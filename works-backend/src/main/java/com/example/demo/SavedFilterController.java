@@ -1,4 +1,4 @@
-package com.example.demo;
+﻿package com.example.demo;
 
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
@@ -6,7 +6,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/saved-filters")
-@CrossOrigin(origins = "http://localhost:5173")
 public class SavedFilterController {
 
     private final SavedFilterRepository repository;
@@ -35,3 +34,4 @@ public class SavedFilterController {
         repository.deleteById(id);
     }
 }
+

@@ -1,4 +1,4 @@
-package com.example.demo;
+﻿package com.example.demo;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -15,7 +15,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/work-items/{workItemId}/attachments")
-@CrossOrigin(origins = "http://localhost:5173")
 public class AttachmentController {
 
     private static final Path UPLOAD_DIR = Paths.get(System.getProperty("user.home"), ".bsmart-works", "uploads");
@@ -59,3 +58,4 @@ public class AttachmentController {
         return ResponseEntity.noContent().build();
     }
 }
+

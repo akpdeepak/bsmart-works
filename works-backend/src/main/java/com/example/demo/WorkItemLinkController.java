@@ -1,4 +1,4 @@
-package com.example.demo;
+﻿package com.example.demo;
 
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
@@ -7,7 +7,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/work-items/{itemId}/links")
-@CrossOrigin(origins = "http://localhost:5173")
 public class WorkItemLinkController {
 
     private final WorkItemLinkRepository linkRepository;
@@ -44,3 +43,4 @@ public class WorkItemLinkController {
         linkRepository.deleteById(linkId);
     }
 }
+

@@ -1,4 +1,4 @@
-package com.example.demo;
+﻿package com.example.demo;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -10,7 +10,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/work-items")
-@CrossOrigin(origins = "http://localhost:5173")
 public class WorkItemController {
 
     private final WorkItemRepository repository;
@@ -55,9 +54,10 @@ public class WorkItemController {
 
     @PutMapping("/backlog/reorder")
     public void reorderBacklog(@RequestBody java.util.List<java.util.Map<String, Object>> items) {
-        items.forEach(item -> jdbc.update(
-                "UPDATE work_items SET backlog_order = ? WHERE id = ?",
-                item.get("order"), item.get("id")));
+        items.forEach(item -> {
+            int order = ((Number) item.get("order")).intValue();
+            jdbc.update("UPDATE work_items SET backlog_order = ? WHERE id = ?", order, item.get("id"));
+        });
     }
 
     private WorkItem mapRow(java.sql.ResultSet rs, int row) throws java.sql.SQLException {
@@ -85,8 +85,8 @@ public class WorkItemController {
     @PostMapping
     public WorkItem createWorkItem(@RequestBody WorkItem newItem,
                                    @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        int randomNum = (int)(Math.random() * 10000);
-        newItem.setId("WEB-" + randomNum);
+        String prefix = newItem.getProjectId() != null ? newItem.getProjectId().replace("PROJ-", "") : "WEB";
+        newItem.setId(prefix + "-" + java.util.UUID.randomUUID().toString().substring(0, 6).toUpperCase());
         newItem.setStatus("Todo");
         newItem.setCreatedBy(userId);
         newItem.setCreatedAt(OffsetDateTime.now());
@@ -152,13 +152,16 @@ public class WorkItemController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteWorkItem(@PathVariable String id,
                                                 @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        if (!repository.existsById(id)) return ResponseEntity.notFound().build();
-        WorkItem item = repository.findById(id).get();
-        jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);
-        jdbc.update("DELETE FROM comments WHERE work_item_id = ?", id);
-        repository.delete(item);
-        eventService.record(id, "WORK_ITEM_DELETED", userId, "{\"title\":\"" + item.getTitle() + "\"}");
-        return ResponseEntity.<Void>noContent().build();
+        return repository.findById(id).map(item -> {
+            jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);
+            jdbc.update("DELETE FROM comments WHERE work_item_id = ?", id);
+            jdbc.update("DELETE FROM work_item_links WHERE source_id = ? OR target_id = ?", id, id);
+            jdbc.update("DELETE FROM attachments WHERE work_item_id = ?", id);
+            repository.delete(item);
+            eventService.record(id, "WORK_ITEM_DELETED", userId,
+                    "{\"title\":\"" + item.getTitle().replace("\"", "'") + "\"}");
+            return ResponseEntity.<Void>noContent().build();
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     private void attachTags(WorkItem item) {
@@ -186,3 +189,4 @@ public class WorkItemController {
         notificationRepository.save(n);
     }
 }
+

@@ -1,4 +1,4 @@
-package com.example.demo;
+﻿package com.example.demo;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -8,7 +8,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/work-items/{workItemId}/activity")
-@CrossOrigin(origins = "http://localhost:5173")
 public class ActivityController {
 
     private final JdbcTemplate jdbc;
@@ -26,3 +25,4 @@ public class ActivityController {
             workItemId);
     }
 }
+

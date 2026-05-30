@@ -1,4 +1,4 @@
-package com.example.demo;
+﻿package com.example.demo;
 
 import org.springframework.web.bind.annotation.*;
 
@@ -7,7 +7,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/notifications")
-@CrossOrigin(origins = "http://localhost:5173")
 public class NotificationController {
 
     private final NotificationRepository notificationRepository;
@@ -42,3 +41,4 @@ public class NotificationController {
         notificationRepository.saveAll(unread);
     }
 }
+

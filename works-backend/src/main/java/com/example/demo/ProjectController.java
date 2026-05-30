@@ -1,4 +1,4 @@
-package com.example.demo;
+﻿package com.example.demo;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -10,7 +10,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/projects")
-@CrossOrigin(origins = "http://localhost:5173")
 public class ProjectController {
 
     private final ProjectRepository projectRepository;
@@ -35,7 +34,7 @@ public class ProjectController {
     @PostMapping
     public Project createProject(@RequestBody Project project,
                                   @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        project.setId("PROJ-" + (int)(Math.random() * 100000));
+        project.setId("PROJ-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         project.setWorkspaceId("WS-001");
         project.setCreatedAt(OffsetDateTime.now());
         Project saved = projectRepository.save(project);
@@ -90,3 +89,5 @@ public class ProjectController {
         return ResponseEntity.noContent().build();
     }
 }
+
+

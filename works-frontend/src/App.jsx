@@ -63,6 +63,7 @@ export default function App() {
   const [forgotMsg, setForgotMsg]       = useState('');
 
   const [view, setView]                 = useState('board');
+  const [toast, setToast]               = useState(null); // { message, type }
   const [workItems, setWorkItems]       = useState([]);
   const [projects, setProjects]         = useState([]);
   const [users, setUsers]               = useState([]);
@@ -81,7 +82,9 @@ export default function App() {
   const [links, setLinks]               = useState([]);
   const [attachments, setAttachments]   = useState([]);
   const [newLink, setNewLink]           = useState({ targetId: '', linkType: 'RELATES_TO' });
+  const [tagInput, setTagInput]         = useState(''); // separate state for tag text field
   const fileInputRef                    = useRef(null);
+  const updateTimerRef                  = useRef(null);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isProjectOpen, setIsProjectOpen] = useState(false);
@@ -135,9 +138,20 @@ export default function App() {
 
   const headers = (extra = {}) => ({
     'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...(currentUser ? { 'X-User-Id': currentUser.id } : {}),
     ...extra
   });
+
+  // Shared fetch wrapper with error handling
+  const apiFetch = async (url, options = {}) => {
+    const res = await fetch(url, { ...options, headers: { ...headers(), ...(options.headers || {}) } });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      throw new Error(err.error || `Request failed: ${res.status}`);
+    }
+    return res.json();
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem('bSmartSession');
@@ -163,6 +177,7 @@ export default function App() {
   useEffect(() => {
     if (!selectedItem) return;
     const id = selectedItem.id;
+    setTagInput((selectedItem.tags || []).join(', '));
     fetch(`${API}/work-items/${id}/comments`).then(r => r.json()).then(d => setComments(Array.isArray(d) ? d : [])).catch(() => {});
     fetch(`${API}/work-items/${id}/activity`).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(() => {});
     fetch(`${API}/work-items/${id}/links`).then(r => r.json()).then(d => setLinks(Array.isArray(d) ? d : [])).catch(() => {});
@@ -177,18 +192,26 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   function fetchAll() {
     setLoading(true);
     Promise.all([
-      fetch(`${API}/work-items`).then(r => r.json()),
-      fetch(`${API}/projects`).then(r => r.json()),
-      fetch(`${API}/users`).then(r => r.json()),
+      fetch(`${API}/work-items`, { headers: headers() }).then(r => r.json()),
+      fetch(`${API}/projects`, { headers: headers() }).then(r => r.json()),
+      fetch(`${API}/users`, { headers: headers() }).then(r => r.json()),
     ]).then(([items, projs, usrs]) => {
       setWorkItems(Array.isArray(items) ? items : []);
       setProjects(Array.isArray(projs) ? projs : []);
       setUsers(Array.isArray(usrs) ? usrs : []);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(err => {
+      setLoading(false);
+      showToast('Failed to load data. Check your connection.', 'error');
+    });
     fetchUnreadCount();
   }
 
@@ -237,20 +260,25 @@ export default function App() {
     if (!newItem.title || newItem.title.length < 3) { setCreateError('Title must be at least 3 characters.'); return; }
     setCreateError('');
     const tags = newItem.tags ? newItem.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
-    fetch(`${API}/work-items`, {
-      method: 'POST', headers: headers(),
+    apiFetch(`${API}/work-items`, {
+      method: 'POST',
       body: JSON.stringify({ ...newItem, tags, dueDate: newItem.dueDate || null, assigneeId: newItem.assigneeId || null })
-    }).then(r => r.json()).then(saved => {
+    }).then(saved => {
       setWorkItems(prev => [...prev, saved]);
       setNewItem({ title: '', type: 'Task', description: '', assigneeId: '', dueDate: '', tags: '' });
       setIsCreateOpen(false);
-    });
+      showToast('Work item created');
+    }).catch(err => setCreateError(err.message));
   };
 
   const handleDelete = (id) => {
     if (!window.confirm('Delete this work item?')) return;
-    fetch(`${API}/work-items/${id}`, { method: 'DELETE', headers: headers() })
-      .then(() => { setWorkItems(prev => prev.filter(i => i.id !== id)); if (selectedItem?.id === id) setSelectedItem(null); });
+    apiFetch(`${API}/work-items/${id}`, { method: 'DELETE' })
+      .then(() => {
+        setWorkItems(prev => prev.filter(i => i.id !== id));
+        if (selectedItem?.id === id) setSelectedItem(null);
+        showToast('Work item deleted');
+      }).catch(err => showToast(err.message, 'error'));
   };
 
   const handleDragStart = (e, id) => e.dataTransfer.setData('itemId', id);
@@ -260,21 +288,30 @@ export default function App() {
     const itemId = e.dataTransfer.getData('itemId');
     const item = workItems.find(i => i.id === itemId);
     if (!item || item.status === newStatus) return;
+    // Optimistic update
     setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: newStatus } : i));
-    fetch(`${API}/work-items/${itemId}`, {
-      method: 'PUT', headers: headers(),
+    apiFetch(`${API}/work-items/${itemId}`, {
+      method: 'PUT',
       body: JSON.stringify({ ...item, status: newStatus })
-    }).catch(() => {});
+    }).catch(() => {
+      // Revert on failure
+      setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: item.status } : i));
+      showToast('Failed to update status', 'error');
+    });
   };
 
+  // Debounced update — wait 600ms after last change before saving
   const handleUpdateItem = (updated) => {
-    fetch(`${API}/work-items/${updated.id}`, {
-      method: 'PUT', headers: headers(),
-      body: JSON.stringify({ ...updated, tags: updated.tags || [] })
-    }).then(r => r.json()).then(saved => {
-      setWorkItems(prev => prev.map(i => i.id === saved.id ? saved : i));
-      setSelectedItem(saved);
-    });
+    clearTimeout(updateTimerRef.current);
+    updateTimerRef.current = setTimeout(() => {
+      apiFetch(`${API}/work-items/${updated.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ...updated, tags: updated.tags || [] })
+      }).then(saved => {
+        setWorkItems(prev => prev.map(i => i.id === saved.id ? saved : i));
+        setSelectedItem(saved);
+      }).catch(err => showToast(err.message, 'error'));
+    }, 600);
   };
 
   // COMMENTS with @mention + internal flag
@@ -318,12 +355,14 @@ export default function App() {
   // PROJECTS
   const handleCreateProject = () => {
     if (!newProject.name || !newProject.keyPrefix) { setCreateError('Name and key prefix required.'); return; }
-    fetch(`${API}/projects`, { method: 'POST', headers: headers(), body: JSON.stringify(newProject) })
-      .then(r => r.json()).then(p => {
+    setCreateError('');
+    apiFetch(`${API}/projects`, { method: 'POST', body: JSON.stringify(newProject) })
+      .then(p => {
         setProjects(prev => [...prev, p]);
         setNewProject({ name: '', keyPrefix: '', description: '' });
         setIsProjectOpen(false);
-      });
+        showToast('Project created');
+      }).catch(err => setCreateError(err.message));
   };
 
   // WORKSPACE
@@ -333,10 +372,10 @@ export default function App() {
   };
 
   const handleInvite = () => {
-    fetch(`${API}/workspaces/WS-001/members`, {
-      method: 'POST', headers: headers(), body: JSON.stringify({ email: inviteEmail, role: 'MEMBER' })
-    }).then(r => r.json()).then(d => { setInviteMsg(d.message || 'Added!'); setInviteEmail(''); fetchMembers(); })
-      .catch(() => setInviteMsg('Error — user may not exist.'));
+    apiFetch(`${API}/workspaces/WS-001/members`, {
+      method: 'POST', body: JSON.stringify({ email: inviteEmail, role: 'MEMBER' })
+    }).then(d => { setInviteMsg(d.message || 'Added!'); setInviteEmail(''); fetchMembers(); })
+      .catch(err => setInviteMsg(err.message || 'Error — user may not exist.'));
   };
 
   const handleRemoveMember = (userId) => {
@@ -1370,9 +1409,14 @@ export default function App() {
 
             <div>
               <label className="block text-xs text-neutral-400 mb-1 font-medium">Tags</label>
-              <input type="text" value={(selectedItem.tags || []).join(', ')}
-                onChange={e => setSelectedItem({ ...selectedItem, tags: e.target.value.split(',').map(t => t.trim()) })}
-                onBlur={() => handleUpdateItem(selectedItem)}
+              <input type="text" value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onBlur={() => {
+                  const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
+                  const updated = { ...selectedItem, tags };
+                  setSelectedItem(updated);
+                  handleUpdateItem(updated);
+                }}
                 placeholder="frontend, urgent, api"
                 className="input" />
             </div>
@@ -1519,6 +1563,14 @@ export default function App() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* TOAST NOTIFICATION */}
+      {toast && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-xl shadow-xl text-sm font-medium flex items-center gap-2.5 transition-all ${toast.type === 'error' ? 'bg-semantic-danger text-white' : 'bg-neutral-900 text-white'}`}>
+          <span>{toast.type === 'error' ? '✕' : '✓'}</span>
+          {toast.message}
         </div>
       )}
 
@@ -1681,7 +1733,7 @@ function PriorityBadge({ priority }) {
 function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
   const [items, setItems] = React.useState([]);
   React.useEffect(() => {
-    fetch(`http://localhost:8080/api/v1/sprints/${sprintId}/items`)
+    fetch(`${API}/sprints/${sprintId}/items`)
       .then(r => r.json()).then(d => setItems(Array.isArray(d) ? d : [])).catch(() => {});
   }, [sprintId]);
 

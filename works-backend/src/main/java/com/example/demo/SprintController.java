@@ -1,4 +1,4 @@
-package com.example.demo;
+﻿package com.example.demo;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -9,7 +9,6 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/v1/sprints")
-@CrossOrigin(origins = "http://localhost:5173")
 public class SprintController {
 
     private final SprintRepository sprintRepository;
@@ -34,7 +33,7 @@ public class SprintController {
     @PostMapping
     public Sprint createSprint(@RequestBody Sprint sprint,
                                @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        sprint.setId("SPR-" + (int)(Math.random() * 100000));
+        sprint.setId("SPR-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         sprint.setStatus("PLANNING");
         sprint.setCreatedAt(OffsetDateTime.now());
         Sprint saved = sprintRepository.save(sprint);
@@ -132,3 +131,5 @@ public class SprintController {
         return report;
     }
 }
+
+

@@ -71,8 +71,17 @@ export default function App() {
   const [loading, setLoading]           = useState(true);
 
   const [selectedItem, setSelectedItem] = useState(null);
+  const [detailTab, setDetailTab]       = useState('details'); // details | activity | links | attachments
   const [comments, setComments]         = useState([]);
   const [newComment, setNewComment]     = useState('');
+  const [commentInternal, setCommentInternal] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionOpen, setMentionOpen]   = useState(false);
+  const [activity, setActivity]         = useState([]);
+  const [links, setLinks]               = useState([]);
+  const [attachments, setAttachments]   = useState([]);
+  const [newLink, setNewLink]           = useState({ targetId: '', linkType: 'RELATES_TO' });
+  const fileInputRef                    = useRef(null);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isProjectOpen, setIsProjectOpen] = useState(false);
@@ -91,6 +100,15 @@ export default function App() {
 
   // Kanban density: compact | comfortable | spacious
   const [density, setDensity]           = useState('comfortable');
+
+  // Dark mode
+  const [darkMode, setDarkMode]         = useState(() => localStorage.getItem('bSmartTheme') === 'dark');
+
+  // My Works sub-tab
+  const [myWorksTab, setMyWorksTab]     = useState('assigned'); // assigned | activity | mentions
+
+  // Notification prefs
+  const [notifPrefs, setNotifPrefs]     = useState({ notifyAssign: true, notifyComment: true, notifyMention: true, emailDigest: false });
 
   // Workspace switcher dropdown
   const [wsOpen, setWsOpen]             = useState(false);
@@ -121,10 +139,18 @@ export default function App() {
   }, [currentUser]);
 
   useEffect(() => {
-    if (selectedItem) {
-      fetch(`${API}/work-items/${selectedItem.id}/comments`)
-        .then(r => r.json()).then(setComments).catch(() => {});
-    }
+    document.documentElement.classList.toggle('dark', darkMode);
+    localStorage.setItem('bSmartTheme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
+
+  useEffect(() => {
+    if (!selectedItem) return;
+    const id = selectedItem.id;
+    fetch(`${API}/work-items/${id}/comments`).then(r => r.json()).then(d => setComments(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`${API}/work-items/${id}/activity`).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`${API}/work-items/${id}/links`).then(r => r.json()).then(d => setLinks(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`${API}/work-items/${id}/attachments`).then(r => r.json()).then(d => setAttachments(Array.isArray(d) ? d : [])).catch(() => {});
+    setDetailTab('details');
   }, [selectedItem?.id]);
 
   // Close workspace dropdown on outside click
@@ -234,12 +260,32 @@ export default function App() {
     });
   };
 
-  // COMMENTS
+  // COMMENTS with @mention + internal flag
   const handleAddComment = () => {
     if (!newComment.trim()) return;
     fetch(`${API}/work-items/${selectedItem.id}/comments`, {
-      method: 'POST', headers: headers(), body: JSON.stringify({ body: newComment })
-    }).then(r => r.json()).then(c => { setComments(prev => [...prev, c]); setNewComment(''); });
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ body: newComment, isInternal: commentInternal })
+    }).then(r => r.json()).then(c => {
+      setComments(prev => [...prev, c]);
+      setNewComment(''); setCommentInternal(false); setMentionOpen(false);
+    });
+  };
+
+  const handleCommentInput = (e) => {
+    const val = e.target.value;
+    setNewComment(val);
+    const lastAt = val.lastIndexOf('@');
+    if (lastAt !== -1 && lastAt === val.length - 1) { setMentionOpen(true); setMentionQuery(''); }
+    else if (lastAt !== -1 && val.slice(lastAt + 1).match(/^\w+$/)) {
+      setMentionOpen(true); setMentionQuery(val.slice(lastAt + 1).toLowerCase());
+    } else { setMentionOpen(false); }
+  };
+
+  const insertMention = (user) => {
+    const lastAt = newComment.lastIndexOf('@');
+    setNewComment(newComment.slice(0, lastAt) + '@' + user.fullName + ' ');
+    setMentionOpen(false);
   };
 
   // SEARCH
@@ -279,6 +325,52 @@ export default function App() {
   const handleRemoveMember = (userId) => {
     fetch(`${API}/workspaces/WS-001/members/${userId}`, { method: 'DELETE', headers: headers() })
       .then(() => fetchMembers());
+  };
+
+  // NOTIFICATION PREFS
+  function fetchNotifPrefs() {
+    fetch(`${API}/notification-preferences`, { headers: headers() })
+      .then(r => r.json()).then(d => setNotifPrefs({
+        notifyAssign:  d.notify_assign  ?? true,
+        notifyComment: d.notify_comment ?? true,
+        notifyMention: d.notify_mention ?? true,
+        emailDigest:   d.email_digest   ?? false,
+      })).catch(() => {});
+  }
+  function saveNotifPrefs(prefs) {
+    fetch(`${API}/notification-preferences`, { method: 'PUT', headers: headers(), body: JSON.stringify(prefs) })
+      .then(() => setNotifPrefs(prefs));
+  }
+
+  // LINKS
+  const handleAddLink = () => {
+    if (!newLink.targetId) return;
+    fetch(`${API}/work-items/${selectedItem.id}/links`, {
+      method: 'POST', headers: headers(), body: JSON.stringify(newLink)
+    }).then(r => r.json()).then(l => { setLinks(prev => [...prev, l]); setNewLink({ targetId: '', linkType: 'RELATES_TO' }); });
+  };
+  const handleDeleteLink = (linkId) => {
+    fetch(`${API}/work-items/${selectedItem.id}/links/${linkId}`, { method: 'DELETE', headers: headers() })
+      .then(() => setLinks(prev => prev.filter(l => l.id !== linkId)));
+  };
+
+  // ATTACHMENTS
+  const handleUploadFile = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const fd = new FormData(); fd.append('file', file);
+    fetch(`${API}/work-items/${selectedItem.id}/attachments`, {
+      method: 'POST', headers: { 'X-User-Id': currentUser?.id || '' }, body: fd
+    }).then(r => r.json()).then(a => setAttachments(prev => [a, ...prev]));
+  };
+  const handleDeleteAttachment = (attId) => {
+    fetch(`${API}/work-items/${selectedItem.id}/attachments/${attId}`, { method: 'DELETE', headers: headers() })
+      .then(() => setAttachments(prev => prev.filter(a => a.id !== attId)));
+  };
+
+  // PROJECT ARCHIVE
+  const handleArchiveProject = (projectId) => {
+    fetch(`${API}/projects/${projectId}/archive`, { method: 'PUT', headers: headers() })
+      .then(r => r.json()).then(p => setProjects(prev => prev.map(x => x.id === p.id ? p : x)));
   };
 
   const columns = [
@@ -402,7 +494,7 @@ export default function App() {
 
         <nav className="flex-1 p-3 space-y-0.5 text-sm overflow-y-auto">
           <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">My Work</p>
-          <NavItem active={view === 'myworks'} onClick={() => setView('myworks')} icon="👤">
+          <NavItem active={view === 'myworks'} onClick={() => { setView('myworks'); fetchNotifications(); }} icon="👤">
             My Works
             {myItems.length > 0 && <span className="ml-auto text-[10px] bg-neutral-100 text-neutral-600 rounded-full px-1.5 py-0.5">{myItems.length}</span>}
           </NavItem>
@@ -419,7 +511,7 @@ export default function App() {
           </NavItem>
 
           <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">Workspace</p>
-          <NavItem active={view === 'workspace'} onClick={() => { setView('workspace'); fetchMembers(); }} icon="⚙️">Settings</NavItem>
+          <NavItem active={view === 'workspace'} onClick={() => { setView('workspace'); fetchMembers(); fetchNotifPrefs(); }} icon="⚙️">Settings</NavItem>
         </nav>
 
         <div className="p-3 border-t border-neutral-200">
@@ -465,9 +557,15 @@ export default function App() {
               </div>
             )}
           </div>
-          <Button variant="action" onClick={() => { setView('board'); setIsCreateOpen(true); }}>
-            + Create
-          </Button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setDarkMode(d => !d)} title="Toggle dark/light mode"
+              className="w-8 h-8 rounded-md flex items-center justify-center text-neutral-400 hover:bg-neutral-100 transition-colors text-base">
+              {darkMode ? '☀️' : '🌙'}
+            </button>
+            <Button variant="action" onClick={() => { setView('board'); setIsCreateOpen(true); }}>
+              + Create
+            </Button>
+          </div>
         </header>
 
         {/* CONTENT */}
@@ -477,13 +575,25 @@ export default function App() {
           {view === 'myworks' && (
             <div className="p-8 max-w-4xl">
               <h1 className="text-2xl font-bold text-brand-navy mb-1">My Works</h1>
-              <p className="text-sm text-neutral-400 mb-6">Items assigned to you across all projects</p>
-              {myItems.length === 0
+              <p className="text-sm text-neutral-400 mb-4">Your personal workspace</p>
+              {/* Sub-tabs */}
+              <div className="flex gap-1 mb-5 border-b border-neutral-200">
+                {[
+                  { key: 'assigned', label: `Assigned (${myItems.length})` },
+                  { key: 'mentions', label: `Mentions (${notifications.filter(n => n.type === 'MENTION').length})` },
+                  { key: 'activity', label: 'Recent Activity' },
+                ].map(t => (
+                  <button key={t.key} onClick={() => setMyWorksTab(t.key)}
+                    className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${myWorksTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700'}`}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              {myWorksTab === 'assigned' && (myItems.length === 0
                 ? <EmptyState icon="👤" title="Nothing assigned to you"
-                    subtitle="Work items assigned to you will appear here. Ask your team lead to assign some tasks."
+                    subtitle="Work items assigned to you will appear here."
                     action={<Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(true)}>Create a work item</Button>} />
-                : (
-                  <div className="space-y-2">
+                : <div className="space-y-2">
                     {myItems.map(item => (
                       <div key={item.id} onClick={() => setSelectedItem(item)}
                         className="bg-white border border-neutral-200 rounded-lg p-4 flex items-center gap-4 hover:shadow-sm cursor-pointer transition-shadow">
@@ -493,14 +603,39 @@ export default function App() {
                           <p className="text-xs text-neutral-400 font-mono">{item.id}</p>
                         </div>
                         <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
-                        {item.dueDate && (
-                          <span className="text-xs text-semantic-warning font-medium whitespace-nowrap">Due {item.dueDate}</span>
-                        )}
+                        {item.dueDate && <span className="text-xs text-semantic-warning font-medium whitespace-nowrap">Due {item.dueDate}</span>}
                       </div>
                     ))}
                   </div>
-                )
-              }
+              )}
+              {myWorksTab === 'mentions' && (() => {
+                const mentions = notifications.filter(n => n.type === 'MENTION');
+                return mentions.length === 0
+                  ? <EmptyState icon="@" title="No mentions yet" subtitle="When someone @mentions you in a comment, it will appear here." />
+                  : <div className="space-y-2">
+                      {mentions.map(n => (
+                        <div key={n.id} className={`bg-white border rounded-lg p-4 ${!n.read ? 'border-brand-navy-tint/30' : 'border-neutral-200'}`}>
+                          <p className="text-sm text-neutral-900">{n.message}</p>
+                          <p className="text-xs text-neutral-400 mt-1">{n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}</p>
+                        </div>
+                      ))}
+                    </div>;
+              })()}
+              {myWorksTab === 'activity' && (
+                <div className="space-y-2">
+                  {workItems.filter(i => i.createdBy === currentUser.id || i.assigneeId === currentUser.id).slice(0, 20).map(i => (
+                    <div key={i.id} onClick={() => setSelectedItem(i)}
+                      className="bg-white border border-neutral-200 rounded-lg p-3 flex items-center gap-3 hover:shadow-sm cursor-pointer">
+                      <TypeBadge type={i.type} compact />
+                      <span className="text-xs font-mono text-neutral-400">{i.id}</span>
+                      <span className="flex-1 text-sm text-neutral-900 truncate">{i.title}</span>
+                      <StatusBadge category={statusToCategory(i.status)}>{i.status}</StatusBadge>
+                    </div>
+                  ))}
+                  {workItems.filter(i => i.createdBy === currentUser.id || i.assigneeId === currentUser.id).length === 0 &&
+                    <EmptyState icon="📋" title="No recent activity" subtitle="Items you create or are assigned to will show here." />}
+                </div>
+              )}
             </div>
           )}
 
@@ -629,6 +764,10 @@ export default function App() {
                               <p className="text-sm font-semibold text-neutral-900">{count} items</p>
                               {count > 0 && <p className="text-xs text-semantic-success">{done} done</p>}
                               {p.leadUserId && <p className="text-xs text-neutral-400 mt-0.5">Lead: {userName(p.leadUserId)}</p>}
+                              <button onClick={() => handleArchiveProject(p.id)}
+                                className="text-xs text-neutral-300 hover:text-neutral-600 mt-1 transition-colors">
+                                {p.archived ? 'Unarchive' : 'Archive'}
+                              </button>
                             </div>
                           </div>
                           {count > 0 && (
@@ -726,6 +865,25 @@ export default function App() {
                   {inviteMsg && <p className="text-xs text-semantic-success mt-2">{inviteMsg}</p>}
                 </div>
               </div>
+
+              {/* Notification Preferences */}
+              <div className="bg-white rounded-xl border border-neutral-200 p-6">
+                <h2 className="font-semibold text-neutral-900 mb-1">Notification Preferences</h2>
+                <p className="text-sm text-neutral-400 mb-4">Control what notifies you</p>
+                {[
+                  { key: 'notifyAssign',  label: 'Assigned to a work item' },
+                  { key: 'notifyComment', label: 'New comment on my items' },
+                  { key: 'notifyMention', label: '@mentioned in a comment' },
+                  { key: 'emailDigest',   label: 'Daily email digest' },
+                ].map(pref => (
+                  <label key={pref.key} className="flex items-center justify-between py-2.5 border-b border-neutral-100 last:border-0 cursor-pointer">
+                    <span className="text-sm text-neutral-700">{pref.label}</span>
+                    <input type="checkbox" checked={notifPrefs[pref.key]}
+                      onChange={e => { const updated = { ...notifPrefs, [pref.key]: e.target.checked }; saveNotifPrefs(updated); }}
+                      className="w-4 h-4 accent-brand-navy" />
+                  </label>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -733,7 +891,7 @@ export default function App() {
 
       {/* DETAIL PANEL */}
       {selectedItem && (
-        <div className="w-[480px] bg-white border-l border-neutral-200 flex flex-col h-screen overflow-hidden flex-shrink-0">
+        <div className="w-[500px] bg-white border-l border-neutral-200 flex flex-col h-screen overflow-hidden flex-shrink-0">
           <div className="h-14 flex items-center justify-between px-5 border-b border-neutral-200">
             <div className="flex items-center gap-2">
               <TypeBadge type={selectedItem.type} compact />
@@ -746,7 +904,25 @@ export default function App() {
                 className="text-neutral-400 hover:text-neutral-900 p-1 rounded hover:bg-neutral-50 transition-colors">✕</button>
             </div>
           </div>
+          {/* Detail panel tabs */}
+          <div className="flex border-b border-neutral-200 px-5">
+            {[
+              { key: 'details',     label: 'Details' },
+              { key: 'comments',    label: `Comments ${comments.length > 0 ? `(${comments.length})` : ''}` },
+              { key: 'links',       label: `Links ${links.length > 0 ? `(${links.length})` : ''}` },
+              { key: 'attachments', label: `Files ${attachments.length > 0 ? `(${attachments.length})` : ''}` },
+              { key: 'activity',    label: 'Activity' },
+            ].map(t => (
+              <button key={t.key} onClick={() => setDetailTab(t.key)}
+                className={`text-xs font-medium px-3 py-2.5 border-b-2 transition-colors whitespace-nowrap ${detailTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700'}`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
           <div className="flex-1 overflow-y-auto p-5 space-y-5">
+            {/* DETAILS TAB */}
+            {detailTab === 'details' && <>
             <input className="w-full text-lg font-bold text-neutral-900 focus:outline-none border-b border-transparent focus:border-neutral-200 pb-1 bg-transparent"
               value={selectedItem.title}
               onChange={e => setSelectedItem({ ...selectedItem, title: e.target.value })}
@@ -804,36 +980,138 @@ export default function App() {
                 className="input resize-none" />
             </div>
 
-            <div>
-              <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">
-                Activity · {comments.length} comment{comments.length !== 1 ? 's' : ''}
-              </h3>
-              {comments.length === 0 && (
-                <p className="text-xs text-neutral-400 text-center py-3">No comments yet. Be the first to comment.</p>
-              )}
-              <div className="space-y-3 mb-4">
-                {comments.map(c => (
-                  <div key={c.id} className="flex gap-2.5">
-                    <Avatar name={c.authorName || '?'} size={7} />
-                    <div className="flex-1 bg-neutral-50 rounded-xl px-3 py-2.5 border border-neutral-100">
-                      <p className="text-xs font-semibold text-neutral-900 mb-0.5">{c.authorName}</p>
-                      <p className="text-sm text-neutral-700 leading-relaxed">{c.body}</p>
-                      <p className="text-[10px] text-neutral-400 mt-1.5">{c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</p>
+            </> /* end details tab */}
+
+            {/* COMMENTS TAB */}
+            {detailTab === 'comments' && (
+              <div>
+                {comments.length === 0 && (
+                  <p className="text-xs text-neutral-400 text-center py-6">No comments yet. Be the first to comment.</p>
+                )}
+                <div className="space-y-3 mb-4">
+                  {comments.map(c => (
+                    <div key={c.id} className="flex gap-2.5">
+                      <Avatar name={c.authorName || '?'} size={7} />
+                      <div className={`flex-1 rounded-xl px-3 py-2.5 border ${c.isInternal ? 'bg-semantic-warning-surface border-semantic-warning/30' : 'bg-neutral-50 border-neutral-100'}`}>
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p className="text-xs font-semibold text-neutral-900">{c.authorName}</p>
+                          {c.isInternal && <span className="text-[10px] bg-semantic-warning text-white px-1.5 py-0.5 rounded">Internal</span>}
+                        </div>
+                        <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{c.body}</p>
+                        <p className="text-[10px] text-neutral-400 mt-1.5">{c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Comment composer with @mention + internal flag */}
+                <div className="relative">
+                  <div className="flex gap-2.5">
+                    <Avatar name={currentUser.fullName} size={7} />
+                    <div className="flex-1">
+                      <textarea rows={2} value={newComment} onChange={handleCommentInput}
+                        onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleAddComment())}
+                        placeholder="Write a comment... (@mention to notify, Enter to send)"
+                        className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-navy resize-none" />
+                      <div className="flex items-center justify-between mt-1.5">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input type="checkbox" checked={commentInternal} onChange={e => setCommentInternal(e.target.checked)}
+                            className="w-3 h-3 rounded accent-semantic-warning" />
+                          <span className="text-xs text-neutral-400">Internal only</span>
+                        </label>
+                        <Button size="sm" onClick={handleAddComment}>Send</Button>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-              <div className="flex gap-2.5">
-                <Avatar name={currentUser.fullName} size={7} />
-                <div className="flex-1 flex gap-2">
-                  <input type="text" value={newComment} onChange={e => setNewComment(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleAddComment()}
-                    placeholder="Write a comment... (Enter to send)"
-                    className="flex-1 border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-navy" />
-                  <Button size="sm" onClick={handleAddComment}>Send</Button>
+                  {/* @mention dropdown */}
+                  {mentionOpen && (
+                    <div className="absolute bottom-full mb-1 left-9 w-56 bg-white rounded-lg shadow-xl border border-neutral-200 z-50 max-h-40 overflow-y-auto">
+                      {users.filter(u => !mentionQuery || u.fullName.toLowerCase().includes(mentionQuery)).map(u => (
+                        <button key={u.id} onClick={() => insertMention(u)}
+                          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 text-left">
+                          <Avatar name={u.fullName} size={6} />
+                          <span className="text-sm text-neutral-900">{u.fullName}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* LINKS TAB */}
+            {detailTab === 'links' && (
+              <div>
+                {links.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No links yet.</p>}
+                <div className="space-y-2 mb-4">
+                  {links.map(l => (
+                    <div key={l.id} className="flex items-center gap-3 p-2.5 bg-neutral-50 rounded-lg border border-neutral-100">
+                      <span className="text-[10px] font-semibold bg-neutral-200 text-neutral-600 px-1.5 py-0.5 rounded uppercase">{l.linkType?.replace('_', ' ')}</span>
+                      <span className="flex-1 text-sm text-neutral-900 font-mono">{l.targetId}</span>
+                      {l.targetTitle && <span className="text-xs text-neutral-400 truncate max-w-24">{l.targetTitle}</span>}
+                      <button onClick={() => handleDeleteLink(l.id)} className="text-neutral-300 hover:text-semantic-danger text-xs">✕</button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <select value={newLink.linkType} onChange={e => setNewLink(p => ({ ...p, linkType: e.target.value }))} className="input w-36">
+                    {['BLOCKS','BLOCKED_BY','RELATES_TO','DUPLICATES','PARENT','CHILD'].map(t => <option key={t} value={t}>{t.replace('_',' ')}</option>)}
+                  </select>
+                  <select value={newLink.targetId} onChange={e => setNewLink(p => ({ ...p, targetId: e.target.value }))} className="input flex-1">
+                    <option value="">Select item...</option>
+                    {workItems.filter(i => i.id !== selectedItem.id).map(i => (
+                      <option key={i.id} value={i.id}>{i.id} — {i.title}</option>
+                    ))}
+                  </select>
+                  <Button size="sm" onClick={handleAddLink}>Link</Button>
+                </div>
+              </div>
+            )}
+
+            {/* ATTACHMENTS TAB */}
+            {detailTab === 'attachments' && (
+              <div>
+                <input type="file" ref={fileInputRef} className="hidden" onChange={handleUploadFile} />
+                <Button variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()} className="mb-4">
+                  ↑ Upload file
+                </Button>
+                {attachments.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No files attached yet.</p>}
+                <div className="space-y-2">
+                  {attachments.map(a => (
+                    <div key={a.id} className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-100">
+                      <div className="w-8 h-8 rounded bg-neutral-200 flex items-center justify-center text-xs font-bold text-neutral-500 flex-shrink-0">
+                        {String(a.file_name || a.fileName || '?').split('.').pop().toUpperCase().slice(0, 3)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-neutral-900 truncate">{a.file_name || a.fileName}</p>
+                        <p className="text-xs text-neutral-400">{a.uploaded_by_name || a.uploadedByName || 'You'} · {a.file_size ? `${Math.round(a.file_size / 1024)}KB` : ''}</p>
+                      </div>
+                      <button onClick={() => handleDeleteAttachment(a.id)} className="text-neutral-300 hover:text-semantic-danger text-xs flex-shrink-0">✕</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ACTIVITY TAB */}
+            {detailTab === 'activity' && (
+              <div>
+                {activity.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No activity recorded yet.</p>}
+                <div className="space-y-3">
+                  {activity.map(a => (
+                    <div key={a.id} className="flex gap-2.5">
+                      <div className="w-2 h-2 rounded-full bg-neutral-300 mt-1.5 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <p className="text-xs text-neutral-700">
+                          <span className="font-semibold">{a.actor_name || 'System'}</span>
+                          {' '}{formatEventType(a.event_type)}
+                        </p>
+                        <p className="text-[10px] text-neutral-400 mt-0.5">{a.occurred_at ? new Date(a.occurred_at).toLocaleString() : ''}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -940,4 +1218,18 @@ function Field({ label, children }) {
       {children}
     </div>
   );
+}
+
+function formatEventType(eventType) {
+  const map = {
+    WORK_ITEM_CREATED: 'created this item',
+    WORK_ITEM_UPDATED: 'updated this item',
+    WORK_ITEM_DELETED: 'deleted this item',
+    COMMENT_ADDED:     'added a comment',
+    STATUS_CHANGED:    'changed the status',
+    ASSIGNED:          'changed the assignee',
+    USER_LOGGED_IN:    'logged in',
+    USER_SIGNED_UP:    'signed up',
+  };
+  return map[eventType] || (eventType || '').toLowerCase().replace(/_/g, ' ');
 }

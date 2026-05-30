@@ -14,6 +14,7 @@ public class Project {
     private String description;
     private String leadUserId;
     private OffsetDateTime createdAt;
+    private boolean isArchived;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -29,4 +30,6 @@ public class Project {
     public void setLeadUserId(String leadUserId) { this.leadUserId = leadUserId; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
+    public boolean isArchived() { return isArchived; }
+    public void setArchived(boolean archived) { isArchived = archived; }
 }

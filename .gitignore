@@ -1,0 +1,7 @@
+.DS_Store
+works-frontend/node_modules/
+works-frontend/dist/
+works-backend/target/
+*.class
+.idea/
+.vscode/

@@ -1,9 +1,14 @@
 package com.example.demo;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import java.util.List;
 
-@Repository
 public interface WorkItemRepository extends JpaRepository<WorkItem, String> {
-    // Spring Boot automatically writes all the SQL queries (FindAll, Save, Delete) for us!
+    List<WorkItem> findByAssigneeId(String assigneeId);
+    List<WorkItem> findByProjectId(String projectId);
+
+    @Query("SELECT w FROM WorkItem w WHERE LOWER(w.title) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(COALESCE(w.description, '')) LIKE LOWER(CONCAT('%', :q, '%'))")
+    List<WorkItem> search(@Param("q") String query);
 }

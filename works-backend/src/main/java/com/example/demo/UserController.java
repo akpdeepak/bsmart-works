@@ -1,7 +1,10 @@
 package com.example.demo;
 
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -9,24 +12,27 @@ import java.util.Map;
 public class UserController {
 
     private final UserRepository userRepository;
-    private final WorkspaceRepository workspaceRepository;
 
-    public UserController(UserRepository userRepository, WorkspaceRepository workspaceRepository) {
+    public UserController(UserRepository userRepository) {
         this.userRepository = userRepository;
-        this.workspaceRepository = workspaceRepository;
     }
 
-    // This endpoint acts as our temporary "Login Context"
-    @GetMapping("/me")
-    public Map<String, Object> getCurrentUser() {
-        // Fetch the user and workspace we inserted in the V3 SQL file
-        User me = userRepository.findById("USR-001").orElse(null);
-        Workspace myWorkspace = workspaceRepository.findById("WS-001").orElse(null);
+    @GetMapping
+    public List<Map<String, String>> getAllUsers() {
+        return userRepository.findAll().stream().map(u -> Map.of(
+                "id", u.getId(),
+                "fullName", u.getFullName(),
+                "email", u.getEmail()
+        )).collect(Collectors.toList());
+    }
 
-        // Bundle them together into one clean package to send to React
-        return Map.of(
-            "user", me,
-            "workspace", myWorkspace
-        );
+    @GetMapping("/me")
+    public Map<String, String> getCurrentUser(
+            @RequestHeader(value = "X-User-Id", required = false) String userId) {
+        if (userId == null) userId = "USR-001";
+        final String uid = userId;
+        return userRepository.findById(uid).map(u -> Map.of(
+                "id", u.getId(), "fullName", u.getFullName(), "email", u.getEmail()
+        )).orElse(Map.of("id", uid, "fullName", "Unknown", "email", ""));
     }
 }

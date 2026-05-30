@@ -1,7 +1,12 @@
 package com.example.demo;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/work-items")
@@ -9,41 +14,140 @@ import java.util.List;
 public class WorkItemController {
 
     private final WorkItemRepository repository;
+    private final EventService eventService;
+    private final JdbcTemplate jdbc;
+    private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
 
-    public WorkItemController(WorkItemRepository repository) {
+    public WorkItemController(WorkItemRepository repository, EventService eventService,
+                              JdbcTemplate jdbc, NotificationRepository notificationRepository,
+                              UserRepository userRepository) {
         this.repository = repository;
+        this.eventService = eventService;
+        this.jdbc = jdbc;
+        this.notificationRepository = notificationRepository;
+        this.userRepository = userRepository;
     }
 
-    // GET: Send data to React
     @GetMapping
     public List<WorkItem> getAllWorkItems() {
-        return repository.findAll();
+        List<WorkItem> items = repository.findAll();
+        items.forEach(this::attachTags);
+        return items;
     }
 
-    // POST: Receive new data from React and save to Postgres
+    @GetMapping("/search")
+    public List<WorkItem> search(@RequestParam String q) {
+        List<WorkItem> items = repository.search(q);
+        items.forEach(this::attachTags);
+        return items;
+    }
+
+    @GetMapping("/my")
+    public List<WorkItem> myWorkItems(@RequestParam String userId) {
+        List<WorkItem> items = repository.findByAssigneeId(userId);
+        items.forEach(this::attachTags);
+        return items;
+    }
+
     @PostMapping
-    public WorkItem createWorkItem(@RequestBody WorkItem newItem) {
-        // Generate a random ID for this MVP (e.g., WEB-8492)
+    public WorkItem createWorkItem(@RequestBody WorkItem newItem,
+                                   @RequestHeader(value = "X-User-Id", required = false) String userId) {
         int randomNum = (int)(Math.random() * 10000);
         newItem.setId("WEB-" + randomNum);
-
-        // Force new items to start as 'Todo'
         newItem.setStatus("Todo");
+        newItem.setCreatedBy(userId);
+        newItem.setCreatedAt(OffsetDateTime.now());
+        if (newItem.getProjectId() == null) newItem.setProjectId("PROJ-001");
 
-        return repository.save(newItem);
+        WorkItem saved = repository.save(newItem);
+
+        if (newItem.getTags() != null) {
+            saveTags(saved.getId(), newItem.getTags());
+        }
+
+        eventService.record(saved.getId(), "WORK_ITEM_CREATED", userId,
+                "{\"title\":\"" + saved.getTitle() + "\",\"type\":\"" + saved.getType() + "\"}");
+
+        // Notify assignee
+        if (saved.getAssigneeId() != null && !saved.getAssigneeId().equals(userId)) {
+            createNotification(saved.getAssigneeId(), "ASSIGNED",
+                    "You were assigned to: " + saved.getTitle(), "/items/" + saved.getId());
+        }
+
+        attachTags(saved);
+        return saved;
     }
 
-    // PUT: Update an existing work item (like moving columns)
     @PutMapping("/{id}")
-    public WorkItem updateWorkItem(@PathVariable String id, @RequestBody WorkItem updatedItem) {
-        // Find the existing item in the database
-        return repository.findById(id).map(existingItem -> {
-            // Update its fields
-            existingItem.setTitle(updatedItem.getTitle());
-            existingItem.setStatus(updatedItem.getStatus());
-            existingItem.setType(updatedItem.getType());
-            // Save the changes
-            return repository.save(existingItem);
+    public WorkItem updateWorkItem(@PathVariable String id, @RequestBody WorkItem updatedItem,
+                                    @RequestHeader(value = "X-User-Id", required = false) String userId) {
+        return repository.findById(id).map(existing -> {
+            String oldAssignee = existing.getAssigneeId();
+
+            existing.setTitle(updatedItem.getTitle());
+            existing.setStatus(updatedItem.getStatus());
+            existing.setType(updatedItem.getType());
+            existing.setDescription(updatedItem.getDescription());
+            existing.setAssigneeId(updatedItem.getAssigneeId());
+            existing.setDueDate(updatedItem.getDueDate());
+
+            WorkItem saved = repository.save(existing);
+
+            if (updatedItem.getTags() != null) {
+                jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);
+                saveTags(id, updatedItem.getTags());
+            }
+
+            eventService.record(id, "WORK_ITEM_UPDATED", userId,
+                    "{\"status\":\"" + saved.getStatus() + "\"}");
+
+            // Notify new assignee
+            String newAssignee = saved.getAssigneeId();
+            if (newAssignee != null && !newAssignee.equals(oldAssignee) && !newAssignee.equals(userId)) {
+                createNotification(newAssignee, "ASSIGNED",
+                        "You were assigned to: " + saved.getTitle(), "/items/" + saved.getId());
+            }
+
+            attachTags(saved);
+            return saved;
         }).orElseThrow(() -> new RuntimeException("Work Item not found: " + id));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteWorkItem(@PathVariable String id,
+                                                @RequestHeader(value = "X-User-Id", required = false) String userId) {
+        return repository.findById(id).map(item -> {
+            jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);
+            jdbc.update("DELETE FROM comments WHERE work_item_id = ?", id);
+            repository.delete(item);
+            eventService.record(id, "WORK_ITEM_DELETED", userId, "{\"title\":\"" + item.getTitle() + "\"}");
+            return ResponseEntity.<Void>noContent().build();
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    private void attachTags(WorkItem item) {
+        List<String> tags = jdbc.queryForList(
+                "SELECT tag FROM tags WHERE work_item_id = ? ORDER BY id", String.class, item.getId());
+        item.setTags(tags);
+    }
+
+    private void saveTags(String workItemId, List<String> tags) {
+        for (String tag : tags) {
+            if (tag != null && !tag.isBlank()) {
+                jdbc.update("INSERT INTO tags (work_item_id, tag) VALUES (?, ?)", workItemId, tag.trim());
+            }
+        }
+    }
+
+    private void createNotification(String userId, String type, String message, String link) {
+        Notification n = new Notification();
+        n.setUserId(userId);
+        n.setType(type);
+        n.setMessage(message);
+        n.setLink(link);
+        n.setRead(false);
+        n.setCreatedAt(OffsetDateTime.now());
+        notificationRepository.save(n);
     }
 }

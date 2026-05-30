@@ -117,13 +117,13 @@ public class WorkItemController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteWorkItem(@PathVariable String id,
                                                 @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        return repository.findById(id).map(item -> {
-            jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);
-            jdbc.update("DELETE FROM comments WHERE work_item_id = ?", id);
-            repository.delete(item);
-            eventService.record(id, "WORK_ITEM_DELETED", userId, "{\"title\":\"" + item.getTitle() + "\"}");
-            return ResponseEntity.<Void>noContent().build();
-        }).orElse(ResponseEntity.notFound().build());
+        if (!repository.existsById(id)) return ResponseEntity.notFound().build();
+        WorkItem item = repository.findById(id).get();
+        jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);
+        jdbc.update("DELETE FROM comments WHERE work_item_id = ?", id);
+        repository.delete(item);
+        eventService.record(id, "WORK_ITEM_DELETED", userId, "{\"title\":\"" + item.getTitle() + "\"}");
+        return ResponseEntity.<Void>noContent().build();
     }
 
     private void attachTags(WorkItem item) {

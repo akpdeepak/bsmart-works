@@ -1,21 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Button } from '@/components/works/button';
+import { StatusBadge, statusToCategory } from '@/components/works/status-badge';
+import { Logo } from '@/components/works/logo';
 
 const API = 'http://localhost:8080/api/v1';
 
-function Logo({ size = 'md' }) {
-  const s = size === 'sm' ? { box: 'w-6 h-6', text: 'text-lg' } : { box: 'w-8 h-8', text: 'text-2xl' };
-  return (
-    <div className="flex items-center gap-2">
-      <div className={`${s.box} bg-[#0B2F5C] rounded-md flex items-end p-1 relative overflow-hidden`}>
-        <div className="w-1.5 h-2 bg-white absolute bottom-1 left-1"></div>
-        <div className="w-1.5 h-3 bg-white absolute bottom-1 left-3"></div>
-        <div className="w-2 h-2 bg-[#E94E1B] absolute top-0 right-0 transform rotate-45 translate-x-1 -translate-y-1"></div>
-      </div>
-      <span className={`font-light text-[#5A6B7E] ${s.text} leading-none tracking-tight`}>bSmart</span>
-      <span className={`font-bold text-[#0B2F5C] ${s.text} leading-none tracking-tight`}>Works</span>
-    </div>
-  );
-}
+// Logo is imported from @/components/works/logo
 
 function getInitials(name) {
   if (!name) return '??';
@@ -416,10 +406,9 @@ export default function App() {
             )}
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => { setView('board'); setIsCreateOpen(true); }}
-              className="bg-[#E94E1B] text-white px-4 py-1.5 rounded-md text-sm font-semibold hover:bg-[#d44315] transition-colors">
+            <Button variant="action" onClick={() => { setView('board'); setIsCreateOpen(true); }}>
               + Create
-            </button>
+            </Button>
           </div>
         </header>
 
@@ -446,7 +435,7 @@ export default function App() {
                         <p className="text-sm font-medium text-[#0F1A2A] truncate">{item.title}</p>
                         <p className="text-xs text-[#9AA8BC]">{item.id}</p>
                       </div>
-                      <StatusBadge status={item.status} />
+                      <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
                       {item.dueDate && <span className="text-xs text-[#B97A00]">Due {item.dueDate}</span>}
                     </div>
                   ))}
@@ -809,10 +798,7 @@ function NavItem({ active, onClick, icon, children }) {
   );
 }
 
-function StatusBadge({ status }) {
-  const colors = { 'Todo': 'bg-[#E5E9EF] text-[#5A6B7E]', 'In Progress': 'bg-blue-100 text-blue-700', 'Done': 'bg-green-100 text-green-700' };
-  return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colors[status] || 'bg-gray-100 text-gray-600'}`}>{status}</span>;
-}
+// StatusBadge is imported from @/components/works/status-badge
 
 function Modal({ title, onClose, children }) {
   return (

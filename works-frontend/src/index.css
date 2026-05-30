@@ -2,8 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, 'Segoe UI', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #F7F9FC;
+    color: #0F1A2A;
+  }
+  code, .font-mono { font-family: 'JetBrains Mono', monospace; }
+}
+
 @layer components {
   .input {
-    @apply w-full border border-[#E5E9EF] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#0B2F5C];
+    @apply w-full border border-neutral-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-brand-navy transition-colors;
   }
 }

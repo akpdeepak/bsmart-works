@@ -43,6 +43,38 @@ public class WorkItemController {
         return items;
     }
 
+    @GetMapping("/backlog")
+    public List<WorkItem> getBacklog(@RequestParam(required = false) String projectId) {
+        String sql = "SELECT * FROM work_items WHERE sprint_id IS NULL" +
+                (projectId != null ? " AND project_id = ?" : "") +
+                " ORDER BY backlog_order ASC, created_at ASC";
+        return projectId != null
+                ? jdbc.query(sql, this::mapRow, projectId)
+                : jdbc.query(sql, this::mapRow);
+    }
+
+    @PutMapping("/backlog/reorder")
+    public void reorderBacklog(@RequestBody java.util.List<java.util.Map<String, Object>> items) {
+        items.forEach(item -> jdbc.update(
+                "UPDATE work_items SET backlog_order = ? WHERE id = ?",
+                item.get("order"), item.get("id")));
+    }
+
+    private WorkItem mapRow(java.sql.ResultSet rs, int row) throws java.sql.SQLException {
+        WorkItem w = new WorkItem();
+        w.setId(rs.getString("id"));
+        w.setTitle(rs.getString("title"));
+        w.setStatus(rs.getString("status"));
+        w.setType(rs.getString("type"));
+        w.setAssigneeId(rs.getString("assignee_id"));
+        w.setSprintId(rs.getString("sprint_id"));
+        w.setStoryPoints(rs.getObject("story_points") != null ? rs.getInt("story_points") : 0);
+        w.setPriority(rs.getString("priority"));
+        w.setDueDate(rs.getDate("due_date") != null ? rs.getDate("due_date").toLocalDate() : null);
+        w.setProjectId(rs.getString("project_id"));
+        return w;
+    }
+
     @GetMapping("/my")
     public List<WorkItem> myWorkItems(@RequestParam String userId) {
         List<WorkItem> items = repository.findByAssigneeId(userId);
@@ -91,6 +123,9 @@ public class WorkItemController {
             existing.setDescription(updatedItem.getDescription());
             existing.setAssigneeId(updatedItem.getAssigneeId());
             existing.setDueDate(updatedItem.getDueDate());
+            existing.setSprintId(updatedItem.getSprintId());
+            existing.setStoryPoints(updatedItem.getStoryPoints());
+            existing.setPriority(updatedItem.getPriority());
 
             WorkItem saved = repository.save(existing);
 

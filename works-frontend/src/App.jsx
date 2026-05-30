@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/works/button';
-import { StatusBadge, statusToCategory } from '@/components/works/status-badge';
+import { StatusBadge } from '@/components/works/status-badge';
 import { Logo } from '@/components/works/logo';
 
 const API = 'http://localhost:8080/api/v1';
@@ -62,7 +62,7 @@ export default function App() {
   const [forgotEmail, setForgotEmail]   = useState('');
   const [forgotMsg, setForgotMsg]       = useState('');
 
-  const [view, setView]                 = useState('board');
+  const [view, setView]                 = useState('board'); // board | myworks | projects | workspace | notifications | backlog | sprint | reports
   const [workItems, setWorkItems]       = useState([]);
   const [projects, setProjects]         = useState([]);
   const [users, setUsers]               = useState([]);
@@ -91,6 +91,19 @@ export default function App() {
 
   // Kanban density: compact | comfortable | spacious
   const [density, setDensity]           = useState('comfortable');
+
+  // Iteration 2 state
+  const [sprints, setSprints]           = useState([]);
+  const [activeSprint, setActiveSprint] = useState(null);
+  const [backlogItems, setBacklogItems] = useState([]);
+  const [sprintItems, setSprintItems]   = useState([]);
+  const [sprintReport, setSprintReport] = useState(null);
+  const [savedFilters, setSavedFilters] = useState([]);
+  const [activeFilter, setActiveFilter] = useState(null); // {type, assigneeId, label}
+  const [swimlaneBy, setSwimlaneBy]     = useState('none'); // none | assignee | type | priority
+  const [isSprintOpen, setIsSprintOpen] = useState(false);
+  const [newSprint, setNewSprint]       = useState({ name: '', goal: '', startDate: '', endDate: '', capacity: 40 });
+  const [selectedSprintId, setSelectedSprintId] = useState(null);
 
   // Workspace switcher dropdown
   const [wsOpen, setWsOpen]             = useState(false);
@@ -158,6 +171,36 @@ export default function App() {
   function fetchNotifications() {
     fetch(`${API}/notifications?userId=${currentUser.id}`)
       .then(r => r.json()).then(d => setNotifications(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function fetchSprints(projectId = 'PROJ-001') {
+    fetch(`${API}/sprints?projectId=${projectId}`)
+      .then(r => r.json()).then(d => {
+        const list = Array.isArray(d) ? d : [];
+        setSprints(list);
+        const active = list.find(s => s.status === 'ACTIVE') || list[0];
+        if (active) { setActiveSprint(active); fetchSprintItems(active.id); }
+      }).catch(() => {});
+  }
+
+  function fetchSprintItems(sprintId) {
+    fetch(`${API}/sprints/${sprintId}/items`)
+      .then(r => r.json()).then(d => setSprintItems(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function fetchBacklog() {
+    fetch(`${API}/work-items/backlog`)
+      .then(r => r.json()).then(d => setBacklogItems(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function fetchSprintReport(sprintId) {
+    fetch(`${API}/sprints/${sprintId}/report`)
+      .then(r => r.json()).then(setSprintReport).catch(() => {});
+  }
+
+  function fetchSavedFilters() {
+    fetch(`${API}/saved-filters`, { headers: headers() })
+      .then(r => r.json()).then(d => setSavedFilters(Array.isArray(d) ? d : [])).catch(() => {});
   }
 
   // AUTH
@@ -279,6 +322,57 @@ export default function App() {
   const handleRemoveMember = (userId) => {
     fetch(`${API}/workspaces/WS-001/members/${userId}`, { method: 'DELETE', headers: headers() })
       .then(() => fetchMembers());
+  };
+
+  // SPRINT HANDLERS
+  const handleCreateSprint = () => {
+    fetch(`${API}/sprints`, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ ...newSprint, projectId: 'PROJ-001' })
+    }).then(r => r.json()).then(s => {
+      setSprints(prev => [s, ...prev]);
+      setNewSprint({ name: '', goal: '', startDate: '', endDate: '', capacity: 40 });
+      setIsSprintOpen(false);
+      if (!activeSprint) { setActiveSprint(s); }
+    });
+  };
+
+  const handleSprintStatusChange = (sprintId, newStatus) => {
+    const sprint = sprints.find(s => s.id === sprintId);
+    if (!sprint) return;
+    fetch(`${API}/sprints/${sprintId}`, {
+      method: 'PUT', headers: headers(),
+      body: JSON.stringify({ ...sprint, status: newStatus })
+    }).then(r => r.json()).then(updated => {
+      setSprints(prev => prev.map(s => s.id === updated.id ? updated : s));
+      if (activeSprint?.id === updated.id) setActiveSprint(updated);
+    });
+  };
+
+  const handleMoveToSprint = (itemId, sprintId) => {
+    fetch(`${API}/sprints/${sprintId}/items/${itemId}`, { method: 'POST', headers: headers() })
+      .then(() => { fetchBacklog(); if (activeSprint) fetchSprintItems(activeSprint.id); });
+  };
+
+  const handleMoveToBacklog = (itemId, sprintId) => {
+    fetch(`${API}/sprints/${sprintId}/items/${itemId}`, { method: 'DELETE', headers: headers() })
+      .then(() => { fetchBacklog(); fetchSprintItems(sprintId); });
+  };
+
+  const handleSaveFilter = (name, filterObj) => {
+    fetch(`${API}/saved-filters`, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ name, filterJson: JSON.stringify(filterObj), isShared: false })
+    }).then(r => r.json()).then(f => setSavedFilters(prev => [...prev, f]));
+  };
+
+  // Filter logic for board/sprint
+  const applyFilter = (items) => {
+    if (!activeFilter) return items;
+    if (activeFilter.type === 'mine') return items.filter(i => i.assigneeId === currentUser.id);
+    if (activeFilter.type === 'priority') return items.filter(i => i.priority === activeFilter.value);
+    if (activeFilter.type === 'itemType') return items.filter(i => i.type === activeFilter.value);
+    return items;
   };
 
   const columns = [
@@ -413,6 +507,12 @@ export default function App() {
 
           <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">Projects</p>
           <NavItem active={view === 'board'} onClick={() => setView('board')} icon="📋">Board</NavItem>
+          <NavItem active={view === 'backlog'} onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); fetchSavedFilters(); }} icon="📝">Backlog</NavItem>
+          <NavItem active={view === 'sprint'} onClick={() => { setView('sprint'); fetchSprints(); fetchSavedFilters(); }} icon="⚡">
+            Active Sprint
+            {sprints.find(s => s.status === 'ACTIVE') && <span className="ml-auto w-2 h-2 rounded-full bg-brand-teal flex-shrink-0"></span>}
+          </NavItem>
+          <NavItem active={view === 'reports'} onClick={() => { setView('reports'); fetchSprints(); }} icon="📊">Reports</NavItem>
           <NavItem active={view === 'projects'} onClick={() => setView('projects')} icon="📁">
             Projects
             {projects.length > 0 && <span className="ml-auto text-[10px] bg-neutral-100 text-neutral-600 rounded-full px-1.5 py-0.5">{projects.length}</span>}
@@ -687,6 +787,271 @@ export default function App() {
             </div>
           )}
 
+          {/* BACKLOG VIEW */}
+          {view === 'backlog' && (
+            <div className="p-6 max-w-5xl">
+              <div className="flex justify-between items-center mb-5">
+                <div>
+                  <h1 className="text-xl font-bold text-brand-navy">Backlog</h1>
+                  <p className="text-xs text-neutral-400 mt-0.5">{backlogItems.length} items not in any sprint</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => setIsSprintOpen(true)}>+ New Sprint</Button>
+                  <Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>+ Add Item</Button>
+                </div>
+              </div>
+
+              {/* Sprints */}
+              {sprints.map(sprint => (
+                <div key={sprint.id} className="bg-white border border-neutral-200 rounded-xl mb-4 overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 bg-neutral-50">
+                    <div className="flex items-center gap-3">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        sprint.status === 'ACTIVE' ? 'bg-brand-teal/10 text-brand-teal' :
+                        sprint.status === 'COMPLETED' ? 'bg-neutral-200 text-neutral-500' :
+                        'bg-brand-navy-tint/10 text-brand-navy-tint'}`}>{sprint.status}</span>
+                      <h3 className="font-semibold text-neutral-900">{sprint.name}</h3>
+                      {sprint.goal && <span className="text-xs text-neutral-400 italic">"{sprint.goal}"</span>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {sprint.startDate && <span className="text-xs text-neutral-400">{sprint.startDate} → {sprint.endDate}</span>}
+                      {sprint.status === 'PLANNING' && (
+                        <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'ACTIVE')}>Start Sprint</Button>
+                      )}
+                      {sprint.status === 'ACTIVE' && (
+                        <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'COMPLETED')}>Complete Sprint</Button>
+                      )}
+                    </div>
+                  </div>
+                  <SprintItemList
+                    sprintId={sprint.id}
+                    users={users}
+                    onMoveToBacklog={(id) => handleMoveToBacklog(id, sprint.id)}
+                    onSelect={setSelectedItem}
+                  />
+                </div>
+              ))}
+
+              {/* Backlog items */}
+              <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 bg-neutral-50">
+                  <h3 className="font-semibold text-neutral-900">Backlog</h3>
+                  <span className="text-xs text-neutral-400">{backlogItems.length} items</span>
+                </div>
+                {backlogItems.length === 0
+                  ? <EmptyState icon="📝" title="Backlog is empty"
+                      subtitle="Create work items and they'll appear here, ready to be added to a sprint."
+                      action={<Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>Add to backlog</Button>} />
+                  : backlogItems.map(item => (
+                    <div key={item.id} className="flex items-center gap-3 px-5 py-3 border-b border-neutral-50 last:border-0 hover:bg-neutral-50 group">
+                      <TypeBadge type={item.type} compact />
+                      <span className="font-mono text-[10px] text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
+                      <span className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy"
+                        onClick={() => setSelectedItem(item)}>{item.title}</span>
+                      <PriorityBadge priority={item.priority} />
+                      {item.storyPoints > 0 && <span className="text-xs bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
+                      {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}
+                      {sprints.filter(s => s.status !== 'COMPLETED').length > 0 && (
+                        <select className="opacity-0 group-hover:opacity-100 text-xs border border-neutral-200 rounded px-1 py-0.5 text-neutral-600 transition-opacity"
+                          onChange={e => e.target.value && handleMoveToSprint(item.id, e.target.value)}
+                          defaultValue="">
+                          <option value="" disabled>Move to sprint</option>
+                          {sprints.filter(s => s.status !== 'COMPLETED').map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+          )}
+
+          {/* ACTIVE SPRINT VIEW */}
+          {view === 'sprint' && (
+            <div className="p-6 h-full flex flex-col">
+              {/* Sprint header */}
+              {activeSprint ? (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <div className="flex items-center gap-3 mb-1">
+                        <h1 className="text-xl font-bold text-brand-navy">{activeSprint.name}</h1>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          activeSprint.status === 'ACTIVE' ? 'bg-brand-teal/10 text-brand-teal' : 'bg-neutral-200 text-neutral-500'}`}>
+                          {activeSprint.status}
+                        </span>
+                      </div>
+                      {activeSprint.goal && <p className="text-sm text-neutral-400 italic">Goal: "{activeSprint.goal}"</p>}
+                      {activeSprint.startDate && (
+                        <p className="text-xs text-neutral-400 mt-0.5">{activeSprint.startDate} → {activeSprint.endDate}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {/* Sprint picker */}
+                      <select value={activeSprint.id}
+                        onChange={e => { const s = sprints.find(x => x.id === e.target.value); if (s) { setActiveSprint(s); fetchSprintItems(s.id); } }}
+                        className="text-sm border border-neutral-200 rounded-md px-2 py-1.5 focus:outline-none">
+                        {sprints.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                      {/* Quick filters */}
+                      <div className="flex gap-1">
+                        {[
+                          { label: 'All', filter: null },
+                          { label: 'Mine', filter: { type: 'mine' } },
+                          { label: 'High Priority', filter: { type: 'priority', value: 'HIGH' } },
+                          { label: 'Bugs', filter: { type: 'itemType', value: 'Bug' } },
+                        ].map(f => (
+                          <button key={f.label} onClick={() => setActiveFilter(f.filter)}
+                            className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${
+                              JSON.stringify(activeFilter) === JSON.stringify(f.filter)
+                                ? 'bg-brand-navy text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}>
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
+                      {/* Swimlane */}
+                      <select value={swimlaneBy} onChange={e => setSwimlaneBy(e.target.value)}
+                        className="text-xs border border-neutral-200 rounded-md px-2 py-1.5 focus:outline-none text-neutral-600">
+                        <option value="none">No swimlane</option>
+                        <option value="assignee">By Assignee</option>
+                        <option value="type">By Type</option>
+                        <option value="priority">By Priority</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Capacity bar */}
+                  {activeSprint.capacity > 0 && (
+                    <div className="mb-4 bg-white border border-neutral-200 rounded-lg px-4 py-3 flex items-center gap-4">
+                      <span className="text-xs text-neutral-400 font-medium w-24">Capacity</span>
+                      <div className="flex-1 h-2 bg-neutral-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-brand-navy-tint rounded-full transition-all"
+                          style={{ width: `${Math.min(100, (sprintItems.reduce((a, i) => a + (i.storyPoints || 0), 0) / activeSprint.capacity) * 100)}%` }}></div>
+                      </div>
+                      <span className="text-xs text-neutral-600 font-medium w-28 text-right">
+                        {sprintItems.reduce((a, i) => a + (i.storyPoints || 0), 0)} / {activeSprint.capacity} pts
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Sprint kanban board with swimlanes */}
+                  <SprintBoard
+                    items={applyFilter(sprintItems)}
+                    columns={columns}
+                    users={users}
+                    swimlaneBy={swimlaneBy}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={(e, status) => {
+                      e.preventDefault();
+                      const itemId = e.dataTransfer.getData('itemId');
+                      const item = sprintItems.find(i => i.id === itemId);
+                      if (!item || item.status === status) return;
+                      setSprintItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
+                      fetch(`${API}/work-items/${itemId}`, {
+                        method: 'PUT', headers: headers(),
+                        body: JSON.stringify({ ...item, status })
+                      }).catch(() => {});
+                    }}
+                    onSelect={setSelectedItem}
+                    onDelete={handleDelete}
+                    density={density}
+                  />
+                </>
+              ) : (
+                <EmptyState icon="⚡" title="No sprints yet"
+                  subtitle="Create your first sprint in the Backlog view to start planning."
+                  action={<Button variant="action" onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); }}>Go to Backlog</Button>} />
+              )}
+            </div>
+          )}
+
+          {/* REPORTS VIEW */}
+          {view === 'reports' && (
+            <div className="p-8 max-w-4xl">
+              <h1 className="text-2xl font-bold text-brand-navy mb-1">Sprint Reports</h1>
+              <p className="text-sm text-neutral-400 mb-6">Velocity, delivery, and scope tracking</p>
+
+              {sprints.length === 0
+                ? <EmptyState icon="📊" title="No sprints to report on"
+                    subtitle="Complete a sprint to see reports here." />
+                : (
+                  <>
+                    {/* Sprint selector */}
+                    <div className="flex gap-2 mb-6 flex-wrap">
+                      {sprints.map(s => (
+                        <button key={s.id} onClick={() => { setSelectedSprintId(s.id); fetchSprintReport(s.id); }}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                            selectedSprintId === s.id ? 'bg-brand-navy text-white' : 'bg-white border border-neutral-200 text-neutral-600 hover:border-brand-navy'}`}>
+                          {s.name}
+                        </button>
+                      ))}
+                    </div>
+
+                    {sprintReport ? (
+                      <div className="space-y-4">
+                        {/* Summary cards */}
+                        <div className="grid grid-cols-4 gap-4">
+                          {[
+                            { label: 'Total Items', value: sprintReport.totalItems, color: 'text-neutral-900' },
+                            { label: 'Completed', value: sprintReport.doneItems, color: 'text-brand-teal' },
+                            { label: 'Completion', value: `${sprintReport.completionRate}%`, color: 'text-brand-navy' },
+                            { label: 'Velocity', value: `${sprintReport.donePoints}/${sprintReport.totalPoints} pts`, color: 'text-brand-orange' },
+                          ].map(card => (
+                            <div key={card.label} className="bg-white border border-neutral-200 rounded-xl p-5">
+                              <p className="text-xs text-neutral-400 mb-1">{card.label}</p>
+                              <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                          <h3 className="font-semibold text-neutral-900 mb-3">Commitment vs Delivery</h3>
+                          <div className="flex gap-2 mb-2 text-xs text-neutral-400">
+                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-brand-teal"></span>Done ({sprintReport.doneItems})</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-brand-navy-tint"></span>In Progress ({sprintReport.inProgressItems})</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-neutral-200"></span>Todo ({sprintReport.todoItems})</span>
+                          </div>
+                          <div className="h-6 bg-neutral-100 rounded-full overflow-hidden flex">
+                            {sprintReport.totalItems > 0 && <>
+                              <div className="h-full bg-brand-teal transition-all" style={{ width: `${(sprintReport.doneItems / sprintReport.totalItems) * 100}%` }}></div>
+                              <div className="h-full bg-brand-navy-tint transition-all" style={{ width: `${(sprintReport.inProgressItems / sprintReport.totalItems) * 100}%` }}></div>
+                            </>}
+                          </div>
+                        </div>
+
+                        {/* Item outcomes table */}
+                        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+                          <div className="px-5 py-3 border-b border-neutral-100">
+                            <h3 className="font-semibold text-neutral-900">Item Outcomes</h3>
+                          </div>
+                          <div className="divide-y divide-neutral-50">
+                            {(sprintReport.items || []).map(item => (
+                              <div key={item.id} className="flex items-center gap-3 px-5 py-3">
+                                <TypeBadge type={item.type} compact />
+                                <span className="font-mono text-[10px] text-neutral-400 w-20">{item.id}</span>
+                                <span className="flex-1 text-sm text-neutral-900">{item.title}</span>
+                                {item.story_points > 0 && <span className="text-xs text-neutral-400">{item.story_points}pt</span>}
+                                <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 text-neutral-400">
+                        <p className="text-sm">Select a sprint above to view its report.</p>
+                      </div>
+                    )}
+                  </>
+                )
+              }
+            </div>
+          )}
+
           {/* WORKSPACE SETTINGS */}
           {view === 'workspace' && (
             <div className="p-8 max-w-3xl">
@@ -879,6 +1244,38 @@ export default function App() {
         </Modal>
       )}
 
+      {/* CREATE SPRINT MODAL */}
+      {isSprintOpen && (
+        <Modal title="New Sprint" onClose={() => setIsSprintOpen(false)}>
+          <div className="space-y-3">
+            <Field label="Sprint Name *">
+              <input type="text" value={newSprint.name} onChange={e => setNewSprint({ ...newSprint, name: e.target.value })}
+                className="input" placeholder="e.g. Sprint 1" autoFocus />
+            </Field>
+            <Field label="Sprint Goal">
+              <input type="text" value={newSprint.goal} onChange={e => setNewSprint({ ...newSprint, goal: e.target.value })}
+                className="input" placeholder="e.g. Stabilize portal, ship SAML" />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Start Date">
+                <input type="date" value={newSprint.startDate} onChange={e => setNewSprint({ ...newSprint, startDate: e.target.value })} className="input" />
+              </Field>
+              <Field label="End Date">
+                <input type="date" value={newSprint.endDate} onChange={e => setNewSprint({ ...newSprint, endDate: e.target.value })} className="input" />
+              </Field>
+            </div>
+            <Field label="Capacity (story points)">
+              <input type="number" value={newSprint.capacity} onChange={e => setNewSprint({ ...newSprint, capacity: parseInt(e.target.value) || 0 })}
+                className="input" min={0} />
+            </Field>
+          </div>
+          <div className="flex justify-end gap-3 mt-5">
+            <Button variant="ghost" onClick={() => setIsSprintOpen(false)}>Cancel</Button>
+            <Button variant="action" onClick={handleCreateSprint}>Create Sprint</Button>
+          </div>
+        </Modal>
+      )}
+
       {/* CREATE PROJECT MODAL */}
       {isProjectOpen && (
         <Modal title="New Project" onClose={() => { setIsProjectOpen(false); setCreateError(''); }}>
@@ -940,4 +1337,145 @@ function Field({ label, children }) {
       {children}
     </div>
   );
+}
+
+const PRIORITY_CONFIG = {
+  CRITICAL: { color: 'text-semantic-danger', bg: 'bg-semantic-danger-surface', label: 'Critical' },
+  HIGH:     { color: 'text-semantic-warning', bg: 'bg-semantic-warning-surface', label: 'High' },
+  MEDIUM:   { color: 'text-neutral-600', bg: 'bg-neutral-100', label: 'Medium' },
+  LOW:      { color: 'text-neutral-400', bg: 'bg-neutral-50', label: 'Low' },
+};
+
+function PriorityBadge({ priority }) {
+  const p = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.MEDIUM;
+  return <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${p.bg} ${p.color}`}>{p.label}</span>;
+}
+
+// Sprint item list used in backlog view
+function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
+  const [items, setItems] = React.useState([]);
+  React.useEffect(() => {
+    fetch(`http://localhost:8080/api/v1/sprints/${sprintId}/items`)
+      .then(r => r.json()).then(d => setItems(Array.isArray(d) ? d : [])).catch(() => {});
+  }, [sprintId]);
+
+  if (items.length === 0) return (
+    <div className="px-5 py-4 text-sm text-neutral-400 text-center">No items in this sprint yet.</div>
+  );
+
+  return (
+    <div className="divide-y divide-neutral-50">
+      {items.map(item => (
+        <div key={item.id} className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 group">
+          <TypeBadge type={item.type} compact />
+          <span className="font-mono text-[10px] text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
+          <span className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy"
+            onClick={() => onSelect(item)}>{item.title}</span>
+          <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
+          {item.storyPoints > 0 && <span className="text-xs bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
+          {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}
+          <button onClick={() => { onMoveToBacklog(item.id); setItems(prev => prev.filter(i => i.id !== item.id)); }}
+            className="opacity-0 group-hover:opacity-100 text-xs text-neutral-400 hover:text-brand-navy transition-opacity">↓ Backlog</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Sprint board with optional swimlanes
+function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOver, onDrop, onSelect, onDelete, density }) {
+  const densityPad = { compact: 'p-2', comfortable: 'p-3', spacious: 'p-4' };
+
+  const getSwimlanes = () => {
+    if (swimlaneBy === 'none') return [{ key: 'all', label: null, items }];
+    if (swimlaneBy === 'assignee') {
+      const assignees = [...new Set(items.map(i => i.assigneeId || 'unassigned'))];
+      return assignees.map(a => ({
+        key: a, label: a === 'unassigned' ? 'Unassigned' : users.find(u => u.id === a)?.fullName || a,
+        items: items.filter(i => (i.assigneeId || 'unassigned') === a)
+      }));
+    }
+    if (swimlaneBy === 'type') {
+      const types = [...new Set(items.map(i => i.type))];
+      return types.map(t => ({ key: t, label: t, items: items.filter(i => i.type === t) }));
+    }
+    if (swimlaneBy === 'priority') {
+      return ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(p => ({
+        key: p, label: p, items: items.filter(i => (i.priority || 'MEDIUM') === p)
+      })).filter(s => s.items.length > 0);
+    }
+    return [{ key: 'all', label: null, items }];
+  };
+
+  const swimlanes = getSwimlanes();
+
+  return (
+    <div className="flex-1 overflow-auto">
+      {swimlanes.map(lane => (
+        <div key={lane.key}>
+          {lane.label && (
+            <div className="flex items-center gap-2 mb-2 mt-4 px-1">
+              <div className="h-px flex-1 bg-neutral-200"></div>
+              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider px-2">{lane.label}</span>
+              <div className="h-px flex-1 bg-neutral-200"></div>
+            </div>
+          )}
+          <div className="flex gap-4 min-h-48">
+            {columns.map(col => {
+              const colItems = lane.items.filter(i => i.status === col.name);
+              return (
+                <div key={col.name}
+                  className="flex-1 min-w-48 flex flex-col bg-neutral-100 rounded-xl p-3"
+                  onDragOver={onDragOver}
+                  onDrop={(e) => onDrop(e, col.name)}>
+                  {!lane.label && (
+                    <div className="flex items-center justify-between mb-3 px-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${col.dot}`}></span>
+                        <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{col.name}</h3>
+                      </div>
+                      <span className="text-xs bg-white text-neutral-500 px-2 py-0.5 rounded-full shadow-sm">{colItems.length}</span>
+                    </div>
+                  )}
+                  <div className="space-y-2 flex-1">
+                    {colItems.length === 0 && (
+                      <div className="flex items-center justify-center py-6 border-2 border-dashed border-neutral-200 rounded-lg">
+                        <p className="text-xs text-neutral-300">Drop here</p>
+                      </div>
+                    )}
+                    {colItems.map(item => (
+                      <div key={item.id} draggable onDragStart={(e) => onDragStart(e, item.id)}
+                        className={`bg-white rounded-lg shadow-sm border border-neutral-200 cursor-grab hover:shadow-md transition-shadow group ${densityPad[density]}`}>
+                        <div className="flex items-start justify-between mb-1.5">
+                          <span className="font-mono text-[10px] text-neutral-400">{item.id}</span>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => onSelect(item)} className="text-neutral-400 hover:text-brand-navy text-xs p-0.5">✏</button>
+                            <button onClick={() => onDelete(item.id)} className="text-neutral-400 hover:text-semantic-danger text-xs p-0.5">✕</button>
+                          </div>
+                        </div>
+                        <p className="text-sm font-medium text-neutral-900 leading-snug mb-2 cursor-pointer"
+                          onClick={() => onSelect(item)}>{item.title}</p>
+                        <div className="flex items-center justify-between">
+                          <TypeBadge type={item.type} compact={density === 'compact'} />
+                          <div className="flex items-center gap-1.5">
+                            {item.storyPoints > 0 && <span className="text-[10px] text-neutral-400 font-medium">{item.storyPoints}pt</span>}
+                            {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={5} />}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function statusToCategory(status) {
+  const map = { 'Todo': 'todo', 'In Progress': 'in_progress', 'Done': 'done', 'Blocked': 'blocked' };
+  return map[status] || 'todo';
 }

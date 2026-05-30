@@ -21,6 +21,11 @@ public class WorkItem {
     private String createdBy;
     private OffsetDateTime createdAt;
 
+    private String sprintId;
+    private Integer backlogOrder;
+    private Integer storyPoints;
+    private String priority;
+
     @Transient
     private List<String> tags;
 
@@ -46,4 +51,12 @@ public class WorkItem {
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
     public List<String> getTags() { return tags; }
     public void setTags(List<String> tags) { this.tags = tags; }
+    public String getSprintId() { return sprintId; }
+    public void setSprintId(String sprintId) { this.sprintId = sprintId; }
+    public Integer getBacklogOrder() { return backlogOrder; }
+    public void setBacklogOrder(Integer backlogOrder) { this.backlogOrder = backlogOrder; }
+    public Integer getStoryPoints() { return storyPoints; }
+    public void setStoryPoints(Integer storyPoints) { this.storyPoints = storyPoints; }
+    public String getPriority() { return priority; }
+    public void setPriority(String priority) { this.priority = priority; }
 }

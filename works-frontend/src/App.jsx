@@ -62,7 +62,7 @@ export default function App() {
   const [forgotEmail, setForgotEmail]   = useState('');
   const [forgotMsg, setForgotMsg]       = useState('');
 
-  const [view, setView]                 = useState('board');
+  const [view, setView]                 = useState('dashboard');
   const [toast, setToast]               = useState(null); // { message, type }
   const [workItems, setWorkItems]       = useState([]);
   const [projects, setProjects]         = useState([]);
@@ -106,6 +106,10 @@ export default function App() {
 
   // Dark mode
   const [darkMode, setDarkMode]         = useState(() => localStorage.getItem('bSmartTheme') === 'dark');
+
+  // RBAC
+  const [userRole, setUserRole]         = useState({ role: 'MEMBER', tier: 2, permissions: [] });
+  const can = (perm) => userRole.permissions.includes(perm) || userRole.tier >= 4;
 
   // My Works sub-tab
   const [myWorksTab, setMyWorksTab]     = useState('assigned'); // assigned | activity | mentions
@@ -197,6 +201,15 @@ export default function App() {
     setTimeout(() => setToast(null), 4000);
   };
 
+  function fetchUserRole() {
+    fetch(`${API}/rbac/me`, { headers: headers() })
+      .then(r => r.json()).then(d => setUserRole({
+        role: d.role || 'MEMBER',
+        tier: d.tier || 2,
+        permissions: Array.isArray(d.permissions) ? d.permissions : []
+      })).catch(() => {});
+  }
+
   function fetchAll() {
     setLoading(true);
     Promise.all([
@@ -213,6 +226,7 @@ export default function App() {
       showToast('Failed to load data. Check your connection.', 'error');
     });
     fetchUnreadCount();
+    fetchUserRole();
   }
 
   function fetchUnreadCount() {
@@ -649,6 +663,7 @@ export default function App() {
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5 text-sm overflow-y-auto">
+          <NavItem active={view === 'dashboard'} onClick={() => setView('dashboard')} icon="🏠">Home</NavItem>
           <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">My Work</p>
           <NavItem active={view === 'myworks'} onClick={() => { setView('myworks'); fetchNotifications(); }} icon="👤">
             My Works
@@ -681,7 +696,9 @@ export default function App() {
             <Avatar name={currentUser.fullName} size={7} />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-neutral-900 truncate">{currentUser.fullName}</p>
-              <p className="text-[10px] text-neutral-400 truncate">{currentUser.email}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <RoleBadge role={userRole.role} tier={userRole.tier} small />
+              </div>
             </div>
             <button onClick={handleLogout} title="Sign out" className="text-neutral-400 hover:text-brand-orange text-sm">↩</button>
           </div>
@@ -724,14 +741,122 @@ export default function App() {
               className="w-8 h-8 rounded-md flex items-center justify-center text-neutral-400 hover:bg-neutral-100 transition-colors text-base">
               {darkMode ? '☀️' : '🌙'}
             </button>
-            <Button variant="action" onClick={() => { setView('board'); setIsCreateOpen(true); }}>
-              + Create
-            </Button>
+            {can('create_items') && (
+              <Button variant="action" onClick={() => { setView('board'); setIsCreateOpen(true); }}>
+                + Create
+              </Button>
+            )}
           </div>
         </header>
 
         {/* CONTENT */}
         <div className="flex-1 overflow-auto">
+
+          {/* DASHBOARD HOME */}
+          {view === 'dashboard' && (
+            <div className="p-6 max-w-6xl">
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold text-brand-navy">Good {getTimeOfDay()}, {currentUser.fullName.split(' ')[0]} 👋</h1>
+                <p className="text-sm text-neutral-400 mt-0.5">Here's what needs your attention today</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {/* My open items */}
+                <StatCard label="Assigned to me" value={myItems.filter(i => i.status !== 'Done').length} sub={`${myItems.length} total`} color="text-brand-navy" icon="👤" onClick={() => setView('myworks')} />
+                {/* Active sprint */}
+                <StatCard label="Active sprint items" value={sprints.find(s=>s.status==='ACTIVE') ? sprintItems.filter(i=>i.status!=='Done').length : '—'} sub={sprints.find(s=>s.status==='ACTIVE')?.name || 'No active sprint'} color="text-brand-teal" icon="⚡" onClick={() => { fetchSprints(); setView('sprint'); }} />
+                {/* Unread notifications */}
+                <StatCard label="Unread notifications" value={unreadCount} sub="Click to view all" color="text-brand-orange" icon="🔔" onClick={() => { fetchNotifications(); setView('notifications'); }} />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {/* Due soon */}
+                <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                  <h3 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2">
+                    <span>📅</span> Due Soon
+                  </h3>
+                  {workItems.filter(i => i.dueDate && i.status !== 'Done').sort((a,b) => new Date(a.dueDate)-new Date(b.dueDate)).slice(0,5).map(item => (
+                    <div key={item.id} onClick={() => setSelectedItem(item)} className="flex items-center gap-3 py-2 border-b border-neutral-50 last:border-0 cursor-pointer hover:bg-neutral-50 -mx-2 px-2 rounded">
+                      <TypeBadge type={item.type} compact />
+                      <span className="flex-1 text-sm text-neutral-900 truncate">{item.title}</span>
+                      <span className={`text-xs font-medium ${new Date(item.dueDate) < new Date() ? 'text-semantic-danger' : 'text-semantic-warning'}`}>{item.dueDate}</span>
+                    </div>
+                  ))}
+                  {workItems.filter(i => i.dueDate && i.status !== 'Done').length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No upcoming due dates 🎉</p>}
+                </div>
+
+                {/* Critical + High priority open items */}
+                <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                  <h3 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2">
+                    <span>🔥</span> High Priority Open
+                  </h3>
+                  {workItems.filter(i => (i.priority==='CRITICAL'||i.priority==='HIGH') && i.status!=='Done').slice(0,5).map(item => (
+                    <div key={item.id} onClick={() => setSelectedItem(item)} className="flex items-center gap-3 py-2 border-b border-neutral-50 last:border-0 cursor-pointer hover:bg-neutral-50 -mx-2 px-2 rounded">
+                      <PriorityBadge priority={item.priority} />
+                      <span className="flex-1 text-sm text-neutral-900 truncate">{item.title}</span>
+                      <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
+                    </div>
+                  ))}
+                  {workItems.filter(i => (i.priority==='CRITICAL'||i.priority==='HIGH') && i.status!=='Done').length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No critical/high items 🎉</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Project health */}
+                <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                  <h3 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2"><span>📁</span> Project Health</h3>
+                  {projects.filter(p => !p.archived).map(p => {
+                    const items = workItems.filter(i => i.projectId === p.id);
+                    const done = items.filter(i => i.status==='Done').length;
+                    const pct = items.length > 0 ? Math.round((done/items.length)*100) : 0;
+                    return (
+                      <div key={p.id} className="mb-3 last:mb-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-neutral-900">{p.name}</span>
+                          <span className="text-xs text-neutral-400">{done}/{items.length} done · {pct}%</span>
+                        </div>
+                        <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-brand-teal rounded-full" style={{width:`${pct}%`}}></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {projects.length===0 && <p className="text-sm text-neutral-400 text-center py-4">No projects yet</p>}
+                </div>
+
+                {/* Your role card */}
+                <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                  <h3 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2"><span>🔐</span> Your Access</h3>
+                  <div className="flex items-center gap-3 mb-4">
+                    <Avatar name={currentUser.fullName} size={8} />
+                    <div>
+                      <p className="font-semibold text-neutral-900">{currentUser.fullName}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <RoleBadge role={userRole.role} tier={userRole.tier} />
+                        <span className="text-xs text-neutral-400">Tier {userRole.tier}/5</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    {[
+                      { perm: 'create_items',    label: 'Create work items' },
+                      { perm: 'manage_sprints',  label: 'Manage sprints' },
+                      { perm: 'manage_projects', label: 'Manage projects' },
+                      { perm: 'invite_members',  label: 'Invite members' },
+                      { perm: 'manage_roles',    label: 'Manage roles' },
+                    ].map(p => (
+                      <div key={p.perm} className="flex items-center justify-between py-1 border-b border-neutral-50 last:border-0">
+                        <span className="text-sm text-neutral-700">{p.label}</span>
+                        <span className={`text-xs font-semibold ${userRole.permissions.includes(p.perm) ? 'text-semantic-success' : 'text-neutral-300'}`}>
+                          {userRole.permissions.includes(p.perm) ? '✓' : '✕'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* MY WORKS */}
           {view === 'myworks' && (
@@ -1329,6 +1454,54 @@ export default function App() {
                   </label>
                 ))}
               </div>
+
+              {/* Role Management — ADMIN+ only */}
+              {can('manage_roles') && (
+                <div className="bg-white rounded-xl border border-neutral-200 p-6">
+                  <h2 className="font-semibold text-neutral-900 mb-1">Role Management</h2>
+                  <p className="text-sm text-neutral-400 mb-4">Control what each member can do</p>
+                  <div className="mb-4 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+                    <p className="text-xs font-semibold text-neutral-600 mb-2">Tier Hierarchy</p>
+                    {[
+                      { role: 'VIEWER', tier: 1, desc: 'View only — no create/edit' },
+                      { role: 'MEMBER', tier: 2, desc: 'Create & edit own items' },
+                      { role: 'LEAD',   tier: 3, desc: 'Edit any item, manage sprints' },
+                      { role: 'ADMIN',  tier: 4, desc: 'Full workspace management' },
+                      { role: 'OWNER',  tier: 5, desc: 'Ownership + billing control' },
+                    ].map(r => (
+                      <div key={r.role} className="flex items-center gap-2 py-1">
+                        <RoleBadge role={r.role} tier={r.tier} />
+                        <span className="text-xs text-neutral-500">{r.desc}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-1">
+                    {workspaceMembers.map(m => (
+                      <div key={m.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 last:border-0">
+                        <Avatar name={m.fullName} size={7} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-neutral-900 truncate">{m.fullName}</p>
+                          <p className="text-xs text-neutral-400 truncate">{m.email}</p>
+                        </div>
+                        {m.id === currentUser.id
+                          ? <RoleBadge role={m.role || userRole.role} tier={userRole.tier} />
+                          : <select defaultValue={m.role || 'MEMBER'}
+                              onChange={e => {
+                                fetch(`${API}/rbac/members/${m.id}/role`, {
+                                  method: 'PUT', headers: headers(),
+                                  body: JSON.stringify({ roleId: e.target.value })
+                                }).then(r => r.json()).then(d => showToast(d.message || 'Role updated'))
+                                  .catch(err => showToast(err.message, 'error'));
+                              }}
+                              className="text-xs border border-neutral-200 rounded px-2 py-1 focus:outline-none text-neutral-700">
+                              {['VIEWER','MEMBER','LEAD','ADMIN'].map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                        }
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1343,8 +1516,10 @@ export default function App() {
               <span className="font-mono text-xs text-neutral-400">{selectedItem.id}</span>
             </div>
             <div className="flex gap-1">
-              <button onClick={() => handleDelete(selectedItem.id)}
-                className="text-xs text-neutral-400 hover:text-semantic-danger px-2 py-1 rounded hover:bg-neutral-50 transition-colors">Delete</button>
+              {can('delete_items') && (
+                <button onClick={() => handleDelete(selectedItem.id)}
+                  className="text-xs text-neutral-400 hover:text-semantic-danger px-2 py-1 rounded hover:bg-neutral-50 transition-colors">Delete</button>
+              )}
               <button onClick={() => setSelectedItem(null)}
                 className="text-neutral-400 hover:text-neutral-900 p-1 rounded hover:bg-neutral-50 transition-colors">✕</button>
             </div>
@@ -1701,6 +1876,44 @@ function Field({ label, children }) {
     <div>
       <label className="block text-sm font-medium text-neutral-700 mb-1">{label}</label>
       {children}
+    </div>
+  );
+}
+
+function getTimeOfDay() {
+  const h = new Date().getHours();
+  if (h < 12) return 'morning';
+  if (h < 17) return 'afternoon';
+  return 'evening';
+}
+
+const ROLE_CONFIG = {
+  OWNER:  { label: 'Owner',  bg: 'bg-purple-100',  text: 'text-purple-700', tier: 5 },
+  ADMIN:  { label: 'Admin',  bg: 'bg-brand-navy/10', text: 'text-brand-navy', tier: 4 },
+  LEAD:   { label: 'Lead',   bg: 'bg-brand-teal/10', text: 'text-brand-teal', tier: 3 },
+  MEMBER: { label: 'Member', bg: 'bg-neutral-100',   text: 'text-neutral-600', tier: 2 },
+  VIEWER: { label: 'Viewer', bg: 'bg-neutral-50',    text: 'text-neutral-400', tier: 1 },
+};
+
+function RoleBadge({ role, tier, small = false }) {
+  const r = ROLE_CONFIG[role] || ROLE_CONFIG.MEMBER;
+  return (
+    <span className={`inline-flex items-center gap-1 font-semibold rounded ${small ? 'text-[9px] px-1 py-0.5' : 'text-[10px] px-1.5 py-0.5'} ${r.bg} ${r.text}`}>
+      {r.label}
+    </span>
+  );
+}
+
+function StatCard({ label, value, sub, color, icon, onClick }) {
+  return (
+    <div onClick={onClick} className="bg-white border border-neutral-200 rounded-xl p-5 cursor-pointer hover:shadow-md transition-shadow group">
+      <div className="flex items-start justify-between mb-3">
+        <span className="text-2xl">{icon}</span>
+        <span className="text-xs text-neutral-400 group-hover:text-brand-navy transition-colors">View →</span>
+      </div>
+      <p className={`text-3xl font-bold ${color} mb-1`}>{value}</p>
+      <p className="text-sm font-medium text-neutral-700">{label}</p>
+      <p className="text-xs text-neutral-400 mt-0.5">{sub}</p>
     </div>
   );
 }

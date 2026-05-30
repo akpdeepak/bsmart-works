@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/works/button';
-import { StatusBadge } from '@/components/works/status-badge';
+import { StatusBadge, statusToCategory } from '@/components/works/status-badge';
 import { Logo } from '@/components/works/logo';
 
 const API = 'http://localhost:8080/api/v1';
@@ -62,7 +62,7 @@ export default function App() {
   const [forgotEmail, setForgotEmail]   = useState('');
   const [forgotMsg, setForgotMsg]       = useState('');
 
-  const [view, setView]                 = useState('board'); // board | myworks | projects | workspace | notifications | backlog | sprint | reports
+  const [view, setView]                 = useState('board');
   const [workItems, setWorkItems]       = useState([]);
   const [projects, setProjects]         = useState([]);
   const [users, setUsers]               = useState([]);
@@ -71,8 +71,17 @@ export default function App() {
   const [loading, setLoading]           = useState(true);
 
   const [selectedItem, setSelectedItem] = useState(null);
+  const [detailTab, setDetailTab]       = useState('details'); // details | activity | links | attachments
   const [comments, setComments]         = useState([]);
   const [newComment, setNewComment]     = useState('');
+  const [commentInternal, setCommentInternal] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionOpen, setMentionOpen]   = useState(false);
+  const [activity, setActivity]         = useState([]);
+  const [links, setLinks]               = useState([]);
+  const [attachments, setAttachments]   = useState([]);
+  const [newLink, setNewLink]           = useState({ targetId: '', linkType: 'RELATES_TO' });
+  const fileInputRef                    = useRef(null);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isProjectOpen, setIsProjectOpen] = useState(false);
@@ -92,18 +101,31 @@ export default function App() {
   // Kanban density: compact | comfortable | spacious
   const [density, setDensity]           = useState('comfortable');
 
-  // Iteration 2 state
+  // Dark mode
+  const [darkMode, setDarkMode]         = useState(() => localStorage.getItem('bSmartTheme') === 'dark');
+
+  // My Works sub-tab
+  const [myWorksTab, setMyWorksTab]     = useState('assigned'); // assigned | activity | mentions
+
+  // Notification prefs
+  const [notifPrefs, setNotifPrefs]     = useState({ notifyAssign: true, notifyComment: true, notifyMention: true, emailDigest: false });
+
+  // Iteration 2 — Sprints & Backlog
   const [sprints, setSprints]           = useState([]);
   const [activeSprint, setActiveSprint] = useState(null);
   const [backlogItems, setBacklogItems] = useState([]);
   const [sprintItems, setSprintItems]   = useState([]);
   const [sprintReport, setSprintReport] = useState(null);
   const [savedFilters, setSavedFilters] = useState([]);
-  const [activeFilter, setActiveFilter] = useState(null); // {type, assigneeId, label}
-  const [swimlaneBy, setSwimlaneBy]     = useState('none'); // none | assignee | type | priority
+  const [activeFilter, setActiveFilter] = useState(null);
+  const [swimlaneBy, setSwimlaneBy]     = useState('none');
   const [isSprintOpen, setIsSprintOpen] = useState(false);
   const [newSprint, setNewSprint]       = useState({ name: '', goal: '', startDate: '', endDate: '', capacity: 40 });
   const [selectedSprintId, setSelectedSprintId] = useState(null);
+  const [refinementMode, setRefinementMode] = useState(false);
+  const [dragOverId, setDragOverId]     = useState(null);
+  const [saveFilterName, setSaveFilterName] = useState('');
+  const [showSaveFilter, setShowSaveFilter] = useState(false);
 
   // Workspace switcher dropdown
   const [wsOpen, setWsOpen]             = useState(false);
@@ -134,10 +156,18 @@ export default function App() {
   }, [currentUser]);
 
   useEffect(() => {
-    if (selectedItem) {
-      fetch(`${API}/work-items/${selectedItem.id}/comments`)
-        .then(r => r.json()).then(setComments).catch(() => {});
-    }
+    document.documentElement.classList.toggle('dark', darkMode);
+    localStorage.setItem('bSmartTheme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
+
+  useEffect(() => {
+    if (!selectedItem) return;
+    const id = selectedItem.id;
+    fetch(`${API}/work-items/${id}/comments`).then(r => r.json()).then(d => setComments(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`${API}/work-items/${id}/activity`).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`${API}/work-items/${id}/links`).then(r => r.json()).then(d => setLinks(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`${API}/work-items/${id}/attachments`).then(r => r.json()).then(d => setAttachments(Array.isArray(d) ? d : [])).catch(() => {});
+    setDetailTab('details');
   }, [selectedItem?.id]);
 
   // Close workspace dropdown on outside click
@@ -171,36 +201,6 @@ export default function App() {
   function fetchNotifications() {
     fetch(`${API}/notifications?userId=${currentUser.id}`)
       .then(r => r.json()).then(d => setNotifications(Array.isArray(d) ? d : [])).catch(() => {});
-  }
-
-  function fetchSprints(projectId = 'PROJ-001') {
-    fetch(`${API}/sprints?projectId=${projectId}`)
-      .then(r => r.json()).then(d => {
-        const list = Array.isArray(d) ? d : [];
-        setSprints(list);
-        const active = list.find(s => s.status === 'ACTIVE') || list[0];
-        if (active) { setActiveSprint(active); fetchSprintItems(active.id); }
-      }).catch(() => {});
-  }
-
-  function fetchSprintItems(sprintId) {
-    fetch(`${API}/sprints/${sprintId}/items`)
-      .then(r => r.json()).then(d => setSprintItems(Array.isArray(d) ? d : [])).catch(() => {});
-  }
-
-  function fetchBacklog() {
-    fetch(`${API}/work-items/backlog`)
-      .then(r => r.json()).then(d => setBacklogItems(Array.isArray(d) ? d : [])).catch(() => {});
-  }
-
-  function fetchSprintReport(sprintId) {
-    fetch(`${API}/sprints/${sprintId}/report`)
-      .then(r => r.json()).then(setSprintReport).catch(() => {});
-  }
-
-  function fetchSavedFilters() {
-    fetch(`${API}/saved-filters`, { headers: headers() })
-      .then(r => r.json()).then(d => setSavedFilters(Array.isArray(d) ? d : [])).catch(() => {});
   }
 
   // AUTH
@@ -277,12 +277,32 @@ export default function App() {
     });
   };
 
-  // COMMENTS
+  // COMMENTS with @mention + internal flag
   const handleAddComment = () => {
     if (!newComment.trim()) return;
     fetch(`${API}/work-items/${selectedItem.id}/comments`, {
-      method: 'POST', headers: headers(), body: JSON.stringify({ body: newComment })
-    }).then(r => r.json()).then(c => { setComments(prev => [...prev, c]); setNewComment(''); });
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ body: newComment, isInternal: commentInternal })
+    }).then(r => r.json()).then(c => {
+      setComments(prev => [...prev, c]);
+      setNewComment(''); setCommentInternal(false); setMentionOpen(false);
+    });
+  };
+
+  const handleCommentInput = (e) => {
+    const val = e.target.value;
+    setNewComment(val);
+    const lastAt = val.lastIndexOf('@');
+    if (lastAt !== -1 && lastAt === val.length - 1) { setMentionOpen(true); setMentionQuery(''); }
+    else if (lastAt !== -1 && val.slice(lastAt + 1).match(/^\w+$/)) {
+      setMentionOpen(true); setMentionQuery(val.slice(lastAt + 1).toLowerCase());
+    } else { setMentionOpen(false); }
+  };
+
+  const insertMention = (user) => {
+    const lastAt = newComment.lastIndexOf('@');
+    setNewComment(newComment.slice(0, lastAt) + '@' + user.fullName + ' ');
+    setMentionOpen(false);
   };
 
   // SEARCH
@@ -324,55 +344,150 @@ export default function App() {
       .then(() => fetchMembers());
   };
 
-  // SPRINT HANDLERS
-  const handleCreateSprint = () => {
-    fetch(`${API}/sprints`, {
-      method: 'POST', headers: headers(),
-      body: JSON.stringify({ ...newSprint, projectId: 'PROJ-001' })
-    }).then(r => r.json()).then(s => {
-      setSprints(prev => [s, ...prev]);
-      setNewSprint({ name: '', goal: '', startDate: '', endDate: '', capacity: 40 });
-      setIsSprintOpen(false);
-      if (!activeSprint) { setActiveSprint(s); }
-    });
-  };
+  // NOTIFICATION PREFS
+  function fetchNotifPrefs() {
+    fetch(`${API}/notification-preferences`, { headers: headers() })
+      .then(r => r.json()).then(d => setNotifPrefs({
+        notifyAssign:  d.notify_assign  ?? true,
+        notifyComment: d.notify_comment ?? true,
+        notifyMention: d.notify_mention ?? true,
+        emailDigest:   d.email_digest   ?? false,
+      })).catch(() => {});
+  }
+  function saveNotifPrefs(prefs) {
+    fetch(`${API}/notification-preferences`, { method: 'PUT', headers: headers(), body: JSON.stringify(prefs) })
+      .then(() => setNotifPrefs(prefs));
+  }
 
+  // SPRINT FUNCTIONS
+  function fetchSprints(projectId = 'PROJ-001') {
+    fetch(`${API}/sprints?projectId=${projectId}`)
+      .then(r => r.json()).then(d => {
+        const list = Array.isArray(d) ? d : [];
+        setSprints(list);
+        const active = list.find(s => s.status === 'ACTIVE') || list[0];
+        if (active) { setActiveSprint(active); fetchSprintItems(active.id); }
+      }).catch(() => {});
+  }
+  function fetchSprintItems(sprintId) {
+    fetch(`${API}/sprints/${sprintId}/items`)
+      .then(r => r.json()).then(d => setSprintItems(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchBacklog() {
+    fetch(`${API}/work-items/backlog`)
+      .then(r => r.json()).then(d => setBacklogItems(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchSprintReport(sprintId) {
+    fetch(`${API}/sprints/${sprintId}/report`)
+      .then(r => r.json()).then(setSprintReport).catch(() => {});
+  }
+  function fetchSavedFilters() {
+    fetch(`${API}/saved-filters`, { headers: headers() })
+      .then(r => r.json()).then(d => setSavedFilters(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  const handleCreateSprint = () => {
+    fetch(`${API}/sprints`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newSprint, projectId: 'PROJ-001' }) })
+      .then(r => r.json()).then(s => {
+        setSprints(prev => [s, ...prev]);
+        setNewSprint({ name: '', goal: '', startDate: '', endDate: '', capacity: 40 });
+        setIsSprintOpen(false);
+        if (!activeSprint) { setActiveSprint(s); }
+      });
+  };
   const handleSprintStatusChange = (sprintId, newStatus) => {
     const sprint = sprints.find(s => s.id === sprintId);
     if (!sprint) return;
-    fetch(`${API}/sprints/${sprintId}`, {
-      method: 'PUT', headers: headers(),
-      body: JSON.stringify({ ...sprint, status: newStatus })
-    }).then(r => r.json()).then(updated => {
-      setSprints(prev => prev.map(s => s.id === updated.id ? updated : s));
-      if (activeSprint?.id === updated.id) setActiveSprint(updated);
-    });
+    fetch(`${API}/sprints/${sprintId}`, { method: 'PUT', headers: headers(), body: JSON.stringify({ ...sprint, status: newStatus }) })
+      .then(r => r.json()).then(updated => {
+        setSprints(prev => prev.map(s => s.id === updated.id ? updated : s));
+        if (activeSprint?.id === updated.id) setActiveSprint(updated);
+      });
   };
-
   const handleMoveToSprint = (itemId, sprintId) => {
     fetch(`${API}/sprints/${sprintId}/items/${itemId}`, { method: 'POST', headers: headers() })
       .then(() => { fetchBacklog(); if (activeSprint) fetchSprintItems(activeSprint.id); });
   };
-
   const handleMoveToBacklog = (itemId, sprintId) => {
     fetch(`${API}/sprints/${sprintId}/items/${itemId}`, { method: 'DELETE', headers: headers() })
       .then(() => { fetchBacklog(); fetchSprintItems(sprintId); });
   };
 
-  const handleSaveFilter = (name, filterObj) => {
-    fetch(`${API}/saved-filters`, {
-      method: 'POST', headers: headers(),
-      body: JSON.stringify({ name, filterJson: JSON.stringify(filterObj), isShared: false })
-    }).then(r => r.json()).then(f => setSavedFilters(prev => [...prev, f]));
+  // Backlog drag-drop reorder
+  const handleBacklogDragStart = (e, id) => { e.dataTransfer.setData('backlogId', id); };
+  const handleBacklogDrop = (e, targetId) => {
+    e.preventDefault();
+    const sourceId = e.dataTransfer.getData('backlogId');
+    if (!sourceId || sourceId === targetId) { setDragOverId(null); return; }
+    const items = [...backlogItems];
+    const sourceIdx = items.findIndex(i => i.id === sourceId);
+    const targetIdx = items.findIndex(i => i.id === targetId);
+    const [moved] = items.splice(sourceIdx, 1);
+    items.splice(targetIdx, 0, moved);
+    const reordered = items.map((item, idx) => ({ ...item, backlogOrder: idx }));
+    setBacklogItems(reordered);
+    setDragOverId(null);
+    fetch(`${API}/work-items/backlog/reorder`, {
+      method: 'PUT', headers: headers(),
+      body: JSON.stringify(reordered.map((i, idx) => ({ id: i.id, order: idx })))
+    }).catch(() => {});
   };
 
-  // Filter logic for board/sprint
+  // Inline refinement update (story points, priority)
+  const handleRefinementUpdate = (itemId, field, value) => {
+    const item = backlogItems.find(i => i.id === itemId);
+    if (!item) return;
+    const updated = { ...item, [field]: value };
+    setBacklogItems(prev => prev.map(i => i.id === itemId ? updated : i));
+    fetch(`${API}/work-items/${itemId}`, { method: 'PUT', headers: headers(), body: JSON.stringify(updated) }).catch(() => {});
+  };
+
+  const handleSaveFilter = () => {
+    if (!saveFilterName.trim()) return;
+    fetch(`${API}/saved-filters`, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ name: saveFilterName, filterJson: JSON.stringify(activeFilter), isShared: false })
+    }).then(r => r.json()).then(f => { setSavedFilters(prev => [...prev, f]); setSaveFilterName(''); setShowSaveFilter(false); });
+  };
+
   const applyFilter = (items) => {
     if (!activeFilter) return items;
     if (activeFilter.type === 'mine') return items.filter(i => i.assigneeId === currentUser.id);
     if (activeFilter.type === 'priority') return items.filter(i => i.priority === activeFilter.value);
     if (activeFilter.type === 'itemType') return items.filter(i => i.type === activeFilter.value);
+    if (activeFilter.type === 'blockers') return items.filter(i => i.priority === 'CRITICAL' || i.type === 'Incident');
     return items;
+  };
+
+  // LINKS
+  const handleAddLink = () => {
+    if (!newLink.targetId) return;
+    fetch(`${API}/work-items/${selectedItem.id}/links`, {
+      method: 'POST', headers: headers(), body: JSON.stringify(newLink)
+    }).then(r => r.json()).then(l => { setLinks(prev => [...prev, l]); setNewLink({ targetId: '', linkType: 'RELATES_TO' }); });
+  };
+  const handleDeleteLink = (linkId) => {
+    fetch(`${API}/work-items/${selectedItem.id}/links/${linkId}`, { method: 'DELETE', headers: headers() })
+      .then(() => setLinks(prev => prev.filter(l => l.id !== linkId)));
+  };
+
+  // ATTACHMENTS
+  const handleUploadFile = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const fd = new FormData(); fd.append('file', file);
+    fetch(`${API}/work-items/${selectedItem.id}/attachments`, {
+      method: 'POST', headers: { 'X-User-Id': currentUser?.id || '' }, body: fd
+    }).then(r => r.json()).then(a => setAttachments(prev => [a, ...prev]));
+  };
+  const handleDeleteAttachment = (attId) => {
+    fetch(`${API}/work-items/${selectedItem.id}/attachments/${attId}`, { method: 'DELETE', headers: headers() })
+      .then(() => setAttachments(prev => prev.filter(a => a.id !== attId)));
+  };
+
+  // PROJECT ARCHIVE
+  const handleArchiveProject = (projectId) => {
+    fetch(`${API}/projects/${projectId}/archive`, { method: 'PUT', headers: headers() })
+      .then(r => r.json()).then(p => setProjects(prev => prev.map(x => x.id === p.id ? p : x)));
   };
 
   const columns = [
@@ -496,7 +611,7 @@ export default function App() {
 
         <nav className="flex-1 p-3 space-y-0.5 text-sm overflow-y-auto">
           <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">My Work</p>
-          <NavItem active={view === 'myworks'} onClick={() => setView('myworks')} icon="👤">
+          <NavItem active={view === 'myworks'} onClick={() => { setView('myworks'); fetchNotifications(); }} icon="👤">
             My Works
             {myItems.length > 0 && <span className="ml-auto text-[10px] bg-neutral-100 text-neutral-600 rounded-full px-1.5 py-0.5">{myItems.length}</span>}
           </NavItem>
@@ -519,7 +634,7 @@ export default function App() {
           </NavItem>
 
           <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">Workspace</p>
-          <NavItem active={view === 'workspace'} onClick={() => { setView('workspace'); fetchMembers(); }} icon="⚙️">Settings</NavItem>
+          <NavItem active={view === 'workspace'} onClick={() => { setView('workspace'); fetchMembers(); fetchNotifPrefs(); }} icon="⚙️">Settings</NavItem>
         </nav>
 
         <div className="p-3 border-t border-neutral-200">
@@ -565,9 +680,15 @@ export default function App() {
               </div>
             )}
           </div>
-          <Button variant="action" onClick={() => { setView('board'); setIsCreateOpen(true); }}>
-            + Create
-          </Button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setDarkMode(d => !d)} title="Toggle dark/light mode"
+              className="w-8 h-8 rounded-md flex items-center justify-center text-neutral-400 hover:bg-neutral-100 transition-colors text-base">
+              {darkMode ? '☀️' : '🌙'}
+            </button>
+            <Button variant="action" onClick={() => { setView('board'); setIsCreateOpen(true); }}>
+              + Create
+            </Button>
+          </div>
         </header>
 
         {/* CONTENT */}
@@ -577,13 +698,25 @@ export default function App() {
           {view === 'myworks' && (
             <div className="p-8 max-w-4xl">
               <h1 className="text-2xl font-bold text-brand-navy mb-1">My Works</h1>
-              <p className="text-sm text-neutral-400 mb-6">Items assigned to you across all projects</p>
-              {myItems.length === 0
+              <p className="text-sm text-neutral-400 mb-4">Your personal workspace</p>
+              {/* Sub-tabs */}
+              <div className="flex gap-1 mb-5 border-b border-neutral-200">
+                {[
+                  { key: 'assigned', label: `Assigned (${myItems.length})` },
+                  { key: 'mentions', label: `Mentions (${notifications.filter(n => n.type === 'MENTION').length})` },
+                  { key: 'activity', label: 'Recent Activity' },
+                ].map(t => (
+                  <button key={t.key} onClick={() => setMyWorksTab(t.key)}
+                    className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${myWorksTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700'}`}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              {myWorksTab === 'assigned' && (myItems.length === 0
                 ? <EmptyState icon="👤" title="Nothing assigned to you"
-                    subtitle="Work items assigned to you will appear here. Ask your team lead to assign some tasks."
+                    subtitle="Work items assigned to you will appear here."
                     action={<Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(true)}>Create a work item</Button>} />
-                : (
-                  <div className="space-y-2">
+                : <div className="space-y-2">
                     {myItems.map(item => (
                       <div key={item.id} onClick={() => setSelectedItem(item)}
                         className="bg-white border border-neutral-200 rounded-lg p-4 flex items-center gap-4 hover:shadow-sm cursor-pointer transition-shadow">
@@ -593,14 +726,39 @@ export default function App() {
                           <p className="text-xs text-neutral-400 font-mono">{item.id}</p>
                         </div>
                         <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
-                        {item.dueDate && (
-                          <span className="text-xs text-semantic-warning font-medium whitespace-nowrap">Due {item.dueDate}</span>
-                        )}
+                        {item.dueDate && <span className="text-xs text-semantic-warning font-medium whitespace-nowrap">Due {item.dueDate}</span>}
                       </div>
                     ))}
                   </div>
-                )
-              }
+              )}
+              {myWorksTab === 'mentions' && (() => {
+                const mentions = notifications.filter(n => n.type === 'MENTION');
+                return mentions.length === 0
+                  ? <EmptyState icon="@" title="No mentions yet" subtitle="When someone @mentions you in a comment, it will appear here." />
+                  : <div className="space-y-2">
+                      {mentions.map(n => (
+                        <div key={n.id} className={`bg-white border rounded-lg p-4 ${!n.read ? 'border-brand-navy-tint/30' : 'border-neutral-200'}`}>
+                          <p className="text-sm text-neutral-900">{n.message}</p>
+                          <p className="text-xs text-neutral-400 mt-1">{n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}</p>
+                        </div>
+                      ))}
+                    </div>;
+              })()}
+              {myWorksTab === 'activity' && (
+                <div className="space-y-2">
+                  {workItems.filter(i => i.createdBy === currentUser.id || i.assigneeId === currentUser.id).slice(0, 20).map(i => (
+                    <div key={i.id} onClick={() => setSelectedItem(i)}
+                      className="bg-white border border-neutral-200 rounded-lg p-3 flex items-center gap-3 hover:shadow-sm cursor-pointer">
+                      <TypeBadge type={i.type} compact />
+                      <span className="text-xs font-mono text-neutral-400">{i.id}</span>
+                      <span className="flex-1 text-sm text-neutral-900 truncate">{i.title}</span>
+                      <StatusBadge category={statusToCategory(i.status)}>{i.status}</StatusBadge>
+                    </div>
+                  ))}
+                  {workItems.filter(i => i.createdBy === currentUser.id || i.assigneeId === currentUser.id).length === 0 &&
+                    <EmptyState icon="📋" title="No recent activity" subtitle="Items you create or are assigned to will show here." />}
+                </div>
+              )}
             </div>
           )}
 
@@ -729,6 +887,10 @@ export default function App() {
                               <p className="text-sm font-semibold text-neutral-900">{count} items</p>
                               {count > 0 && <p className="text-xs text-semantic-success">{done} done</p>}
                               {p.leadUserId && <p className="text-xs text-neutral-400 mt-0.5">Lead: {userName(p.leadUserId)}</p>}
+                              <button onClick={() => handleArchiveProject(p.id)}
+                                className="text-xs text-neutral-300 hover:text-neutral-600 mt-1 transition-colors">
+                                {p.archived ? 'Unarchive' : 'Archive'}
+                              </button>
                             </div>
                           </div>
                           {count > 0 && (
@@ -795,70 +957,90 @@ export default function App() {
                   <h1 className="text-xl font-bold text-brand-navy">Backlog</h1>
                   <p className="text-xs text-neutral-400 mt-0.5">{backlogItems.length} items not in any sprint</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                  <label className="flex items-center gap-1.5 cursor-pointer mr-2">
+                    <input type="checkbox" checked={refinementMode} onChange={e => setRefinementMode(e.target.checked)} className="w-3 h-3 accent-brand-navy" />
+                    <span className="text-xs text-neutral-600 font-medium">Refinement mode</span>
+                  </label>
                   <Button variant="secondary" size="sm" onClick={() => setIsSprintOpen(true)}>+ New Sprint</Button>
                   <Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>+ Add Item</Button>
                 </div>
               </div>
 
-              {/* Sprints */}
-              {sprints.map(sprint => (
-                <div key={sprint.id} className="bg-white border border-neutral-200 rounded-xl mb-4 overflow-hidden">
-                  <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 bg-neutral-50">
-                    <div className="flex items-center gap-3">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        sprint.status === 'ACTIVE' ? 'bg-brand-teal/10 text-brand-teal' :
-                        sprint.status === 'COMPLETED' ? 'bg-neutral-200 text-neutral-500' :
-                        'bg-brand-navy-tint/10 text-brand-navy-tint'}`}>{sprint.status}</span>
-                      <h3 className="font-semibold text-neutral-900">{sprint.name}</h3>
-                      {sprint.goal && <span className="text-xs text-neutral-400 italic">"{sprint.goal}"</span>}
+              {/* Sprints with capacity bar */}
+              {sprints.map(sprint => {
+                const sprintCapUsed = sprint.capacity || 0;
+                return (
+                  <div key={sprint.id} className="bg-white border border-neutral-200 rounded-xl mb-4 overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 bg-neutral-50">
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${sprint.status === 'ACTIVE' ? 'bg-brand-teal/10 text-brand-teal' : sprint.status === 'COMPLETED' ? 'bg-neutral-200 text-neutral-500' : 'bg-brand-navy-tint/10 text-brand-navy-tint'}`}>{sprint.status}</span>
+                        <h3 className="font-semibold text-neutral-900">{sprint.name}</h3>
+                        {sprint.goal && <span className="text-xs text-neutral-400 italic hidden md:inline">"{sprint.goal}"</span>}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {/* Capacity bar */}
+                        {sprint.capacity > 0 && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-24 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+                              <div className="h-full bg-brand-teal rounded-full" style={{ width: `${Math.min(100, (sprintCapUsed / sprint.capacity) * 100)}%` }}></div>
+                            </div>
+                            <span className="text-xs text-neutral-400">{sprint.capacity}pt cap</span>
+                          </div>
+                        )}
+                        {sprint.startDate && <span className="text-xs text-neutral-400 hidden md:inline">{sprint.startDate} → {sprint.endDate}</span>}
+                        {sprint.status === 'PLANNING' && <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'ACTIVE')}>Start Sprint</Button>}
+                        {sprint.status === 'ACTIVE' && <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'COMPLETED')}>Complete</Button>}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {sprint.startDate && <span className="text-xs text-neutral-400">{sprint.startDate} → {sprint.endDate}</span>}
-                      {sprint.status === 'PLANNING' && (
-                        <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'ACTIVE')}>Start Sprint</Button>
-                      )}
-                      {sprint.status === 'ACTIVE' && (
-                        <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'COMPLETED')}>Complete Sprint</Button>
-                      )}
-                    </div>
+                    <SprintItemList sprintId={sprint.id} users={users} onMoveToBacklog={(id) => handleMoveToBacklog(id, sprint.id)} onSelect={setSelectedItem} />
                   </div>
-                  <SprintItemList
-                    sprintId={sprint.id}
-                    users={users}
-                    onMoveToBacklog={(id) => handleMoveToBacklog(id, sprint.id)}
-                    onSelect={setSelectedItem}
-                  />
-                </div>
-              ))}
+                );
+              })}
 
-              {/* Backlog items */}
+              {/* Backlog items with drag-drop reorder */}
               <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 bg-neutral-50">
                   <h3 className="font-semibold text-neutral-900">Backlog</h3>
                   <span className="text-xs text-neutral-400">{backlogItems.length} items</span>
                 </div>
                 {backlogItems.length === 0
-                  ? <EmptyState icon="📝" title="Backlog is empty"
-                      subtitle="Create work items and they'll appear here, ready to be added to a sprint."
-                      action={<Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>Add to backlog</Button>} />
-                  : backlogItems.map(item => (
-                    <div key={item.id} className="flex items-center gap-3 px-5 py-3 border-b border-neutral-50 last:border-0 hover:bg-neutral-50 group">
+                  ? <EmptyState icon="📝" title="Backlog is empty" subtitle="Create work items to add them to the backlog." action={<Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>Add to backlog</Button>} />
+                  : backlogItems.map((item, idx) => (
+                    <div key={item.id}
+                      draggable onDragStart={(e) => handleBacklogDragStart(e, item.id)}
+                      onDragOver={(e) => { e.preventDefault(); setDragOverId(item.id); }}
+                      onDragLeave={() => setDragOverId(null)}
+                      onDrop={(e) => handleBacklogDrop(e, item.id)}
+                      className={`flex items-center gap-3 px-5 py-3 border-b border-neutral-50 last:border-0 hover:bg-neutral-50 group transition-colors ${dragOverId === item.id ? 'border-t-2 border-t-brand-navy bg-brand-navy/5' : ''}`}>
+                      <span className="text-neutral-300 cursor-grab text-xs mr-1">⠿</span>
                       <TypeBadge type={item.type} compact />
                       <span className="font-mono text-[10px] text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
-                      <span className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy"
-                        onClick={() => setSelectedItem(item)}>{item.title}</span>
-                      <PriorityBadge priority={item.priority} />
-                      {item.storyPoints > 0 && <span className="text-xs bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
+                      <span className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate" onClick={() => setSelectedItem(item)}>{item.title}</span>
+                      {/* Refinement mode — inline edit */}
+                      {refinementMode ? (
+                        <div className="flex items-center gap-2">
+                          <select value={item.priority || 'MEDIUM'} onChange={e => handleRefinementUpdate(item.id, 'priority', e.target.value)}
+                            className="text-xs border border-neutral-200 rounded px-1.5 py-1 focus:outline-none text-neutral-600">
+                            {['LOW','MEDIUM','HIGH','CRITICAL'].map(p => <option key={p} value={p}>{p}</option>)}
+                          </select>
+                          <input type="number" min={0} max={100} value={item.storyPoints || 0}
+                            onChange={e => handleRefinementUpdate(item.id, 'storyPoints', parseInt(e.target.value) || 0)}
+                            className="w-14 text-xs border border-neutral-200 rounded px-1.5 py-1 focus:outline-none text-center"
+                            placeholder="pts" />
+                        </div>
+                      ) : (
+                        <>
+                          <PriorityBadge priority={item.priority} />
+                          {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
+                        </>
+                      )}
                       {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}
                       {sprints.filter(s => s.status !== 'COMPLETED').length > 0 && (
                         <select className="opacity-0 group-hover:opacity-100 text-xs border border-neutral-200 rounded px-1 py-0.5 text-neutral-600 transition-opacity"
-                          onChange={e => e.target.value && handleMoveToSprint(item.id, e.target.value)}
-                          defaultValue="">
-                          <option value="" disabled>Move to sprint</option>
-                          {sprints.filter(s => s.status !== 'COMPLETED').map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
+                          onChange={e => e.target.value && handleMoveToSprint(item.id, e.target.value)} defaultValue="">
+                          <option value="" disabled>→ Sprint</option>
+                          {sprints.filter(s => s.status !== 'COMPLETED').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                       )}
                     </div>
@@ -871,61 +1053,30 @@ export default function App() {
           {/* ACTIVE SPRINT VIEW */}
           {view === 'sprint' && (
             <div className="p-6 h-full flex flex-col">
-              {/* Sprint header */}
               {activeSprint ? (
                 <>
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between mb-3">
                     <div>
-                      <div className="flex items-center gap-3 mb-1">
+                      <div className="flex items-center gap-3 mb-0.5">
                         <h1 className="text-xl font-bold text-brand-navy">{activeSprint.name}</h1>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                          activeSprint.status === 'ACTIVE' ? 'bg-brand-teal/10 text-brand-teal' : 'bg-neutral-200 text-neutral-500'}`}>
-                          {activeSprint.status}
-                        </span>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${activeSprint.status === 'ACTIVE' ? 'bg-brand-teal/10 text-brand-teal' : 'bg-neutral-200 text-neutral-500'}`}>{activeSprint.status}</span>
                       </div>
-                      {activeSprint.goal && <p className="text-sm text-neutral-400 italic">Goal: "{activeSprint.goal}"</p>}
-                      {activeSprint.startDate && (
-                        <p className="text-xs text-neutral-400 mt-0.5">{activeSprint.startDate} → {activeSprint.endDate}</p>
-                      )}
+                      {activeSprint.goal && <p className="text-sm text-neutral-400 italic">"{activeSprint.goal}"</p>}
+                      {activeSprint.startDate && <p className="text-xs text-neutral-400 mt-0.5">{activeSprint.startDate} → {activeSprint.endDate}</p>}
                     </div>
-                    <div className="flex items-center gap-3">
-                      {/* Sprint picker */}
+                    <div className="flex items-center gap-2 flex-wrap justify-end">
                       <select value={activeSprint.id}
                         onChange={e => { const s = sprints.find(x => x.id === e.target.value); if (s) { setActiveSprint(s); fetchSprintItems(s.id); } }}
                         className="text-sm border border-neutral-200 rounded-md px-2 py-1.5 focus:outline-none">
                         {sprints.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                      </select>
-                      {/* Quick filters */}
-                      <div className="flex gap-1">
-                        {[
-                          { label: 'All', filter: null },
-                          { label: 'Mine', filter: { type: 'mine' } },
-                          { label: 'High Priority', filter: { type: 'priority', value: 'HIGH' } },
-                          { label: 'Bugs', filter: { type: 'itemType', value: 'Bug' } },
-                        ].map(f => (
-                          <button key={f.label} onClick={() => setActiveFilter(f.filter)}
-                            className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${
-                              JSON.stringify(activeFilter) === JSON.stringify(f.filter)
-                                ? 'bg-brand-navy text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}>
-                            {f.label}
-                          </button>
-                        ))}
-                      </div>
-                      {/* Swimlane */}
-                      <select value={swimlaneBy} onChange={e => setSwimlaneBy(e.target.value)}
-                        className="text-xs border border-neutral-200 rounded-md px-2 py-1.5 focus:outline-none text-neutral-600">
-                        <option value="none">No swimlane</option>
-                        <option value="assignee">By Assignee</option>
-                        <option value="type">By Type</option>
-                        <option value="priority">By Priority</option>
                       </select>
                     </div>
                   </div>
 
                   {/* Capacity bar */}
                   {activeSprint.capacity > 0 && (
-                    <div className="mb-4 bg-white border border-neutral-200 rounded-lg px-4 py-3 flex items-center gap-4">
-                      <span className="text-xs text-neutral-400 font-medium w-24">Capacity</span>
+                    <div className="mb-3 bg-white border border-neutral-200 rounded-lg px-4 py-2.5 flex items-center gap-4">
+                      <span className="text-xs text-neutral-400 font-medium w-20">Capacity</span>
                       <div className="flex-1 h-2 bg-neutral-100 rounded-full overflow-hidden">
                         <div className="h-full bg-brand-navy-tint rounded-full transition-all"
                           style={{ width: `${Math.min(100, (sprintItems.reduce((a, i) => a + (i.storyPoints || 0), 0) / activeSprint.capacity) * 100)}%` }}></div>
@@ -936,33 +1087,62 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Sprint kanban board with swimlanes */}
-                  <SprintBoard
-                    items={applyFilter(sprintItems)}
-                    columns={columns}
-                    users={users}
-                    swimlaneBy={swimlaneBy}
-                    onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
+                  {/* Quick filters + Swimlane + Saved filters */}
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    {[
+                      { label: 'All', filter: null },
+                      { label: 'Mine', filter: { type: 'mine' } },
+                      { label: '🔥 Blockers', filter: { type: 'blockers' } },
+                      { label: '⬆ High Priority', filter: { type: 'priority', value: 'HIGH' } },
+                      { label: '🐛 Bugs', filter: { type: 'itemType', value: 'Bug' } },
+                    ].map(f => (
+                      <button key={f.label} onClick={() => setActiveFilter(f.filter)}
+                        className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${JSON.stringify(activeFilter) === JSON.stringify(f.filter) ? 'bg-brand-navy text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}>
+                        {f.label}
+                      </button>
+                    ))}
+                    {savedFilters.map(f => (
+                      <button key={f.id} onClick={() => setActiveFilter(JSON.parse(f.filterJson))}
+                        className="text-xs px-3 py-1.5 rounded-full bg-brand-navy/10 text-brand-navy font-medium hover:bg-brand-navy/20 transition-colors">
+                        ★ {f.name}
+                      </button>
+                    ))}
+                    {activeFilter && (
+                      <div className="flex items-center gap-1 ml-auto">
+                        {!showSaveFilter
+                          ? <button onClick={() => setShowSaveFilter(true)} className="text-xs text-neutral-400 hover:text-brand-navy">Save filter</button>
+                          : <div className="flex gap-1">
+                              <input type="text" value={saveFilterName} onChange={e => setSaveFilterName(e.target.value)}
+                                placeholder="Filter name" className="text-xs border border-neutral-200 rounded px-2 py-1 focus:outline-none" />
+                              <Button size="sm" variant="secondary" onClick={handleSaveFilter}>Save</Button>
+                              <button onClick={() => setShowSaveFilter(false)} className="text-xs text-neutral-400 px-1">✕</button>
+                            </div>
+                        }
+                      </div>
+                    )}
+                    <select value={swimlaneBy} onChange={e => setSwimlaneBy(e.target.value)}
+                      className="text-xs border border-neutral-200 rounded-md px-2 py-1.5 focus:outline-none text-neutral-600 ml-auto">
+                      <option value="none">No swimlane</option>
+                      <option value="assignee">By Assignee</option>
+                      <option value="type">By Type</option>
+                      <option value="priority">By Priority</option>
+                    </select>
+                  </div>
+
+                  <SprintBoard items={applyFilter(sprintItems)} columns={columns} users={users}
+                    swimlaneBy={swimlaneBy} onDragStart={handleDragStart} onDragOver={handleDragOver}
                     onDrop={(e, status) => {
                       e.preventDefault();
                       const itemId = e.dataTransfer.getData('itemId');
                       const item = sprintItems.find(i => i.id === itemId);
                       if (!item || item.status === status) return;
                       setSprintItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
-                      fetch(`${API}/work-items/${itemId}`, {
-                        method: 'PUT', headers: headers(),
-                        body: JSON.stringify({ ...item, status })
-                      }).catch(() => {});
+                      fetch(`${API}/work-items/${itemId}`, { method: 'PUT', headers: headers(), body: JSON.stringify({ ...item, status }) }).catch(() => {});
                     }}
-                    onSelect={setSelectedItem}
-                    onDelete={handleDelete}
-                    density={density}
-                  />
+                    onSelect={setSelectedItem} onDelete={handleDelete} density={density} />
                 </>
               ) : (
-                <EmptyState icon="⚡" title="No sprints yet"
-                  subtitle="Create your first sprint in the Backlog view to start planning."
+                <EmptyState icon="⚡" title="No sprints yet" subtitle="Create a sprint in the Backlog view to get started."
                   action={<Button variant="action" onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); }}>Go to Backlog</Button>} />
               )}
             </div>
@@ -972,33 +1152,27 @@ export default function App() {
           {view === 'reports' && (
             <div className="p-8 max-w-4xl">
               <h1 className="text-2xl font-bold text-brand-navy mb-1">Sprint Reports</h1>
-              <p className="text-sm text-neutral-400 mb-6">Velocity, delivery, and scope tracking</p>
-
+              <p className="text-sm text-neutral-400 mb-5">Velocity, delivery, and scope tracking</p>
               {sprints.length === 0
-                ? <EmptyState icon="📊" title="No sprints to report on"
-                    subtitle="Complete a sprint to see reports here." />
-                : (
-                  <>
-                    {/* Sprint selector */}
-                    <div className="flex gap-2 mb-6 flex-wrap">
+                ? <EmptyState icon="📊" title="No sprints to report on" subtitle="Complete a sprint to see reports here." />
+                : <>
+                    <div className="flex gap-2 mb-5 flex-wrap">
                       {sprints.map(s => (
                         <button key={s.id} onClick={() => { setSelectedSprintId(s.id); fetchSprintReport(s.id); }}
-                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                            selectedSprintId === s.id ? 'bg-brand-navy text-white' : 'bg-white border border-neutral-200 text-neutral-600 hover:border-brand-navy'}`}>
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedSprintId === s.id ? 'bg-brand-navy text-white' : 'bg-white border border-neutral-200 text-neutral-600 hover:border-brand-navy'}`}>
                           {s.name}
                         </button>
                       ))}
                     </div>
-
                     {sprintReport ? (
                       <div className="space-y-4">
-                        {/* Summary cards */}
-                        <div className="grid grid-cols-4 gap-4">
+                        {/* KPI cards */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           {[
                             { label: 'Total Items', value: sprintReport.totalItems, color: 'text-neutral-900' },
                             { label: 'Completed', value: sprintReport.doneItems, color: 'text-brand-teal' },
                             { label: 'Completion', value: `${sprintReport.completionRate}%`, color: 'text-brand-navy' },
-                            { label: 'Velocity', value: `${sprintReport.donePoints}/${sprintReport.totalPoints} pts`, color: 'text-brand-orange' },
+                            { label: 'Velocity', value: `${sprintReport.donePoints}/${sprintReport.totalPoints}pt`, color: 'text-brand-orange' },
                           ].map(card => (
                             <div key={card.label} className="bg-white border border-neutral-200 rounded-xl p-5">
                               <p className="text-xs text-neutral-400 mb-1">{card.label}</p>
@@ -1007,23 +1181,32 @@ export default function App() {
                           ))}
                         </div>
 
-                        {/* Progress bar */}
+                        {/* Burndown chart (visual) */}
                         <div className="bg-white border border-neutral-200 rounded-xl p-5">
-                          <h3 className="font-semibold text-neutral-900 mb-3">Commitment vs Delivery</h3>
-                          <div className="flex gap-2 mb-2 text-xs text-neutral-400">
-                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-brand-teal"></span>Done ({sprintReport.doneItems})</span>
-                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-brand-navy-tint"></span>In Progress ({sprintReport.inProgressItems})</span>
-                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-neutral-200"></span>Todo ({sprintReport.todoItems})</span>
+                          <h3 className="font-semibold text-neutral-900 mb-4">Burndown — Commitment vs Delivery</h3>
+                          <div className="flex gap-3 mb-3 text-xs text-neutral-400">
+                            <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-brand-teal inline-block"></span>Done ({sprintReport.doneItems})</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-brand-navy-tint inline-block"></span>In Progress ({sprintReport.inProgressItems})</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-neutral-200 inline-block"></span>Todo ({sprintReport.todoItems})</span>
                           </div>
-                          <div className="h-6 bg-neutral-100 rounded-full overflow-hidden flex">
+                          {/* Stacked bar burndown */}
+                          <div className="h-8 bg-neutral-100 rounded-lg overflow-hidden flex mb-2">
                             {sprintReport.totalItems > 0 && <>
-                              <div className="h-full bg-brand-teal transition-all" style={{ width: `${(sprintReport.doneItems / sprintReport.totalItems) * 100}%` }}></div>
-                              <div className="h-full bg-brand-navy-tint transition-all" style={{ width: `${(sprintReport.inProgressItems / sprintReport.totalItems) * 100}%` }}></div>
+                              <div className="h-full bg-brand-teal transition-all flex items-center justify-center" style={{ width: `${(sprintReport.doneItems / sprintReport.totalItems) * 100}%` }}>
+                                {sprintReport.doneItems > 0 && <span className="text-white text-[10px] font-bold">{sprintReport.doneItems}</span>}
+                              </div>
+                              <div className="h-full bg-brand-navy-tint transition-all flex items-center justify-center" style={{ width: `${(sprintReport.inProgressItems / sprintReport.totalItems) * 100}%` }}>
+                                {sprintReport.inProgressItems > 0 && <span className="text-white text-[10px] font-bold">{sprintReport.inProgressItems}</span>}
+                              </div>
+                              <div className="h-full bg-neutral-200 transition-all flex items-center justify-center" style={{ width: `${(sprintReport.todoItems / sprintReport.totalItems) * 100}%` }}>
+                                {sprintReport.todoItems > 0 && <span className="text-neutral-600 text-[10px] font-bold">{sprintReport.todoItems}</span>}
+                              </div>
                             </>}
                           </div>
+                          <p className="text-xs text-neutral-400">{sprintReport.completionRate}% complete · {sprintReport.velocityRate}% of story points delivered</p>
                         </div>
 
-                        {/* Item outcomes table */}
+                        {/* Item outcomes */}
                         <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
                           <div className="px-5 py-3 border-b border-neutral-100">
                             <h3 className="font-semibold text-neutral-900">Item Outcomes</h3>
@@ -1042,12 +1225,9 @@ export default function App() {
                         </div>
                       </div>
                     ) : (
-                      <div className="text-center py-12 text-neutral-400">
-                        <p className="text-sm">Select a sprint above to view its report.</p>
-                      </div>
+                      <p className="text-sm text-neutral-400 text-center py-10">Select a sprint above to view its report.</p>
                     )}
                   </>
-                )
               }
             </div>
           )}
@@ -1091,6 +1271,25 @@ export default function App() {
                   {inviteMsg && <p className="text-xs text-semantic-success mt-2">{inviteMsg}</p>}
                 </div>
               </div>
+
+              {/* Notification Preferences */}
+              <div className="bg-white rounded-xl border border-neutral-200 p-6">
+                <h2 className="font-semibold text-neutral-900 mb-1">Notification Preferences</h2>
+                <p className="text-sm text-neutral-400 mb-4">Control what notifies you</p>
+                {[
+                  { key: 'notifyAssign',  label: 'Assigned to a work item' },
+                  { key: 'notifyComment', label: 'New comment on my items' },
+                  { key: 'notifyMention', label: '@mentioned in a comment' },
+                  { key: 'emailDigest',   label: 'Daily email digest' },
+                ].map(pref => (
+                  <label key={pref.key} className="flex items-center justify-between py-2.5 border-b border-neutral-100 last:border-0 cursor-pointer">
+                    <span className="text-sm text-neutral-700">{pref.label}</span>
+                    <input type="checkbox" checked={notifPrefs[pref.key]}
+                      onChange={e => { const updated = { ...notifPrefs, [pref.key]: e.target.checked }; saveNotifPrefs(updated); }}
+                      className="w-4 h-4 accent-brand-navy" />
+                  </label>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -1098,7 +1297,7 @@ export default function App() {
 
       {/* DETAIL PANEL */}
       {selectedItem && (
-        <div className="w-[480px] bg-white border-l border-neutral-200 flex flex-col h-screen overflow-hidden flex-shrink-0">
+        <div className="w-[500px] bg-white border-l border-neutral-200 flex flex-col h-screen overflow-hidden flex-shrink-0">
           <div className="h-14 flex items-center justify-between px-5 border-b border-neutral-200">
             <div className="flex items-center gap-2">
               <TypeBadge type={selectedItem.type} compact />
@@ -1111,7 +1310,25 @@ export default function App() {
                 className="text-neutral-400 hover:text-neutral-900 p-1 rounded hover:bg-neutral-50 transition-colors">✕</button>
             </div>
           </div>
+          {/* Detail panel tabs */}
+          <div className="flex border-b border-neutral-200 px-5">
+            {[
+              { key: 'details',     label: 'Details' },
+              { key: 'comments',    label: `Comments ${comments.length > 0 ? `(${comments.length})` : ''}` },
+              { key: 'links',       label: `Links ${links.length > 0 ? `(${links.length})` : ''}` },
+              { key: 'attachments', label: `Files ${attachments.length > 0 ? `(${attachments.length})` : ''}` },
+              { key: 'activity',    label: 'Activity' },
+            ].map(t => (
+              <button key={t.key} onClick={() => setDetailTab(t.key)}
+                className={`text-xs font-medium px-3 py-2.5 border-b-2 transition-colors whitespace-nowrap ${detailTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700'}`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
           <div className="flex-1 overflow-y-auto p-5 space-y-5">
+            {/* DETAILS TAB */}
+            {detailTab === 'details' && <>
             <input className="w-full text-lg font-bold text-neutral-900 focus:outline-none border-b border-transparent focus:border-neutral-200 pb-1 bg-transparent"
               value={selectedItem.title}
               onChange={e => setSelectedItem({ ...selectedItem, title: e.target.value })}
@@ -1169,38 +1386,167 @@ export default function App() {
                 className="input resize-none" />
             </div>
 
-            <div>
-              <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">
-                Activity · {comments.length} comment{comments.length !== 1 ? 's' : ''}
-              </h3>
-              {comments.length === 0 && (
-                <p className="text-xs text-neutral-400 text-center py-3">No comments yet. Be the first to comment.</p>
-              )}
-              <div className="space-y-3 mb-4">
-                {comments.map(c => (
-                  <div key={c.id} className="flex gap-2.5">
-                    <Avatar name={c.authorName || '?'} size={7} />
-                    <div className="flex-1 bg-neutral-50 rounded-xl px-3 py-2.5 border border-neutral-100">
-                      <p className="text-xs font-semibold text-neutral-900 mb-0.5">{c.authorName}</p>
-                      <p className="text-sm text-neutral-700 leading-relaxed">{c.body}</p>
-                      <p className="text-[10px] text-neutral-400 mt-1.5">{c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</p>
+            </> /* end details tab */}
+
+            {/* COMMENTS TAB */}
+            {detailTab === 'comments' && (
+              <div>
+                {comments.length === 0 && (
+                  <p className="text-xs text-neutral-400 text-center py-6">No comments yet. Be the first to comment.</p>
+                )}
+                <div className="space-y-3 mb-4">
+                  {comments.map(c => (
+                    <div key={c.id} className="flex gap-2.5">
+                      <Avatar name={c.authorName || '?'} size={7} />
+                      <div className={`flex-1 rounded-xl px-3 py-2.5 border ${c.isInternal ? 'bg-semantic-warning-surface border-semantic-warning/30' : 'bg-neutral-50 border-neutral-100'}`}>
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p className="text-xs font-semibold text-neutral-900">{c.authorName}</p>
+                          {c.isInternal && <span className="text-[10px] bg-semantic-warning text-white px-1.5 py-0.5 rounded">Internal</span>}
+                        </div>
+                        <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{c.body}</p>
+                        <p className="text-[10px] text-neutral-400 mt-1.5">{c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Comment composer with @mention + internal flag */}
+                <div className="relative">
+                  <div className="flex gap-2.5">
+                    <Avatar name={currentUser.fullName} size={7} />
+                    <div className="flex-1">
+                      <textarea rows={2} value={newComment} onChange={handleCommentInput}
+                        onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleAddComment())}
+                        placeholder="Write a comment... (@mention to notify, Enter to send)"
+                        className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-navy resize-none" />
+                      <div className="flex items-center justify-between mt-1.5">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input type="checkbox" checked={commentInternal} onChange={e => setCommentInternal(e.target.checked)}
+                            className="w-3 h-3 rounded accent-semantic-warning" />
+                          <span className="text-xs text-neutral-400">Internal only</span>
+                        </label>
+                        <Button size="sm" onClick={handleAddComment}>Send</Button>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-              <div className="flex gap-2.5">
-                <Avatar name={currentUser.fullName} size={7} />
-                <div className="flex-1 flex gap-2">
-                  <input type="text" value={newComment} onChange={e => setNewComment(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleAddComment()}
-                    placeholder="Write a comment... (Enter to send)"
-                    className="flex-1 border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-navy" />
-                  <Button size="sm" onClick={handleAddComment}>Send</Button>
+                  {/* @mention dropdown */}
+                  {mentionOpen && (
+                    <div className="absolute bottom-full mb-1 left-9 w-56 bg-white rounded-lg shadow-xl border border-neutral-200 z-50 max-h-40 overflow-y-auto">
+                      {users.filter(u => !mentionQuery || u.fullName.toLowerCase().includes(mentionQuery)).map(u => (
+                        <button key={u.id} onClick={() => insertMention(u)}
+                          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 text-left">
+                          <Avatar name={u.fullName} size={6} />
+                          <span className="text-sm text-neutral-900">{u.fullName}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* LINKS TAB */}
+            {detailTab === 'links' && (
+              <div>
+                {links.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No links yet.</p>}
+                <div className="space-y-2 mb-4">
+                  {links.map(l => (
+                    <div key={l.id} className="flex items-center gap-3 p-2.5 bg-neutral-50 rounded-lg border border-neutral-100">
+                      <span className="text-[10px] font-semibold bg-neutral-200 text-neutral-600 px-1.5 py-0.5 rounded uppercase">{l.linkType?.replace('_', ' ')}</span>
+                      <span className="flex-1 text-sm text-neutral-900 font-mono">{l.targetId}</span>
+                      {l.targetTitle && <span className="text-xs text-neutral-400 truncate max-w-24">{l.targetTitle}</span>}
+                      <button onClick={() => handleDeleteLink(l.id)} className="text-neutral-300 hover:text-semantic-danger text-xs">✕</button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <select value={newLink.linkType} onChange={e => setNewLink(p => ({ ...p, linkType: e.target.value }))} className="input w-36">
+                    {['BLOCKS','BLOCKED_BY','RELATES_TO','DUPLICATES','PARENT','CHILD'].map(t => <option key={t} value={t}>{t.replace('_',' ')}</option>)}
+                  </select>
+                  <select value={newLink.targetId} onChange={e => setNewLink(p => ({ ...p, targetId: e.target.value }))} className="input flex-1">
+                    <option value="">Select item...</option>
+                    {workItems.filter(i => i.id !== selectedItem.id).map(i => (
+                      <option key={i.id} value={i.id}>{i.id} — {i.title}</option>
+                    ))}
+                  </select>
+                  <Button size="sm" onClick={handleAddLink}>Link</Button>
+                </div>
+              </div>
+            )}
+
+            {/* ATTACHMENTS TAB */}
+            {detailTab === 'attachments' && (
+              <div>
+                <input type="file" ref={fileInputRef} className="hidden" onChange={handleUploadFile} />
+                <Button variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()} className="mb-4">
+                  ↑ Upload file
+                </Button>
+                {attachments.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No files attached yet.</p>}
+                <div className="space-y-2">
+                  {attachments.map(a => (
+                    <div key={a.id} className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-100">
+                      <div className="w-8 h-8 rounded bg-neutral-200 flex items-center justify-center text-xs font-bold text-neutral-500 flex-shrink-0">
+                        {String(a.file_name || a.fileName || '?').split('.').pop().toUpperCase().slice(0, 3)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-neutral-900 truncate">{a.file_name || a.fileName}</p>
+                        <p className="text-xs text-neutral-400">{a.uploaded_by_name || a.uploadedByName || 'You'} · {a.file_size ? `${Math.round(a.file_size / 1024)}KB` : ''}</p>
+                      </div>
+                      <button onClick={() => handleDeleteAttachment(a.id)} className="text-neutral-300 hover:text-semantic-danger text-xs flex-shrink-0">✕</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ACTIVITY TAB */}
+            {detailTab === 'activity' && (
+              <div>
+                {activity.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No activity recorded yet.</p>}
+                <div className="space-y-3">
+                  {activity.map(a => (
+                    <div key={a.id} className="flex gap-2.5">
+                      <div className="w-2 h-2 rounded-full bg-neutral-300 mt-1.5 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <p className="text-xs text-neutral-700">
+                          <span className="font-semibold">{a.actor_name || 'System'}</span>
+                          {' '}{formatEventType(a.event_type)}
+                        </p>
+                        <p className="text-[10px] text-neutral-400 mt-0.5">{a.occurred_at ? new Date(a.occurred_at).toLocaleString() : ''}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
+      )}
+
+      {/* CREATE SPRINT MODAL */}
+      {isSprintOpen && (
+        <Modal title="New Sprint" onClose={() => setIsSprintOpen(false)}>
+          <div className="space-y-3">
+            <Field label="Sprint Name *">
+              <input type="text" value={newSprint.name} onChange={e => setNewSprint({ ...newSprint, name: e.target.value })}
+                className="input" placeholder="e.g. Sprint 1" autoFocus />
+            </Field>
+            <Field label="Sprint Goal">
+              <input type="text" value={newSprint.goal} onChange={e => setNewSprint({ ...newSprint, goal: e.target.value })}
+                className="input" placeholder="e.g. Stabilize portal, ship SAML" />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Start Date"><input type="date" value={newSprint.startDate} onChange={e => setNewSprint({ ...newSprint, startDate: e.target.value })} className="input" /></Field>
+              <Field label="End Date"><input type="date" value={newSprint.endDate} onChange={e => setNewSprint({ ...newSprint, endDate: e.target.value })} className="input" /></Field>
+            </div>
+            <Field label="Capacity (story points)">
+              <input type="number" value={newSprint.capacity} onChange={e => setNewSprint({ ...newSprint, capacity: parseInt(e.target.value) || 0 })} className="input" min={0} />
+            </Field>
+          </div>
+          <div className="flex justify-end gap-3 mt-5">
+            <Button variant="ghost" onClick={() => setIsSprintOpen(false)}>Cancel</Button>
+            <Button variant="action" onClick={handleCreateSprint}>Create Sprint</Button>
+          </div>
+        </Modal>
       )}
 
       {/* CREATE WORK ITEM MODAL */}
@@ -1240,38 +1586,6 @@ export default function App() {
           <div className="flex justify-end gap-3 mt-5">
             <Button variant="ghost" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
             <Button variant="action" onClick={handleCreate}>Create Item</Button>
-          </div>
-        </Modal>
-      )}
-
-      {/* CREATE SPRINT MODAL */}
-      {isSprintOpen && (
-        <Modal title="New Sprint" onClose={() => setIsSprintOpen(false)}>
-          <div className="space-y-3">
-            <Field label="Sprint Name *">
-              <input type="text" value={newSprint.name} onChange={e => setNewSprint({ ...newSprint, name: e.target.value })}
-                className="input" placeholder="e.g. Sprint 1" autoFocus />
-            </Field>
-            <Field label="Sprint Goal">
-              <input type="text" value={newSprint.goal} onChange={e => setNewSprint({ ...newSprint, goal: e.target.value })}
-                className="input" placeholder="e.g. Stabilize portal, ship SAML" />
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Start Date">
-                <input type="date" value={newSprint.startDate} onChange={e => setNewSprint({ ...newSprint, startDate: e.target.value })} className="input" />
-              </Field>
-              <Field label="End Date">
-                <input type="date" value={newSprint.endDate} onChange={e => setNewSprint({ ...newSprint, endDate: e.target.value })} className="input" />
-              </Field>
-            </div>
-            <Field label="Capacity (story points)">
-              <input type="number" value={newSprint.capacity} onChange={e => setNewSprint({ ...newSprint, capacity: parseInt(e.target.value) || 0 })}
-                className="input" min={0} />
-            </Field>
-          </div>
-          <div className="flex justify-end gap-3 mt-5">
-            <Button variant="ghost" onClick={() => setIsSprintOpen(false)}>Cancel</Button>
-            <Button variant="action" onClick={handleCreateSprint}>Create Sprint</Button>
           </div>
         </Modal>
       )}
@@ -1339,19 +1653,31 @@ function Field({ label, children }) {
   );
 }
 
-const PRIORITY_CONFIG = {
-  CRITICAL: { color: 'text-semantic-danger', bg: 'bg-semantic-danger-surface', label: 'Critical' },
-  HIGH:     { color: 'text-semantic-warning', bg: 'bg-semantic-warning-surface', label: 'High' },
-  MEDIUM:   { color: 'text-neutral-600', bg: 'bg-neutral-100', label: 'Medium' },
-  LOW:      { color: 'text-neutral-400', bg: 'bg-neutral-50', label: 'Low' },
-};
+function formatEventType(eventType) {
+  const map = {
+    WORK_ITEM_CREATED: 'created this item',
+    WORK_ITEM_UPDATED: 'updated this item',
+    WORK_ITEM_DELETED: 'deleted this item',
+    COMMENT_ADDED:     'added a comment',
+    STATUS_CHANGED:    'changed the status',
+    ASSIGNED:          'changed the assignee',
+    USER_LOGGED_IN:    'logged in',
+    USER_SIGNED_UP:    'signed up',
+  };
+  return map[eventType] || (eventType || '').toLowerCase().replace(/_/g, ' ');
+}
 
+const PRIORITY_CONFIG = {
+  CRITICAL: { color: 'text-semantic-danger',  bg: 'bg-semantic-danger-surface',  label: 'Critical' },
+  HIGH:     { color: 'text-semantic-warning',  bg: 'bg-semantic-warning-surface', label: 'High' },
+  MEDIUM:   { color: 'text-neutral-600',       bg: 'bg-neutral-100',              label: 'Medium' },
+  LOW:      { color: 'text-neutral-400',       bg: 'bg-neutral-50',               label: 'Low' },
+};
 function PriorityBadge({ priority }) {
   const p = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.MEDIUM;
   return <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${p.bg} ${p.color}`}>{p.label}</span>;
 }
 
-// Sprint item list used in backlog view
 function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
   const [items, setItems] = React.useState([]);
   React.useEffect(() => {
@@ -1359,20 +1685,16 @@ function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
       .then(r => r.json()).then(d => setItems(Array.isArray(d) ? d : [])).catch(() => {});
   }, [sprintId]);
 
-  if (items.length === 0) return (
-    <div className="px-5 py-4 text-sm text-neutral-400 text-center">No items in this sprint yet.</div>
-  );
-
+  if (items.length === 0) return <div className="px-5 py-4 text-sm text-neutral-400 text-center">No items in this sprint yet.</div>;
   return (
     <div className="divide-y divide-neutral-50">
       {items.map(item => (
         <div key={item.id} className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 group">
           <TypeBadge type={item.type} compact />
           <span className="font-mono text-[10px] text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
-          <span className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy"
-            onClick={() => onSelect(item)}>{item.title}</span>
+          <span className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate" onClick={() => onSelect(item)}>{item.title}</span>
           <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
-          {item.storyPoints > 0 && <span className="text-xs bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
+          {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
           {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}
           <button onClick={() => { onMoveToBacklog(item.id); setItems(prev => prev.filter(i => i.id !== item.id)); }}
             className="opacity-0 group-hover:opacity-100 text-xs text-neutral-400 hover:text-brand-navy transition-opacity">↓ Backlog</button>
@@ -1382,36 +1704,28 @@ function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
   );
 }
 
-// Sprint board with optional swimlanes
 function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOver, onDrop, onSelect, onDelete, density }) {
-  const densityPad = { compact: 'p-2', comfortable: 'p-3', spacious: 'p-4' };
+  const pad = { compact: 'p-2', comfortable: 'p-3', spacious: 'p-4' };
 
   const getSwimlanes = () => {
     if (swimlaneBy === 'none') return [{ key: 'all', label: null, items }];
     if (swimlaneBy === 'assignee') {
-      const assignees = [...new Set(items.map(i => i.assigneeId || 'unassigned'))];
-      return assignees.map(a => ({
-        key: a, label: a === 'unassigned' ? 'Unassigned' : users.find(u => u.id === a)?.fullName || a,
-        items: items.filter(i => (i.assigneeId || 'unassigned') === a)
-      }));
+      const keys = [...new Set(items.map(i => i.assigneeId || 'unassigned'))];
+      return keys.map(k => ({ key: k, label: k === 'unassigned' ? 'Unassigned' : users.find(u => u.id === k)?.fullName || k, items: items.filter(i => (i.assigneeId || 'unassigned') === k) }));
     }
     if (swimlaneBy === 'type') {
-      const types = [...new Set(items.map(i => i.type))];
-      return types.map(t => ({ key: t, label: t, items: items.filter(i => i.type === t) }));
+      const keys = [...new Set(items.map(i => i.type))];
+      return keys.map(k => ({ key: k, label: k, items: items.filter(i => i.type === k) }));
     }
     if (swimlaneBy === 'priority') {
-      return ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(p => ({
-        key: p, label: p, items: items.filter(i => (i.priority || 'MEDIUM') === p)
-      })).filter(s => s.items.length > 0);
+      return ['CRITICAL','HIGH','MEDIUM','LOW'].map(p => ({ key: p, label: p, items: items.filter(i => (i.priority || 'MEDIUM') === p) })).filter(s => s.items.length > 0);
     }
     return [{ key: 'all', label: null, items }];
   };
 
-  const swimlanes = getSwimlanes();
-
   return (
     <div className="flex-1 overflow-auto">
-      {swimlanes.map(lane => (
+      {getSwimlanes().map(lane => (
         <div key={lane.key}>
           {lane.label && (
             <div className="flex items-center gap-2 mb-2 mt-4 px-1">
@@ -1420,14 +1734,12 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
               <div className="h-px flex-1 bg-neutral-200"></div>
             </div>
           )}
-          <div className="flex gap-4 min-h-48">
+          <div className="flex gap-4 min-h-40">
             {columns.map(col => {
               const colItems = lane.items.filter(i => i.status === col.name);
               return (
-                <div key={col.name}
-                  className="flex-1 min-w-48 flex flex-col bg-neutral-100 rounded-xl p-3"
-                  onDragOver={onDragOver}
-                  onDrop={(e) => onDrop(e, col.name)}>
+                <div key={col.name} className="flex-1 min-w-48 flex flex-col bg-neutral-100 rounded-xl p-3"
+                  onDragOver={onDragOver} onDrop={(e) => onDrop(e, col.name)}>
                   {!lane.label && (
                     <div className="flex items-center justify-between mb-3 px-1">
                       <div className="flex items-center gap-2">
@@ -1438,14 +1750,10 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
                     </div>
                   )}
                   <div className="space-y-2 flex-1">
-                    {colItems.length === 0 && (
-                      <div className="flex items-center justify-center py-6 border-2 border-dashed border-neutral-200 rounded-lg">
-                        <p className="text-xs text-neutral-300">Drop here</p>
-                      </div>
-                    )}
+                    {colItems.length === 0 && <div className="flex items-center justify-center py-6 border-2 border-dashed border-neutral-200 rounded-lg"><p className="text-xs text-neutral-300">Drop here</p></div>}
                     {colItems.map(item => (
                       <div key={item.id} draggable onDragStart={(e) => onDragStart(e, item.id)}
-                        className={`bg-white rounded-lg shadow-sm border border-neutral-200 cursor-grab hover:shadow-md transition-shadow group ${densityPad[density]}`}>
+                        className={`bg-white rounded-lg shadow-sm border border-neutral-200 cursor-grab hover:shadow-md transition-shadow group ${pad[density]}`}>
                         <div className="flex items-start justify-between mb-1.5">
                           <span className="font-mono text-[10px] text-neutral-400">{item.id}</span>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1453,12 +1761,11 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
                             <button onClick={() => onDelete(item.id)} className="text-neutral-400 hover:text-semantic-danger text-xs p-0.5">✕</button>
                           </div>
                         </div>
-                        <p className="text-sm font-medium text-neutral-900 leading-snug mb-2 cursor-pointer"
-                          onClick={() => onSelect(item)}>{item.title}</p>
+                        <p className="text-sm font-medium text-neutral-900 leading-snug mb-2 cursor-pointer" onClick={() => onSelect(item)}>{item.title}</p>
                         <div className="flex items-center justify-between">
                           <TypeBadge type={item.type} compact={density === 'compact'} />
                           <div className="flex items-center gap-1.5">
-                            {item.storyPoints > 0 && <span className="text-[10px] text-neutral-400 font-medium">{item.storyPoints}pt</span>}
+                            {(item.storyPoints > 0) && <span className="text-[10px] text-neutral-400 font-medium">{item.storyPoints}pt</span>}
                             {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={5} />}
                           </div>
                         </div>
@@ -1473,9 +1780,4 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
       ))}
     </div>
   );
-}
-
-function statusToCategory(status) {
-  const map = { 'Todo': 'todo', 'In Progress': 'in_progress', 'Done': 'done', 'Blocked': 'blocked' };
-  return map[status] || 'todo';
 }

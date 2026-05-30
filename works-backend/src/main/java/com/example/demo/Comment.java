@@ -14,6 +14,8 @@ public class Comment {
     private String body;
     private OffsetDateTime createdAt;
 
+    private boolean isInternal;
+
     @Transient
     private String authorName;
 
@@ -27,6 +29,8 @@ public class Comment {
     public void setBody(String body) { this.body = body; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
+    public boolean isInternal() { return isInternal; }
+    public void setInternal(boolean internal) { isInternal = internal; }
     public String getAuthorName() { return authorName; }
     public void setAuthorName(String authorName) { this.authorName = authorName; }
 }

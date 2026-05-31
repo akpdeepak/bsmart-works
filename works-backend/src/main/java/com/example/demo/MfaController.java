@@ -31,11 +31,8 @@ public class MfaController {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
 
-    private static final TimeBasedOneTimePasswordGenerator TOTP;
-    static {
-        try { TOTP = new TimeBasedOneTimePasswordGenerator(Duration.ofSeconds(30)); }
-        catch (NoSuchAlgorithmException e) { throw new RuntimeException(e); }
-    }
+    private static final TimeBasedOneTimePasswordGenerator TOTP =
+            new TimeBasedOneTimePasswordGenerator(Duration.ofSeconds(30));
 
     public MfaController(UserRepository userRepository, JwtUtil jwtUtil) {
         this.userRepository = userRepository;

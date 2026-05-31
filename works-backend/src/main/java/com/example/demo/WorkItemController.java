@@ -17,15 +17,17 @@ public class WorkItemController {
     private final JdbcTemplate jdbc;
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
                               JdbcTemplate jdbc, NotificationRepository notificationRepository,
-                              UserRepository userRepository) {
+                              UserRepository userRepository, EmailService emailService) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.emailService = emailService;
     }
 
     @GetMapping
@@ -165,10 +167,12 @@ public class WorkItemController {
         eventService.record(saved.getId(), "WORK_ITEM_CREATED", userId,
                 "{\"title\":\"" + saved.getTitle() + "\",\"type\":\"" + saved.getType() + "\"}");
 
-        // Notify assignee
+        // Notify assignee (in-app + email)
         if (saved.getAssigneeId() != null && !saved.getAssigneeId().equals(userId)) {
             createNotification(saved.getAssigneeId(), "ASSIGNED",
                     "You were assigned to: " + saved.getTitle(), "/items/" + saved.getId());
+            String actorName = userRepository.findById(userId != null ? userId : "").map(User::getFullName).orElse("Someone");
+            emailService.sendAssignmentEmail(saved.getAssigneeId(), actorName, saved.getId(), saved.getTitle());
         }
 
         attachTags(saved);
@@ -241,11 +245,13 @@ public class WorkItemController {
                 }
             }
 
-            // Notify new assignee
+            // Notify new assignee (in-app + email)
             String newAssignee = saved.getAssigneeId();
             if (newAssignee != null && !newAssignee.equals(oldAssignee) && !newAssignee.equals(userId)) {
                 createNotification(newAssignee, "ASSIGNED",
                         "You were assigned to: " + saved.getTitle(), "/items/" + saved.getId());
+                String actorName = userRepository.findById(userId != null ? userId : "").map(User::getFullName).orElse("Someone");
+                emailService.sendAssignmentEmail(newAssignee, actorName, saved.getId(), saved.getTitle());
             }
 
             attachTags(saved);

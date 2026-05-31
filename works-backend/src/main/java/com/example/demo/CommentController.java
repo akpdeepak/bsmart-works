@@ -16,13 +16,16 @@ public class CommentController {
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
     private final EventService eventService;
+    private final EmailService emailService;
 
     public CommentController(CommentRepository commentRepository, UserRepository userRepository,
-                             NotificationRepository notificationRepository, EventService eventService) {
+                             NotificationRepository notificationRepository, EventService eventService,
+                             EmailService emailService) {
         this.commentRepository = commentRepository;
         this.userRepository = userRepository;
         this.notificationRepository = notificationRepository;
         this.eventService = eventService;
+        this.emailService = emailService;
     }
 
     @GetMapping
@@ -30,8 +33,7 @@ public class CommentController {
                                      @RequestHeader(value = "X-User-Id", required = false) String userId) {
         List<Comment> all = commentRepository.findByWorkItemIdOrderByCreatedAtAsc(workItemId);
         all.forEach(c -> userRepository.findById(c.getAuthorId()).ifPresent(u -> c.setAuthorName(u.getFullName())));
-        // Build threaded structure: top-level comments with replies nested
-        java.util.Map<Long, Comment> byId = new java.util.LinkedHashMap<>();
+        Map<Long, Comment> byId = new java.util.LinkedHashMap<>();
         all.forEach(c -> byId.put(c.getId(), c));
         List<Comment> threaded = new java.util.ArrayList<>();
         for (Comment c : all) {
@@ -63,7 +65,10 @@ public class CommentController {
 
         eventService.record(workItemId, "COMMENT_ADDED", userId, "{\"commentId\":" + saved.getId() + "}");
 
-        // Parse @mentions â€” match @FullName or @email
+        String actorName = saved.getAuthorName() != null ? saved.getAuthorName() : "Someone";
+        String snippet = truncate(saved.getBody(), 120);
+
+        // @mention notifications + emails
         String body = saved.getBody();
         if (body != null) {
             Pattern p = Pattern.compile("@([\\w.]+)");
@@ -78,11 +83,13 @@ public class CommentController {
                         Notification n = new Notification();
                         n.setUserId(u.getId());
                         n.setType("MENTION");
-                        n.setMessage(saved.getAuthorName() + " mentioned you in a comment");
+                        n.setMessage(actorName + " mentioned you in a comment");
                         n.setLink("/items/" + workItemId);
                         n.setRead(false);
                         n.setCreatedAt(OffsetDateTime.now());
                         notificationRepository.save(n);
+                        // Send email for mention
+                        emailService.sendMentionEmail(u.getId(), actorName, workItemId, snippet);
                     });
             }
         }
@@ -94,5 +101,9 @@ public class CommentController {
     public void deleteComment(@PathVariable String workItemId, @PathVariable Long commentId) {
         commentRepository.deleteById(commentId);
     }
-}
 
+    private String truncate(String s, int max) {
+        if (s == null) return "";
+        return s.length() <= max ? s : s.substring(0, max) + "…";
+    }
+}

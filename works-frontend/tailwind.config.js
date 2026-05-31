@@ -71,6 +71,25 @@ export default {
         'out-quint': 'cubic-bezier(0.22, 1, 0.36, 1)',
         spring:      'cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
+      // Layout dimensions as tokens — so the three-zone shell never needs banned arbitrary
+      // px values (w-[360px]). Matches CLAUDE.md §4.6. Use w-sidebar / w-panel etc.
+      width: {
+        sidebar:             '240px',
+        'sidebar-collapsed': '48px',
+        panel:               '360px',
+      },
+      // Stacking order — single source of truth so sidebar / sticky header / dropdown / panel /
+      // modal / command palette / toast never fight. Matches CLAUDE.md §4.21. Use z-sticky etc.
+      zIndex: {
+        base:     '0',
+        sticky:   '20',  // page-level sticky header bar (in-content sticky tables stay z-10)
+        dropdown: '30',  // dropdowns, context menus, tooltips
+        panel:    '40',  // right contextual slide-in panel
+        bulkbar:  '45',  // bulk-action bar
+        modal:    '50',  // modal / dialog + backdrop
+        palette:  '60',  // command palette (⌘K)
+        toast:    '70',  // toasts / notifications — always on top
+      },
     },
   },
   plugins: [],

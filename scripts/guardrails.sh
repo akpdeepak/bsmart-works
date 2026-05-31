@@ -51,6 +51,11 @@ check() {
 check BLOCK "No works-* token names (use brand-navy/brand-orange — CLAUDE.md §4)" \
   "$(grep -RInE '\bworks-(navy|orange|blue|amber|teal)\b' "$FE" 2>/dev/null || true)"
 
+# Tailwind's default gray-* palette is not ours — the token set is neutral-* (CLAUDE.md §4.2).
+# Currently zero usages; keep it that way.
+check BLOCK "No Tailwind gray-* classes (use neutral-* tokens — CLAUDE.md §4.2)" \
+  "$(grep -RInE '\b(bg|text|border|ring|ring-offset|from|to|via|divide|fill|stroke|placeholder|outline|decoration|shadow|accent|caret)-gray-[0-9]' "$FE" 2>/dev/null || true)"
+
 # New code must stay in com.example.demo until a rename is scheduled.
 if [ -d "$BE" ]; then
   check BLOCK "No new com.bcits.works.* packages yet (match com.example.demo — CLAUDE.md §3)" \
@@ -88,6 +93,15 @@ check WARN "No arbitrary spacing values (use Tailwind 4px scale — CLAUDE.md §
 check WARN "No inline fetch/axios in components (use apiClient — CLAUDE.md §3)" \
   "$(grep -RInE '\bfetch\(|from .axios.' "$FE" 2>/dev/null \
      | grep -viE 'apiClient|api-client' || true)"
+
+# Arbitrary z-index — use the named stacking tokens (z-sticky/z-panel/z-modal/z-toast …) so
+# layers can't fight. See CLAUDE.md §4.21 and the zIndex scale in tailwind.config.js.
+check WARN "No arbitrary z-index (use z-index tokens — CLAUDE.md §4.21)" \
+  "$(grep -RInE '\bz-\[[0-9]+\]' "$FE" 2>/dev/null || true)"
+
+# NOTE: contrast (CLAUDE.md §4.17) is intentionally NOT grep-enforced here. `text-neutral-400`
+# is a legitimate token for placeholders/disabled/icons, so a blanket grep can't tell those
+# apart from misuse as body text. That check lives in eslint-plugin-jsx-a11y + code review.
 
 echo
 if [ "$block_fail" -ne 0 ]; then

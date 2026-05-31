@@ -63,6 +63,12 @@ export default function App() {
   const [forgotMsg, setForgotMsg]       = useState('');
   const [verifyPending, setVerifyPending] = useState(null); // { email, devToken }
   const [verifyMsg, setVerifyMsg]       = useState('');
+  const [mfaChallenge, setMfaChallenge] = useState(null); // { userId } — awaiting TOTP
+  const [mfaCode, setMfaCode]           = useState('');
+  const [mfaError, setMfaError]         = useState('');
+  const [mfaSetup, setMfaSetup]         = useState(null); // { otpAuthUri, secret } — enroll flow
+  const [mfaSetupCode, setMfaSetupCode] = useState('');
+  const [mfaSetupMsg, setMfaSetupMsg]   = useState('');
 
   const [view, setView]                 = useState('dashboard');
   const [toast, setToast]               = useState(null); // { message, type }
@@ -303,9 +309,13 @@ export default function App() {
     }).then(data => {
       if (!data) return;
       if (data.requiresVerification) {
-        // Signup success — show verify screen with dev token for UAT
         setVerifyPending({ email: authForm.email, devToken: data.devToken });
         setVerifyMsg('');
+        return;
+      }
+      if (data.requiresMfa) {
+        setMfaChallenge({ userId: data.userId });
+        setMfaCode(''); setMfaError('');
         return;
       }
       setCurrentUser(data.user); setToken(data.token);
@@ -326,6 +336,39 @@ export default function App() {
         localStorage.setItem('bSmartSession', JSON.stringify({ user: data.user, token: data.token }));
       })
       .catch(err => setVerifyMsg(err.message));
+  };
+
+  const handleMfaVerify = () => {
+    setMfaError('');
+    fetch(`${API}/auth/mfa/verify`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: mfaChallenge.userId, totp: mfaCode })
+    }).then(async res => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Invalid code');
+      return data;
+    }).then(data => {
+      setMfaChallenge(null); setMfaCode('');
+      setCurrentUser(data.user); setToken(data.token);
+      localStorage.setItem('bSmartSession', JSON.stringify({ user: data.user, token: data.token }));
+    }).catch(err => setMfaError(err.message));
+  };
+
+  const handleMfaEnroll = () => {
+    fetch(`${API}/auth/mfa/enroll`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-User-Id': currentUser?.id }
+    }).then(r => r.json()).then(d => { setMfaSetup(d); setMfaSetupCode(''); setMfaSetupMsg(''); })
+      .catch(() => showToast('MFA enroll failed', 'error'));
+  };
+
+  const handleMfaConfirm = () => {
+    fetch(`${API}/auth/mfa/confirm`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-User-Id': currentUser?.id },
+      body: JSON.stringify({ totp: mfaSetupCode })
+    }).then(r => r.json()).then(d => {
+      if (d.message) { setMfaSetup(null); setMfaSetupMsg(''); showToast('MFA enabled! ✓'); }
+      else setMfaSetupMsg(d.error || 'Failed');
+    }).catch(() => setMfaSetupMsg('Confirmation failed'));
   };
 
   const handleForgotPassword = (e) => {
@@ -768,6 +811,29 @@ export default function App() {
           )}
           <button onClick={() => { setVerifyPending(null); setAuthMode('login'); }}
             className="w-full text-center text-sm text-neutral-400 hover:text-brand-navy transition-colors">
+            ← Back to sign in
+          </button>
+        </div>
+      </div>
+    );
+
+    // MFA challenge screen
+    if (mfaChallenge) return (
+      <div className="flex h-screen bg-neutral-100 items-center justify-center font-sans">
+        <div className="bg-white p-8 rounded-xl shadow-xl w-96 border border-neutral-200">
+          <div className="flex justify-center mb-6"><Logo /></div>
+          <div className="w-14 h-14 rounded-full bg-brand-navy/10 flex items-center justify-center text-2xl mx-auto mb-4">🔐</div>
+          <h2 className="text-xl font-bold text-brand-navy text-center mb-2">Two-factor authentication</h2>
+          <p className="text-sm text-neutral-500 text-center mb-5">Enter the 6-digit code from your authenticator app.</p>
+          {mfaError && <p className="text-sm text-semantic-danger text-center mb-3">{mfaError}</p>}
+          <input type="text" inputMode="numeric" maxLength={6} placeholder="000000"
+            value={mfaCode} onChange={e => setMfaCode(e.target.value.replace(/\D/g,''))}
+            onKeyDown={e => e.key === 'Enter' && mfaCode.length === 6 && handleMfaVerify()}
+            className="input text-center text-2xl tracking-widest mb-4" autoFocus />
+          <Button variant="action" fullWidth onClick={handleMfaVerify}
+            disabled={mfaCode.length !== 6}>Verify Code</Button>
+          <button onClick={() => { setMfaChallenge(null); setMfaCode(''); }}
+            className="w-full mt-3 text-center text-sm text-neutral-400 hover:text-brand-navy transition-colors">
             ← Back to sign in
           </button>
         </div>
@@ -1828,6 +1894,44 @@ export default function App() {
                       className="w-4 h-4 accent-brand-navy" />
                   </label>
                 ))}
+              </div>
+
+              {/* MFA / Two-Factor Authentication */}
+              <div className="bg-white rounded-xl border border-neutral-200 p-6 mt-6">
+                <h2 className="font-semibold text-neutral-900 mb-1">Two-Factor Authentication (TOTP)</h2>
+                <p className="text-sm text-neutral-400 mb-4">Secure your account with an authenticator app (Google Authenticator, Authy, etc.)</p>
+                {!mfaSetup ? (
+                  <Button variant="secondary" onClick={handleMfaEnroll}>
+                    🔐 Set up authenticator app
+                  </Button>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
+                      <p className="text-xs font-semibold text-neutral-600 mb-2">1. Scan this QR code with your authenticator app</p>
+                      <div className="bg-white border border-neutral-300 rounded p-3 text-center mb-3">
+                        <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(mfaSetup.otpAuthUri)}&size=160x160`}
+                          alt="TOTP QR Code" className="mx-auto w-40 h-40" />
+                      </div>
+                      <p className="text-xs text-neutral-500 mb-1">Or enter this secret manually:</p>
+                      <code className="text-xs bg-neutral-100 px-2 py-1 rounded font-mono break-all">{mfaSetup.secret}</code>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-neutral-600 mb-2">2. Enter the 6-digit code to confirm</p>
+                      <div className="flex gap-2">
+                        <input type="text" inputMode="numeric" maxLength={6} placeholder="000000"
+                          value={mfaSetupCode} onChange={e => setMfaSetupCode(e.target.value.replace(/\D/g,''))}
+                          className="input w-32 text-center tracking-widest text-lg font-mono" />
+                        <Button variant="action" onClick={handleMfaConfirm} disabled={mfaSetupCode.length !== 6}>
+                          Activate MFA
+                        </Button>
+                        <Button variant="secondary" onClick={() => { setMfaSetup(null); setMfaSetupCode(''); }}>
+                          Cancel
+                        </Button>
+                      </div>
+                      {mfaSetupMsg && <p className="text-xs text-semantic-danger mt-2">{mfaSetupMsg}</p>}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Role Management — ADMIN+ only */}

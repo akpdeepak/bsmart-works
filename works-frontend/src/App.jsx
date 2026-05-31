@@ -2780,86 +2780,99 @@ function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
   );
 }
 
-// Simple rich text editor with markdown toolbar
+/**
+ * WYSIWYG Rich Text Editor
+ * Uses contentEditable + execCommand for true what-you-see-is-what-you-get editing.
+ * Formatting (bold, italic, lists, headings, links) is applied and rendered immediately —
+ * no separate "preview" mode needed. Stores and emits HTML.
+ */
 function RichTextEditor({ value, onChange, onBlur, placeholder }) {
-  const textareaRef = useRef(null);
+  const editorRef = useRef(null);
+  const isComposing = useRef(false);
 
-  const wrap = (prefix, suffix = prefix) => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const selected = value.slice(start, end);
-    const before = value.slice(0, start);
-    const after = value.slice(end);
-    const newVal = before + prefix + selected + suffix + after;
-    onChange(newVal);
-    setTimeout(() => {
-      ta.focus();
-      ta.setSelectionRange(start + prefix.length, end + prefix.length);
-    }, 0);
+  // Sync initial value into the editor DOM (only on mount or external value change)
+  useEffect(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    // Only update DOM if it differs (avoids cursor jump on every keystroke)
+    if (el.innerHTML !== (value || '')) {
+      el.innerHTML = value || '';
+    }
+  }, []);  // mount-only; ongoing changes come from user input
+
+  const exec = (cmd, arg = null) => {
+    editorRef.current?.focus();
+    document.execCommand(cmd, false, arg);
+    // Emit updated HTML after command
+    onChange(editorRef.current?.innerHTML || '');
   };
 
-  const insertBullet = () => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const before = value.slice(0, start);
-    const after = value.slice(start);
-    const needsNewline = before.length > 0 && !before.endsWith('\n');
-    const newVal = before + (needsNewline ? '\n' : '') + '- ' + after;
-    onChange(newVal);
-    setTimeout(() => { ta.focus(); ta.setSelectionRange(start + (needsNewline ? 3 : 2), start + (needsNewline ? 3 : 2)); }, 0);
+  const handleInput = () => {
+    if (!isComposing.current) onChange(editorRef.current?.innerHTML || '');
   };
 
-  // Render markdown-like preview
-  const renderPreview = (text) => {
-    if (!text) return '';
-    return text
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/`(.+?)`/g, '<code class="bg-neutral-100 text-semantic-danger px-1 rounded text-[11px] font-mono">$1</code>')
-      .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
-      .replace(/^# (.+)$/gm, '<p class="font-bold text-base">$1</p>')
-      .replace(/\n/g, '<br/>');
+  const handleKeyDown = (e) => {
+    // Ctrl/Cmd shortcuts
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 'b') { e.preventDefault(); exec('bold'); }
+      if (e.key === 'i') { e.preventDefault(); exec('italic'); }
+      if (e.key === 'u') { e.preventDefault(); exec('underline'); }
+    }
   };
 
-  const [showPreview, setShowPreview] = React.useState(false);
+  const handleBlur = () => {
+    onChange(editorRef.current?.innerHTML || '');
+    onBlur?.();
+  };
+
+  const ToolBtn = ({ cmd, arg, title, children, active }) => (
+    <button type="button" title={title}
+      onMouseDown={e => { e.preventDefault(); exec(cmd, arg); }}
+      className={`w-7 h-7 flex items-center justify-center rounded text-xs transition-colors
+        ${active ? 'bg-brand-navy text-white' : 'text-neutral-600 hover:bg-neutral-200'}`}>
+      {children}
+    </button>
+  );
 
   return (
     <div className="border border-neutral-200 rounded-lg overflow-hidden focus-within:border-brand-navy transition-colors">
-      {/* Toolbar */}
-      <div className="flex items-center gap-0.5 px-2 py-1.5 bg-neutral-50 border-b border-neutral-200">
-        <button type="button" onClick={() => wrap('**')} title="Bold (Ctrl+B)"
-          className="w-6 h-6 flex items-center justify-center rounded text-xs font-bold text-neutral-600 hover:bg-neutral-200 transition-colors">B</button>
-        <button type="button" onClick={() => wrap('*')} title="Italic"
-          className="w-6 h-6 flex items-center justify-center rounded text-xs italic text-neutral-600 hover:bg-neutral-200 transition-colors">I</button>
-        <button type="button" onClick={() => wrap('`')} title="Inline code"
-          className="w-6 h-6 flex items-center justify-center rounded text-xs font-mono text-neutral-600 hover:bg-neutral-200 transition-colors">`</button>
-        <button type="button" onClick={insertBullet} title="Bullet point"
-          className="w-6 h-6 flex items-center justify-center rounded text-xs text-neutral-600 hover:bg-neutral-200 transition-colors">•</button>
-        <button type="button" onClick={() => wrap('# ', '')} title="Heading"
-          className="w-6 h-6 flex items-center justify-center rounded text-xs font-bold text-neutral-600 hover:bg-neutral-200 transition-colors">H</button>
-        <div className="h-4 w-px bg-neutral-200 mx-1"></div>
-        <button type="button" onClick={() => setShowPreview(p => !p)}
-          className={`text-[10px] px-2 py-0.5 rounded font-medium transition-colors ${showPreview ? 'bg-brand-navy text-white' : 'text-neutral-500 hover:bg-neutral-200'}`}>
-          {showPreview ? 'Edit' : 'Preview'}
-        </button>
+      {/* WYSIWYG Toolbar */}
+      <div className="flex items-center gap-0.5 px-2 py-1.5 bg-neutral-50 border-b border-neutral-200 flex-wrap">
+        <ToolBtn cmd="bold"          title="Bold (Ctrl+B)"><strong>B</strong></ToolBtn>
+        <ToolBtn cmd="italic"        title="Italic (Ctrl+I)"><em>I</em></ToolBtn>
+        <ToolBtn cmd="underline"     title="Underline (Ctrl+U)"><u>U</u></ToolBtn>
+        <ToolBtn cmd="strikeThrough" title="Strikethrough"><s>S</s></ToolBtn>
+        <div className="h-4 w-px bg-neutral-200 mx-1"/>
+        <ToolBtn cmd="formatBlock" arg="h2"  title="Heading 2"><span className="font-bold text-[10px]">H2</span></ToolBtn>
+        <ToolBtn cmd="formatBlock" arg="h3"  title="Heading 3"><span className="font-bold text-[10px]">H3</span></ToolBtn>
+        <ToolBtn cmd="formatBlock" arg="p"   title="Paragraph"><span className="text-[10px]">¶</span></ToolBtn>
+        <div className="h-4 w-px bg-neutral-200 mx-1"/>
+        <ToolBtn cmd="insertUnorderedList" title="Bullet list"><span className="text-[11px]">• —</span></ToolBtn>
+        <ToolBtn cmd="insertOrderedList"   title="Numbered list"><span className="text-[11px]">1.</span></ToolBtn>
+        <ToolBtn cmd="indent"              title="Indent"><span className="text-[11px]">→</span></ToolBtn>
+        <ToolBtn cmd="outdent"             title="Outdent"><span className="text-[11px]">←</span></ToolBtn>
+        <div className="h-4 w-px bg-neutral-200 mx-1"/>
+        <ToolBtn cmd="removeFormat" title="Clear formatting"><span className="text-[10px]">✕</span></ToolBtn>
+        <span className="ml-auto text-[9px] text-neutral-300 pr-1">WYSIWYG</span>
       </div>
-      {showPreview ? (
-        <div className="min-h-[80px] p-3 text-sm text-neutral-700 leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: renderPreview(value) || '<span class="text-neutral-300">Nothing to preview</span>' }} />
-      ) : (
-        <textarea
-          ref={textareaRef}
-          rows={4}
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          onBlur={onBlur}
-          placeholder={placeholder}
-          className="w-full px-3 py-2 text-sm text-neutral-900 focus:outline-none resize-none bg-white"
-        />
-      )}
+
+      {/* Editable area — true WYSIWYG */}
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
+        onCompositionStart={() => { isComposing.current = true; }}
+        onCompositionEnd={() => { isComposing.current = false; handleInput(); }}
+        data-placeholder={placeholder}
+        className="min-h-[100px] max-h-64 overflow-y-auto px-3 py-2 text-sm text-neutral-900 focus:outline-none bg-white
+          [&_h2]:text-base [&_h2]:font-bold [&_h2]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mb-1
+          [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5
+          [&_li]:mb-0.5 [&_strong]:font-semibold [&_em]:italic [&_u]:underline [&_s]:line-through
+          empty:before:content-[attr(data-placeholder)] empty:before:text-neutral-300"
+      />
     </div>
   );
 }

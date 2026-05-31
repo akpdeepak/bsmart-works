@@ -22,7 +22,7 @@ function Avatar({ name, size = 8 }) {
 
 const TYPES = {
   Task:            { color: 'bg-brand-navy-tint',      icon: '✓' },
-  Story:           { color: 'bg-brand-teal',           icon: '📖' },
+  Story:           { color: 'bg-semantic-success',           icon: '📖' },
   Bug:             { color: 'bg-semantic-danger',       icon: '🐛' },
   Epic:            { color: 'bg-purple-700',            icon: '⚡' },
   'Sub-task':      { color: 'bg-neutral-600',          icon: '↳' },
@@ -795,7 +795,7 @@ export default function App() {
   const columns = [
     { name: 'Todo',        dot: 'bg-neutral-400' },
     { name: 'In Progress', dot: 'bg-brand-navy-tint' },
-    { name: 'Done',        dot: 'bg-brand-teal' },
+    { name: 'Done',        dot: 'bg-semantic-success' },
   ];
 
   const densityPad = { compact: 'p-2', comfortable: 'p-3', spacious: 'p-4' };
@@ -811,7 +811,7 @@ export default function App() {
       <div className="flex h-screen bg-neutral-100 items-center justify-center font-sans">
         <div className="bg-white p-8 rounded-xl shadow-xl w-96 border border-neutral-200">
           <div className="flex justify-center mb-6"><Logo /></div>
-          <div className="w-14 h-14 rounded-full bg-brand-teal/10 flex items-center justify-center text-2xl mx-auto mb-4">📧</div>
+          <div className="w-14 h-14 rounded-full bg-semantic-success/10 flex items-center justify-center text-2xl mx-auto mb-4">📧</div>
           <h2 className="text-xl font-bold text-brand-navy text-center mb-2">Check your email</h2>
           <p className="text-sm text-neutral-500 text-center mb-5">
             We sent a verification link to <strong>{verifyPending.email}</strong>.<br/>
@@ -982,7 +982,7 @@ export default function App() {
           <NavItem active={view === 'backlog'} onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); fetchSavedFilters(); }} icon="📝">Backlog</NavItem>
           <NavItem active={view === 'sprint'} onClick={() => { setView('sprint'); fetchSprints(); fetchSavedFilters(); }} icon="⚡">
             Active Sprint
-            {sprints.find(s => s.status === 'ACTIVE') && <span className="ml-auto w-2 h-2 rounded-full bg-brand-teal flex-shrink-0"></span>}
+            {sprints.find(s => s.status === 'ACTIVE') && <span className="ml-auto w-2 h-2 rounded-full bg-semantic-success flex-shrink-0"></span>}
           </NavItem>
           <NavItem active={view === 'reports'} onClick={() => { setView('reports'); fetchSprints(); fetchVelocityData(); }} icon="📊">Reports</NavItem>
           <NavItem active={view === 'projects'} onClick={() => setView('projects')} icon="📁">
@@ -1090,7 +1090,7 @@ export default function App() {
                 {/* My open items */}
                 <StatCard label="Assigned to me" value={myItems.filter(i => i.status !== 'Done').length} sub={`${myItems.length} total`} color="text-brand-navy" icon="👤" onClick={() => setView('myworks')} />
                 {/* Active sprint */}
-                <StatCard label="Active sprint items" value={sprints.find(s=>s.status==='ACTIVE') ? sprintItems.filter(i=>i.status!=='Done').length : '—'} sub={sprints.find(s=>s.status==='ACTIVE')?.name || 'No active sprint'} color="text-brand-teal" icon="⚡" onClick={() => { fetchSprints(); setView('sprint'); }} />
+                <StatCard label="Active sprint items" value={sprints.find(s=>s.status==='ACTIVE') ? sprintItems.filter(i=>i.status!=='Done').length : '—'} sub={sprints.find(s=>s.status==='ACTIVE')?.name || 'No active sprint'} color="text-semantic-success" icon="⚡" onClick={() => { fetchSprints(); setView('sprint'); }} />
                 {/* Unread notifications */}
                 <StatCard label="Unread notifications" value={unreadCount} sub="Click to view all" color="text-brand-orange" icon="🔔" onClick={() => { fetchNotifications(); setView('notifications'); }} />
               </div>
@@ -1142,7 +1142,7 @@ export default function App() {
                           <span className="text-xs text-neutral-400">{done}/{items.length} done · {pct}%</span>
                         </div>
                         <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-brand-teal rounded-full" style={{width:`${pct}%`}}></div>
+                          <div className="h-full bg-semantic-success rounded-full" style={{width:`${pct}%`}}></div>
                         </div>
                       </div>
                     );
@@ -1439,7 +1439,7 @@ export default function App() {
                           {count > 0 && (
                             <div className="mt-3">
                               <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-brand-teal rounded-full transition-all" style={{ width: `${Math.round((done / count) * 100)}%` }}></div>
+                                <div className="h-full bg-semantic-success rounded-full transition-all" style={{ width: `${Math.round((done / count) * 100)}%` }}></div>
                               </div>
                               <p className="text-[10px] text-neutral-400 mt-1">{Math.round((done / count) * 100)}% complete</p>
                             </div>
@@ -1514,12 +1514,12 @@ export default function App() {
               {sprints.map(sprint => {
                 const usedPts = sprint.usedPoints || 0;
                 const capPct = sprint.capacity > 0 ? Math.min(100, Math.round((usedPts / sprint.capacity) * 100)) : 0;
-                const capColor = capPct >= 100 ? 'bg-semantic-danger' : capPct >= 80 ? 'bg-semantic-warning' : 'bg-brand-teal';
+                const capColor = capPct >= 100 ? 'bg-semantic-danger' : capPct >= 80 ? 'bg-semantic-warning' : 'bg-semantic-success';
                 return (
                   <div key={sprint.id} className="bg-white border border-neutral-200 rounded-xl mb-4 overflow-hidden">
                     <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 bg-neutral-50">
                       <div className="flex items-center gap-3">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${sprint.status === 'ACTIVE' ? 'bg-brand-teal/10 text-brand-teal' : sprint.status === 'COMPLETED' ? 'bg-neutral-200 text-neutral-500' : 'bg-brand-navy-tint/10 text-brand-navy-tint'}`}>{sprint.status}</span>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${sprint.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : sprint.status === 'COMPLETED' ? 'bg-neutral-200 text-neutral-500' : 'bg-brand-navy-tint/10 text-brand-navy-tint'}`}>{sprint.status}</span>
                         <h3 className="font-semibold text-neutral-900">{sprint.name}</h3>
                         {sprint.goal && <span className="text-xs text-neutral-400 italic hidden md:inline">"{sprint.goal}"</span>}
                       </div>
@@ -1606,7 +1606,7 @@ export default function App() {
                     <div>
                       <div className="flex items-center gap-3 mb-0.5">
                         <h1 className="text-xl font-bold text-brand-navy">{activeSprint.name}</h1>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${activeSprint.status === 'ACTIVE' ? 'bg-brand-teal/10 text-brand-teal' : 'bg-neutral-200 text-neutral-500'}`}>{activeSprint.status}</span>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${activeSprint.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : 'bg-neutral-200 text-neutral-500'}`}>{activeSprint.status}</span>
                       </div>
                       {activeSprint.goal && <p className="text-sm text-neutral-400 italic">"{activeSprint.goal}"</p>}
                       {activeSprint.startDate && <p className="text-xs text-neutral-400 mt-0.5">{activeSprint.startDate} → {activeSprint.endDate}</p>}
@@ -1651,7 +1651,7 @@ export default function App() {
                     {savedFilters.map(f => (
                       <div key={f.id} className="flex items-center gap-0.5">
                         <button onClick={() => setActiveFilter(JSON.parse(f.filterJson))}
-                          className={`text-xs px-2.5 py-1.5 rounded-l-full font-medium transition-colors ${f.shared ? 'bg-brand-teal/10 text-brand-teal' : 'bg-brand-navy/10 text-brand-navy'} hover:opacity-80`}>
+                          className={`text-xs px-2.5 py-1.5 rounded-l-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/10 text-semantic-success' : 'bg-brand-navy/10 text-brand-navy'} hover:opacity-80`}>
                           {f.shared ? '🌐' : '★'} {f.name}
                         </button>
                         {f.createdBy === currentUser?.id && (
@@ -1661,7 +1661,7 @@ export default function App() {
                               .catch(() => {});
                           }}
                             title={f.shared ? 'Make private' : 'Share with team'}
-                            className={`text-[10px] px-1.5 py-1.5 rounded-r-full font-medium transition-colors ${f.shared ? 'bg-brand-teal/20 text-brand-teal hover:bg-brand-teal/30' : 'bg-neutral-100 text-neutral-400 hover:bg-neutral-200'}`}>
+                            className={`text-[10px] px-1.5 py-1.5 rounded-r-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/20 text-semantic-success hover:bg-semantic-success/30' : 'bg-neutral-100 text-neutral-400 hover:bg-neutral-200'}`}>
                             {f.shared ? '🔓' : '🔒'}
                           </button>
                         )}
@@ -1740,11 +1740,11 @@ export default function App() {
                             </div>
                             {/* Delivered bar */}
                             <div className="flex flex-col justify-end h-32">
-                              <div className="w-5 rounded-t bg-brand-teal" style={{ height: `${doneH}px` }} title={`Delivered: ${s.donePoints}pt`}></div>
+                              <div className="w-5 rounded-t bg-semantic-success" style={{ height: `${doneH}px` }} title={`Delivered: ${s.donePoints}pt`}></div>
                             </div>
                           </div>
                           <p className="text-[10px] text-neutral-400 text-center leading-tight max-w-[80px] truncate">{s.sprintName.replace('Sprint ', 'S').replace(' — ', ' ')}</p>
-                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${s.status === 'ACTIVE' ? 'bg-brand-teal/10 text-brand-teal' : s.status === 'COMPLETED' ? 'bg-neutral-100 text-neutral-500' : 'bg-neutral-50 text-neutral-400'}`}>{s.status}</span>
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${s.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : s.status === 'COMPLETED' ? 'bg-neutral-100 text-neutral-500' : 'bg-neutral-50 text-neutral-400'}`}>{s.status}</span>
                         </div>
                       );
                     })}
@@ -1752,7 +1752,7 @@ export default function App() {
                   <div className="flex items-center gap-4 mt-3 text-xs text-neutral-400">
                     <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-neutral-200 inline-block"></span>Capacity</span>
                     <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-brand-navy-tint inline-block"></span>Committed</span>
-                    <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-brand-teal inline-block"></span>Delivered</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-semantic-success inline-block"></span>Delivered</span>
                   </div>
                 </div>
               )}
@@ -1774,7 +1774,7 @@ export default function App() {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           {[
                             { label: 'Total Items', value: sprintReport.totalItems, color: 'text-neutral-900' },
-                            { label: 'Completed', value: sprintReport.doneItems, color: 'text-brand-teal' },
+                            { label: 'Completed', value: sprintReport.doneItems, color: 'text-semantic-success' },
                             { label: 'Completion', value: `${sprintReport.completionRate}%`, color: 'text-brand-navy' },
                             { label: 'Velocity', value: `${sprintReport.donePoints}/${sprintReport.totalPoints}pt`, color: 'text-brand-orange' },
                           ].map(card => (
@@ -1789,14 +1789,14 @@ export default function App() {
                         <div className="bg-white border border-neutral-200 rounded-xl p-5">
                           <h3 className="font-semibold text-neutral-900 mb-4">Burndown — Commitment vs Delivery</h3>
                           <div className="flex gap-3 mb-3 text-xs text-neutral-400">
-                            <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-brand-teal inline-block"></span>Done ({sprintReport.doneItems})</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-semantic-success inline-block"></span>Done ({sprintReport.doneItems})</span>
                             <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-brand-navy-tint inline-block"></span>In Progress ({sprintReport.inProgressItems})</span>
                             <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-neutral-200 inline-block"></span>Todo ({sprintReport.todoItems})</span>
                           </div>
                           {/* Stacked bar burndown */}
                           <div className="h-8 bg-neutral-100 rounded-lg overflow-hidden flex mb-2">
                             {sprintReport.totalItems > 0 && <>
-                              <div className="h-full bg-brand-teal transition-all flex items-center justify-center" style={{ width: `${(sprintReport.doneItems / sprintReport.totalItems) * 100}%` }}>
+                              <div className="h-full bg-semantic-success transition-all flex items-center justify-center" style={{ width: `${(sprintReport.doneItems / sprintReport.totalItems) * 100}%` }}>
                                 {sprintReport.doneItems > 0 && <span className="text-white text-[10px] font-bold">{sprintReport.doneItems}</span>}
                               </div>
                               <div className="h-full bg-brand-navy-tint transition-all flex items-center justify-center" style={{ width: `${(sprintReport.inProgressItems / sprintReport.totalItems) * 100}%` }}>
@@ -1819,7 +1819,7 @@ export default function App() {
                               {[
                                 { label: 'Capacity', value: sprintReport.sprint?.capacity || 0, max: Math.max(sprintReport.sprint?.capacity || 0, sprintReport.totalPoints), color: 'bg-neutral-200' },
                                 { label: 'Committed', value: sprintReport.totalPoints, max: Math.max(sprintReport.sprint?.capacity || 0, sprintReport.totalPoints), color: 'bg-brand-navy-tint' },
-                                { label: 'Delivered', value: sprintReport.donePoints, max: Math.max(sprintReport.sprint?.capacity || 0, sprintReport.totalPoints), color: 'bg-brand-teal' },
+                                { label: 'Delivered', value: sprintReport.donePoints, max: Math.max(sprintReport.sprint?.capacity || 0, sprintReport.totalPoints), color: 'bg-semantic-success' },
                               ].map(row => (
                                 <div key={row.label} className="flex items-center gap-3">
                                   <span className="text-xs text-neutral-500 w-20 flex-shrink-0">{row.label}</span>
@@ -2420,7 +2420,7 @@ export default function App() {
                             RELATES_TO: 'border-brand-navy-tint bg-brand-navy/5 text-brand-navy',
                             DUPLICATES: 'border-semantic-warning bg-semantic-warning-surface text-semantic-warning',
                             PARENT: 'border-purple-400 bg-purple-50 text-purple-700',
-                            CHILD: 'border-brand-teal bg-brand-teal/10 text-brand-teal',
+                            CHILD: 'border-semantic-success bg-semantic-success/10 text-semantic-success',
                           };
                           const colorClass = LINK_COLORS[l.linkType] || LINK_COLORS.RELATES_TO;
                           return (
@@ -2541,7 +2541,7 @@ export default function App() {
                   {activity.map(a => (
                     <div key={a.id} className="flex gap-2.5">
                       <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                        a.event_type === 'WORK_ITEM_CREATED' ? 'bg-brand-teal' :
+                        a.event_type === 'WORK_ITEM_CREATED' ? 'bg-semantic-success' :
                         a.event_type === 'STATUS_CHANGED' ? 'bg-brand-navy-tint' :
                         a.event_type === 'COMMENT_ADDED' ? 'bg-brand-orange' :
                         'bg-neutral-300'
@@ -2754,7 +2754,7 @@ function getTimeOfDay() {
 const ROLE_CONFIG = {
   OWNER:  { label: 'Owner',  bg: 'bg-purple-100',  text: 'text-purple-700', tier: 5 },
   ADMIN:  { label: 'Admin',  bg: 'bg-brand-navy/10', text: 'text-brand-navy', tier: 4 },
-  LEAD:   { label: 'Lead',   bg: 'bg-brand-teal/10', text: 'text-brand-teal', tier: 3 },
+  LEAD:   { label: 'Lead',   bg: 'bg-semantic-success/10', text: 'text-semantic-success', tier: 3 },
   MEMBER: { label: 'Member', bg: 'bg-neutral-100',   text: 'text-neutral-600', tier: 2 },
   VIEWER: { label: 'Viewer', bg: 'bg-neutral-50',    text: 'text-neutral-400', tier: 1 },
 };

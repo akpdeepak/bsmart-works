@@ -1710,6 +1710,220 @@ When you intentionally take a shortcut, add an entry to `TECH-DEBT.md` in the sa
 
 ---
 
+## 21. Architecture: Working Principle, Attributes & Modular Design
+
+### 21.1 Working Principle — Modular Monolith, Microservice-Ready
+
+The system is deployed as a **single Spring Boot application today**, but designed with
+**microservice-extractable domain boundaries**. Every domain is a cohesive cluster of
+`Entity + Service + Controller + Repository`. When extraction is justified by scale, each
+cluster can become its own service without architectural surgery.
+
+**Do not pre-extract.** No Kafka, message bus, gRPC, or service mesh until real scale demands
+it. Complexity must be earned. The current monolith is the right architecture for this stage.
+
+#### Domain Module Map (verified against the codebase)
+| Domain | Core Entities | Future Service Boundary |
+|--------|--------------|------------------------|
+| Identity & Auth | `User`, `JwtUtil`, `SecurityConfig`, `MFA` | identity-service |
+| Work Management | `WorkItem`, `Sprint`, `WorkLog`, `WorkItemLink` | work-service |
+| PM Artifacts (RAID) | `Risk`, `Assumption`, `Issue`, `Decision`, `ActionItem` | raid-service |
+| Customization | `FieldDef`, `FieldLayout`, `Workflow`, `WorkflowStatus` | config-service |
+| Knowledge | `KnowledgeSpace`, `Article`, `ArticleVersion` | knowledge-service |
+| Collaboration | `Comment`, `Attachment`, `Meeting`, `Notification` | collab-service |
+| Releases | `Release`, `CrossProjectDependency`, `Stakeholder` | release-service |
+| RBAC | `RoleDef`, `RolePermission`, `PermissionScheme` | (stays shared) |
+| Events | `AppEvent`, `EventService` | (stays shared — audit bus) |
+| AI Orchestration | (iteration 10+) | ai-service |
+
+**Rule:** When adding a new feature, identify which domain it belongs to and add it to that
+cluster. Never create a cross-domain entity. Never put two domain's business logic in one
+service class.
+
+### 21.2 Architectural Attributes (Quality Attributes)
+
+| Attribute | How It Is Achieved |
+|-----------|-------------------|
+| **Maintainability** | One way per operation. Tooling enforces it. No drive-by refactors. |
+| **Modularity** | Domain cohesion — each domain owns its entity/service/controller/repo. No cross-domain leakage. |
+| **Horizontal Scalability** | Stateless JWT (no server sessions). Add instances, not complexity. |
+| **Security** | Defense-in-depth: Spring Security at the edge, `RbacService` in every service, API-enforced privacy. |
+| **Auditability** | Append-only `events` table. Every mutation emits an event. Full state reconstruction always possible. |
+| **Extensibility** | Customization (FieldDef, Workflow) is a deliberate separate layer. AI is a toggleable overlay. |
+| **Simplicity** | No abstraction without demonstrated need. Three similar lines > a premature abstraction. |
+| **Testability** | JUnit 5 + real Postgres (Testcontainers). Behavior proved, not mocked away. |
+| **Observability** | Event store enables time-travel debugging and compliance reconstruction. |
+
+### 21.3 Request Flow (end-to-end)
+
+```
+Browser (React SPA)
+  └─ apiClient.js              ← single HTTP gateway, sets JWT header
+       └─ Spring Boot /api/v1/
+            └─ SecurityConfig  ← JWT filter (stateless verify)
+                 └─ Controller ← parse + delegate only
+                      └─ RbacService.check()  ← permission gate
+                           └─ Service         ← business logic
+                                └─ Repository ← JPA query
+                                     └─ PostgreSQL
+                                └─ EventService.emit()  ← append to `events`
+```
+
+**Every write path emits an event. Every read path goes through RBAC.**
+
+### 21.4 Database Contract
+
+- Schema: Flyway-only (never manual). Sequential integers, no gaps on a branch.
+- Tables: plural snake_case (`work_items`, `project_members`).
+- Events: append-only (`events`). Never UPDATE or DELETE from this table.
+- Current high-water mark on `main`: **V26**. Next new migration: **V27__.sql**.
+
+---
+
+## 22. UI/UX Design System — Look, Feel & Interaction
+
+### 22.1 Visual Personality
+
+**Professional, dense, operational.** The reference point is tools like Linear, Notion Pro, or
+a Bloomberg terminal — not a consumer app. Information density is a feature. Users are
+professionals who spend 8+ hours in the tool; visual noise and empty whitespace are waste.
+
+- Navy (`brand-navy`) dominates. It anchors headers, nav, and primary actions.
+- Orange/amber are accents only — CTAs, live indicators, chevrons. Use sparingly.
+- Neutrals carry body content. The page background is `neutral-50`. Cards are `white` with `shadow-sm`.
+- Semantic colors signal status, never decoration.
+
+### 22.2 Layout Shell
+
+Every screen uses the same shell — never create a one-off layout:
+
+```
+┌──────────────────────────────────────────────────────┐
+│  Top Bar (h-14, bg-white, border-b neutral-200)       │
+├──────┬───────────────────────────────────────────────┤
+│ Nav  │                                               │
+│ w-56 │   Main Content Area                           │
+│ or   │   (scrollable, p-6, neutral-50 bg)            │
+│ w-12 │                                               │
+│ col- │                                               │
+│lapse │                                               │
+└──────┴───────────────────────────────────────────────┘
+```
+
+- **Left nav**: `w-56` expanded, `w-12` icon-only collapsed. State in React Context.
+- **Top bar**: workspace switcher, search, notifications, user avatar.
+- **Main area**: `bg-neutral-50 min-h-screen`. Content in cards (`bg-white rounded-lg shadow-sm`).
+- Never create page-specific nav, toolbars, or wrapper layouts outside this shell.
+
+### 22.3 Expand / Shrink Patterns
+
+All animated transitions use the brand motion tokens (from `tailwind.config.js`):
+
+| Pattern | CSS approach | Duration | Easing |
+|---------|-------------|----------|--------|
+| Sidebar collapse/expand | `w-56` ↔ `w-12` | `duration-fast` (150ms) | `ease-out-quint` |
+| Detail panel (slide-in) | `translate-x-full` → `translate-x-0` | `duration-fast` (150ms) | `ease-out-quint` |
+| Section accordion | `max-h-0 overflow-hidden` → `max-h-screen` | `duration-slow` (320ms) | `ease-out-quint` |
+| Page transitions | opacity + slight translate-y | `duration-base` (220ms) | `ease-out-quint` |
+| Dropdown / popover | scale + opacity | `duration-[120ms]` | `ease-out-quint` |
+| Drag & sort | none (direct) | `duration-instant` | — |
+
+**Never** use `spring` easing for UI chrome — it's reserved for microinteractions (badges, counters).
+**Never** use bounce, sparkle, or decorative motion.
+
+### 22.4 Component Rules
+
+Every component in `works-frontend/src/components/works/` follows `button.jsx`:
+- Written with `cva` variants + `cn()` composition.
+- Token classes only — no raw hex, px, or font names.
+- Hover: one shade deeper (navy → navy-tint; neutral-100 → neutral-200).
+- Focus: `ring-2 ring-brand-navy-tint/40 ring-offset-2`.
+- Active: `active:translate-y-px` (1px down — already in Button).
+- Disabled: `opacity-50 pointer-events-none`.
+- Transition: `duration-[120ms]` on all interactive elements.
+
+#### Loading & Async States
+- Button loading: `Loader2` spinning icon (already in Button, reuse this pattern).
+- Data loading: skeleton shimmer using `bg-neutral-200 animate-pulse rounded`.
+- Page loading: spinner centered in content area, not full-screen overlay.
+
+#### Empty States
+Every empty state must have three elements:
+1. A lucide icon (neutral-300, size `h-10 w-10`).
+2. A title explaining WHY it's empty (`text-neutral-700 font-semibold`).
+3. A next-step prompt or action button.
+Never show a blank area or just "No items found."
+
+#### Error States
+- Inline field errors: `text-semantic-danger text-xs` below the field.
+- Toast/banner errors: `semantic-danger-surface bg` with danger border.
+- Always state: what went wrong + what the user can do.
+- API errors are mapped from `{ code, message, field? }` in `apiClient`.
+
+### 22.5 Density & Spacing
+
+- Base unit: 4px (Tailwind default scale).
+- Standard row height: `h-9` (36px) for list items, table rows, inputs.
+- Card padding: `p-4` (small cards) or `p-6` (feature cards).
+- Section spacing: `space-y-4` between cards; `space-y-6` between page sections.
+- Max content width: `max-w-7xl mx-auto` for full-width pages.
+- No arbitrary spacing values (`p-[13px]` fails lint).
+
+### 22.6 Typography Hierarchy
+
+| Role | Classes |
+|------|---------|
+| Page title | `text-xl font-bold text-neutral-900` |
+| Section header | `text-base font-semibold text-neutral-700` |
+| Card label | `text-xs font-semibold text-neutral-600 uppercase tracking-wide` |
+| Body text | `text-sm text-neutral-700` |
+| Secondary / meta | `text-xs text-neutral-400` |
+| Monospace / code | `font-mono text-sm text-neutral-700` |
+
+### 22.7 Interaction Principles
+
+- **Same everywhere**: every list, every form, every table uses the same patterns — no bespoke UX per feature.
+- **Keyboard-first**: every action reachable by keyboard. Focus management is required for modals and panels.
+- **Instant feedback**: button loading states, optimistic UI for non-destructive mutations.
+- **Reversible destructives**: destructive actions require confirmation (`danger` variant + modal).
+- **No hidden complexity**: show the real state. Role-restricted content shows a locked state, not nothing.
+
+---
+
+## 23. How AI Tools Auto-Follow These Rules (Never Repeat Yourself)
+
+### The mechanism
+`CLAUDE.md` is the **single source of truth**. Every AI tool reads a derived copy of it:
+
+```
+CLAUDE.md  ──► .github/copilot-instructions.md   (GitHub Copilot)
+           ──► .cursor/rules/bsmart.mdc           (Cursor — alwaysApply: true)
+           ──► .windsurfrules                      (Windsurf / Codeium)
+           ──► AGENTS.md                           (cross-tool standard)
+```
+
+**Whenever you update a rule here, regenerate:**
+```bash
+node scripts/generate-ai-rules.mjs
+```
+Commit the regenerated files alongside the CLAUDE.md change. CI fails if they're stale
+(`node scripts/generate-ai-rules.mjs --check`).
+
+### What this means in practice
+- **You never repeat design rules to an AI tool.** They are always present in context.
+- **Rules are enforced by machines, not memory.** ESLint, Checkstyle, and guardrails.sh
+  catch violations before they reach PR review.
+- **Any new principle you add here** becomes permanent the moment you run the generator.
+  It will be followed by Claude Code, Cursor, Copilot, and Windsurf on every subsequent task.
+
+### To add a new rule permanently
+1. Edit `CLAUDE.md` (this file) — the appropriate section.
+2. `node scripts/generate-ai-rules.mjs` — regenerate derived files.
+3. Commit: `CLAUDE.md` + all four derived files in one commit.
+4. Done. Every AI tool and every teammate is in sync.
+
+---
+
 *Verified against the codebase on 2026-06-01. Source specs: Capability Map v3.5, Complete
 Iteration Guide, Tech Stack & Architecture, Brand & Identity (bSmart Works master package).
 Where spec and code conflict, code is canonical and the conflict is flagged ⚠️.*

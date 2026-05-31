@@ -77,35 +77,5 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ],
-  "shortcuts": [
-    {
-      "name": "Create work item",
-      "short_name": "Create",
-      "description": "Quickly create a new work item",
-      "url": "/create",
-      "icons": [{ "src": "/icons/shortcut-create.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Assigned to me",
-      "short_name": "My items",
-      "url": "/me/assigned",
-      "icons": [{ "src": "/icons/shortcut-assigned.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Compliance dashboard",
-      "short_name": "Compliance",
-      "url": "/compliance",
-      "icons": [{ "src": "/icons/shortcut-compliance.png", "sizes": "96x96" }]
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshots/dashboard-desktop.png",
-      "sizes": "1280x800",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "My Works — daily workspace home"
-    }
   ]
 }

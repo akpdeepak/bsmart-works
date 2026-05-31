@@ -429,7 +429,7 @@ export default function App() {
     if (!newItem.title || newItem.title.length < 3) { setCreateError('Title must be at least 3 characters.'); return; }
     setCreateError('');
     const tags = newItem.tags ? newItem.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
-    const projectId = newItem.projectId || (projects.length > 0 ? projects[0].id : 'PROJ-001');
+    const projectId = newItem.projectId || (projects.length > 0 ? projects[0].id : 'PROJ-WORKS');
     apiFetch(`${API}/work-items`, {
       method: 'POST',
       body: JSON.stringify({
@@ -602,7 +602,7 @@ export default function App() {
   }
 
   // SPRINT FUNCTIONS
-  function fetchSprints(projectId = 'PROJ-001') {
+  function fetchSprints(projectId = 'PROJ-WORKS') {
     fetch(`${API}/sprints?projectId=${projectId}`, { headers: headers() })
       .then(r => r.json()).then(d => {
         const list = Array.isArray(d) ? d : [];
@@ -817,7 +817,7 @@ export default function App() {
   }
 
   const handleCreateSprint = () => {
-    fetch(`${API}/sprints`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newSprint, projectId: 'PROJ-001' }) })
+    fetch(`${API}/sprints`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newSprint, projectId: 'PROJ-WORKS' }) })
       .then(r => r.json()).then(s => {
         setSprints(prev => [s, ...prev]);
         setNewSprint({ name: '', goal: '', startDate: '', endDate: '', capacity: 40 });

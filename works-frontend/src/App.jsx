@@ -2472,7 +2472,7 @@ export default function App() {
               <div>
                 {/* Event type filter */}
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  {['', 'WORK_ITEM_CREATED', 'WORK_ITEM_UPDATED', 'STATUS_CHANGED', 'COMMENT_ADDED', 'ASSIGNED'].map(et => (
+                  {['', 'WORK_ITEM_CREATED', 'WORK_ITEM_UPDATED', 'STATUS_CHANGED', 'ASSIGNED', 'COMMENT_ADDED', 'LINKED', 'ATTACHED'].map(et => (
                     <button key={et} onClick={() => {
                       setActivityEventFilter(et);
                       const url = `${API}/work-items/${selectedItem.id}/activity${et ? `?eventType=${et}` : ''}`;

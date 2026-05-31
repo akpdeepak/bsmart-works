@@ -2377,32 +2377,141 @@ export default function App() {
               {settings3Tab === 'workflows' && (
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="font-semibold text-neutral-900">Workflow Definitions</h2>
+                    <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Workflow Definitions</h2>
                     <Button variant="action" onClick={() => {
-                      api.raw(`/workflows`, { method: 'POST', body: JSON.stringify({ name: 'New Workflow', workspaceId: 'WS-001', isDefault: false }) })
+                      const name = 'New Workflow ' + (workflows.length + 1);
+                      api.raw(`/workflows`, { method: 'POST', body: JSON.stringify({ name, workspaceId: 'WS-001', isDefault: false }) })
                         .then(r => r.json()).then(() => fetchWorkflows());
                     }}>+ New Workflow</Button>
                   </div>
                   {workflows.length === 0
-                    ? <EmptyState icon="⚙" title="No workflows yet" subtitle="Create a workflow to define statuses and transitions for your work items." action={<Button variant="action" onClick={() => { api.raw(`/workflows`, { method: 'POST', body: JSON.stringify({ name: 'Default Workflow', workspaceId: 'WS-001', isDefault: true }) }).then(r => r.json()).then(() => fetchWorkflows()); }}>Create default workflow</Button>} />
+                    ? <EmptyState icon="⚙" title="No workflows yet" subtitle="Create a workflow to define statuses and transitions for your work items."
+                        action={<Button variant="action" onClick={() => {
+                          api.raw(`/workflows`, { method: 'POST', body: JSON.stringify({ name: 'Default Workflow', workspaceId: 'WS-001', isDefault: true }) })
+                            .then(r => r.json()).then(() => fetchWorkflows());
+                        }}>Create default workflow</Button>} />
                     : <div className="space-y-3">
-                        {workflows.map(wf => (
-                          <div key={wf.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-3">
-                                <span className="font-semibold text-neutral-900">{wf.name}</span>
-                                {wf.isDefault && <span className="text-[10px] bg-brand-navy text-white px-2 py-0.5 rounded-full font-semibold">DEFAULT</span>}
-                                {wf.itemType && <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded">{wf.itemType}</span>}
+                        {workflows.map(wf => {
+                          const isExpanded = expandedWorkflowId === wf.id;
+                          const detail = isExpanded ? workflowDetail : null;
+                          const statuses = detail?.statuses || [];
+                          const transitions = detail?.transitions || [];
+                          const CATEGORIES = ['TO_DO', 'IN_PROGRESS', 'DONE'];
+                          const catColor = { TO_DO: 'bg-neutral-200 text-neutral-700', IN_PROGRESS: 'bg-brand-navy/10 text-brand-navy', DONE: 'bg-semantic-success/10 text-semantic-success' };
+                          return (
+                            <div key={wf.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
+                              {/* Workflow header */}
+                              <div className="flex items-center justify-between p-5 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700" onClick={() => expandWorkflow(wf.id)}>
+                                <div className="flex items-center gap-3">
+                                  <span className={`transition-transform ${isExpanded ? 'rotate-90' : ''} text-neutral-400 text-sm`}>▶</span>
+                                  <span className="font-semibold text-neutral-900 dark:text-neutral-100">{wf.name}</span>
+                                  {wf.isDefault && <span className="text-[10px] bg-brand-navy text-white px-2 py-0.5 rounded-full font-semibold">DEFAULT</span>}
+                                  {wf.itemType && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded">{wf.itemType}</span>}
+                                </div>
+                                <div className="flex gap-3 items-center" onClick={e => e.stopPropagation()}>
+                                  <span className="font-mono text-xs text-neutral-300">{wf.id}</span>
+                                  <button onClick={() => api.raw(`/workflows/${wf.id}`, { method: 'DELETE' }).then(() => { fetchWorkflows(); if (expandedWorkflowId === wf.id) setExpandedWorkflowId(null); })}
+                                    className="text-xs text-semantic-danger hover:underline">Delete</button>
+                                </div>
                               </div>
-                              <div className="flex gap-2">
-                                <span className="font-mono text-xs text-neutral-400">{wf.id}</span>
-                                <button onClick={() => api.raw(`/workflows/${wf.id}`, { method: 'DELETE' }).then(() => fetchWorkflows())}
-                                  className="text-xs text-semantic-danger hover:underline">Delete</button>
-                              </div>
+
+                              {/* Expanded detail */}
+                              {isExpanded && (
+                                <div className="border-t border-neutral-100 dark:border-neutral-700 p-5 bg-neutral-50 dark:bg-neutral-900 space-y-6">
+                                  {!detail ? <p className="text-sm text-neutral-400 text-center py-4">Loading...</p> : (
+                                    <>
+                                      {/* Statuses */}
+                                      <div>
+                                        <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">Statuses ({statuses.length})</p>
+                                        <div className="flex flex-wrap gap-2 mb-3">
+                                          {statuses.map(s => (
+                                            <div key={s.id} className="flex items-center gap-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5">
+                                              <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: s.color || '#0B2F5C' }}></span>
+                                              <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{s.name}</span>
+                                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${catColor[s.category] || 'bg-neutral-100 text-neutral-500'}`}>{s.category}</span>
+                                              {s.isInitial && <span className="text-[10px] text-brand-amber font-bold">INITIAL</span>}
+                                              <button onClick={() => deleteStatus(wf.id, s.id)} className="text-neutral-300 hover:text-semantic-danger ml-1 text-xs">✕</button>
+                                            </div>
+                                          ))}
+                                        </div>
+                                        {/* Add status inline form */}
+                                        <div className="flex gap-2 items-end flex-wrap">
+                                          <div>
+                                            <label className="text-[10px] font-semibold text-neutral-400 uppercase block mb-1">Status Name</label>
+                                            <input className="input text-sm w-36" placeholder="e.g. In Review" value={newStatusForm.name}
+                                              onChange={e => setNewStatusForm(f => ({ ...f, name: e.target.value }))} />
+                                          </div>
+                                          <div>
+                                            <label className="text-[10px] font-semibold text-neutral-400 uppercase block mb-1">Category</label>
+                                            <select className="input text-sm" value={newStatusForm.category}
+                                              onChange={e => setNewStatusForm(f => ({ ...f, category: e.target.value }))}>
+                                              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                            </select>
+                                          </div>
+                                          <div>
+                                            <label className="text-[10px] font-semibold text-neutral-400 uppercase block mb-1">Color</label>
+                                            <input type="color" className="h-9 w-12 rounded border border-neutral-200 cursor-pointer" value={newStatusForm.color}
+                                              onChange={e => setNewStatusForm(f => ({ ...f, color: e.target.value }))} />
+                                          </div>
+                                          <Button variant="secondary" onClick={() => addStatus(wf.id)}>+ Add Status</Button>
+                                        </div>
+                                      </div>
+
+                                      {/* Transitions */}
+                                      <div>
+                                        <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">Transitions ({transitions.length})</p>
+                                        {transitions.length > 0 && (
+                                          <div className="space-y-1.5 mb-3">
+                                            {transitions.map(t => {
+                                              const fromS = statuses.find(s => s.id === t.fromStatus);
+                                              const toS = statuses.find(s => s.id === t.toStatus);
+                                              return (
+                                                <div key={t.id} className="flex items-center gap-2 text-sm">
+                                                  <span className="font-medium text-neutral-700 dark:text-neutral-200 w-32 truncate">{t.name}</span>
+                                                  <span className="text-neutral-400 text-xs">{fromS?.name || t.fromStatus}</span>
+                                                  <span className="text-neutral-300">→</span>
+                                                  <span className="text-neutral-400 text-xs">{toS?.name || t.toStatus}</span>
+                                                  <button onClick={() => deleteTransition(wf.id, t.id)} className="text-neutral-300 hover:text-semantic-danger ml-auto text-xs">✕</button>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+                                        {statuses.length >= 2 && (
+                                          <div className="flex gap-2 items-end flex-wrap">
+                                            <div>
+                                              <label className="text-[10px] font-semibold text-neutral-400 uppercase block mb-1">Transition Name</label>
+                                              <input className="input text-sm w-32" placeholder="e.g. Start Review" value={newTransitionForm.name}
+                                                onChange={e => setNewTransitionForm(f => ({ ...f, name: e.target.value }))} />
+                                            </div>
+                                            <div>
+                                              <label className="text-[10px] font-semibold text-neutral-400 uppercase block mb-1">From</label>
+                                              <select className="input text-sm" value={newTransitionForm.fromStatus}
+                                                onChange={e => setNewTransitionForm(f => ({ ...f, fromStatus: e.target.value }))}>
+                                                <option value="">— From —</option>
+                                                {statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                              </select>
+                                            </div>
+                                            <div>
+                                              <label className="text-[10px] font-semibold text-neutral-400 uppercase block mb-1">To</label>
+                                              <select className="input text-sm" value={newTransitionForm.toStatus}
+                                                onChange={e => setNewTransitionForm(f => ({ ...f, toStatus: e.target.value }))}>
+                                                <option value="">— To —</option>
+                                                {statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                              </select>
+                                            </div>
+                                            <Button variant="secondary" onClick={() => addTransition(wf.id)}>+ Add Transition</Button>
+                                          </div>
+                                        )}
+                                        {statuses.length < 2 && <p className="text-xs text-neutral-400 italic">Add at least 2 statuses to define transitions.</p>}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              )}
                             </div>
-                            <p className="text-xs text-neutral-400">Visual workflow editor — add statuses and transitions via the API or future drag-drop UI</p>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                   }
                 </div>
@@ -2412,16 +2521,49 @@ export default function App() {
               {settings3Tab === 'fields' && (
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="font-semibold text-neutral-900">Custom Field Library</h2>
-                    <Button variant="action" onClick={() => {
-                      const name = window.prompt('Field name:');
-                      const type = window.prompt('Field type (TEXT/NUMBER/SELECT/DATE/CHECKBOX/USER/URL/CURRENCY/MULTI_SELECT/TEXTAREA/EMAIL/PHONE/RATING/PROGRESS/FILE/JSON):') || 'TEXT';
-                      if (name) {
-                        api.raw(`/field-defs`, { method: 'POST', body: JSON.stringify({ name, fieldType: type.toUpperCase(), fieldKey: name.toLowerCase().replace(/\s+/g,'_'), workspaceId: 'WS-001' }) })
-                          .then(r => r.json()).then(() => fetchFieldDefs());
-                      }
-                    }}>+ New Field</Button>
+                    <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Custom Field Library</h2>
+                    <Button variant="action" onClick={() => setShowFieldForm(f => !f)}>
+                      {showFieldForm ? 'Cancel' : '+ New Field'}
+                    </Button>
                   </div>
+
+                  {/* Inline add field form */}
+                  {showFieldForm && (
+                    <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-5 mb-5 space-y-4">
+                      <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">New Custom Field</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Field Name *</label>
+                          <input className="input text-sm w-full" placeholder="e.g. Meter Serial Number" value={newFieldForm.name}
+                            onChange={e => setNewFieldForm(f => ({ ...f, name: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Field Type *</label>
+                          <select className="input text-sm w-full" value={newFieldForm.fieldType}
+                            onChange={e => setNewFieldForm(f => ({ ...f, fieldType: e.target.value }))}>
+                            {['TEXT','NUMBER','CURRENCY','DATE','SELECT','MULTI_SELECT','USER','URL','CHECKBOX','FILE','JSON','TEXTAREA','EMAIL','PHONE','RATING','PROGRESS'].map(t => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Description</label>
+                          <input className="input text-sm w-full" placeholder="What is this field for?" value={newFieldForm.description}
+                            onChange={e => setNewFieldForm(f => ({ ...f, description: e.target.value }))} />
+                        </div>
+                        <div className="flex items-center gap-3 pt-5">
+                          <input type="checkbox" id="req" checked={newFieldForm.required}
+                            onChange={e => setNewFieldForm(f => ({ ...f, required: e.target.checked }))} className="w-4 h-4 accent-brand-navy" />
+                          <label htmlFor="req" className="text-sm text-neutral-700 dark:text-neutral-200">Required field</label>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="action" onClick={createFieldDef}>Create Field</Button>
+                        <Button variant="ghost" onClick={() => setShowFieldForm(false)}>Cancel</Button>
+                      </div>
+                    </div>
+                  )}
+
                   {fieldDefs.length === 0
                     ? <EmptyState icon="📝" title="No custom fields" subtitle="Create custom fields to capture domain-specific data on work items." />
                     : <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
@@ -2436,7 +2578,10 @@ export default function App() {
                           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
                             {fieldDefs.map(fd => (
                               <tr key={fd.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
-                                <td className="px-4 py-3 font-medium text-neutral-900">{fd.name}</td>
+                                <td className="px-4 py-3 font-medium text-neutral-900 dark:text-neutral-100">
+                                  {fd.name}
+                                  {fd.description && <p className="text-xs text-neutral-400 mt-0.5">{fd.description}</p>}
+                                </td>
                                 <td className="px-4 py-3"><span className="text-xs bg-brand-navy/10 dark:bg-brand-navy/20 text-brand-navy dark:text-blue-300 px-2 py-0.5 rounded font-mono">{fd.fieldType}</span></td>
                                 <td className="px-4 py-3 font-mono text-xs text-neutral-400">{fd.fieldKey}</td>
                                 <td className="px-4 py-3"><span className={`text-xs font-semibold ${fd.required ? 'text-semantic-danger' : 'text-neutral-300'}`}>{fd.required ? '✓ Required' : 'Optional'}</span></td>

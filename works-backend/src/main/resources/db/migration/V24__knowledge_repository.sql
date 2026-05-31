@@ -31,7 +31,7 @@ CREATE TABLE articles (
 );
 
 CREATE TABLE article_versions (
-    id             SERIAL PRIMARY KEY,
+    id             BIGSERIAL PRIMARY KEY,
     article_id     VARCHAR(50) NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
     version_number INTEGER NOT NULL,
     title          TEXT NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE article_versions (
 );
 
 CREATE TABLE article_work_item_links (
-    id           SERIAL PRIMARY KEY,
+    id           BIGSERIAL PRIMARY KEY,
     article_id   VARCHAR(50) NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
     work_item_id VARCHAR(100) NOT NULL,
     link_type    VARCHAR(30) NOT NULL DEFAULT 'RELATED',  -- RELATED | DOCUMENTS | REFERENCED_BY

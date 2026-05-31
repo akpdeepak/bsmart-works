@@ -15,13 +15,15 @@ public class SprintController {
     private final WorkItemRepository workItemRepository;
     private final EventService eventService;
     private final JdbcTemplate jdbc;
+    private final AuthenticatedUser authenticatedUser;
 
     public SprintController(SprintRepository sprintRepository, WorkItemRepository workItemRepository,
-                            EventService eventService, JdbcTemplate jdbc) {
+                            EventService eventService, JdbcTemplate jdbc, AuthenticatedUser authenticatedUser) {
         this.sprintRepository = sprintRepository;
         this.workItemRepository = workItemRepository;
         this.eventService = eventService;
         this.jdbc = jdbc;
+        this.authenticatedUser = authenticatedUser;
     }
 
     @GetMapping
@@ -40,8 +42,8 @@ public class SprintController {
     }
 
     @PostMapping
-    public Sprint createSprint(@RequestBody Sprint sprint,
-                               @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public Sprint createSprint(@RequestBody Sprint sprint) {
+        String userId = authenticatedUser.id();
         sprint.setId("SPR-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         sprint.setStatus("PLANNING");
         sprint.setCreatedAt(OffsetDateTime.now());
@@ -51,8 +53,8 @@ public class SprintController {
     }
 
     @PutMapping("/{id}")
-    public Sprint updateSprint(@PathVariable String id, @RequestBody Sprint updated,
-                               @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public Sprint updateSprint(@PathVariable String id, @RequestBody Sprint updated) {
+        String userId = authenticatedUser.id();
         return sprintRepository.findById(id).map(s -> {
             String oldStatus = s.getStatus();
             s.setName(updated.getName());
@@ -168,5 +170,4 @@ public class SprintController {
         return report;
     }
 }
-
 

@@ -11,14 +11,16 @@ import java.util.Map;
 public class NotificationPrefController {
 
     private final JdbcTemplate jdbc;
+    private final AuthenticatedUser authenticatedUser;
 
-    public NotificationPrefController(JdbcTemplate jdbc) {
+    public NotificationPrefController(JdbcTemplate jdbc, AuthenticatedUser authenticatedUser) {
         this.jdbc = jdbc;
+        this.authenticatedUser = authenticatedUser;
     }
 
     @GetMapping
-    public Map<String, Object> getPrefs(@RequestHeader(value = "X-User-Id", required = false) String userId) {
-        if (userId == null) userId = "USR-001";
+    public Map<String, Object> getPrefs() {
+        String userId = authenticatedUser.id();
         final String uid = userId;
         List<Map<String, Object>> rows = jdbc.queryForList(
             "SELECT * FROM notification_preferences WHERE user_id = ?", uid);
@@ -31,9 +33,8 @@ public class NotificationPrefController {
 
     @PutMapping
     public Map<String, String> updatePrefs(
-            @RequestHeader(value = "X-User-Id", required = false) String userId,
             @RequestBody Map<String, Boolean> payload) {
-        if (userId == null) userId = "USR-001";
+        String userId = authenticatedUser.id();
         jdbc.update(
             "INSERT INTO notification_preferences (user_id, notify_assign, notify_comment, notify_mention, email_digest) " +
             "VALUES (?,?,?,?,?) ON CONFLICT (user_id) DO UPDATE SET " +
@@ -47,4 +48,3 @@ public class NotificationPrefController {
         return Map.of("message", "Preferences saved");
     }
 }
-

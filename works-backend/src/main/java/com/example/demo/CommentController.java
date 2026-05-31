@@ -16,18 +16,20 @@ public class CommentController {
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
     private final EventService eventService;
+    private final AuthenticatedUser authenticatedUser;
 
     public CommentController(CommentRepository commentRepository, UserRepository userRepository,
-                             NotificationRepository notificationRepository, EventService eventService) {
+                             NotificationRepository notificationRepository, EventService eventService,
+                             AuthenticatedUser authenticatedUser) {
         this.commentRepository = commentRepository;
         this.userRepository = userRepository;
         this.notificationRepository = notificationRepository;
         this.eventService = eventService;
+        this.authenticatedUser = authenticatedUser;
     }
 
     @GetMapping
-    public List<Comment> getComments(@PathVariable String workItemId,
-                                     @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public List<Comment> getComments(@PathVariable String workItemId) {
         List<Comment> all = commentRepository.findByWorkItemIdOrderByCreatedAtAsc(workItemId);
         all.forEach(c -> userRepository.findById(c.getAuthorId()).ifPresent(u -> c.setAuthorName(u.getFullName())));
         // Build threaded structure: top-level comments with replies nested
@@ -47,11 +49,11 @@ public class CommentController {
 
     @PostMapping
     public Comment addComment(@PathVariable String workItemId,
-                              @RequestBody Map<String, Object> payload,
-                              @RequestHeader(value = "X-User-Id", required = false) String userId) {
+                              @RequestBody Map<String, Object> payload) {
+        String userId = authenticatedUser.id();
         Comment comment = new Comment();
         comment.setWorkItemId(workItemId);
-        comment.setAuthorId(userId != null ? userId : "USR-001");
+        comment.setAuthorId(userId);
         comment.setBody((String) payload.get("body"));
         comment.setInternal(Boolean.TRUE.equals(payload.get("isInternal")));
         comment.setCreatedAt(OffsetDateTime.now());
@@ -95,4 +97,3 @@ public class CommentController {
         commentRepository.deleteById(commentId);
     }
 }
-

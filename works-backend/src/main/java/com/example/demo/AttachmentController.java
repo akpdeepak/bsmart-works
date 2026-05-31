@@ -19,9 +19,11 @@ public class AttachmentController {
 
     private static final Path UPLOAD_DIR = Paths.get(System.getProperty("user.home"), ".bsmart-works", "uploads");
     private final JdbcTemplate jdbc;
+    private final AuthenticatedUser authenticatedUser;
 
-    public AttachmentController(JdbcTemplate jdbc) {
+    public AttachmentController(JdbcTemplate jdbc, AuthenticatedUser authenticatedUser) {
         this.jdbc = jdbc;
+        this.authenticatedUser = authenticatedUser;
         try { Files.createDirectories(UPLOAD_DIR); } catch (IOException e) { /* ignore */ }
     }
 
@@ -35,8 +37,8 @@ public class AttachmentController {
 
     @PostMapping
     public Map<String, Object> upload(@PathVariable String workItemId,
-                                      @RequestParam("file") MultipartFile file,
-                                      @RequestHeader(value = "X-User-Id", required = false) String userId) throws IOException {
+                                      @RequestParam("file") MultipartFile file) throws IOException {
+        String userId = authenticatedUser.id();
         String originalName = StringUtils.cleanPath(file.getOriginalFilename() != null ? file.getOriginalFilename() : "file");
         String storedName = UUID.randomUUID() + "_" + originalName;
         Path dest = UPLOAD_DIR.resolve(storedName);
@@ -76,4 +78,3 @@ public class AttachmentController {
         return ResponseEntity.noContent().build();
     }
 }
-

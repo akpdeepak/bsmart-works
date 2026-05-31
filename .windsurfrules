@@ -375,6 +375,256 @@ Use the `<Logo>` component or reference `/logo-*.svg`. Never distort, recolor, o
 
 ---
 
+### 4.15 Design Laws — Mental Models Every Developer Must Apply
+
+These are not suggestions — they are constraints that govern every layout, menu, and interaction
+decision. Violating them creates friction even when the code is correct.
+
+**Hick's Law — fewer choices = faster decisions.**
+Every menu, dropdown, and toolbar must contain the minimum options needed. If a dropdown
+exceeds 7 items, it requires either grouping with headings or a search input. Toolbars cap at
+5 visible actions; overflow goes in a `...` menu. The primary action on every screen is singular
+and obvious — never two equally-prominent CTAs.
+
+**Fitts's Law — big targets, close to where focus already is.**
+Action buttons appear near the content they act on: row-level actions appear inline on hover,
+not in a column far right. Page-level actions are in the sticky header, not the sidebar
+(which requires a long mouse journey away from content). Touch targets are minimum 44×44px.
+
+**Miller's Law — group into chunks of ≤7.**
+Sidebar navigation is grouped into sections (Work, Delivery, Knowledge, Admin) with ≤6 items
+each. Forms group related fields under a heading — never one long unsectioned field list.
+Filter panels group filter chips by category.
+
+**Gestalt — proximity, similarity, figure/ground.**
+- **Proximity:** related items share a `gap-*` group; unrelated items have a larger `space-y-*`
+  separator. Never use a border just to group — use space first.
+- **Similarity:** all clickable rows look identical; all read-only labels look identical.
+  Visual treatment = behavioral contract.
+- **Figure/Ground:** white cards (`bg-white`) on `bg-neutral-50` page backgrounds. Content must
+  always visually pop from the surface it sits on.
+- **Continuity:** align to the column grid always. Misaligned elements break the implicit grid
+  and feel broken even to users who can't name why.
+
+**Jakob's Law — match established conventions.**
+Left sidebar navigation, breadcrumbs, right panel for detail, ⌘K command palette, `?` for
+shortcuts — these are established conventions from Linear, GitHub, Notion. Do not invent novel
+navigation patterns. Users bring existing muscle memory; meet it.
+
+**Progressive Disclosure law.**
+Never show information the user hasn't asked for yet. List views show summary data only.
+Detail opens in the right panel or a dedicated page. Advanced options live behind an
+"Advanced" toggle, not visible by default. The primary path must always be obvious; the
+power-user path is discoverable, not upfront.
+
+---
+
+### 4.16 Core Interaction Patterns (Mandatory for Relevant Features)
+
+These are the standard patterns for this product. When a feature maps to one of these, use
+the pattern exactly — never invent an alternative.
+
+**Command Palette (⌘K / Ctrl+K)**
+The single most important power-user feature. Opens a centered modal overlay with a search
+input. Searches across: work items, projects, people, actions (create, assign, change status).
+Results appear instantly with fuzzy matching. Keyboard navigation (↑↓ Enter Esc). Dismiss on
+Esc or click-outside. Every major action in the app must be reachable via the command palette.
+Renders in the `Elevated / modal` surface level (§4.9).
+
+**Quick-Add / Inline Capture**
+Pressing `N` (or clicking `+`) on any list creates an **inline editable row at the top of the
+list** — not a modal dialog. The user types the title, presses Enter to save, Esc to cancel.
+This is the standard create pattern for work items, tasks, and similar entities. Reduces the
+round-trip cost of creating items to zero.
+
+**Keyboard Navigation — Standard Bindings**
+| Key | Action |
+|-----|--------|
+| `J` / `↓` | Next row / item |
+| `K` / `↑` | Previous row / item |
+| `Enter` | Open selected item (right panel or detail page) |
+| `E` | Edit selected item inline |
+| `Esc` | Close panel / cancel edit / deselect |
+| `N` | New item (inline capture) |
+| `⌘K` / `Ctrl+K` | Command palette |
+| `?` | Keyboard shortcut reference sheet |
+
+Every list view and detail panel must respect these bindings. Never override browser defaults
+(`⌘R`, `⌘T`, `⌘W`, `F5`, etc.).
+
+**Bulk Actions**
+Checkbox appears on list rows on hover. When ≥1 row is selected, a bulk action bar slides up
+from the bottom of the viewport (`fixed bottom-0`, `bg-white border-t border-neutral-200
+shadow-lg`, `py-3 px-6`). Bar shows: count selected + action buttons (Assign, Change status,
+Move sprint, Delete). Bar disappears when selection is cleared. Never requires a separate
+"bulk mode" toggle — selection IS the mode.
+
+**Saved Views / Filters**
+Every list page supports saving the current filter+sort combination as a named view. Saved
+views appear in the sidebar under the relevant section. The save action is "Save view" in the
+filter bar. Users can rename or delete their views. Views are per-user, stored via the API —
+not just localStorage.
+
+**Optimistic UI — Default Mutation Pattern**
+All mutations (status change, assign, rename, reorder) update the UI immediately without waiting
+for the API response. The API call happens in the background. On success: nothing visible (the
+UI is already correct). On error: silently revert the UI change + show a toast
+`"Couldn't save — retrying…"` or `"Failed to save. Try again."`. Never show a loading spinner
+for a mutation that was already reflected optimistically. This is the default; synchronous
+(wait-for-response) mutations are the exception and must be justified.
+
+**Ambient Notifications — No Modal Interruption**
+Notifications are signalled by a dot/count badge on the bell icon in the sidebar. Clicking
+opens the right contextual panel (§4.6) with the notification list. Nothing interrupts the
+user's current view. The only exception: session-expiry or permission-revocation errors that
+require immediate user action — these use a modal dialog. All other system messages are toasts
+(§4.11).
+
+---
+
+### 4.17 Accessibility — WCAG 2.1 AA (Non-Negotiable)
+
+This is a legal and ethical baseline for enterprise/utility-sector clients. Every component
+ships accessible or it doesn't ship.
+
+**Colour contrast minimums (verified against brand tokens):**
+| Text size | Minimum ratio | Failing example |
+|-----------|--------------|-----------------|
+| Normal (< 18pt / < 14pt bold) | 4.5 : 1 | `text-neutral-400` on `bg-white` = 2.8:1 — FAIL for body |
+| Large (≥ 18pt or bold ≥ 14pt) | 3.0 : 1 | `text-neutral-400` on `bg-white` — still fails |
+| UI components & focus indicators | 3.0 : 1 | |
+
+Safe pairings with brand tokens: `text-neutral-600` on `bg-white` (5.9:1 ✓),
+`text-neutral-700` on `bg-white` (8.5:1 ✓), `text-white` on `bg-brand-navy` (12.6:1 ✓).
+Do NOT use `text-neutral-400` or `text-neutral-300` for any readable body text.
+
+**Never communicate by colour alone.**
+Status badges must combine colour + text label (e.g. `● In Progress`, not just a green dot).
+Error states must combine `text-semantic-danger` + `AlertCircle` icon + error message text.
+Charts/graphs must use patterns or labels in addition to colour differentiation.
+
+**ARIA on every custom interactive element:**
+- `role="button"` + `tabIndex={0}` + `onKeyDown` (Enter/Space) on any non-`<button>` click target
+- `aria-expanded={isOpen}` on collapsible triggers
+- `aria-label` on every icon-only button (e.g. `aria-label="Close panel"`)
+- `aria-live="polite"` on toast/notification regions
+- `aria-busy="true"` on skeleton/loading regions
+
+**Focus management:**
+- When a panel or modal opens: move focus to the first interactive element inside it.
+- When a panel or modal closes: return focus to the element that triggered it.
+- Focus must never be trapped outside a modal or lost to `document.body`.
+
+**Skip link:** `<a href="#main-content" className="sr-only focus:not-sr-only ...">Skip to main content</a>`
+must be the first DOM element in the layout. Visible on keyboard focus only.
+
+**Keyboard operability:** every feature must be fully operable without a mouse. If you can't
+tab to it, press Enter/Space on it, and Esc out of it — it is not done.
+
+---
+
+### 4.18 Performance as UX — Perceived Speed Rules
+
+The app must feel instant. These rules achieve that without requiring perfect API latency.
+
+**Optimistic UI** is §4.16 — the biggest single win. Treat it as mandatory.
+
+**Route-level code splitting.** Every React route is `lazy()`-wrapped:
+```jsx
+const SprintBoard = lazy(() => import('./pages/SprintBoard'));
+```
+The dashboard does not load sprint board code. Each route loads only what it needs.
+
+**Virtual scrolling** for any list that can exceed ~100 rows. Use `@tanstack/react-virtual`.
+Rendering 2 000+ DOM nodes kills scroll performance. Work item lists, audit logs, notification
+history all need this. Standard paginated lists (≤50 rows/page) do not.
+
+**Debounce search and filter inputs** at 250ms. Never fire an API call on every keystroke.
+```js
+const debouncedSearch = useMemo(() => debounce(onSearch, 250), [onSearch]);
+```
+
+**Image and asset optimisation.** SVG icons via `lucide-react` (tree-shakeable). No PNG icons.
+Avatars: serve WebP at 2× the rendered size. Logo SVGs are already in `/public/`.
+
+**Avoid layout shift.** Skeleton screens must match the exact dimensions of the content they
+replace (same height rows, same card dimensions). Use `min-h-*` on containers that will fill
+asynchronously so the layout doesn't jump when data loads.
+
+**Prefetch on hover.** On `mouseenter` of a navigation link or work item row, prefetch the
+detail data (`queryClient.prefetchQuery(...)`) so the panel feels instant on click.
+
+---
+
+### 4.19 Atomic Design — Component Structure
+
+The component library grows via Atomic Design. Every new component belongs to exactly one
+level. This keeps the codebase navigable as the library scales.
+
+```
+works-frontend/src/components/works/
+├── atoms/          Button, Input, Badge, Avatar, Checkbox, Toggle, Skeleton, Tooltip
+├── molecules/      SearchInput, FilterBar, UserAvatar, FormField, RowActions
+├── organisms/      WorkItemRow, SprintCard, SidebarNav, CommandPalette, BulkActionBar
+├── templates/      ThreeZoneLayout, ListPageTemplate, DetailPageTemplate
+└── (root)          Existing: button.jsx, logo.jsx, status-badge.jsx  ← migrate to atoms/ when refactoring
+```
+
+**Rules:**
+- Atoms have no knowledge of domain data (no `workItem`, no `sprint` props).
+- Molecules compose atoms; organisms compose molecules + atoms + domain data.
+- Templates wire organisms into the three-zone layout with no business logic.
+- Pages (in `src/pages/`) compose templates + call hooks/API — no raw JSX layout there.
+- Each component gets a co-located `.stories.jsx` file when it is built.
+  Stories document all cva variants and interactive states visually.
+
+**Current reality:** the root-level `works/` folder is the starting point. Migrate to
+`atoms/` subdirectory as components are built, not retroactively all at once.
+
+---
+
+### 4.20 Content & Copywriting Standards
+
+Microcopy quality is a direct proxy for product quality. These rules apply to every string
+that appears in the UI — labels, placeholders, tooltips, confirmations, errors.
+
+**Error messages — always say what went wrong AND what to do:**
+- Bad: `"An error occurred."`
+- Bad: `"Request failed with status 403."`
+- Good: `"You don't have permission to edit this project. Contact your workspace admin."`
+- Good: `"Couldn't save — check your connection and try again."`
+
+**Confirmation dialogs — button label = the action:**
+- Bad: `[OK]` / `[Cancel]`
+- Good: `[Delete work item]` / `[Keep it]`
+- Good: `[Remove from sprint]` / `[Cancel]`
+Users read the button, not the modal body. The button label must make the consequence clear.
+
+**Form field copy:**
+- Label: short noun phrase. `"Sprint goal"` not `"Please enter the sprint goal"`
+- Placeholder: a concrete example in the field's format. `e.g. Ship payments API with zero criticals`
+  not a repeat of the label.
+- Helper text (below field, before error): one sentence of context when the field's purpose
+  isn't obvious. `text-xs text-neutral-600`.
+
+**Empty states — the formula:**
+```
+[Icon, neutral-400]
+[Heading: "No work items yet", text-sm font-semibold text-neutral-700]
+[Body: "Add your first work item to start tracking progress.", text-xs text-neutral-600 max-w-xs]
+[CTA: <Button variant="primary">Add work item</Button>]
+```
+
+**Tone rules:**
+- Active voice. `"Create a project"` not `"A project can be created."`
+- Present tense. `"Saving…"` not `"Your changes will be saved."`
+- No exclamation marks on functional surfaces. `"Work item created."` not `"Work item created!"`
+- No filler words. `"No sprints"` not `"It looks like there are no sprints yet."`
+- Titles are sentence case. `"Active sprints"` not `"Active Sprints"` (except proper nouns and
+  the product name `bSmart Works`).
+
+---
+
 ## 5. Iteration Roadmap & Current Status
 
 **20 iterations total. Build only what the active iteration requires.**
@@ -421,6 +671,19 @@ before building forward. **Do not implement iteration N+1 features while iterati
 - Don't use `italic` for UI text — emphasis is always `font-semibold`, same color.
 - Don't use arbitrary spacing values like `p-[13px]` or `mt-[22px]` — Tailwind 4px scale only.
 - Don't use orange or amber in more than 1–2 places per screen — if it appears everywhere it means nothing.
+- Don't use `text-neutral-400` or lighter for readable body text — fails WCAG 2.1 AA contrast.
+- Don't communicate status or state by colour alone — always pair colour with a text label or icon.
+- Don't put a click handler on a non-`<button>` element without `role="button"`, `tabIndex={0}`, and keyboard handler.
+- Don't open a modal or panel without moving focus into it; don't close one without returning focus to the trigger.
+- Don't build a list that can exceed ~100 rows without virtual scrolling (`@tanstack/react-virtual`).
+- Don't fire API calls on every keystroke — debounce search/filter inputs at 250ms.
+- Don't wait for the API before reflecting a mutation in the UI — optimistic updates are the default.
+- Don't put two equally-prominent CTAs on the same screen — one primary action per view.
+- Don't build a dropdown or menu with >7 items without grouping or search.
+- Don't write `"An error occurred."` — always say what failed and what the user should do next.
+- Don't use `[OK]` / `[Cancel]` in confirmation dialogs — button label must be the specific action.
+- Don't use exclamation marks on functional surfaces. No filler phrases like "It looks like…".
+- Don't use `Title Case` for section headings — sentence case only (except proper nouns).
 
 ---
 
@@ -436,7 +699,8 @@ before building forward. **Do not implement iteration N+1 features while iterati
 
 **Frontend / UI**
 - [ ] No raw hex/px/font in frontend — token classes only (`brand-*`, `neutral-*`, `semantic-*`)
-- [ ] New components follow the `button.jsx` cva + `cn()` pattern
+- [ ] New components follow the `button.jsx` cva + `cn()` pattern, filed under correct Atomic Design level
+- [ ] New component has a co-located `.stories.jsx` covering all variants and states
 - [ ] Every interactive element has all 5 states: default, hover, active, disabled, focus ring
 - [ ] Every new section or panel supports expand/collapse with localStorage persistence
 - [ ] Loading states use skeleton screens — no content-area spinners
@@ -445,6 +709,17 @@ before building forward. **Do not implement iteration N+1 features while iterati
 - [ ] Page-level actions sit in the sticky header top-right, not floating or in sidebar
 - [ ] No Tailwind `gray-*` classes — only `neutral-*` from the token set
 - [ ] Orange/amber appear at most 1–2 times per screen
+- [ ] All text meets WCAG 2.1 AA contrast (`text-neutral-400` or lighter never used for body text)
+- [ ] Status/state never communicated by colour alone — label or icon always accompanies colour
+- [ ] Every custom interactive non-`<button>` element has `role`, `tabIndex`, and keyboard handler
+- [ ] Focus moves into opened panels/modals; returns to trigger on close
+- [ ] Skip-to-main-content link present in root layout
+- [ ] Lists that can exceed ~100 rows use virtual scrolling
+- [ ] Search/filter inputs debounced at 250ms
+- [ ] Mutations use optimistic UI — UI updates before API response
+- [ ] Only one primary CTA per screen; dropdowns with >7 items are grouped or searchable
+- [ ] Error messages say what failed + what to do. Confirmation buttons label the specific action.
+- [ ] All UI copy is sentence case, active voice, present tense, no exclamation marks on functional surfaces
 
 ---
 

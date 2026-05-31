@@ -52,8 +52,9 @@ Never create capability-specific data tables, auth flows, or UI conventions.
 - **Backend package is `com.example.demo` (flat).** The spec's target is `com.bcits.works.<feature>`.
   Until a rename migration happens, **match the existing `com.example.demo` package** — do NOT
   create new `com.bcits.works.*` packages that fragment the codebase. Renaming is its own task.
-- **Two event tables exist:** `event_log` (V1) and `events` (V4) — overlapping purpose. This
-  violates the "single event store" principle. Pick one before building more on event sourcing.
+- **Event store: resolved → `events` is canonical.** The schema once had two tables; the dead
+  `event_log` was dropped in V20. **`events`** is the single event store (mapped by `AppEvent`,
+  written by `EventService`). Any future audit-log explorer reads from `events`.
 
 ---
 
@@ -78,14 +79,14 @@ package-by-feature migration is formally scheduled.
 ### Database (Flyway — current high-water mark: **V19** on `main`; note V16 was skipped)
 - **All schema changes via Flyway migrations only.** Never alter the DB manually.
 - Next migration is **`V20__<description>.sql`**. Naming: `V{n}__{snake_case_description}.sql`.
-  (Existing on `main`: …V14, V15 seed_brand_and_identity, V17 mfa_totp, V18 project_slugs, V19 data_quality_cleanup.)
+  (Existing on `main`: …V14, V15 seed_brand_and_identity, V17 mfa_totp, V18 project_slugs,
+  V19 data_quality_cleanup, V20 drop_dead_event_log.)
 - **Table names are PLURAL.** Verified existing tables:
   `users, projects, project_members, workspaces, workspace_members, work_items,
   work_item_links, sprints, comments, attachments, notifications, notification_preferences,
   tags, starred_items, saved_filters, roles, permissions, role_audit_log,
-  password_reset_tokens, event_log, events`
-- Event sourcing: append-only event table — **append only, never delete/update rows.**
-  (⚠️ resolve the `event_log` vs `events` duplication first.)
+  password_reset_tokens, events`
+- Event sourcing: the single store is **`events`** (append-only — never delete/update rows).
 
 ### JWT / Auth
 - JWT is stateless. No server-side session storage.

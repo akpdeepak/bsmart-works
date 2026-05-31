@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { cva } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
@@ -24,9 +23,4 @@ export function StatusBadge({ className, category, children, ...props }) {
       {children}
     </span>
   );
-}
-
-export function statusToCategory(status) {
-  const map = { 'Todo': 'todo', 'In Progress': 'in_progress', 'Done': 'done', 'Blocked': 'blocked' };
-  return map[status] || 'todo';
 }

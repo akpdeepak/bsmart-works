@@ -2,6 +2,9 @@ package com.example.demo;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,12 +18,15 @@ public class AuthController {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final EventService eventService;
+    private final boolean exposeDevVerificationToken;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public AuthController(UserRepository userRepository, JwtUtil jwtUtil, EventService eventService) {
+    public AuthController(UserRepository userRepository, JwtUtil jwtUtil, EventService eventService,
+                          @Value("${app.auth.expose-dev-verification-token:false}") boolean exposeDevVerificationToken) {
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
         this.eventService = eventService;
+        this.exposeDevVerificationToken = exposeDevVerificationToken;
     }
 
     @PostMapping("/signup")
@@ -57,12 +63,13 @@ public class AuthController {
         System.out.println("[EMAIL] Verification link for " + newUser.getEmail()
                 + ": http://localhost:5173/verify?token=" + verificationToken);
 
-        // Return without a token — user must verify email first
-        return ResponseEntity.ok(Map.of(
-            "requiresVerification", true,
-            "message", "Account created! Please check your email to verify your account.",
-            "devToken", verificationToken  // exposed only in dev/UAT mode
-        ));
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("requiresVerification", true);
+        response.put("message", "Account created! Please check your email to verify your account.");
+        if (exposeDevVerificationToken) {
+            response.put("devToken", verificationToken);
+        }
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/verify")
@@ -142,6 +149,9 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> payload) {
         String email = payload.get("email");
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email is required."));
+        }
         userRepository.findByEmail(email.toLowerCase().trim()).ifPresent(u -> {
             System.out.println("[EMAIL] Password reset requested for: " + u.getEmail());
         });
@@ -150,20 +160,37 @@ public class AuthController {
 
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> payload) {
-        String email       = payload.get("email");
+        String currentUserId = authenticatedUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentication required."));
+        }
+
+        String currentPassword = payload.get("currentPassword");
         String newPassword = payload.get("newPassword");
+        if (currentPassword == null || currentPassword.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Current password is required."));
+        }
         if (newPassword == null || newPassword.length() < 6) {
             return ResponseEntity.badRequest().body(Map.of("error", "Password must be at least 6 characters."));
         }
-        Optional<User> userOpt = userRepository.findByEmail(email.toLowerCase().trim());
+        Optional<User> userOpt = userRepository.findById(currentUserId);
         if (userOpt.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "User not found."));
         }
         User user = userOpt.get();
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Current password is incorrect."));
+        }
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
         eventService.record(user.getId(), "PASSWORD_RESET", user.getId(), "{}");
         return ResponseEntity.ok(Map.of("message", "Password updated successfully."));
+    }
+
+    private String authenticatedUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || auth.getPrincipal() == null) return null;
+        return auth.getPrincipal().toString();
     }
 
     private String legacySha256(String password) {

@@ -16,13 +16,15 @@ public class ProjectController {
     private final EventService eventService;
     private final JdbcTemplate jdbc;
     private final UserRepository userRepository;
+    private final AuthenticatedUser authenticatedUser;
 
     public ProjectController(ProjectRepository projectRepository, EventService eventService,
-                             JdbcTemplate jdbc, UserRepository userRepository) {
+                             JdbcTemplate jdbc, UserRepository userRepository, AuthenticatedUser authenticatedUser) {
         this.projectRepository = projectRepository;
         this.eventService = eventService;
         this.jdbc = jdbc;
         this.userRepository = userRepository;
+        this.authenticatedUser = authenticatedUser;
     }
 
     @GetMapping
@@ -40,8 +42,8 @@ public class ProjectController {
     }
 
     @PostMapping
-    public Project createProject(@RequestBody Project project,
-                                  @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public Project createProject(@RequestBody Project project) {
+        String userId = authenticatedUser.id();
         project.setId("PROJ-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         project.setWorkspaceId("WS-001");
         project.setCreatedAt(OffsetDateTime.now());
@@ -107,5 +109,4 @@ public class ProjectController {
         return ResponseEntity.noContent().build();
     }
 }
-
 

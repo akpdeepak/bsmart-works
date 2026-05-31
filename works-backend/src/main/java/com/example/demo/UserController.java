@@ -11,9 +11,11 @@ import java.util.stream.Collectors;
 public class UserController {
 
     private final UserRepository userRepository;
+    private final AuthenticatedUser authenticatedUser;
 
-    public UserController(UserRepository userRepository) {
+    public UserController(UserRepository userRepository, AuthenticatedUser authenticatedUser) {
         this.userRepository = userRepository;
+        this.authenticatedUser = authenticatedUser;
     }
 
     @GetMapping
@@ -26,13 +28,11 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    public Map<String, String> getCurrentUser(
-            @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        if (userId == null) userId = "USR-001";
+    public Map<String, String> getCurrentUser() {
+        String userId = authenticatedUser.id();
         final String uid = userId;
         return userRepository.findById(uid).map(u -> Map.of(
                 "id", u.getId(), "fullName", u.getFullName(), "email", u.getEmail()
         )).orElse(Map.of("id", uid, "fullName", "Unknown", "email", ""));
     }
 }
-

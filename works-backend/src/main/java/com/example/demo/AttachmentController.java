@@ -42,9 +42,11 @@ public class AttachmentController {
     private int clamavPort;
 
     private final JdbcTemplate jdbc;
+    private final AuthenticatedUser authenticatedUser;
 
-    public AttachmentController(JdbcTemplate jdbc) {
+    public AttachmentController(JdbcTemplate jdbc, AuthenticatedUser authenticatedUser) {
         this.jdbc = jdbc;
+        this.authenticatedUser = authenticatedUser;
         try { Files.createDirectories(UPLOAD_DIR); } catch (IOException e) { /* ignore */ }
     }
 
@@ -58,8 +60,8 @@ public class AttachmentController {
 
     @PostMapping
     public Map<String, Object> upload(@PathVariable String workItemId,
-                                      @RequestParam("file") MultipartFile file,
-                                      @RequestHeader(value = "X-User-Id", required = false) String userId) throws IOException {
+                                      @RequestParam("file") MultipartFile file) throws IOException {
+        String userId = authenticatedUser.id();
 
         // 1. Configurable size limit
         if (file.getSize() > maxSizeBytes) {

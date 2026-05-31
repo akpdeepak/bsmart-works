@@ -19,11 +19,12 @@ public class WorkItemController {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final NotificationBatchService batchService;
+    private final AuthenticatedUser authenticatedUser;
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
                               JdbcTemplate jdbc, NotificationRepository notificationRepository,
                               UserRepository userRepository, EmailService emailService,
-                              NotificationBatchService batchService) {
+                              NotificationBatchService batchService, AuthenticatedUser authenticatedUser) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
@@ -31,11 +32,12 @@ public class WorkItemController {
         this.userRepository = userRepository;
         this.emailService = emailService;
         this.batchService = batchService;
+        this.authenticatedUser = authenticatedUser;
     }
 
     @GetMapping
-    public List<WorkItem> getAllWorkItems(@RequestParam(required = false) String parentId,
-                                          @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public List<WorkItem> getAllWorkItems(@RequestParam(required = false) String parentId) {
+        String userId = authenticatedUser.id();
         List<WorkItem> items;
         if (parentId != null) {
             items = jdbc.query("SELECT * FROM work_items WHERE parent_id = ? AND deleted_at IS NULL ORDER BY created_at ASC",
@@ -44,12 +46,12 @@ public class WorkItemController {
             items = jdbc.query("SELECT * FROM work_items WHERE deleted_at IS NULL ORDER BY created_at ASC", this::mapRow);
         }
         items.forEach(this::attachTags);
-        if (userId != null) attachStarred(items, userId);
+        attachStarred(items, userId);
         return items;
     }
 
     @GetMapping("/trash")
-    public List<WorkItem> getTrash(@RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public List<WorkItem> getTrash() {
         List<WorkItem> items = jdbc.query(
             "SELECT * FROM work_items WHERE deleted_at IS NOT NULL AND deleted_at > NOW() - INTERVAL '30 days' ORDER BY deleted_at DESC",
             this::mapRow);
@@ -68,23 +70,22 @@ public class WorkItemController {
 
     // Star / unstar
     @PostMapping("/{id}/star")
-    public Map<String, Object> starItem(@PathVariable String id,
-                                         @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        if (userId == null) return Map.of("starred", false);
+    public Map<String, Object> starItem(@PathVariable String id) {
+        String userId = authenticatedUser.id();
         jdbc.update("INSERT INTO starred_items (user_id, work_item_id) VALUES (?,?) ON CONFLICT DO NOTHING", userId, id);
         return Map.of("starred", true, "itemId", id);
     }
 
     @DeleteMapping("/{id}/star")
-    public Map<String, Object> unstarItem(@PathVariable String id,
-                                           @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        if (userId != null) jdbc.update("DELETE FROM starred_items WHERE user_id = ? AND work_item_id = ?", userId, id);
+    public Map<String, Object> unstarItem(@PathVariable String id) {
+        String userId = authenticatedUser.id();
+        jdbc.update("DELETE FROM starred_items WHERE user_id = ? AND work_item_id = ?", userId, id);
         return Map.of("starred", false, "itemId", id);
     }
 
     @GetMapping("/starred")
-    public List<WorkItem> getStarred(@RequestHeader(value = "X-User-Id", required = false) String userId) {
-        if (userId == null) return List.of();
+    public List<WorkItem> getStarred() {
+        String userId = authenticatedUser.id();
         List<WorkItem> items = jdbc.query(
             "SELECT wi.* FROM work_items wi JOIN starred_items si ON si.work_item_id = wi.id WHERE si.user_id = ? AND wi.deleted_at IS NULL ORDER BY si.created_at DESC",
             this::mapRow, userId);
@@ -93,8 +94,8 @@ public class WorkItemController {
     }
 
     @GetMapping("/search")
-    public List<WorkItem> search(@RequestParam String q,
-                                  @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public List<WorkItem> search(@RequestParam String q) {
+        String userId = authenticatedUser.id();
         // Starred items get priority in search results
         String sql = "SELECT wi.*, (CASE WHEN si.work_item_id IS NOT NULL THEN 1 ELSE 0 END) AS is_starred " +
             "FROM work_items wi LEFT JOIN starred_items si ON si.work_item_id = wi.id AND si.user_id = ? " +
@@ -105,7 +106,7 @@ public class WorkItemController {
             WorkItem w = mapRow(rs, row);
             try { w.setStarred(rs.getInt("is_starred") == 1); } catch (Exception ignored) {}
             return w;
-        }, userId != null ? userId : "", pattern, pattern);
+        }, userId, pattern, pattern);
         items.forEach(this::attachTags);
         return items;
     }
@@ -145,15 +146,16 @@ public class WorkItemController {
     }
 
     @GetMapping("/my")
-    public List<WorkItem> myWorkItems(@RequestParam String userId) {
-        List<WorkItem> items = repository.findByAssigneeId(userId);
+    public List<WorkItem> myWorkItems(@RequestParam(required = false) String userId) {
+        String requestedUserId = authenticatedUser.id();
+        List<WorkItem> items = repository.findByAssigneeId(requestedUserId);
         items.forEach(this::attachTags);
         return items;
     }
 
     @PostMapping
-    public WorkItem createWorkItem(@RequestBody WorkItem newItem,
-                                   @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public WorkItem createWorkItem(@RequestBody WorkItem newItem) {
+        String userId = authenticatedUser.id();
         String prefix = newItem.getProjectId() != null ? newItem.getProjectId().replace("PROJ-", "") : "WEB";
         newItem.setId(prefix + "-" + java.util.UUID.randomUUID().toString().substring(0, 6).toUpperCase());
         newItem.setStatus("Todo");
@@ -183,10 +185,18 @@ public class WorkItemController {
     }
 
     @PutMapping("/{id}")
-    public WorkItem updateWorkItem(@PathVariable String id, @RequestBody WorkItem updatedItem,
-                                    @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public WorkItem updateWorkItem(@PathVariable String id, @RequestBody WorkItem updatedItem) {
+        String userId = authenticatedUser.id();
         return repository.findById(id).map(existing -> {
+            String oldStatus = existing.getStatus();
             String oldAssignee = existing.getAssigneeId();
+            String oldPriority = existing.getPriority();
+            String oldTitle = existing.getTitle();
+            java.time.LocalDate oldDueDate = existing.getDueDate();
+            String oldType = existing.getType();
+            Integer oldStoryPoints = existing.getStoryPoints();
+            String oldDescription = existing.getDescription();
+            List<String> oldTags = jdbc.queryForList("SELECT tag FROM tags WHERE work_item_id = ? ORDER BY tag", String.class, id);
 
             existing.setTitle(updatedItem.getTitle());
             existing.setStatus(updatedItem.getStatus());
@@ -207,40 +217,39 @@ public class WorkItemController {
             }
 
             // Record field-level diffs
-            if (!java.util.Objects.equals(existing.getStatus(), saved.getStatus())) {
-                eventService.recordDiff(id, "STATUS_CHANGED", userId, "status", existing.getStatus(), saved.getStatus());
+            if (!java.util.Objects.equals(oldStatus, saved.getStatus())) {
+                eventService.recordDiff(id, "STATUS_CHANGED", userId, "status", oldStatus, saved.getStatus());
             }
-            if (!java.util.Objects.equals(existing.getAssigneeId(), saved.getAssigneeId())) {
-                String oldName = existing.getAssigneeId() != null ? userRepository.findById(existing.getAssigneeId()).map(u -> u.getFullName()).orElse(existing.getAssigneeId()) : "unassigned";
+            if (!java.util.Objects.equals(oldAssignee, saved.getAssigneeId())) {
+                String oldName = oldAssignee != null ? userRepository.findById(oldAssignee).map(u -> u.getFullName()).orElse(oldAssignee) : "unassigned";
                 String newName = saved.getAssigneeId() != null ? userRepository.findById(saved.getAssigneeId()).map(u -> u.getFullName()).orElse(saved.getAssigneeId()) : "unassigned";
                 eventService.recordDiff(id, "ASSIGNED", userId, "assignee", oldName, newName);
             }
-            if (!java.util.Objects.equals(existing.getPriority(), saved.getPriority())) {
-                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "priority", existing.getPriority(), saved.getPriority());
+            if (!java.util.Objects.equals(oldPriority, saved.getPriority())) {
+                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "priority", oldPriority, saved.getPriority());
             }
-            if (!java.util.Objects.equals(existing.getTitle(), saved.getTitle())) {
-                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "title", existing.getTitle(), saved.getTitle());
+            if (!java.util.Objects.equals(oldTitle, saved.getTitle())) {
+                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "title", oldTitle, saved.getTitle());
             }
-            if (!java.util.Objects.equals(existing.getDueDate(), saved.getDueDate())) {
+            if (!java.util.Objects.equals(oldDueDate, saved.getDueDate())) {
                 eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "dueDate",
-                    existing.getDueDate() != null ? existing.getDueDate().toString() : "none",
+                    oldDueDate != null ? oldDueDate.toString() : "none",
                     saved.getDueDate() != null ? saved.getDueDate().toString() : "none");
             }
-            if (!java.util.Objects.equals(existing.getType(), saved.getType())) {
-                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "type", existing.getType(), saved.getType());
+            if (!java.util.Objects.equals(oldType, saved.getType())) {
+                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "type", oldType, saved.getType());
             }
-            if (!java.util.Objects.equals(existing.getStoryPoints(), saved.getStoryPoints())) {
+            if (!java.util.Objects.equals(oldStoryPoints, saved.getStoryPoints())) {
                 eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "storyPoints",
-                    String.valueOf(existing.getStoryPoints() != null ? existing.getStoryPoints() : 0),
+                    String.valueOf(oldStoryPoints != null ? oldStoryPoints : 0),
                     String.valueOf(saved.getStoryPoints() != null ? saved.getStoryPoints() : 0));
             }
             // Description changed (track as boolean — text too large for event store)
-            if (!java.util.Objects.equals(existing.getDescription(), saved.getDescription())) {
+            if (!java.util.Objects.equals(oldDescription, saved.getDescription())) {
                 eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "description", "edited", "edited");
             }
             // Tags diff
             if (updatedItem.getTags() != null) {
-                List<String> oldTags = jdbc.queryForList("SELECT tag FROM tags WHERE work_item_id = ? ORDER BY tag", String.class, id);
                 List<String> newTags = updatedItem.getTags();
                 if (!oldTags.equals(newTags.stream().sorted().toList())) {
                     eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "tags",
@@ -263,8 +272,8 @@ public class WorkItemController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteWorkItem(@PathVariable String id,
-                                                @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public ResponseEntity<Void> deleteWorkItem(@PathVariable String id) {
+        String userId = authenticatedUser.id();
         var opt = repository.findById(id);
         if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build();
         var item = opt.get();
@@ -276,8 +285,7 @@ public class WorkItemController {
     }
 
     @DeleteMapping("/{id}/permanent")
-    public ResponseEntity<Void> permanentDelete(@PathVariable String id,
-                                                 @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public ResponseEntity<Void> permanentDelete(@PathVariable String id) {
         var opt = repository.findById(id);
         if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build();
         var item = opt.get();
@@ -317,4 +325,3 @@ public class WorkItemController {
         batchService.createIfNotBatched(userId, type, message, link);
     }
 }
-

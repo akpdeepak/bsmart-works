@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/works/button';
-import { StatusBadge, statusToCategory } from '@/components/works/status-badge';
+import { StatusBadge } from '@/components/works/status-badge';
+import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
 
-const API = 'http://localhost:8080/api/v1';
+const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 function getInitials(name) {
   if (!name) return '??';
@@ -18,6 +19,14 @@ function Avatar({ name, size = 8 }) {
       {getInitials(name)}
     </div>
   );
+}
+
+function readStoredSession() {
+  try {
+    return JSON.parse(localStorage.getItem('bSmartSession') || 'null');
+  } catch {
+    return null;
+  }
 }
 
 const TYPES = {
@@ -53,8 +62,9 @@ function EmptyState({ icon, title, subtitle, action }) {
 }
 
 export default function App() {
-  const [currentUser, setCurrentUser]   = useState(null);
-  const [token, setToken]               = useState(null);
+  const initialSession                  = readStoredSession();
+  const [currentUser, setCurrentUser]   = useState(() => initialSession?.user || null);
+  const [token, setToken]               = useState(() => initialSession?.token || null);
   const [authMode, setAuthMode]         = useState('login');
   const [authForm, setAuthForm]         = useState({ email: '', password: '', fullName: '' });
   const [authError, setAuthError]       = useState('');
@@ -161,7 +171,7 @@ export default function App() {
   const [replyingTo, setReplyingTo]     = useState(null);   // comment being replied to
   const [replyBody, setReplyBody]       = useState('');
   const [trashItems, setTrashItems]     = useState([]);
-  const [branding, setBranding]         = useState({ primaryColor: '#E94E1B', logoUrl: '', description: '' });
+  const [, setBranding]                 = useState({ primaryColor: '#E94E1B', logoUrl: '', description: '' });
   const [projectMembers, setProjectMembers] = useState([]);
   const [projectMemberEmail, setProjectMemberEmail] = useState('');
   const [projectMemberMsg, setProjectMemberMsg] = useState('');
@@ -174,7 +184,6 @@ export default function App() {
   const headers = (extra = {}) => ({
     'Content-Type': 'application/json',
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-    ...(currentUser ? { 'X-User-Id': currentUser.id } : {}),
     ...extra
   });
 
@@ -189,19 +198,12 @@ export default function App() {
   };
 
   useEffect(() => {
-    const saved = localStorage.getItem('bSmartSession');
-    if (saved) {
-      const { user, token } = JSON.parse(saved);
-      setCurrentUser(user); setToken(token);
-    }
-  }, []);
-
-  useEffect(() => {
     if (currentUser) {
       fetchAll();
       const iv = setInterval(fetchUnreadCount, 30000);
       return () => clearInterval(iv);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
   useEffect(() => {
@@ -212,6 +214,8 @@ export default function App() {
   useEffect(() => {
     if (!selectedItem) return;
     const id = selectedItem.id;
+    // Keep detail drawer controls aligned with the selected work item.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTagInput((selectedItem.tags || []).join(', '));
     setActivityEventFilter('');
     const h = headers();
@@ -220,6 +224,7 @@ export default function App() {
     fetch(`${API}/work-items/${id}/links`, { headers: h }).then(r => r.json()).then(d => setLinks(Array.isArray(d) ? d : [])).catch(() => {});
     fetch(`${API}/work-items/${id}/attachments`, { headers: h }).then(r => r.json()).then(d => setAttachments(Array.isArray(d) ? d : [])).catch(() => {});
     setDetailTab('details');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedItem?.id]);
 
   // Close workspace dropdown on outside click
@@ -232,6 +237,7 @@ export default function App() {
   // Track recently viewed items
   useEffect(() => {
     if (!selectedItem) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRecentlyViewed(prev => {
       const filtered = prev.filter(i => i.id !== selectedItem.id);
       const updated = [{ id: selectedItem.id, title: selectedItem.title, type: selectedItem.type }, ...filtered].slice(0, 8);
@@ -243,6 +249,7 @@ export default function App() {
       .then(r => r.json())
       .then(d => setItemChildren((Array.isArray(d) ? d : []).filter(i => i.parentId === selectedItem.id)))
       .catch(() => setItemChildren([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedItem?.id]);
 
   const showToast = (message, type = 'success') => {
@@ -270,7 +277,7 @@ export default function App() {
       setProjects(Array.isArray(projs) ? projs : []);
       setUsers(Array.isArray(usrs) ? usrs : []);
       setLoading(false);
-    }).catch(err => {
+    }).catch(() => {
       setLoading(false);
       showToast('Failed to load data. Check your connection.', 'error');
     });
@@ -504,7 +511,11 @@ export default function App() {
 
   // SEARCH
   useEffect(() => {
-    if (!searchQuery.trim()) { setSearchResults([]); return; }
+    if (!searchQuery.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSearchResults([]);
+      return;
+    }
     const t = setTimeout(() => {
       fetch(`${API}/work-items/search?q=${encodeURIComponent(searchQuery)}`)
         .then(r => r.json()).then(d => setSearchResults(Array.isArray(d) ? d : [])).catch(() => {});
@@ -766,7 +777,9 @@ export default function App() {
     }
     const fd = new FormData(); fd.append('file', file);
     fetch(`${API}/work-items/${selectedItem.id}/attachments`, {
-      method: 'POST', headers: { 'X-User-Id': currentUser?.id || '' }, body: fd
+      method: 'POST',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      body: fd
     }).then(async res => {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -1553,7 +1566,7 @@ export default function App() {
                 </div>
                 {backlogItems.length === 0
                   ? <EmptyState icon="📝" title="Backlog is empty" subtitle="Create work items to add them to the backlog." action={<Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>Add to backlog</Button>} />
-                  : backlogItems.map((item, idx) => (
+                  : backlogItems.map((item) => (
                     <div key={item.id}
                       draggable onDragStart={(e) => handleBacklogDragStart(e, item.id)}
                       onDragOver={(e) => { e.preventDefault(); setDragOverId(item.id); }}
@@ -2760,7 +2773,7 @@ const ROLE_CONFIG = {
 };
 
 function RoleBadge({ role, tier, small = false }) {
-  const r = ROLE_CONFIG[role] || ROLE_CONFIG.MEMBER;
+  const r = ROLE_CONFIG[role] || Object.values(ROLE_CONFIG).find(config => config.tier === tier) || ROLE_CONFIG.MEMBER;
   return (
     <span className={`inline-flex items-center gap-1 font-semibold rounded ${small ? 'text-[9px] px-1 py-0.5' : 'text-[10px] px-1.5 py-0.5'} ${r.bg} ${r.text}`}>
       {r.label}
@@ -2961,7 +2974,11 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
           label: epic ? `⚡ ${epic.title}` : epicId === 'no-epic' ? 'No Epic' : epicId,
           items: epicItems
         };
-      }).sort((a, b) => a.label === 'No Epic' ? 1 : -1);
+      }).sort((a, b) => {
+        if (a.label === 'No Epic') return 1;
+        if (b.label === 'No Epic') return -1;
+        return a.label.localeCompare(b.label);
+      });
     }
     if (swimlaneBy === 'tag') {
       const tagMap = { 'No Tags': [] };
@@ -2978,7 +2995,11 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
       return Object.entries(tagMap)
         .filter(([, tagItems]) => tagItems.length > 0)
         .map(([tag, tagItems]) => ({ key: tag, label: `🏷 ${tag}`, items: tagItems }))
-        .sort((a, b) => a.label === '🏷 No Tags' ? 1 : -1);
+        .sort((a, b) => {
+          if (a.label === '🏷 No Tags') return 1;
+          if (b.label === '🏷 No Tags') return -1;
+          return a.label.localeCompare(b.label);
+        });
     }
     return [{ key: 'all', label: null, items }];
   };

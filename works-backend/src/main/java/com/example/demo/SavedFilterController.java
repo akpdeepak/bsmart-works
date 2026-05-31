@@ -9,20 +9,22 @@ import java.util.List;
 public class SavedFilterController {
 
     private final SavedFilterRepository repository;
+    private final AuthenticatedUser authenticatedUser;
 
-    public SavedFilterController(SavedFilterRepository repository) {
+    public SavedFilterController(SavedFilterRepository repository, AuthenticatedUser authenticatedUser) {
         this.repository = repository;
+        this.authenticatedUser = authenticatedUser;
     }
 
     @GetMapping
-    public List<SavedFilter> getFilters(
-            @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        return repository.findByWorkspaceIdAndIsSharedOrCreatedBy("WS-001", true, userId != null ? userId : "");
+    public List<SavedFilter> getFilters() {
+        String userId = authenticatedUser.id();
+        return repository.findByWorkspaceIdAndIsSharedOrCreatedBy("WS-001", true, userId);
     }
 
     @PostMapping
-    public SavedFilter createFilter(@RequestBody SavedFilter filter,
-                                    @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public SavedFilter createFilter(@RequestBody SavedFilter filter) {
+        String userId = authenticatedUser.id();
         filter.setWorkspaceId("WS-001");
         filter.setCreatedBy(userId);
         filter.setCreatedAt(OffsetDateTime.now());
@@ -30,8 +32,7 @@ public class SavedFilterController {
     }
 
     @PutMapping("/{id}/share")
-    public SavedFilter toggleShare(@PathVariable Long id,
-                                    @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public SavedFilter toggleShare(@PathVariable Long id) {
         return repository.findById(id).map(f -> {
             f.setShared(!Boolean.TRUE.equals(f.isShared()));
             return repository.save(f);
@@ -43,4 +44,3 @@ public class SavedFilterController {
         repository.deleteById(id);
     }
 }
-

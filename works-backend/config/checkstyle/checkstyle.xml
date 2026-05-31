@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+  "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+  "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+  bSmart Works — Checkstyle rules.
+  A deliberately moderate ruleset: enforces consistency without drowning a young
+  codebase in noise. Tighten over time. Pair with CLAUDE.md §3 for the architectural
+  rules Checkstyle can't express (those live in scripts/guardrails.sh).
+-->
+<module name="Checker">
+  <property name="charset" value="UTF-8"/>
+  <property name="severity" value="warning"/>
+  <property name="fileExtensions" value="java"/>
+
+  <!-- No tabs for indentation is not enforced (project uses tabs); keep it lenient. -->
+  <module name="LineLength">
+    <property name="max" value="140"/>
+    <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://"/>
+  </module>
+
+  <module name="TreeWalker">
+    <!-- Naming consistency (matches the canonical vocabulary in CLAUDE.md §3) -->
+    <module name="TypeName"/>
+    <module name="MethodName"/>
+    <module name="ConstantName"/>
+    <module name="PackageName"/>
+    <module name="LocalVariableName"/>
+    <module name="MemberName"/>
+
+    <!-- Imports -->
+    <module name="UnusedImports"/>
+    <module name="RedundantImport"/>
+    <module name="AvoidStarImport"/>
+
+    <!-- Common correctness / readability -->
+    <module name="EmptyStatement"/>
+    <module name="EqualsHashCode"/>
+    <module name="SimplifyBooleanExpression"/>
+    <module name="SimplifyBooleanReturn"/>
+    <module name="MissingSwitchDefault"/>
+    <module name="OneStatementPerLine"/>
+    <module name="UpperEll"/>
+    <module name="NeedBraces"/>
+  </module>
+</module>

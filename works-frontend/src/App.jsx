@@ -61,6 +61,8 @@ export default function App() {
   const [forgotMode, setForgotMode]     = useState(false);
   const [forgotEmail, setForgotEmail]   = useState('');
   const [forgotMsg, setForgotMsg]       = useState('');
+  const [verifyPending, setVerifyPending] = useState(null); // { email, devToken }
+  const [verifyMsg, setVerifyMsg]       = useState('');
 
   const [view, setView]                 = useState('dashboard');
   const [toast, setToast]               = useState(null); // { message, type }
@@ -289,12 +291,41 @@ export default function App() {
       body: JSON.stringify(authForm)
     }).then(async res => {
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Authentication failed');
+      if (!res.ok) {
+        if (data.requiresVerification) {
+          setVerifyPending({ email: authForm.email, devToken: null });
+          setVerifyMsg('Please verify your email before signing in. Check your inbox.');
+          return;
+        }
+        throw new Error(data.error || 'Authentication failed');
+      }
       return data;
     }).then(data => {
+      if (!data) return;
+      if (data.requiresVerification) {
+        // Signup success — show verify screen with dev token for UAT
+        setVerifyPending({ email: authForm.email, devToken: data.devToken });
+        setVerifyMsg('');
+        return;
+      }
       setCurrentUser(data.user); setToken(data.token);
       localStorage.setItem('bSmartSession', JSON.stringify({ user: data.user, token: data.token }));
     }).catch(err => setAuthError(err.message));
+  };
+
+  const handleVerifyEmail = (token) => {
+    fetch(`${API}/auth/verify?token=${token}`)
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Verification failed');
+        return data;
+      })
+      .then(data => {
+        setVerifyPending(null); setVerifyMsg('');
+        setCurrentUser(data.user); setToken(data.token);
+        localStorage.setItem('bSmartSession', JSON.stringify({ user: data.user, token: data.token }));
+      })
+      .catch(err => setVerifyMsg(err.message));
   };
 
   const handleForgotPassword = (e) => {
@@ -712,6 +743,37 @@ export default function App() {
   // AUTH SCREENS
   // ==========================================
   if (!currentUser) {
+    // Email verification pending screen
+    if (verifyPending) return (
+      <div className="flex h-screen bg-neutral-100 items-center justify-center font-sans">
+        <div className="bg-white p-8 rounded-xl shadow-xl w-96 border border-neutral-200">
+          <div className="flex justify-center mb-6"><Logo /></div>
+          <div className="w-14 h-14 rounded-full bg-brand-teal/10 flex items-center justify-center text-2xl mx-auto mb-4">📧</div>
+          <h2 className="text-xl font-bold text-brand-navy text-center mb-2">Check your email</h2>
+          <p className="text-sm text-neutral-500 text-center mb-5">
+            We sent a verification link to <strong>{verifyPending.email}</strong>.<br/>
+            Click it to activate your account.
+          </p>
+          {verifyMsg && <p className="text-sm text-semantic-danger text-center mb-3">{verifyMsg}</p>}
+          {/* DEV/UAT only — show token so testers can verify without email */}
+          {verifyPending.devToken && (
+            <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-3 mb-4">
+              <p className="text-[10px] text-neutral-400 uppercase tracking-wider mb-1">UAT — One-click verify</p>
+              <button onClick={() => handleVerifyEmail(verifyPending.devToken)}
+                className="w-full py-2 bg-brand-navy text-white rounded-lg text-sm font-semibold hover:bg-brand-navy/90 transition-colors">
+                ✓ Verify my email (UAT shortcut)
+              </button>
+              <p className="text-[10px] text-neutral-400 mt-2 text-center">In production this arrives by email</p>
+            </div>
+          )}
+          <button onClick={() => { setVerifyPending(null); setAuthMode('login'); }}
+            className="w-full text-center text-sm text-neutral-400 hover:text-brand-navy transition-colors">
+            ← Back to sign in
+          </button>
+        </div>
+      </div>
+    );
+
     if (forgotMode) return (
       <div className="flex h-screen bg-neutral-100 items-center justify-center font-sans">
         <div className="bg-white p-8 rounded-xl shadow-xl w-96 border border-neutral-200">

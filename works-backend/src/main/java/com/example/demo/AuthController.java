@@ -39,18 +39,51 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Email already in use!"));
         }
 
+        String verificationToken = UUID.randomUUID().toString().replace("-", "");
+
         User newUser = new User();
         newUser.setId("USR-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         newUser.setEmail(email.toLowerCase().trim());
         newUser.setFullName(fullName.trim());
         newUser.setPasswordHash(passwordEncoder.encode(password));
+        newUser.setEmailVerified(false);
+        newUser.setVerificationToken(verificationToken);
         userRepository.save(newUser);
 
         eventService.record(newUser.getId(), "USER_SIGNED_UP", newUser.getId(),
                 "{\"email\":\"" + newUser.getEmail() + "\"}");
 
-        String token = jwtUtil.generate(newUser.getId(), newUser.getEmail());
-        return ResponseEntity.ok(Map.of("token", token, "user", userToMap(newUser)));
+        // In production: send email. For now log the verification link.
+        System.out.println("[EMAIL] Verification link for " + newUser.getEmail()
+                + ": http://localhost:5173/verify?token=" + verificationToken);
+
+        // Return without a token — user must verify email first
+        return ResponseEntity.ok(Map.of(
+            "requiresVerification", true,
+            "message", "Account created! Please check your email to verify your account.",
+            "devToken", verificationToken  // exposed only in dev/UAT mode
+        ));
+    }
+
+    @GetMapping("/verify")
+    public ResponseEntity<?> verifyEmail(@RequestParam String token) {
+        Optional<User> userOpt = userRepository.findByVerificationToken(token);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid or expired verification token."));
+        }
+        User user = userOpt.get();
+        user.setEmailVerified(true);
+        user.setVerificationToken(null);
+        userRepository.save(user);
+        eventService.record(user.getId(), "EMAIL_VERIFIED", user.getId(),
+                "{\"email\":\"" + user.getEmail() + "\"}");
+
+        String token2 = jwtUtil.generate(user.getId(), user.getEmail());
+        return ResponseEntity.ok(Map.of(
+            "message", "Email verified! You are now signed in.",
+            "token", token2,
+            "user", userToMap(user)
+        ));
     }
 
     @PostMapping("/login")
@@ -74,7 +107,6 @@ public class AuthController {
         if (user.getPasswordHash().startsWith("$2a$") || user.getPasswordHash().startsWith("$2b$")) {
             valid = passwordEncoder.matches(password, user.getPasswordHash());
         } else {
-            // Legacy SHA-256 — migrate to BCrypt on first login
             valid = legacySha256(password).equals(user.getPasswordHash());
             if (valid) {
                 user.setPasswordHash(passwordEncoder.encode(password));
@@ -86,17 +118,23 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid email or password."));
         }
 
+        if (!user.isEmailVerified()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                "error", "Please verify your email before signing in.",
+                "requiresVerification", true
+            ));
+        }
+
         eventService.record(user.getId(), "USER_LOGGED_IN", user.getId(), "{}");
-        String token = jwtUtil.generate(user.getId(), user.getEmail());
-        return ResponseEntity.ok(Map.of("token", token, "user", userToMap(user)));
+        String token2 = jwtUtil.generate(user.getId(), user.getEmail());
+        return ResponseEntity.ok(Map.of("token", token2, "user", userToMap(user)));
     }
 
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> payload) {
         String email = payload.get("email");
         userRepository.findByEmail(email.toLowerCase().trim()).ifPresent(u -> {
-            // In production: send email. For now we log.
-            System.out.println("[DEV] Password reset requested for: " + u.getEmail());
+            System.out.println("[EMAIL] Password reset requested for: " + u.getEmail());
         });
         return ResponseEntity.ok(Map.of("message", "If that email exists, a reset link has been sent."));
     }
@@ -124,9 +162,7 @@ public class AuthController {
             java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(password.getBytes("UTF-8"));
             return Base64.getEncoder().encodeToString(hash);
-        } catch (Exception e) {
-            return "";
-        }
+        } catch (Exception e) { return ""; }
     }
 
     private Map<String, Object> userToMap(User u) {
@@ -134,6 +170,7 @@ public class AuthController {
         m.put("id", u.getId());
         m.put("email", u.getEmail());
         m.put("fullName", u.getFullName());
+        m.put("emailVerified", u.isEmailVerified());
         return m;
     }
 }

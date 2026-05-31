@@ -1,0 +1,22 @@
+-- V20: Consolidate the event store to a single table.
+--
+-- The schema carried two overlapping event-sourcing tables:
+--   * event_log (V1) — payload JSONB. DEAD: no @Entity maps to it, no INSERT exists
+--                       anywhere in code or migrations. It has never held a row.
+--   * events    (V4) — the LIVE store. Mapped by AppEvent, written by EventService,
+--                       read by ActivityController / SprintController, extended over V8–V13.
+--
+-- This violates the "single event store" unification principle. We keep the LIVE table
+-- (`events`) as the one canonical store and drop the dead `event_log`.
+--
+-- Naming note: several seed/spec strings in V10–V12 (acceptance criteria, capability
+-- descriptions, the planned iteration-16 Audit Log Explorer) refer to "event_log" as the
+-- canonical store. That was the original intent; the implementation settled on `events`.
+-- Per the project's "code is canonical" rule, `events` wins. Any future audit-log explorer
+-- must read from `events`. Those past migrations are immutable (Flyway checksums) and are
+-- left untouched; this comment records the resolution.
+--
+-- Safety: event_log has no rows, no inbound foreign keys, and no dependent views, so the
+-- drop cannot cascade or lose data. IF EXISTS makes the migration idempotent across envs.
+
+DROP TABLE IF EXISTS event_log;

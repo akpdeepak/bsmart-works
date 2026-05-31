@@ -37,4 +37,16 @@ public class User {
 
     public String getVerificationToken()           { return verificationToken; }
     public void   setVerificationToken(String t)   { this.verificationToken = t; }
+
+    @Column(name = "mfa_enabled", nullable = false)
+    private boolean mfaEnabled = false;
+
+    @Column(name = "mfa_secret")
+    private String mfaSecret;
+
+    public boolean isMfaEnabled()               { return mfaEnabled; }
+    public void    setMfaEnabled(boolean v)     { this.mfaEnabled = v; }
+
+    public String getMfaSecret()                { return mfaSecret; }
+    public void   setMfaSecret(String s)        { this.mfaSecret = s; }
 }

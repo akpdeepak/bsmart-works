@@ -125,6 +125,15 @@ public class AuthController {
             ));
         }
 
+        // MFA challenge — return userId for the frontend to call /auth/mfa/verify
+        if (user.isMfaEnabled()) {
+            return ResponseEntity.ok(Map.of(
+                "requiresMfa", true,
+                "userId", user.getId(),
+                "message", "Enter your authenticator app code to complete sign in."
+            ));
+        }
+
         eventService.record(user.getId(), "USER_LOGGED_IN", user.getId(), "{}");
         String token2 = jwtUtil.generate(user.getId(), user.getEmail());
         return ResponseEntity.ok(Map.of("token", token2, "user", userToMap(user)));

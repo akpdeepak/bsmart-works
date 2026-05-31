@@ -205,10 +205,11 @@ export default function App() {
     const id = selectedItem.id;
     setTagInput((selectedItem.tags || []).join(', '));
     setActivityEventFilter('');
-    fetch(`${API}/work-items/${id}/comments`).then(r => r.json()).then(d => setComments(Array.isArray(d) ? d : [])).catch(() => {});
-    fetch(`${API}/work-items/${id}/activity`).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(() => {});
-    fetch(`${API}/work-items/${id}/links`).then(r => r.json()).then(d => setLinks(Array.isArray(d) ? d : [])).catch(() => {});
-    fetch(`${API}/work-items/${id}/attachments`).then(r => r.json()).then(d => setAttachments(Array.isArray(d) ? d : [])).catch(() => {});
+    const h = headers();
+    fetch(`${API}/work-items/${id}/comments`, { headers: h }).then(r => r.json()).then(d => setComments(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`${API}/work-items/${id}/activity`, { headers: h }).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`${API}/work-items/${id}/links`, { headers: h }).then(r => r.json()).then(d => setLinks(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`${API}/work-items/${id}/attachments`, { headers: h }).then(r => r.json()).then(d => setAttachments(Array.isArray(d) ? d : [])).catch(() => {});
     setDetailTab('details');
   }, [selectedItem?.id]);
 
@@ -1355,7 +1356,9 @@ export default function App() {
 
               {/* Sprints with capacity bar */}
               {sprints.map(sprint => {
-                const sprintCapUsed = sprint.capacity || 0;
+                const usedPts = sprint.usedPoints || 0;
+                const capPct = sprint.capacity > 0 ? Math.min(100, Math.round((usedPts / sprint.capacity) * 100)) : 0;
+                const capColor = capPct >= 100 ? 'bg-semantic-danger' : capPct >= 80 ? 'bg-semantic-warning' : 'bg-brand-teal';
                 return (
                   <div key={sprint.id} className="bg-white border border-neutral-200 rounded-xl mb-4 overflow-hidden">
                     <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 bg-neutral-50">
@@ -1365,13 +1368,15 @@ export default function App() {
                         {sprint.goal && <span className="text-xs text-neutral-400 italic hidden md:inline">"{sprint.goal}"</span>}
                       </div>
                       <div className="flex items-center gap-3">
-                        {/* Capacity bar */}
+                        {/* Capacity bar — shows actual committed pts vs capacity */}
                         {sprint.capacity > 0 && (
                           <div className="flex items-center gap-2">
-                            <div className="w-24 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
-                              <div className="h-full bg-brand-teal rounded-full" style={{ width: `${Math.min(100, (sprintCapUsed / sprint.capacity) * 100)}%` }}></div>
+                            <div className="w-24 h-1.5 bg-neutral-200 rounded-full overflow-hidden" title={`${usedPts}/${sprint.capacity} story points`}>
+                              <div className={`h-full rounded-full transition-all ${capColor}`} style={{ width: `${capPct}%` }}></div>
                             </div>
-                            <span className="text-xs text-neutral-400">{sprint.capacity}pt cap</span>
+                            <span className={`text-xs font-medium ${capPct >= 100 ? 'text-semantic-danger' : capPct >= 80 ? 'text-semantic-warning' : 'text-neutral-400'}`}>
+                              {usedPts}/{sprint.capacity}pt
+                            </span>
                           </div>
                         )}
                         {sprint.startDate && <span className="text-xs text-neutral-400 hidden md:inline">{sprint.startDate} → {sprint.endDate}</span>}
@@ -1488,10 +1493,23 @@ export default function App() {
                       </button>
                     ))}
                     {savedFilters.map(f => (
-                      <button key={f.id} onClick={() => setActiveFilter(JSON.parse(f.filterJson))}
-                        className="text-xs px-3 py-1.5 rounded-full bg-brand-navy/10 text-brand-navy font-medium hover:bg-brand-navy/20 transition-colors">
-                        ★ {f.name}
-                      </button>
+                      <div key={f.id} className="flex items-center gap-0.5">
+                        <button onClick={() => setActiveFilter(JSON.parse(f.filterJson))}
+                          className={`text-xs px-2.5 py-1.5 rounded-l-full font-medium transition-colors ${f.shared ? 'bg-brand-teal/10 text-brand-teal' : 'bg-brand-navy/10 text-brand-navy'} hover:opacity-80`}>
+                          {f.shared ? '🌐' : '★'} {f.name}
+                        </button>
+                        {f.createdBy === currentUser?.id && (
+                          <button onClick={() => {
+                            fetch(`${API}/saved-filters/${f.id}/share`, { method: 'PUT', headers: headers() })
+                              .then(r => r.json()).then(() => fetchSavedFilters())
+                              .catch(() => {});
+                          }}
+                            title={f.shared ? 'Make private' : 'Share with team'}
+                            className={`text-[10px] px-1.5 py-1.5 rounded-r-full font-medium transition-colors ${f.shared ? 'bg-brand-teal/20 text-brand-teal hover:bg-brand-teal/30' : 'bg-neutral-100 text-neutral-400 hover:bg-neutral-200'}`}>
+                            {f.shared ? '🔓' : '🔒'}
+                          </button>
+                        )}
+                      </div>
                     ))}
                     {activeFilter && (
                       <div className="flex items-center gap-1 ml-auto">
@@ -1512,11 +1530,13 @@ export default function App() {
                       <option value="assignee">By Assignee</option>
                       <option value="type">By Type</option>
                       <option value="priority">By Priority</option>
+                      <option value="epic">By Epic</option>
+                      <option value="tag">By Tag</option>
                     </select>
                   </div>
 
                   <SprintBoard items={applyFilter(sprintItems)} columns={columns} users={users}
-                    swimlaneBy={swimlaneBy} onDragStart={handleDragStart} onDragOver={handleDragOver}
+                    swimlaneBy={swimlaneBy} allItems={workItems} onDragStart={handleDragStart} onDragOver={handleDragOver}
                     onDrop={(e, status) => {
                       e.preventDefault();
                       const itemId = e.dataTransfer.getData('itemId');
@@ -1633,6 +1653,35 @@ export default function App() {
                           </div>
                           <p className="text-xs text-neutral-400">{sprintReport.completionRate}% complete · {sprintReport.velocityRate}% of story points delivered</p>
                         </div>
+
+                        {/* Commitment vs Delivery — story points comparison */}
+                        {sprintReport.totalPoints > 0 && (
+                          <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                            <h3 className="font-semibold text-neutral-900 mb-1">Commitment vs Delivery</h3>
+                            <p className="text-xs text-neutral-400 mb-4">Story points: what was committed vs what was delivered</p>
+                            <div className="space-y-3">
+                              {[
+                                { label: 'Capacity', value: sprintReport.sprint?.capacity || 0, max: Math.max(sprintReport.sprint?.capacity || 0, sprintReport.totalPoints), color: 'bg-neutral-200' },
+                                { label: 'Committed', value: sprintReport.totalPoints, max: Math.max(sprintReport.sprint?.capacity || 0, sprintReport.totalPoints), color: 'bg-brand-navy-tint' },
+                                { label: 'Delivered', value: sprintReport.donePoints, max: Math.max(sprintReport.sprint?.capacity || 0, sprintReport.totalPoints), color: 'bg-brand-teal' },
+                              ].map(row => (
+                                <div key={row.label} className="flex items-center gap-3">
+                                  <span className="text-xs text-neutral-500 w-20 flex-shrink-0">{row.label}</span>
+                                  <div className="flex-1 h-5 bg-neutral-100 rounded-full overflow-hidden">
+                                    <div className={`h-full rounded-full ${row.color} transition-all flex items-center justify-end pr-2`}
+                                      style={{ width: `${row.max > 0 ? Math.round((row.value / row.max) * 100) : 0}%` }}>
+                                      {row.value > 0 && <span className="text-[10px] text-white font-bold">{row.value}pt</span>}
+                                    </div>
+                                  </div>
+                                  <span className="text-xs font-semibold text-neutral-700 w-12 text-right">{row.max > 0 ? Math.round((row.value / row.max) * 100) : 0}%</span>
+                                </div>
+                              ))}
+                            </div>
+                            {sprintReport.totalPoints > (sprintReport.sprint?.capacity || Infinity) && (
+                              <p className="text-xs text-semantic-warning mt-3">⚠ Over-committed: {sprintReport.totalPoints}pt committed exceeds {sprintReport.sprint?.capacity}pt capacity</p>
+                            )}
+                          </div>
+                        )}
 
                         {/* Item outcomes */}
                         <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
@@ -2134,6 +2183,47 @@ export default function App() {
             {/* LINKS TAB */}
             {detailTab === 'links' && (
               <div>
+                {/* Visual Link Graph */}
+                {links.length > 0 && (
+                  <div className="mb-4 bg-neutral-50 rounded-xl p-4 border border-neutral-100">
+                    <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-3">Link Graph</p>
+                    <div className="flex flex-col items-center gap-2">
+                      {/* Current item — center node */}
+                      <div className="bg-brand-navy text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm max-w-full truncate">
+                        {selectedItem.id}
+                      </div>
+                      {/* Link lines to related items */}
+                      <div className="w-full space-y-1.5">
+                        {links.map(l => {
+                          const LINK_COLORS = {
+                            BLOCKS: 'border-semantic-danger bg-semantic-danger-surface text-semantic-danger',
+                            BLOCKED_BY: 'border-semantic-danger bg-semantic-danger-surface text-semantic-danger',
+                            RELATES_TO: 'border-brand-navy-tint bg-brand-navy/5 text-brand-navy',
+                            DUPLICATES: 'border-semantic-warning bg-semantic-warning-surface text-semantic-warning',
+                            PARENT: 'border-purple-400 bg-purple-50 text-purple-700',
+                            CHILD: 'border-brand-teal bg-brand-teal/10 text-brand-teal',
+                          };
+                          const colorClass = LINK_COLORS[l.linkType] || LINK_COLORS.RELATES_TO;
+                          return (
+                            <div key={l.id} className="flex items-center gap-2">
+                              <div className="flex-1 h-px bg-neutral-200"></div>
+                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${colorClass} flex-shrink-0`}>
+                                {l.linkType?.replace('_', ' ')}
+                              </span>
+                              <div className="flex-1 h-px bg-neutral-200"></div>
+                              <div className={`text-[10px] font-semibold px-2 py-1 rounded-lg border ${colorClass} cursor-pointer hover:opacity-80 truncate max-w-32`}
+                                onClick={() => { const t = workItems.find(i => i.id === l.targetId); if (t) setSelectedItem(t); }}
+                                title={l.targetTitle || l.targetId}>
+                                {l.targetId}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {links.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No links yet.</p>}
                 <div className="space-y-2 mb-4">
                   {links.map(l => (
@@ -2600,7 +2690,7 @@ function RichTextEditor({ value, onChange, onBlur, placeholder }) {
   );
 }
 
-function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOver, onDrop, onSelect, onDelete, density }) {
+function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOver, onDrop, onSelect, onDelete, density, allItems = [] }) {
   const pad = { compact: 'p-2', comfortable: 'p-3', spacious: 'p-4' };
 
   const getSwimlanes = () => {
@@ -2615,6 +2705,40 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
     }
     if (swimlaneBy === 'priority') {
       return ['CRITICAL','HIGH','MEDIUM','LOW'].map(p => ({ key: p, label: p, items: items.filter(i => (i.priority || 'MEDIUM') === p) })).filter(s => s.items.length > 0);
+    }
+    if (swimlaneBy === 'epic') {
+      // Group by parent Epic (or "No Epic" if no parent)
+      const epicMap = {};
+      items.forEach(item => {
+        const epicId = item.parentId || 'no-epic';
+        if (!epicMap[epicId]) epicMap[epicId] = [];
+        epicMap[epicId].push(item);
+      });
+      return Object.entries(epicMap).map(([epicId, epicItems]) => {
+        const epic = allItems.find(i => i.id === epicId && i.type === 'Epic');
+        return {
+          key: epicId,
+          label: epic ? `⚡ ${epic.title}` : epicId === 'no-epic' ? 'No Epic' : epicId,
+          items: epicItems
+        };
+      }).sort((a, b) => a.label === 'No Epic' ? 1 : -1);
+    }
+    if (swimlaneBy === 'tag') {
+      const tagMap = { 'No Tags': [] };
+      items.forEach(item => {
+        if (!item.tags || item.tags.length === 0) {
+          tagMap['No Tags'].push(item);
+        } else {
+          item.tags.forEach(tag => {
+            if (!tagMap[tag]) tagMap[tag] = [];
+            tagMap[tag].push(item);
+          });
+        }
+      });
+      return Object.entries(tagMap)
+        .filter(([, tagItems]) => tagItems.length > 0)
+        .map(([tag, tagItems]) => ({ key: tag, label: `🏷 ${tag}`, items: tagItems }))
+        .sort((a, b) => a.label === '🏷 No Tags' ? 1 : -1);
     }
     return [{ key: 'all', label: null, items }];
   };

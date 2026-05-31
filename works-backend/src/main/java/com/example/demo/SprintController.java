@@ -26,8 +26,17 @@ public class SprintController {
 
     @GetMapping
     public List<Sprint> getSprints(@RequestParam(required = false) String projectId) {
-        if (projectId != null) return sprintRepository.findByProjectIdOrderByCreatedAtDesc(projectId);
-        return sprintRepository.findAll();
+        List<Sprint> sprints = projectId != null
+            ? sprintRepository.findByProjectIdOrderByCreatedAtDesc(projectId)
+            : sprintRepository.findAll();
+        // Attach actual used story points per sprint
+        sprints.forEach(s -> {
+            Integer used = jdbc.queryForObject(
+                "SELECT COALESCE(SUM(story_points), 0) FROM work_items WHERE sprint_id = ? AND deleted_at IS NULL",
+                Integer.class, s.getId());
+            s.setUsedPoints(used != null ? used : 0);
+        });
+        return sprints;
     }
 
     @PostMapping

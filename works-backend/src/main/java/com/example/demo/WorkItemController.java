@@ -214,6 +214,32 @@ public class WorkItemController {
             if (!java.util.Objects.equals(existing.getTitle(), saved.getTitle())) {
                 eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "title", existing.getTitle(), saved.getTitle());
             }
+            if (!java.util.Objects.equals(existing.getDueDate(), saved.getDueDate())) {
+                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "dueDate",
+                    existing.getDueDate() != null ? existing.getDueDate().toString() : "none",
+                    saved.getDueDate() != null ? saved.getDueDate().toString() : "none");
+            }
+            if (!java.util.Objects.equals(existing.getType(), saved.getType())) {
+                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "type", existing.getType(), saved.getType());
+            }
+            if (!java.util.Objects.equals(existing.getStoryPoints(), saved.getStoryPoints())) {
+                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "storyPoints",
+                    String.valueOf(existing.getStoryPoints() != null ? existing.getStoryPoints() : 0),
+                    String.valueOf(saved.getStoryPoints() != null ? saved.getStoryPoints() : 0));
+            }
+            // Description changed (track as boolean — text too large for event store)
+            if (!java.util.Objects.equals(existing.getDescription(), saved.getDescription())) {
+                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "description", "edited", "edited");
+            }
+            // Tags diff
+            if (updatedItem.getTags() != null) {
+                List<String> oldTags = jdbc.queryForList("SELECT tag FROM tags WHERE work_item_id = ? ORDER BY tag", String.class, id);
+                List<String> newTags = updatedItem.getTags();
+                if (!oldTags.equals(newTags.stream().sorted().toList())) {
+                    eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "tags",
+                        String.join(", ", oldTags), String.join(", ", newTags));
+                }
+            }
 
             // Notify new assignee
             String newAssignee = saved.getAssigneeId();

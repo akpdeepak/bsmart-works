@@ -17,6 +17,8 @@ public class Sprint {
     private Integer capacity;
     private OffsetDateTime createdAt;
 
+    @Transient private Integer usedPoints = 0;  // actual story points committed to sprint
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getProjectId() { return projectId; }
@@ -35,4 +37,6 @@ public class Sprint {
     public void setCapacity(Integer capacity) { this.capacity = capacity; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
+    public Integer getUsedPoints() { return usedPoints; }
+    public void setUsedPoints(Integer usedPoints) { this.usedPoints = usedPoints; }
 }

@@ -29,6 +29,15 @@ public class SavedFilterController {
         return repository.save(filter);
     }
 
+    @PutMapping("/{id}/share")
+    public SavedFilter toggleShare(@PathVariable Long id,
+                                    @RequestHeader(value = "X-User-Id", required = false) String userId) {
+        return repository.findById(id).map(f -> {
+            f.setShared(!Boolean.TRUE.equals(f.isShared()));
+            return repository.save(f);
+        }).orElseThrow();
+    }
+
     @DeleteMapping("/{id}")
     public void deleteFilter(@PathVariable Long id) {
         repository.deleteById(id);

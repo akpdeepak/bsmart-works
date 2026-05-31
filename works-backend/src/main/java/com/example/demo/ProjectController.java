@@ -17,14 +17,17 @@ public class ProjectController {
     private final JdbcTemplate jdbc;
     private final UserRepository userRepository;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
     public ProjectController(ProjectRepository projectRepository, EventService eventService,
-                             JdbcTemplate jdbc, UserRepository userRepository, AuthenticatedUser authenticatedUser) {
+                             JdbcTemplate jdbc, UserRepository userRepository,
+                             AuthenticatedUser authenticatedUser, RbacService rbac) {
         this.projectRepository = projectRepository;
         this.eventService = eventService;
         this.jdbc = jdbc;
         this.userRepository = userRepository;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -33,7 +36,6 @@ public class ProjectController {
         return projectRepository.findAll();
     }
 
-    /** Lookup project by slug — used for slug-based URL routing. */
     @GetMapping("/by-slug/{slug}")
     public ResponseEntity<Project> getBySlug(@PathVariable String slug) {
         return projectRepository.findBySlug(slug)
@@ -44,10 +46,12 @@ public class ProjectController {
     @PostMapping
     public Project createProject(@RequestBody Project project) {
         String userId = authenticatedUser.id();
+        String wsId = project.getWorkspaceId() != null ? project.getWorkspaceId() : "WS-001";
+        rbac.require(userId, wsId, "manage_projects");
+
         project.setId("PROJ-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-        project.setWorkspaceId("WS-001");
+        project.setWorkspaceId(wsId);
         project.setCreatedAt(OffsetDateTime.now());
-        // Auto-generate slug from keyPrefix if not provided
         if (project.getSlug() == null || project.getSlug().isBlank()) {
             project.setSlug(toSlug(project.getKeyPrefix() != null ? project.getKeyPrefix() : project.getName()));
         }
@@ -56,28 +60,26 @@ public class ProjectController {
         return saved;
     }
 
-    private String toSlug(String raw) {
-        return raw.toLowerCase()
-                  .replaceAll("[^a-z0-9]+", "-")
-                  .replaceAll("^-|-$", "");
-    }
-
     @PutMapping("/{id}")
     public Project updateProject(@PathVariable String id, @RequestBody Project updated) {
-        return projectRepository.findById(id).map(p -> {
-            p.setName(updated.getName());
-            p.setDescription(updated.getDescription());
-            p.setLeadUserId(updated.getLeadUserId());
-            return projectRepository.save(p);
-        }).orElseThrow();
+        String userId = authenticatedUser.id();
+        Project existing = projectRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Project", id));
+        rbac.require(userId, existing.getWorkspaceId(), "manage_projects");
+        existing.setName(updated.getName());
+        existing.setDescription(updated.getDescription());
+        existing.setLeadUserId(updated.getLeadUserId());
+        return projectRepository.save(existing);
     }
 
     @PutMapping("/{id}/archive")
     public Project archiveProject(@PathVariable String id) {
-        return projectRepository.findById(id).map(p -> {
-            p.setArchived(!p.isArchived());
-            return projectRepository.save(p);
-        }).orElseThrow();
+        String userId = authenticatedUser.id();
+        Project existing = projectRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Project", id));
+        rbac.require(userId, existing.getWorkspaceId(), "manage_projects");
+        existing.setArchived(!existing.isArchived());
+        return projectRepository.save(existing);
     }
 
     @GetMapping("/{id}/members")
@@ -89,6 +91,10 @@ public class ProjectController {
 
     @PostMapping("/{id}/members")
     public Map<String, String> addProjectMember(@PathVariable String id, @RequestBody Map<String, String> payload) {
+        String userId = authenticatedUser.id();
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Project", id));
+        rbac.require(userId, project.getWorkspaceId(), "manage_projects");
         String email = payload.get("email");
         String role  = payload.getOrDefault("role", "MEMBER");
         userRepository.findByEmail(email).ifPresent(u ->
@@ -97,16 +103,29 @@ public class ProjectController {
         return Map.of("message", "Member added");
     }
 
-    @DeleteMapping("/{id}/members/{userId}")
-    public Map<String, String> removeProjectMember(@PathVariable String id, @PathVariable String userId) {
-        jdbc.update("DELETE FROM project_members WHERE project_id = ? AND user_id = ?", id, userId);
+    @DeleteMapping("/{id}/members/{memberId}")
+    public Map<String, String> removeProjectMember(@PathVariable String id, @PathVariable String memberId) {
+        String userId = authenticatedUser.id();
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Project", id));
+        rbac.require(userId, project.getWorkspaceId(), "manage_projects");
+        jdbc.update("DELETE FROM project_members WHERE project_id = ? AND user_id = ?", id, memberId);
         return Map.of("message", "Member removed");
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProject(@PathVariable String id) {
+        String userId = authenticatedUser.id();
+        Project existing = projectRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Project", id));
+        rbac.require(userId, existing.getWorkspaceId(), "manage_projects");
         projectRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
-}
 
+    private String toSlug(String raw) {
+        return raw.toLowerCase()
+                  .replaceAll("[^a-z0-9]+", "-")
+                  .replaceAll("^-|-$", "");
+    }
+}

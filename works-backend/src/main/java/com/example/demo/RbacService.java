@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 /**
  * Role-based access control service.
  * Tier hierarchy: VIEWER(1) < MEMBER(2) < LEAD(3) < ADMIN(4) < OWNER(5)
- * Every check compares caller's tier against the required permission's min_tier.
+ * All permission checks go through here — never in controllers.
  */
 @Service
 public class RbacService {
@@ -16,6 +16,8 @@ public class RbacService {
     public RbacService(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
+
+    // ── Tier lookup ──────────────────────────────────────────────────────────
 
     public int getUserTier(String userId, String workspaceId) {
         try {
@@ -39,19 +41,52 @@ public class RbacService {
         }
     }
 
+    // ── Permission check ─────────────────────────────────────────────────────
+
     public boolean canDo(String userId, String workspaceId, String permission) {
         try {
             Integer minTier = jdbc.queryForObject(
                 "SELECT min_tier FROM permissions WHERE id = ?", Integer.class, permission);
             if (minTier == null) return false;
-            int userTier = getUserTier(userId, workspaceId);
-            return userTier >= minTier;
+            return getUserTier(userId, workspaceId) >= minTier;
         } catch (Exception e) {
             return false;
         }
     }
 
-    // Convenience methods
+    /** Throw 403 ApiException if the user lacks the given permission. */
+    public void require(String userId, String workspaceId, String permission) {
+        if (!canDo(userId, workspaceId, permission)) {
+            throw ApiException.forbidden("You do not have permission to perform this action.");
+        }
+    }
+
+    // ── Workspace ID resolution ───────────────────────────────────────────────
+
+    /** Look up workspaceId from a project. Returns null if project doesn't exist. */
+    public String workspaceForProject(String projectId) {
+        try {
+            return jdbc.queryForObject(
+                "SELECT workspace_id FROM projects WHERE id = ?", String.class, projectId);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Look up workspaceId from a work item (via its project). */
+    public String workspaceForWorkItem(String workItemId) {
+        try {
+            return jdbc.queryForObject(
+                "SELECT p.workspace_id FROM work_items wi " +
+                "JOIN projects p ON p.id = wi.project_id WHERE wi.id = ?",
+                String.class, workItemId);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // ── Convenience check + throw combos ─────────────────────────────────────
+
     public boolean canView(String userId, String wsId)           { return canDo(userId, wsId, "view_items"); }
     public boolean canCreateItems(String userId, String wsId)    { return canDo(userId, wsId, "create_items"); }
     public boolean canEditAny(String userId, String wsId)        { return canDo(userId, wsId, "edit_any_item"); }
@@ -62,4 +97,12 @@ public class RbacService {
     public boolean canManageRoles(String userId, String wsId)    { return canDo(userId, wsId, "manage_roles"); }
     public boolean isAdmin(String userId, String wsId)           { return getUserTier(userId, wsId) >= 4; }
     public boolean isOwner(String userId, String wsId)           { return getUserTier(userId, wsId) >= 5; }
+
+    // Whether user can edit a specific work item (own or any)
+    public boolean canEdit(String userId, String wsId, String itemCreatorId, String itemAssigneeId) {
+        if (canEditAny(userId, wsId)) return true;
+        // MEMBER tier can edit own items
+        return canDo(userId, wsId, "edit_own_items")
+                && (userId.equals(itemCreatorId) || userId.equals(itemAssigneeId));
+    }
 }

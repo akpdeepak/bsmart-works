@@ -14,12 +14,17 @@ public class WorkspaceController {
     private final WorkspaceRepository workspaceRepository;
     private final UserRepository userRepository;
     private final JdbcTemplate jdbc;
+    private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
     public WorkspaceController(WorkspaceRepository workspaceRepository,
-                               UserRepository userRepository, JdbcTemplate jdbc) {
+                               UserRepository userRepository, JdbcTemplate jdbc,
+                               AuthenticatedUser authenticatedUser, RbacService rbac) {
         this.workspaceRepository = workspaceRepository;
         this.userRepository = userRepository;
         this.jdbc = jdbc;
+        this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping("/{id}")
@@ -43,27 +48,33 @@ public class WorkspaceController {
     @PostMapping("/{id}/members")
     public Map<String, String> addMember(@PathVariable String id,
                                           @RequestBody Map<String, String> payload) {
+        String callerId = authenticatedUser.id();
+        rbac.require(callerId, id, "invite_members");
         String email = payload.get("email");
         String role = payload.getOrDefault("role", "MEMBER");
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found: " + email));
+                .orElseThrow(() -> ApiException.notFound("User", email));
         jdbc.update("INSERT INTO workspace_members (workspace_id, user_id, system_role) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
                 id, user.getId(), role);
         return Map.of("message", "Member added", "userId", user.getId());
     }
 
-    @DeleteMapping("/{id}/members/{userId}")
-    public Map<String, String> removeMember(@PathVariable String id, @PathVariable String userId) {
-        jdbc.update("DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?", id, userId);
+    @DeleteMapping("/{id}/members/{memberId}")
+    public Map<String, String> removeMember(@PathVariable String id, @PathVariable String memberId) {
+        String callerId = authenticatedUser.id();
+        rbac.require(callerId, id, "remove_members");
+        jdbc.update("DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?", id, memberId);
         return Map.of("message", "Member removed");
     }
 
     @PutMapping("/{id}")
     public Workspace updateWorkspace(@PathVariable String id, @RequestBody Workspace updated) {
+        String callerId = authenticatedUser.id();
+        rbac.require(callerId, id, "manage_workspace");
         return workspaceRepository.findById(id).map(w -> {
             w.setName(updated.getName());
             return workspaceRepository.save(w);
-        }).orElseThrow();
+        }).orElseThrow(() -> ApiException.notFound("Workspace", id));
     }
 
     // Workspace branding
@@ -81,6 +92,7 @@ public class WorkspaceController {
 
     @PutMapping("/{id}/branding")
     public Map<String, Object> updateBranding(@PathVariable String id, @RequestBody Map<String, String> payload) {
+        rbac.require(authenticatedUser.id(), id, "manage_workspace");
         String color = payload.getOrDefault("primaryColor", "#E94E1B");
         String logoUrl = payload.getOrDefault("logoUrl", "");
         String description = payload.getOrDefault("description", "");
@@ -100,19 +112,21 @@ public class WorkspaceController {
     @PostMapping("/{wsId}/projects/{projectId}/members")
     public Map<String, String> addProjectMember(@PathVariable String wsId, @PathVariable String projectId,
                                                   @RequestBody Map<String, String> payload) {
+        rbac.require(authenticatedUser.id(), wsId, "manage_projects");
         String email = payload.get("email");
         String role = payload.getOrDefault("role", "MEMBER");
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found: " + email));
+                .orElseThrow(() -> ApiException.notFound("User", email));
         jdbc.update("INSERT INTO project_members (project_id, user_id, role) VALUES (?,?,?) ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role",
             projectId, user.getId(), role);
         return Map.of("message", "Member added", "userId", user.getId());
     }
 
-    @DeleteMapping("/{wsId}/projects/{projectId}/members/{userId}")
+    @DeleteMapping("/{wsId}/projects/{projectId}/members/{memberId}")
     public Map<String, String> removeProjectMember(@PathVariable String wsId, @PathVariable String projectId,
-                                                     @PathVariable String userId) {
-        jdbc.update("DELETE FROM project_members WHERE project_id = ? AND user_id = ?", projectId, userId);
+                                                     @PathVariable String memberId) {
+        rbac.require(authenticatedUser.id(), wsId, "manage_projects");
+        jdbc.update("DELETE FROM project_members WHERE project_id = ? AND user_id = ?", projectId, memberId);
         return Map.of("message", "Member removed");
     }
 }

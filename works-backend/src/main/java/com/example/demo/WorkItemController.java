@@ -21,11 +21,13 @@ public class WorkItemController {
     private final EmailService emailService;
     private final NotificationBatchService batchService;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
                               JdbcTemplate jdbc, NotificationRepository notificationRepository,
                               UserRepository userRepository, EmailService emailService,
-                              NotificationBatchService batchService, AuthenticatedUser authenticatedUser) {
+                              NotificationBatchService batchService, AuthenticatedUser authenticatedUser,
+                              RbacService rbac) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
@@ -34,6 +36,7 @@ public class WorkItemController {
         this.emailService = emailService;
         this.batchService = batchService;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -157,6 +160,8 @@ public class WorkItemController {
     @PostMapping
     public WorkItem createWorkItem(@RequestBody WorkItem newItem) {
         String userId = authenticatedUser.id();
+        String wsId = rbac.workspaceForProject(newItem.getProjectId());
+        if (wsId != null) rbac.require(userId, wsId, "create_items");
         String prefix = newItem.getProjectId() != null ? newItem.getProjectId().replace("PROJ-", "") : "WEB";
         newItem.setId(prefix + "-" + java.util.UUID.randomUUID().toString().substring(0, 6).toUpperCase());
         newItem.setStatus("Todo");
@@ -188,6 +193,13 @@ public class WorkItemController {
     @PutMapping("/{id}")
     public WorkItem updateWorkItem(@PathVariable String id, @RequestBody WorkItem updatedItem) {
         String userId = authenticatedUser.id();
+        WorkItem existing0 = repository.findById(id).orElseThrow(() -> ApiException.notFound("Work item", id));
+        String wsId = rbac.workspaceForProject(existing0.getProjectId());
+        if (wsId != null) {
+            if (!rbac.canEdit(userId, wsId, existing0.getCreatedBy(), existing0.getAssigneeId())) {
+                throw ApiException.forbidden("You do not have permission to edit this work item.");
+            }
+        }
         return repository.findById(id).map(existing -> {
             String oldStatus = existing.getStatus();
             String oldAssignee = existing.getAssigneeId();
@@ -278,6 +290,8 @@ public class WorkItemController {
         var opt = repository.findById(id);
         if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build();
         var item = opt.get();
+        String wsId = rbac.workspaceForProject(item.getProjectId());
+        if (wsId != null) rbac.require(userId, wsId, "delete_items");
         // Soft delete — keep for 30 days in trash
         jdbc.update("UPDATE work_items SET deleted_at = NOW(), deleted_by = ? WHERE id = ?", userId, id);
         eventService.record(id, "WORK_ITEM_DELETED", userId,

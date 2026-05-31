@@ -16,14 +16,17 @@ public class SprintController {
     private final EventService eventService;
     private final JdbcTemplate jdbc;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
     public SprintController(SprintRepository sprintRepository, WorkItemRepository workItemRepository,
-                            EventService eventService, JdbcTemplate jdbc, AuthenticatedUser authenticatedUser) {
+                            EventService eventService, JdbcTemplate jdbc,
+                            AuthenticatedUser authenticatedUser, RbacService rbac) {
         this.sprintRepository = sprintRepository;
         this.workItemRepository = workItemRepository;
         this.eventService = eventService;
         this.jdbc = jdbc;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -44,6 +47,8 @@ public class SprintController {
     @PostMapping
     public Sprint createSprint(@RequestBody Sprint sprint) {
         String userId = authenticatedUser.id();
+        String wsId = rbac.workspaceForProject(sprint.getProjectId());
+        if (wsId != null) rbac.require(userId, wsId, "manage_sprints");
         sprint.setId("SPR-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         sprint.setStatus("PLANNING");
         sprint.setCreatedAt(OffsetDateTime.now());
@@ -55,6 +60,10 @@ public class SprintController {
     @PutMapping("/{id}")
     public Sprint updateSprint(@PathVariable String id, @RequestBody Sprint updated) {
         String userId = authenticatedUser.id();
+        Sprint existing = sprintRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Sprint", id));
+        String wsId = rbac.workspaceForProject(existing.getProjectId());
+        if (wsId != null) rbac.require(userId, wsId, "manage_sprints");
         return sprintRepository.findById(id).map(s -> {
             String oldStatus = s.getStatus();
             s.setName(updated.getName());
@@ -74,6 +83,11 @@ public class SprintController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSprint(@PathVariable String id) {
+        String userId = authenticatedUser.id();
+        Sprint existing = sprintRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Sprint", id));
+        String wsId = rbac.workspaceForProject(existing.getProjectId());
+        if (wsId != null) rbac.require(userId, wsId, "manage_sprints");
         // Move items back to backlog
         jdbc.update("UPDATE work_items SET sprint_id = NULL WHERE sprint_id = ?", id);
         sprintRepository.deleteById(id);

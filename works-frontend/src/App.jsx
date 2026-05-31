@@ -180,6 +180,58 @@ export default function App() {
   const [brandingColor, setBrandingColor] = useState('#E94E1B');
   const [brandingDesc, setBrandingDesc]  = useState('');
 
+  // Iteration 4 — PM Artifacts
+  const [pmProjectId, setPmProjectId]   = useState(null);
+  const [risks, setRisks]               = useState([]);
+  const [assumptions, setAssumptions]   = useState([]);
+  const [pmIssues, setPmIssues]         = useState([]);
+  const [dependencies, setDependencies] = useState([]);
+  const [decisions, setDecisions]       = useState([]);
+  const [meetingNotes, setMeetingNotes] = useState([]);
+  const [actionItems, setActionItems]   = useState([]);
+  const [stakeholders, setStakeholders] = useState([]);
+  const [lessonsLearned, setLessonsLearned] = useState([]);
+  const [raidTab, setRaidTab]           = useState('risks');
+  const [selectedMeeting, setSelectedMeeting] = useState(null);
+  const [showCreateRisk, setShowCreateRisk] = useState(false);
+  const [showCreateAssumption, setShowCreateAssumption] = useState(false);
+  const [showCreateIssue, setShowCreateIssue] = useState(false);
+  const [showCreateDependency, setShowCreateDependency] = useState(false);
+  const [showCreateDecision, setShowCreateDecision] = useState(false);
+  const [showCreateMeeting, setShowCreateMeeting] = useState(false);
+  const [showCreateAction, setShowCreateAction] = useState(false);
+  const [showCreateStakeholder, setShowCreateStakeholder] = useState(false);
+  const [showCreateLesson, setShowCreateLesson] = useState(false);
+  const [newRisk, setNewRisk]           = useState({ title: '', probability: 'MEDIUM', impact: 'MEDIUM', description: '', mitigationPlan: '' });
+  const [newAssumption, setNewAssumption] = useState({ title: '', rationale: '', validationStatus: 'PENDING' });
+  const [newPmIssue, setNewPmIssue]     = useState({ title: '', severity: 'MEDIUM', problem: '', impact: '' });
+  const [newDependency, setNewDependency] = useState({ title: '', status: 'PENDING', isBlocker: false });
+  const [newDecision, setNewDecision]   = useState({ title: '', decisionText: '', rationale: '' });
+  const [newMeeting, setNewMeeting]     = useState({ title: '', meetingDate: '', meetingType: 'GENERAL', agenda: '', notes: '' });
+  const [newAction, setNewAction]       = useState({ title: '', priority: 'MEDIUM', dueDate: '' });
+  const [newStakeholder, setNewStakeholder] = useState({ name: '', role: '', email: '', influence: 'MEDIUM', interest: 'MEDIUM' });
+  const [newLesson, setNewLesson]       = useState({ title: '', whatWorked: '', whatDidntWork: '', recommendations: '' });
+
+  // Iteration 5 — Knowledge + Releases
+  const [knowledgeSpaces, setKnowledgeSpaces] = useState([]);
+  const [articles, setArticles]         = useState([]);
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [selectedSpaceId, setSelectedSpaceId] = useState(null);
+  const [articleEditing, setArticleEditing] = useState(false);
+  const [articleContent, setArticleContent] = useState('');
+  const [articleTitle, setArticleTitle] = useState('');
+  const [articleVersions, setArticleVersions] = useState([]);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [showCreateArticle, setShowCreateArticle] = useState(false);
+  const [newArticle, setNewArticle]     = useState({ title: '', templateType: 'CUSTOM', spaceId: '' });
+  const [releases, setReleases]         = useState([]);
+  const [selectedRelease, setSelectedRelease] = useState(null);
+  const [showCreateRelease, setShowCreateRelease] = useState(false);
+  const [newRelease, setNewRelease]     = useState({ name: '', version: '', description: '', releaseDate: '' });
+  const [worklogs, setWorklogs]         = useState([]);
+  const [showLogTime, setShowLogTime]   = useState(false);
+  const [newWorklog, setNewWorklog]     = useState({ timeSpentMinutes: 60, description: '', workDate: '' });
+
   const workspace = { id: 'WS-001', name: 'BCITS Master Workspace' };
 
   const headers = (extra = {}) => ({
@@ -620,6 +672,147 @@ export default function App() {
       .then(r => r.json()).then(d => setTrashItems(Array.isArray(d) ? d : [])).catch(() => {});
   }
 
+  // Iteration 4 — PM Artifacts fetch helpers
+  function getActivePmProjectId() { return pmProjectId || projects[0]?.id; }
+  function fetchRisks(projectId) {
+    const pid = projectId || getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/risks?projectId=${pid}`, { headers: headers() })
+      .then(r => r.json()).then(d => { setRisks(Array.isArray(d) ? d : []); if (!pmProjectId) setPmProjectId(pid); }).catch(() => {});
+  }
+  function fetchAssumptions(projectId) {
+    const pid = projectId || getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/assumptions?projectId=${pid}`, { headers: headers() })
+      .then(r => r.json()).then(d => setAssumptions(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchPmIssues(projectId) {
+    const pid = projectId || getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/pm-issues?projectId=${pid}`, { headers: headers() })
+      .then(r => r.json()).then(d => setPmIssues(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchDependencies(projectId) {
+    const pid = projectId || getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/dependencies?projectId=${pid}`, { headers: headers() })
+      .then(r => r.json()).then(d => setDependencies(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchDecisions(projectId) {
+    const pid = projectId || getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/decisions?projectId=${pid}`, { headers: headers() })
+      .then(r => r.json()).then(d => setDecisions(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchMeetingNotes(projectId) {
+    const pid = projectId || getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/meeting-notes?projectId=${pid}`, { headers: headers() })
+      .then(r => r.json()).then(d => setMeetingNotes(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchActionItems(projectId) {
+    const pid = projectId || getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/action-items?projectId=${pid}`, { headers: headers() })
+      .then(r => r.json()).then(d => setActionItems(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchStakeholders(projectId) {
+    const pid = projectId || getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/stakeholders?projectId=${pid}`, { headers: headers() })
+      .then(r => r.json()).then(d => setStakeholders(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchLessonsLearned(projectId) {
+    const pid = projectId || getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/lessons-learned?projectId=${pid}`, { headers: headers() })
+      .then(r => r.json()).then(d => setLessonsLearned(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchAllRaid(projectId) {
+    fetchRisks(projectId); fetchAssumptions(projectId); fetchPmIssues(projectId); fetchDependencies(projectId);
+  }
+  function handleCreateRisk() {
+    const pid = getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/risks`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newRisk, projectId: pid }) })
+      .then(r => r.json()).then(r => { setRisks(prev => [r, ...prev]); setShowCreateRisk(false); setNewRisk({ title: '', probability: 'MEDIUM', impact: 'MEDIUM', description: '', mitigationPlan: '' }); showToast('Risk logged'); }).catch(() => showToast('Failed', 'error'));
+  }
+  function handleCreateAssumption() {
+    const pid = getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/assumptions`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newAssumption, projectId: pid }) })
+      .then(r => r.json()).then(a => { setAssumptions(prev => [a, ...prev]); setShowCreateAssumption(false); setNewAssumption({ title: '', rationale: '', validationStatus: 'PENDING' }); showToast('Assumption logged'); }).catch(() => showToast('Failed', 'error'));
+  }
+  function handleCreatePmIssue() {
+    const pid = getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/pm-issues`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newPmIssue, projectId: pid }) })
+      .then(r => r.json()).then(i => { setPmIssues(prev => [i, ...prev]); setShowCreateIssue(false); setNewPmIssue({ title: '', severity: 'MEDIUM', problem: '', impact: '' }); showToast('Issue logged'); }).catch(() => showToast('Failed', 'error'));
+  }
+  function handleCreateDependency() {
+    const pid = getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/dependencies`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newDependency, fromProjectId: pid }) })
+      .then(r => r.json()).then(d => { setDependencies(prev => [d, ...prev]); setShowCreateDependency(false); setNewDependency({ title: '', status: 'PENDING', isBlocker: false }); showToast('Dependency logged'); }).catch(() => showToast('Failed', 'error'));
+  }
+  function handleCreateDecision() {
+    const pid = getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/decisions`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newDecision, projectId: pid }) })
+      .then(r => r.json()).then(d => { setDecisions(prev => [d, ...prev]); setShowCreateDecision(false); setNewDecision({ title: '', decisionText: '', rationale: '' }); showToast('Decision recorded'); }).catch(() => showToast('Failed', 'error'));
+  }
+  function handleCreateMeeting() {
+    const pid = getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/meeting-notes`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newMeeting, projectId: pid }) })
+      .then(r => r.json()).then(m => { setMeetingNotes(prev => [m, ...prev]); setShowCreateMeeting(false); setNewMeeting({ title: '', meetingDate: '', meetingType: 'GENERAL', agenda: '', notes: '' }); showToast('Meeting notes saved'); }).catch(() => showToast('Failed', 'error'));
+  }
+  function handleCreateAction() {
+    const pid = getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/action-items`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newAction, projectId: pid }) })
+      .then(r => r.json()).then(a => { setActionItems(prev => [a, ...prev]); setShowCreateAction(false); setNewAction({ title: '', priority: 'MEDIUM', dueDate: '' }); showToast('Action item created'); }).catch(() => showToast('Failed', 'error'));
+  }
+  function handleCreateStakeholder() {
+    const pid = getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/stakeholders`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newStakeholder, projectId: pid }) })
+      .then(r => r.json()).then(s => { setStakeholders(prev => [...prev, s]); setShowCreateStakeholder(false); setNewStakeholder({ name: '', role: '', email: '', influence: 'MEDIUM', interest: 'MEDIUM' }); showToast('Stakeholder added'); }).catch(() => showToast('Failed', 'error'));
+  }
+  function handleCreateLesson() {
+    const pid = getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/lessons-learned`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newLesson, projectId: pid }) })
+      .then(r => r.json()).then(l => { setLessonsLearned(prev => [l, ...prev]); setShowCreateLesson(false); setNewLesson({ title: '', whatWorked: '', whatDidntWork: '', recommendations: '' }); showToast('Lesson recorded'); }).catch(() => showToast('Failed', 'error'));
+  }
+
+  // Iteration 5 — Knowledge + Releases fetch helpers
+  function fetchKnowledgeSpaces() {
+    fetch(`${API}/knowledge-spaces`, { headers: headers() })
+      .then(r => r.json()).then(d => {
+        const list = Array.isArray(d) ? d : [];
+        setKnowledgeSpaces(list);
+        if (!selectedSpaceId && list.length > 0) { setSelectedSpaceId(list[0].id); fetchArticles(list[0].id); }
+      }).catch(() => {});
+  }
+  function fetchArticles(spaceId) {
+    const sid = spaceId || selectedSpaceId; if (!sid) return;
+    fetch(`${API}/articles?spaceId=${sid}`, { headers: headers() })
+      .then(r => r.json()).then(d => setArticles(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchReleases(projectId) {
+    const pid = projectId || getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/releases?projectId=${pid}`, { headers: headers() })
+      .then(r => r.json()).then(d => setReleases(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchWorklogs(workItemId) {
+    if (!workItemId) return;
+    fetch(`${API}/worklogs?workItemId=${workItemId}`, { headers: headers() })
+      .then(r => r.json()).then(d => setWorklogs(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function handleCreateArticle() {
+    const sid = newArticle.spaceId || selectedSpaceId; if (!sid) return;
+    fetch(`${API}/articles`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newArticle, spaceId: sid }) })
+      .then(r => r.json()).then(a => { setArticles(prev => [a, ...prev]); setShowCreateArticle(false); setNewArticle({ title: '', templateType: 'CUSTOM', spaceId: '' }); setSelectedArticle(a); setArticleTitle(a.title); setArticleContent(a.content || ''); setArticleEditing(true); showToast('Article created'); }).catch(() => showToast('Failed', 'error'));
+  }
+  function handleSaveArticle() {
+    if (!selectedArticle) return;
+    fetch(`${API}/articles/${selectedArticle.id}`, { method: 'PUT', headers: headers(), body: JSON.stringify({ ...selectedArticle, title: articleTitle, content: articleContent }) })
+      .then(r => r.json()).then(a => { setArticles(prev => prev.map(x => x.id === a.id ? a : x)); setSelectedArticle(a); setArticleEditing(false); showToast('Article saved'); }).catch(() => showToast('Failed', 'error'));
+  }
+  function handleCreateRelease() {
+    const pid = getActivePmProjectId(); if (!pid) return;
+    fetch(`${API}/releases`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newRelease, projectId: pid }) })
+      .then(r => r.json()).then(r => { setReleases(prev => [r, ...prev]); setShowCreateRelease(false); setNewRelease({ name: '', version: '', description: '', releaseDate: '' }); showToast('Release created'); }).catch(() => showToast('Failed', 'error'));
+  }
+  function handleLogTime() {
+    if (!selectedItem) return;
+    fetch(`${API}/worklogs`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newWorklog, workItemId: selectedItem.id }) })
+      .then(r => r.json()).then(l => { setWorklogs(prev => [l, ...prev]); setShowLogTime(false); setNewWorklog({ timeSpentMinutes: 60, description: '', workDate: '' }); showToast('Time logged'); }).catch(() => showToast('Failed', 'error'));
+  }
+
   function restoreFromTrash(id) {
     apiFetch(`${API}/work-items/${id}/restore`, { method: 'PUT' })
       .then(item => {
@@ -996,6 +1189,21 @@ export default function App() {
             Projects
             {projects.length > 0 && <span className="ml-auto text-[10px] bg-neutral-100 text-neutral-600 rounded-full px-1.5 py-0.5">{projects.length}</span>}
           </NavItem>
+
+          <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">Project Mgmt</p>
+          <NavItem active={view === 'raid'} onClick={() => { setView('raid'); fetchAllRaid(); }} icon="⚠️">RAID</NavItem>
+          <NavItem active={view === 'decisions'} onClick={() => { setView('decisions'); fetchDecisions(); }} icon="✅">Decisions</NavItem>
+          <NavItem active={view === 'meetings'} onClick={() => { setView('meetings'); fetchMeetingNotes(); fetchActionItems(); }} icon="📅">Meetings</NavItem>
+          <NavItem active={view === 'action-items'} onClick={() => { setView('action-items'); fetchActionItems(); }} icon="☑️">
+            Action Items
+            {actionItems.filter(a => a.status === 'OPEN').length > 0 && <span className="ml-auto text-[10px] bg-neutral-100 text-neutral-600 rounded-full px-1.5 py-0.5">{actionItems.filter(a => a.status === 'OPEN').length}</span>}
+          </NavItem>
+          <NavItem active={view === 'stakeholders'} onClick={() => { setView('stakeholders'); fetchStakeholders(); }} icon="👥">Stakeholders</NavItem>
+          <NavItem active={view === 'lessons'} onClick={() => { setView('lessons'); fetchLessonsLearned(); }} icon="📚">Lessons Learned</NavItem>
+
+          <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">Knowledge</p>
+          <NavItem active={view === 'knowledge'} onClick={() => { setView('knowledge'); fetchKnowledgeSpaces(); }} icon="🧠">Knowledge Base</NavItem>
+          <NavItem active={view === 'releases'} onClick={() => { setView('releases'); fetchReleases(); }} icon="🚀">Releases</NavItem>
 
           <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">Workspace</p>
           <NavItem active={view === 'workspace'} onClick={() => { setView('workspace'); fetchMembers(); fetchNotifPrefs(); fetchBranding(); }} icon="⚙️">Settings</NavItem>
@@ -2147,6 +2355,570 @@ export default function App() {
             </div>
           )}
         </div>
+
+          {/* ── ITERATION 4: RAID ── */}
+          {view === 'raid' && (
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-brand-navy">RAID</h1>
+                  <p className="text-sm text-neutral-400 mt-0.5">Risks · Assumptions · Issues · Dependencies</p>
+                </div>
+                <div className="flex gap-2">
+                  {raidTab === 'risks' && <Button variant="action" size="sm" onClick={() => setShowCreateRisk(true)}>+ Log Risk</Button>}
+                  {raidTab === 'assumptions' && <Button variant="action" size="sm" onClick={() => setShowCreateAssumption(true)}>+ Log Assumption</Button>}
+                  {raidTab === 'issues' && <Button variant="action" size="sm" onClick={() => setShowCreateIssue(true)}>+ Log Issue</Button>}
+                  {raidTab === 'dependencies' && <Button variant="action" size="sm" onClick={() => setShowCreateDependency(true)}>+ Add Dependency</Button>}
+                </div>
+              </div>
+              {/* RAID heatmap summary */}
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                {[
+                  { label: 'Open Risks', count: risks.filter(r => r.status === 'OPEN').length, color: 'text-semantic-danger', bg: 'bg-semantic-danger-surface', tab: 'risks' },
+                  { label: 'Assumptions', count: assumptions.length, color: 'text-semantic-warning', bg: 'bg-semantic-warning-surface', tab: 'assumptions' },
+                  { label: 'Open Issues', count: pmIssues.filter(i => i.status === 'OPEN').length, color: 'text-brand-navy', bg: 'bg-neutral-100', tab: 'issues' },
+                  { label: 'Dependencies', count: dependencies.length, color: 'text-semantic-info', bg: 'bg-semantic-info-surface', tab: 'dependencies' },
+                ].map(c => (
+                  <button key={c.tab} onClick={() => setRaidTab(c.tab)}
+                    className={`${c.bg} rounded-xl p-4 text-left border-2 transition-all ${raidTab === c.tab ? 'border-brand-navy' : 'border-transparent hover:border-neutral-200'}`}>
+                    <p className={`text-2xl font-bold ${c.color}`}>{c.count}</p>
+                    <p className="text-xs text-neutral-600 mt-1">{c.label}</p>
+                  </button>
+                ))}
+              </div>
+              {/* Tab tabs */}
+              <div className="flex gap-1 mb-4 bg-neutral-100 rounded-lg p-1 w-fit">
+                {['risks', 'assumptions', 'issues', 'dependencies'].map(t => (
+                  <button key={t} onClick={() => setRaidTab(t)}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors capitalize ${raidTab === t ? 'bg-white text-brand-navy shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+              {/* Risks list */}
+              {raidTab === 'risks' && (
+                risks.length === 0
+                  ? <EmptyState icon="⚠️" title="No risks logged" subtitle="Log your first risk to start tracking project threats." action={<Button variant="action" size="sm" onClick={() => setShowCreateRisk(true)}>Log Risk</Button>} />
+                  : <div className="space-y-2">{risks.map(r => (
+                    <div key={r.id} className="bg-white border border-neutral-200 rounded-xl p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-neutral-900 text-sm">{r.title}</p>
+                          {r.description && <p className="text-xs text-neutral-500 mt-0.5 line-clamp-2">{r.description}</p>}
+                        </div>
+                        <div className="flex gap-1.5 flex-shrink-0">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${r.probability === 'HIGH' || r.probability === 'CRITICAL' ? 'bg-semantic-danger-surface text-semantic-danger' : 'bg-neutral-100 text-neutral-600'}`}>P: {r.probability}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${r.impact === 'HIGH' || r.impact === 'CRITICAL' ? 'bg-semantic-danger-surface text-semantic-danger' : 'bg-neutral-100 text-neutral-600'}`}>I: {r.impact}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-neutral-100 text-neutral-600">{r.status}</span>
+                        </div>
+                      </div>
+                      {r.mitigationPlan && <p className="text-xs text-neutral-500 mt-2 bg-neutral-50 rounded px-2 py-1">Mitigation: {r.mitigationPlan}</p>}
+                    </div>
+                  ))}</div>
+              )}
+              {/* Assumptions list */}
+              {raidTab === 'assumptions' && (
+                assumptions.length === 0
+                  ? <EmptyState icon="💭" title="No assumptions logged" subtitle="Capture project assumptions before they become risks." action={<Button variant="action" size="sm" onClick={() => setShowCreateAssumption(true)}>Log Assumption</Button>} />
+                  : <div className="space-y-2">{assumptions.map(a => (
+                    <div key={a.id} className="bg-white border border-neutral-200 rounded-xl p-4 flex items-start gap-4">
+                      <div className="flex-1">
+                        <p className="font-semibold text-neutral-900 text-sm">{a.title}</p>
+                        {a.rationale && <p className="text-xs text-neutral-500 mt-0.5">{a.rationale}</p>}
+                      </div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${a.validationStatus === 'VALIDATED' ? 'bg-semantic-success-surface text-semantic-success' : a.validationStatus === 'INVALIDATED' ? 'bg-semantic-danger-surface text-semantic-danger' : 'bg-neutral-100 text-neutral-600'}`}>{a.validationStatus}</span>
+                    </div>
+                  ))}</div>
+              )}
+              {/* PM Issues list */}
+              {raidTab === 'issues' && (
+                pmIssues.length === 0
+                  ? <EmptyState icon="🔥" title="No issues logged" subtitle="Log project-level problems distinct from software bugs." action={<Button variant="action" size="sm" onClick={() => setShowCreateIssue(true)}>Log Issue</Button>} />
+                  : <div className="space-y-2">{pmIssues.map(i => (
+                    <div key={i.id} className="bg-white border border-neutral-200 rounded-xl p-4 flex items-start gap-4">
+                      <div className="flex-1">
+                        <p className="font-semibold text-neutral-900 text-sm">{i.title}</p>
+                        {i.problem && <p className="text-xs text-neutral-500 mt-0.5">{i.problem}</p>}
+                      </div>
+                      <div className="flex gap-1.5">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${i.severity === 'CRITICAL' || i.severity === 'HIGH' ? 'bg-semantic-danger-surface text-semantic-danger' : 'bg-neutral-100 text-neutral-600'}`}>{i.severity}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neutral-100 text-neutral-600">{i.status}</span>
+                      </div>
+                    </div>
+                  ))}</div>
+              )}
+              {/* Dependencies list */}
+              {raidTab === 'dependencies' && (
+                dependencies.length === 0
+                  ? <EmptyState icon="🔗" title="No dependencies tracked" subtitle="Track cross-team and cross-project dependencies." action={<Button variant="action" size="sm" onClick={() => setShowCreateDependency(true)}>Add Dependency</Button>} />
+                  : <div className="space-y-2">{dependencies.map(d => (
+                    <div key={d.id} className="bg-white border border-neutral-200 rounded-xl p-4 flex items-start gap-4">
+                      <div className="flex-1">
+                        <p className="font-semibold text-neutral-900 text-sm">{d.title}</p>
+                        {d.description && <p className="text-xs text-neutral-500 mt-0.5">{d.description}</p>}
+                        {d.deadline && <p className="text-xs text-neutral-400 mt-1">Due: {d.deadline}</p>}
+                      </div>
+                      <div className="flex gap-1.5">
+                        {d.isBlocker && <span className="text-[10px] px-2 py-0.5 rounded-full bg-semantic-danger-surface text-semantic-danger font-medium">Blocker</span>}
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neutral-100 text-neutral-600">{d.status}</span>
+                      </div>
+                    </div>
+                  ))}</div>
+              )}
+            </div>
+          )}
+
+          {/* ── DECISIONS ── */}
+          {view === 'decisions' && (
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-brand-navy">Decision Register</h1>
+                  <p className="text-sm text-neutral-400 mt-0.5">Permanent searchable record of architectural and project decisions</p>
+                </div>
+                <Button variant="action" size="sm" onClick={() => setShowCreateDecision(true)}>+ Record Decision</Button>
+              </div>
+              {decisions.length === 0
+                ? <EmptyState icon="✅" title="No decisions recorded" subtitle="Capture key decisions so no one asks 'who decided what when'." action={<Button variant="action" size="sm" onClick={() => setShowCreateDecision(true)}>Record Decision</Button>} />
+                : <div className="space-y-3">{decisions.map(d => (
+                  <div key={d.id} className="bg-white border border-neutral-200 rounded-xl p-5">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <p className="font-semibold text-neutral-900">{d.title}</p>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${d.status === 'ACTIVE' ? 'bg-semantic-success-surface text-semantic-success' : 'bg-neutral-100 text-neutral-600'}`}>{d.status}</span>
+                    </div>
+                    {d.decisionText && <p className="text-sm text-neutral-700 mb-2">{d.decisionText}</p>}
+                    {d.rationale && <p className="text-xs text-neutral-500 bg-neutral-50 rounded px-2 py-1.5"><span className="font-medium">Rationale:</span> {d.rationale}</p>}
+                    {d.alternativesConsidered && <p className="text-xs text-neutral-500 mt-1.5"><span className="font-medium">Alternatives considered:</span> {d.alternativesConsidered}</p>}
+                    <p className="text-xs text-neutral-400 mt-2 font-mono">{d.id}{d.decidedAt ? ` · ${d.decidedAt}` : ''}</p>
+                  </div>
+                ))}</div>
+              }
+            </div>
+          )}
+
+          {/* ── MEETINGS ── */}
+          {view === 'meetings' && (
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-brand-navy">Meeting Notes</h1>
+                  <p className="text-sm text-neutral-400 mt-0.5">Structured capture: agenda, notes, decisions, action items</p>
+                </div>
+                <Button variant="action" size="sm" onClick={() => setShowCreateMeeting(true)}>+ New Meeting</Button>
+              </div>
+              {selectedMeeting ? (
+                <div className="bg-white border border-neutral-200 rounded-xl p-6">
+                  <button onClick={() => setSelectedMeeting(null)} className="text-xs text-neutral-400 hover:text-neutral-900 mb-4 flex items-center gap-1">← Back to meetings</button>
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h2 className="text-lg font-bold text-brand-navy">{selectedMeeting.title}</h2>
+                      <p className="text-sm text-neutral-400">{selectedMeeting.meetingDate} · {selectedMeeting.meetingType}</p>
+                    </div>
+                  </div>
+                  {selectedMeeting.agenda && <div className="mb-4"><p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Agenda</p><p className="text-sm text-neutral-700 whitespace-pre-wrap">{selectedMeeting.agenda}</p></div>}
+                  {selectedMeeting.notes && <div className="mb-4"><p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Notes</p><p className="text-sm text-neutral-700 whitespace-pre-wrap">{selectedMeeting.notes}</p></div>}
+                  {selectedMeeting.decisionsMade && <div className="mb-4"><p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Decisions Made</p><p className="text-sm text-neutral-700 whitespace-pre-wrap">{selectedMeeting.decisionsMade}</p></div>}
+                  {selectedMeeting.attendees && <div className="mb-4"><p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Attendees</p><p className="text-sm text-neutral-700">{selectedMeeting.attendees}</p></div>}
+                  <div className="mt-4 pt-4 border-t border-neutral-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Action Items</p>
+                      <Button variant="secondary" size="sm" onClick={() => { setShowCreateAction(true); }}>+ Add Action</Button>
+                    </div>
+                    {actionItems.filter(a => a.meetingNoteId === selectedMeeting.id).length === 0
+                      ? <p className="text-xs text-neutral-400">No action items for this meeting.</p>
+                      : actionItems.filter(a => a.meetingNoteId === selectedMeeting.id).map(a => (
+                        <div key={a.id} className="flex items-center gap-3 py-2 border-b border-neutral-50 last:border-0">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${a.status === 'COMPLETED' ? 'bg-semantic-success' : a.status === 'OPEN' ? 'bg-brand-orange' : 'bg-neutral-300'}`}></span>
+                          <p className="text-sm flex-1">{a.title}</p>
+                          {a.dueDate && <p className="text-xs text-neutral-400">{a.dueDate}</p>}
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${a.priority === 'HIGH' ? 'bg-semantic-danger-surface text-semantic-danger' : 'bg-neutral-100 text-neutral-600'}`}>{a.priority}</span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+              ) : (
+                meetingNotes.length === 0
+                  ? <EmptyState icon="📅" title="No meeting notes yet" subtitle="Capture structured meeting notes with agenda, decisions, and action items." action={<Button variant="action" size="sm" onClick={() => setShowCreateMeeting(true)}>New Meeting</Button>} />
+                  : <div className="space-y-3">{meetingNotes.map(m => (
+                    <button key={m.id} onClick={() => setSelectedMeeting(m)} className="w-full bg-white border border-neutral-200 rounded-xl p-4 text-left hover:border-brand-navy/30 hover:bg-neutral-50 transition-colors">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-neutral-900 text-sm">{m.title}</p>
+                          <p className="text-xs text-neutral-400 mt-0.5">{m.meetingDate} · {m.meetingType}</p>
+                        </div>
+                        <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full flex-shrink-0">{m.meetingType}</span>
+                      </div>
+                      {m.agenda && <p className="text-xs text-neutral-500 mt-1.5 line-clamp-2">{m.agenda}</p>}
+                    </button>
+                  ))}</div>
+              )}
+            </div>
+          )}
+
+          {/* ── ACTION ITEMS ── */}
+          {view === 'action-items' && (
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-brand-navy">Action Items</h1>
+                  <p className="text-sm text-neutral-400 mt-0.5">Tracked tasks with owners and deadlines — never lost in meeting chat</p>
+                </div>
+                <Button variant="action" size="sm" onClick={() => setShowCreateAction(true)}>+ New Action</Button>
+              </div>
+              {actionItems.length === 0
+                ? <EmptyState icon="☑️" title="No action items" subtitle="Create action items here or they auto-generate from meeting notes." action={<Button variant="action" size="sm" onClick={() => setShowCreateAction(true)}>New Action</Button>} />
+                : (
+                  <div className="space-y-2">
+                    {['OPEN', 'IN_PROGRESS', 'COMPLETED'].map(status => {
+                      const group = actionItems.filter(a => a.status === status);
+                      if (group.length === 0) return null;
+                      return (
+                        <div key={status}>
+                          <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">{status.replace('_', ' ')} ({group.length})</p>
+                          {group.map(a => (
+                            <div key={a.id} className="bg-white border border-neutral-200 rounded-xl p-4 mb-2 flex items-center gap-4">
+                              <span className={`w-3 h-3 rounded-full flex-shrink-0 ${a.status === 'COMPLETED' ? 'bg-semantic-success' : a.status === 'OPEN' ? 'bg-brand-orange' : 'bg-semantic-info'}`}></span>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm font-medium ${a.status === 'COMPLETED' ? 'line-through text-neutral-400' : 'text-neutral-900'}`}>{a.title}</p>
+                                {a.dueDate && <p className="text-xs text-neutral-400">Due {a.dueDate}</p>}
+                              </div>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${a.priority === 'HIGH' ? 'bg-semantic-danger-surface text-semantic-danger' : a.priority === 'MEDIUM' ? 'bg-semantic-warning-surface text-semantic-warning' : 'bg-neutral-100 text-neutral-600'}`}>{a.priority}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              }
+            </div>
+          )}
+
+          {/* ── STAKEHOLDERS ── */}
+          {view === 'stakeholders' && (
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-brand-navy">Stakeholder Register</h1>
+                  <p className="text-sm text-neutral-400 mt-0.5">Influence · Interest · Communication cadence</p>
+                </div>
+                <Button variant="action" size="sm" onClick={() => setShowCreateStakeholder(true)}>+ Add Stakeholder</Button>
+              </div>
+              {stakeholders.length === 0
+                ? <EmptyState icon="👥" title="No stakeholders registered" subtitle="Track who needs to be kept informed and at what frequency." action={<Button variant="action" size="sm" onClick={() => setShowCreateStakeholder(true)}>Add Stakeholder</Button>} />
+                : (
+                  <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-neutral-50 border-b border-neutral-200">
+                        <tr>
+                          {['Name', 'Role', 'Influence', 'Interest', 'Frequency', 'Last Contact'].map(h => (
+                            <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stakeholders.map((s, i) => (
+                          <tr key={s.id} className={`border-b border-neutral-50 ${i % 2 === 0 ? 'bg-white' : 'bg-neutral-50/50'}`}>
+                            <td className="px-4 py-3">
+                              <p className="font-medium text-neutral-900">{s.name}</p>
+                              {s.email && <p className="text-xs text-neutral-400">{s.email}</p>}
+                            </td>
+                            <td className="px-4 py-3 text-neutral-600">{s.role || '—'}</td>
+                            <td className="px-4 py-3"><span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${s.influence === 'HIGH' ? 'bg-semantic-danger-surface text-semantic-danger' : 'bg-neutral-100 text-neutral-600'}`}>{s.influence}</span></td>
+                            <td className="px-4 py-3"><span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${s.interest === 'HIGH' ? 'bg-semantic-info-surface text-semantic-info' : 'bg-neutral-100 text-neutral-600'}`}>{s.interest}</span></td>
+                            <td className="px-4 py-3 text-neutral-600 text-xs">{s.communicationFrequency}</td>
+                            <td className="px-4 py-3 text-neutral-400 text-xs">{s.lastContactedAt || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              }
+            </div>
+          )}
+
+          {/* ── LESSONS LEARNED ── */}
+          {view === 'lessons' && (
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-brand-navy">Lessons Learned</h1>
+                  <p className="text-sm text-neutral-400 mt-0.5">Post-project knowledge — searchable, linkable, permanent</p>
+                </div>
+                <Button variant="action" size="sm" onClick={() => setShowCreateLesson(true)}>+ Record Lesson</Button>
+              </div>
+              {lessonsLearned.length === 0
+                ? <EmptyState icon="📚" title="No lessons recorded" subtitle="Capture what worked and what didn't so future projects benefit." action={<Button variant="action" size="sm" onClick={() => setShowCreateLesson(true)}>Record Lesson</Button>} />
+                : <div className="space-y-4">{lessonsLearned.map(l => (
+                  <div key={l.id} className="bg-white border border-neutral-200 rounded-xl p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <p className="font-semibold text-neutral-900">{l.title}</p>
+                      {l.category && <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 font-medium flex-shrink-0">{l.category}</span>}
+                    </div>
+                    {l.whatWorked && <div className="mb-2"><p className="text-xs font-semibold text-semantic-success mb-1">What worked</p><p className="text-sm text-neutral-700">{l.whatWorked}</p></div>}
+                    {l.whatDidntWork && <div className="mb-2"><p className="text-xs font-semibold text-semantic-danger mb-1">What didn't work</p><p className="text-sm text-neutral-700">{l.whatDidntWork}</p></div>}
+                    {l.recommendations && <div><p className="text-xs font-semibold text-neutral-500 mb-1">Recommendations</p><p className="text-sm text-neutral-700">{l.recommendations}</p></div>}
+                    {l.tags && <p className="text-xs text-neutral-400 mt-2">Tags: {l.tags}</p>}
+                  </div>
+                ))}</div>
+              }
+            </div>
+          )}
+
+          {/* ── KNOWLEDGE BASE ── */}
+          {view === 'knowledge' && (
+            <div className="flex-1 flex overflow-hidden">
+              {/* Space sidebar */}
+              <div className="w-56 bg-neutral-50 border-r border-neutral-200 flex flex-col">
+                <div className="p-3 border-b border-neutral-200">
+                  <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Spaces</p>
+                </div>
+                <div className="flex-1 overflow-y-auto p-2">
+                  {knowledgeSpaces.map(s => (
+                    <button key={s.id} onClick={() => { setSelectedSpaceId(s.id); setSelectedArticle(null); fetchArticles(s.id); }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${selectedSpaceId === s.id ? 'bg-brand-navy text-white' : 'text-neutral-600 hover:bg-neutral-100'}`}>
+                      <span className="text-base">📖</span>
+                      <span className="truncate">{s.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Article area */}
+              <div className="flex-1 flex flex-col overflow-hidden">
+                {selectedArticle && !articleEditing ? (
+                  <div className="flex-1 overflow-y-auto p-6 max-w-3xl mx-auto w-full">
+                    <button onClick={() => setSelectedArticle(null)} className="text-xs text-neutral-400 hover:text-neutral-900 mb-4 flex items-center gap-1">← Back</button>
+                    <div className="flex items-start justify-between mb-6">
+                      <div>
+                        <h1 className="text-2xl font-bold text-brand-navy">{selectedArticle.title}</h1>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${selectedArticle.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : 'bg-neutral-100 text-neutral-600'}`}>{selectedArticle.status}</span>
+                          {selectedArticle.templateType && <span className="text-xs text-neutral-400">{selectedArticle.templateType}</span>}
+                          <span className="text-xs text-neutral-400">v{selectedArticle.versionNumber}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="secondary" size="sm" onClick={() => { setShowVersionHistory(true); fetch(`${API}/articles/${selectedArticle.id}/versions`, { headers: headers() }).then(r => r.json()).then(d => setArticleVersions(Array.isArray(d) ? d : [])); }}>History</Button>
+                        <Button variant="action" size="sm" onClick={() => { setArticleTitle(selectedArticle.title); setArticleContent(selectedArticle.content || ''); setArticleEditing(true); }}>Edit</Button>
+                      </div>
+                    </div>
+                    <div className="prose prose-sm max-w-none text-neutral-700" dangerouslySetInnerHTML={{ __html: selectedArticle.content || '<p class="text-neutral-400">No content yet. Click Edit to add content.</p>' }} />
+                  </div>
+                ) : selectedArticle && articleEditing ? (
+                  <div className="flex-1 flex flex-col overflow-hidden p-6 max-w-3xl mx-auto w-full">
+                    <div className="flex items-center justify-between mb-4">
+                      <input value={articleTitle} onChange={e => setArticleTitle(e.target.value)}
+                        className="text-2xl font-bold text-brand-navy bg-transparent border-0 outline-none flex-1 mr-4" placeholder="Article title" />
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setArticleEditing(false)}>Cancel</Button>
+                        <Button variant="action" size="sm" onClick={handleSaveArticle}>Save</Button>
+                      </div>
+                    </div>
+                    <RichTextEditor value={articleContent} onChange={setArticleContent} placeholder="Write your article content here... Supports rich text formatting." />
+                  </div>
+                ) : (
+                  <div className="flex-1 overflow-y-auto p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h2 className="text-lg font-bold text-brand-navy">{knowledgeSpaces.find(s => s.id === selectedSpaceId)?.name || 'Knowledge'}</h2>
+                        <p className="text-sm text-neutral-400">{articles.length} article{articles.length !== 1 ? 's' : ''}</p>
+                      </div>
+                      <Button variant="action" size="sm" onClick={() => { setNewArticle({ title: '', templateType: 'CUSTOM', spaceId: selectedSpaceId || '' }); setShowCreateArticle(true); }}>+ New Article</Button>
+                    </div>
+                    {articles.length === 0
+                      ? <EmptyState icon="🧠" title="No articles yet" subtitle="Start building your knowledge base — runbooks, ADRs, onboarding guides." action={<Button variant="action" size="sm" onClick={() => setShowCreateArticle(true)}>New Article</Button>} />
+                      : <div className="space-y-2">{articles.map(a => (
+                        <button key={a.id} onClick={() => { setSelectedArticle(a); setArticleEditing(false); }}
+                          className="w-full bg-white border border-neutral-200 rounded-xl p-4 text-left hover:border-brand-navy/30 transition-colors">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-neutral-900 text-sm">{a.title}</p>
+                              {a.templateType && a.templateType !== 'CUSTOM' && <p className="text-xs text-neutral-400 mt-0.5">{a.templateType}</p>}
+                            </div>
+                            <div className="flex gap-2 flex-shrink-0">
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${a.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : 'bg-neutral-100 text-neutral-600'}`}>{a.status}</span>
+                              <span className="text-xs text-neutral-400">{a.viewCount} views</span>
+                            </div>
+                          </div>
+                        </button>
+                      ))}</div>
+                    }
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── RELEASES ── */}
+          {view === 'releases' && (
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-brand-navy">Releases</h1>
+                  <p className="text-sm text-neutral-400 mt-0.5">Version and release planning — assign work items to releases</p>
+                </div>
+                <Button variant="action" size="sm" onClick={() => setShowCreateRelease(true)}>+ New Release</Button>
+              </div>
+              {releases.length === 0
+                ? <EmptyState icon="🚀" title="No releases planned" subtitle="Define releases to track what ships in each version." action={<Button variant="action" size="sm" onClick={() => setShowCreateRelease(true)}>New Release</Button>} />
+                : <div className="space-y-4">{releases.map(r => (
+                  <div key={r.id} className="bg-white border border-neutral-200 rounded-xl p-5">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-neutral-900">{r.name}</p>
+                          <span className="font-mono text-xs text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded">{r.version}</span>
+                        </div>
+                        {r.description && <p className="text-sm text-neutral-500 mt-0.5">{r.description}</p>}
+                      </div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${r.status === 'RELEASED' ? 'bg-semantic-success-surface text-semantic-success' : r.status === 'IN_PROGRESS' ? 'bg-semantic-info-surface text-semantic-info' : 'bg-neutral-100 text-neutral-600'}`}>{r.status}</span>
+                    </div>
+                    {r.releaseDate && <p className="text-xs text-neutral-400">Target: {r.releaseDate}</p>}
+                  </div>
+                ))}</div>
+              }
+            </div>
+          )}
+
+          {/* ── MODALS: ITERATION 4 ARTIFACTS ── */}
+          {showCreateRisk && <Modal title="Log Risk" onClose={() => setShowCreateRisk(false)}>
+            <div className="space-y-3">
+              <input className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="Risk title *" value={newRisk.title} onChange={e => setNewRisk(p => ({ ...p, title: e.target.value }))} />
+              <textarea className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" rows={2} placeholder="Description" value={newRisk.description} onChange={e => setNewRisk(p => ({ ...p, description: e.target.value }))} />
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-xs text-neutral-500 mb-1 block">Probability</label><select className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" value={newRisk.probability} onChange={e => setNewRisk(p => ({ ...p, probability: e.target.value }))}><option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option></select></div>
+                <div><label className="text-xs text-neutral-500 mb-1 block">Impact</label><select className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" value={newRisk.impact} onChange={e => setNewRisk(p => ({ ...p, impact: e.target.value }))}><option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option></select></div>
+              </div>
+              <textarea className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" rows={2} placeholder="Mitigation plan" value={newRisk.mitigationPlan} onChange={e => setNewRisk(p => ({ ...p, mitigationPlan: e.target.value }))} />
+            </div>
+            <div className="flex justify-end gap-3 mt-5"><Button variant="ghost" onClick={() => setShowCreateRisk(false)}>Cancel</Button><Button variant="action" onClick={handleCreateRisk}>Log Risk</Button></div>
+          </Modal>}
+
+          {showCreateAssumption && <Modal title="Log Assumption" onClose={() => setShowCreateAssumption(false)}>
+            <div className="space-y-3">
+              <input className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="Assumption *" value={newAssumption.title} onChange={e => setNewAssumption(p => ({ ...p, title: e.target.value }))} />
+              <textarea className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" rows={2} placeholder="Rationale" value={newAssumption.rationale} onChange={e => setNewAssumption(p => ({ ...p, rationale: e.target.value }))} />
+              <div><label className="text-xs text-neutral-500 mb-1 block">Validation Status</label><select className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" value={newAssumption.validationStatus} onChange={e => setNewAssumption(p => ({ ...p, validationStatus: e.target.value }))}><option>PENDING</option><option>VALIDATED</option><option>INVALIDATED</option></select></div>
+            </div>
+            <div className="flex justify-end gap-3 mt-5"><Button variant="ghost" onClick={() => setShowCreateAssumption(false)}>Cancel</Button><Button variant="action" onClick={handleCreateAssumption}>Log</Button></div>
+          </Modal>}
+
+          {showCreateIssue && <Modal title="Log PM Issue" onClose={() => setShowCreateIssue(false)}>
+            <div className="space-y-3">
+              <input className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="Issue title *" value={newPmIssue.title} onChange={e => setNewPmIssue(p => ({ ...p, title: e.target.value }))} />
+              <div><label className="text-xs text-neutral-500 mb-1 block">Severity</label><select className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" value={newPmIssue.severity} onChange={e => setNewPmIssue(p => ({ ...p, severity: e.target.value }))}><option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option></select></div>
+              <textarea className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" rows={2} placeholder="Problem description" value={newPmIssue.problem} onChange={e => setNewPmIssue(p => ({ ...p, problem: e.target.value }))} />
+              <textarea className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" rows={2} placeholder="Impact" value={newPmIssue.impact} onChange={e => setNewPmIssue(p => ({ ...p, impact: e.target.value }))} />
+            </div>
+            <div className="flex justify-end gap-3 mt-5"><Button variant="ghost" onClick={() => setShowCreateIssue(false)}>Cancel</Button><Button variant="action" onClick={handleCreatePmIssue}>Log Issue</Button></div>
+          </Modal>}
+
+          {showCreateDependency && <Modal title="Add Dependency" onClose={() => setShowCreateDependency(false)}>
+            <div className="space-y-3">
+              <input className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="Dependency title *" value={newDependency.title} onChange={e => setNewDependency(p => ({ ...p, title: e.target.value }))} />
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-xs text-neutral-500 mb-1 block">Status</label><select className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" value={newDependency.status} onChange={e => setNewDependency(p => ({ ...p, status: e.target.value }))}><option>PENDING</option><option>IN_PROGRESS</option><option>COMPLETE</option><option>BLOCKED</option></select></div>
+                <div className="flex items-end pb-2"><label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={newDependency.isBlocker} onChange={e => setNewDependency(p => ({ ...p, isBlocker: e.target.checked }))} /><span>Blocker</span></label></div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-5"><Button variant="ghost" onClick={() => setShowCreateDependency(false)}>Cancel</Button><Button variant="action" onClick={handleCreateDependency}>Add</Button></div>
+          </Modal>}
+
+          {showCreateDecision && <Modal title="Record Decision" onClose={() => setShowCreateDecision(false)}>
+            <div className="space-y-3">
+              <input className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="Decision title *" value={newDecision.title} onChange={e => setNewDecision(p => ({ ...p, title: e.target.value }))} />
+              <textarea className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" rows={2} placeholder="Decision" value={newDecision.decisionText} onChange={e => setNewDecision(p => ({ ...p, decisionText: e.target.value }))} />
+              <textarea className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" rows={2} placeholder="Rationale" value={newDecision.rationale} onChange={e => setNewDecision(p => ({ ...p, rationale: e.target.value }))} />
+            </div>
+            <div className="flex justify-end gap-3 mt-5"><Button variant="ghost" onClick={() => setShowCreateDecision(false)}>Cancel</Button><Button variant="action" onClick={handleCreateDecision}>Record</Button></div>
+          </Modal>}
+
+          {showCreateMeeting && <Modal title="New Meeting Notes" onClose={() => setShowCreateMeeting(false)}>
+            <div className="space-y-3">
+              <input className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="Meeting title *" value={newMeeting.title} onChange={e => setNewMeeting(p => ({ ...p, title: e.target.value }))} />
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-xs text-neutral-500 mb-1 block">Date</label><input type="date" className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" value={newMeeting.meetingDate} onChange={e => setNewMeeting(p => ({ ...p, meetingDate: e.target.value }))} /></div>
+                <div><label className="text-xs text-neutral-500 mb-1 block">Type</label><select className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" value={newMeeting.meetingType} onChange={e => setNewMeeting(p => ({ ...p, meetingType: e.target.value }))}><option>GENERAL</option><option>STANDUP</option><option>REVIEW</option><option>RETROSPECTIVE</option><option>STEERING</option></select></div>
+              </div>
+              <textarea className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" rows={2} placeholder="Agenda" value={newMeeting.agenda} onChange={e => setNewMeeting(p => ({ ...p, agenda: e.target.value }))} />
+              <textarea className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" rows={3} placeholder="Notes" value={newMeeting.notes} onChange={e => setNewMeeting(p => ({ ...p, notes: e.target.value }))} />
+            </div>
+            <div className="flex justify-end gap-3 mt-5"><Button variant="ghost" onClick={() => setShowCreateMeeting(false)}>Cancel</Button><Button variant="action" onClick={handleCreateMeeting}>Save Notes</Button></div>
+          </Modal>}
+
+          {showCreateAction && <Modal title="New Action Item" onClose={() => setShowCreateAction(false)}>
+            <div className="space-y-3">
+              <input className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="Action item title *" value={newAction.title} onChange={e => setNewAction(p => ({ ...p, title: e.target.value }))} />
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-xs text-neutral-500 mb-1 block">Priority</label><select className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" value={newAction.priority} onChange={e => setNewAction(p => ({ ...p, priority: e.target.value }))}><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select></div>
+                <div><label className="text-xs text-neutral-500 mb-1 block">Due Date</label><input type="date" className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" value={newAction.dueDate} onChange={e => setNewAction(p => ({ ...p, dueDate: e.target.value }))} /></div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-5"><Button variant="ghost" onClick={() => setShowCreateAction(false)}>Cancel</Button><Button variant="action" onClick={handleCreateAction}>Create</Button></div>
+          </Modal>}
+
+          {showCreateStakeholder && <Modal title="Add Stakeholder" onClose={() => setShowCreateStakeholder(false)}>
+            <div className="space-y-3">
+              <input className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="Name *" value={newStakeholder.name} onChange={e => setNewStakeholder(p => ({ ...p, name: e.target.value }))} />
+              <div className="grid grid-cols-2 gap-3">
+                <input className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="Role" value={newStakeholder.role} onChange={e => setNewStakeholder(p => ({ ...p, role: e.target.value }))} />
+                <input className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="Email" value={newStakeholder.email} onChange={e => setNewStakeholder(p => ({ ...p, email: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-xs text-neutral-500 mb-1 block">Influence</label><select className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" value={newStakeholder.influence} onChange={e => setNewStakeholder(p => ({ ...p, influence: e.target.value }))}><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select></div>
+                <div><label className="text-xs text-neutral-500 mb-1 block">Interest</label><select className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" value={newStakeholder.interest} onChange={e => setNewStakeholder(p => ({ ...p, interest: e.target.value }))}><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select></div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-5"><Button variant="ghost" onClick={() => setShowCreateStakeholder(false)}>Cancel</Button><Button variant="action" onClick={handleCreateStakeholder}>Add</Button></div>
+          </Modal>}
+
+          {showCreateLesson && <Modal title="Record Lesson Learned" onClose={() => setShowCreateLesson(false)}>
+            <div className="space-y-3">
+              <input className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="Title *" value={newLesson.title} onChange={e => setNewLesson(p => ({ ...p, title: e.target.value }))} />
+              <textarea className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" rows={2} placeholder="What worked" value={newLesson.whatWorked} onChange={e => setNewLesson(p => ({ ...p, whatWorked: e.target.value }))} />
+              <textarea className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" rows={2} placeholder="What didn't work" value={newLesson.whatDidntWork} onChange={e => setNewLesson(p => ({ ...p, whatDidntWork: e.target.value }))} />
+              <textarea className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" rows={2} placeholder="Recommendations" value={newLesson.recommendations} onChange={e => setNewLesson(p => ({ ...p, recommendations: e.target.value }))} />
+            </div>
+            <div className="flex justify-end gap-3 mt-5"><Button variant="ghost" onClick={() => setShowCreateLesson(false)}>Cancel</Button><Button variant="action" onClick={handleCreateLesson}>Record</Button></div>
+          </Modal>}
+
+          {showCreateArticle && <Modal title="New Article" onClose={() => setShowCreateArticle(false)}>
+            <div className="space-y-3">
+              <input className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="Article title *" value={newArticle.title} onChange={e => setNewArticle(p => ({ ...p, title: e.target.value }))} />
+              <div><label className="text-xs text-neutral-500 mb-1 block">Template</label><select className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" value={newArticle.templateType} onChange={e => setNewArticle(p => ({ ...p, templateType: e.target.value }))}><option value="CUSTOM">Custom</option><option value="RUNBOOK">Runbook</option><option value="ADR">ADR (Architecture Decision)</option><option value="POSTMORTEM">Post-Mortem</option><option value="ONBOARDING">Onboarding</option><option value="KB">Knowledge Base Article</option><option value="TROUBLESHOOTING">Troubleshooting Guide</option></select></div>
+              <div><label className="text-xs text-neutral-500 mb-1 block">Space</label><select className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" value={newArticle.spaceId || selectedSpaceId || ''} onChange={e => setNewArticle(p => ({ ...p, spaceId: e.target.value }))}>{knowledgeSpaces.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+            </div>
+            <div className="flex justify-end gap-3 mt-5"><Button variant="ghost" onClick={() => setShowCreateArticle(false)}>Cancel</Button><Button variant="action" onClick={handleCreateArticle}>Create</Button></div>
+          </Modal>}
+
+          {showVersionHistory && <Modal title="Version History" onClose={() => setShowVersionHistory(false)}>
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {articleVersions.map(v => (
+                <div key={v.id} className="flex items-center justify-between py-2 border-b border-neutral-100 last:border-0">
+                  <div>
+                    <p className="text-sm font-medium">v{v.versionNumber}</p>
+                    <p className="text-xs text-neutral-400">{v.savedAt ? new Date(v.savedAt).toLocaleString() : ''}</p>
+                  </div>
+                  <span className="text-xs text-neutral-500">{v.savedBy}</span>
+                </div>
+              ))}
+              {articleVersions.length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No versions yet.</p>}
+            </div>
+            <div className="flex justify-end mt-4"><Button variant="ghost" onClick={() => setShowVersionHistory(false)}>Close</Button></div>
+          </Modal>}
+
+          {showCreateRelease && <Modal title="New Release" onClose={() => setShowCreateRelease(false)}>
+            <div className="space-y-3">
+              <input className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="Release name *" value={newRelease.name} onChange={e => setNewRelease(p => ({ ...p, name: e.target.value }))} />
+              <input className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm font-mono" placeholder="Version (e.g. 4.2.0) *" value={newRelease.version} onChange={e => setNewRelease(p => ({ ...p, version: e.target.value }))} />
+              <textarea className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" rows={2} placeholder="Description" value={newRelease.description} onChange={e => setNewRelease(p => ({ ...p, description: e.target.value }))} />
+              <div><label className="text-xs text-neutral-500 mb-1 block">Target Date</label><input type="date" className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" value={newRelease.releaseDate} onChange={e => setNewRelease(p => ({ ...p, releaseDate: e.target.value }))} /></div>
+            </div>
+            <div className="flex justify-end gap-3 mt-5"><Button variant="ghost" onClick={() => setShowCreateRelease(false)}>Cancel</Button><Button variant="action" onClick={handleCreateRelease}>Create Release</Button></div>
+          </Modal>}
+
       </main>
 
       {/* DETAIL PANEL */}

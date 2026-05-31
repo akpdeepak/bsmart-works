@@ -1395,7 +1395,15 @@ export default function App() {
                           <div className="flex items-center gap-4">
                             <div className="w-10 h-10 bg-brand-navy rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0">{p.keyPrefix}</div>
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-neutral-900">{p.name}</h3>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-semibold text-neutral-900">{p.name}</h3>
+                                {p.slug && (
+                                  <span className="text-[10px] font-mono bg-neutral-100 text-neutral-500 px-1.5 py-0.5 rounded border border-neutral-200"
+                                    title="Slug-based project URL">
+                                    /projects/{p.slug}
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-xs text-neutral-400 mt-0.5">{p.description || 'No description'}</p>
                             </div>
                             <div className="text-right flex-shrink-0">

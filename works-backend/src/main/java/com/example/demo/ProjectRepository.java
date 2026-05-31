@@ -5,4 +5,5 @@ import java.util.List;
 
 public interface ProjectRepository extends JpaRepository<Project, String> {
     List<Project> findByWorkspaceId(String workspaceId);
+    java.util.Optional<Project> findBySlug(String slug);
 }

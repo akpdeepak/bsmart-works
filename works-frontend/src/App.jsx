@@ -2507,12 +2507,16 @@ export default function App() {
                 {[
                   { key: 'workflows',   label: 'Workflows' },
                   { key: 'fields',      label: 'Custom Fields' },
+                  { key: 'layout',      label: 'Field Layout' },
+                  { key: 'visibility',  label: 'Field Visibility' },
                   { key: 'permissions', label: 'Permissions' },
                   { key: 'types',       label: 'Item Types' },
                 ].map(t => (
                   <button key={t.key} onClick={() => {
                     setSettings3Tab(t.key);
                     if (t.key === 'permissions') fetchPermMatrix();
+                    if (t.key === 'layout') { fetchFieldDefs(); fetchFieldLayouts(); }
+                    if (t.key === 'visibility') { fetchFieldDefs(); fetchRoles(); fetchFieldVisibility(); }
                   }}
                     className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${settings3Tab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                     {t.label}
@@ -2745,6 +2749,144 @@ export default function App() {
                 </div>
               )}
 
+              {/* FIELD LAYOUT TAB */}
+              {settings3Tab === 'layout' && (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <div>
+                      <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Field Layout</h2>
+                      <p className="text-xs text-neutral-400 mt-0.5">Control which custom fields appear on each work item type and in what order.</p>
+                    </div>
+                  </div>
+                  {fieldDefs.length === 0 ? (
+                    <EmptyState icon="📐" title="No custom fields defined" subtitle="Go to Custom Fields tab and create fields first, then configure layout here." />
+                  ) : (
+                    <div className="space-y-4">
+                      {Object.keys(TYPES).map(itemType => {
+                        const layoutForType = fieldLayouts.find(fl => fl.itemType === itemType);
+                        const orderedFields = layoutForType?.layout || fieldDefs.map(fd => ({ fieldDefId: fd.id, visible: true }));
+                        return (
+                          <div key={itemType} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <TypeBadge type={itemType} compact />
+                                <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{itemType}</span>
+                              </div>
+                              <Button variant="secondary" onClick={() => {
+                                const layout = fieldDefs.map(fd => ({ fieldDefId: fd.id, visible: true }));
+                                api.send(`/field-layouts`, { method: 'PUT', body: JSON.stringify({ itemType, layout, workspaceId: 'WS-001' }) })
+                                  .then(() => { showToast('Layout saved'); fetchFieldLayouts(); }).catch(() => showToast('Failed', 'error'));
+                              }}>Save Layout</Button>
+                            </div>
+                            <div className="space-y-1">
+                              {fieldDefs.map((fd, idx) => {
+                                const entry = orderedFields.find(e => e.fieldDefId === fd.id);
+                                const visible = entry ? entry.visible !== false : true;
+                                return (
+                                  <div key={fd.id} className="flex items-center gap-3 py-2 px-3 bg-neutral-50 dark:bg-neutral-700 rounded-lg">
+                                    <span className="text-neutral-300 cursor-grab text-sm">⠿</span>
+                                    <div className="flex-1">
+                                      <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{fd.name}</span>
+                                      <span className="ml-2 text-[10px] font-mono text-neutral-400">{fd.fieldType}</span>
+                                    </div>
+                                    <input type="checkbox" checked={visible} className="w-4 h-4 accent-brand-navy"
+                                      onChange={() => showToast('Toggle field visibility in Field Visibility tab')}
+                                      title="Toggle visibility" />
+                                    <span className="text-[10px] text-neutral-400">#{idx + 1}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* FIELD VISIBILITY TAB */}
+              {settings3Tab === 'visibility' && (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <div>
+                      <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Field Visibility by Role</h2>
+                      <p className="text-xs text-neutral-400 mt-0.5">Control who can see or edit each custom field. Default is EDITABLE for all roles.</p>
+                    </div>
+                  </div>
+
+                  {/* Add visibility rule */}
+                  <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-5 mb-5">
+                    <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 mb-3">Add Visibility Rule</p>
+                    <div className="flex gap-3 flex-wrap items-end">
+                      <div>
+                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Field</label>
+                        <select className="input text-sm" value={newFieldVisForm.fieldDefId}
+                          onChange={e => setNewFieldVisForm(f => ({ ...f, fieldDefId: e.target.value }))}>
+                          <option value="">— Select field —</option>
+                          {fieldDefs.map(fd => <option key={fd.id} value={fd.id}>{fd.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Role</label>
+                        <select className="input text-sm" value={newFieldVisForm.roleId}
+                          onChange={e => setNewFieldVisForm(f => ({ ...f, roleId: e.target.value }))}>
+                          <option value="">— Select role —</option>
+                          {[{id:'VIEWER',name:'VIEWER'},{id:'MEMBER',name:'MEMBER'},{id:'LEAD',name:'LEAD'},{id:'ADMIN',name:'ADMIN'},{id:'OWNER',name:'OWNER'},...roles].map(r => (
+                            <option key={r.id} value={r.id}>{r.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Visibility</label>
+                        <select className="input text-sm" value={newFieldVisForm.visibility}
+                          onChange={e => setNewFieldVisForm(f => ({ ...f, visibility: e.target.value }))}>
+                          <option value="EDITABLE">EDITABLE</option>
+                          <option value="READONLY">READ ONLY</option>
+                          <option value="HIDDEN">HIDDEN</option>
+                        </select>
+                      </div>
+                      <Button variant="action" onClick={saveFieldVisibility}>Add Rule</Button>
+                    </div>
+                  </div>
+
+                  {fieldVisibility.length === 0 ? (
+                    <EmptyState icon="👁" title="No visibility rules defined" subtitle="All fields are visible and editable by all roles by default. Add rules to restrict access." />
+                  ) : (
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
+                          <tr>
+                            {['Field', 'Role', 'Visibility', ''].map(h => (
+                              <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+                          {fieldVisibility.map(fv => (
+                            <tr key={fv.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
+                              <td className="px-4 py-3 font-medium text-neutral-900 dark:text-neutral-100">
+                                {fieldDefs.find(fd => fd.id === fv.fieldDefId)?.name || fv.fieldDefId}
+                              </td>
+                              <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">{fv.roleId}</td>
+                              <td className="px-4 py-3">
+                                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${fv.visibility === 'HIDDEN' ? 'bg-semantic-danger-surface text-semantic-danger' : fv.visibility === 'READONLY' ? 'bg-semantic-warning-surface text-semantic-warning' : 'bg-semantic-success-surface text-semantic-success'}`}>
+                                  {fv.visibility}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <button onClick={() => api.send(`/field-visibility/${fv.id}`, { method: 'DELETE' }).then(() => { showToast('Rule deleted'); fetchFieldVisibility(); }).catch(() => {})}
+                                  className="text-xs text-semantic-danger hover:underline">Delete</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* PERMISSIONS MATRIX TAB */}
               {settings3Tab === 'permissions' && (
                 <div>
@@ -2816,9 +2958,11 @@ export default function App() {
                                       <td className="px-4 py-2 font-mono sticky left-0 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200">{perm}</td>
                                       {permMatrix.matrix.map(row => (
                                         <td key={row.role.id} className="px-3 py-2 text-center">
-                                          <span className={`text-sm font-bold ${row.permissions[perm] ? 'text-semantic-success' : 'text-neutral-200 dark:text-neutral-600'}`}>
+                                          <button onClick={() => togglePermission(row.role.id, perm, row.permissions[perm])}
+                                            className={`w-7 h-7 rounded transition-colors text-sm font-bold ${row.permissions[perm] ? 'bg-semantic-success text-white hover:opacity-80' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-400 hover:bg-brand-navy/10'}`}
+                                            title={row.permissions[perm] ? 'Click to revoke' : 'Click to grant'}>
                                             {row.permissions[perm] ? '✓' : '—'}
-                                          </span>
+                                          </button>
                                         </td>
                                       ))}
                                     </tr>
@@ -3031,8 +3175,9 @@ export default function App() {
                       { key: 'actions',      label: `✅ Actions (${actionItems.length})` },
                       { key: 'stakeholders', label: `👥 Stakeholders (${stakeholders.length})` },
                       { key: 'lessons',      label: `📚 Lessons (${lessonsLearned.length})` },
+                      { key: 'cross-deps',   label: `🌐 Cross-Project (${crossProjectDeps.length})` },
                     ].map(t => (
-                      <button key={t.key} onClick={() => setPmTab(t.key)}
+                      <button key={t.key} onClick={() => { setPmTab(t.key); if (t.key === 'cross-deps') fetchCrossProjectDeps(); }}
                         className={`text-xs font-medium px-3 py-2 border-b-2 whitespace-nowrap transition-colors ${pmTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                         {t.label}
                       </button>
@@ -3241,14 +3386,57 @@ export default function App() {
 
                   {/* STAKEHOLDERS */}
                   {pmTab === 'stakeholders' && (
-                    <PmArtifactList
-                      title="Stakeholder Register" icon="👥"
-                      items={stakeholders}
-                      columns={['Name', 'Role', 'Org', 'Influence', 'Interest', 'Strategy']}
-                      renderRow={s => [s.name, s.role || '—', s.organization || '—', s.influence, s.interest, s.engagementStrategy]}
-                      onDelete={id => pmDelete('stakeholder', id)}
-                      onAdd={() => { setPmFormOpen('stakeholder'); setPmForm({ influence: 'MEDIUM', interest: 'MEDIUM', engagementStrategy: 'INFORM', communicationFreq: 'MONTHLY' }); }}
-                    />
+                    <div>
+                      <PmArtifactList
+                        title="Stakeholder Register" icon="👥"
+                        items={stakeholders}
+                        columns={['Name', 'Role', 'Org', 'Influence', 'Interest', 'Strategy']}
+                        renderRow={s => [s.name, s.role || '—', s.organization || '—', s.influence || '—', s.interest || '—', s.engagementStrategy || '—']}
+                        onDelete={id => pmDelete('stakeholder', id)}
+                        onAdd={() => { setPmFormOpen('stakeholder'); setPmForm({ influence: 'MEDIUM', interest: 'MEDIUM', engagementStrategy: 'INFORM', communicationFreq: 'MONTHLY' }); }}
+                      />
+                      {stakeholders.length > 0 && (
+                        <div className="mt-6 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-4">Influence / Interest Matrix</h3>
+                          <div className="grid grid-cols-2 gap-2 max-w-lg">
+                            {[
+                              { label: 'High Influence, High Interest', key: 'HH', desc: 'Manage Closely', color: 'bg-semantic-danger-surface border-semantic-danger/30' },
+                              { label: 'High Influence, Low Interest', key: 'HL', desc: 'Keep Satisfied', color: 'bg-semantic-warning-surface border-semantic-warning/30' },
+                              { label: 'Low Influence, High Interest', key: 'LH', desc: 'Keep Informed', color: 'bg-semantic-info-surface border-semantic-info/30' },
+                              { label: 'Low Influence, Low Interest', key: 'LL', desc: 'Monitor', color: 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700' },
+                            ].map(q => {
+                              const quadrantStakeholders = stakeholders.filter(s => {
+                                const inf = (s.influence || '').toUpperCase();
+                                const int = (s.interest || '').toUpperCase();
+                                const highInf = inf === 'HIGH';
+                                const highInt = int === 'HIGH';
+                                if (q.key === 'HH') return highInf && highInt;
+                                if (q.key === 'HL') return highInf && !highInt;
+                                if (q.key === 'LH') return !highInf && highInt;
+                                return !highInf && !highInt;
+                              });
+                              return (
+                                <div key={q.key} className={`p-4 rounded-xl border ${q.color} min-h-[100px]`}>
+                                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-1">{q.desc}</p>
+                                  <p className="text-xs text-neutral-400 mb-2">{q.label}</p>
+                                  <div className="space-y-1">
+                                    {quadrantStakeholders.length === 0 && <p className="text-[10px] text-neutral-300 italic">None</p>}
+                                    {quadrantStakeholders.map(s => (
+                                      <div key={s.id} className="flex items-center gap-1.5">
+                                        <Avatar name={s.name} size={5} />
+                                        <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100">{s.name}</span>
+                                        <span className="text-[10px] text-neutral-400">{s.role}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <p className="text-[10px] text-neutral-400 mt-3">Based on Influence (HIGH/MEDIUM/LOW) and Interest (HIGH/MEDIUM/LOW) fields. HIGH means above MEDIUM.</p>
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   {/* LESSONS LEARNED */}
@@ -3261,6 +3449,105 @@ export default function App() {
                       onDelete={id => pmDelete('lesson', id)}
                       onAdd={() => { setPmFormOpen('lesson'); setPmForm({ category: 'PROCESS' }); }}
                     />
+                  )}
+
+                  {pmTab === 'cross-deps' && (
+                    <div>
+                      <div className="flex justify-between items-center mb-4">
+                        <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Cross-Project Dependencies</h2>
+                        <Button variant="action" onClick={() => setIsCrossProjOpen(true)}>+ Add Dependency</Button>
+                      </div>
+                      {crossProjectDeps.length === 0 ? (
+                        <EmptyState icon="🌐" title="No cross-project dependencies" subtitle="Track dependencies between this project and other projects or teams." />
+                      ) : (
+                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
+                          <table className="w-full text-sm">
+                            <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
+                              <tr>
+                                {['Title', 'Target Project', 'Deadline', 'Blocker', 'Status', ''].map(h => (
+                                  <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+                              {crossProjectDeps.map(dep => (
+                                <tr key={dep.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
+                                  <td className="px-4 py-3 font-medium text-neutral-900 dark:text-neutral-100">
+                                    {dep.title}
+                                    {dep.description && <p className="text-xs text-neutral-400 mt-0.5">{dep.description}</p>}
+                                  </td>
+                                  <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">
+                                    {projects.find(p => p.id === dep.targetProjectId)?.name || dep.targetProjectId || '—'}
+                                  </td>
+                                  <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">
+                                    {dep.deadline ? new Date(dep.deadline).toLocaleDateString() : '—'}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    {dep.isBlocker ? (
+                                      <span className="text-xs font-bold text-semantic-danger bg-semantic-danger-surface px-2 py-0.5 rounded">BLOCKER</span>
+                                    ) : (
+                                      <span className="text-xs text-neutral-400">—</span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${dep.status === 'RESOLVED' ? 'bg-semantic-success-surface text-semantic-success' : dep.status === 'AT_RISK' ? 'bg-semantic-danger-surface text-semantic-danger' : 'bg-semantic-warning-surface text-semantic-warning'}`}>
+                                      {dep.status || 'OPEN'}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <button onClick={() => api.send(`/cross-project-dependencies/${dep.id}`, { method: 'DELETE' }).then(() => { showToast('Deleted'); fetchCrossProjectDeps(); }).catch(() => {})}
+                                      className="text-xs text-semantic-danger hover:underline">Delete</button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+
+                      {/* Create cross-project dep modal */}
+                      {isCrossProjOpen && (
+                        <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-center justify-center z-50 p-4"
+                          onClick={e => { if (e.target === e.currentTarget) setIsCrossProjOpen(false); }}>
+                          <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl w-full max-w-lg p-6">
+                            <h2 className="font-bold text-xl text-brand-navy mb-4">New Cross-Project Dependency</h2>
+                            <div className="space-y-3">
+                              <Field label="Title *">
+                                <input className="input" placeholder="What does this project depend on?" value={crossProjForm.title}
+                                  onChange={e => setCrossProjForm(f => ({ ...f, title: e.target.value }))} autoFocus />
+                              </Field>
+                              <Field label="Description">
+                                <textarea className="input" rows={2} placeholder="Details of the dependency..."
+                                  value={crossProjForm.description} onChange={e => setCrossProjForm(f => ({ ...f, description: e.target.value }))} />
+                              </Field>
+                              <Field label="Target Project">
+                                <select className="input" value={crossProjForm.targetProjectId}
+                                  onChange={e => setCrossProjForm(f => ({ ...f, targetProjectId: e.target.value }))}>
+                                  <option value="">— Select project —</option>
+                                  {projects.filter(p => p.id !== pmProjectId).map(p => (
+                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                  ))}
+                                </select>
+                              </Field>
+                              <Field label="Deadline">
+                                <input type="date" className="input" value={crossProjForm.deadline}
+                                  onChange={e => setCrossProjForm(f => ({ ...f, deadline: e.target.value }))} />
+                              </Field>
+                              <div className="flex items-center gap-2">
+                                <input type="checkbox" id="blocker" className="w-4 h-4 accent-brand-navy"
+                                  checked={crossProjForm.isBlocker}
+                                  onChange={e => setCrossProjForm(f => ({ ...f, isBlocker: e.target.checked }))} />
+                                <label htmlFor="blocker" className="text-sm text-neutral-700 dark:text-neutral-200">This is a blocker (blocks our delivery)</label>
+                              </div>
+                            </div>
+                            <div className="flex justify-end gap-3 mt-5">
+                              <Button variant="ghost" onClick={() => setIsCrossProjOpen(false)}>Cancel</Button>
+                              <Button variant="action" onClick={createCrossProjectDep}>Create Dependency</Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </>
               )}
@@ -3419,6 +3706,244 @@ export default function App() {
               }
             </div>
           )}
+
+          {/* ======================================================
+               ITERATION 5 — KNOWLEDGE REPOSITORY
+             ====================================================== */}
+          {view === 'knowledge' && (
+            <div className="flex h-full overflow-hidden">
+              {/* Left sidebar — spaces */}
+              <div className="w-64 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col">
+                <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">Knowledge Spaces</h2>
+                    <button onClick={() => setIsSpaceFormOpen(true)} className="w-6 h-6 flex items-center justify-center rounded bg-brand-navy text-white text-sm hover:opacity-80 transition-opacity" title="New space">+</button>
+                  </div>
+                  {/* Search */}
+                  <div className="relative">
+                    <input type="text" placeholder="Search articles..." value={knowledgeSearch}
+                      onChange={e => setKnowledgeSearch(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { searchKnowledge(); setKnowledgeTab('search'); } }}
+                      className="input text-xs pl-6 py-1.5 w-full" />
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400 text-xs">🔍</span>
+                  </div>
+                </div>
+                {/* All articles shortcut */}
+                <div className="px-2 py-1">
+                  <button onClick={() => { setSelectedSpace(null); setSelectedArticle(null); setKnowledgeTab('all'); fetchKnowledgeArticles(null); }}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${knowledgeTab === 'all' && !selectedSpace ? 'bg-brand-navy/10 text-brand-navy' : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700'}`}>
+                    📄 All Articles
+                  </button>
+                </div>
+                {/* Space list */}
+                <div className="flex-1 overflow-y-auto px-2 pb-2">
+                  {knowledgeSpaces.length === 0 && (
+                    <p className="text-xs text-neutral-400 text-center py-6">No spaces yet. Create one to get started.</p>
+                  )}
+                  {knowledgeSpaces.map(space => (
+                    <div key={space.id}>
+                      <button onClick={() => { setSelectedSpace(space); setSelectedArticle(null); setEditingArticle(false); setKnowledgeTab('space'); fetchKnowledgeArticles(space.id); }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors group flex items-center justify-between ${selectedSpace?.id === space.id ? 'bg-brand-navy/10 text-brand-navy' : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700'}`}>
+                        <span className="flex items-center gap-1.5">
+                          <span>{space.icon || '📁'}</span>
+                          <span className="truncate">{space.name}</span>
+                        </span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${space.visibility === 'PUBLIC' ? 'bg-semantic-success-surface text-semantic-success' : space.visibility === 'PRIVATE' ? 'bg-semantic-danger-surface text-semantic-danger' : 'bg-brand-navy/10 text-brand-navy'}`}>
+                          {space.visibility || 'TEAM'}
+                        </span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Main content area */}
+              <div className="flex-1 flex overflow-hidden">
+                {/* Article list panel */}
+                {!selectedArticle && (
+                  <div className="flex-1 overflow-y-auto p-6">
+                    {knowledgeTab === 'search' ? (
+                      <div>
+                        <div className="flex items-center gap-3 mb-4">
+                          <h1 className="text-xl font-bold text-brand-navy dark:text-white">Search Results</h1>
+                          <span className="text-sm text-neutral-400">{knowledgeSearchResults.length} results for "{knowledgeSearch}"</span>
+                          <button onClick={() => { setKnowledgeTab('spaces'); setKnowledgeSearch(''); setKnowledgeSearchResults([]); }} className="text-xs text-neutral-400 hover:text-neutral-700 ml-auto">Clear</button>
+                        </div>
+                        {knowledgeSearchResults.length === 0 ? (
+                          <EmptyState icon="🔍" title="No results found" subtitle={`No articles match "${knowledgeSearch}". Try different keywords.`} />
+                        ) : (
+                          <div className="space-y-2">
+                            {knowledgeSearchResults.map(art => (
+                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setShowVersionHistory(false); }}
+                                className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{art.title}</p>
+                                    <p className="text-xs text-neutral-400 mt-0.5 line-clamp-2">{(art.content || '').substring(0, 120)}{(art.content || '').length > 120 ? '...' : ''}</p>
+                                  </div>
+                                  <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${art.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : art.status === 'DRAFT' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500' : 'bg-semantic-warning-surface text-semantic-warning'}`}>{art.status || 'DRAFT'}</span>
+                                    <span className="text-[10px] text-neutral-400 font-mono">{art.templateType || 'KB'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (selectedSpace || knowledgeTab === 'all') ? (
+                      <div>
+                        <div className="flex items-center justify-between mb-5">
+                          <div className="flex items-center gap-3">
+                            {selectedSpace && <button onClick={() => { setSelectedSpace(null); setKnowledgeTab('spaces'); }} className="text-xs text-neutral-400 hover:text-brand-navy transition-colors">← Spaces</button>}
+                            <h1 className="text-xl font-bold text-brand-navy dark:text-white">{selectedSpace ? selectedSpace.name : 'All Articles'}</h1>
+                            {selectedSpace?.description && <p className="text-xs text-neutral-400">{selectedSpace.description}</p>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {selectedSpace && can('manage_projects') && (
+                              <button onClick={() => deleteKnowledgeSpace(selectedSpace.id)} className="text-xs text-semantic-danger hover:underline">Delete Space</button>
+                            )}
+                            {selectedSpace && (
+                              <Button variant="action" onClick={() => { setIsArticleFormOpen(true); setArticleForm({ title: '', content: '', templateType: 'KB', status: 'DRAFT' }); }}>+ New Article</Button>
+                            )}
+                          </div>
+                        </div>
+                        {knowledgeArticles.length === 0 ? (
+                          <EmptyState icon="📄" title={selectedSpace ? `No articles in ${selectedSpace.name}` : 'No articles'} subtitle="Create your first article to capture knowledge for the team."
+                            action={selectedSpace && <Button variant="action" onClick={() => setIsArticleFormOpen(true)}>Write Article</Button>} />
+                        ) : (
+                          <div className="space-y-2">
+                            {knowledgeArticles.map(art => (
+                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setShowVersionHistory(false); fetchArticleVersions(art.id); }}
+                                className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{art.title}</p>
+                                    </div>
+                                    <p className="text-xs text-neutral-400 line-clamp-2">{(art.content || '').substring(0, 120)}{(art.content || '').length > 120 ? '...' : ''}</p>
+                                    <div className="flex items-center gap-3 mt-2">
+                                      <span className="text-[10px] text-neutral-400">v{art.versionNumber || 1} · {art.authorName || 'Unknown'}</span>
+                                      {art.updatedAt && <span className="text-[10px] text-neutral-400">{new Date(art.updatedAt).toLocaleDateString()}</span>}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${art.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : art.status === 'DRAFT' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500' : art.status === 'ARCHIVED' ? 'bg-neutral-200 dark:bg-neutral-600 text-neutral-500' : 'bg-semantic-warning-surface text-semantic-warning'}`}>{art.status || 'DRAFT'}</span>
+                                    <span className="text-[10px] bg-brand-navy/10 text-brand-navy px-1.5 py-0.5 rounded font-mono">{art.templateType || 'KB'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <EmptyState icon="📚" title="Select a space" subtitle="Choose a knowledge space from the left sidebar to browse articles, or search for specific content." />
+                    )}
+                  </div>
+                )}
+
+                {/* Article detail / editor panel */}
+                {selectedArticle && (
+                  <div className="flex-1 overflow-y-auto flex flex-col">
+                    {/* Article header */}
+                    <div className="border-b border-neutral-200 dark:border-neutral-700 px-6 py-4 flex items-center justify-between bg-white dark:bg-neutral-800 flex-shrink-0">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <button onClick={() => { setSelectedArticle(null); setEditingArticle(false); setShowVersionHistory(false); }} className="text-xs text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0">←</button>
+                        <div className="min-w-0">
+                          <h1 className="font-bold text-lg text-neutral-900 dark:text-white truncate">{selectedArticle.title}</h1>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${selectedArticle.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : selectedArticle.status === 'DRAFT' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500' : 'bg-neutral-200 dark:bg-neutral-600 text-neutral-500'}`}>{selectedArticle.status || 'DRAFT'}</span>
+                            <span className="text-[10px] font-mono text-neutral-400">{selectedArticle.templateType || 'KB'}</span>
+                            <span className="text-[10px] text-neutral-400">v{selectedArticle.versionNumber || 1}</span>
+                            {selectedArticle.updatedAt && <span className="text-[10px] text-neutral-400">Updated {new Date(selectedArticle.updatedAt).toLocaleDateString()}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button onClick={() => setShowVersionHistory(v => !v)} className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${showVersionHistory ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 text-neutral-600 hover:border-brand-navy'}`}>
+                          History ({articleVersions.length})
+                        </button>
+                        {selectedArticle.status !== 'PUBLISHED' && (
+                          <Button variant="action" onClick={() => publishArticle(selectedArticle.id)}>Publish</Button>
+                        )}
+                        <Button variant="secondary" onClick={() => setEditingArticle(e => !e)}>
+                          {editingArticle ? 'View' : 'Edit'}
+                        </Button>
+                        <button onClick={() => deleteArticle(selectedArticle.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-1 overflow-hidden">
+                      {/* Content area */}
+                      <div className="flex-1 overflow-y-auto p-6">
+                        {editingArticle ? (
+                          <div className="space-y-4">
+                            <div>
+                              <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Title</label>
+                              <input className="input text-lg font-bold w-full" value={selectedArticle.title || ''}
+                                onChange={e => setSelectedArticle(a => ({ ...a, title: e.target.value }))}
+                                onBlur={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content })} />
+                            </div>
+                            <div>
+                              <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Template Type</label>
+                              <select className="input text-sm w-48" value={selectedArticle.templateType || 'KB'}
+                                onChange={e => { const t = e.target.value; setSelectedArticle(a => ({ ...a, templateType: t })); updateArticle(selectedArticle.id, { templateType: t }); }}>
+                                {['KB','RUNBOOK','ADR','POSTMORTEM','ONBOARDING','TROUBLESHOOTING','CUSTOM'].map(t => <option key={t} value={t}>{t}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Content (Markdown supported)</label>
+                              <textarea rows={20} className="input resize-none font-mono text-sm w-full"
+                                value={selectedArticle.content || ''}
+                                onChange={e => setSelectedArticle(a => ({ ...a, content: e.target.value }))}
+                                onBlur={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, templateType: selectedArticle.templateType })}
+                                placeholder="Write your article content here... Supports Markdown formatting." />
+                            </div>
+                            <Button variant="action" onClick={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, templateType: selectedArticle.templateType })}>
+                              Save Changes
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="prose prose-sm max-w-none dark:prose-invert">
+                            {selectedArticle.content ? (
+                              <div className="text-neutral-800 dark:text-neutral-200 leading-relaxed whitespace-pre-wrap text-sm"
+                                dangerouslySetInnerHTML={{ __html: renderMd(selectedArticle.content) }} />
+                            ) : (
+                              <EmptyState icon="📝" title="No content yet" subtitle="Click Edit to start writing." action={<Button variant="action" onClick={() => setEditingArticle(true)}>Start Writing</Button>} />
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Version history sidebar */}
+                      {showVersionHistory && (
+                        <div className="w-56 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
+                          <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Version History</h3>
+                          {articleVersions.length === 0 ? (
+                            <p className="text-xs text-neutral-400">No versions saved yet.</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {articleVersions.map(v => (
+                                <div key={v.id} className="bg-white dark:bg-neutral-800 rounded-lg p-3 border border-neutral-200 dark:border-neutral-700">
+                                  <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">Version {v.versionNumber}</p>
+                                  <p className="text-[10px] text-neutral-400 mt-0.5">{v.savedBy || 'Unknown'}</p>
+                                  <p className="text-[10px] text-neutral-400">{v.savedAt ? new Date(v.savedAt).toLocaleString() : '—'}</p>
+                                  <button onClick={() => setSelectedArticle(a => ({ ...a, content: v.content }))}
+                                    className="text-[10px] text-brand-navy hover:underline mt-1">Restore</button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
         </div>
       </main>
 
@@ -3447,11 +3972,12 @@ export default function App() {
           {/* Detail panel tabs */}
           <div className="flex border-b border-neutral-200 dark:border-neutral-700 px-5">
             {[
-              { key: 'details',     label: 'Details' },
-              { key: 'comments',    label: `Comments ${comments.length > 0 ? `(${comments.length})` : ''}` },
-              { key: 'links',       label: `Links ${links.length > 0 ? `(${links.length})` : ''}` },
-              { key: 'attachments', label: `Files ${attachments.length > 0 ? `(${attachments.length})` : ''}` },
-              { key: 'activity',    label: 'Activity' },
+              { key: 'details',      label: 'Details' },
+              { key: 'custom-fields', label: 'Custom Fields' },
+              { key: 'comments',     label: `Comments ${comments.length > 0 ? `(${comments.length})` : ''}` },
+              { key: 'links',        label: `Links ${links.length > 0 ? `(${links.length})` : ''}` },
+              { key: 'attachments',  label: `Files ${attachments.length > 0 ? `(${attachments.length})` : ''}` },
+              { key: 'activity',     label: 'Activity' },
             ].map(t => (
               <button key={t.key} onClick={() => setDetailTab(t.key)}
                 className={`text-xs font-medium px-3 py-2.5 border-b-2 transition-colors whitespace-nowrap ${detailTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
@@ -3582,6 +4108,92 @@ export default function App() {
             </div>
 
             </> /* end details tab */}
+
+            {/* CUSTOM FIELDS TAB */}
+            {detailTab === 'custom-fields' && (
+              <div>
+                {fieldDefs.length === 0 ? (
+                  <EmptyState icon="📋" title="No custom fields defined" subtitle="Go to Workflows & Fields settings to define custom fields for your work items." />
+                ) : (
+                  <div className="space-y-3">
+                    <label className="block text-xs text-neutral-400 mb-2 font-medium uppercase tracking-wider">Custom Fields</label>
+                    {fieldDefs.map(fd => (
+                      <div key={fd.id} className="flex items-center gap-2">
+                        <label className="text-xs text-neutral-500 w-32 flex-shrink-0">{fd.name}{fd.required && <span className="text-semantic-danger ml-0.5">*</span>}</label>
+                        {(fd.fieldType === 'TEXT' || fd.fieldType === 'EMAIL' || fd.fieldType === 'URL' || fd.fieldType === 'PHONE') && (
+                          <input type={fd.fieldType === 'EMAIL' ? 'email' : fd.fieldType === 'URL' ? 'url' : 'text'}
+                            className="input flex-1 text-sm py-1"
+                            value={fieldValues[fd.id] || ''}
+                            onChange={e => setFieldValues(v => ({ ...v, [fd.id]: e.target.value }))}
+                            onBlur={e => saveFieldValue(selectedItem.id, fd.id, e.target.value)}
+                            placeholder={fd.description || fd.name} />
+                        )}
+                        {fd.fieldType === 'TEXTAREA' && (
+                          <textarea rows={2} className="input flex-1 text-sm resize-none"
+                            value={fieldValues[fd.id] || ''}
+                            onChange={e => setFieldValues(v => ({ ...v, [fd.id]: e.target.value }))}
+                            onBlur={e => saveFieldValue(selectedItem.id, fd.id, e.target.value)}
+                            placeholder={fd.description || fd.name} />
+                        )}
+                        {fd.fieldType === 'NUMBER' && (
+                          <input type="number" className="input flex-1 text-sm py-1"
+                            value={fieldValues[fd.id] || ''}
+                            onChange={e => setFieldValues(v => ({ ...v, [fd.id]: e.target.value }))}
+                            onBlur={e => saveFieldValue(selectedItem.id, fd.id, e.target.value)} />
+                        )}
+                        {fd.fieldType === 'DATE' && (
+                          <input type="date" className="input flex-1 text-sm py-1"
+                            value={fieldValues[fd.id] || ''}
+                            onChange={e => { setFieldValues(v => ({ ...v, [fd.id]: e.target.value })); saveFieldValue(selectedItem.id, fd.id, e.target.value); }} />
+                        )}
+                        {fd.fieldType === 'CHECKBOX' && (
+                          <input type="checkbox" className="w-4 h-4 accent-brand-navy"
+                            checked={fieldValues[fd.id] === 'true' || fieldValues[fd.id] === true}
+                            onChange={e => { const v = String(e.target.checked); setFieldValues(fv => ({ ...fv, [fd.id]: v })); saveFieldValue(selectedItem.id, fd.id, v); }} />
+                        )}
+                        {fd.fieldType === 'SELECT' && (
+                          <select className="input flex-1 text-sm py-1"
+                            value={fieldValues[fd.id] || ''}
+                            onChange={e => { setFieldValues(v => ({ ...v, [fd.id]: e.target.value })); saveFieldValue(selectedItem.id, fd.id, e.target.value); }}>
+                            <option value="">— Select —</option>
+                            {(fd.options || fd.config?.options || []).map(opt => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        )}
+                        {fd.fieldType === 'USER' && (
+                          <select className="input flex-1 text-sm py-1"
+                            value={fieldValues[fd.id] || ''}
+                            onChange={e => { setFieldValues(v => ({ ...v, [fd.id]: e.target.value })); saveFieldValue(selectedItem.id, fd.id, e.target.value); }}>
+                            <option value="">— Select user —</option>
+                            {users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
+                          </select>
+                        )}
+                        {fd.fieldType === 'RATING' && (
+                          <div className="flex gap-1">
+                            {[1,2,3,4,5].map(n => (
+                              <button key={n} onClick={() => { setFieldValues(v => ({ ...v, [fd.id]: String(n) })); saveFieldValue(selectedItem.id, fd.id, String(n)); }}
+                                className={`w-6 h-6 rounded text-xs font-bold transition-colors ${Number(fieldValues[fd.id]) >= n ? 'bg-brand-amber text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-400'}`}>
+                                {n}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {fd.fieldType === 'PROGRESS' && (
+                          <div className="flex items-center gap-2 flex-1">
+                            <input type="range" min={0} max={100} className="flex-1"
+                              value={fieldValues[fd.id] || 0}
+                              onChange={e => setFieldValues(v => ({ ...v, [fd.id]: e.target.value }))}
+                              onMouseUp={e => saveFieldValue(selectedItem.id, fd.id, e.target.value)} />
+                            <span className="text-xs text-neutral-500 w-8">{fieldValues[fd.id] || 0}%</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* COMMENTS TAB */}
             {detailTab === 'comments' && (
@@ -3849,6 +4461,58 @@ export default function App() {
             )}
           </div>
         </div>
+      )}
+
+      {/* CREATE KNOWLEDGE SPACE MODAL */}
+      {isSpaceFormOpen && (
+        <Modal title="New Knowledge Space" onClose={() => setIsSpaceFormOpen(false)}>
+          <div className="space-y-3">
+            <Field label="Space Name *">
+              <input type="text" className="input" placeholder="e.g. Engineering, Support, Onboarding" value={spaceForm.name}
+                onChange={e => setSpaceForm(f => ({ ...f, name: e.target.value }))} autoFocus />
+            </Field>
+            <Field label="Description">
+              <textarea rows={2} className="input resize-none" placeholder="What kind of knowledge does this space contain?"
+                value={spaceForm.description} onChange={e => setSpaceForm(f => ({ ...f, description: e.target.value }))} />
+            </Field>
+            <Field label="Visibility">
+              <select className="input" value={spaceForm.visibility} onChange={e => setSpaceForm(f => ({ ...f, visibility: e.target.value }))}>
+                <option value="PUBLIC">Public — visible to everyone</option>
+                <option value="TEAM">Team — workspace members only</option>
+                <option value="PRIVATE">Private — only invited members</option>
+              </select>
+            </Field>
+          </div>
+          <div className="flex justify-end gap-3 mt-5">
+            <Button variant="ghost" onClick={() => setIsSpaceFormOpen(false)}>Cancel</Button>
+            <Button variant="action" onClick={createKnowledgeSpace}>Create Space</Button>
+          </div>
+        </Modal>
+      )}
+
+      {/* CREATE ARTICLE MODAL */}
+      {isArticleFormOpen && (
+        <Modal title="New Article" onClose={() => setIsArticleFormOpen(false)}>
+          <div className="space-y-3">
+            <Field label="Title *">
+              <input type="text" className="input" placeholder="Article title" value={articleForm.title}
+                onChange={e => setArticleForm(f => ({ ...f, title: e.target.value }))} autoFocus />
+            </Field>
+            <Field label="Template Type">
+              <select className="input" value={articleForm.templateType} onChange={e => setArticleForm(f => ({ ...f, templateType: e.target.value }))}>
+                {['KB','RUNBOOK','ADR','POSTMORTEM','ONBOARDING','TROUBLESHOOTING','CUSTOM'].map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </Field>
+            <Field label="Initial Content (optional)">
+              <textarea rows={4} className="input resize-none font-mono text-sm" placeholder="Start writing... (Markdown supported)"
+                value={articleForm.content} onChange={e => setArticleForm(f => ({ ...f, content: e.target.value }))} />
+            </Field>
+          </div>
+          <div className="flex justify-end gap-3 mt-5">
+            <Button variant="ghost" onClick={() => setIsArticleFormOpen(false)}>Cancel</Button>
+            <Button variant="action" onClick={createArticle}>Create Article</Button>
+          </div>
+        </Modal>
       )}
 
       {/* TOAST NOTIFICATION */}

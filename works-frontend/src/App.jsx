@@ -3,6 +3,7 @@ import { Button } from '@/components/works/button';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
+import { api } from '@/lib/apiClient';
 
 const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
@@ -187,15 +188,8 @@ export default function App() {
     ...extra
   });
 
-  // Shared fetch wrapper with error handling
-  const apiFetch = async (url, options = {}) => {
-    const res = await fetch(url, { ...options, headers: { ...headers(), ...(options.headers || {}) } });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-      throw new Error(err.error || `Request failed: ${res.status}`);
-    }
-    return res.json();
-  };
+  // Shared request wrapper (throws on error, returns JSON) — delegates to the single apiClient.
+  const apiFetch = (url, options = {}) => api.send(url, options);
 
   useEffect(() => {
     if (currentUser) {
@@ -219,10 +213,10 @@ export default function App() {
     setTagInput((selectedItem.tags || []).join(', '));
     setActivityEventFilter('');
     const h = headers();
-    fetch(`${API}/work-items/${id}/comments`, { headers: h }).then(r => r.json()).then(d => setComments(Array.isArray(d) ? d : [])).catch(() => {});
-    fetch(`${API}/work-items/${id}/activity`, { headers: h }).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(() => {});
-    fetch(`${API}/work-items/${id}/links`, { headers: h }).then(r => r.json()).then(d => setLinks(Array.isArray(d) ? d : [])).catch(() => {});
-    fetch(`${API}/work-items/${id}/attachments`, { headers: h }).then(r => r.json()).then(d => setAttachments(Array.isArray(d) ? d : [])).catch(() => {});
+    api.raw(`/work-items/${id}/comments`, { headers: h }).then(r => r.json()).then(d => setComments(Array.isArray(d) ? d : [])).catch(() => {});
+    api.raw(`/work-items/${id}/activity`, { headers: h }).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(() => {});
+    api.raw(`/work-items/${id}/links`, { headers: h }).then(r => r.json()).then(d => setLinks(Array.isArray(d) ? d : [])).catch(() => {});
+    api.raw(`/work-items/${id}/attachments`, { headers: h }).then(r => r.json()).then(d => setAttachments(Array.isArray(d) ? d : [])).catch(() => {});
     setDetailTab('details');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedItem?.id]);
@@ -245,7 +239,7 @@ export default function App() {
       return updated;
     });
     // Load children
-    fetch(`${API}/work-items?parentId=${selectedItem.id}`)
+    api.raw(`/work-items?parentId=${selectedItem.id}`)
       .then(r => r.json())
       .then(d => setItemChildren((Array.isArray(d) ? d : []).filter(i => i.parentId === selectedItem.id)))
       .catch(() => setItemChildren([]));
@@ -258,7 +252,7 @@ export default function App() {
   };
 
   function fetchUserRole() {
-    fetch(`${API}/rbac/me`, { headers: headers() })
+    api.raw(`/rbac/me`, { headers: headers() })
       .then(r => r.json()).then(d => setUserRole({
         role: d.role || 'MEMBER',
         tier: d.tier || 2,
@@ -269,9 +263,9 @@ export default function App() {
   function fetchAll() {
     setLoading(true);
     Promise.all([
-      fetch(`${API}/work-items`, { headers: headers() }).then(r => r.json()),
-      fetch(`${API}/projects`, { headers: headers() }).then(r => r.json()),
-      fetch(`${API}/users`, { headers: headers() }).then(r => r.json()),
+      api.raw(`/work-items`, { headers: headers() }).then(r => r.json()),
+      api.raw(`/projects`, { headers: headers() }).then(r => r.json()),
+      api.raw(`/users`, { headers: headers() }).then(r => r.json()),
     ]).then(([items, projs, usrs]) => {
       setWorkItems(Array.isArray(items) ? items : []);
       setProjects(Array.isArray(projs) ? projs : []);
@@ -288,19 +282,19 @@ export default function App() {
 
   function fetchUnreadCount() {
     if (!currentUser) return;
-    fetch(`${API}/notifications/unread-count?userId=${currentUser.id}`)
+    api.raw(`/notifications/unread-count?userId=${currentUser.id}`)
       .then(r => r.json()).then(d => setUnreadCount(d.count || 0)).catch(() => {});
   }
 
   function fetchNotifications() {
-    fetch(`${API}/notifications?userId=${currentUser.id}`)
+    api.raw(`/notifications?userId=${currentUser.id}`)
       .then(r => r.json()).then(d => setNotifications(Array.isArray(d) ? d : [])).catch(() => {});
   }
 
   // AUTH
   const handleAuthSubmit = (e) => {
     e.preventDefault(); setAuthError('');
-    fetch(`${API}/auth${authMode === 'login' ? '/login' : '/signup'}`, {
+    api.raw(`/auth${authMode === 'login' ? '/login' : '/signup'}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(authForm)
     }).then(async res => {
@@ -332,7 +326,7 @@ export default function App() {
   };
 
   const handleVerifyEmail = (token) => {
-    fetch(`${API}/auth/verify?token=${token}`)
+    api.raw(`/auth/verify?token=${token}`)
       .then(async res => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Verification failed');
@@ -348,7 +342,7 @@ export default function App() {
 
   const handleMfaVerify = () => {
     setMfaError('');
-    fetch(`${API}/auth/mfa/verify`, {
+    api.raw(`/auth/mfa/verify`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: mfaChallenge.userId, totp: mfaCode })
     }).then(async res => {
@@ -363,14 +357,14 @@ export default function App() {
   };
 
   const handleMfaEnroll = () => {
-    fetch(`${API}/auth/mfa/enroll`, {
+    api.raw(`/auth/mfa/enroll`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'X-User-Id': currentUser?.id }
     }).then(r => r.json()).then(d => { setMfaSetup(d); setMfaSetupCode(''); setMfaSetupMsg(''); })
       .catch(() => showToast('MFA enroll failed', 'error'));
   };
 
   const handleMfaConfirm = () => {
-    fetch(`${API}/auth/mfa/confirm`, {
+    api.raw(`/auth/mfa/confirm`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'X-User-Id': currentUser?.id },
       body: JSON.stringify({ totp: mfaSetupCode })
     }).then(r => r.json()).then(d => {
@@ -381,7 +375,7 @@ export default function App() {
 
   const handleForgotPassword = (e) => {
     e.preventDefault();
-    fetch(`${API}/auth/forgot-password`, {
+    api.raw(`/auth/forgot-password`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: forgotEmail })
     }).then(r => r.json()).then(d => setForgotMsg(d.message)).catch(() => setForgotMsg('Error. Please try again.'));
@@ -484,7 +478,7 @@ export default function App() {
   // COMMENTS with @mention + internal flag
   const handleAddComment = () => {
     if (!newComment.trim()) return;
-    fetch(`${API}/work-items/${selectedItem.id}/comments`, {
+    api.raw(`/work-items/${selectedItem.id}/comments`, {
       method: 'POST', headers: headers(),
       body: JSON.stringify({ body: newComment, isInternal: commentInternal })
     }).then(r => r.json()).then(c => {
@@ -517,7 +511,7 @@ export default function App() {
       return;
     }
     const t = setTimeout(() => {
-      fetch(`${API}/work-items/search?q=${encodeURIComponent(searchQuery)}`)
+      api.raw(`/work-items/search?q=${encodeURIComponent(searchQuery)}`)
         .then(r => r.json()).then(d => setSearchResults(Array.isArray(d) ? d : [])).catch(() => {});
     }, 300);
     return () => clearTimeout(t);
@@ -538,7 +532,7 @@ export default function App() {
 
   // WORKSPACE
   const fetchMembers = () => {
-    fetch(`${API}/workspaces/WS-001/members`)
+    api.raw(`/workspaces/WS-001/members`)
       .then(r => r.json()).then(d => setWorkspaceMembers(Array.isArray(d) ? d : [])).catch(() => {});
   };
 
@@ -550,13 +544,13 @@ export default function App() {
   };
 
   const handleRemoveMember = (userId) => {
-    fetch(`${API}/workspaces/WS-001/members/${userId}`, { method: 'DELETE', headers: headers() })
+    api.raw(`/workspaces/WS-001/members/${userId}`, { method: 'DELETE', headers: headers() })
       .then(() => fetchMembers());
   };
 
   // NOTIFICATION PREFS
   function fetchNotifPrefs() {
-    fetch(`${API}/notification-preferences`, { headers: headers() })
+    api.raw(`/notification-preferences`, { headers: headers() })
       .then(r => r.json()).then(d => setNotifPrefs({
         notifyAssign:  d.notify_assign  ?? true,
         notifyComment: d.notify_comment ?? true,
@@ -565,13 +559,13 @@ export default function App() {
       })).catch(() => {});
   }
   function saveNotifPrefs(prefs) {
-    fetch(`${API}/notification-preferences`, { method: 'PUT', headers: headers(), body: JSON.stringify(prefs) })
+    api.raw(`/notification-preferences`, { method: 'PUT', headers: headers(), body: JSON.stringify(prefs) })
       .then(() => setNotifPrefs(prefs));
   }
 
   // SPRINT FUNCTIONS
   function fetchSprints(projectId = 'PROJ-WORKS') {
-    fetch(`${API}/sprints?projectId=${projectId}`, { headers: headers() })
+    api.raw(`/sprints?projectId=${projectId}`, { headers: headers() })
       .then(r => r.json()).then(d => {
         const list = Array.isArray(d) ? d : [];
         setSprints(list);
@@ -580,31 +574,31 @@ export default function App() {
       }).catch(() => {});
   }
   function fetchSprintItems(sprintId) {
-    fetch(`${API}/sprints/${sprintId}/items`, { headers: headers() })
+    api.raw(`/sprints/${sprintId}/items`, { headers: headers() })
       .then(r => r.json()).then(d => setSprintItems(Array.isArray(d) ? d : [])).catch(() => {});
   }
   function fetchBacklog() {
-    fetch(`${API}/work-items/backlog`, { headers: headers() })
+    api.raw(`/work-items/backlog`, { headers: headers() })
       .then(r => r.json()).then(d => setBacklogItems(Array.isArray(d) ? d : [])).catch(() => {});
   }
   function fetchSprintReport(sprintId) {
-    fetch(`${API}/sprints/${sprintId}/report`, { headers: headers() })
+    api.raw(`/sprints/${sprintId}/report`, { headers: headers() })
       .then(r => r.json()).then(setSprintReport).catch(() => {});
-    fetch(`${API}/sprints/${sprintId}/scope-changes`, { headers: headers() })
+    api.raw(`/sprints/${sprintId}/scope-changes`, { headers: headers() })
       .then(r => r.json()).then(d => setScopeChanges(Array.isArray(d) ? d : [])).catch(() => {});
   }
   function fetchSavedFilters() {
-    fetch(`${API}/saved-filters`, { headers: headers() })
+    api.raw(`/saved-filters`, { headers: headers() })
       .then(r => r.json()).then(d => setSavedFilters(Array.isArray(d) ? d : [])).catch(() => {});
   }
 
   function fetchVelocityData() {
-    fetch(`${API}/sprints/velocity`, { headers: headers() })
+    api.raw(`/sprints/velocity`, { headers: headers() })
       .then(r => r.json()).then(d => setVelocityData(Array.isArray(d) ? d : [])).catch(() => {});
   }
 
   function fetchBranding() {
-    fetch(`${API}/workspaces/WS-001/branding`, { headers: headers() })
+    api.raw(`/workspaces/WS-001/branding`, { headers: headers() })
       .then(r => r.json()).then(d => {
         setBranding(d);
         setBrandingColor(d.primaryColor || '#E94E1B');
@@ -615,14 +609,14 @@ export default function App() {
   }
 
   function saveBranding() {
-    fetch(`${API}/workspaces/WS-001/branding`, {
+    api.raw(`/workspaces/WS-001/branding`, {
       method: 'PUT', headers: headers(),
       body: JSON.stringify({ primaryColor: brandingColor, description: brandingDesc })
     }).then(r => r.json()).then(d => { setBranding(d); showToast('Branding saved'); }).catch(() => {});
   }
 
   function fetchTrash() {
-    fetch(`${API}/work-items/trash`, { headers: headers() })
+    api.raw(`/work-items/trash`, { headers: headers() })
       .then(r => r.json()).then(d => setTrashItems(Array.isArray(d) ? d : [])).catch(() => {});
   }
 
@@ -645,7 +639,7 @@ export default function App() {
   function toggleStar(item) {
     const isStarred = item.starred;
     const method = isStarred ? 'DELETE' : 'POST';
-    fetch(`${API}/work-items/${item.id}/star`, { method, headers: headers() })
+    api.raw(`/work-items/${item.id}/star`, { method, headers: headers() })
       .then(r => r.json()).then(() => {
         setWorkItems(prev => prev.map(i => i.id === item.id ? { ...i, starred: !isStarred } : i));
         if (selectedItem?.id === item.id) setSelectedItem(prev => ({ ...prev, starred: !isStarred }));
@@ -654,7 +648,7 @@ export default function App() {
 
   function fetchProjectMembers(projectId) {
     setSelectedProjectId(projectId);
-    fetch(`${API}/workspaces/WS-001/projects/${projectId}/members`, { headers: headers() })
+    api.raw(`/workspaces/WS-001/projects/${projectId}/members`, { headers: headers() })
       .then(r => r.json()).then(d => setProjectMembers(Array.isArray(d) ? d : [])).catch(() => {});
   }
 
@@ -671,7 +665,7 @@ export default function App() {
 
   function addReply(workItemId, parentId) {
     if (!replyBody.trim()) return;
-    fetch(`${API}/work-items/${workItemId}/comments`, {
+    api.raw(`/work-items/${workItemId}/comments`, {
       method: 'POST', headers: headers(),
       body: JSON.stringify({ body: replyBody, isInternal: false, parentId })
     }).then(r => r.json()).then(c => {
@@ -683,7 +677,7 @@ export default function App() {
   }
 
   const handleCreateSprint = () => {
-    fetch(`${API}/sprints`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newSprint, projectId: 'PROJ-WORKS' }) })
+    api.raw(`/sprints`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newSprint, projectId: 'PROJ-WORKS' }) })
       .then(r => r.json()).then(s => {
         setSprints(prev => [s, ...prev]);
         setNewSprint({ name: '', goal: '', startDate: '', endDate: '', capacity: 40 });
@@ -694,18 +688,18 @@ export default function App() {
   const handleSprintStatusChange = (sprintId, newStatus) => {
     const sprint = sprints.find(s => s.id === sprintId);
     if (!sprint) return;
-    fetch(`${API}/sprints/${sprintId}`, { method: 'PUT', headers: headers(), body: JSON.stringify({ ...sprint, status: newStatus }) })
+    api.raw(`/sprints/${sprintId}`, { method: 'PUT', headers: headers(), body: JSON.stringify({ ...sprint, status: newStatus }) })
       .then(r => r.json()).then(updated => {
         setSprints(prev => prev.map(s => s.id === updated.id ? updated : s));
         if (activeSprint?.id === updated.id) setActiveSprint(updated);
       });
   };
   const handleMoveToSprint = (itemId, sprintId) => {
-    fetch(`${API}/sprints/${sprintId}/items/${itemId}`, { method: 'POST', headers: headers() })
+    api.raw(`/sprints/${sprintId}/items/${itemId}`, { method: 'POST', headers: headers() })
       .then(() => { fetchBacklog(); if (activeSprint) fetchSprintItems(activeSprint.id); });
   };
   const handleMoveToBacklog = (itemId, sprintId) => {
-    fetch(`${API}/sprints/${sprintId}/items/${itemId}`, { method: 'DELETE', headers: headers() })
+    api.raw(`/sprints/${sprintId}/items/${itemId}`, { method: 'DELETE', headers: headers() })
       .then(() => { fetchBacklog(); fetchSprintItems(sprintId); });
   };
 
@@ -723,7 +717,7 @@ export default function App() {
     const reordered = items.map((item, idx) => ({ ...item, backlogOrder: idx }));
     setBacklogItems(reordered);
     setDragOverId(null);
-    fetch(`${API}/work-items/backlog/reorder`, {
+    api.raw(`/work-items/backlog/reorder`, {
       method: 'PUT', headers: headers(),
       body: JSON.stringify(reordered.map((i, idx) => ({ id: i.id, order: idx })))
     }).catch(() => {});
@@ -735,12 +729,12 @@ export default function App() {
     if (!item) return;
     const updated = { ...item, [field]: value };
     setBacklogItems(prev => prev.map(i => i.id === itemId ? updated : i));
-    fetch(`${API}/work-items/${itemId}`, { method: 'PUT', headers: headers(), body: JSON.stringify(updated) }).catch(() => {});
+    api.raw(`/work-items/${itemId}`, { method: 'PUT', headers: headers(), body: JSON.stringify(updated) }).catch(() => {});
   };
 
   const handleSaveFilter = () => {
     if (!saveFilterName.trim()) return;
-    fetch(`${API}/saved-filters`, {
+    api.raw(`/saved-filters`, {
       method: 'POST', headers: headers(),
       body: JSON.stringify({ name: saveFilterName, filterJson: JSON.stringify(activeFilter), isShared: false })
     }).then(r => r.json()).then(f => { setSavedFilters(prev => [...prev, f]); setSaveFilterName(''); setShowSaveFilter(false); });
@@ -758,12 +752,12 @@ export default function App() {
   // LINKS
   const handleAddLink = () => {
     if (!newLink.targetId) return;
-    fetch(`${API}/work-items/${selectedItem.id}/links`, {
+    api.raw(`/work-items/${selectedItem.id}/links`, {
       method: 'POST', headers: headers(), body: JSON.stringify(newLink)
     }).then(r => r.json()).then(l => { setLinks(prev => [...prev, l]); setNewLink({ targetId: '', linkType: 'RELATES_TO' }); });
   };
   const handleDeleteLink = (linkId) => {
-    fetch(`${API}/work-items/${selectedItem.id}/links/${linkId}`, { method: 'DELETE', headers: headers() })
+    api.raw(`/work-items/${selectedItem.id}/links/${linkId}`, { method: 'DELETE', headers: headers() })
       .then(() => setLinks(prev => prev.filter(l => l.id !== linkId)));
   };
 
@@ -776,7 +770,7 @@ export default function App() {
       showToast(`File too large — max ${MAX_UPLOAD_MB} MB`, 'error'); return;
     }
     const fd = new FormData(); fd.append('file', file);
-    fetch(`${API}/work-items/${selectedItem.id}/attachments`, {
+    api.raw(`/work-items/${selectedItem.id}/attachments`, {
       method: 'POST',
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       body: fd
@@ -795,13 +789,13 @@ export default function App() {
     }).then(a => { if (a) setAttachments(prev => [a, ...prev]); });
   };
   const handleDeleteAttachment = (attId) => {
-    fetch(`${API}/work-items/${selectedItem.id}/attachments/${attId}`, { method: 'DELETE', headers: headers() })
+    api.raw(`/work-items/${selectedItem.id}/attachments/${attId}`, { method: 'DELETE', headers: headers() })
       .then(() => setAttachments(prev => prev.filter(a => a.id !== attId)));
   };
 
   // PROJECT ARCHIVE
   const handleArchiveProject = (projectId) => {
-    fetch(`${API}/projects/${projectId}/archive`, { method: 'PUT', headers: headers() })
+    api.raw(`/projects/${projectId}/archive`, { method: 'PUT', headers: headers() })
       .then(r => r.json()).then(p => setProjects(prev => prev.map(x => x.id === p.id ? p : x)));
   };
 
@@ -1473,7 +1467,7 @@ export default function App() {
                 <h1 className="text-2xl font-bold text-brand-navy">Notifications</h1>
                 {unreadCount > 0 && (
                   <button onClick={() => {
-                    fetch(`${API}/notifications/mark-all-read?userId=${currentUser.id}`, { method: 'PUT' })
+                    api.raw(`/notifications/mark-all-read?userId=${currentUser.id}`, { method: 'PUT' })
                       .then(() => { fetchNotifications(); setUnreadCount(0); });
                   }} className="text-sm text-brand-navy-tint hover:underline">Mark all as read</button>
                 )}
@@ -1493,7 +1487,7 @@ export default function App() {
                         </div>
                         {!n.read && (
                           <button onClick={() => {
-                            fetch(`${API}/notifications/${n.id}/read`, { method: 'PUT' })
+                            api.raw(`/notifications/${n.id}/read`, { method: 'PUT' })
                               .then(() => { fetchNotifications(); fetchUnreadCount(); });
                           }} className="text-xs text-neutral-400 hover:text-brand-navy mt-0.5">✓</button>
                         )}
@@ -1669,7 +1663,7 @@ export default function App() {
                         </button>
                         {f.createdBy === currentUser?.id && (
                           <button onClick={() => {
-                            fetch(`${API}/saved-filters/${f.id}/share`, { method: 'PUT', headers: headers() })
+                            api.raw(`/saved-filters/${f.id}/share`, { method: 'PUT', headers: headers() })
                               .then(r => r.json()).then(() => fetchSavedFilters())
                               .catch(() => {});
                           }}
@@ -1712,7 +1706,7 @@ export default function App() {
                       const item = sprintItems.find(i => i.id === itemId);
                       if (!item || item.status === status) return;
                       setSprintItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
-                      fetch(`${API}/work-items/${itemId}`, { method: 'PUT', headers: headers(), body: JSON.stringify({ ...item, status }) }).catch(() => {});
+                      api.raw(`/work-items/${itemId}`, { method: 'PUT', headers: headers(), body: JSON.stringify({ ...item, status }) }).catch(() => {});
                     }}
                     onSelect={setSelectedItem} onDelete={handleDelete} density={density} />
                 </>
@@ -2032,7 +2026,7 @@ export default function App() {
                           ? <RoleBadge role={m.role || userRole.role} tier={userRole.tier} />
                           : <select defaultValue={m.role || 'MEMBER'}
                               onChange={e => {
-                                fetch(`${API}/rbac/members/${m.id}/role`, {
+                                api.raw(`/rbac/members/${m.id}/role`, {
                                   method: 'PUT', headers: headers(),
                                   body: JSON.stringify({ roleId: e.target.value })
                                 }).then(r => r.json()).then(d => showToast(d.message || 'Role updated'))
@@ -2541,8 +2535,8 @@ export default function App() {
                   {['', 'WORK_ITEM_CREATED', 'WORK_ITEM_UPDATED', 'STATUS_CHANGED', 'ASSIGNED', 'COMMENT_ADDED', 'LINKED', 'ATTACHED'].map(et => (
                     <button key={et} onClick={() => {
                       setActivityEventFilter(et);
-                      const url = `${API}/work-items/${selectedItem.id}/activity${et ? `?eventType=${et}` : ''}`;
-                      fetch(url).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(() => {});
+                      const url = `/work-items/${selectedItem.id}/activity${et ? `?eventType=${et}` : ''}`;
+                      api.raw(url).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(() => {});
                     }}
                       className={`text-[10px] px-2 py-1 rounded-full font-medium transition-colors ${activityEventFilter === et ? 'bg-brand-navy text-white' : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'}`}>
                       {et ? et.replace(/_/g, ' ') : 'All'}
@@ -2823,7 +2817,7 @@ function PriorityBadge({ priority }) {
 function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
   const [items, setItems] = React.useState([]);
   React.useEffect(() => {
-    fetch(`${API}/sprints/${sprintId}/items`)
+    api.raw(`/sprints/${sprintId}/items`)
       .then(r => r.json()).then(d => setItems(Array.isArray(d) ? d : [])).catch(() => {});
   }, [sprintId]);
 

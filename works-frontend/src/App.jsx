@@ -174,6 +174,18 @@ export default function App() {
   const [permMatrix, setPermMatrix]         = useState(null);
   const [settings3Tab, setSettings3Tab]     = useState('workflows'); // workflows | fields | permissions | types
 
+  // Iter 3 — settings UI state
+  const [expandedWorkflowId, setExpandedWorkflowId] = useState(null);
+  const [workflowDetail, setWorkflowDetail]         = useState(null); // { statuses, transitions }
+  const [newStatusForm, setNewStatusForm]           = useState({ name: '', color: '#0B2F5C', category: 'IN_PROGRESS' });
+  const [newTransitionForm, setNewTransitionForm]   = useState({ name: '', fromStatus: '', toStatus: '' });
+  const [showFieldForm, setShowFieldForm]           = useState(false);
+  const [newFieldForm, setNewFieldForm]             = useState({ name: '', fieldType: 'TEXT', required: false, description: '' });
+  const [showTypeForm, setShowTypeForm]             = useState(false);
+  const [newTypeForm, setNewTypeForm]               = useState({ label: '', typeKey: '', icon: '📦' });
+  const [showRoleForm, setShowRoleForm]             = useState(false);
+  const [newRoleForm, setNewRoleForm]               = useState({ name: '', tier: 2 });
+
   // Iteration 4 — PM Artifacts
   const [pmProjectId, setPmProjectId]       = useState('');
   const [pmTab, setPmTab]                   = useState('raid');   // raid | risks | assumptions | issues | deps | decisions | meetings | actions | stakeholders | lessons
@@ -677,6 +689,50 @@ export default function App() {
   function fetchPermMatrix() {
     api.raw(`/permission-schemes/matrix?workspaceId=WS-001`)
       .then(r => r.json()).then(d => setPermMatrix(d)).catch(() => {});
+  }
+  function loadWorkflowDetail(wfId) {
+    api.raw(`/workflows/${wfId}`)
+      .then(r => r.json()).then(d => setWorkflowDetail(d)).catch(() => {});
+  }
+  function expandWorkflow(wfId) {
+    if (expandedWorkflowId === wfId) { setExpandedWorkflowId(null); setWorkflowDetail(null); return; }
+    setExpandedWorkflowId(wfId);
+    setWorkflowDetail(null);
+    loadWorkflowDetail(wfId);
+  }
+  function addStatus(wfId) {
+    if (!newStatusForm.name.trim()) return;
+    api.raw(`/workflows/${wfId}/statuses`, { method: 'POST', body: JSON.stringify(newStatusForm) })
+      .then(r => r.json()).then(() => { loadWorkflowDetail(wfId); setNewStatusForm({ name: '', color: '#0B2F5C', category: 'IN_PROGRESS' }); }).catch(() => {});
+  }
+  function deleteStatus(wfId, statusId) {
+    api.raw(`/workflows/${wfId}/statuses/${statusId}`, { method: 'DELETE' })
+      .then(() => loadWorkflowDetail(wfId)).catch(() => {});
+  }
+  function addTransition(wfId) {
+    if (!newTransitionForm.name.trim() || !newTransitionForm.fromStatus || !newTransitionForm.toStatus) return;
+    api.raw(`/workflows/${wfId}/transitions`, { method: 'POST', body: JSON.stringify(newTransitionForm) })
+      .then(r => r.json()).then(() => { loadWorkflowDetail(wfId); setNewTransitionForm({ name: '', fromStatus: '', toStatus: '' }); }).catch(() => {});
+  }
+  function deleteTransition(wfId, transId) {
+    api.raw(`/workflows/${wfId}/transitions/${transId}`, { method: 'DELETE' })
+      .then(() => loadWorkflowDetail(wfId)).catch(() => {});
+  }
+  function createFieldDef() {
+    if (!newFieldForm.name.trim()) return;
+    api.raw(`/field-defs`, { method: 'POST', body: JSON.stringify({ ...newFieldForm, fieldKey: newFieldForm.name.toLowerCase().replace(/\s+/g,'_'), workspaceId: 'WS-001' }) })
+      .then(r => r.json()).then(() => { fetchFieldDefs(); setShowFieldForm(false); setNewFieldForm({ name: '', fieldType: 'TEXT', required: false, description: '' }); }).catch(() => {});
+  }
+  function createWorkItemType() {
+    if (!newTypeForm.label.trim()) return;
+    const typeKey = newTypeForm.typeKey || newTypeForm.label.toUpperCase().replace(/\s+/g,'_');
+    api.raw(`/work-item-types`, { method: 'POST', body: JSON.stringify({ ...newTypeForm, typeKey, color: '#6b7280', workspaceId: 'WS-001' }) })
+      .then(r => r.json()).then(() => { fetchWorkItemTypes(); setShowTypeForm(false); setNewTypeForm({ label: '', typeKey: '', icon: '📦' }); }).catch(() => {});
+  }
+  function createRole() {
+    if (!newRoleForm.name.trim()) return;
+    api.raw(`/permission-schemes/roles`, { method: 'POST', body: JSON.stringify({ ...newRoleForm, workspaceId: 'WS-001' }) })
+      .then(r => r.json()).then(() => { fetchRoles(); fetchPermMatrix(); setShowRoleForm(false); setNewRoleForm({ name: '', tier: 2 }); }).catch(() => {});
   }
   function runWiql() {
     setWiqlError('');
@@ -2296,7 +2352,7 @@ export default function App() {
              ====================================================== */}
           {view === 'settings3' && (
             <div className="p-8 max-w-5xl">
-              <h1 className="text-2xl font-bold text-brand-navy mb-1">Workflows & Fields</h1>
+              <h1 className="text-2xl font-bold text-brand-navy dark:text-white mb-1">Workflows & Fields</h1>
               <p className="text-sm text-neutral-400 mb-5">Configure workflows, custom fields, permissions, and work item types</p>
 
               {/* Sub-tabs */}

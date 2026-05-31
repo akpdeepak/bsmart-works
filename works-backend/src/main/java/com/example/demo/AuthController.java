@@ -1,5 +1,8 @@
 package com.example.demo;
 
+import com.example.demo.dto.LoginRequest;
+import com.example.demo.dto.SignupRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,19 +33,13 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody Map<String, String> payload) {
-        String email    = payload.get("email");
-        String fullName = payload.get("fullName");
-        String password = payload.get("password");
-
-        if (email == null || email.isBlank() || fullName == null || fullName.isBlank()
-                || password == null || password.length() < 6) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Email, full name and password (min 6 chars) are required."));
-        }
+    public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest req) {
+        String email    = req.email();
+        String fullName = req.fullName();
+        String password = req.password();
 
         if (userRepository.findByEmail(email.toLowerCase().trim()).isPresent()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Email already in use!"));
+            throw ApiException.conflict("Email already in use.");
         }
 
         String verificationToken = UUID.randomUUID().toString().replace("-", "");
@@ -76,7 +73,7 @@ public class AuthController {
     public ResponseEntity<?> verifyEmail(@RequestParam String token) {
         Optional<User> userOpt = userRepository.findByVerificationToken(token);
         if (userOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Invalid or expired verification token."));
+            throw ApiException.badRequest("INVALID_TOKEN", "Invalid or expired verification token.");
         }
         User user = userOpt.get();
         user.setEmailVerified(true);
@@ -94,17 +91,13 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> payload) {
-        String email    = payload.get("email");
-        String password = payload.get("password");
-
-        if (email == null || password == null) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Email and password required."));
-        }
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req) {
+        String email    = req.email();
+        String password = req.password();
 
         Optional<User> userOpt = userRepository.findByEmail(email.toLowerCase().trim());
         if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid email or password."));
+            throw ApiException.unauthorized("Invalid email or password.");
         }
 
         User user = userOpt.get();
@@ -122,14 +115,12 @@ public class AuthController {
         }
 
         if (!valid) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid email or password."));
+            throw ApiException.unauthorized("Invalid email or password.");
         }
 
         if (!user.isEmailVerified()) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
-                "error", "Please verify your email before signing in.",
-                "requiresVerification", true
-            ));
+            throw new ApiException(HttpStatus.FORBIDDEN, "EMAIL_NOT_VERIFIED",
+                    "Please verify your email before signing in.");
         }
 
         // MFA challenge — return userId for the frontend to call /auth/mfa/verify
@@ -150,11 +141,11 @@ public class AuthController {
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> payload) {
         String email = payload.get("email");
         if (email == null || email.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Email is required."));
+            throw ApiException.badRequest("VALIDATION_ERROR", "Email is required.", "email");
         }
-        userRepository.findByEmail(email.toLowerCase().trim()).ifPresent(u -> {
-            System.out.println("[EMAIL] Password reset requested for: " + u.getEmail());
-        });
+        userRepository.findByEmail(email.toLowerCase().trim()).ifPresent(u ->
+            System.out.println("[EMAIL] Password reset requested for: " + u.getEmail())
+        );
         return ResponseEntity.ok(Map.of("message", "If that email exists, a reset link has been sent."));
     }
 
@@ -162,24 +153,21 @@ public class AuthController {
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> payload) {
         String currentUserId = authenticatedUserId();
         if (currentUserId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentication required."));
+            throw ApiException.unauthorized("Authentication required.");
         }
 
         String currentPassword = payload.get("currentPassword");
         String newPassword = payload.get("newPassword");
         if (currentPassword == null || currentPassword.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Current password is required."));
+            throw ApiException.badRequest("VALIDATION_ERROR", "Current password is required.", "currentPassword");
         }
-        if (newPassword == null || newPassword.length() < 6) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Password must be at least 6 characters."));
+        if (newPassword == null || newPassword.length() < 8) {
+            throw ApiException.badRequest("VALIDATION_ERROR", "New password must be at least 8 characters.", "newPassword");
         }
-        Optional<User> userOpt = userRepository.findById(currentUserId);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "User not found."));
-        }
-        User user = userOpt.get();
+        User user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> ApiException.notFound("User", currentUserId));
         if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Current password is incorrect."));
+            throw ApiException.unauthorized("Current password is incorrect.");
         }
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);

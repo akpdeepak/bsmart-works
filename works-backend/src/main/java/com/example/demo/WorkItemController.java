@@ -1,5 +1,6 @@
 package com.example.demo;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -63,7 +64,7 @@ public class WorkItemController {
     public WorkItem restoreFromTrash(@PathVariable String id) {
         jdbc.update("UPDATE work_items SET deleted_at = NULL, deleted_by = NULL WHERE id = ?", id);
         var opt = repository.findById(id);
-        if (opt.isEmpty()) throw new RuntimeException("Not found: " + id);
+        if (opt.isEmpty()) throw ApiException.notFound("Work item", id);
         attachTags(opt.get());
         return opt.get();
     }
@@ -268,7 +269,7 @@ public class WorkItemController {
 
             attachTags(saved);
             return saved;
-        }).orElseThrow(() -> new RuntimeException("Work Item not found: " + id));
+        }).orElseThrow(() -> ApiException.notFound("Work item", id));
     }
 
     @DeleteMapping("/{id}")

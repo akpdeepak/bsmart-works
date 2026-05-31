@@ -18,16 +18,19 @@ public class WorkItemController {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final NotificationBatchService batchService;
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
                               JdbcTemplate jdbc, NotificationRepository notificationRepository,
-                              UserRepository userRepository, EmailService emailService) {
+                              UserRepository userRepository, EmailService emailService,
+                              NotificationBatchService batchService) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
         this.emailService = emailService;
+        this.batchService = batchService;
     }
 
     @GetMapping
@@ -310,14 +313,8 @@ public class WorkItemController {
     }
 
     private void createNotification(String userId, String type, String message, String link) {
-        Notification n = new Notification();
-        n.setUserId(userId);
-        n.setType(type);
-        n.setMessage(message);
-        n.setLink(link);
-        n.setRead(false);
-        n.setCreatedAt(OffsetDateTime.now());
-        notificationRepository.save(n);
+        // Use batch service — suppresses duplicate notifications within 5-minute window
+        batchService.createIfNotBatched(userId, type, message, link);
     }
 }
 

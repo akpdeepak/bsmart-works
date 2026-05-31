@@ -11,6 +11,8 @@ public class Project {
     private String workspaceId;
     private String name;
     private String keyPrefix;
+    @Column(unique = true)
+    private String slug;
     private String description;
     private String leadUserId;
     private OffsetDateTime createdAt;
@@ -24,6 +26,8 @@ public class Project {
     public void setName(String name) { this.name = name; }
     public String getKeyPrefix() { return keyPrefix; }
     public void setKeyPrefix(String keyPrefix) { this.keyPrefix = keyPrefix; }
+    public String getSlug() { return slug; }
+    public void setSlug(String slug) { this.slug = slug; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
     public String getLeadUserId() { return leadUserId; }

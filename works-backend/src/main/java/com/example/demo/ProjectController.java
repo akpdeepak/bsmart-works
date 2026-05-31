@@ -31,15 +31,33 @@ public class ProjectController {
         return projectRepository.findAll();
     }
 
+    /** Lookup project by slug — used for slug-based URL routing. */
+    @GetMapping("/by-slug/{slug}")
+    public ResponseEntity<Project> getBySlug(@PathVariable String slug) {
+        return projectRepository.findBySlug(slug)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @PostMapping
     public Project createProject(@RequestBody Project project,
                                   @RequestHeader(value = "X-User-Id", required = false) String userId) {
         project.setId("PROJ-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         project.setWorkspaceId("WS-001");
         project.setCreatedAt(OffsetDateTime.now());
+        // Auto-generate slug from keyPrefix if not provided
+        if (project.getSlug() == null || project.getSlug().isBlank()) {
+            project.setSlug(toSlug(project.getKeyPrefix() != null ? project.getKeyPrefix() : project.getName()));
+        }
         Project saved = projectRepository.save(project);
         eventService.record(saved.getId(), "PROJECT_CREATED", userId, "{\"name\":\"" + saved.getName() + "\"}");
         return saved;
+    }
+
+    private String toSlug(String raw) {
+        return raw.toLowerCase()
+                  .replaceAll("[^a-z0-9]+", "-")
+                  .replaceAll("^-|-$", "");
     }
 
     @PutMapping("/{id}")

@@ -181,7 +181,15 @@ public class WorkItemController {
     public WorkItem updateWorkItem(@PathVariable String id, @RequestBody WorkItem updatedItem) {
         String userId = authenticatedUser.id();
         return repository.findById(id).map(existing -> {
+            String oldStatus = existing.getStatus();
             String oldAssignee = existing.getAssigneeId();
+            String oldPriority = existing.getPriority();
+            String oldTitle = existing.getTitle();
+            java.time.LocalDate oldDueDate = existing.getDueDate();
+            String oldType = existing.getType();
+            Integer oldStoryPoints = existing.getStoryPoints();
+            String oldDescription = existing.getDescription();
+            List<String> oldTags = jdbc.queryForList("SELECT tag FROM tags WHERE work_item_id = ? ORDER BY tag", String.class, id);
 
             existing.setTitle(updatedItem.getTitle());
             existing.setStatus(updatedItem.getStatus());
@@ -202,40 +210,39 @@ public class WorkItemController {
             }
 
             // Record field-level diffs
-            if (!java.util.Objects.equals(existing.getStatus(), saved.getStatus())) {
-                eventService.recordDiff(id, "STATUS_CHANGED", userId, "status", existing.getStatus(), saved.getStatus());
+            if (!java.util.Objects.equals(oldStatus, saved.getStatus())) {
+                eventService.recordDiff(id, "STATUS_CHANGED", userId, "status", oldStatus, saved.getStatus());
             }
-            if (!java.util.Objects.equals(existing.getAssigneeId(), saved.getAssigneeId())) {
-                String oldName = existing.getAssigneeId() != null ? userRepository.findById(existing.getAssigneeId()).map(u -> u.getFullName()).orElse(existing.getAssigneeId()) : "unassigned";
+            if (!java.util.Objects.equals(oldAssignee, saved.getAssigneeId())) {
+                String oldName = oldAssignee != null ? userRepository.findById(oldAssignee).map(u -> u.getFullName()).orElse(oldAssignee) : "unassigned";
                 String newName = saved.getAssigneeId() != null ? userRepository.findById(saved.getAssigneeId()).map(u -> u.getFullName()).orElse(saved.getAssigneeId()) : "unassigned";
                 eventService.recordDiff(id, "ASSIGNED", userId, "assignee", oldName, newName);
             }
-            if (!java.util.Objects.equals(existing.getPriority(), saved.getPriority())) {
-                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "priority", existing.getPriority(), saved.getPriority());
+            if (!java.util.Objects.equals(oldPriority, saved.getPriority())) {
+                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "priority", oldPriority, saved.getPriority());
             }
-            if (!java.util.Objects.equals(existing.getTitle(), saved.getTitle())) {
-                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "title", existing.getTitle(), saved.getTitle());
+            if (!java.util.Objects.equals(oldTitle, saved.getTitle())) {
+                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "title", oldTitle, saved.getTitle());
             }
-            if (!java.util.Objects.equals(existing.getDueDate(), saved.getDueDate())) {
+            if (!java.util.Objects.equals(oldDueDate, saved.getDueDate())) {
                 eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "dueDate",
-                    existing.getDueDate() != null ? existing.getDueDate().toString() : "none",
+                    oldDueDate != null ? oldDueDate.toString() : "none",
                     saved.getDueDate() != null ? saved.getDueDate().toString() : "none");
             }
-            if (!java.util.Objects.equals(existing.getType(), saved.getType())) {
-                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "type", existing.getType(), saved.getType());
+            if (!java.util.Objects.equals(oldType, saved.getType())) {
+                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "type", oldType, saved.getType());
             }
-            if (!java.util.Objects.equals(existing.getStoryPoints(), saved.getStoryPoints())) {
+            if (!java.util.Objects.equals(oldStoryPoints, saved.getStoryPoints())) {
                 eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "storyPoints",
-                    String.valueOf(existing.getStoryPoints() != null ? existing.getStoryPoints() : 0),
+                    String.valueOf(oldStoryPoints != null ? oldStoryPoints : 0),
                     String.valueOf(saved.getStoryPoints() != null ? saved.getStoryPoints() : 0));
             }
             // Description changed (track as boolean — text too large for event store)
-            if (!java.util.Objects.equals(existing.getDescription(), saved.getDescription())) {
+            if (!java.util.Objects.equals(oldDescription, saved.getDescription())) {
                 eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "description", "edited", "edited");
             }
             // Tags diff
             if (updatedItem.getTags() != null) {
-                List<String> oldTags = jdbc.queryForList("SELECT tag FROM tags WHERE work_item_id = ? ORDER BY tag", String.class, id);
                 List<String> newTags = updatedItem.getTags();
                 if (!oldTags.equals(newTags.stream().sorted().toList())) {
                     eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "tags",

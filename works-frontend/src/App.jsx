@@ -2602,48 +2602,86 @@ export default function App() {
               {settings3Tab === 'permissions' && (
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="font-semibold text-neutral-900">Roles & Permissions Matrix</h2>
-                    <Button variant="action" onClick={() => {
-                      const name = window.prompt('Role name:');
-                      if (name) {
-                        api.raw(`/permission-schemes/roles`, { method: 'POST', body: JSON.stringify({ name, workspaceId: 'WS-001', tier: 2 }) })
-                          .then(r => r.json()).then(() => { fetchRoles(); fetchPermMatrix(); });
-                      }
-                    }}>+ New Role</Button>
+                    <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Roles & Permissions Matrix</h2>
+                    <Button variant="action" onClick={() => setShowRoleForm(f => !f)}>
+                      {showRoleForm ? 'Cancel' : '+ New Role'}
+                    </Button>
                   </div>
+
+                  {/* Inline add role form */}
+                  {showRoleForm && (
+                    <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-5 mb-5">
+                      <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 mb-3">New Custom Role</p>
+                      <div className="flex gap-4 items-end flex-wrap">
+                        <div>
+                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Role Name *</label>
+                          <input className="input text-sm w-44" placeholder="e.g. Support Agent" value={newRoleForm.name}
+                            onChange={e => setNewRoleForm(f => ({ ...f, name: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Tier (1-5)</label>
+                          <select className="input text-sm" value={newRoleForm.tier}
+                            onChange={e => setNewRoleForm(f => ({ ...f, tier: Number(e.target.value) }))}>
+                            {[1,2,3,4,5].map(t => <option key={t} value={t}>Tier {t} — {['Viewer','Member','Lead','Admin','Owner'][t-1]}</option>)}
+                          </select>
+                        </div>
+                        <Button variant="action" onClick={createRole}>Create Role</Button>
+                        <Button variant="ghost" onClick={() => setShowRoleForm(false)}>Cancel</Button>
+                      </div>
+                    </div>
+                  )}
+
                   {!permMatrix
                     ? <div className="text-center py-12 text-neutral-400">Loading permissions matrix...</div>
-                    : permMatrix.matrix.length === 0
-                      ? <EmptyState icon="🔐" title="No custom roles" subtitle="Create roles to define fine-grained access control for your team." />
-                      : <div className="overflow-x-auto">
-                          <table className="w-full text-xs border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden dark:text-neutral-300">
-                            <thead className="bg-neutral-50">
-                              <tr>
-                                <th className="text-left px-4 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 sticky left-0 bg-neutral-50 dark:bg-neutral-900">Permission</th>
-                                {permMatrix.roles.map(r => (
-                                  <th key={r.id} className="px-3 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 text-center min-w-[90px]">
-                                    <div>{r.name}</div>
-                                    <div className="font-normal text-neutral-400">Tier {r.tier}</div>
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                              {permMatrix.allPermissions.map(perm => (
-                                <tr key={perm} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
-                                  <td className="px-4 py-2 font-mono sticky left-0 bg-white dark:bg-neutral-800">{perm}</td>
-                                  {permMatrix.matrix.map(row => (
-                                    <td key={row.role.id} className="px-3 py-2 text-center">
-                                      <span className={`text-sm font-bold ${row.permissions[perm] ? 'text-semantic-success' : 'text-neutral-200'}`}>
-                                        {row.permissions[perm] ? '✓' : '—'}
-                                      </span>
-                                    </td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                    : (
+                      <>
+                        {/* System roles legend */}
+                        <div className="mb-4 p-4 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700">
+                          <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">System Roles</p>
+                          <div className="flex flex-wrap gap-3">
+                            {[{id:'VIEWER',tier:1},{id:'MEMBER',tier:2},{id:'LEAD',tier:3},{id:'ADMIN',tier:4},{id:'OWNER',tier:5}].map(r => (
+                              <div key={r.id} className="flex items-center gap-2 text-xs">
+                                <span className="font-semibold text-neutral-700 dark:text-neutral-200">{r.id}</span>
+                                <span className="text-neutral-400">Tier {r.tier}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-[10px] text-neutral-400 mt-2">System roles are tier-based. A role can do anything its tier permits. ✓ = permitted, — = not permitted.</p>
                         </div>
+                        {permMatrix.matrix.length === 0
+                          ? <EmptyState icon="🔐" title="No custom roles" subtitle="Create roles to define fine-grained access control for your team." />
+                          : <div className="overflow-x-auto">
+                              <table className="w-full text-xs border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden dark:text-neutral-300">
+                                <thead className="bg-neutral-50 dark:bg-neutral-900">
+                                  <tr>
+                                    <th className="text-left px-4 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 sticky left-0 bg-neutral-50 dark:bg-neutral-900">Permission</th>
+                                    {permMatrix.roles.map(r => (
+                                      <th key={r.id} className="px-3 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 text-center min-w-[90px]">
+                                        <div>{r.name}</div>
+                                        <div className="font-normal text-neutral-400">Tier {r.tier}</div>
+                                      </th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+                                  {permMatrix.allPermissions.map(perm => (
+                                    <tr key={perm} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
+                                      <td className="px-4 py-2 font-mono sticky left-0 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200">{perm}</td>
+                                      {permMatrix.matrix.map(row => (
+                                        <td key={row.role.id} className="px-3 py-2 text-center">
+                                          <span className={`text-sm font-bold ${row.permissions[perm] ? 'text-semantic-success' : 'text-neutral-200 dark:text-neutral-600'}`}>
+                                            {row.permissions[perm] ? '✓' : '—'}
+                                          </span>
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                        }
+                      </>
+                    )
                   }
                 </div>
               )}
@@ -2652,17 +2690,38 @@ export default function App() {
               {settings3Tab === 'types' && (
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="font-semibold text-neutral-900">Work Item Types</h2>
-                    <Button variant="action" onClick={() => {
-                      const label = window.prompt('Type label (e.g. Meter Rollout):');
-                      const icon  = window.prompt('Icon emoji (e.g. 📟):') || '📦';
-                      if (label) {
-                        const key = label.toUpperCase().replace(/\s+/g,'_');
-                        api.raw(`/work-item-types`, { method: 'POST', body: JSON.stringify({ label, typeKey: key, icon, color: '#6b7280', workspaceId: 'WS-001' }) })
-                          .then(r => r.json()).then(() => fetchWorkItemTypes());
-                      }
-                    }}>+ Custom Type</Button>
+                    <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Work Item Types</h2>
+                    <Button variant="action" onClick={() => setShowTypeForm(f => !f)}>
+                      {showTypeForm ? 'Cancel' : '+ Custom Type'}
+                    </Button>
                   </div>
+
+                  {/* Inline add type form */}
+                  {showTypeForm && (
+                    <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-5 mb-5">
+                      <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 mb-3">New Custom Type</p>
+                      <div className="flex gap-4 items-end flex-wrap">
+                        <div>
+                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Label *</label>
+                          <input className="input text-sm w-44" placeholder="e.g. Meter Rollout" value={newTypeForm.label}
+                            onChange={e => setNewTypeForm(f => ({ ...f, label: e.target.value, typeKey: e.target.value.toUpperCase().replace(/\s+/g,'_') }))} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Key</label>
+                          <input className="input text-sm w-36 font-mono" placeholder="METER_ROLLOUT" value={newTypeForm.typeKey}
+                            onChange={e => setNewTypeForm(f => ({ ...f, typeKey: e.target.value.toUpperCase() }))} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Icon</label>
+                          <input className="input text-sm w-16 text-center text-lg" placeholder="📦" value={newTypeForm.icon}
+                            onChange={e => setNewTypeForm(f => ({ ...f, icon: e.target.value }))} />
+                        </div>
+                        <Button variant="action" onClick={createWorkItemType}>Create Type</Button>
+                        <Button variant="ghost" onClick={() => setShowTypeForm(false)}>Cancel</Button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-4">
                     <div>
                       <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">Built-in Types</p>
@@ -2671,7 +2730,7 @@ export default function App() {
                           <div key={t.typeKey} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 flex items-center gap-3">
                             <span className="text-2xl">{t.icon}</span>
                             <div>
-                              <p className="font-semibold text-neutral-900 text-sm">{t.label}</p>
+                              <p className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">{t.label}</p>
                               <p className="text-xs text-neutral-400 font-mono">{t.typeKey}</p>
                             </div>
                           </div>
@@ -2686,7 +2745,7 @@ export default function App() {
                             <div key={t.id} className="bg-white dark:bg-neutral-800 border border-brand-navy/20 dark:border-brand-navy/30 rounded-xl p-4 flex items-center gap-3 relative group">
                               <span className="text-2xl">{t.icon}</span>
                               <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-neutral-900 text-sm">{t.label}</p>
+                                <p className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">{t.label}</p>
                                 <p className="text-xs text-neutral-400 font-mono truncate">{t.typeKey}</p>
                               </div>
                               <button onClick={() => api.raw(`/work-item-types/${t.id}`, { method: 'DELETE' }).then(() => fetchWorkItemTypes())}
@@ -2695,6 +2754,9 @@ export default function App() {
                           ))}
                         </div>
                       </div>
+                    )}
+                    {(workItemTypes.custom || []).length === 0 && !showTypeForm && (
+                      <p className="text-sm text-neutral-400 italic">No custom types yet. Create utility-domain types like Meter Rollout, Tariff Change, or Substation Commission.</p>
                     )}
                   </div>
                 </div>

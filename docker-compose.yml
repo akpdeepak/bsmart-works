@@ -1,0 +1,51 @@
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: bsmart-postgres
+    environment:
+      POSTGRES_DB:       works_db
+      POSTGRES_USER:     bcits_admin
+      POSTGRES_PASSWORD: works_secure_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - bsmart_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "bcits_admin", "-d", "works_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── MailHog  (dev SMTP + web UI) ────────────────────────────
+  # SMTP on :1025  |  Web inbox on http://localhost:8025
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: bsmart-mailhog
+    ports:
+      - "1025:1025"   # SMTP (Spring Mail points here)
+      - "8025:8025"   # Web UI — open in browser to read sent emails
+
+  # ── ClamAV  (virus scanning) ─────────────────────────────────
+  # Exposes the INSTREAM TCP interface on :3310
+  # First start takes ~2-3 min to download virus definitions
+  clamav:
+    image: clamav/clamav:stable
+    container_name: bsmart-clamav
+    ports:
+      - "3310:3310"
+    volumes:
+      - bsmart_clamav_data:/var/lib/clamav
+    environment:
+      - CLAMAV_NO_FRESHCLAMD=false
+    healthcheck:
+      test: ["CMD", "clamdscan", "--ping", "3"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s   # virus DB download takes time on first run
+
+volumes:
+  bsmart_pg_data:
+  bsmart_clamav_data:

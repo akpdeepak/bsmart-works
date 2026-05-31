@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/works/button';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
@@ -287,7 +287,7 @@ export default function App() {
   };
 
   function fetchUserRole() {
-    api.raw(`/rbac/me`, { headers: headers() })
+    api.raw(`/rbac/me`)
       .then(r => r.json()).then(d => setUserRole({
         role: d.role || 'MEMBER',
         tier: d.tier || 2,
@@ -298,9 +298,9 @@ export default function App() {
   function fetchAll() {
     setLoading(true);
     Promise.all([
-      api.raw(`/work-items`, { headers: headers() }).then(r => r.json()),
-      api.raw(`/projects`, { headers: headers() }).then(r => r.json()),
-      api.raw(`/users`, { headers: headers() }).then(r => r.json()),
+      api.raw(`/work-items`).then(r => r.json()),
+      api.raw(`/projects`).then(r => r.json()),
+      api.raw(`/users`).then(r => r.json()),
     ]).then(([items, projs, usrs]) => {
       setWorkItems(Array.isArray(items) ? items : []);
       setProjects(Array.isArray(projs) ? projs : []);
@@ -432,7 +432,7 @@ export default function App() {
     setCreateError('');
     const tags = newItem.tags ? newItem.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
     const projectId = newItem.projectId || (projects.length > 0 ? projects[0].id : 'PROJ-WORKS');
-    apiFetch(`${API}/work-items`, {
+    api.send(`/work-items`, {
       method: 'POST',
       body: JSON.stringify({
         ...newItem,
@@ -462,7 +462,7 @@ export default function App() {
     // Toast with undo — commit delete after 8 seconds
     setToast({ message: `"${item.title.slice(0, 35)}${item.title.length > 35 ? '…' : ''}" deleted`, type: 'undo' });
     deleteUndoTimer.current = setTimeout(() => {
-      apiFetch(`${API}/work-items/${id}`, { method: 'DELETE' }).catch(() => {
+      api.send(`/work-items/${id}`, { method: 'DELETE' }).catch(() => {
         setWorkItems(prev => [...prev, item]);
         showToast('Failed to delete item', 'error');
       });
@@ -491,7 +491,7 @@ export default function App() {
     if (!item || item.status === newStatus) return;
     // Optimistic update
     setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: newStatus } : i));
-    apiFetch(`${API}/work-items/${itemId}`, {
+    api.send(`/work-items/${itemId}`, {
       method: 'PUT',
       body: JSON.stringify({ ...item, status: newStatus })
     }).catch(() => {
@@ -505,7 +505,7 @@ export default function App() {
   const handleUpdateItem = (updated) => {
     clearTimeout(updateTimerRef.current);
     updateTimerRef.current = setTimeout(() => {
-      apiFetch(`${API}/work-items/${updated.id}`, {
+      api.send(`/work-items/${updated.id}`, {
         method: 'PUT',
         body: JSON.stringify({ ...updated, tags: updated.tags || [] })
       }).then(saved => {
@@ -519,7 +519,7 @@ export default function App() {
   const handleAddComment = () => {
     if (!newComment.trim()) return;
     api.raw(`/work-items/${selectedItem.id}/comments`, {
-      method: 'POST', headers: headers(),
+      method: 'POST',
       body: JSON.stringify({ body: newComment, isInternal: commentInternal })
     }).then(r => r.json()).then(c => {
       setComments(prev => [...prev, c]);
@@ -561,7 +561,7 @@ export default function App() {
   const handleCreateProject = () => {
     if (!newProject.name || !newProject.keyPrefix) { setCreateError('Name and key prefix required.'); return; }
     setCreateError('');
-    apiFetch(`${API}/projects`, { method: 'POST', body: JSON.stringify(newProject) })
+    api.send(`/projects`, { method: 'POST', body: JSON.stringify(newProject) })
       .then(p => {
         setProjects(prev => [...prev, p]);
         setNewProject({ name: '', keyPrefix: '', description: '' });
@@ -577,7 +577,7 @@ export default function App() {
   };
 
   const handleInvite = () => {
-    apiFetch(`${API}/workspaces/WS-001/members`, {
+    api.send(`/workspaces/WS-001/members`, {
       method: 'POST', body: JSON.stringify({ email: inviteEmail, role: 'MEMBER' })
     }).then(d => { setInviteMsg(d.message || 'Added!'); setInviteEmail(''); fetchMembers(); })
       .catch(err => setInviteMsg(err.message || 'Error — user may not exist.'));
@@ -590,7 +590,7 @@ export default function App() {
 
   // NOTIFICATION PREFS
   function fetchNotifPrefs() {
-    api.raw(`/notification-preferences`, { headers: headers() })
+    api.raw(`/notification-preferences`)
       .then(r => r.json()).then(d => setNotifPrefs({
         notifyAssign:  d.notify_assign  ?? true,
         notifyComment: d.notify_comment ?? true,
@@ -599,13 +599,13 @@ export default function App() {
       })).catch(() => {});
   }
   function saveNotifPrefs(prefs) {
-    api.raw(`/notification-preferences`, { method: 'PUT', headers: headers(), body: JSON.stringify(prefs) })
+    api.raw(`/notification-preferences`, { method: 'PUT', body: JSON.stringify(prefs) })
       .then(() => setNotifPrefs(prefs));
   }
 
   // SPRINT FUNCTIONS
   function fetchSprints(projectId = 'PROJ-WORKS') {
-    api.raw(`/sprints?projectId=${projectId}`, { headers: headers() })
+    api.raw(`/sprints?projectId=${projectId}`)
       .then(r => r.json()).then(d => {
         const list = Array.isArray(d) ? d : [];
         setSprints(list);
@@ -614,31 +614,31 @@ export default function App() {
       }).catch(() => {});
   }
   function fetchSprintItems(sprintId) {
-    api.raw(`/sprints/${sprintId}/items`, { headers: headers() })
+    api.raw(`/sprints/${sprintId}/items`)
       .then(r => r.json()).then(d => setSprintItems(Array.isArray(d) ? d : [])).catch(() => {});
   }
   function fetchBacklog() {
-    api.raw(`/work-items/backlog`, { headers: headers() })
+    api.raw(`/work-items/backlog`)
       .then(r => r.json()).then(d => setBacklogItems(Array.isArray(d) ? d : [])).catch(() => {});
   }
   function fetchSprintReport(sprintId) {
-    api.raw(`/sprints/${sprintId}/report`, { headers: headers() })
+    api.raw(`/sprints/${sprintId}/report`)
       .then(r => r.json()).then(setSprintReport).catch(() => {});
-    api.raw(`/sprints/${sprintId}/scope-changes`, { headers: headers() })
+    api.raw(`/sprints/${sprintId}/scope-changes`)
       .then(r => r.json()).then(d => setScopeChanges(Array.isArray(d) ? d : [])).catch(() => {});
   }
   function fetchSavedFilters() {
-    api.raw(`/saved-filters`, { headers: headers() })
+    api.raw(`/saved-filters`)
       .then(r => r.json()).then(d => setSavedFilters(Array.isArray(d) ? d : [])).catch(() => {});
   }
 
   function fetchVelocityData() {
-    api.raw(`/sprints/velocity`, { headers: headers() })
+    api.raw(`/sprints/velocity`)
       .then(r => r.json()).then(d => setVelocityData(Array.isArray(d) ? d : [])).catch(() => {});
   }
 
   function fetchBranding() {
-    api.raw(`/workspaces/WS-001/branding`, { headers: headers() })
+    api.raw(`/workspaces/WS-001/branding`)
       .then(r => r.json()).then(d => {
         setBranding(d);
         setBrandingColor(d.primaryColor || '#E94E1B');
@@ -650,7 +650,7 @@ export default function App() {
 
   function saveBranding() {
     api.raw(`/workspaces/WS-001/branding`, {
-      method: 'PUT', headers: headers(),
+      method: 'PUT',
       body: JSON.stringify({ primaryColor: brandingColor, description: brandingDesc })
     }).then(r => r.json()).then(d => { setBranding(d); showToast('Branding saved'); }).catch(() => {});
   }
@@ -658,41 +658,41 @@ export default function App() {
   // ---- Iteration 3 fetches ----
   function fetchWorkflows(projectId) {
     const q = projectId ? `?projectId=${projectId}` : '';
-    fetch(`${API}/workflows${q}`, { headers: headers() })
+    api.raw(`/workflows${q}`)
       .then(r => r.json()).then(d => setWorkflows(Array.isArray(d) ? d : [])).catch(() => {});
   }
   function fetchFieldDefs(projectId) {
     const q = projectId ? `?projectId=${projectId}` : '';
-    fetch(`${API}/field-defs${q}`, { headers: headers() })
+    api.raw(`/field-defs${q}`)
       .then(r => r.json()).then(d => setFieldDefs(Array.isArray(d) ? d : [])).catch(() => {});
   }
   function fetchRoles() {
-    fetch(`${API}/permission-schemes/roles`, { headers: headers() })
+    api.raw(`/permission-schemes/roles`)
       .then(r => r.json()).then(d => setRoles(Array.isArray(d) ? d : [])).catch(() => {});
   }
   function fetchWorkItemTypes() {
-    fetch(`${API}/work-item-types`, { headers: headers() })
+    api.raw(`/work-item-types`)
       .then(r => r.json()).then(d => setWorkItemTypes(d || { builtIn: [], custom: [] })).catch(() => {});
   }
   function fetchPermMatrix() {
-    fetch(`${API}/permission-schemes/matrix?workspaceId=WS-001`, { headers: headers() })
+    api.raw(`/permission-schemes/matrix?workspaceId=WS-001`)
       .then(r => r.json()).then(d => setPermMatrix(d)).catch(() => {});
   }
   function runWiql() {
     setWiqlError('');
-    fetch(`${API}/wiql/execute`, { method: 'POST', headers: headers(), body: JSON.stringify({ query: wiqlQuery }) })
+    api.raw(`/wiql/execute`, { method: 'POST', body: JSON.stringify({ query: wiqlQuery }) })
       .then(r => r.json()).then(d => {
         if (d.error) { setWiqlError(d.error); setWiqlResults([]); }
         else setWiqlResults(Array.isArray(d) ? d : []);
       }).catch(err => setWiqlError(err.message));
   }
   function fetchWiqlFilters() {
-    fetch(`${API}/wiql/filters`, { headers: headers() })
+    api.raw(`/wiql/filters`)
       .then(r => r.json()).then(d => setWiqlFilters(Array.isArray(d) ? d : [])).catch(() => {});
   }
   function saveWiqlFilter() {
     if (!wiqlFilterName.trim() || !wiqlQuery.trim()) return;
-    fetch(`${API}/wiql/filters`, { method: 'POST', headers: headers(), body: JSON.stringify({ name: wiqlFilterName, query: wiqlQuery, isShared: false }) })
+    api.raw(`/wiql/filters`, { method: 'POST', body: JSON.stringify({ name: wiqlFilterName, query: wiqlQuery, isShared: false }) })
       .then(r => r.json()).then(f => { setWiqlFilters(prev => [f, ...prev]); setWiqlFilterName(''); showToast('Filter saved'); })
       .catch(() => showToast('Failed to save filter', 'error'));
   }
@@ -700,18 +700,18 @@ export default function App() {
   // ---- Iteration 4 fetches ----
   function fetchRaidDashboard(pid) {
     if (!pid) return;
-    fetch(`${API}/raid-dashboard?projectId=${pid}`, { headers: headers() })
+    api.raw(`/raid-dashboard?projectId=${pid}`)
       .then(r => r.json()).then(setRaidDashboard).catch(() => {});
   }
-  function fetchRisks(pid)       { fetch(`${API}/risks?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setRisks(Array.isArray(d) ? d : [])).catch(() => {}); }
-  function fetchAssumptions(pid) { fetch(`${API}/assumptions?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setAssumptions(Array.isArray(d) ? d : [])).catch(() => {}); }
-  function fetchPmIssues(pid)    { fetch(`${API}/pm-issues?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setPmIssues(Array.isArray(d) ? d : [])).catch(() => {}); }
-  function fetchDependencies(pid){ fetch(`${API}/dependencies?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setDependencies(Array.isArray(d) ? d : [])).catch(() => {}); }
-  function fetchDecisions(pid)   { fetch(`${API}/decisions?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setDecisions(Array.isArray(d) ? d : [])).catch(() => {}); }
-  function fetchMeetings(pid)    { fetch(`${API}/meetings?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setMeetings(Array.isArray(d) ? d : [])).catch(() => {}); }
-  function fetchActionItems(pid) { fetch(`${API}/action-items?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setActionItems(Array.isArray(d) ? d : [])).catch(() => {}); }
-  function fetchStakeholders(pid){ fetch(`${API}/stakeholders?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setStakeholders(Array.isArray(d) ? d : [])).catch(() => {}); }
-  function fetchLessons(pid)     { fetch(`${API}/lessons-learned?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setLessonsLearned(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchRisks(pid)       { api.raw(`/risks?projectId=${pid}`).then(r => r.json()).then(d => setRisks(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchAssumptions(pid) { api.raw(`/assumptions?projectId=${pid}`).then(r => r.json()).then(d => setAssumptions(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchPmIssues(pid)    { api.raw(`/pm-issues?projectId=${pid}`).then(r => r.json()).then(d => setPmIssues(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchDependencies(pid){ api.raw(`/dependencies?projectId=${pid}`).then(r => r.json()).then(d => setDependencies(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchDecisions(pid)   { api.raw(`/decisions?projectId=${pid}`).then(r => r.json()).then(d => setDecisions(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchMeetings(pid)    { api.raw(`/meetings?projectId=${pid}`).then(r => r.json()).then(d => setMeetings(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchActionItems(pid) { api.raw(`/action-items?projectId=${pid}`).then(r => r.json()).then(d => setActionItems(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchStakeholders(pid){ api.raw(`/stakeholders?projectId=${pid}`).then(r => r.json()).then(d => setStakeholders(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchLessons(pid)     { api.raw(`/lessons-learned?projectId=${pid}`).then(r => r.json()).then(d => setLessonsLearned(Array.isArray(d) ? d : [])).catch(() => {}); }
 
   function pmCreate(type, payload) {
     const endpoints = {
@@ -720,7 +720,7 @@ export default function App() {
     };
     const ep = endpoints[type];
     if (!ep) return;
-    fetch(`${API}/${ep}`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...payload, projectId: pmProjectId, workspaceId: 'WS-001' }) })
+    api.raw(`/${ep}`, { method: 'POST', body: JSON.stringify({ ...payload, projectId: pmProjectId, workspaceId: 'WS-001' }) })
       .then(r => r.json()).then(() => {
         setPmFormOpen(null); setPmForm({});
         if (type === 'risk')        { fetchRisks(pmProjectId); fetchRaidDashboard(pmProjectId); }
@@ -743,7 +743,7 @@ export default function App() {
     };
     const ep = endpoints[type];
     if (!ep) return;
-    fetch(`${API}/${ep}/${id}`, { method: 'DELETE', headers: headers() }).then(() => {
+    api.raw(`/${ep}/${id}`, { method: 'DELETE' }).then(() => {
       if (type === 'risk')        { fetchRisks(pmProjectId); fetchRaidDashboard(pmProjectId); }
       if (type === 'assumption')  { fetchAssumptions(pmProjectId); fetchRaidDashboard(pmProjectId); }
       if (type === 'issue')       { fetchPmIssues(pmProjectId); fetchRaidDashboard(pmProjectId); }
@@ -758,12 +758,12 @@ export default function App() {
   }
 
   function fetchTrash() {
-    api.raw(`/work-items/trash`, { headers: headers() })
+    api.raw(`/work-items/trash`)
       .then(r => r.json()).then(d => setTrashItems(Array.isArray(d) ? d : [])).catch(() => {});
   }
 
   function restoreFromTrash(id) {
-    apiFetch(`${API}/work-items/${id}/restore`, { method: 'PUT' })
+    api.send(`/work-items/${id}/restore`, { method: 'PUT' })
       .then(item => {
         setTrashItems(prev => prev.filter(i => i.id !== id));
         setWorkItems(prev => [...prev, item]);
@@ -773,7 +773,7 @@ export default function App() {
 
   function permanentDelete(id) {
     if (!window.confirm('Permanently delete? This cannot be undone.')) return;
-    apiFetch(`${API}/work-items/${id}/permanent`, { method: 'DELETE' })
+    api.send(`/work-items/${id}/permanent`, { method: 'DELETE' })
       .then(() => { setTrashItems(prev => prev.filter(i => i.id !== id)); showToast('Permanently deleted'); })
       .catch(err => showToast(err.message, 'error'));
   }
@@ -790,13 +790,13 @@ export default function App() {
 
   function fetchProjectMembers(projectId) {
     setSelectedProjectId(projectId);
-    api.raw(`/workspaces/WS-001/projects/${projectId}/members`, { headers: headers() })
+    api.raw(`/workspaces/WS-001/projects/${projectId}/members`)
       .then(r => r.json()).then(d => setProjectMembers(Array.isArray(d) ? d : [])).catch(() => {});
   }
 
   function addProjectMember(projectId) {
     if (!projectMemberEmail.trim()) return;
-    apiFetch(`${API}/workspaces/WS-001/projects/${projectId}/members`, {
+    api.send(`/workspaces/WS-001/projects/${projectId}/members`, {
       method: 'POST', body: JSON.stringify({ email: projectMemberEmail, role: 'MEMBER' })
     }).then(d => {
       setProjectMemberMsg(d.message || 'Added!');
@@ -808,7 +808,7 @@ export default function App() {
   function addReply(workItemId, parentId) {
     if (!replyBody.trim()) return;
     api.raw(`/work-items/${workItemId}/comments`, {
-      method: 'POST', headers: headers(),
+      method: 'POST',
       body: JSON.stringify({ body: replyBody, isInternal: false, parentId })
     }).then(r => r.json()).then(c => {
       setComments(prev => prev.map(cm =>
@@ -819,7 +819,7 @@ export default function App() {
   }
 
   const handleCreateSprint = () => {
-    api.raw(`/sprints`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newSprint, projectId: 'PROJ-WORKS' }) })
+    api.raw(`/sprints`, { method: 'POST', body: JSON.stringify({ ...newSprint, projectId: 'PROJ-WORKS' }) })
       .then(r => r.json()).then(s => {
         setSprints(prev => [s, ...prev]);
         setNewSprint({ name: '', goal: '', startDate: '', endDate: '', capacity: 40 });
@@ -830,7 +830,7 @@ export default function App() {
   const handleSprintStatusChange = (sprintId, newStatus) => {
     const sprint = sprints.find(s => s.id === sprintId);
     if (!sprint) return;
-    api.raw(`/sprints/${sprintId}`, { method: 'PUT', headers: headers(), body: JSON.stringify({ ...sprint, status: newStatus }) })
+    api.raw(`/sprints/${sprintId}`, { method: 'PUT', body: JSON.stringify({ ...sprint, status: newStatus }) })
       .then(r => r.json()).then(updated => {
         setSprints(prev => prev.map(s => s.id === updated.id ? updated : s));
         if (activeSprint?.id === updated.id) setActiveSprint(updated);
@@ -860,7 +860,7 @@ export default function App() {
     setBacklogItems(reordered);
     setDragOverId(null);
     api.raw(`/work-items/backlog/reorder`, {
-      method: 'PUT', headers: headers(),
+      method: 'PUT',
       body: JSON.stringify(reordered.map((i, idx) => ({ id: i.id, order: idx })))
     }).catch(() => {});
   };
@@ -871,13 +871,13 @@ export default function App() {
     if (!item) return;
     const updated = { ...item, [field]: value };
     setBacklogItems(prev => prev.map(i => i.id === itemId ? updated : i));
-    api.raw(`/work-items/${itemId}`, { method: 'PUT', headers: headers(), body: JSON.stringify(updated) }).catch(() => {});
+    api.raw(`/work-items/${itemId}`, { method: 'PUT', body: JSON.stringify(updated) }).catch(() => {});
   };
 
   const handleSaveFilter = () => {
     if (!saveFilterName.trim()) return;
     api.raw(`/saved-filters`, {
-      method: 'POST', headers: headers(),
+      method: 'POST',
       body: JSON.stringify({ name: saveFilterName, filterJson: JSON.stringify(activeFilter), isShared: false })
     }).then(r => r.json()).then(f => { setSavedFilters(prev => [...prev, f]); setSaveFilterName(''); setShowSaveFilter(false); });
   };
@@ -895,7 +895,7 @@ export default function App() {
   const handleAddLink = () => {
     if (!newLink.targetId) return;
     api.raw(`/work-items/${selectedItem.id}/links`, {
-      method: 'POST', headers: headers(), body: JSON.stringify(newLink)
+      method: 'POST', body: JSON.stringify(newLink)
     }).then(r => r.json()).then(l => { setLinks(prev => [...prev, l]); setNewLink({ targetId: '', linkType: 'RELATES_TO' }); });
   };
   const handleDeleteLink = (linkId) => {
@@ -957,8 +957,8 @@ export default function App() {
   if (!currentUser) {
     // Email verification pending screen
     if (verifyPending) return (
-      <div className="flex h-screen bg-neutral-100 items-center justify-center font-sans">
-        <div className="bg-white p-8 rounded-xl shadow-xl w-96 border border-neutral-200">
+      <div className="flex h-screen bg-neutral-100 dark:bg-neutral-900 items-center justify-center font-sans">
+        <div className="bg-white dark:bg-neutral-800 p-8 rounded-xl shadow-xl w-96 border border-neutral-200 dark:border-neutral-700">
           <div className="flex justify-center mb-6"><Logo /></div>
           <div className="w-14 h-14 rounded-full bg-semantic-success/10 flex items-center justify-center text-2xl mx-auto mb-4">📧</div>
           <h2 className="text-xl font-bold text-brand-navy text-center mb-2">Check your email</h2>
@@ -969,7 +969,7 @@ export default function App() {
           {verifyMsg && <p className="text-sm text-semantic-danger text-center mb-3">{verifyMsg}</p>}
           {/* DEV/UAT only — show token so testers can verify without email */}
           {verifyPending.devToken && (
-            <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-3 mb-4">
+            <div className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3 mb-4">
               <p className="text-[10px] text-neutral-400 uppercase tracking-wider mb-1">UAT — One-click verify</p>
               <button onClick={() => handleVerifyEmail(verifyPending.devToken)}
                 className="w-full py-2 bg-brand-navy text-white rounded-lg text-sm font-semibold hover:bg-brand-navy/90 transition-colors">
@@ -988,8 +988,8 @@ export default function App() {
 
     // MFA challenge screen
     if (mfaChallenge) return (
-      <div className="flex h-screen bg-neutral-100 items-center justify-center font-sans">
-        <div className="bg-white p-8 rounded-xl shadow-xl w-96 border border-neutral-200">
+      <div className="flex h-screen bg-neutral-100 dark:bg-neutral-900 items-center justify-center font-sans">
+        <div className="bg-white dark:bg-neutral-800 p-8 rounded-xl shadow-xl w-96 border border-neutral-200 dark:border-neutral-700">
           <div className="flex justify-center mb-6"><Logo /></div>
           <div className="w-14 h-14 rounded-full bg-brand-navy/10 flex items-center justify-center text-2xl mx-auto mb-4">🔐</div>
           <h2 className="text-xl font-bold text-brand-navy text-center mb-2">Two-factor authentication</h2>
@@ -1010,8 +1010,8 @@ export default function App() {
     );
 
     if (forgotMode) return (
-      <div className="flex h-screen bg-neutral-100 items-center justify-center font-sans">
-        <div className="bg-white p-8 rounded-xl shadow-xl w-96 border border-neutral-200">
+      <div className="flex h-screen bg-neutral-100 dark:bg-neutral-900 items-center justify-center font-sans">
+        <div className="bg-white dark:bg-neutral-800 p-8 rounded-xl shadow-xl w-96 border border-neutral-200 dark:border-neutral-700">
           <div className="flex justify-center mb-6"><Logo /></div>
           <h2 className="text-xl font-bold text-brand-navy text-center mb-4">Reset Password</h2>
           {forgotMsg
@@ -1031,8 +1031,8 @@ export default function App() {
     );
 
     return (
-      <div className="flex h-screen bg-neutral-100 items-center justify-center font-sans">
-        <div className="bg-white p-8 rounded-xl shadow-xl w-96 border border-neutral-200">
+      <div className="flex h-screen bg-neutral-100 dark:bg-neutral-900 items-center justify-center font-sans">
+        <div className="bg-white dark:bg-neutral-800 p-8 rounded-xl shadow-xl w-96 border border-neutral-200 dark:border-neutral-700">
           <div className="flex justify-center mb-8"><Logo /></div>
           <h2 className="text-xl font-bold text-brand-navy text-center mb-6">
             {authMode === 'login' ? 'Sign in to your account' : 'Create your account'}
@@ -1107,12 +1107,12 @@ export default function App() {
   // MAIN APP
   // ==========================================
   return (
-    <div className="flex h-screen bg-neutral-50 font-sans text-neutral-900">
+    <div className="flex h-screen bg-neutral-50 dark:bg-neutral-900 font-sans text-neutral-900 dark:text-neutral-100">
 
       {/* SIDEBAR */}
-      <aside className="w-60 bg-white border-r border-neutral-200 flex flex-col z-10 flex-shrink-0">
+      <aside className="w-60 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-700 flex flex-col z-10 flex-shrink-0">
         {/* Workspace switcher */}
-        <div className="h-14 flex items-center px-3 border-b border-neutral-200 relative" ref={wsRef}>
+        <div className="h-14 flex items-center px-3 border-b border-neutral-200 dark:border-neutral-700 relative" ref={wsRef}>
           <button onClick={() => setWsOpen(o => !o)}
             className="flex-1 flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-neutral-100 transition-colors text-left">
             <div className="w-6 h-6 rounded bg-brand-navy flex items-center justify-center flex-shrink-0">
@@ -1122,20 +1122,20 @@ export default function App() {
             <span className="text-neutral-400 text-xs">⌄</span>
           </button>
           {wsOpen && (
-            <div className="absolute top-full left-3 right-3 mt-1 bg-white rounded-lg shadow-xl border border-neutral-200 z-50 py-1">
-              <div className="px-3 py-2 border-b border-neutral-100">
+            <div className="absolute top-full left-3 right-3 mt-1 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 z-50 py-1">
+              <div className="px-3 py-2 border-b border-neutral-100 dark:border-neutral-700">
                 <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Workspaces</p>
               </div>
-              <button className="w-full flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 text-left">
+              <button className="w-full flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-left">
                 <div className="w-5 h-5 rounded bg-brand-navy flex items-center justify-center">
                   <span className="text-white text-[9px] font-bold">BC</span>
                 </div>
                 <span className="text-sm font-medium text-neutral-900">{workspace.name}</span>
                 <span className="ml-auto text-brand-orange text-xs">✓</span>
               </button>
-              <div className="border-t border-neutral-100 mt-1 pt-1">
+              <div className="border-t border-neutral-100 dark:border-neutral-700 mt-1 pt-1">
                 <button onClick={() => { setView('workspace'); fetchMembers(); setWsOpen(false); }}
-                  className="w-full px-3 py-2 text-xs text-neutral-400 hover:text-brand-navy hover:bg-neutral-50 text-left">
+                  className="w-full px-3 py-2 text-xs text-neutral-400 hover:text-brand-navy hover:bg-neutral-50 dark:hover:bg-neutral-700 text-left">
                   ⚙ Workspace Settings
                 </button>
               </div>
@@ -1145,17 +1145,17 @@ export default function App() {
 
         <nav className="flex-1 p-3 space-y-0.5 text-sm overflow-y-auto">
           <NavItem active={view === 'dashboard'} onClick={() => setView('dashboard')} icon="🏠">Home</NavItem>
-          <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">My Work</p>
+          <p className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-3 pt-3 pb-1">My Work</p>
           <NavItem active={view === 'myworks'} onClick={() => { setView('myworks'); fetchNotifications(); }} icon="👤">
             My Works
-            {myItems.length > 0 && <span className="ml-auto text-[10px] bg-neutral-100 text-neutral-600 rounded-full px-1.5 py-0.5">{myItems.length}</span>}
+            {myItems.length > 0 && <span className="ml-auto text-[10px] bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-full px-1.5 py-0.5">{myItems.length}</span>}
           </NavItem>
           <NavItem active={view === 'notifications'} onClick={() => { setView('notifications'); fetchNotifications(); }} icon="🔔">
             Notifications
             {unreadCount > 0 && <span className="ml-auto text-[10px] bg-brand-orange text-white rounded-full px-1.5 py-0.5">{unreadCount}</span>}
           </NavItem>
 
-          <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">Projects</p>
+          <p className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-3 pt-3 pb-1">Projects</p>
           <NavItem active={view === 'board'} onClick={() => setView('board')} icon="📋">Board</NavItem>
           <NavItem active={view === 'backlog'} onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); fetchSavedFilters(); }} icon="📝">Backlog</NavItem>
           <NavItem active={view === 'sprint'} onClick={() => { setView('sprint'); fetchSprints(); fetchSavedFilters(); }} icon="⚡">
@@ -1164,27 +1164,27 @@ export default function App() {
           </NavItem>
           <NavItem active={view === 'reports'} onClick={() => { setView('reports'); fetchSprints(); fetchVelocityData(); }} icon="📊">Reports</NavItem>
 
-          <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">Configuration</p>
+          <p className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-3 pt-3 pb-1">Configuration</p>
           <NavItem active={view === 'settings3'} onClick={() => { setView('settings3'); fetchWorkflows(); fetchFieldDefs(); fetchRoles(); fetchWorkItemTypes(); }} icon="⚙">Workflows & Fields</NavItem>
           <NavItem active={view === 'wiql'} onClick={() => { setView('wiql'); fetchWiqlFilters(); }} icon="🔍">WIQL Query</NavItem>
 
-          <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">Project Management</p>
+          <p className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-3 pt-3 pb-1">Project Management</p>
           <NavItem active={view === 'pm'} onClick={() => { setView('pm'); if (projects.length) { const pid = projects[0].id; setPmProjectId(pid); fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); } }} icon="📋">PM Artifacts</NavItem>
 
           <NavItem active={view === 'projects'} onClick={() => setView('projects')} icon="📁">
             Projects
-            {projects.length > 0 && <span className="ml-auto text-[10px] bg-neutral-100 text-neutral-600 rounded-full px-1.5 py-0.5">{projects.length}</span>}
+            {projects.length > 0 && <span className="ml-auto text-[10px] bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-full px-1.5 py-0.5">{projects.length}</span>}
           </NavItem>
 
-          <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">Workspace</p>
+          <p className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-3 pt-3 pb-1">Workspace</p>
           <NavItem active={view === 'workspace'} onClick={() => { setView('workspace'); fetchMembers(); fetchNotifPrefs(); fetchBranding(); }} icon="⚙️">Settings</NavItem>
           <NavItem active={view === 'trash'} onClick={() => { setView('trash'); fetchTrash(); }} icon="🗑">
             Trash
           </NavItem>
         </nav>
 
-        <div className="p-3 border-t border-neutral-200">
-          <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-neutral-50 cursor-pointer">
+        <div className="p-3 border-t border-neutral-200 dark:border-neutral-700">
+          <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer">
             <Avatar name={currentUser.fullName} size={7} />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-neutral-900 truncate">{currentUser.fullName}</p>
@@ -1198,21 +1198,21 @@ export default function App() {
       </aside>
 
       {/* MAIN */}
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 flex flex-col min-w-0 dark:bg-neutral-900">
         {/* TOPBAR */}
-        <header className="h-14 bg-white border-b border-neutral-200 flex items-center justify-between px-6 flex-shrink-0 relative">
+        <header className="h-14 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between px-6 flex-shrink-0 relative">
           <div className="relative" ref={searchRef}>
             <input type="text" placeholder="Search work items..."
               value={searchQuery}
               onFocus={() => setSearchOpen(true)}
               onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
               onChange={e => setSearchQuery(e.target.value)}
-              className="bg-neutral-100 rounded-md px-3 py-1.5 w-72 text-sm focus:outline-none focus:ring-1 focus:ring-brand-navy" />
+              className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-100 rounded-md px-3 py-1.5 w-72 text-sm focus:outline-none focus:ring-1 focus:ring-brand-navy" />
             {searchOpen && searchResults.length > 0 && (
-              <div className="absolute top-full mt-1 w-80 bg-white rounded-lg shadow-xl border border-neutral-200 z-50 max-h-64 overflow-y-auto">
+              <div className="absolute top-full mt-1 w-80 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 z-50 max-h-64 overflow-y-auto">
                 {searchResults.map(item => (
                   <button key={item.id} onClick={() => { setSelectedItem(item); setSearchQuery(''); setSearchOpen(false); }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-neutral-50 border-b border-neutral-100 last:border-0">
+                    className="w-full text-left px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-700 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                     <div className="flex items-center gap-2">
                       <TypeBadge type={item.type} compact />
                       <span className="font-mono text-[10px] text-neutral-400">{item.id}</span>
@@ -1223,20 +1223,20 @@ export default function App() {
               </div>
             )}
             {searchOpen && searchQuery.trim() && searchResults.length === 0 && (
-              <div className="absolute top-full mt-1 w-80 bg-white rounded-lg shadow-xl border border-neutral-200 z-50 px-4 py-6 text-center">
+              <div className="absolute top-full mt-1 w-80 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 z-50 px-4 py-6 text-center">
                 <p className="text-sm text-neutral-400">No results for "<span className="text-neutral-700">{searchQuery}</span>"</p>
               </div>
             )}
             {searchOpen && !searchQuery.trim() && recentlyViewed.length > 0 && (
-              <div className="absolute top-full mt-1 w-80 bg-white rounded-lg shadow-xl border border-neutral-200 z-50 max-h-64 overflow-y-auto">
-                <div className="px-4 py-2 border-b border-neutral-100">
+              <div className="absolute top-full mt-1 w-80 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 z-50 max-h-64 overflow-y-auto">
+                <div className="px-4 py-2 border-b border-neutral-100 dark:border-neutral-700">
                   <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Recently Viewed</p>
                 </div>
                 {recentlyViewed.map(item => {
                   const full = workItems.find(i => i.id === item.id);
                   return (
                     <button key={item.id} onClick={() => { if (full) { setSelectedItem(full); } setSearchQuery(''); setSearchOpen(false); }}
-                      className="w-full text-left px-4 py-2.5 hover:bg-neutral-50 border-b border-neutral-100 last:border-0">
+                      className="w-full text-left px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-700 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                       <div className="flex items-center gap-2">
                         <TypeBadge type={item.type} compact />
                         <span className="font-mono text-[10px] text-neutral-400">{item.id}</span>
@@ -1250,7 +1250,7 @@ export default function App() {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => setDarkMode(d => !d)} title="Toggle dark/light mode"
-              className="w-8 h-8 rounded-md flex items-center justify-center text-neutral-400 hover:bg-neutral-100 transition-colors text-base">
+              className="w-8 h-8 rounded-md flex items-center justify-center text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-base">
               {darkMode ? '☀️' : '🌙'}
             </button>
             {can('create_items') && (
@@ -1262,7 +1262,7 @@ export default function App() {
         </header>
 
         {/* CONTENT */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto dark:bg-neutral-900">
 
           {/* DASHBOARD HOME */}
           {view === 'dashboard' && (
@@ -1283,12 +1283,12 @@ export default function App() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 {/* Due soon */}
-                <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                   <h3 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2">
                     <span>📅</span> Due Soon
                   </h3>
                   {workItems.filter(i => i.dueDate && i.status !== 'Done').sort((a,b) => new Date(a.dueDate)-new Date(b.dueDate)).slice(0,5).map(item => (
-                    <div key={item.id} onClick={() => setSelectedItem(item)} className="flex items-center gap-3 py-2 border-b border-neutral-50 last:border-0 cursor-pointer hover:bg-neutral-50 -mx-2 px-2 rounded">
+                    <div key={item.id} onClick={() => setSelectedItem(item)} className="flex items-center gap-3 py-2 border-b border-neutral-50 dark:border-neutral-700 last:border-0 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 -mx-2 px-2 rounded">
                       <TypeBadge type={item.type} compact />
                       <span className="flex-1 text-sm text-neutral-900 truncate">{item.title}</span>
                       <span className={`text-xs font-medium ${new Date(item.dueDate) < new Date() ? 'text-semantic-danger' : 'text-semantic-warning'}`}>{item.dueDate}</span>
@@ -1298,12 +1298,12 @@ export default function App() {
                 </div>
 
                 {/* Critical + High priority open items */}
-                <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                   <h3 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2">
                     <span>🔥</span> High Priority Open
                   </h3>
                   {workItems.filter(i => (i.priority==='CRITICAL'||i.priority==='HIGH') && i.status!=='Done').slice(0,5).map(item => (
-                    <div key={item.id} onClick={() => setSelectedItem(item)} className="flex items-center gap-3 py-2 border-b border-neutral-50 last:border-0 cursor-pointer hover:bg-neutral-50 -mx-2 px-2 rounded">
+                    <div key={item.id} onClick={() => setSelectedItem(item)} className="flex items-center gap-3 py-2 border-b border-neutral-50 dark:border-neutral-700 last:border-0 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 -mx-2 px-2 rounded">
                       <PriorityBadge priority={item.priority} />
                       <span className="flex-1 text-sm text-neutral-900 truncate">{item.title}</span>
                       <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
@@ -1315,7 +1315,7 @@ export default function App() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Project health */}
-                <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                   <h3 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2"><span>📁</span> Project Health</h3>
                   {projects.filter(p => !p.archived).map(p => {
                     const items = workItems.filter(i => i.projectId === p.id);
@@ -1327,7 +1327,7 @@ export default function App() {
                           <span className="text-sm font-medium text-neutral-900">{p.name}</span>
                           <span className="text-xs text-neutral-400">{done}/{items.length} done · {pct}%</span>
                         </div>
-                        <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                        <div className="h-1.5 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
                           <div className="h-full bg-semantic-success rounded-full" style={{width:`${pct}%`}}></div>
                         </div>
                       </div>
@@ -1337,7 +1337,7 @@ export default function App() {
                 </div>
 
                 {/* Your role card */}
-                <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                   <h3 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2"><span>🔐</span> Your Access</h3>
                   <div className="flex items-center gap-3 mb-4">
                     <Avatar name={currentUser.fullName} size={8} />
@@ -1357,7 +1357,7 @@ export default function App() {
                       { perm: 'invite_members',  label: 'Invite members' },
                       { perm: 'manage_roles',    label: 'Manage roles' },
                     ].map(p => (
-                      <div key={p.perm} className="flex items-center justify-between py-1 border-b border-neutral-50 last:border-0">
+                      <div key={p.perm} className="flex items-center justify-between py-1 border-b border-neutral-50 dark:border-neutral-700 last:border-0">
                         <span className="text-sm text-neutral-700">{p.label}</span>
                         <span className={`text-xs font-semibold ${userRole.permissions.includes(p.perm) ? 'text-semantic-success' : 'text-neutral-300'}`}>
                           {userRole.permissions.includes(p.perm) ? '✓' : '✕'}
@@ -1376,7 +1376,7 @@ export default function App() {
               <h1 className="text-2xl font-bold text-brand-navy mb-1">My Works</h1>
               <p className="text-sm text-neutral-400 mb-4">Your personal workspace</p>
               {/* Sub-tabs */}
-              <div className="flex gap-1 mb-5 border-b border-neutral-200">
+              <div className="flex gap-1 mb-5 border-b border-neutral-200 dark:border-neutral-700">
                 {[
                   { key: 'assigned', label: `Assigned (${myItems.length})` },
                   { key: 'starred',  label: `Starred (${workItems.filter(i => i.starred).length})` },
@@ -1384,7 +1384,7 @@ export default function App() {
                   { key: 'activity', label: 'Recent Activity' },
                 ].map(t => (
                   <button key={t.key} onClick={() => setMyWorksTab(t.key)}
-                    className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${myWorksTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700'}`}>
+                    className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${myWorksTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                     {t.label}
                   </button>
                 ))}
@@ -1396,11 +1396,11 @@ export default function App() {
                 : <div className="space-y-2">
                     {myItems.map(item => (
                       <div key={item.id} onClick={() => setSelectedItem(item)}
-                        className="bg-white border border-neutral-200 rounded-lg p-4 flex items-center gap-4 hover:shadow-sm cursor-pointer transition-shadow">
+                        className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 flex items-center gap-4 hover:shadow-sm cursor-pointer transition-shadow">
                         <TypeBadge type={item.type} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-neutral-900 truncate">{item.title}</p>
-                          <p className="text-xs text-neutral-400 font-mono">{item.id}</p>
+                          <p className="text-xs text-neutral-400 dark:text-neutral-500 font-mono">{item.id}</p>
                         </div>
                         <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
                         {item.dueDate && <span className="text-xs text-semantic-warning font-medium whitespace-nowrap">Due {item.dueDate}</span>}
@@ -1415,12 +1415,12 @@ export default function App() {
                   : <div className="space-y-2">
                       {starredItems.map(item => (
                         <div key={item.id} onClick={() => setSelectedItem(item)}
-                          className="bg-white border border-brand-orange/30 rounded-lg p-4 flex items-center gap-4 hover:shadow-sm cursor-pointer transition-shadow">
+                          className="bg-white dark:bg-neutral-800 border border-brand-orange/30 rounded-lg p-4 flex items-center gap-4 hover:shadow-sm cursor-pointer transition-shadow">
                           <span className="text-brand-orange text-sm">★</span>
                           <TypeBadge type={item.type} />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-neutral-900 truncate">{item.title}</p>
-                            <p className="text-xs text-neutral-400 font-mono">{item.id}</p>
+                            <p className="text-xs text-neutral-400 dark:text-neutral-500 font-mono">{item.id}</p>
                           </div>
                           <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
                         </div>
@@ -1434,7 +1434,7 @@ export default function App() {
                   ? <EmptyState icon="@" title="No mentions yet" subtitle="When someone @mentions you in a comment, it will appear here." />
                   : <div className="space-y-2">
                       {mentions.map(n => (
-                        <div key={n.id} className={`bg-white border rounded-lg p-4 ${!n.read ? 'border-brand-navy-tint/30' : 'border-neutral-200'}`}>
+                        <div key={n.id} className={`bg-white dark:bg-neutral-800 border rounded-lg p-4 ${!n.read ? 'border-brand-navy-tint/30' : 'border-neutral-200 dark:border-neutral-700'}`}>
                           <p className="text-sm text-neutral-900">{n.message}</p>
                           <p className="text-xs text-neutral-400 mt-1">{n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}</p>
                         </div>
@@ -1445,7 +1445,7 @@ export default function App() {
                 <div className="space-y-2">
                   {workItems.filter(i => i.createdBy === currentUser.id || i.assigneeId === currentUser.id).slice(0, 20).map(i => (
                     <div key={i.id} onClick={() => setSelectedItem(i)}
-                      className="bg-white border border-neutral-200 rounded-lg p-3 flex items-center gap-3 hover:shadow-sm cursor-pointer">
+                      className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3 flex items-center gap-3 hover:shadow-sm cursor-pointer">
                       <TypeBadge type={i.type} compact />
                       <span className="text-xs font-mono text-neutral-400">{i.id}</span>
                       <span className="flex-1 text-sm text-neutral-900 truncate">{i.title}</span>
@@ -1468,10 +1468,10 @@ export default function App() {
                   <p className="text-xs text-neutral-400 mt-0.5">{workItems.length} items total</p>
                 </div>
                 {/* Density toggle */}
-                <div className="flex items-center gap-1 bg-neutral-100 rounded-lg p-1">
+                <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1">
                   {['compact', 'comfortable', 'spacious'].map(d => (
                     <button key={d} onClick={() => setDensity(d)}
-                      className={`px-3 py-1 rounded-md text-xs font-medium transition-colors capitalize ${density === d ? 'bg-white shadow-sm text-brand-navy' : 'text-neutral-400 hover:text-neutral-700'}`}>
+                      className={`px-3 py-1 rounded-md text-xs font-medium transition-colors capitalize ${density === d ? 'bg-white dark:bg-neutral-700 shadow-sm text-brand-navy' : 'text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                       {d}
                     </button>
                   ))}
@@ -1487,7 +1487,7 @@ export default function App() {
                 : loading ? (
                   <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
                     {columns.map(col => (
-                      <div key={col.name} className="flex-1 min-w-56 flex flex-col bg-neutral-100 rounded-xl p-3">
+                      <div key={col.name} className="flex-1 min-w-56 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3">
                         <div className="flex items-center justify-between mb-3 px-1">
                           <div className="h-3 w-20 bg-neutral-200 rounded animate-pulse"></div>
                           <div className="h-5 w-6 bg-white rounded-full animate-pulse"></div>
@@ -1512,7 +1512,7 @@ export default function App() {
                       const colItems = workItems.filter(i => i.status === col.name);
                       return (
                         <div key={col.name}
-                          className="flex-1 min-w-56 flex flex-col bg-neutral-100 rounded-xl p-3"
+                          className="flex-1 min-w-56 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3"
                           onDragOver={handleDragOver}
                           onDrop={(e) => handleDrop(e, col.name)}>
                           <div className="flex items-center justify-between mb-3 px-1">
@@ -1520,7 +1520,7 @@ export default function App() {
                               <span className={`w-2 h-2 rounded-full ${col.dot}`}></span>
                               <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{col.name}</h3>
                             </div>
-                            <span className="text-xs bg-white text-neutral-500 px-2 py-0.5 rounded-full shadow-sm">{colItems.length}</span>
+                            <span className="text-xs bg-white dark:bg-neutral-700 text-neutral-500 dark:text-neutral-300 px-2 py-0.5 rounded-full shadow-sm">{colItems.length}</span>
                           </div>
                           <div className="space-y-2 flex-1">
                             {colItems.length === 0 && (
@@ -1531,7 +1531,7 @@ export default function App() {
                             {colItems.map(item => (
                               <div key={item.id} draggable
                                 onDragStart={(e) => handleDragStart(e, item.id)}
-                                className={`bg-white rounded-lg shadow-sm border border-neutral-200 cursor-grab hover:shadow-md transition-shadow group ${densityPad[density]} ${item.starred ? 'border-brand-orange/40' : ''}`}>
+                                className={`bg-white dark:bg-neutral-700 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-600 cursor-grab hover:shadow-md transition-shadow group ${densityPad[density]} ${item.starred ? 'border-brand-orange/40' : ''}`}>
                                 <div className="flex items-start justify-between mb-1.5">
                                   <span className="font-mono text-[10px] text-neutral-400">{item.id}</span>
                                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1556,7 +1556,7 @@ export default function App() {
                                 {density !== 'compact' && item.tags && item.tags.length > 0 && (
                                   <div className="flex flex-wrap gap-1 mt-2">
                                     {item.tags.map(t => (
-                                      <span key={t} className="text-[10px] bg-neutral-100 text-neutral-500 px-1.5 py-0.5 rounded">{t}</span>
+                                      <span key={t} className="text-[10px] bg-neutral-100 dark:bg-neutral-600 text-neutral-500 dark:text-neutral-300 px-1.5 py-0.5 rounded">{t}</span>
                                     ))}
                                   </div>
                                 )}
@@ -1565,7 +1565,7 @@ export default function App() {
                           </div>
                           {/* Add item shortcut */}
                           <button onClick={() => { setNewItem(p => ({ ...p, status: col.name })); setIsCreateOpen(true); }}
-                            className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-400 hover:text-neutral-700 hover:bg-white rounded-lg transition-colors">
+                            className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-700 rounded-lg transition-colors">
                             <span>+</span> Add item
                           </button>
                         </div>
@@ -1597,14 +1597,14 @@ export default function App() {
                       const count = workItems.filter(i => i.projectId === p.id).length;
                       const done  = workItems.filter(i => i.projectId === p.id && i.status === 'Done').length;
                       return (
-                        <div key={p.id} className="bg-white border border-neutral-200 rounded-xl p-5 hover:shadow-sm transition-shadow">
+                        <div key={p.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 hover:shadow-sm transition-shadow">
                           <div className="flex items-center gap-4">
                             <div className="w-10 h-10 bg-brand-navy rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0">{p.keyPrefix}</div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="font-semibold text-neutral-900">{p.name}</h3>
                                 {p.slug && (
-                                  <span className="text-[10px] font-mono bg-neutral-100 text-neutral-500 px-1.5 py-0.5 rounded border border-neutral-200"
+                                  <span className="text-[10px] font-mono bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-300 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-600"
                                     title="Slug-based project URL">
                                     /projects/{p.slug}
                                   </span>
@@ -1624,7 +1624,7 @@ export default function App() {
                           </div>
                           {count > 0 && (
                             <div className="mt-3">
-                              <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                              <div className="h-1.5 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
                                 <div className="h-full bg-semantic-success rounded-full transition-all" style={{ width: `${Math.round((done / count) * 100)}%` }}></div>
                               </div>
                               <p className="text-[10px] text-neutral-400 mt-1">{Math.round((done / count) * 100)}% complete</p>
@@ -1658,7 +1658,7 @@ export default function App() {
                   <div className="space-y-2">
                     {notifications.map(n => (
                       <div key={n.id}
-                        className={`bg-white border rounded-xl p-4 flex gap-3 items-start transition-colors ${!n.read ? 'border-brand-navy-tint/30 bg-semantic-info-surface/30' : 'border-neutral-200'}`}>
+                        className={`bg-white dark:bg-neutral-800 border rounded-xl p-4 flex gap-3 items-start transition-colors ${!n.read ? 'border-brand-navy-tint/30 bg-semantic-info-surface/30' : 'border-neutral-200 dark:border-neutral-700'}`}>
                         <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${!n.read ? 'bg-brand-orange' : 'bg-transparent'}`}></div>
                         <div className="flex-1">
                           <p className="text-sm text-neutral-900">{n.message}</p>
@@ -1702,8 +1702,8 @@ export default function App() {
                 const capPct = sprint.capacity > 0 ? Math.min(100, Math.round((usedPts / sprint.capacity) * 100)) : 0;
                 const capColor = capPct >= 100 ? 'bg-semantic-danger' : capPct >= 80 ? 'bg-semantic-warning' : 'bg-semantic-success';
                 return (
-                  <div key={sprint.id} className="bg-white border border-neutral-200 rounded-xl mb-4 overflow-hidden">
-                    <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 bg-neutral-50">
+                  <div key={sprint.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl mb-4 overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900">
                       <div className="flex items-center gap-3">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${sprint.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : sprint.status === 'COMPLETED' ? 'bg-neutral-200 text-neutral-500' : 'bg-brand-navy-tint/10 text-brand-navy-tint'}`}>{sprint.status}</span>
                         <h3 className="font-semibold text-neutral-900">{sprint.name}</h3>
@@ -1732,8 +1732,8 @@ export default function App() {
               })}
 
               {/* Backlog items with drag-drop reorder */}
-              <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 bg-neutral-50">
+              <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900">
                   <h3 className="font-semibold text-neutral-900">Backlog</h3>
                   <span className="text-xs text-neutral-400">{backlogItems.length} items</span>
                 </div>
@@ -1745,7 +1745,7 @@ export default function App() {
                       onDragOver={(e) => { e.preventDefault(); setDragOverId(item.id); }}
                       onDragLeave={() => setDragOverId(null)}
                       onDrop={(e) => handleBacklogDrop(e, item.id)}
-                      className={`flex items-center gap-3 px-5 py-3 border-b border-neutral-50 last:border-0 hover:bg-neutral-50 group transition-colors ${dragOverId === item.id ? 'border-t-2 border-t-brand-navy bg-brand-navy/5' : ''}`}>
+                      className={`flex items-center gap-3 px-5 py-3 border-b border-neutral-50 dark:border-neutral-700 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-700 group transition-colors ${dragOverId === item.id ? 'border-t-2 border-t-brand-navy bg-brand-navy/5' : ''}`}>
                       <span className="text-neutral-300 cursor-grab text-xs mr-1">⠿</span>
                       <TypeBadge type={item.type} compact />
                       <span className="font-mono text-[10px] text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
@@ -1754,18 +1754,18 @@ export default function App() {
                       {refinementMode ? (
                         <div className="flex items-center gap-2">
                           <select value={item.priority || 'MEDIUM'} onChange={e => handleRefinementUpdate(item.id, 'priority', e.target.value)}
-                            className="text-xs border border-neutral-200 rounded px-1.5 py-1 focus:outline-none text-neutral-600">
+                            className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-300 rounded px-1.5 py-1 focus:outline-none text-neutral-600">
                             {['LOW','MEDIUM','HIGH','CRITICAL'].map(p => <option key={p} value={p}>{p}</option>)}
                           </select>
                           <input type="number" min={0} max={100} value={item.storyPoints || 0}
                             onChange={e => handleRefinementUpdate(item.id, 'storyPoints', parseInt(e.target.value) || 0)}
-                            className="w-14 text-xs border border-neutral-200 rounded px-1.5 py-1 focus:outline-none text-center"
+                            className="w-14 text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-300 rounded px-1.5 py-1 focus:outline-none text-center"
                             placeholder="pts" />
                         </div>
                       ) : (
                         <>
                           <PriorityBadge priority={item.priority} />
-                          {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
+                          {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
                         </>
                       )}
                       {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}
@@ -1800,7 +1800,7 @@ export default function App() {
                     <div className="flex items-center gap-2 flex-wrap justify-end">
                       <select value={activeSprint.id}
                         onChange={e => { const s = sprints.find(x => x.id === e.target.value); if (s) { setActiveSprint(s); fetchSprintItems(s.id); } }}
-                        className="text-sm border border-neutral-200 rounded-md px-2 py-1.5 focus:outline-none">
+                        className="text-sm border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 rounded-md px-2 py-1.5 focus:outline-none">
                         {sprints.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
                     </div>
@@ -1808,9 +1808,9 @@ export default function App() {
 
                   {/* Capacity bar */}
                   {activeSprint.capacity > 0 && (
-                    <div className="mb-3 bg-white border border-neutral-200 rounded-lg px-4 py-2.5 flex items-center gap-4">
+                    <div className="mb-3 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-4 py-2.5 flex items-center gap-4">
                       <span className="text-xs text-neutral-400 font-medium w-20">Capacity</span>
-                      <div className="flex-1 h-2 bg-neutral-100 rounded-full overflow-hidden">
+                      <div className="flex-1 h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
                         <div className="h-full bg-brand-navy-tint rounded-full transition-all"
                           style={{ width: `${Math.min(100, (sprintItems.reduce((a, i) => a + (i.storyPoints || 0), 0) / activeSprint.capacity) * 100)}%` }}></div>
                       </div>
@@ -1830,7 +1830,7 @@ export default function App() {
                       { label: '🐛 Bugs', filter: { type: 'itemType', value: 'Bug' } },
                     ].map(f => (
                       <button key={f.label} onClick={() => setActiveFilter(f.filter)}
-                        className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${JSON.stringify(activeFilter) === JSON.stringify(f.filter) ? 'bg-brand-navy text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}>
+                        className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${JSON.stringify(activeFilter) === JSON.stringify(f.filter) ? 'bg-brand-navy text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'}`}>
                         {f.label}
                       </button>
                     ))}
@@ -1859,7 +1859,7 @@ export default function App() {
                           ? <button onClick={() => setShowSaveFilter(true)} className="text-xs text-neutral-400 hover:text-brand-navy">Save filter</button>
                           : <div className="flex gap-1">
                               <input type="text" value={saveFilterName} onChange={e => setSaveFilterName(e.target.value)}
-                                placeholder="Filter name" className="text-xs border border-neutral-200 rounded px-2 py-1 focus:outline-none" />
+                                placeholder="Filter name" className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 rounded px-2 py-1 focus:outline-none" />
                               <Button size="sm" variant="secondary" onClick={handleSaveFilter}>Save</Button>
                               <button onClick={() => setShowSaveFilter(false)} className="text-xs text-neutral-400 px-1">✕</button>
                             </div>
@@ -1867,7 +1867,7 @@ export default function App() {
                       </div>
                     )}
                     <select value={swimlaneBy} onChange={e => setSwimlaneBy(e.target.value)}
-                      className="text-xs border border-neutral-200 rounded-md px-2 py-1.5 focus:outline-none text-neutral-600 ml-auto">
+                      className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 rounded-md px-2 py-1.5 focus:outline-none text-neutral-600 ml-auto">
                       <option value="none">No swimlane</option>
                       <option value="assignee">By Assignee</option>
                       <option value="type">By Type</option>
@@ -1885,7 +1885,7 @@ export default function App() {
                       const item = sprintItems.find(i => i.id === itemId);
                       if (!item || item.status === status) return;
                       setSprintItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
-                      api.raw(`/work-items/${itemId}`, { method: 'PUT', headers: headers(), body: JSON.stringify({ ...item, status }) }).catch(() => {});
+                      api.raw(`/work-items/${itemId}`, { method: 'PUT', body: JSON.stringify({ ...item, status }) }).catch(() => {});
                     }}
                     onSelect={setSelectedItem} onDelete={handleDelete} density={density} />
                 </>
@@ -1949,7 +1949,7 @@ export default function App() {
                     <div className="flex gap-2 mb-5 flex-wrap">
                       {sprints.map(s => (
                         <button key={s.id} onClick={() => { setSelectedSprintId(s.id); fetchSprintReport(s.id); }}
-                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedSprintId === s.id ? 'bg-brand-navy text-white' : 'bg-white border border-neutral-200 text-neutral-600 hover:border-brand-navy'}`}>
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedSprintId === s.id ? 'bg-brand-navy text-white' : 'bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-brand-navy'}`}>
                           {s.name}
                         </button>
                       ))}
@@ -1964,7 +1964,7 @@ export default function App() {
                             { label: 'Completion', value: `${sprintReport.completionRate}%`, color: 'text-brand-navy' },
                             { label: 'Velocity', value: `${sprintReport.donePoints}/${sprintReport.totalPoints}pt`, color: 'text-brand-orange' },
                           ].map(card => (
-                            <div key={card.label} className="bg-white border border-neutral-200 rounded-xl p-5">
+                            <div key={card.label} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                               <p className="text-xs text-neutral-400 mb-1">{card.label}</p>
                               <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
                             </div>
@@ -1972,7 +1972,7 @@ export default function App() {
                         </div>
 
                         {/* Burndown chart (visual) */}
-                        <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                           <h3 className="font-semibold text-neutral-900 mb-4">Burndown — Commitment vs Delivery</h3>
                           <div className="flex gap-3 mb-3 text-xs text-neutral-400">
                             <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-semantic-success inline-block"></span>Done ({sprintReport.doneItems})</span>
@@ -1980,7 +1980,7 @@ export default function App() {
                             <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-neutral-200 inline-block"></span>Todo ({sprintReport.todoItems})</span>
                           </div>
                           {/* Stacked bar burndown */}
-                          <div className="h-8 bg-neutral-100 rounded-lg overflow-hidden flex mb-2">
+                          <div className="h-8 bg-neutral-100 dark:bg-neutral-700 rounded-lg overflow-hidden flex mb-2">
                             {sprintReport.totalItems > 0 && <>
                               <div className="h-full bg-semantic-success transition-all flex items-center justify-center" style={{ width: `${(sprintReport.doneItems / sprintReport.totalItems) * 100}%` }}>
                                 {sprintReport.doneItems > 0 && <span className="text-white text-[10px] font-bold">{sprintReport.doneItems}</span>}
@@ -1998,7 +1998,7 @@ export default function App() {
 
                         {/* Commitment vs Delivery — story points comparison */}
                         {sprintReport.totalPoints > 0 && (
-                          <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                             <h3 className="font-semibold text-neutral-900 mb-1">Commitment vs Delivery</h3>
                             <p className="text-xs text-neutral-400 mb-4">Story points: what was committed vs what was delivered</p>
                             <div className="space-y-3">
@@ -2009,7 +2009,7 @@ export default function App() {
                               ].map(row => (
                                 <div key={row.label} className="flex items-center gap-3">
                                   <span className="text-xs text-neutral-500 w-20 flex-shrink-0">{row.label}</span>
-                                  <div className="flex-1 h-5 bg-neutral-100 rounded-full overflow-hidden">
+                                  <div className="flex-1 h-5 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
                                     <div className={`h-full rounded-full ${row.color} transition-all flex items-center justify-end pr-2`}
                                       style={{ width: `${row.max > 0 ? Math.round((row.value / row.max) * 100) : 0}%` }}>
                                       {row.value > 0 && <span className="text-[10px] text-white font-bold">{row.value}pt</span>}
@@ -2026,11 +2026,11 @@ export default function App() {
                         )}
 
                         {/* Item outcomes */}
-                        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-                          <div className="px-5 py-3 border-b border-neutral-100">
+                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
+                          <div className="px-5 py-3 border-b border-neutral-100 dark:border-neutral-700">
                             <h3 className="font-semibold text-neutral-900">Item Outcomes</h3>
                           </div>
-                          <div className="divide-y divide-neutral-50">
+                          <div className="divide-y divide-neutral-50 dark:divide-neutral-700">
                             {(sprintReport.items || []).map(item => (
                               <div key={item.id} className="flex items-center gap-3 px-5 py-3">
                                 <TypeBadge type={item.type} compact />
@@ -2044,15 +2044,15 @@ export default function App() {
                         </div>
 
                         {/* Scope-change timeline */}
-                        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-                          <div className="px-5 py-3 border-b border-neutral-100 flex items-center justify-between">
+                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
+                          <div className="px-5 py-3 border-b border-neutral-100 dark:border-neutral-700 flex items-center justify-between">
                             <h3 className="font-semibold text-neutral-900">Scope-Change Timeline</h3>
                             <span className="text-xs text-neutral-400">Items added/removed mid-sprint</span>
                           </div>
                           {scopeChanges.length === 0 ? (
                             <p className="text-xs text-neutral-400 text-center py-6">No scope changes — sprint stayed on plan ✓</p>
                           ) : (
-                            <div className="divide-y divide-neutral-50">
+                            <div className="divide-y divide-neutral-50 dark:divide-neutral-700">
                               {scopeChanges.map((c, i) => (
                                 <div key={i} className="flex items-center gap-3 px-5 py-3">
                                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${c.change_type === 'ADDED' ? 'bg-semantic-success-surface text-semantic-success' : 'bg-semantic-danger-surface text-semantic-danger'}`}>
@@ -2081,20 +2081,20 @@ export default function App() {
             <div className="p-8 max-w-3xl">
               <h1 className="text-2xl font-bold text-brand-navy mb-1">Workspace Settings</h1>
               <p className="text-sm text-neutral-400 mb-6">BCITS Master Workspace</p>
-              <div className="bg-white rounded-xl border border-neutral-200 p-6 mb-6">
+              <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 mb-6">
                 <h2 className="font-semibold text-neutral-900 mb-1">Members</h2>
                 <p className="text-sm text-neutral-400 mb-4">People who have access to this workspace</p>
                 <div className="space-y-1 mb-5">
                   {workspaceMembers.length === 0
                     ? <p className="text-sm text-neutral-400 py-4 text-center">Loading members...</p>
                     : workspaceMembers.map(m => (
-                      <div key={m.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 last:border-0">
+                      <div key={m.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                         <Avatar name={m.fullName} size={8} />
                         <div className="flex-1">
                           <p className="text-sm font-medium text-neutral-900">{m.fullName}</p>
                           <p className="text-xs text-neutral-400">{m.email}</p>
                         </div>
-                        <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full">{m.role}</span>
+                        <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full">{m.role}</span>
                         {m.id !== currentUser.id && (
                           <button onClick={() => handleRemoveMember(m.id)}
                             className="text-xs text-neutral-400 hover:text-semantic-danger transition-colors">Remove</button>
@@ -2117,7 +2117,7 @@ export default function App() {
               </div>
 
               {/* Notification Preferences */}
-              <div className="bg-white rounded-xl border border-neutral-200 p-6">
+              <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6">
                 <h2 className="font-semibold text-neutral-900 mb-1">Notification Preferences</h2>
                 <p className="text-sm text-neutral-400 mb-4">Control what notifies you</p>
                 {[
@@ -2126,7 +2126,7 @@ export default function App() {
                   { key: 'notifyMention', label: '@mentioned in a comment' },
                   { key: 'emailDigest',   label: 'Daily email digest' },
                 ].map(pref => (
-                  <label key={pref.key} className="flex items-center justify-between py-2.5 border-b border-neutral-100 last:border-0 cursor-pointer">
+                  <label key={pref.key} className="flex items-center justify-between py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0 cursor-pointer">
                     <span className="text-sm text-neutral-700">{pref.label}</span>
                     <input type="checkbox" checked={notifPrefs[pref.key]}
                       onChange={e => { const updated = { ...notifPrefs, [pref.key]: e.target.checked }; saveNotifPrefs(updated); }}
@@ -2136,7 +2136,7 @@ export default function App() {
               </div>
 
               {/* MFA / Two-Factor Authentication */}
-              <div className="bg-white rounded-xl border border-neutral-200 p-6 mt-6">
+              <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 mt-6">
                 <h2 className="font-semibold text-neutral-900 mb-1">Two-Factor Authentication (TOTP)</h2>
                 <p className="text-sm text-neutral-400 mb-4">Secure your account with an authenticator app (Google Authenticator, Authy, etc.)</p>
                 {!mfaSetup ? (
@@ -2145,14 +2145,14 @@ export default function App() {
                   </Button>
                 ) : (
                   <div className="space-y-4">
-                    <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
+                    <div className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
                       <p className="text-xs font-semibold text-neutral-600 mb-2">1. Scan this QR code with your authenticator app</p>
-                      <div className="bg-white border border-neutral-300 rounded p-3 text-center mb-3">
+                      <div className="bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded p-3 text-center mb-3">
                         <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(mfaSetup.otpAuthUri)}&size=160x160`}
                           alt="TOTP QR Code" className="mx-auto w-40 h-40" />
                       </div>
                       <p className="text-xs text-neutral-500 mb-1">Or enter this secret manually:</p>
-                      <code className="text-xs bg-neutral-100 px-2 py-1 rounded font-mono break-all">{mfaSetup.secret}</code>
+                      <code className="text-xs bg-neutral-100 dark:bg-neutral-700 dark:text-neutral-200 px-2 py-1 rounded font-mono break-all">{mfaSetup.secret}</code>
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-neutral-600 mb-2">2. Enter the 6-digit code to confirm</p>
@@ -2175,10 +2175,10 @@ export default function App() {
 
               {/* Role Management — ADMIN+ only */}
               {can('manage_roles') && (
-                <div className="bg-white rounded-xl border border-neutral-200 p-6">
+                <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6">
                   <h2 className="font-semibold text-neutral-900 mb-1">Role Management</h2>
                   <p className="text-sm text-neutral-400 mb-4">Control what each member can do</p>
-                  <div className="mb-4 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+                  <div className="mb-4 p-3 bg-neutral-50 dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700">
                     <p className="text-xs font-semibold text-neutral-600 mb-2">Tier Hierarchy</p>
                     {[
                       { role: 'VIEWER', tier: 1, desc: 'View only — no create/edit' },
@@ -2195,7 +2195,7 @@ export default function App() {
                   </div>
                   <div className="space-y-1">
                     {workspaceMembers.map(m => (
-                      <div key={m.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 last:border-0">
+                      <div key={m.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                         <Avatar name={m.fullName} size={7} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-neutral-900 truncate">{m.fullName}</p>
@@ -2206,12 +2206,12 @@ export default function App() {
                           : <select defaultValue={m.role || 'MEMBER'}
                               onChange={e => {
                                 api.raw(`/rbac/members/${m.id}/role`, {
-                                  method: 'PUT', headers: headers(),
+                                  method: 'PUT',
                                   body: JSON.stringify({ roleId: e.target.value })
                                 }).then(r => r.json()).then(d => showToast(d.message || 'Role updated'))
                                   .catch(err => showToast(err.message, 'error'));
                               }}
-                              className="text-xs border border-neutral-200 rounded px-2 py-1 focus:outline-none text-neutral-700">
+                              className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-200 rounded px-2 py-1 focus:outline-none text-neutral-700">
                               {['VIEWER','MEMBER','LEAD','ADMIN'].map(r => <option key={r} value={r}>{r}</option>)}
                             </select>
                         }
@@ -2223,7 +2223,7 @@ export default function App() {
 
               {/* Workspace Branding */}
               {can('manage_projects') && (
-                <div className="bg-white rounded-xl border border-neutral-200 p-6 mt-6">
+                <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 mt-6">
                   <h2 className="font-semibold text-neutral-900 mb-1">Workspace Branding</h2>
                   <p className="text-sm text-neutral-400 mb-4">Customize your workspace appearance</p>
                   <div className="space-y-4">
@@ -2241,7 +2241,7 @@ export default function App() {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-neutral-700 mb-1">Workspace Description</label>
+                      <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Workspace Description</label>
                       <textarea rows={2} value={brandingDesc} onChange={e => setBrandingDesc(e.target.value)}
                         className="input resize-none" placeholder="Describe your workspace..." />
                     </div>
@@ -2251,7 +2251,7 @@ export default function App() {
               )}
 
               {/* Project Members */}
-              <div className="bg-white rounded-xl border border-neutral-200 p-6 mt-6">
+              <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 mt-6">
                 <h2 className="font-semibold text-neutral-900 mb-1">Project Members</h2>
                 <p className="text-sm text-neutral-400 mb-4">Manage per-project team membership</p>
                 <div className="flex gap-2 mb-4 flex-wrap">
@@ -2266,13 +2266,13 @@ export default function App() {
                   <>
                     <div className="space-y-1 mb-4 max-h-40 overflow-y-auto">
                       {projectMembers.map(m => (
-                        <div key={m.user_id || m.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 last:border-0">
+                        <div key={m.user_id || m.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <Avatar name={m.full_name || m.fullName} size={7} />
                           <div className="flex-1">
                             <p className="text-sm font-medium text-neutral-900">{m.full_name || m.fullName}</p>
                             <p className="text-xs text-neutral-400">{m.email}</p>
                           </div>
-                          <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full">{m.role}</span>
+                          <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full">{m.role}</span>
                         </div>
                       ))}
                       {projectMembers.length === 0 && <p className="text-sm text-neutral-400 py-2 text-center">No project-specific members yet.</p>}
@@ -2300,7 +2300,7 @@ export default function App() {
               <p className="text-sm text-neutral-400 mb-5">Configure workflows, custom fields, permissions, and work item types</p>
 
               {/* Sub-tabs */}
-              <div className="flex gap-1 mb-6 border-b border-neutral-200">
+              <div className="flex gap-1 mb-6 border-b border-neutral-200 dark:border-neutral-700">
                 {[
                   { key: 'workflows',   label: 'Workflows' },
                   { key: 'fields',      label: 'Custom Fields' },
@@ -2311,7 +2311,7 @@ export default function App() {
                     setSettings3Tab(t.key);
                     if (t.key === 'permissions') fetchPermMatrix();
                   }}
-                    className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${settings3Tab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700'}`}>
+                    className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${settings3Tab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                     {t.label}
                   </button>
                 ))}
@@ -2323,15 +2323,15 @@ export default function App() {
                   <div className="flex justify-between items-center mb-4">
                     <h2 className="font-semibold text-neutral-900">Workflow Definitions</h2>
                     <Button variant="action" onClick={() => {
-                      fetch(`${API}/workflows`, { method: 'POST', headers: headers(), body: JSON.stringify({ name: 'New Workflow', workspaceId: 'WS-001', isDefault: false }) })
+                      api.raw(`/workflows`, { method: 'POST', body: JSON.stringify({ name: 'New Workflow', workspaceId: 'WS-001', isDefault: false }) })
                         .then(r => r.json()).then(() => fetchWorkflows());
                     }}>+ New Workflow</Button>
                   </div>
                   {workflows.length === 0
-                    ? <EmptyState icon="⚙" title="No workflows yet" subtitle="Create a workflow to define statuses and transitions for your work items." action={<Button variant="action" onClick={() => { fetch(`${API}/workflows`, { method: 'POST', headers: headers(), body: JSON.stringify({ name: 'Default Workflow', workspaceId: 'WS-001', isDefault: true }) }).then(r => r.json()).then(() => fetchWorkflows()); }}>Create default workflow</Button>} />
+                    ? <EmptyState icon="⚙" title="No workflows yet" subtitle="Create a workflow to define statuses and transitions for your work items." action={<Button variant="action" onClick={() => { api.raw(`/workflows`, { method: 'POST', body: JSON.stringify({ name: 'Default Workflow', workspaceId: 'WS-001', isDefault: true }) }).then(r => r.json()).then(() => fetchWorkflows()); }}>Create default workflow</Button>} />
                     : <div className="space-y-3">
                         {workflows.map(wf => (
-                          <div key={wf.id} className="bg-white border border-neutral-200 rounded-xl p-5">
+                          <div key={wf.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-3">
                                 <span className="font-semibold text-neutral-900">{wf.name}</span>
@@ -2340,7 +2340,7 @@ export default function App() {
                               </div>
                               <div className="flex gap-2">
                                 <span className="font-mono text-xs text-neutral-400">{wf.id}</span>
-                                <button onClick={() => fetch(`${API}/workflows/${wf.id}`, { method: 'DELETE', headers: headers() }).then(() => fetchWorkflows())}
+                                <button onClick={() => api.raw(`/workflows/${wf.id}`, { method: 'DELETE' }).then(() => fetchWorkflows())}
                                   className="text-xs text-semantic-danger hover:underline">Delete</button>
                               </div>
                             </div>
@@ -2361,31 +2361,31 @@ export default function App() {
                       const name = window.prompt('Field name:');
                       const type = window.prompt('Field type (TEXT/NUMBER/SELECT/DATE/CHECKBOX/USER/URL/CURRENCY/MULTI_SELECT/TEXTAREA/EMAIL/PHONE/RATING/PROGRESS/FILE/JSON):') || 'TEXT';
                       if (name) {
-                        fetch(`${API}/field-defs`, { method: 'POST', headers: headers(), body: JSON.stringify({ name, fieldType: type.toUpperCase(), fieldKey: name.toLowerCase().replace(/\s+/g,'_'), workspaceId: 'WS-001' }) })
+                        api.raw(`/field-defs`, { method: 'POST', body: JSON.stringify({ name, fieldType: type.toUpperCase(), fieldKey: name.toLowerCase().replace(/\s+/g,'_'), workspaceId: 'WS-001' }) })
                           .then(r => r.json()).then(() => fetchFieldDefs());
                       }
                     }}>+ New Field</Button>
                   </div>
                   {fieldDefs.length === 0
                     ? <EmptyState icon="📝" title="No custom fields" subtitle="Create custom fields to capture domain-specific data on work items." />
-                    : <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+                    : <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
                         <table className="w-full text-sm">
-                          <thead className="bg-neutral-50 border-b border-neutral-200">
+                          <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
                             <tr>
                               {['Field Name', 'Type', 'Key', 'Required', ''].map(h => (
-                                <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{h}</th>
+                                <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{h}</th>
                               ))}
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-neutral-100">
+                          <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
                             {fieldDefs.map(fd => (
-                              <tr key={fd.id} className="hover:bg-neutral-50">
+                              <tr key={fd.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
                                 <td className="px-4 py-3 font-medium text-neutral-900">{fd.name}</td>
-                                <td className="px-4 py-3"><span className="text-xs bg-brand-navy/10 text-brand-navy px-2 py-0.5 rounded font-mono">{fd.fieldType}</span></td>
+                                <td className="px-4 py-3"><span className="text-xs bg-brand-navy/10 dark:bg-brand-navy/20 text-brand-navy dark:text-blue-300 px-2 py-0.5 rounded font-mono">{fd.fieldType}</span></td>
                                 <td className="px-4 py-3 font-mono text-xs text-neutral-400">{fd.fieldKey}</td>
                                 <td className="px-4 py-3"><span className={`text-xs font-semibold ${fd.required ? 'text-semantic-danger' : 'text-neutral-300'}`}>{fd.required ? '✓ Required' : 'Optional'}</span></td>
                                 <td className="px-4 py-3">
-                                  <button onClick={() => fetch(`${API}/field-defs/${fd.id}`, { method: 'DELETE', headers: headers() }).then(() => fetchFieldDefs())}
+                                  <button onClick={() => api.raw(`/field-defs/${fd.id}`, { method: 'DELETE' }).then(() => fetchFieldDefs())}
                                     className="text-xs text-semantic-danger hover:underline">Delete</button>
                                 </td>
                               </tr>
@@ -2405,7 +2405,7 @@ export default function App() {
                     <Button variant="action" onClick={() => {
                       const name = window.prompt('Role name:');
                       if (name) {
-                        fetch(`${API}/permission-schemes/roles`, { method: 'POST', headers: headers(), body: JSON.stringify({ name, workspaceId: 'WS-001', tier: 2 }) })
+                        api.raw(`/permission-schemes/roles`, { method: 'POST', body: JSON.stringify({ name, workspaceId: 'WS-001', tier: 2 }) })
                           .then(r => r.json()).then(() => { fetchRoles(); fetchPermMatrix(); });
                       }
                     }}>+ New Role</Button>
@@ -2415,22 +2415,22 @@ export default function App() {
                     : permMatrix.matrix.length === 0
                       ? <EmptyState icon="🔐" title="No custom roles" subtitle="Create roles to define fine-grained access control for your team." />
                       : <div className="overflow-x-auto">
-                          <table className="w-full text-xs border border-neutral-200 rounded-xl overflow-hidden">
+                          <table className="w-full text-xs border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden dark:text-neutral-300">
                             <thead className="bg-neutral-50">
                               <tr>
-                                <th className="text-left px-4 py-2.5 font-semibold text-neutral-700 sticky left-0 bg-neutral-50">Permission</th>
+                                <th className="text-left px-4 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 sticky left-0 bg-neutral-50 dark:bg-neutral-900">Permission</th>
                                 {permMatrix.roles.map(r => (
-                                  <th key={r.id} className="px-3 py-2.5 font-semibold text-neutral-700 text-center min-w-[90px]">
+                                  <th key={r.id} className="px-3 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 text-center min-w-[90px]">
                                     <div>{r.name}</div>
                                     <div className="font-normal text-neutral-400">Tier {r.tier}</div>
                                   </th>
                                 ))}
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-neutral-100">
+                            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
                               {permMatrix.allPermissions.map(perm => (
-                                <tr key={perm} className="hover:bg-neutral-50">
-                                  <td className="px-4 py-2 font-mono sticky left-0 bg-white">{perm}</td>
+                                <tr key={perm} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
+                                  <td className="px-4 py-2 font-mono sticky left-0 bg-white dark:bg-neutral-800">{perm}</td>
                                   {permMatrix.matrix.map(row => (
                                     <td key={row.role.id} className="px-3 py-2 text-center">
                                       <span className={`text-sm font-bold ${row.permissions[perm] ? 'text-semantic-success' : 'text-neutral-200'}`}>
@@ -2457,7 +2457,7 @@ export default function App() {
                       const icon  = window.prompt('Icon emoji (e.g. 📟):') || '📦';
                       if (label) {
                         const key = label.toUpperCase().replace(/\s+/g,'_');
-                        fetch(`${API}/work-item-types`, { method: 'POST', headers: headers(), body: JSON.stringify({ label, typeKey: key, icon, color: '#6b7280', workspaceId: 'WS-001' }) })
+                        api.raw(`/work-item-types`, { method: 'POST', body: JSON.stringify({ label, typeKey: key, icon, color: '#6b7280', workspaceId: 'WS-001' }) })
                           .then(r => r.json()).then(() => fetchWorkItemTypes());
                       }
                     }}>+ Custom Type</Button>
@@ -2467,7 +2467,7 @@ export default function App() {
                       <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">Built-in Types</p>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {(workItemTypes.builtIn || []).map(t => (
-                          <div key={t.typeKey} className="bg-white border border-neutral-200 rounded-xl p-4 flex items-center gap-3">
+                          <div key={t.typeKey} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 flex items-center gap-3">
                             <span className="text-2xl">{t.icon}</span>
                             <div>
                               <p className="font-semibold text-neutral-900 text-sm">{t.label}</p>
@@ -2482,13 +2482,13 @@ export default function App() {
                         <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">Custom Types</p>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                           {(workItemTypes.custom || []).map(t => (
-                            <div key={t.id} className="bg-white border border-brand-navy/20 rounded-xl p-4 flex items-center gap-3 relative group">
+                            <div key={t.id} className="bg-white dark:bg-neutral-800 border border-brand-navy/20 dark:border-brand-navy/30 rounded-xl p-4 flex items-center gap-3 relative group">
                               <span className="text-2xl">{t.icon}</span>
                               <div className="flex-1 min-w-0">
                                 <p className="font-semibold text-neutral-900 text-sm">{t.label}</p>
                                 <p className="text-xs text-neutral-400 font-mono truncate">{t.typeKey}</p>
                               </div>
-                              <button onClick={() => fetch(`${API}/work-item-types/${t.id}`, { method: 'DELETE', headers: headers() }).then(() => fetchWorkItemTypes())}
+                              <button onClick={() => api.raw(`/work-item-types/${t.id}`, { method: 'DELETE' }).then(() => fetchWorkItemTypes())}
                                 className="opacity-0 group-hover:opacity-100 text-semantic-danger text-xs transition-opacity absolute top-2 right-2">✕</button>
                             </div>
                           ))}
@@ -2509,7 +2509,7 @@ export default function App() {
               <h1 className="text-2xl font-bold text-brand-navy mb-1">WIQL — Work Item Query Language</h1>
               <p className="text-sm text-neutral-400 mb-5">Write composable queries to filter work items. Use AND/OR, comparison operators, and functions like currentUser() and today().</p>
 
-              <div className="bg-white border border-neutral-200 rounded-xl p-5 mb-4">
+              <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 mb-4">
                 <div className="mb-3">
                   <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Query</label>
                   <div className="flex gap-2 mt-2">
@@ -2545,10 +2545,10 @@ export default function App() {
                   <div className="flex flex-wrap gap-2">
                     {wiqlFilters.map(f => (
                       <button key={f.id} onClick={() => { setWiqlQuery(f.query); runWiql(); }}
-                        className="flex items-center gap-2 bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-sm hover:border-brand-navy transition-colors group">
+                        className="flex items-center gap-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5 text-sm hover:border-brand-navy transition-colors group">
                         <span className="font-medium text-neutral-900">{f.name}</span>
                         {f.isShared && <span className="text-[10px] text-neutral-400">shared</span>}
-                        <button onClick={e => { e.stopPropagation(); fetch(`${API}/wiql/filters/${f.id}`, { method: 'DELETE', headers: headers() }).then(() => fetchWiqlFilters()); }}
+                        <button onClick={e => { e.stopPropagation(); api.raw(`/wiql/filters/${f.id}`, { method: 'DELETE' }).then(() => fetchWiqlFilters()); }}
                           className="text-neutral-300 hover:text-semantic-danger opacity-0 group-hover:opacity-100 transition-opacity ml-1">✕</button>
                       </button>
                     ))}
@@ -2558,7 +2558,7 @@ export default function App() {
 
               {/* Results */}
               {wiqlResults.length > 0 && (
-                <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+                <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
                   <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
                     <span className="text-sm font-semibold text-neutral-900">{wiqlResults.length} result{wiqlResults.length !== 1 ? 's' : ''}</span>
                   </div>
@@ -2609,7 +2609,7 @@ export default function App() {
               ) : (
                 <>
                   {/* Sub-tabs */}
-                  <div className="flex gap-1 mb-5 border-b border-neutral-200 overflow-x-auto">
+                  <div className="flex gap-1 mb-5 border-b border-neutral-200 dark:border-neutral-700 overflow-x-auto">
                     {[
                       { key: 'raid',         label: '🎯 RAID Dashboard' },
                       { key: 'risks',        label: `⚠ Risks (${risks.length})` },
@@ -2623,7 +2623,7 @@ export default function App() {
                       { key: 'lessons',      label: `📚 Lessons (${lessonsLearned.length})` },
                     ].map(t => (
                       <button key={t.key} onClick={() => setPmTab(t.key)}
-                        className={`text-xs font-medium px-3 py-2 border-b-2 whitespace-nowrap transition-colors ${pmTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700'}`}>
+                        className={`text-xs font-medium px-3 py-2 border-b-2 whitespace-nowrap transition-colors ${pmTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                         {t.label}
                       </button>
                     ))}
@@ -2643,7 +2643,7 @@ export default function App() {
 
                       {/* Risk heatmap */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                           <h3 className="font-semibold text-neutral-900 mb-3">Risk Heat Matrix</h3>
                           {(() => {
                             const probs = ['VERY_HIGH', 'HIGH', 'MEDIUM', 'LOW'];
@@ -2660,7 +2660,7 @@ export default function App() {
                                     {impacts.map(imp => {
                                       const count = (raidDashboard.risks || []).filter(r => r.probability === p && r.impact === imp && r.status === 'OPEN').length;
                                       const heat = (probs.indexOf(p) + impacts.indexOf(imp));
-                                      const bg = count === 0 ? 'bg-neutral-100' : heat >= 5 ? 'bg-semantic-danger' : heat >= 3 ? 'bg-semantic-warning' : 'bg-semantic-success';
+                                      const bg = count === 0 ? 'bg-neutral-100 dark:bg-neutral-700' : heat >= 5 ? 'bg-semantic-danger' : heat >= 3 ? 'bg-semantic-warning' : 'bg-semantic-success';
                                       return (
                                         <div key={imp} className={`flex-1 h-8 rounded flex items-center justify-center text-xs font-bold ${bg} ${count > 0 ? 'text-white' : 'text-neutral-300'}`}>
                                           {count > 0 ? count : ''}
@@ -2676,7 +2676,7 @@ export default function App() {
                         </div>
 
                         {/* Open action items */}
-                        <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                           <h3 className="font-semibold text-neutral-900 mb-3">Overdue & High-Priority Actions</h3>
                           {(raidDashboard.actionItems || []).filter(a => a.status !== 'DONE').slice(0, 5).map(a => (
                             <div key={a.id} className="flex items-center gap-3 py-2 border-b border-neutral-50 last:border-0">
@@ -2763,8 +2763,8 @@ export default function App() {
                         ? <EmptyState icon="📅" title="No meetings yet" subtitle="Log meeting notes with structured agenda, notes, decisions, and action items." />
                         : <div className="space-y-3">
                             {meetings.map(m => (
-                              <div key={m.id} className="bg-white border border-neutral-200 rounded-xl p-5 cursor-pointer hover:shadow-sm transition-shadow"
-                                onClick={() => { setSelectedMeeting(m); setPmTab('meeting-detail'); fetch(`${API}/meetings/${m.id}`, { headers: headers() }).then(r => r.json()).then(d => setMeetingNotes(d.notes || [])); }}>
+                              <div key={m.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 cursor-pointer hover:shadow-sm transition-shadow"
+                                onClick={() => { setSelectedMeeting(m); setPmTab('meeting-detail'); api.raw(`/meetings/${m.id}`).then(r => r.json()).then(d => setMeetingNotes(d.notes || [])); }}>
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
@@ -2799,12 +2799,12 @@ export default function App() {
                             <div key={section} className="bg-white border border-neutral-200 rounded-xl p-4">
                               <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">{section}</p>
                               <textarea
-                                className="w-full text-sm text-neutral-900 border-none outline-none resize-none min-h-[100px] bg-transparent"
+                                className="w-full text-sm text-neutral-900 dark:text-neutral-100 border-none outline-none resize-none min-h-[100px] bg-transparent"
                                 placeholder={`Enter ${section.toLowerCase()}...`}
                                 defaultValue={note?.content || ''}
                                 onBlur={e => {
-                                  fetch(`${API}/meetings/${selectedMeeting.id}/notes/${section}`, {
-                                    method: 'PUT', headers: headers(),
+                                  api.raw(`/meetings/${selectedMeeting.id}/notes/${section}`, {
+                                    method: 'PUT',
                                     body: JSON.stringify({ content: e.target.value })
                                   }).catch(() => {});
                                 }}
@@ -2857,8 +2857,8 @@ export default function App() {
 
               {/* PM CREATE MODAL */}
               {pmFormOpen && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={e => { if (e.target === e.currentTarget) { setPmFormOpen(null); setPmForm({}); } }}>
-                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+                <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-center justify-center z-50 p-4" onClick={e => { if (e.target === e.currentTarget) { setPmFormOpen(null); setPmForm({}); } }}>
+                  <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl w-full max-w-lg p-6">
                     <h2 className="font-bold text-xl text-brand-navy mb-4 capitalize">New {pmFormOpen.replace('issue','PM Issue').replace('lesson','Lesson Learned').replace('action','Action Item').replace('dependency','Dependency')}</h2>
                     <div className="space-y-3">
                       <Field label="Title">
@@ -2989,11 +2989,11 @@ export default function App() {
                 : (
                   <div className="space-y-2">
                     {trashItems.map(item => (
-                      <div key={item.id} className="bg-white border border-neutral-200 rounded-xl p-4 flex items-center gap-4">
+                      <div key={item.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 flex items-center gap-4">
                         <TypeBadge type={item.type} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-neutral-900 truncate">{item.title}</p>
-                          <p className="text-xs text-neutral-400 font-mono">{item.id} · Deleted {item.deletedAt ? new Date(item.deletedAt).toLocaleDateString() : ''}</p>
+                          <p className="text-xs text-neutral-400 dark:text-neutral-500 font-mono">{item.id} · Deleted {item.deletedAt ? new Date(item.deletedAt).toLocaleDateString() : ''}</p>
                         </div>
                         <div className="flex gap-2 flex-shrink-0">
                           <Button variant="secondary" size="sm" onClick={() => restoreFromTrash(item.id)}>Restore</Button>
@@ -3014,8 +3014,8 @@ export default function App() {
 
       {/* DETAIL PANEL */}
       {selectedItem && (
-        <div className="w-[500px] bg-white border-l border-neutral-200 flex flex-col h-screen overflow-hidden flex-shrink-0">
-          <div className="h-14 flex items-center justify-between px-5 border-b border-neutral-200">
+        <div className="w-[500px] bg-white dark:bg-neutral-900 border-l border-neutral-200 dark:border-neutral-700 flex flex-col h-screen overflow-hidden flex-shrink-0">
+          <div className="h-14 flex items-center justify-between px-5 border-b border-neutral-200 dark:border-neutral-700">
             <div className="flex items-center gap-2">
               <TypeBadge type={selectedItem.type} compact />
               <span className="font-mono text-xs text-neutral-400">{selectedItem.id}</span>
@@ -3028,14 +3028,14 @@ export default function App() {
               </button>
               {can('delete_items') && (
                 <button onClick={() => handleDelete(selectedItem.id)}
-                  className="text-xs text-neutral-400 hover:text-semantic-danger px-2 py-1 rounded hover:bg-neutral-50 transition-colors">Delete</button>
+                  className="text-xs text-neutral-400 hover:text-semantic-danger px-2 py-1 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">Delete</button>
               )}
               <button onClick={() => setSelectedItem(null)}
-                className="text-neutral-400 hover:text-neutral-900 p-1 rounded hover:bg-neutral-50 transition-colors">✕</button>
+                className="text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 p-1 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">✕</button>
             </div>
           </div>
           {/* Detail panel tabs */}
-          <div className="flex border-b border-neutral-200 px-5">
+          <div className="flex border-b border-neutral-200 dark:border-neutral-700 px-5">
             {[
               { key: 'details',     label: 'Details' },
               { key: 'comments',    label: `Comments ${comments.length > 0 ? `(${comments.length})` : ''}` },
@@ -3044,16 +3044,16 @@ export default function App() {
               { key: 'activity',    label: 'Activity' },
             ].map(t => (
               <button key={t.key} onClick={() => setDetailTab(t.key)}
-                className={`text-xs font-medium px-3 py-2.5 border-b-2 transition-colors whitespace-nowrap ${detailTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700'}`}>
+                className={`text-xs font-medium px-3 py-2.5 border-b-2 transition-colors whitespace-nowrap ${detailTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                 {t.label}
               </button>
             ))}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          <div className="flex-1 overflow-y-auto p-5 space-y-5 dark:bg-neutral-900">
             {/* DETAILS TAB */}
             {detailTab === 'details' && <>
-            <input className="w-full text-lg font-bold text-neutral-900 focus:outline-none border-b border-transparent focus:border-neutral-200 pb-1 bg-transparent"
+            <input className="w-full text-lg font-bold text-neutral-900 dark:text-neutral-100 focus:outline-none border-b border-transparent focus:border-neutral-200 dark:focus:border-neutral-600 pb-1 bg-transparent"
               value={selectedItem.title}
               onChange={e => setSelectedItem({ ...selectedItem, title: e.target.value })}
               onBlur={() => handleUpdateItem(selectedItem)} />
@@ -3135,7 +3135,7 @@ export default function App() {
                 <div className="space-y-1">
                   {itemChildren.map(child => (
                     <div key={child.id} onClick={() => setSelectedItem(child)}
-                      className="flex items-center gap-2 p-2 bg-neutral-50 rounded-lg border border-neutral-100 cursor-pointer hover:border-brand-navy/30 transition-colors">
+                      className="flex items-center gap-2 p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700 cursor-pointer hover:border-brand-navy/30 transition-colors">
                       <span className="text-neutral-300 text-xs">↳</span>
                       <TypeBadge type={child.type} compact />
                       <span className="font-mono text-[10px] text-neutral-400">{child.id}</span>
@@ -3185,7 +3185,7 @@ export default function App() {
                       {/* Top-level comment */}
                       <div className="flex gap-2.5">
                         <Avatar name={c.authorName || '?'} size={7} />
-                        <div className={`flex-1 rounded-xl px-3 py-2.5 border ${c.isInternal ? 'bg-semantic-warning-surface border-semantic-warning/30' : 'bg-neutral-50 border-neutral-100'}`}>
+                        <div className={`flex-1 rounded-xl px-3 py-2.5 border ${c.isInternal ? 'bg-semantic-warning-surface border-semantic-warning/30' : 'bg-neutral-50 dark:bg-neutral-800 border-neutral-100 dark:border-neutral-700'}`}>
                           <div className="flex items-center gap-2 mb-0.5">
                             <p className="text-xs font-semibold text-neutral-900">{c.authorName}</p>
                             {c.isInternal && <span className="text-[10px] bg-semantic-warning text-white px-1.5 py-0.5 rounded">Internal</span>}
@@ -3204,7 +3204,7 @@ export default function App() {
                           {c.replies.map(r => (
                             <div key={r.id} className="flex gap-2">
                               <Avatar name={r.authorName || '?'} size={6} />
-                              <div className="flex-1 bg-white rounded-lg px-3 py-2 border border-neutral-100">
+                              <div className="flex-1 bg-white dark:bg-neutral-800 rounded-lg px-3 py-2 border border-neutral-100 dark:border-neutral-700">
                                 <div className="flex items-center gap-2 mb-0.5">
                                   <p className="text-[10px] font-semibold text-neutral-900">{r.authorName}</p>
                                   <span className="text-[10px] text-neutral-400 ml-auto">{r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}</span>
@@ -3223,7 +3223,7 @@ export default function App() {
                             <textarea rows={2} value={replyBody} onChange={e => setReplyBody(e.target.value)}
                               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), addReply(selectedItem.id, c.id))}
                               placeholder="Write a reply... (Enter to send)"
-                              className="w-full border border-neutral-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-brand-navy resize-none" />
+                              className="w-full border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-brand-navy resize-none" />
                             <div className="flex gap-2 mt-1">
                               <Button size="sm" onClick={() => addReply(selectedItem.id, c.id)}>Reply</Button>
                               <button onClick={() => { setReplyingTo(null); setReplyBody(''); }} className="text-xs text-neutral-400 hover:text-neutral-700">Cancel</button>
@@ -3242,7 +3242,7 @@ export default function App() {
                       <textarea rows={2} value={newComment} onChange={handleCommentInput}
                         onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleAddComment())}
                         placeholder="Write a comment... (@mention to notify, Enter to send)"
-                        className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-navy resize-none" />
+                        className="w-full border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-navy resize-none" />
                       <div className="flex items-center justify-between mt-1.5">
                         <label className="flex items-center gap-1.5 cursor-pointer">
                           <input type="checkbox" checked={commentInternal} onChange={e => setCommentInternal(e.target.checked)}
@@ -3255,10 +3255,10 @@ export default function App() {
                   </div>
                   {/* @mention dropdown */}
                   {mentionOpen && (
-                    <div className="absolute bottom-full mb-1 left-9 w-56 bg-white rounded-lg shadow-xl border border-neutral-200 z-50 max-h-40 overflow-y-auto">
+                    <div className="absolute bottom-full mb-1 left-9 w-56 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 z-50 max-h-40 overflow-y-auto">
                       {users.filter(u => !mentionQuery || u.fullName.toLowerCase().includes(mentionQuery)).map(u => (
                         <button key={u.id} onClick={() => insertMention(u)}
-                          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 text-left">
+                          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-left">
                           <Avatar name={u.fullName} size={6} />
                           <span className="text-sm text-neutral-900">{u.fullName}</span>
                         </button>
@@ -3274,7 +3274,7 @@ export default function App() {
               <div>
                 {/* Visual Link Graph */}
                 {links.length > 0 && (
-                  <div className="mb-4 bg-neutral-50 rounded-xl p-4 border border-neutral-100">
+                  <div className="mb-4 bg-neutral-50 dark:bg-neutral-800 rounded-xl p-4 border border-neutral-100 dark:border-neutral-700">
                     <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-3">Link Graph</p>
                     <div className="flex flex-col items-center gap-2">
                       {/* Current item — center node */}
@@ -3295,11 +3295,11 @@ export default function App() {
                           const colorClass = LINK_COLORS[l.linkType] || LINK_COLORS.RELATES_TO;
                           return (
                             <div key={l.id} className="flex items-center gap-2">
-                              <div className="flex-1 h-px bg-neutral-200"></div>
+                              <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-700"></div>
                               <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${colorClass} flex-shrink-0`}>
                                 {l.linkType?.replace('_', ' ')}
                               </span>
-                              <div className="flex-1 h-px bg-neutral-200"></div>
+                              <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-700"></div>
                               <div className={`text-[10px] font-semibold px-2 py-1 rounded-lg border ${colorClass} cursor-pointer hover:opacity-80 truncate max-w-32`}
                                 onClick={() => { const t = workItems.find(i => i.id === l.targetId); if (t) setSelectedItem(t); }}
                                 title={l.targetTitle || l.targetId}>
@@ -3316,7 +3316,7 @@ export default function App() {
                 {links.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No links yet.</p>}
                 <div className="space-y-2 mb-4">
                   {links.map(l => (
-                    <div key={l.id} className="flex items-center gap-3 p-2.5 bg-neutral-50 rounded-lg border border-neutral-100">
+                    <div key={l.id} className="flex items-center gap-3 p-2.5 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700">
                       <span className="text-[10px] font-semibold bg-neutral-200 text-neutral-600 px-1.5 py-0.5 rounded uppercase">{l.linkType?.replace('_', ' ')}</span>
                       <span className="flex-1 text-sm text-neutral-900 font-mono">{l.targetId}</span>
                       {l.targetTitle && <span className="text-xs text-neutral-400 truncate max-w-24">{l.targetTitle}</span>}
@@ -3363,9 +3363,9 @@ export default function App() {
                     const previewUrl = `${API}/work-items/${selectedItem.id}/attachments/${a.id}/content`;
                     const ext = fileName.split('.').pop().toUpperCase().slice(0, 3);
                     return (
-                      <div key={a.id} className="bg-neutral-50 rounded-lg border border-neutral-100 overflow-hidden">
+                      <div key={a.id} className="bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700 overflow-hidden">
                         {isImage && (
-                          <div className="border-b border-neutral-100 bg-neutral-100 flex items-center justify-center p-2 max-h-48 overflow-hidden">
+                          <div className="border-b border-neutral-100 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-700 flex items-center justify-center p-2 max-h-48 overflow-hidden">
                             <img src={previewUrl} alt={fileName}
                               className="max-h-44 max-w-full object-contain rounded"
                               onError={e => { e.target.style.display = 'none'; }} />
@@ -3574,7 +3574,7 @@ export default function App() {
 function NavItem({ active, onClick, icon, children }) {
   return (
     <button onClick={onClick}
-      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${active ? 'bg-neutral-100 text-brand-navy font-semibold' : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'}`}>
+      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${active ? 'bg-neutral-100 dark:bg-neutral-800 text-brand-navy font-semibold' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100'}`}>
       <span className="text-base leading-none">{icon}</span>
       <span className="flex-1 text-left flex items-center">{children}</span>
     </button>
@@ -3583,9 +3583,9 @@ function NavItem({ active, onClick, icon, children }) {
 
 function Modal({ title, onClose, children }) {
   return (
-    <div className="fixed inset-0 bg-neutral-900/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <div className="px-6 py-4 border-b border-neutral-200 flex justify-between items-center">
+    <div className="fixed inset-0 bg-neutral-900/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-2xl w-full max-w-md">
+        <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-700 flex justify-between items-center">
           <h2 className="text-lg font-bold text-brand-navy">{title}</h2>
           <button onClick={onClose} className="text-neutral-400 hover:text-neutral-900 text-xl leading-none">✕</button>
         </div>
@@ -3598,7 +3598,7 @@ function Modal({ title, onClose, children }) {
 function Field({ label, children }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-neutral-700 mb-1">{label}</label>
+      <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">{label}</label>
       {children}
     </div>
   );
@@ -3640,7 +3640,7 @@ function RoleBadge({ role, tier, small = false }) {
 
 function StatCard({ label, value, sub, color, icon, onClick }) {
   return (
-    <div onClick={onClick} className="bg-white border border-neutral-200 rounded-xl p-5 cursor-pointer hover:shadow-md transition-shadow group">
+    <div onClick={onClick} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 cursor-pointer hover:shadow-md transition-shadow group">
       <div className="flex items-start justify-between mb-3">
         <span className="text-2xl">{icon}</span>
         <span className="text-xs text-neutral-400 group-hover:text-brand-navy transition-colors">View →</span>
@@ -3686,21 +3686,21 @@ function PmArtifactList({ title, icon, items, columns, renderRow, onDelete, onAd
       </div>
       {items.length === 0
         ? <EmptyState icon={icon} title={`No ${title.toLowerCase()} yet`} subtitle="Click + New to add your first entry." action={<Button variant="action" onClick={onAdd}>+ New</Button>} />
-        : <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+        : <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-neutral-50 border-b border-neutral-200">
+              <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
                 <tr>
-                  {columns.map(c => <th key={c} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{c}</th>)}
+                  {columns.map(c => <th key={c} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{c}</th>)}
                   <th className="px-4 py-2.5"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100">
+              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
                 {items.map(item => {
                   const cells = renderRow(item);
                   return (
-                    <tr key={item.id} className="hover:bg-neutral-50">
+                    <tr key={item.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
                       {cells.map((cell, i) => (
-                        <td key={i} className={`px-4 py-3 ${i === 0 ? 'font-medium text-neutral-900 max-w-xs truncate' : 'text-neutral-600 text-xs'}`}>
+                        <td key={i} className={`px-4 py-3 ${i === 0 ? 'font-medium text-neutral-900 dark:text-neutral-100 max-w-xs truncate' : 'text-neutral-600 dark:text-neutral-300 text-xs'}`}>
                           {i === 0 ? cell : (statusColors[cell]
                             ? <span className={`font-semibold ${statusColors[cell]}`}>{cell}</span>
                             : cell)}
@@ -3729,14 +3729,14 @@ function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
 
   if (items.length === 0) return <div className="px-5 py-4 text-sm text-neutral-400 text-center">No items in this sprint yet.</div>;
   return (
-    <div className="divide-y divide-neutral-50">
+    <div className="divide-y divide-neutral-50 dark:divide-neutral-700">
       {items.map(item => (
-        <div key={item.id} className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 group">
+        <div key={item.id} className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-700 group">
           <TypeBadge type={item.type} compact />
           <span className="font-mono text-[10px] text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
           <span className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate" onClick={() => onSelect(item)}>{item.title}</span>
           <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
-          {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
+          {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
           {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}
           <button onClick={() => { onMoveToBacklog(item.id); setItems(prev => prev.filter(i => i.id !== item.id)); }}
             className="opacity-0 group-hover:opacity-100 text-xs text-neutral-400 hover:text-brand-navy transition-opacity">↓ Backlog</button>
@@ -3795,29 +3795,29 @@ function RichTextEditor({ value, onChange, onBlur, placeholder }) {
     <button type="button" title={title}
       onMouseDown={e => { e.preventDefault(); exec(cmd, arg); }}
       className={`w-7 h-7 flex items-center justify-center rounded text-xs transition-colors
-        ${active ? 'bg-brand-navy text-white' : 'text-neutral-600 hover:bg-neutral-200'}`}>
+        ${active ? 'bg-brand-navy text-white' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'}`}>
       {children}
     </button>
   );
 
   return (
-    <div className="border border-neutral-200 rounded-lg overflow-hidden focus-within:border-brand-navy transition-colors">
+    <div className="border border-neutral-200 dark:border-neutral-600 rounded-lg overflow-hidden focus-within:border-brand-navy transition-colors dark:bg-neutral-800">
       {/* WYSIWYG Toolbar */}
-      <div className="flex items-center gap-0.5 px-2 py-1.5 bg-neutral-50 border-b border-neutral-200 flex-wrap">
+      <div className="flex items-center gap-0.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 flex-wrap">
         <ToolBtn cmd="bold"          title="Bold (Ctrl+B)"><strong>B</strong></ToolBtn>
         <ToolBtn cmd="italic"        title="Italic (Ctrl+I)"><em>I</em></ToolBtn>
         <ToolBtn cmd="underline"     title="Underline (Ctrl+U)"><u>U</u></ToolBtn>
         <ToolBtn cmd="strikeThrough" title="Strikethrough"><s>S</s></ToolBtn>
-        <div className="h-4 w-px bg-neutral-200 mx-1"/>
+        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1"/>
         <ToolBtn cmd="formatBlock" arg="h2"  title="Heading 2"><span className="font-bold text-[10px]">H2</span></ToolBtn>
         <ToolBtn cmd="formatBlock" arg="h3"  title="Heading 3"><span className="font-bold text-[10px]">H3</span></ToolBtn>
         <ToolBtn cmd="formatBlock" arg="p"   title="Paragraph"><span className="text-[10px]">¶</span></ToolBtn>
-        <div className="h-4 w-px bg-neutral-200 mx-1"/>
+        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1"/>
         <ToolBtn cmd="insertUnorderedList" title="Bullet list"><span className="text-[11px]">• —</span></ToolBtn>
         <ToolBtn cmd="insertOrderedList"   title="Numbered list"><span className="text-[11px]">1.</span></ToolBtn>
         <ToolBtn cmd="indent"              title="Indent"><span className="text-[11px]">→</span></ToolBtn>
         <ToolBtn cmd="outdent"             title="Outdent"><span className="text-[11px]">←</span></ToolBtn>
-        <div className="h-4 w-px bg-neutral-200 mx-1"/>
+        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1"/>
         <ToolBtn cmd="removeFormat" title="Clear formatting"><span className="text-[10px]">✕</span></ToolBtn>
         <span className="ml-auto text-[9px] text-neutral-300 pr-1">WYSIWYG</span>
       </div>
@@ -3833,7 +3833,7 @@ function RichTextEditor({ value, onChange, onBlur, placeholder }) {
         onCompositionStart={() => { isComposing.current = true; }}
         onCompositionEnd={() => { isComposing.current = false; handleInput(); }}
         data-placeholder={placeholder}
-        className="min-h-[100px] max-h-64 overflow-y-auto px-3 py-2 text-sm text-neutral-900 focus:outline-none bg-white
+        className="min-h-[100px] max-h-64 overflow-y-auto px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 focus:outline-none bg-white dark:bg-neutral-800
           [&_h2]:text-base [&_h2]:font-bold [&_h2]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mb-1
           [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5
           [&_li]:mb-0.5 [&_strong]:font-semibold [&_em]:italic [&_u]:underline [&_s]:line-through
@@ -3905,21 +3905,21 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
   };
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div className="flex-1 overflow-auto dark:bg-neutral-900">
       {getSwimlanes().map(lane => (
         <div key={lane.key}>
           {lane.label && (
             <div className="flex items-center gap-2 mb-2 mt-4 px-1">
-              <div className="h-px flex-1 bg-neutral-200"></div>
-              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider px-2">{lane.label}</span>
-              <div className="h-px flex-1 bg-neutral-200"></div>
+              <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700"></div>
+              <span className="text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-2">{lane.label}</span>
+              <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700"></div>
             </div>
           )}
           <div className="flex gap-4 min-h-40">
             {columns.map(col => {
               const colItems = lane.items.filter(i => i.status === col.name);
               return (
-                <div key={col.name} className="flex-1 min-w-48 flex flex-col bg-neutral-100 rounded-xl p-3"
+                <div key={col.name} className="flex-1 min-w-48 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3"
                   onDragOver={onDragOver} onDrop={(e) => onDrop(e, col.name)}>
                   {!lane.label && (
                     <div className="flex items-center justify-between mb-3 px-1">
@@ -3927,14 +3927,14 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
                         <span className={`w-2 h-2 rounded-full ${col.dot}`}></span>
                         <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{col.name}</h3>
                       </div>
-                      <span className="text-xs bg-white text-neutral-500 px-2 py-0.5 rounded-full shadow-sm">{colItems.length}</span>
+                      <span className="text-xs bg-white dark:bg-neutral-700 text-neutral-500 dark:text-neutral-300 px-2 py-0.5 rounded-full shadow-sm">{colItems.length}</span>
                     </div>
                   )}
                   <div className="space-y-2 flex-1">
                     {colItems.length === 0 && <div className="flex items-center justify-center py-6 border-2 border-dashed border-neutral-200 rounded-lg"><p className="text-xs text-neutral-300">Drop here</p></div>}
                     {colItems.map(item => (
                       <div key={item.id} draggable onDragStart={(e) => onDragStart(e, item.id)}
-                        className={`bg-white rounded-lg shadow-sm border border-neutral-200 cursor-grab hover:shadow-md transition-shadow group ${pad[density]}`}>
+                        className={`bg-white dark:bg-neutral-700 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-600 cursor-grab hover:shadow-md transition-shadow group ${pad[density]}`}>
                         <div className="flex items-start justify-between mb-1.5">
                           <span className="font-mono text-[10px] text-neutral-400">{item.id}</span>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

@@ -1,4 +1,4 @@
-﻿package com.example.demo;
+package com.example.demo;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;

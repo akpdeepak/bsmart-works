@@ -25,6 +25,7 @@ public class WorkItem {
     private Integer backlogOrder;
     private Integer storyPoints;
     private String priority;
+    private String parentId;
 
     @Transient
     private List<String> tags;
@@ -59,4 +60,6 @@ public class WorkItem {
     public void setStoryPoints(Integer storyPoints) { this.storyPoints = storyPoints; }
     public String getPriority() { return priority; }
     public void setPriority(String priority) { this.priority = priority; }
+    public String getParentId() { return parentId; }
+    public void setParentId(String parentId) { this.parentId = parentId; }
 }

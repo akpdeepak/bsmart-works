@@ -1,4 +1,4 @@
-﻿package com.example.demo;
+package com.example.demo;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -48,6 +48,24 @@ public class AttachmentController {
 
         Long id = jdbc.queryForObject("SELECT id FROM attachments WHERE storage_path = ?", Long.class, storedName);
         return Map.of("id", id, "fileName", originalName, "fileSize", file.getSize(), "mimeType", file.getContentType() != null ? file.getContentType() : "");
+    }
+
+    @GetMapping("/{id}/content")
+    public ResponseEntity<org.springframework.core.io.Resource> serveFile(
+            @PathVariable String workItemId, @PathVariable Long id) throws IOException {
+        List<Map<String, Object>> rows = jdbc.queryForList(
+            "SELECT file_name, mime_type, storage_path FROM attachments WHERE id = ? AND work_item_id = ?", id, workItemId);
+        if (rows.isEmpty()) return ResponseEntity.notFound().build();
+        Map<String, Object> row = rows.get(0);
+        Path filePath = UPLOAD_DIR.resolve((String) row.get("storage_path"));
+        org.springframework.core.io.Resource resource = new org.springframework.core.io.FileSystemResource(filePath);
+        if (!resource.exists()) return ResponseEntity.notFound().build();
+        String mimeType = (String) row.get("mime_type");
+        if (mimeType == null) mimeType = "application/octet-stream";
+        return ResponseEntity.ok()
+            .header("Content-Type", mimeType)
+            .header("Content-Disposition", "inline; filename=\"" + row.get("file_name") + "\"")
+            .body(resource);
     }
 
     @DeleteMapping("/{id}")

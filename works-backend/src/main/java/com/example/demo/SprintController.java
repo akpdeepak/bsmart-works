@@ -1,4 +1,4 @@
-﻿package com.example.demo;
+package com.example.demo;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -84,6 +84,7 @@ public class SprintController {
                 w.setSprintId(rs.getString("sprint_id"));
                 w.setStoryPoints(rs.getObject("story_points") != null ? rs.getInt("story_points") : 0);
                 w.setPriority(rs.getString("priority"));
+                w.setParentId(rs.getString("parent_id"));
                 return w;
             }, id);
     }
@@ -100,6 +101,33 @@ public class SprintController {
     public Map<String, String> removeItemFromSprint(@PathVariable String id, @PathVariable String itemId) {
         jdbc.update("UPDATE work_items SET sprint_id = NULL WHERE id = ? AND sprint_id = ?", itemId, id);
         return Map.of("message", "Item moved to backlog");
+    }
+
+    // Multi-sprint velocity chart data
+    @GetMapping("/velocity")
+    public List<Map<String, Object>> getVelocityChart() {
+        List<Sprint> sprints = sprintRepository.findAll();
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Sprint sprint : sprints) {
+            List<Map<String, Object>> items = jdbc.queryForList(
+                "SELECT status, story_points FROM work_items WHERE sprint_id = ?", sprint.getId());
+            int totalPoints = items.stream().mapToInt(i -> i.get("story_points") != null ? ((Number) i.get("story_points")).intValue() : 0).sum();
+            int donePoints = items.stream().filter(i -> "Done".equals(i.get("status")))
+                    .mapToInt(i -> i.get("story_points") != null ? ((Number) i.get("story_points")).intValue() : 0).sum();
+            int totalItems = items.size();
+            long doneItems = items.stream().filter(i -> "Done".equals(i.get("status"))).count();
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("sprintId", sprint.getId());
+            entry.put("sprintName", sprint.getName());
+            entry.put("status", sprint.getStatus());
+            entry.put("capacity", sprint.getCapacity() != null ? sprint.getCapacity() : 0);
+            entry.put("totalPoints", totalPoints);
+            entry.put("donePoints", donePoints);
+            entry.put("totalItems", totalItems);
+            entry.put("doneItems", doneItems);
+            result.add(entry);
+        }
+        return result;
     }
 
     // Sprint report data

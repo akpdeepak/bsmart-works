@@ -1,4 +1,4 @@
-﻿package com.example.demo;
+package com.example.demo;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -29,8 +29,14 @@ public class WorkItemController {
     }
 
     @GetMapping
-    public List<WorkItem> getAllWorkItems() {
-        List<WorkItem> items = repository.findAll();
+    public List<WorkItem> getAllWorkItems(@RequestParam(required = false) String parentId) {
+        List<WorkItem> items;
+        if (parentId != null) {
+            items = jdbc.query("SELECT * FROM work_items WHERE parent_id = ? ORDER BY created_at ASC",
+                this::mapRow, parentId);
+        } else {
+            items = repository.findAll();
+        }
         items.forEach(this::attachTags);
         return items;
     }
@@ -72,6 +78,7 @@ public class WorkItemController {
         w.setPriority(rs.getString("priority"));
         w.setDueDate(rs.getDate("due_date") != null ? rs.getDate("due_date").toLocalDate() : null);
         w.setProjectId(rs.getString("project_id"));
+        w.setParentId(rs.getString("parent_id"));
         return w;
     }
 
@@ -126,6 +133,7 @@ public class WorkItemController {
             existing.setSprintId(updatedItem.getSprintId());
             existing.setStoryPoints(updatedItem.getStoryPoints());
             existing.setPriority(updatedItem.getPriority());
+            existing.setParentId(updatedItem.getParentId());
 
             WorkItem saved = repository.save(existing);
 
@@ -152,16 +160,17 @@ public class WorkItemController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteWorkItem(@PathVariable String id,
                                                 @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        return repository.findById(id).map(item -> {
-            jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);
-            jdbc.update("DELETE FROM comments WHERE work_item_id = ?", id);
-            jdbc.update("DELETE FROM work_item_links WHERE source_id = ? OR target_id = ?", id, id);
-            jdbc.update("DELETE FROM attachments WHERE work_item_id = ?", id);
-            repository.delete(item);
-            eventService.record(id, "WORK_ITEM_DELETED", userId,
-                    "{\"title\":\"" + item.getTitle().replace("\"", "'") + "\"}");
-            return ResponseEntity.<Void>noContent().build();
-        }).orElse(ResponseEntity.notFound().build());
+        var opt = repository.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build();
+        var item = opt.get();
+        jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);
+        jdbc.update("DELETE FROM comments WHERE work_item_id = ?", id);
+        jdbc.update("DELETE FROM work_item_links WHERE source_id = ? OR target_id = ?", id, id);
+        jdbc.update("DELETE FROM attachments WHERE work_item_id = ?", id);
+        repository.delete(item);
+        eventService.record(id, "WORK_ITEM_DELETED", userId,
+                "{\"title\":\"" + item.getTitle().replace("\"", "'") + "\"}");
+        return ResponseEntity.<Void>noContent().build();
     }
 
     private void attachTags(WorkItem item) {

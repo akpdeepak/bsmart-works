@@ -88,7 +88,7 @@ export default function App() {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isProjectOpen, setIsProjectOpen] = useState(false);
-  const [newItem, setNewItem]           = useState({ title: '', type: 'Task', description: '', assigneeId: '', dueDate: '', tags: '' });
+  const [newItem, setNewItem]           = useState({ title: '', type: 'Task', description: '', assigneeId: '', dueDate: '', tags: '', priority: 'MEDIUM', parentId: '', projectId: '' });
   const [newProject, setNewProject]     = useState({ name: '', keyPrefix: '', description: '' });
   const [createError, setCreateError]   = useState('');
 
@@ -138,6 +138,16 @@ export default function App() {
   const [wsOpen, setWsOpen]             = useState(false);
   const wsRef                           = useRef(null);
 
+  // Iter 1 & 2 completion features
+  const [recentlyViewed, setRecentlyViewed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('bSmartRecentItems') || '[]'); } catch { return []; }
+  });
+  const [activityEventFilter, setActivityEventFilter] = useState('');
+  const [velocityData, setVelocityData] = useState([]);
+  const [deleteUndoItem, setDeleteUndoItem] = useState(null);
+  const deleteUndoTimer = useRef(null);
+  const [itemChildren, setItemChildren] = useState([]);
+
   const workspace = { id: 'WS-001', name: 'BCITS Master Workspace' };
 
   const headers = (extra = {}) => ({
@@ -182,6 +192,7 @@ export default function App() {
     if (!selectedItem) return;
     const id = selectedItem.id;
     setTagInput((selectedItem.tags || []).join(', '));
+    setActivityEventFilter('');
     fetch(`${API}/work-items/${id}/comments`).then(r => r.json()).then(d => setComments(Array.isArray(d) ? d : [])).catch(() => {});
     fetch(`${API}/work-items/${id}/activity`).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(() => {});
     fetch(`${API}/work-items/${id}/links`).then(r => r.json()).then(d => setLinks(Array.isArray(d) ? d : [])).catch(() => {});
@@ -195,6 +206,22 @@ export default function App() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Track recently viewed items
+  useEffect(() => {
+    if (!selectedItem) return;
+    setRecentlyViewed(prev => {
+      const filtered = prev.filter(i => i.id !== selectedItem.id);
+      const updated = [{ id: selectedItem.id, title: selectedItem.title, type: selectedItem.type }, ...filtered].slice(0, 8);
+      localStorage.setItem('bSmartRecentItems', JSON.stringify(updated));
+      return updated;
+    });
+    // Load children
+    fetch(`${API}/work-items?parentId=${selectedItem.id}`)
+      .then(r => r.json())
+      .then(d => setItemChildren((Array.isArray(d) ? d : []).filter(i => i.parentId === selectedItem.id)))
+      .catch(() => setItemChildren([]));
+  }, [selectedItem?.id]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -274,25 +301,55 @@ export default function App() {
     if (!newItem.title || newItem.title.length < 3) { setCreateError('Title must be at least 3 characters.'); return; }
     setCreateError('');
     const tags = newItem.tags ? newItem.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+    const projectId = newItem.projectId || (projects.length > 0 ? projects[0].id : 'PROJ-001');
     apiFetch(`${API}/work-items`, {
       method: 'POST',
-      body: JSON.stringify({ ...newItem, tags, dueDate: newItem.dueDate || null, assigneeId: newItem.assigneeId || null })
+      body: JSON.stringify({
+        ...newItem,
+        tags,
+        dueDate: newItem.dueDate || null,
+        assigneeId: newItem.assigneeId || null,
+        parentId: newItem.parentId || null,
+        projectId,
+        priority: newItem.priority || 'MEDIUM',
+      })
     }).then(saved => {
       setWorkItems(prev => [...prev, saved]);
-      setNewItem({ title: '', type: 'Task', description: '', assigneeId: '', dueDate: '', tags: '' });
+      setNewItem({ title: '', type: 'Task', description: '', assigneeId: '', dueDate: '', tags: '', priority: 'MEDIUM', parentId: '', projectId: '' });
       setIsCreateOpen(false);
       showToast('Work item created');
     }).catch(err => setCreateError(err.message));
   };
 
   const handleDelete = (id) => {
-    if (!window.confirm('Delete this work item?')) return;
-    apiFetch(`${API}/work-items/${id}`, { method: 'DELETE' })
-      .then(() => {
-        setWorkItems(prev => prev.filter(i => i.id !== id));
-        if (selectedItem?.id === id) setSelectedItem(null);
-        showToast('Work item deleted');
-      }).catch(err => showToast(err.message, 'error'));
+    const item = workItems.find(i => i.id === id);
+    if (!item) return;
+    // Optimistic remove
+    setWorkItems(prev => prev.filter(i => i.id !== id));
+    if (selectedItem?.id === id) setSelectedItem(null);
+    setDeleteUndoItem(item);
+    clearTimeout(deleteUndoTimer.current);
+    // Toast with undo — commit delete after 8 seconds
+    setToast({ message: `"${item.title.slice(0, 35)}${item.title.length > 35 ? '…' : ''}" deleted`, type: 'undo' });
+    deleteUndoTimer.current = setTimeout(() => {
+      apiFetch(`${API}/work-items/${id}`, { method: 'DELETE' }).catch(() => {
+        setWorkItems(prev => [...prev, item]);
+        showToast('Failed to delete item', 'error');
+      });
+      setDeleteUndoItem(null);
+      setToast(null);
+    }, 8000);
+  };
+
+  const handleUndoDelete = () => {
+    if (!deleteUndoItem) return;
+    clearTimeout(deleteUndoTimer.current);
+    setWorkItems(prev => {
+      const exists = prev.find(i => i.id === deleteUndoItem.id);
+      return exists ? prev : [...prev, deleteUndoItem];
+    });
+    setDeleteUndoItem(null);
+    setToast(null);
   };
 
   const handleDragStart = (e, id) => e.dataTransfer.setData('itemId', id);
@@ -437,6 +494,11 @@ export default function App() {
   function fetchSavedFilters() {
     fetch(`${API}/saved-filters`, { headers: headers() })
       .then(r => r.json()).then(d => setSavedFilters(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function fetchVelocityData() {
+    fetch(`${API}/sprints/velocity`)
+      .then(r => r.json()).then(d => setVelocityData(Array.isArray(d) ? d : [])).catch(() => {});
   }
 
   const handleCreateSprint = () => {
@@ -681,7 +743,7 @@ export default function App() {
             Active Sprint
             {sprints.find(s => s.status === 'ACTIVE') && <span className="ml-auto w-2 h-2 rounded-full bg-brand-teal flex-shrink-0"></span>}
           </NavItem>
-          <NavItem active={view === 'reports'} onClick={() => { setView('reports'); fetchSprints(); }} icon="📊">Reports</NavItem>
+          <NavItem active={view === 'reports'} onClick={() => { setView('reports'); fetchSprints(); fetchVelocityData(); }} icon="📊">Reports</NavItem>
           <NavItem active={view === 'projects'} onClick={() => setView('projects')} icon="📁">
             Projects
             {projects.length > 0 && <span className="ml-auto text-[10px] bg-neutral-100 text-neutral-600 rounded-full px-1.5 py-0.5">{projects.length}</span>}
@@ -733,6 +795,26 @@ export default function App() {
             {searchOpen && searchQuery.trim() && searchResults.length === 0 && (
               <div className="absolute top-full mt-1 w-80 bg-white rounded-lg shadow-xl border border-neutral-200 z-50 px-4 py-6 text-center">
                 <p className="text-sm text-neutral-400">No results for "<span className="text-neutral-700">{searchQuery}</span>"</p>
+              </div>
+            )}
+            {searchOpen && !searchQuery.trim() && recentlyViewed.length > 0 && (
+              <div className="absolute top-full mt-1 w-80 bg-white rounded-lg shadow-xl border border-neutral-200 z-50 max-h-64 overflow-y-auto">
+                <div className="px-4 py-2 border-b border-neutral-100">
+                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Recently Viewed</p>
+                </div>
+                {recentlyViewed.map(item => {
+                  const full = workItems.find(i => i.id === item.id);
+                  return (
+                    <button key={item.id} onClick={() => { if (full) { setSelectedItem(full); } setSearchQuery(''); setSearchOpen(false); }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-neutral-50 border-b border-neutral-100 last:border-0">
+                      <div className="flex items-center gap-2">
+                        <TypeBadge type={item.type} compact />
+                        <span className="font-mono text-[10px] text-neutral-400">{item.id}</span>
+                      </div>
+                      <div className="text-sm text-neutral-900 font-medium mt-0.5 truncate">{item.title}</div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1314,9 +1396,51 @@ export default function App() {
 
           {/* REPORTS VIEW */}
           {view === 'reports' && (
-            <div className="p-8 max-w-4xl">
+            <div className="p-8 max-w-5xl">
               <h1 className="text-2xl font-bold text-brand-navy mb-1">Sprint Reports</h1>
               <p className="text-sm text-neutral-400 mb-5">Velocity, delivery, and scope tracking</p>
+
+              {/* VELOCITY CHART — multi-sprint comparison */}
+              {velocityData.length > 0 && (
+                <div className="bg-white border border-neutral-200 rounded-xl p-5 mb-6">
+                  <h3 className="font-semibold text-neutral-900 mb-1">Velocity — All Sprints</h3>
+                  <p className="text-xs text-neutral-400 mb-4">Committed capacity vs. delivered story points</p>
+                  <div className="flex items-end gap-3 overflow-x-auto pb-2">
+                    {velocityData.map((s) => {
+                      const maxVal = Math.max(...velocityData.map(x => Math.max(x.capacity || 0, x.totalPoints, 1)));
+                      const capH = Math.round(((s.capacity || 0) / maxVal) * 120);
+                      const doneH = Math.round((s.donePoints / maxVal) * 120);
+                      const totalH = Math.round((s.totalPoints / maxVal) * 120);
+                      return (
+                        <div key={s.sprintId} className="flex flex-col items-center gap-1 min-w-[80px]">
+                          <div className="flex items-end gap-1 h-32">
+                            {/* Capacity bar */}
+                            <div className="flex flex-col justify-end h-32">
+                              <div className="w-5 rounded-t bg-neutral-200" style={{ height: `${capH}px` }} title={`Capacity: ${s.capacity}pt`}></div>
+                            </div>
+                            {/* Committed bar */}
+                            <div className="flex flex-col justify-end h-32">
+                              <div className="w-5 rounded-t bg-brand-navy-tint" style={{ height: `${totalH}px` }} title={`Committed: ${s.totalPoints}pt`}></div>
+                            </div>
+                            {/* Delivered bar */}
+                            <div className="flex flex-col justify-end h-32">
+                              <div className="w-5 rounded-t bg-brand-teal" style={{ height: `${doneH}px` }} title={`Delivered: ${s.donePoints}pt`}></div>
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-neutral-400 text-center leading-tight max-w-[80px] truncate">{s.sprintName.replace('Sprint ', 'S').replace(' — ', ' ')}</p>
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${s.status === 'ACTIVE' ? 'bg-brand-teal/10 text-brand-teal' : s.status === 'COMPLETED' ? 'bg-neutral-100 text-neutral-500' : 'bg-neutral-50 text-neutral-400'}`}>{s.status}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center gap-4 mt-3 text-xs text-neutral-400">
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-neutral-200 inline-block"></span>Capacity</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-brand-navy-tint inline-block"></span>Committed</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-brand-teal inline-block"></span>Delivered</span>
+                  </div>
+                </div>
+              )}
+
               {sprints.length === 0
                 ? <EmptyState icon="📊" title="No sprints to report on" subtitle="Complete a sprint to see reports here." />
                 : <>
@@ -1566,6 +1690,14 @@ export default function App() {
                 </select>
               </div>
               <div>
+                <label className="block text-xs text-neutral-400 mb-1 font-medium">Priority</label>
+                <select value={selectedItem.priority || 'MEDIUM'}
+                  onChange={e => { const u = { ...selectedItem, priority: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }}
+                  className="input">
+                  {['CRITICAL','HIGH','MEDIUM','LOW'].map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
                 <label className="block text-xs text-neutral-400 mb-1 font-medium">Assignee</label>
                 <select value={selectedItem.assigneeId || ''}
                   onChange={e => { const u = { ...selectedItem, assigneeId: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
@@ -1580,7 +1712,54 @@ export default function App() {
                   onChange={e => { const u = { ...selectedItem, dueDate: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
                   className="input" />
               </div>
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1 font-medium">Story Points</label>
+                <input type="number" min={0} max={100} value={selectedItem.storyPoints || 0}
+                  onChange={e => { const u = { ...selectedItem, storyPoints: parseInt(e.target.value) || 0 }; setSelectedItem(u); handleUpdateItem(u); }}
+                  className="input" />
+              </div>
             </div>
+
+            {/* Parent item selector */}
+            <div>
+              <label className="block text-xs text-neutral-400 mb-1 font-medium">Parent Item</label>
+              <select value={selectedItem.parentId || ''}
+                onChange={e => { const u = { ...selectedItem, parentId: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
+                className="input">
+                <option value="">No parent</option>
+                {workItems.filter(i => i.id !== selectedItem.id && (i.type === 'Epic' || i.type === 'Story')).map(i => (
+                  <option key={i.id} value={i.id}>{i.id} — {i.title}</option>
+                ))}
+              </select>
+              {selectedItem.parentId && (() => {
+                const parent = workItems.find(i => i.id === selectedItem.parentId);
+                return parent ? (
+                  <div className="mt-1.5 flex items-center gap-2 text-xs text-brand-navy cursor-pointer hover:underline"
+                    onClick={() => setSelectedItem(parent)}>
+                    <span>↑</span><TypeBadge type={parent.type} compact /><span>{parent.title}</span>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+
+            {/* Children items */}
+            {itemChildren.length > 0 && (
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1 font-medium">Sub-items ({itemChildren.length})</label>
+                <div className="space-y-1">
+                  {itemChildren.map(child => (
+                    <div key={child.id} onClick={() => setSelectedItem(child)}
+                      className="flex items-center gap-2 p-2 bg-neutral-50 rounded-lg border border-neutral-100 cursor-pointer hover:border-brand-navy/30 transition-colors">
+                      <span className="text-neutral-300 text-xs">↳</span>
+                      <TypeBadge type={child.type} compact />
+                      <span className="font-mono text-[10px] text-neutral-400">{child.id}</span>
+                      <span className="flex-1 text-xs text-neutral-900 truncate">{child.title}</span>
+                      <StatusBadge category={statusToCategory(child.status)}>{child.status}</StatusBadge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-xs text-neutral-400 mb-1 font-medium">Tags</label>
@@ -1598,11 +1777,12 @@ export default function App() {
 
             <div>
               <label className="block text-xs text-neutral-400 mb-1 font-medium">Description</label>
-              <textarea rows={4} value={selectedItem.description || ''}
-                onChange={e => setSelectedItem({ ...selectedItem, description: e.target.value })}
+              <RichTextEditor
+                value={selectedItem.description || ''}
+                onChange={val => setSelectedItem({ ...selectedItem, description: val })}
                 onBlur={() => handleUpdateItem(selectedItem)}
-                placeholder="Add a description..."
-                className="input resize-none" />
+                placeholder="Add a description... (supports **bold**, *italic*, `code`, - bullets)"
+              />
             </div>
 
             </> /* end details tab */}
@@ -1622,7 +1802,7 @@ export default function App() {
                           <p className="text-xs font-semibold text-neutral-900">{c.authorName}</p>
                           {c.isInternal && <span className="text-[10px] bg-semantic-warning text-white px-1.5 py-0.5 rounded">Internal</span>}
                         </div>
-                        <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{c.body}</p>
+                        <p className="text-sm text-neutral-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMd(c.body) }} />
                         <p className="text-[10px] text-neutral-400 mt-1.5">{c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</p>
                       </div>
                     </div>
@@ -1701,18 +1881,36 @@ export default function App() {
                 </Button>
                 {attachments.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No files attached yet.</p>}
                 <div className="space-y-2">
-                  {attachments.map(a => (
-                    <div key={a.id} className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-100">
-                      <div className="w-8 h-8 rounded bg-neutral-200 flex items-center justify-center text-xs font-bold text-neutral-500 flex-shrink-0">
-                        {String(a.file_name || a.fileName || '?').split('.').pop().toUpperCase().slice(0, 3)}
+                  {attachments.map(a => {
+                    const mime = a.mime_type || a.mimeType || '';
+                    const isImage = mime.startsWith('image/');
+                    const fileName = a.file_name || a.fileName || '?';
+                    const previewUrl = `${API}/work-items/${selectedItem.id}/attachments/${a.id}/content`;
+                    const ext = fileName.split('.').pop().toUpperCase().slice(0, 3);
+                    return (
+                      <div key={a.id} className="bg-neutral-50 rounded-lg border border-neutral-100 overflow-hidden">
+                        {isImage && (
+                          <div className="border-b border-neutral-100 bg-neutral-100 flex items-center justify-center p-2 max-h-48 overflow-hidden">
+                            <img src={previewUrl} alt={fileName}
+                              className="max-h-44 max-w-full object-contain rounded"
+                              onError={e => { e.target.style.display = 'none'; }} />
+                          </div>
+                        )}
+                        <div className="flex items-center gap-3 p-3">
+                          <div className={`w-8 h-8 rounded flex items-center justify-center text-xs font-bold flex-shrink-0 ${isImage ? 'bg-brand-navy/10 text-brand-navy' : 'bg-neutral-200 text-neutral-500'}`}>
+                            {isImage ? '🖼' : ext}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-neutral-900 truncate">{fileName}</p>
+                            <p className="text-xs text-neutral-400">{a.uploaded_by_name || a.uploadedByName || 'You'} · {a.file_size ? `${Math.round(a.file_size / 1024)}KB` : ''}</p>
+                          </div>
+                          <a href={previewUrl} target="_blank" rel="noreferrer"
+                            className="text-xs text-brand-navy hover:underline flex-shrink-0 mr-2">View</a>
+                          <button onClick={() => handleDeleteAttachment(a.id)} className="text-neutral-300 hover:text-semantic-danger text-xs flex-shrink-0">✕</button>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-neutral-900 truncate">{a.file_name || a.fileName}</p>
-                        <p className="text-xs text-neutral-400">{a.uploaded_by_name || a.uploadedByName || 'You'} · {a.file_size ? `${Math.round(a.file_size / 1024)}KB` : ''}</p>
-                      </div>
-                      <button onClick={() => handleDeleteAttachment(a.id)} className="text-neutral-300 hover:text-semantic-danger text-xs flex-shrink-0">✕</button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1720,16 +1918,37 @@ export default function App() {
             {/* ACTIVITY TAB */}
             {detailTab === 'activity' && (
               <div>
+                {/* Event type filter */}
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  {['', 'WORK_ITEM_CREATED', 'WORK_ITEM_UPDATED', 'STATUS_CHANGED', 'COMMENT_ADDED', 'ASSIGNED'].map(et => (
+                    <button key={et} onClick={() => {
+                      setActivityEventFilter(et);
+                      const url = `${API}/work-items/${selectedItem.id}/activity${et ? `?eventType=${et}` : ''}`;
+                      fetch(url).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(() => {});
+                    }}
+                      className={`text-[10px] px-2 py-1 rounded-full font-medium transition-colors ${activityEventFilter === et ? 'bg-brand-navy text-white' : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'}`}>
+                      {et ? et.replace(/_/g, ' ') : 'All'}
+                    </button>
+                  ))}
+                </div>
                 {activity.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No activity recorded yet.</p>}
                 <div className="space-y-3">
                   {activity.map(a => (
                     <div key={a.id} className="flex gap-2.5">
-                      <div className="w-2 h-2 rounded-full bg-neutral-300 mt-1.5 flex-shrink-0"></div>
+                      <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                        a.event_type === 'WORK_ITEM_CREATED' ? 'bg-brand-teal' :
+                        a.event_type === 'STATUS_CHANGED' ? 'bg-brand-navy-tint' :
+                        a.event_type === 'COMMENT_ADDED' ? 'bg-brand-orange' :
+                        'bg-neutral-300'
+                      }`}></div>
                       <div className="flex-1">
                         <p className="text-xs text-neutral-700">
                           <span className="font-semibold">{a.actor_name || 'System'}</span>
                           {' '}{formatEventType(a.event_type)}
                         </p>
+                        {a.payload && a.payload !== '{}' && (
+                          <p className="text-[10px] text-neutral-400 font-mono mt-0.5 truncate">{a.payload}</p>
+                        )}
                         <p className="text-[10px] text-neutral-400 mt-0.5">{a.occurred_at ? new Date(a.occurred_at).toLocaleString() : ''}</p>
                       </div>
                     </div>
@@ -1743,9 +1962,15 @@ export default function App() {
 
       {/* TOAST NOTIFICATION */}
       {toast && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-xl shadow-xl text-sm font-medium flex items-center gap-2.5 transition-all ${toast.type === 'error' ? 'bg-semantic-danger text-white' : 'bg-neutral-900 text-white'}`}>
-          <span>{toast.type === 'error' ? '✕' : '✓'}</span>
-          {toast.message}
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-xl shadow-xl text-sm font-medium flex items-center gap-3 transition-all ${toast.type === 'error' ? 'bg-semantic-danger text-white' : 'bg-neutral-900 text-white'}`}>
+          <span>{toast.type === 'error' ? '✕' : toast.type === 'undo' ? '🗑' : '✓'}</span>
+          <span>{toast.message}</span>
+          {toast.type === 'undo' && deleteUndoItem && (
+            <button onClick={handleUndoDelete}
+              className="ml-1 text-brand-orange font-bold hover:text-orange-300 transition-colors text-xs border border-brand-orange/40 rounded px-2 py-0.5">
+              Undo
+            </button>
+          )}
         </div>
       )}
 
@@ -1791,13 +2016,31 @@ export default function App() {
                   {Object.keys(TYPES).map(t => <option key={t}>{t}</option>)}
                 </select>
               </Field>
+              <Field label="Priority">
+                <select value={newItem.priority} onChange={e => setNewItem({ ...newItem, priority: e.target.value })} className="input">
+                  {['CRITICAL','HIGH','MEDIUM','LOW'].map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </Field>
               <Field label="Assignee">
                 <select value={newItem.assigneeId} onChange={e => setNewItem({ ...newItem, assigneeId: e.target.value })} className="input">
                   <option value="">Unassigned</option>
                   {users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
                 </select>
               </Field>
+              <Field label="Project">
+                <select value={newItem.projectId} onChange={e => setNewItem({ ...newItem, projectId: e.target.value })} className="input">
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </Field>
             </div>
+            <Field label="Parent Item (optional)">
+              <select value={newItem.parentId} onChange={e => setNewItem({ ...newItem, parentId: e.target.value })} className="input">
+                <option value="">No parent</option>
+                {workItems.filter(i => i.type === 'Epic' || i.type === 'Story').map(i => (
+                  <option key={i.id} value={i.id}>{i.id} — {i.title}</option>
+                ))}
+              </select>
+            </Field>
             <Field label="Due Date">
               <input type="date" value={newItem.dueDate} onChange={e => setNewItem({ ...newItem, dueDate: e.target.value })} className="input" />
             </Field>
@@ -1807,7 +2050,7 @@ export default function App() {
             </Field>
             <Field label="Description">
               <textarea rows={3} value={newItem.description} onChange={e => setNewItem({ ...newItem, description: e.target.value })}
-                className="input resize-none" placeholder="Optional description..." />
+                className="input resize-none" placeholder="Optional description... (supports **bold**, *italic*, - bullets)" />
             </Field>
           </div>
           <div className="flex justify-end gap-3 mt-5">
@@ -1878,6 +2121,16 @@ function Field({ label, children }) {
       {children}
     </div>
   );
+}
+
+function renderMd(text) {
+  if (!text) return '';
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code style="background:#f3f4f6;padding:0 3px;border-radius:3px;font-size:11px">$1</code>')
+    .replace(/^- (.+)$/gm, '• $1')
+    .replace(/\n/g, '<br/>');
 }
 
 function getTimeOfDay() {
@@ -1965,6 +2218,90 @@ function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
             className="opacity-0 group-hover:opacity-100 text-xs text-neutral-400 hover:text-brand-navy transition-opacity">↓ Backlog</button>
         </div>
       ))}
+    </div>
+  );
+}
+
+// Simple rich text editor with markdown toolbar
+function RichTextEditor({ value, onChange, onBlur, placeholder }) {
+  const textareaRef = useRef(null);
+
+  const wrap = (prefix, suffix = prefix) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = value.slice(start, end);
+    const before = value.slice(0, start);
+    const after = value.slice(end);
+    const newVal = before + prefix + selected + suffix + after;
+    onChange(newVal);
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(start + prefix.length, end + prefix.length);
+    }, 0);
+  };
+
+  const insertBullet = () => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const before = value.slice(0, start);
+    const after = value.slice(start);
+    const needsNewline = before.length > 0 && !before.endsWith('\n');
+    const newVal = before + (needsNewline ? '\n' : '') + '- ' + after;
+    onChange(newVal);
+    setTimeout(() => { ta.focus(); ta.setSelectionRange(start + (needsNewline ? 3 : 2), start + (needsNewline ? 3 : 2)); }, 0);
+  };
+
+  // Render markdown-like preview
+  const renderPreview = (text) => {
+    if (!text) return '';
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`(.+?)`/g, '<code class="bg-neutral-100 text-semantic-danger px-1 rounded text-[11px] font-mono">$1</code>')
+      .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
+      .replace(/^# (.+)$/gm, '<p class="font-bold text-base">$1</p>')
+      .replace(/\n/g, '<br/>');
+  };
+
+  const [showPreview, setShowPreview] = React.useState(false);
+
+  return (
+    <div className="border border-neutral-200 rounded-lg overflow-hidden focus-within:border-brand-navy transition-colors">
+      {/* Toolbar */}
+      <div className="flex items-center gap-0.5 px-2 py-1.5 bg-neutral-50 border-b border-neutral-200">
+        <button type="button" onClick={() => wrap('**')} title="Bold (Ctrl+B)"
+          className="w-6 h-6 flex items-center justify-center rounded text-xs font-bold text-neutral-600 hover:bg-neutral-200 transition-colors">B</button>
+        <button type="button" onClick={() => wrap('*')} title="Italic"
+          className="w-6 h-6 flex items-center justify-center rounded text-xs italic text-neutral-600 hover:bg-neutral-200 transition-colors">I</button>
+        <button type="button" onClick={() => wrap('`')} title="Inline code"
+          className="w-6 h-6 flex items-center justify-center rounded text-xs font-mono text-neutral-600 hover:bg-neutral-200 transition-colors">`</button>
+        <button type="button" onClick={insertBullet} title="Bullet point"
+          className="w-6 h-6 flex items-center justify-center rounded text-xs text-neutral-600 hover:bg-neutral-200 transition-colors">•</button>
+        <button type="button" onClick={() => wrap('# ', '')} title="Heading"
+          className="w-6 h-6 flex items-center justify-center rounded text-xs font-bold text-neutral-600 hover:bg-neutral-200 transition-colors">H</button>
+        <div className="h-4 w-px bg-neutral-200 mx-1"></div>
+        <button type="button" onClick={() => setShowPreview(p => !p)}
+          className={`text-[10px] px-2 py-0.5 rounded font-medium transition-colors ${showPreview ? 'bg-brand-navy text-white' : 'text-neutral-500 hover:bg-neutral-200'}`}>
+          {showPreview ? 'Edit' : 'Preview'}
+        </button>
+      </div>
+      {showPreview ? (
+        <div className="min-h-[80px] p-3 text-sm text-neutral-700 leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: renderPreview(value) || '<span class="text-neutral-300">Nothing to preview</span>' }} />
+      ) : (
+        <textarea
+          ref={textareaRef}
+          rows={4}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          onBlur={onBlur}
+          placeholder={placeholder}
+          className="w-full px-3 py-2 text-sm text-neutral-900 focus:outline-none resize-none bg-white"
+        />
+      )}
     </div>
   );
 }

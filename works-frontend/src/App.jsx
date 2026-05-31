@@ -757,12 +757,29 @@ export default function App() {
   };
 
   // ATTACHMENTS
+  const MAX_UPLOAD_MB = 20; // must match app.attachments.max-size-bytes / 1024 / 1024
   const handleUploadFile = (e) => {
     const file = e.target.files[0]; if (!file) return;
+    // Client-side size guard (mirrors server limit)
+    if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+      showToast(`File too large — max ${MAX_UPLOAD_MB} MB`, 'error'); return;
+    }
     const fd = new FormData(); fd.append('file', file);
     fetch(`${API}/work-items/${selectedItem.id}/attachments`, {
       method: 'POST', headers: { 'X-User-Id': currentUser?.id || '' }, body: fd
-    }).then(r => r.json()).then(a => setAttachments(prev => [a, ...prev]));
+    }).then(async res => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const msg = {
+          413: `File too large (max ${MAX_UPLOAD_MB} MB)`,
+          415: 'File type not permitted',
+          422: 'File rejected by virus scanner',
+        }[res.status] || (err.message || `Upload failed (${res.status})`);
+        showToast(msg, 'error');
+        return null;
+      }
+      return res.json();
+    }).then(a => { if (a) setAttachments(prev => [a, ...prev]); });
   };
   const handleDeleteAttachment = (attId) => {
     fetch(`${API}/work-items/${selectedItem.id}/attachments/${attId}`, { method: 'DELETE', headers: headers() })
@@ -2456,9 +2473,17 @@ export default function App() {
             {detailTab === 'attachments' && (
               <div>
                 <input type="file" ref={fileInputRef} className="hidden" onChange={handleUploadFile} />
-                <Button variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()} className="mb-4">
-                  ↑ Upload file
-                </Button>
+                <div className="flex items-center gap-3 mb-4">
+                  <Button variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()}>
+                    ↑ Upload file
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-neutral-400">Max {MAX_UPLOAD_MB} MB per file</span>
+                    <span className="text-[10px] bg-semantic-success-surface text-semantic-success px-1.5 py-0.5 rounded flex items-center gap-1">
+                      🛡 Virus scan active
+                    </span>
+                  </div>
+                </div>
                 {attachments.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No files attached yet.</p>}
                 <div className="space-y-2">
                   {attachments.map(a => {

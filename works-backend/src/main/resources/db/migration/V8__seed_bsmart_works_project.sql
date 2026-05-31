@@ -4,11 +4,32 @@
 -- ============================================================
 
 -- ---- USERS ----
+-- Remove legacy users that conflict with canonical seed IDs (CASCADE deletes workspace_members)
+-- projects.lead_user_id references are updated first to avoid FK issues
+UPDATE projects SET lead_user_id = NULL WHERE lead_user_id IN (
+  SELECT id FROM users WHERE email = 'deepak@bcits.com' AND id != 'USR-DEV1'
+);
+UPDATE work_items SET assignee_id = NULL WHERE assignee_id IN (
+  SELECT id FROM users WHERE email IN ('deepak@bcits.com', 'akpdeepak@bcits.com') AND id NOT IN ('USR-DEV1', 'USR-DEV2')
+);
+UPDATE work_items SET created_by = NULL WHERE created_by IN (
+  SELECT id FROM users WHERE email IN ('deepak@bcits.com', 'akpdeepak@bcits.com') AND id NOT IN ('USR-DEV1', 'USR-DEV2')
+);
+DELETE FROM saved_filters WHERE created_by IN (
+  SELECT id FROM users WHERE email IN ('deepak@bcits.com', 'akpdeepak@bcits.com') AND id NOT IN ('USR-DEV1', 'USR-DEV2')
+);
+DELETE FROM notifications WHERE user_id IN (
+  SELECT id FROM users WHERE email IN ('deepak@bcits.com', 'akpdeepak@bcits.com') AND id NOT IN ('USR-DEV1', 'USR-DEV2')
+);
+-- Delete old users (workspace_members cascades automatically)
+DELETE FROM users WHERE email = 'deepak@bcits.com' AND id != 'USR-DEV1';
+DELETE FROM users WHERE email = 'akpdeepak@bcits.com' AND id != 'USR-DEV2';
+
 -- Deepak (Owner/Product), Akp (Dev Account)
 INSERT INTO users (id, email, password_hash, full_name, avatar_color, timezone) VALUES
     ('USR-DEV1', 'deepak@bcits.com',        '$2a$10$placeholder_bcrypt_hash_1', 'Deepak Pandey',   '#0B2F5C', 'Asia/Kolkata'),
     ('USR-DEV2', 'akpdeepak@bcits.com',     '$2a$10$placeholder_bcrypt_hash_2', 'AKP Dev Account', '#E94E1B', 'Asia/Kolkata')
-ON CONFLICT (email) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;
 
 -- ---- WORKSPACE ----
 INSERT INTO workspace_members (workspace_id, user_id, system_role, role_id) VALUES

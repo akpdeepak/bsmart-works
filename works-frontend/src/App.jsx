@@ -471,7 +471,7 @@ export default function App() {
 
   // SPRINT FUNCTIONS
   function fetchSprints(projectId = 'PROJ-001') {
-    fetch(`${API}/sprints?projectId=${projectId}`)
+    fetch(`${API}/sprints?projectId=${projectId}`, { headers: headers() })
       .then(r => r.json()).then(d => {
         const list = Array.isArray(d) ? d : [];
         setSprints(list);
@@ -480,15 +480,15 @@ export default function App() {
       }).catch(() => {});
   }
   function fetchSprintItems(sprintId) {
-    fetch(`${API}/sprints/${sprintId}/items`)
+    fetch(`${API}/sprints/${sprintId}/items`, { headers: headers() })
       .then(r => r.json()).then(d => setSprintItems(Array.isArray(d) ? d : [])).catch(() => {});
   }
   function fetchBacklog() {
-    fetch(`${API}/work-items/backlog`)
+    fetch(`${API}/work-items/backlog`, { headers: headers() })
       .then(r => r.json()).then(d => setBacklogItems(Array.isArray(d) ? d : [])).catch(() => {});
   }
   function fetchSprintReport(sprintId) {
-    fetch(`${API}/sprints/${sprintId}/report`)
+    fetch(`${API}/sprints/${sprintId}/report`, { headers: headers() })
       .then(r => r.json()).then(setSprintReport).catch(() => {});
   }
   function fetchSavedFilters() {
@@ -497,7 +497,7 @@ export default function App() {
   }
 
   function fetchVelocityData() {
-    fetch(`${API}/sprints/velocity`)
+    fetch(`${API}/sprints/velocity`, { headers: headers() })
       .then(r => r.json()).then(d => setVelocityData(Array.isArray(d) ? d : [])).catch(() => {});
   }
 

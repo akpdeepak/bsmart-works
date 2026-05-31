@@ -1,6 +1,18 @@
 {
+  "name": "bsmart-works",
+  "private": true,
+  "version": "0.0.0",
+  "description": "bSmart Works — monorepo root. AI rules, guardrails, and git hooks live here.",
+  "scripts": {
+    "prepare": "husky",
+    "guardrails": "bash scripts/guardrails.sh",
+    "ai-rules": "node scripts/generate-ai-rules.mjs",
+    "ai-rules:check": "node scripts/generate-ai-rules.mjs --check",
+    "verify": "npm run guardrails && npm run ai-rules:check"
+  },
   "devDependencies": {
     "autoprefixer": "^10.5.0",
+    "husky": "^9.1.7",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.0"
   }

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160" width="640" height="160" role="img" aria-label="bSmart Works">
+  <title>bSmart Works</title>
+  <defs>
+    <linearGradient id="markGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B2F5C"/>
+      <stop offset="100%" stop-color="#1E4D8C"/>
+    </linearGradient>
+    <linearGradient id="pulseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#E94E1B"/>
+      <stop offset="100%" stop-color="#F39200"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Glyph mark: a chevron-arrow forming a forward motion + rising bars
+       Conceptually: three vertical bars rising in height (forward motion)
+       + a forward-pointing chevron at the top right (delivery/progress).
+       Sits inside a soft rounded square to read as an app icon. -->
+  <g transform="translate(24, 24)">
+    <!-- App tile background -->
+    <rect x="0" y="0" width="112" height="112" rx="22" ry="22" fill="url(#markGrad)"/>
+    <!-- Three rising bars (rhythm) -->
+    <rect x="22" y="68" width="14" height="26" rx="3" fill="#FFFFFF" opacity="0.92"/>
+    <rect x="42" y="54" width="14" height="40" rx="3" fill="#FFFFFF" opacity="0.92"/>
+    <rect x="62" y="38" width="14" height="56" rx="3" fill="#FFFFFF" opacity="0.92"/>
+    <!-- Accent chevron (forward delivery) -->
+    <path d="M 70 22 L 92 38 L 70 54 Z" fill="url(#pulseGrad)"/>
+  </g>
+
+  <!-- Wordmark: "bSmart" in light weight + "Works" in semibold -->
+  <g transform="translate(160, 0)">
+    <text x="0" y="80"
+          font-family="Inter, 'Segoe UI', Arial, sans-serif"
+          font-size="44" font-weight="300"
+          fill="#5A6B7E"
+          letter-spacing="-0.5">bSmart</text>
+    <text x="0" y="125"
+          font-family="Inter, 'Segoe UI', Arial, sans-serif"
+          font-size="56" font-weight="700"
+          fill="#0B2F5C"
+          letter-spacing="-1.2">Works</text>
+  </g>
+</svg>

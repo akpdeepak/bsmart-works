@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160" width="640" height="160" role="img" aria-label="bSmart Works">
+  <title>bSmart Works — Reverse</title>
+  <rect x="0" y="0" width="640" height="160" fill="#0B2F5C"/>
+  <g transform="translate(24, 24)">
+    <rect x="0" y="0" width="112" height="112" rx="22" ry="22" fill="#FFFFFF" opacity="0.08"/>
+    <rect x="22" y="68" width="14" height="26" rx="3" fill="#FFFFFF"/>
+    <rect x="42" y="54" width="14" height="40" rx="3" fill="#FFFFFF"/>
+    <rect x="62" y="38" width="14" height="56" rx="3" fill="#FFFFFF"/>
+    <path d="M 70 22 L 92 38 L 70 54 Z" fill="#E94E1B"/>
+  </g>
+  <g transform="translate(160, 0)">
+    <text x="0" y="80"
+          font-family="Inter, 'Segoe UI', Arial, sans-serif"
+          font-size="44" font-weight="300"
+          fill="#B8C5D6"
+          letter-spacing="-0.5">bSmart</text>
+    <text x="0" y="125"
+          font-family="Inter, 'Segoe UI', Arial, sans-serif"
+          font-size="56" font-weight="700"
+          fill="#FFFFFF"
+          letter-spacing="-1.2">Works</text>
+  </g>
+</svg>

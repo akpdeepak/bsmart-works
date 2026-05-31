@@ -1,8 +1,10 @@
 .DS_Store
-backend.log
+/node_modules/
 works-frontend/node_modules/
 works-frontend/dist/
 works-backend/target/
 *.class
 .idea/
 .vscode/
+.husky/_/
+*.log

@@ -68,6 +68,9 @@ export default function App() {
   const [authMode, setAuthMode]         = useState('login');
   const [authForm, setAuthForm]         = useState({ email: '', password: '', fullName: '' });
   const [authError, setAuthError]       = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [forgotMode, setForgotMode]     = useState(false);
   const [forgotEmail, setForgotEmail]   = useState('');
   const [forgotMsg, setForgotMsg]       = useState('');
@@ -332,6 +335,11 @@ export default function App() {
   // AUTH
   const handleAuthSubmit = (e) => {
     e.preventDefault(); setAuthError('');
+    if (authMode === 'signup') {
+      if (authForm.email !== confirmEmail) { setAuthError('Email addresses do not match.'); return; }
+      if (authForm.password !== confirmPassword) { setAuthError('Passwords do not match.'); return; }
+      if (authForm.password.length < 8) { setAuthError('Password must be at least 8 characters.'); return; }
+    }
     fetch(`${API}/auth${authMode === 'login' ? '/login' : '/signup'}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(authForm)
@@ -1040,17 +1048,46 @@ export default function App() {
             {authMode === 'signup' && (
               <Field label="Full Name">
                 <input type="text" required value={authForm.fullName}
-                  onChange={e => setAuthForm({ ...authForm, fullName: e.target.value })} className="input" />
+                  onChange={e => setAuthForm({ ...authForm, fullName: e.target.value })} className="input" autoFocus />
               </Field>
             )}
             <Field label="Email">
               <input type="email" required value={authForm.email}
                 onChange={e => setAuthForm({ ...authForm, email: e.target.value })} className="input" />
             </Field>
+            {authMode === 'signup' && (
+              <Field label="Confirm Email">
+                <input type="email" required value={confirmEmail}
+                  onChange={e => setConfirmEmail(e.target.value)} className="input"
+                  placeholder="Re-enter your email" />
+              </Field>
+            )}
             <Field label="Password">
-              <input type="password" required value={authForm.password}
-                onChange={e => setAuthForm({ ...authForm, password: e.target.value })} className="input" />
+              <div className="relative">
+                <input type={showPassword ? 'text' : 'password'} required value={authForm.password}
+                  onChange={e => setAuthForm({ ...authForm, password: e.target.value })}
+                  className="input pr-10" placeholder={authMode === 'signup' ? 'Min. 8 characters' : ''} />
+                <button type="button" onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 transition-colors text-sm select-none"
+                  tabIndex={-1}>
+                  {showPassword ? '🙈' : '👁'}
+                </button>
+              </div>
             </Field>
+            {authMode === 'signup' && (
+              <Field label="Confirm Password">
+                <div className="relative">
+                  <input type={showPassword ? 'text' : 'password'} required value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    className="input pr-10" placeholder="Re-enter your password" />
+                  {confirmPassword && (
+                    <span className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-sm ${confirmPassword === authForm.password ? 'text-semantic-success' : 'text-semantic-danger'}`}>
+                      {confirmPassword === authForm.password ? '✓' : '✕'}
+                    </span>
+                  )}
+                </div>
+              </Field>
+            )}
             <Button type="submit" variant="action" fullWidth>
               {authMode === 'login' ? 'Sign In' : 'Create Account'}
             </Button>
@@ -1062,7 +1099,7 @@ export default function App() {
           )}
           <div className="mt-4 text-center text-sm text-neutral-600">
             {authMode === 'login' ? "Don't have an account? " : "Already have an account? "}
-            <button onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setAuthError(''); }}
+            <button onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setAuthError(''); setShowPassword(false); setConfirmEmail(''); setConfirmPassword(''); }}
               className="text-brand-orange font-bold hover:underline">
               {authMode === 'login' ? 'Sign up' : 'Log in'}
             </button>

@@ -1,0 +1,70 @@
+name: CI
+
+# The cross-tool / cross-user enforcement gate. No matter which AI tool or person
+# wrote the code, a PR cannot merge unless these checks pass.
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  guardrails:
+    name: Architecture & brand guardrails
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run guardrails
+        run: bash scripts/guardrails.sh
+
+  ai-rules-in-sync:
+    name: AI rules in sync with CLAUDE.md
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Check derived AI-rules files are up to date
+        run: node scripts/generate-ai-rules.mjs --check
+
+  frontend:
+    name: Frontend (lint + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: works-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: works-frontend/package-lock.json
+      - run: npm ci
+      # Lint is advisory for now: main carries pre-existing base-rule debt (e.g. App.jsx
+      # react-hooks errors) unrelated to this change. The blocking design-token/architecture
+      # rules run in the `guardrails` job. Remove continue-on-error once the baseline is clean.
+      - run: npm run lint
+        continue-on-error: true
+      - run: npm run build   # blocking — the app must compile
+
+  backend:
+    name: Backend (compile + checkstyle)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: works-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      # Compile + run Checkstyle (reporting mode). Tests are skipped in this job because the
+      # suite uses Testcontainers/infra; enable full `./mvnw -B verify` here once confirmed
+      # green in CI. This still guarantees the backend compiles and Checkstyle runs.
+      - name: Compile + checkstyle
+        run: ./mvnw -B -DskipTests verify

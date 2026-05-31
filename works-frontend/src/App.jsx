@@ -4,7 +4,7 @@ import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
 
-const API = 'http://localhost:8080/api/v1';
+const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 function getInitials(name) {
   if (!name) return '??';

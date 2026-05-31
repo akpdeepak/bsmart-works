@@ -1,4 +1,5 @@
 .DS_Store
+backend.log
 works-frontend/node_modules/
 works-frontend/dist/
 works-backend/target/

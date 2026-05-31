@@ -141,6 +141,7 @@ export default function App() {
   const [dragOverId, setDragOverId]     = useState(null);
   const [saveFilterName, setSaveFilterName] = useState('');
   const [showSaveFilter, setShowSaveFilter] = useState(false);
+  const [scopeChanges, setScopeChanges] = useState([]);
 
   // Workspace switcher dropdown
   const [wsOpen, setWsOpen]             = useState(false);
@@ -578,6 +579,8 @@ export default function App() {
   function fetchSprintReport(sprintId) {
     fetch(`${API}/sprints/${sprintId}/report`, { headers: headers() })
       .then(r => r.json()).then(setSprintReport).catch(() => {});
+    fetch(`${API}/sprints/${sprintId}/scope-changes`, { headers: headers() })
+      .then(r => r.json()).then(d => setScopeChanges(Array.isArray(d) ? d : [])).catch(() => {});
   }
   function fetchSavedFilters() {
     fetch(`${API}/saved-filters`, { headers: headers() })
@@ -1835,6 +1838,31 @@ export default function App() {
                               </div>
                             ))}
                           </div>
+                        </div>
+
+                        {/* Scope-change timeline */}
+                        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+                          <div className="px-5 py-3 border-b border-neutral-100 flex items-center justify-between">
+                            <h3 className="font-semibold text-neutral-900">Scope-Change Timeline</h3>
+                            <span className="text-xs text-neutral-400">Items added/removed mid-sprint</span>
+                          </div>
+                          {scopeChanges.length === 0 ? (
+                            <p className="text-xs text-neutral-400 text-center py-6">No scope changes — sprint stayed on plan ✓</p>
+                          ) : (
+                            <div className="divide-y divide-neutral-50">
+                              {scopeChanges.map((c, i) => (
+                                <div key={i} className="flex items-center gap-3 px-5 py-3">
+                                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${c.change_type === 'ADDED' ? 'bg-semantic-success-surface text-semantic-success' : 'bg-semantic-danger-surface text-semantic-danger'}`}>
+                                    {c.change_type === 'ADDED' ? '+ Added' : '− Removed'}
+                                  </span>
+                                  {c.type && <TypeBadge type={c.type} compact />}
+                                  <span className="flex-1 text-sm text-neutral-900">{c.title || c.work_item_id}</span>
+                                  <span className="text-xs text-neutral-400">{c.actor_name || 'System'}</span>
+                                  <span className="text-[10px] text-neutral-300">{c.occurred_at ? new Date(c.occurred_at).toLocaleDateString() : ''}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ) : (

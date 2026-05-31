@@ -167,6 +167,39 @@ public class SprintController {
         report.put("items", items);
         return report;
     }
+
+    /**
+     * Scope-change timeline: items added to or removed from this sprint after it was started.
+     * Derived from the events table — looks for SPRINT_ITEM_ADDED / SPRINT_ITEM_REMOVED events,
+     * and also WORK_ITEM_UPDATED events where field_name = 'sprint_id' and new_value = sprintId.
+     */
+    @GetMapping("/{id}/scope-changes")
+    public List<Map<String, Object>> getScopeChanges(@PathVariable String id) {
+        // Items added (sprint_id changed TO this sprint after sprint started)
+        List<Map<String, Object>> added = jdbc.queryForList(
+            "SELECT e.occurred_at, 'ADDED' as change_type, e.aggregate_id as work_item_id, " +
+            "       wi.title, wi.type, u.full_name as actor_name " +
+            "FROM events e " +
+            "LEFT JOIN work_items wi ON wi.id = e.aggregate_id " +
+            "LEFT JOIN users u ON u.id = e.actor_id " +
+            "WHERE e.field_name = 'sprint_id' AND e.new_value = ? " +
+            "ORDER BY e.occurred_at ASC", id);
+
+        // Items removed (sprint_id changed FROM this sprint)
+        List<Map<String, Object>> removed = jdbc.queryForList(
+            "SELECT e.occurred_at, 'REMOVED' as change_type, e.aggregate_id as work_item_id, " +
+            "       wi.title, wi.type, u.full_name as actor_name " +
+            "FROM events e " +
+            "LEFT JOIN work_items wi ON wi.id = e.aggregate_id " +
+            "LEFT JOIN users u ON u.id = e.actor_id " +
+            "WHERE e.field_name = 'sprint_id' AND e.old_value = ? " +
+            "ORDER BY e.occurred_at ASC", id);
+
+        List<Map<String, Object>> all = new ArrayList<>(added);
+        all.addAll(removed);
+        all.sort(Comparator.comparing(m -> m.get("occurred_at").toString()));
+        return all;
+    }
 }
 
 

@@ -204,8 +204,11 @@ Font stack: Inter (300 light · 400 regular · 600 semibold · 700 bold) + JetBr
   - Between section title and first element: `mb-4`
   - Between sections: `mb-6` or `space-y-6`
   - Page-level padding: `p-6` or `px-6 py-5`
-- **Radius tokens (verified):** `rounded-sm` 4px · `rounded` / `rounded-md` 8px · `rounded-lg` 12px · `rounded-xl` 16px
-- Card: `rounded-lg` — Panel: `rounded-md` — Pill/badge: `rounded-full`
+- **Radius tokens (verified against `tailwind.config.js`):** `rounded-sm` 4px · `rounded` / `rounded-md` 8px · `rounded-lg` 12px · `rounded-xl` **22px** · `rounded-full` 9999px
+  ⚠️ `xl` is **22px**, not 16px — the config is canonical. Earlier doc said 16px; code wins.
+- Card: `rounded-lg` — Panel: `rounded-md` — Pill/badge / count chip: `rounded-full`
+- **Layout dimension tokens** (in config): `w-sidebar` 240px · `w-sidebar-collapsed` 48px · `w-panel` 360px.
+  Use these for the three-zone shell instead of arbitrary `w-[240px]`.
 
 ---
 
@@ -222,6 +225,9 @@ Font stack: Inter (300 light · 400 regular · 600 semibold · 700 bold) + JetBr
 - **No bounce, no spring, no decorative keyframe animation** on functional surfaces.
 - Loading states: **skeleton screens** using `animate-pulse bg-neutral-100` — never spinners
   inside content areas. A spinner is only acceptable in a button during a mutation.
+- **Named tokens also exist in `tailwind.config.js`** (use when you want semantic names rather
+  than literals): durations `fast` 150ms · `base` 220ms · `slow` 320ms; easings `ease-out-quint`
+  and `ease-spring` (spring reserved for brand/marketing surfaces only, never functional UI).
 
 ---
 
@@ -348,20 +354,22 @@ mutations (save, submit, delete).
 
 ### 4.13 Components — Build Pattern
 
-The library lives in `works-frontend/src/components/works/`. Currently 3 exist:
-`Button` (`button.jsx`, cva variants: primary/secondary/ghost/danger/action/link),
-`Logo` (`logo.jsx`), `StatusBadge` (`status-badge.jsx`).
+The library lives in `works-frontend/src/components/works/`. **What exists today:**
+- Root: `Button` (`button.jsx`, cva variants primary/secondary/ghost/danger/action/link),
+  `Logo` (`logo.jsx`), `StatusBadge` (`status-badge.jsx`)
+- `atoms/`: `Input`, `Badge`, `Skeleton`, `Collapsible`
+- `templates/`: `ThreeZoneLayout`
 
 When adding a component:
-1. Use `cva` for variants + `cn()` for merging — match `button.jsx` exactly.
+1. Use `cva` for variants + `cn()` for merging — match `button.jsx` / `atoms/input.jsx` exactly.
 2. Token classes only — no raw hex/px/font.
-3. Export from the same `works/` folder.
-4. Build toward the target inventory incrementally — do not assume more than the 3 that exist.
+3. File it at the correct Atomic Design level (§4.19): `atoms/`, `molecules/`, `organisms/`, `templates/`.
+4. Build toward the target inventory incrementally — don't assume components beyond those listed above.
 
-**Target component inventory** (build as features require, in this rough priority order):
-`Input`, `Select`, `Textarea`, `Checkbox`, `RadioGroup`, `Toggle`,
-`Badge`, `Tooltip`, `Dropdown` / `ContextMenu`, `Modal` / `Dialog`,
-`Collapsible`, `Tabs`, `Breadcrumb`, `Avatar`, `Skeleton`,
+**Target component inventory** (build as features require, in this rough priority order;
+✅ = already built): ✅`Input`, `Select`, `Textarea`, `Checkbox`, `RadioGroup`, `Toggle`,
+✅`Badge`, `Tooltip`, `Dropdown` / `ContextMenu`, `Modal` / `Dialog`,
+✅`Collapsible`, `Tabs`, `Breadcrumb`, `Avatar`, ✅`Skeleton`,
 `Toast` / `Notification`, `Table`, `Pagination`, `Sidebar`, `CommandPalette`
 
 ---
@@ -563,23 +571,33 @@ level. This keeps the codebase navigable as the library scales.
 
 ```
 works-frontend/src/components/works/
-├── atoms/          Button, Input, Badge, Avatar, Checkbox, Toggle, Skeleton, Tooltip
-├── molecules/      SearchInput, FilterBar, UserAvatar, FormField, RowActions
-├── organisms/      WorkItemRow, SprintCard, SidebarNav, CommandPalette, BulkActionBar
-├── templates/      ThreeZoneLayout, ListPageTemplate, DetailPageTemplate
+├── atoms/          ✅ input.jsx, badge.jsx, skeleton.jsx, collapsible.jsx  (built — golden path)
+│                   todo: Avatar, Checkbox, Toggle, Tooltip, Select, Textarea
+├── molecules/      SearchInput, FilterBar, UserAvatar, FormField, RowActions  (todo)
+├── organisms/      WorkItemRow, SprintCard, SidebarNav, CommandPalette, BulkActionBar  (todo)
+├── templates/      ✅ three-zone-layout.jsx  (built)  · todo: ListPageTemplate, DetailPageTemplate
 └── (root)          Existing: button.jsx, logo.jsx, status-badge.jsx  ← migrate to atoms/ when refactoring
 ```
+
+**The built components are the canonical reference — pattern-match them, don't reinvent.**
+`atoms/input.jsx`, `atoms/badge.jsx`, `atoms/skeleton.jsx`, `atoms/collapsible.jsx`, and
+`templates/three-zone-layout.jsx` demonstrate the house style end-to-end: cva + `cn()`, dark
+variants, the `focus-visible:ring-brand-navy-tint/40` ring, token-only classes, the §4.7
+expand/collapse model, and §4.17 a11y wiring (`aria-expanded`, `aria-controls`, `inert`,
+`aria-invalid`). New components copy these conventions.
 
 **Rules:**
 - Atoms have no knowledge of domain data (no `workItem`, no `sprint` props).
 - Molecules compose atoms; organisms compose molecules + atoms + domain data.
 - Templates wire organisms into the three-zone layout with no business logic.
 - Pages (in `src/pages/`) compose templates + call hooks/API — no raw JSX layout there.
-- Each component gets a co-located `.stories.jsx` file when it is built.
-  Stories document all cva variants and interactive states visually.
+- **Once Storybook is configured**, each component gets a co-located `.stories.jsx` documenting
+  its cva variants and interactive states. (Storybook is not yet installed — don't author orphan
+  story files until it is; that's a separate setup task.)
 
-**Current reality:** the root-level `works/` folder is the starting point. Migrate to
-`atoms/` subdirectory as components are built, not retroactively all at once.
+**Current reality:** the root-level `works/` folder still holds the original 3 components; new
+components land in the Atomic subfolders (`atoms/`, `templates/`). Migrate the root 3 into
+`atoms/` only as part of a deliberate refactor, not retroactively all at once.
 
 ---
 
@@ -625,6 +643,79 @@ Users read the button, not the modal body. The button label must make the conseq
 
 ---
 
+### 4.21 Z-Index — The Stacking Scale (Single Source of Truth)
+
+Layers must never fight. Use the named z-index tokens from `tailwind.config.js` — never an
+arbitrary `z-[100]`. (Enforced: `guardrails.sh` warns on arbitrary z-index.)
+
+| Token | Value | Layer |
+|-------|-------|-------|
+| `z-base` | 0 | Normal content flow |
+| *(default `z-10`)* | 10 | In-content sticky elements (e.g. sticky table header §4.10) |
+| `z-sticky` | 20 | Page-level sticky header bar |
+| `z-dropdown` | 30 | Dropdowns, context menus, tooltips |
+| `z-panel` | 40 | Right contextual slide-in panel + its click-catcher |
+| `z-bulkbar` | 45 | Bulk-action bar (§4.16) |
+| `z-modal` | 50 | Modal / dialog and its backdrop |
+| `z-palette` | 60 | Command palette (⌘K) |
+| `z-toast` | 70 | Toasts / notifications — always on top |
+
+Rule of thumb: the more transient and user-initiated the surface, the higher it sits. A toast
+must never be hidden behind a modal; a command palette opens above everything except toasts.
+
+---
+
+### 4.22 Date, Time & Number Formatting
+
+Consistency here is a direct signal of product quality. Centralise these in `@/lib/format`
+(create it when first needed) — never hand-format dates inline per component.
+
+- **Relative time for recent events** (≤ 7 days): `"2h ago"`, `"3d ago"`, `"just now"`.
+  Use `Intl.RelativeTimeFormat`. Show the absolute timestamp in a `title`/tooltip on hover.
+- **Absolute dates** (older than 7 days, or any formal record): `"31 May 2026"` (day-month-year,
+  month spelled). Never locale-ambiguous numeric like `05/31/26`.
+- **Date + time** when precision matters (audit log, comments): `"31 May 2026, 14:30"` (24-hour).
+- **Timestamps in tables / IDs / codes:** `font-mono text-xs` (§4.3).
+- **Numbers:** `Intl.NumberFormat` for thousands separators (`1,240`). Right-align numeric table
+  columns (§4.10).
+- **Durations:** compact human form — `"3d 4h"`, `"2h 15m"` — not raw seconds.
+- **Percentages:** whole numbers unless precision matters — `"87%"` not `"86.7431%"`.
+- **Empty / unknown values:** render an em-dash `—` in `text-neutral-400`, never `"null"`,
+  `"undefined"`, or a blank cell.
+- **Timezone:** display in the user's local timezone; store/transmit UTC (ISO-8601) over the API.
+
+---
+
+### 4.23 Iconography
+
+Icons are from `lucide-react` only (§2). Consistency in size, weight, and meaning is mandatory.
+
+**Sizing (match the adjacent text/control):**
+| Context | Size | Class |
+|---------|------|-------|
+| Inline with `text-xs` meta | 14px | `h-3.5 w-3.5` |
+| Default — buttons, list rows, body | 16px | `h-4 w-4` |
+| Primary nav items, section headers | 20px | `h-5 w-5` |
+| Empty-state / feature illustration | 32px | `h-8 w-8` |
+
+**Rules:**
+- **Colour:** icons inherit text colour (`currentColor`) by default — set via `text-*` token,
+  never a hard-coded fill. Rest-state standalone icons: `text-neutral-400`; active/interactive:
+  `text-neutral-600` → `text-brand-navy` on hover.
+- **Stroke:** use the lucide default (2px). Don't mix stroke widths across the UI.
+- **One icon = one meaning, app-wide.** Pick a canonical icon per concept and never reuse it for
+  something else. House mapping (extend, don't contradict):
+  `Plus` create · `Pencil` edit · `Trash2` delete · `Check` done/confirm · `X` close/cancel ·
+  `ChevronDown` expand/collapse · `ChevronRight` breadcrumb separator / drill-in ·
+  `Search` search · `Filter` filter · `Bell` notifications · `Settings` settings ·
+  `MoreHorizontal` overflow menu · `AlertCircle` error/validation · `Loader2` in-progress (spin).
+- **Icon-only buttons MUST have `aria-label`** (§4.17) — e.g. `aria-label="Delete work item"`.
+  Decorative icons beside a text label get `aria-hidden="true"`.
+- Don't place an icon without purpose. Every icon either conveys state, identifies an action, or
+  aids scanning — never pure decoration on functional surfaces.
+
+---
+
 ## 5. Iteration Roadmap & Current Status
 
 **20 iterations total. Build only what the active iteration requires.**
@@ -660,7 +751,7 @@ before building forward. **Do not implement iteration N+1 features while iterati
 **UI / Frontend**
 - Don't put raw hex, px, or font names in components — use token classes only.
 - Don't use Tailwind's default `gray-*` palette — use `neutral-*` token aliases from `tailwind.config.js`.
-- Don't assume the 30-component library exists — only Button, Logo, StatusBadge do.
+- Don't assume a full component library exists — see §4.13 for exactly what's built.
 - Don't use gradient backgrounds on content surfaces (cards, panels, tables) — gradients for brand/hero only.
 - Don't use a spinner inside a content area during loading — use skeleton screens (`animate-pulse bg-neutral-100`).
 - Don't use a toast to report form validation errors — inline errors beneath the field only.
@@ -684,10 +775,11 @@ before building forward. **Do not implement iteration N+1 features while iterati
 - Don't use `[OK]` / `[Cancel]` in confirmation dialogs — button label must be the specific action.
 - Don't use exclamation marks on functional surfaces. No filler phrases like "It looks like…".
 - Don't use `Title Case` for section headings — sentence case only (except proper nouns).
-
----
-
-## 7. Definition of Done (Every PR)
+- Don't use arbitrary z-index (`z-[100]`) — use the named scale (`z-modal`, `z-toast` …) from §4.21.
+- Don't hand-format dates/numbers inline — use `@/lib/format`; never locale-ambiguous numeric dates (`05/31/26`).
+- Don't render `null`/`undefined`/blank for missing values — use an em-dash `—` in `text-neutral-400`.
+- Don't reuse a `lucide` icon for two different meanings, or mix icon stroke widths (§4.23).
+- Don't add `eslint-plugin-tailwindcss` back — it's incompatible with this ESLint 10 + Tailwind 3.4 stack (§ see `eslint.config.js`).
 
 **Backend**
 - [ ] New endpoints have `@Valid` DTO validation, under `/api/v1/`, plural kebab path
@@ -700,7 +792,7 @@ before building forward. **Do not implement iteration N+1 features while iterati
 **Frontend / UI**
 - [ ] No raw hex/px/font in frontend — token classes only (`brand-*`, `neutral-*`, `semantic-*`)
 - [ ] New components follow the `button.jsx` cva + `cn()` pattern, filed under correct Atomic Design level
-- [ ] New component has a co-located `.stories.jsx` covering all variants and states
+- [ ] New component has a co-located `.stories.jsx` covering all variants and states *(once Storybook is set up)*
 - [ ] Every interactive element has all 5 states: default, hover, active, disabled, focus ring
 - [ ] Every new section or panel supports expand/collapse with localStorage persistence
 - [ ] Loading states use skeleton screens — no content-area spinners
@@ -720,6 +812,16 @@ before building forward. **Do not implement iteration N+1 features while iterati
 - [ ] Only one primary CTA per screen; dropdowns with >7 items are grouped or searchable
 - [ ] Error messages say what failed + what to do. Confirmation buttons label the specific action.
 - [ ] All UI copy is sentence case, active voice, present tense, no exclamation marks on functional surfaces
+- [ ] Z-index uses named tokens (§4.21), not arbitrary values
+- [ ] Dates/numbers formatted per §4.22 (relative ≤7d, `31 May 2026` absolute, em-dash for empty)
+- [ ] Icons from `lucide` at standard sizes (§4.23); icon-only buttons have `aria-label`
+
+> **How these are enforced (so they hold without re-stating them):** (1) `eslint.config.js` —
+> `eslint-plugin-jsx-a11y` (a11y) + custom rules (tokens, no inline fetch, no arbitrary px);
+> (2) `scripts/guardrails.sh` — brand/architecture greps (no `gray-*`, no `works-*`, no arbitrary
+> z-index, Flyway naming, RBAC placement), run in pre-commit + CI; (3) the CI workflow's
+> "AI rules in sync" job, which fails if the derived rules files drift from this CLAUDE.md.
+> Lint is currently advisory in CI (App.jsx baseline debt); the **build** and **guardrails** jobs block.
 
 ---
 

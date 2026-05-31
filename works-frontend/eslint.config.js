@@ -2,6 +2,7 @@ import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import jsxA11y from 'eslint-plugin-jsx-a11y'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 // bSmart Works — design-system & architecture guardrails.
@@ -68,6 +69,21 @@ const worksArbitraryValueRule = {
   },
 }
 
+// Accessibility — enforces CLAUDE.md §4.17 (WCAG 2.1 AA) at lint time: icon-only buttons
+// need aria-label, click handlers on non-interactive elements need keyboard handlers + role,
+// etc. App.jsx (the legacy monolith) may surface violations — that's documented baseline debt
+// (lint is continue-on-error in CI), but all NEW components must pass clean.
+const worksA11yRules = {
+  files: ['src/**/*.{js,jsx}'],
+  ...jsxA11y.flatConfigs.recommended,
+}
+
+// NOTE: eslint-plugin-tailwindcss is intentionally NOT used. No published version fits this
+// stack — the v4 line requires Tailwind 4 (we're on 3.4) and the v3 line calls the removed
+// `context.getSourceCode()` API (we're on ESLint 10). Tailwind token/class enforcement instead
+// lives in: (a) the worksArchRules below (no raw hex, no works-*), and (b) scripts/guardrails.sh
+// (no gray-*, arbitrary-value checks). Revisit if the plugin ships an ESLint-10 + TW-3 build.
+
 export default defineConfig([
   globalIgnores(['dist']),
   {
@@ -82,6 +98,7 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  worksA11yRules,
   worksArchRules,
   worksArbitraryValueRule,
 ])

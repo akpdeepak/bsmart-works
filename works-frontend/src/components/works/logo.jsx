@@ -1,5 +1,3 @@
-import * as React from 'react';
-
 export function Logo({ size = 'md', variant = 'default' }) {
   const textSize = size === 'sm' ? 'text-lg' : size === 'lg' ? 'text-3xl' : 'text-2xl';
   const boxSize  = size === 'sm' ? 'w-7 h-7'  : size === 'lg' ? 'w-12 h-12' : 'w-9 h-9';

@@ -26,9 +26,14 @@ public class WorkItem {
     private Integer storyPoints;
     private String priority;
     private String parentId;
+    private OffsetDateTime deletedAt;
+    private String deletedBy;
+    private Integer version = 0;
 
     @Transient
     private List<String> tags;
+    @Transient
+    private boolean starred = false;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -62,4 +67,12 @@ public class WorkItem {
     public void setPriority(String priority) { this.priority = priority; }
     public String getParentId() { return parentId; }
     public void setParentId(String parentId) { this.parentId = parentId; }
+    public OffsetDateTime getDeletedAt() { return deletedAt; }
+    public void setDeletedAt(OffsetDateTime deletedAt) { this.deletedAt = deletedAt; }
+    public String getDeletedBy() { return deletedBy; }
+    public void setDeletedBy(String deletedBy) { this.deletedBy = deletedBy; }
+    public Integer getVersion() { return version; }
+    public void setVersion(Integer version) { this.version = version; }
+    public boolean isStarred() { return starred; }
+    public void setStarred(boolean starred) { this.starred = starred; }
 }

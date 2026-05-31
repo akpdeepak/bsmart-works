@@ -29,21 +29,78 @@ public class WorkItemController {
     }
 
     @GetMapping
-    public List<WorkItem> getAllWorkItems(@RequestParam(required = false) String parentId) {
+    public List<WorkItem> getAllWorkItems(@RequestParam(required = false) String parentId,
+                                          @RequestHeader(value = "X-User-Id", required = false) String userId) {
         List<WorkItem> items;
         if (parentId != null) {
-            items = jdbc.query("SELECT * FROM work_items WHERE parent_id = ? ORDER BY created_at ASC",
+            items = jdbc.query("SELECT * FROM work_items WHERE parent_id = ? AND deleted_at IS NULL ORDER BY created_at ASC",
                 this::mapRow, parentId);
         } else {
-            items = repository.findAll();
+            items = jdbc.query("SELECT * FROM work_items WHERE deleted_at IS NULL ORDER BY created_at ASC", this::mapRow);
         }
+        items.forEach(this::attachTags);
+        if (userId != null) attachStarred(items, userId);
+        return items;
+    }
+
+    @GetMapping("/trash")
+    public List<WorkItem> getTrash(@RequestHeader(value = "X-User-Id", required = false) String userId) {
+        List<WorkItem> items = jdbc.query(
+            "SELECT * FROM work_items WHERE deleted_at IS NOT NULL AND deleted_at > NOW() - INTERVAL '30 days' ORDER BY deleted_at DESC",
+            this::mapRow);
         items.forEach(this::attachTags);
         return items;
     }
 
+    @PutMapping("/{id}/restore")
+    public WorkItem restoreFromTrash(@PathVariable String id) {
+        jdbc.update("UPDATE work_items SET deleted_at = NULL, deleted_by = NULL WHERE id = ?", id);
+        var opt = repository.findById(id);
+        if (opt.isEmpty()) throw new RuntimeException("Not found: " + id);
+        attachTags(opt.get());
+        return opt.get();
+    }
+
+    // Star / unstar
+    @PostMapping("/{id}/star")
+    public Map<String, Object> starItem(@PathVariable String id,
+                                         @RequestHeader(value = "X-User-Id", required = false) String userId) {
+        if (userId == null) return Map.of("starred", false);
+        jdbc.update("INSERT INTO starred_items (user_id, work_item_id) VALUES (?,?) ON CONFLICT DO NOTHING", userId, id);
+        return Map.of("starred", true, "itemId", id);
+    }
+
+    @DeleteMapping("/{id}/star")
+    public Map<String, Object> unstarItem(@PathVariable String id,
+                                           @RequestHeader(value = "X-User-Id", required = false) String userId) {
+        if (userId != null) jdbc.update("DELETE FROM starred_items WHERE user_id = ? AND work_item_id = ?", userId, id);
+        return Map.of("starred", false, "itemId", id);
+    }
+
+    @GetMapping("/starred")
+    public List<WorkItem> getStarred(@RequestHeader(value = "X-User-Id", required = false) String userId) {
+        if (userId == null) return List.of();
+        List<WorkItem> items = jdbc.query(
+            "SELECT wi.* FROM work_items wi JOIN starred_items si ON si.work_item_id = wi.id WHERE si.user_id = ? AND wi.deleted_at IS NULL ORDER BY si.created_at DESC",
+            this::mapRow, userId);
+        items.forEach(i -> { attachTags(i); i.setStarred(true); });
+        return items;
+    }
+
     @GetMapping("/search")
-    public List<WorkItem> search(@RequestParam String q) {
-        List<WorkItem> items = repository.search(q);
+    public List<WorkItem> search(@RequestParam String q,
+                                  @RequestHeader(value = "X-User-Id", required = false) String userId) {
+        // Starred items get priority in search results
+        String sql = "SELECT wi.*, (CASE WHEN si.work_item_id IS NOT NULL THEN 1 ELSE 0 END) AS is_starred " +
+            "FROM work_items wi LEFT JOIN starred_items si ON si.work_item_id = wi.id AND si.user_id = ? " +
+            "WHERE wi.deleted_at IS NULL AND (wi.title ILIKE ? OR wi.description ILIKE ?) " +
+            "ORDER BY is_starred DESC, wi.created_at DESC LIMIT 20";
+        String pattern = "%" + q + "%";
+        List<WorkItem> items = jdbc.query(sql, (rs, row) -> {
+            WorkItem w = mapRow(rs, row);
+            try { w.setStarred(rs.getInt("is_starred") == 1); } catch (Exception ignored) {}
+            return w;
+        }, userId != null ? userId : "", pattern, pattern);
         items.forEach(this::attachTags);
         return items;
     }
@@ -142,8 +199,21 @@ public class WorkItemController {
                 saveTags(id, updatedItem.getTags());
             }
 
-            eventService.record(id, "WORK_ITEM_UPDATED", userId,
-                    "{\"status\":\"" + saved.getStatus() + "\"}");
+            // Record field-level diffs
+            if (!java.util.Objects.equals(existing.getStatus(), saved.getStatus())) {
+                eventService.recordDiff(id, "STATUS_CHANGED", userId, "status", existing.getStatus(), saved.getStatus());
+            }
+            if (!java.util.Objects.equals(existing.getAssigneeId(), saved.getAssigneeId())) {
+                String oldName = existing.getAssigneeId() != null ? userRepository.findById(existing.getAssigneeId()).map(u -> u.getFullName()).orElse(existing.getAssigneeId()) : "unassigned";
+                String newName = saved.getAssigneeId() != null ? userRepository.findById(saved.getAssigneeId()).map(u -> u.getFullName()).orElse(saved.getAssigneeId()) : "unassigned";
+                eventService.recordDiff(id, "ASSIGNED", userId, "assignee", oldName, newName);
+            }
+            if (!java.util.Objects.equals(existing.getPriority(), saved.getPriority())) {
+                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "priority", existing.getPriority(), saved.getPriority());
+            }
+            if (!java.util.Objects.equals(existing.getTitle(), saved.getTitle())) {
+                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "title", existing.getTitle(), saved.getTitle());
+            }
 
             // Notify new assignee
             String newAssignee = saved.getAssigneeId();
@@ -163,14 +233,34 @@ public class WorkItemController {
         var opt = repository.findById(id);
         if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build();
         var item = opt.get();
+        // Soft delete — keep for 30 days in trash
+        jdbc.update("UPDATE work_items SET deleted_at = NOW(), deleted_by = ? WHERE id = ?", userId, id);
+        eventService.record(id, "WORK_ITEM_DELETED", userId,
+                "{\"title\":\"" + item.getTitle().replace("\"", "'") + "\"}");
+        return ResponseEntity.<Void>noContent().build();
+    }
+
+    @DeleteMapping("/{id}/permanent")
+    public ResponseEntity<Void> permanentDelete(@PathVariable String id,
+                                                 @RequestHeader(value = "X-User-Id", required = false) String userId) {
+        var opt = repository.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build();
+        var item = opt.get();
         jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);
         jdbc.update("DELETE FROM comments WHERE work_item_id = ?", id);
         jdbc.update("DELETE FROM work_item_links WHERE source_id = ? OR target_id = ?", id, id);
         jdbc.update("DELETE FROM attachments WHERE work_item_id = ?", id);
+        jdbc.update("DELETE FROM starred_items WHERE work_item_id = ?", id);
         repository.delete(item);
-        eventService.record(id, "WORK_ITEM_DELETED", userId,
-                "{\"title\":\"" + item.getTitle().replace("\"", "'") + "\"}");
         return ResponseEntity.<Void>noContent().build();
+    }
+
+    private void attachStarred(List<WorkItem> items, String userId) {
+        if (items.isEmpty()) return;
+        List<String> starredIds = jdbc.queryForList(
+            "SELECT work_item_id FROM starred_items WHERE user_id = ?", String.class, userId);
+        java.util.Set<String> starredSet = new java.util.HashSet<>(starredIds);
+        items.forEach(i -> i.setStarred(starredSet.contains(i.getId())));
     }
 
     private void attachTags(WorkItem item) {

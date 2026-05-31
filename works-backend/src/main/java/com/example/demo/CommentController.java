@@ -28,12 +28,21 @@ public class CommentController {
     @GetMapping
     public List<Comment> getComments(@PathVariable String workItemId,
                                      @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        List<Comment> comments = commentRepository.findByWorkItemIdOrderByCreatedAtAsc(workItemId);
-        comments.forEach(c -> {
-            userRepository.findById(c.getAuthorId()).ifPresent(u -> c.setAuthorName(u.getFullName()));
-            // Hide internal comments from non-authors (basic rule)
-        });
-        return comments;
+        List<Comment> all = commentRepository.findByWorkItemIdOrderByCreatedAtAsc(workItemId);
+        all.forEach(c -> userRepository.findById(c.getAuthorId()).ifPresent(u -> c.setAuthorName(u.getFullName())));
+        // Build threaded structure: top-level comments with replies nested
+        java.util.Map<Long, Comment> byId = new java.util.LinkedHashMap<>();
+        all.forEach(c -> byId.put(c.getId(), c));
+        List<Comment> threaded = new java.util.ArrayList<>();
+        for (Comment c : all) {
+            if (c.getParentId() == null) {
+                threaded.add(c);
+            } else {
+                Comment parent = byId.get(c.getParentId());
+                if (parent != null) parent.getReplies().add(c);
+            }
+        }
+        return threaded;
     }
 
     @PostMapping
@@ -46,6 +55,9 @@ public class CommentController {
         comment.setBody((String) payload.get("body"));
         comment.setInternal(Boolean.TRUE.equals(payload.get("isInternal")));
         comment.setCreatedAt(OffsetDateTime.now());
+        if (payload.get("parentId") != null) {
+            comment.setParentId(((Number) payload.get("parentId")).longValue());
+        }
         Comment saved = commentRepository.save(comment);
         userRepository.findById(saved.getAuthorId()).ifPresent(u -> saved.setAuthorName(u.getFullName()));
 

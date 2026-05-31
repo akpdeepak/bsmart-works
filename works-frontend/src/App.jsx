@@ -148,6 +148,18 @@ export default function App() {
   const deleteUndoTimer = useRef(null);
   const [itemChildren, setItemChildren] = useState([]);
 
+  // Iter 1 complete — new states
+  const [replyingTo, setReplyingTo]     = useState(null);   // comment being replied to
+  const [replyBody, setReplyBody]       = useState('');
+  const [trashItems, setTrashItems]     = useState([]);
+  const [branding, setBranding]         = useState({ primaryColor: '#E94E1B', logoUrl: '', description: '' });
+  const [projectMembers, setProjectMembers] = useState([]);
+  const [projectMemberEmail, setProjectMemberEmail] = useState('');
+  const [projectMemberMsg, setProjectMemberMsg] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [brandingColor, setBrandingColor] = useState('#E94E1B');
+  const [brandingDesc, setBrandingDesc]  = useState('');
+
   const workspace = { id: 'WS-001', name: 'BCITS Master Workspace' };
 
   const headers = (extra = {}) => ({
@@ -254,6 +266,7 @@ export default function App() {
     });
     fetchUnreadCount();
     fetchUserRole();
+    fetchBranding();
   }
 
   function fetchUnreadCount() {
@@ -499,6 +512,85 @@ export default function App() {
   function fetchVelocityData() {
     fetch(`${API}/sprints/velocity`, { headers: headers() })
       .then(r => r.json()).then(d => setVelocityData(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function fetchBranding() {
+    fetch(`${API}/workspaces/WS-001/branding`, { headers: headers() })
+      .then(r => r.json()).then(d => {
+        setBranding(d);
+        setBrandingColor(d.primaryColor || '#E94E1B');
+        setBrandingDesc(d.description || '');
+        // Apply brand color as CSS variable
+        document.documentElement.style.setProperty('--brand-action', d.primaryColor || '#E94E1B');
+      }).catch(() => {});
+  }
+
+  function saveBranding() {
+    fetch(`${API}/workspaces/WS-001/branding`, {
+      method: 'PUT', headers: headers(),
+      body: JSON.stringify({ primaryColor: brandingColor, description: brandingDesc })
+    }).then(r => r.json()).then(d => { setBranding(d); showToast('Branding saved'); }).catch(() => {});
+  }
+
+  function fetchTrash() {
+    fetch(`${API}/work-items/trash`, { headers: headers() })
+      .then(r => r.json()).then(d => setTrashItems(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function restoreFromTrash(id) {
+    apiFetch(`${API}/work-items/${id}/restore`, { method: 'PUT' })
+      .then(item => {
+        setTrashItems(prev => prev.filter(i => i.id !== id));
+        setWorkItems(prev => [...prev, item]);
+        showToast('Item restored from trash');
+      }).catch(err => showToast(err.message, 'error'));
+  }
+
+  function permanentDelete(id) {
+    if (!window.confirm('Permanently delete? This cannot be undone.')) return;
+    apiFetch(`${API}/work-items/${id}/permanent`, { method: 'DELETE' })
+      .then(() => { setTrashItems(prev => prev.filter(i => i.id !== id)); showToast('Permanently deleted'); })
+      .catch(err => showToast(err.message, 'error'));
+  }
+
+  function toggleStar(item) {
+    const isStarred = item.starred;
+    const method = isStarred ? 'DELETE' : 'POST';
+    fetch(`${API}/work-items/${item.id}/star`, { method, headers: headers() })
+      .then(r => r.json()).then(() => {
+        setWorkItems(prev => prev.map(i => i.id === item.id ? { ...i, starred: !isStarred } : i));
+        if (selectedItem?.id === item.id) setSelectedItem(prev => ({ ...prev, starred: !isStarred }));
+      }).catch(() => {});
+  }
+
+  function fetchProjectMembers(projectId) {
+    setSelectedProjectId(projectId);
+    fetch(`${API}/workspaces/WS-001/projects/${projectId}/members`, { headers: headers() })
+      .then(r => r.json()).then(d => setProjectMembers(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function addProjectMember(projectId) {
+    if (!projectMemberEmail.trim()) return;
+    apiFetch(`${API}/workspaces/WS-001/projects/${projectId}/members`, {
+      method: 'POST', body: JSON.stringify({ email: projectMemberEmail, role: 'MEMBER' })
+    }).then(d => {
+      setProjectMemberMsg(d.message || 'Added!');
+      setProjectMemberEmail('');
+      fetchProjectMembers(projectId);
+    }).catch(err => setProjectMemberMsg(err.message || 'Error'));
+  }
+
+  function addReply(workItemId, parentId) {
+    if (!replyBody.trim()) return;
+    fetch(`${API}/work-items/${workItemId}/comments`, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ body: replyBody, isInternal: false, parentId })
+    }).then(r => r.json()).then(c => {
+      setComments(prev => prev.map(cm =>
+        cm.id === parentId ? { ...cm, replies: [...(cm.replies || []), { ...c, authorName: currentUser.fullName }] } : cm
+      ));
+      setReplyBody(''); setReplyingTo(null);
+    }).catch(() => {});
   }
 
   const handleCreateSprint = () => {
@@ -750,7 +842,10 @@ export default function App() {
           </NavItem>
 
           <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">Workspace</p>
-          <NavItem active={view === 'workspace'} onClick={() => { setView('workspace'); fetchMembers(); fetchNotifPrefs(); }} icon="⚙️">Settings</NavItem>
+          <NavItem active={view === 'workspace'} onClick={() => { setView('workspace'); fetchMembers(); fetchNotifPrefs(); fetchBranding(); }} icon="⚙️">Settings</NavItem>
+          <NavItem active={view === 'trash'} onClick={() => { setView('trash'); fetchTrash(); }} icon="🗑">
+            Trash
+          </NavItem>
         </nav>
 
         <div className="p-3 border-t border-neutral-200">
@@ -949,6 +1044,7 @@ export default function App() {
               <div className="flex gap-1 mb-5 border-b border-neutral-200">
                 {[
                   { key: 'assigned', label: `Assigned (${myItems.length})` },
+                  { key: 'starred',  label: `Starred (${workItems.filter(i => i.starred).length})` },
                   { key: 'mentions', label: `Mentions (${notifications.filter(n => n.type === 'MENTION').length})` },
                   { key: 'activity', label: 'Recent Activity' },
                 ].map(t => (
@@ -977,6 +1073,26 @@ export default function App() {
                     ))}
                   </div>
               )}
+              {myWorksTab === 'starred' && (() => {
+                const starredItems = workItems.filter(i => i.starred);
+                return starredItems.length === 0
+                  ? <EmptyState icon="★" title="No starred items" subtitle="Star work items to keep them handy. Click ★ on any card or in the detail panel." />
+                  : <div className="space-y-2">
+                      {starredItems.map(item => (
+                        <div key={item.id} onClick={() => setSelectedItem(item)}
+                          className="bg-white border border-brand-orange/30 rounded-lg p-4 flex items-center gap-4 hover:shadow-sm cursor-pointer transition-shadow">
+                          <span className="text-brand-orange text-sm">★</span>
+                          <TypeBadge type={item.type} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-neutral-900 truncate">{item.title}</p>
+                            <p className="text-xs text-neutral-400 font-mono">{item.id}</p>
+                          </div>
+                          <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
+                        </div>
+                      ))}
+                    </div>;
+              })()}
+
               {myWorksTab === 'mentions' && (() => {
                 const mentions = notifications.filter(n => n.type === 'MENTION');
                 return mentions.length === 0
@@ -1033,7 +1149,29 @@ export default function App() {
                       <p className="text-sm text-neutral-400">Loading board...</p>
                     </div>
                   </div>
-                : (
+                : loading ? (
+                  <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
+                    {columns.map(col => (
+                      <div key={col.name} className="flex-1 min-w-56 flex flex-col bg-neutral-100 rounded-xl p-3">
+                        <div className="flex items-center justify-between mb-3 px-1">
+                          <div className="h-3 w-20 bg-neutral-200 rounded animate-pulse"></div>
+                          <div className="h-5 w-6 bg-white rounded-full animate-pulse"></div>
+                        </div>
+                        {[1,2,3].map(n => (
+                          <div key={n} className="bg-white rounded-lg p-3 mb-2 border border-neutral-200">
+                            <div className="h-2 w-16 bg-neutral-100 rounded animate-pulse mb-2"></div>
+                            <div className="h-3 w-full bg-neutral-100 rounded animate-pulse mb-1"></div>
+                            <div className="h-3 w-3/4 bg-neutral-100 rounded animate-pulse mb-3"></div>
+                            <div className="flex justify-between">
+                              <div className="h-4 w-14 bg-neutral-100 rounded animate-pulse"></div>
+                              <div className="h-5 w-5 bg-neutral-100 rounded-full animate-pulse"></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
                   <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
                     {columns.map(col => {
                       const colItems = workItems.filter(i => i.status === col.name);
@@ -1058,10 +1196,12 @@ export default function App() {
                             {colItems.map(item => (
                               <div key={item.id} draggable
                                 onDragStart={(e) => handleDragStart(e, item.id)}
-                                className={`bg-white rounded-lg shadow-sm border border-neutral-200 cursor-grab hover:shadow-md transition-shadow group ${densityPad[density]}`}>
+                                className={`bg-white rounded-lg shadow-sm border border-neutral-200 cursor-grab hover:shadow-md transition-shadow group ${densityPad[density]} ${item.starred ? 'border-brand-orange/40' : ''}`}>
                                 <div className="flex items-start justify-between mb-1.5">
                                   <span className="font-mono text-[10px] text-neutral-400">{item.id}</span>
                                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => toggleStar(item)} title={item.starred ? 'Unstar' : 'Star'}
+                                      className={`text-xs p-0.5 transition-colors ${item.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}`}>★</button>
                                     <button onClick={() => setSelectedItem(item)} className="text-neutral-400 hover:text-brand-navy text-xs p-0.5">✏</button>
                                     <button onClick={() => handleDelete(item.id)} className="text-neutral-400 hover:text-semantic-danger text-xs p-0.5">✕</button>
                                   </div>
@@ -1626,6 +1766,109 @@ export default function App() {
                   </div>
                 </div>
               )}
+
+              {/* Workspace Branding */}
+              {can('manage_projects') && (
+                <div className="bg-white rounded-xl border border-neutral-200 p-6 mt-6">
+                  <h2 className="font-semibold text-neutral-900 mb-1">Workspace Branding</h2>
+                  <p className="text-sm text-neutral-400 mb-4">Customize your workspace appearance</p>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-2">Primary Accent Color</label>
+                      <div className="flex items-center gap-3">
+                        <input type="color" value={brandingColor}
+                          onChange={e => setBrandingColor(e.target.value)}
+                          className="w-10 h-10 rounded-lg border border-neutral-200 cursor-pointer" />
+                        <input type="text" value={brandingColor}
+                          onChange={e => setBrandingColor(e.target.value)}
+                          className="input w-32 font-mono text-sm" placeholder="#E94E1B" />
+                        <div className="w-8 h-8 rounded-lg flex-shrink-0" style={{ backgroundColor: brandingColor }}></div>
+                        <span className="text-xs text-neutral-400">Used for action buttons and accents</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1">Workspace Description</label>
+                      <textarea rows={2} value={brandingDesc} onChange={e => setBrandingDesc(e.target.value)}
+                        className="input resize-none" placeholder="Describe your workspace..." />
+                    </div>
+                    <Button variant="action" onClick={saveBranding}>Save Branding</Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Project Members */}
+              <div className="bg-white rounded-xl border border-neutral-200 p-6 mt-6">
+                <h2 className="font-semibold text-neutral-900 mb-1">Project Members</h2>
+                <p className="text-sm text-neutral-400 mb-4">Manage per-project team membership</p>
+                <div className="flex gap-2 mb-4 flex-wrap">
+                  {projects.filter(p => !p.archived).map(p => (
+                    <button key={p.id} onClick={() => fetchProjectMembers(p.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${selectedProjectId === p.id ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white text-neutral-600 border-neutral-200 hover:border-brand-navy'}`}>
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+                {selectedProjectId && (
+                  <>
+                    <div className="space-y-1 mb-4 max-h-40 overflow-y-auto">
+                      {projectMembers.map(m => (
+                        <div key={m.user_id || m.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 last:border-0">
+                          <Avatar name={m.full_name || m.fullName} size={7} />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-neutral-900">{m.full_name || m.fullName}</p>
+                            <p className="text-xs text-neutral-400">{m.email}</p>
+                          </div>
+                          <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full">{m.role}</span>
+                        </div>
+                      ))}
+                      {projectMembers.length === 0 && <p className="text-sm text-neutral-400 py-2 text-center">No project-specific members yet.</p>}
+                    </div>
+                    <div className="flex gap-2">
+                      <input type="email" placeholder="Email address"
+                        value={projectMemberEmail} onChange={e => setProjectMemberEmail(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && addProjectMember(selectedProjectId)}
+                        className="input flex-1 text-sm" />
+                      <Button variant="secondary" onClick={() => addProjectMember(selectedProjectId)}>Add</Button>
+                    </div>
+                    {projectMemberMsg && <p className="text-xs text-semantic-success mt-2">{projectMemberMsg}</p>}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TRASH VIEW */}
+          {view === 'trash' && (
+            <div className="p-8 max-w-3xl">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-brand-navy">Trash</h1>
+                  <p className="text-sm text-neutral-400 mt-0.5">Deleted items are kept for 30 days</p>
+                </div>
+              </div>
+              {trashItems.length === 0
+                ? <EmptyState icon="🗑" title="Trash is empty" subtitle="Deleted work items will appear here for 30 days before permanent removal." />
+                : (
+                  <div className="space-y-2">
+                    {trashItems.map(item => (
+                      <div key={item.id} className="bg-white border border-neutral-200 rounded-xl p-4 flex items-center gap-4">
+                        <TypeBadge type={item.type} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-neutral-900 truncate">{item.title}</p>
+                          <p className="text-xs text-neutral-400 font-mono">{item.id} · Deleted {item.deletedAt ? new Date(item.deletedAt).toLocaleDateString() : ''}</p>
+                        </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                          <Button variant="secondary" size="sm" onClick={() => restoreFromTrash(item.id)}>Restore</Button>
+                          <button onClick={() => permanentDelete(item.id)}
+                            className="text-xs text-semantic-danger hover:text-semantic-danger/80 px-2 py-1 rounded border border-semantic-danger/30 hover:bg-semantic-danger-surface transition-colors">
+                            Delete permanently
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              }
             </div>
           )}
         </div>
@@ -1640,6 +1883,11 @@ export default function App() {
               <span className="font-mono text-xs text-neutral-400">{selectedItem.id}</span>
             </div>
             <div className="flex gap-1">
+              <button onClick={() => toggleStar(selectedItem)}
+                title={selectedItem.starred ? 'Unstar' : 'Star this item'}
+                className={`text-sm px-2 py-1 rounded transition-colors ${selectedItem.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}`}>
+                {selectedItem.starred ? '★' : '☆'}
+              </button>
               {can('delete_items') && (
                 <button onClick={() => handleDelete(selectedItem.id)}
                   className="text-xs text-neutral-400 hover:text-semantic-danger px-2 py-1 rounded hover:bg-neutral-50 transition-colors">Delete</button>
@@ -1795,16 +2043,56 @@ export default function App() {
                 )}
                 <div className="space-y-3 mb-4">
                   {comments.map(c => (
-                    <div key={c.id} className="flex gap-2.5">
-                      <Avatar name={c.authorName || '?'} size={7} />
-                      <div className={`flex-1 rounded-xl px-3 py-2.5 border ${c.isInternal ? 'bg-semantic-warning-surface border-semantic-warning/30' : 'bg-neutral-50 border-neutral-100'}`}>
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <p className="text-xs font-semibold text-neutral-900">{c.authorName}</p>
-                          {c.isInternal && <span className="text-[10px] bg-semantic-warning text-white px-1.5 py-0.5 rounded">Internal</span>}
+                    <div key={c.id}>
+                      {/* Top-level comment */}
+                      <div className="flex gap-2.5">
+                        <Avatar name={c.authorName || '?'} size={7} />
+                        <div className={`flex-1 rounded-xl px-3 py-2.5 border ${c.isInternal ? 'bg-semantic-warning-surface border-semantic-warning/30' : 'bg-neutral-50 border-neutral-100'}`}>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <p className="text-xs font-semibold text-neutral-900">{c.authorName}</p>
+                            {c.isInternal && <span className="text-[10px] bg-semantic-warning text-white px-1.5 py-0.5 rounded">Internal</span>}
+                            <span className="text-[10px] text-neutral-400 ml-auto">{c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</span>
+                          </div>
+                          <p className="text-sm text-neutral-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMd(c.body) }} />
+                          <button onClick={() => setReplyingTo(replyingTo === c.id ? null : c.id)}
+                            className="text-[10px] text-neutral-400 hover:text-brand-navy mt-1.5 transition-colors">
+                            ↩ Reply {c.replies?.length > 0 && `(${c.replies.length})`}
+                          </button>
                         </div>
-                        <p className="text-sm text-neutral-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMd(c.body) }} />
-                        <p className="text-[10px] text-neutral-400 mt-1.5">{c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</p>
                       </div>
+                      {/* Threaded replies */}
+                      {c.replies?.length > 0 && (
+                        <div className="ml-9 mt-1.5 space-y-1.5 border-l-2 border-neutral-100 pl-3">
+                          {c.replies.map(r => (
+                            <div key={r.id} className="flex gap-2">
+                              <Avatar name={r.authorName || '?'} size={6} />
+                              <div className="flex-1 bg-white rounded-lg px-3 py-2 border border-neutral-100">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  <p className="text-[10px] font-semibold text-neutral-900">{r.authorName}</p>
+                                  <span className="text-[10px] text-neutral-400 ml-auto">{r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}</span>
+                                </div>
+                                <p className="text-xs text-neutral-700" dangerouslySetInnerHTML={{ __html: renderMd(r.body) }} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* Reply composer */}
+                      {replyingTo === c.id && (
+                        <div className="ml-9 mt-1.5 flex gap-2">
+                          <Avatar name={currentUser.fullName} size={6} />
+                          <div className="flex-1">
+                            <textarea rows={2} value={replyBody} onChange={e => setReplyBody(e.target.value)}
+                              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), addReply(selectedItem.id, c.id))}
+                              placeholder="Write a reply... (Enter to send)"
+                              className="w-full border border-neutral-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-brand-navy resize-none" />
+                            <div className="flex gap-2 mt-1">
+                              <Button size="sm" onClick={() => addReply(selectedItem.id, c.id)}>Reply</Button>
+                              <button onClick={() => { setReplyingTo(null); setReplyBody(''); }} className="text-xs text-neutral-400 hover:text-neutral-700">Cancel</button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1946,8 +2234,14 @@ export default function App() {
                           <span className="font-semibold">{a.actor_name || 'System'}</span>
                           {' '}{formatEventType(a.event_type)}
                         </p>
-                        {a.payload && a.payload !== '{}' && (
-                          <p className="text-[10px] text-neutral-400 font-mono mt-0.5 truncate">{a.payload}</p>
+                        {/* Field diff display */}
+                        {a.field_name && a.old_value !== null && a.new_value !== null && (
+                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            <span className="text-[10px] text-neutral-400 font-medium capitalize">{String(a.field_name).replace(/_/g,' ')}:</span>
+                            {a.old_value && <span className="text-[10px] bg-semantic-danger-surface text-semantic-danger px-1.5 py-0.5 rounded line-through">{a.old_value}</span>}
+                            <span className="text-[10px] text-neutral-400">→</span>
+                            {a.new_value && <span className="text-[10px] bg-semantic-success-surface text-semantic-success px-1.5 py-0.5 rounded">{a.new_value}</span>}
+                          </div>
                         )}
                         <p className="text-[10px] text-neutral-400 mt-0.5">{a.occurred_at ? new Date(a.occurred_at).toLocaleString() : ''}</p>
                       </div>

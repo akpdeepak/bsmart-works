@@ -16,8 +16,12 @@ public class Comment {
 
     private boolean isInternal;
 
+    private Long parentId;
+
     @Transient
     private String authorName;
+    @Transient
+    private java.util.List<Comment> replies = new java.util.ArrayList<>();
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -33,4 +37,8 @@ public class Comment {
     public void setInternal(boolean internal) { isInternal = internal; }
     public String getAuthorName() { return authorName; }
     public void setAuthorName(String authorName) { this.authorName = authorName; }
+    public Long getParentId() { return parentId; }
+    public void setParentId(Long parentId) { this.parentId = parentId; }
+    public java.util.List<Comment> getReplies() { return replies; }
+    public void setReplies(java.util.List<Comment> replies) { this.replies = replies; }
 }

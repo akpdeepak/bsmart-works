@@ -15,6 +15,11 @@ public class AppEvent {
     @Column(columnDefinition = "TEXT")
     private String payload;
     private OffsetDateTime occurredAt;
+    private String fieldName;
+    @Column(columnDefinition = "TEXT")
+    private String oldValue;
+    @Column(columnDefinition = "TEXT")
+    private String newValue;
 
     public Long getId() { return id; }
     public String getAggregateId() { return aggregateId; }
@@ -27,4 +32,10 @@ public class AppEvent {
     public void setPayload(String payload) { this.payload = payload; }
     public OffsetDateTime getOccurredAt() { return occurredAt; }
     public void setOccurredAt(OffsetDateTime occurredAt) { this.occurredAt = occurredAt; }
+    public String getFieldName() { return fieldName; }
+    public void setFieldName(String fieldName) { this.fieldName = fieldName; }
+    public String getOldValue() { return oldValue; }
+    public void setOldValue(String oldValue) { this.oldValue = oldValue; }
+    public String getNewValue() { return newValue; }
+    public void setNewValue(String newValue) { this.newValue = newValue; }
 }

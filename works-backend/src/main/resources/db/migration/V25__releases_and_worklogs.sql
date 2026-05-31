@@ -22,7 +22,7 @@ CREATE TABLE work_item_releases (
 );
 
 CREATE TABLE worklogs (
-    id                   SERIAL PRIMARY KEY,
+    id                   BIGSERIAL PRIMARY KEY,
     work_item_id         VARCHAR(100) NOT NULL,
     user_id              VARCHAR(100) NOT NULL REFERENCES users(id),
     time_spent_minutes   INTEGER NOT NULL,

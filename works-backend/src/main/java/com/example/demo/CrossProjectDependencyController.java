@@ -6,7 +6,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/dependencies")
+@RequestMapping("/api/v1/cross-project-dependencies")
 public class CrossProjectDependencyController {
 
     private final CrossProjectDependencyRepository dependencyRepository;

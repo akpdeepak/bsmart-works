@@ -205,6 +205,33 @@ export default function App() {
   const [pmFormOpen, setPmFormOpen]         = useState(null); // 'risk'|'assumption'|...|null
   const [selectedPmItem, setSelectedPmItem] = useState(null);
 
+  // Iteration 3 completions
+  const [fieldValues, setFieldValues] = useState({});
+  const [fieldLayouts, setFieldLayouts] = useState([]);
+  const [fieldVisibility, setFieldVisibility] = useState([]);
+  const [newFieldVisForm, setNewFieldVisForm] = useState({ fieldDefId: '', roleId: '', visibility: 'EDITABLE' });
+
+  // Iteration 4 completions
+  const [crossProjectDeps, setCrossProjectDeps] = useState([]);
+  const [isCrossProjOpen, setIsCrossProjOpen] = useState(false);
+  const [crossProjForm, setCrossProjForm] = useState({ title: '', description: '', targetProjectId: '', deadline: '', isBlocker: false });
+
+  // Iteration 5 — Knowledge Repository
+  const [knowledgeSpaces, setKnowledgeSpaces] = useState([]);
+  const [knowledgeArticles, setKnowledgeArticles] = useState([]);
+  const [selectedSpace, setSelectedSpace] = useState(null);
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [articleVersions, setArticleVersions] = useState([]);
+  const [knowledgeSearch, setKnowledgeSearch] = useState('');
+  const [knowledgeSearchResults, setKnowledgeSearchResults] = useState([]);
+  const [knowledgeTab, setKnowledgeTab] = useState('spaces');
+  const [spaceForm, setSpaceForm] = useState({ name: '', description: '', visibility: 'TEAM' });
+  const [articleForm, setArticleForm] = useState({ title: '', content: '', templateType: 'KB', status: 'DRAFT' });
+  const [isSpaceFormOpen, setIsSpaceFormOpen] = useState(false);
+  const [isArticleFormOpen, setIsArticleFormOpen] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [editingArticle, setEditingArticle] = useState(false);
+
   // Iter 1 & 2 completion features
   const [recentlyViewed, setRecentlyViewed] = useState(() => {
     try { return JSON.parse(localStorage.getItem('bSmartRecentItems') || '[]'); } catch { return []; }
@@ -265,6 +292,7 @@ export default function App() {
     api.raw(`/work-items/${id}/links`, { headers: h }).then(r => r.json()).then(d => setLinks(Array.isArray(d) ? d : [])).catch(() => {});
     api.raw(`/work-items/${id}/attachments`, { headers: h }).then(r => r.json()).then(d => setAttachments(Array.isArray(d) ? d : [])).catch(() => {});
     setDetailTab('details');
+    if (fieldDefs.length > 0) fetchFieldValues(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedItem?.id]);
 
@@ -813,6 +841,124 @@ export default function App() {
     }).catch(() => showToast('Delete failed', 'error'));
   }
 
+  // ── Iteration 3 completions ──────────────────────────────────────────────────
+
+  function fetchFieldValues(workItemId) {
+    api.raw(`/work-items/${workItemId}/field-values`)
+      .then(r => r.json()).then(d => {
+        const map = {};
+        (Array.isArray(d) ? d : []).forEach(fv => { map[fv.fieldDefId] = fv.value; });
+        setFieldValues(map);
+      }).catch(() => {});
+  }
+
+  function saveFieldValue(workItemId, fieldDefId, value) {
+    api.send(`/work-items/${workItemId}/field-values`, {
+      method: 'POST', body: JSON.stringify({ fieldDefId, value })
+    }).catch(() => {});
+  }
+
+  function fetchFieldLayouts() {
+    api.raw(`/field-layouts`).then(r => r.json()).then(d => setFieldLayouts(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function fetchFieldVisibility() {
+    api.raw(`/field-visibility`).then(r => r.json()).then(d => setFieldVisibility(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function saveFieldVisibility() {
+    if (!newFieldVisForm.fieldDefId || !newFieldVisForm.roleId) { showToast('Select field and role', 'error'); return; }
+    api.send(`/field-visibility`, { method: 'POST', body: JSON.stringify(newFieldVisForm) })
+      .then(() => { showToast('Visibility saved'); fetchFieldVisibility(); setNewFieldVisForm({ fieldDefId: '', roleId: '', visibility: 'EDITABLE' }); })
+      .catch(() => showToast('Failed to save visibility', 'error'));
+  }
+
+  function togglePermission(roleId, permission, currentlyGranted) {
+    api.send(`/permission-schemes/permissions`, {
+      method: 'POST', body: JSON.stringify({ roleId, permission, granted: !currentlyGranted })
+    }).then(() => { showToast('Permission updated'); fetchPermMatrix(); })
+      .catch(() => showToast('Failed to update permission', 'error'));
+  }
+
+  // ── Iteration 4 completions ──────────────────────────────────────────────────
+
+  function fetchCrossProjectDeps() {
+    api.raw(`/cross-project-dependencies`)
+      .then(r => r.json()).then(d => setCrossProjectDeps(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function createCrossProjectDep() {
+    if (!crossProjForm.title) { showToast('Title is required', 'error'); return; }
+    api.send(`/cross-project-dependencies`, {
+      method: 'POST', body: JSON.stringify({ ...crossProjForm, workspaceId: 'WS-001' })
+    }).then(() => {
+      showToast('Cross-project dependency created');
+      setIsCrossProjOpen(false);
+      setCrossProjForm({ title: '', description: '', targetProjectId: '', deadline: '', isBlocker: false });
+      fetchCrossProjectDeps();
+    }).catch(() => showToast('Failed to create dependency', 'error'));
+  }
+
+  // ── Iteration 5 — Knowledge Repository ──────────────────────────────────────
+
+  function fetchKnowledgeSpaces() {
+    api.raw(`/knowledge-spaces`).then(r => r.json()).then(d => setKnowledgeSpaces(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function fetchKnowledgeArticles(spaceId) {
+    const url = spaceId ? `/knowledge-spaces/${spaceId}/articles` : `/articles`;
+    api.raw(url).then(r => r.json()).then(d => setKnowledgeArticles(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function fetchArticleVersions(articleId) {
+    api.raw(`/articles/${articleId}/versions`)
+      .then(r => r.json()).then(d => setArticleVersions(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function createKnowledgeSpace() {
+    if (!spaceForm.name) { showToast('Space name is required', 'error'); return; }
+    api.send(`/knowledge-spaces`, { method: 'POST', body: JSON.stringify({ ...spaceForm, workspaceId: 'WS-001' }) })
+      .then(() => { showToast('Space created'); setIsSpaceFormOpen(false); setSpaceForm({ name: '', description: '', visibility: 'TEAM' }); fetchKnowledgeSpaces(); })
+      .catch(() => showToast('Failed to create space', 'error'));
+  }
+
+  function deleteKnowledgeSpace(id) {
+    api.send(`/knowledge-spaces/${id}`, { method: 'DELETE' })
+      .then(() => { showToast('Space deleted'); if (selectedSpace?.id === id) { setSelectedSpace(null); setKnowledgeArticles([]); } fetchKnowledgeSpaces(); })
+      .catch(() => showToast('Failed to delete space', 'error'));
+  }
+
+  function createArticle() {
+    if (!articleForm.title) { showToast('Title is required', 'error'); return; }
+    api.send(`/articles`, { method: 'POST', body: JSON.stringify({ ...articleForm, spaceId: selectedSpace?.id, workspaceId: 'WS-001' }) })
+      .then(() => { showToast('Article created'); setIsArticleFormOpen(false); setArticleForm({ title: '', content: '', templateType: 'KB', status: 'DRAFT' }); fetchKnowledgeArticles(selectedSpace?.id); })
+      .catch(() => showToast('Failed to create article', 'error'));
+  }
+
+  function updateArticle(id, patch) {
+    api.send(`/articles/${id}`, { method: 'PUT', body: JSON.stringify(patch) })
+      .then(d => { setSelectedArticle(d); showToast('Article saved'); fetchKnowledgeArticles(selectedSpace?.id); })
+      .catch(() => showToast('Failed to save article', 'error'));
+  }
+
+  function publishArticle(id) {
+    api.send(`/articles/${id}/publish`, { method: 'PUT' })
+      .then(d => { setSelectedArticle(d); showToast('Article published'); fetchKnowledgeArticles(selectedSpace?.id); })
+      .catch(() => showToast('Failed to publish', 'error'));
+  }
+
+  function deleteArticle(id) {
+    api.send(`/articles/${id}`, { method: 'DELETE' })
+      .then(() => { showToast('Article deleted'); setSelectedArticle(null); setEditingArticle(false); fetchKnowledgeArticles(selectedSpace?.id); })
+      .catch(() => showToast('Failed to delete article', 'error'));
+  }
+
+  function searchKnowledge() {
+    if (!knowledgeSearch.trim()) return;
+    api.raw(`/articles?search=${encodeURIComponent(knowledgeSearch.trim())}`)
+      .then(r => r.json()).then(d => setKnowledgeSearchResults(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
   function fetchTrash() {
     api.raw(`/work-items/trash`)
       .then(r => r.json()).then(d => setTrashItems(Array.isArray(d) ? d : [])).catch(() => {});
@@ -1223,6 +1369,7 @@ export default function App() {
           <p className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-3 pt-3 pb-1">Configuration</p>
           <NavItem active={view === 'settings3'} onClick={() => { setView('settings3'); fetchWorkflows(); fetchFieldDefs(); fetchRoles(); fetchWorkItemTypes(); }} icon="⚙">Workflows & Fields</NavItem>
           <NavItem active={view === 'wiql'} onClick={() => { setView('wiql'); fetchWiqlFilters(); }} icon="🔍">WIQL Query</NavItem>
+          <NavItem active={view === 'knowledge'} onClick={() => { setView('knowledge'); fetchKnowledgeSpaces(); setKnowledgeTab('spaces'); setSelectedSpace(null); setSelectedArticle(null); }} icon="📚">Knowledge</NavItem>
 
           <p className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-3 pt-3 pb-1">Project Management</p>
           <NavItem active={view === 'pm'} onClick={() => { setView('pm'); if (projects.length) { const pid = projects[0].id; setPmProjectId(pid); fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); } }} icon="📋">PM Artifacts</NavItem>

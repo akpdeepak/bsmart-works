@@ -17,20 +17,22 @@ public class WorkItemController {
     private final JdbcTemplate jdbc;
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final AuthenticatedUser authenticatedUser;
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
                               JdbcTemplate jdbc, NotificationRepository notificationRepository,
-                              UserRepository userRepository) {
+                              UserRepository userRepository, AuthenticatedUser authenticatedUser) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.authenticatedUser = authenticatedUser;
     }
 
     @GetMapping
-    public List<WorkItem> getAllWorkItems(@RequestParam(required = false) String parentId,
-                                          @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public List<WorkItem> getAllWorkItems(@RequestParam(required = false) String parentId) {
+        String userId = authenticatedUser.id();
         List<WorkItem> items;
         if (parentId != null) {
             items = jdbc.query("SELECT * FROM work_items WHERE parent_id = ? AND deleted_at IS NULL ORDER BY created_at ASC",
@@ -39,12 +41,12 @@ public class WorkItemController {
             items = jdbc.query("SELECT * FROM work_items WHERE deleted_at IS NULL ORDER BY created_at ASC", this::mapRow);
         }
         items.forEach(this::attachTags);
-        if (userId != null) attachStarred(items, userId);
+        attachStarred(items, userId);
         return items;
     }
 
     @GetMapping("/trash")
-    public List<WorkItem> getTrash(@RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public List<WorkItem> getTrash() {
         List<WorkItem> items = jdbc.query(
             "SELECT * FROM work_items WHERE deleted_at IS NOT NULL AND deleted_at > NOW() - INTERVAL '30 days' ORDER BY deleted_at DESC",
             this::mapRow);
@@ -63,23 +65,22 @@ public class WorkItemController {
 
     // Star / unstar
     @PostMapping("/{id}/star")
-    public Map<String, Object> starItem(@PathVariable String id,
-                                         @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        if (userId == null) return Map.of("starred", false);
+    public Map<String, Object> starItem(@PathVariable String id) {
+        String userId = authenticatedUser.id();
         jdbc.update("INSERT INTO starred_items (user_id, work_item_id) VALUES (?,?) ON CONFLICT DO NOTHING", userId, id);
         return Map.of("starred", true, "itemId", id);
     }
 
     @DeleteMapping("/{id}/star")
-    public Map<String, Object> unstarItem(@PathVariable String id,
-                                           @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        if (userId != null) jdbc.update("DELETE FROM starred_items WHERE user_id = ? AND work_item_id = ?", userId, id);
+    public Map<String, Object> unstarItem(@PathVariable String id) {
+        String userId = authenticatedUser.id();
+        jdbc.update("DELETE FROM starred_items WHERE user_id = ? AND work_item_id = ?", userId, id);
         return Map.of("starred", false, "itemId", id);
     }
 
     @GetMapping("/starred")
-    public List<WorkItem> getStarred(@RequestHeader(value = "X-User-Id", required = false) String userId) {
-        if (userId == null) return List.of();
+    public List<WorkItem> getStarred() {
+        String userId = authenticatedUser.id();
         List<WorkItem> items = jdbc.query(
             "SELECT wi.* FROM work_items wi JOIN starred_items si ON si.work_item_id = wi.id WHERE si.user_id = ? AND wi.deleted_at IS NULL ORDER BY si.created_at DESC",
             this::mapRow, userId);
@@ -88,8 +89,8 @@ public class WorkItemController {
     }
 
     @GetMapping("/search")
-    public List<WorkItem> search(@RequestParam String q,
-                                  @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public List<WorkItem> search(@RequestParam String q) {
+        String userId = authenticatedUser.id();
         // Starred items get priority in search results
         String sql = "SELECT wi.*, (CASE WHEN si.work_item_id IS NOT NULL THEN 1 ELSE 0 END) AS is_starred " +
             "FROM work_items wi LEFT JOIN starred_items si ON si.work_item_id = wi.id AND si.user_id = ? " +
@@ -100,7 +101,7 @@ public class WorkItemController {
             WorkItem w = mapRow(rs, row);
             try { w.setStarred(rs.getInt("is_starred") == 1); } catch (Exception ignored) {}
             return w;
-        }, userId != null ? userId : "", pattern, pattern);
+        }, userId, pattern, pattern);
         items.forEach(this::attachTags);
         return items;
     }
@@ -140,15 +141,16 @@ public class WorkItemController {
     }
 
     @GetMapping("/my")
-    public List<WorkItem> myWorkItems(@RequestParam String userId) {
-        List<WorkItem> items = repository.findByAssigneeId(userId);
+    public List<WorkItem> myWorkItems(@RequestParam(required = false) String userId) {
+        String requestedUserId = authenticatedUser.id();
+        List<WorkItem> items = repository.findByAssigneeId(requestedUserId);
         items.forEach(this::attachTags);
         return items;
     }
 
     @PostMapping
-    public WorkItem createWorkItem(@RequestBody WorkItem newItem,
-                                   @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public WorkItem createWorkItem(@RequestBody WorkItem newItem) {
+        String userId = authenticatedUser.id();
         String prefix = newItem.getProjectId() != null ? newItem.getProjectId().replace("PROJ-", "") : "WEB";
         newItem.setId(prefix + "-" + java.util.UUID.randomUUID().toString().substring(0, 6).toUpperCase());
         newItem.setStatus("Todo");
@@ -176,8 +178,8 @@ public class WorkItemController {
     }
 
     @PutMapping("/{id}")
-    public WorkItem updateWorkItem(@PathVariable String id, @RequestBody WorkItem updatedItem,
-                                    @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public WorkItem updateWorkItem(@PathVariable String id, @RequestBody WorkItem updatedItem) {
+        String userId = authenticatedUser.id();
         return repository.findById(id).map(existing -> {
             String oldAssignee = existing.getAssigneeId();
 
@@ -254,8 +256,8 @@ public class WorkItemController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteWorkItem(@PathVariable String id,
-                                                @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public ResponseEntity<Void> deleteWorkItem(@PathVariable String id) {
+        String userId = authenticatedUser.id();
         var opt = repository.findById(id);
         if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build();
         var item = opt.get();
@@ -267,8 +269,7 @@ public class WorkItemController {
     }
 
     @DeleteMapping("/{id}/permanent")
-    public ResponseEntity<Void> permanentDelete(@PathVariable String id,
-                                                 @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public ResponseEntity<Void> permanentDelete(@PathVariable String id) {
         var opt = repository.findById(id);
         if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build();
         var item = opt.get();
@@ -314,4 +315,3 @@ public class WorkItemController {
         notificationRepository.save(n);
     }
 }
-

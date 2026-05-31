@@ -15,17 +15,19 @@ public class RbacController {
 
     private final RbacService rbacService;
     private final JdbcTemplate jdbc;
+    private final AuthenticatedUser authenticatedUser;
     private static final String WS = "WS-001";
 
-    public RbacController(RbacService rbacService, JdbcTemplate jdbc) {
+    public RbacController(RbacService rbacService, JdbcTemplate jdbc, AuthenticatedUser authenticatedUser) {
         this.rbacService = rbacService;
         this.jdbc = jdbc;
+        this.authenticatedUser = authenticatedUser;
     }
 
     // Get current user's role and permissions
     @GetMapping("/me")
-    public Map<String, Object> myRole(@RequestHeader(value = "X-User-Id", required = false) String userId) {
-        if (userId == null) userId = "USR-001";
+    public Map<String, Object> myRole() {
+        String userId = authenticatedUser.id();
         String role = rbacService.getUserRole(userId, WS);
         int tier    = rbacService.getUserTier(userId, WS);
         List<String> perms = jdbc.queryForList(
@@ -43,9 +45,9 @@ public class RbacController {
     @PutMapping("/members/{targetUserId}/role")
     public ResponseEntity<?> updateRole(
             @PathVariable String targetUserId,
-            @RequestBody Map<String, String> payload,
-            @RequestHeader(value = "X-User-Id", required = false) String callerId) {
-        if (callerId == null || !rbacService.canManageRoles(callerId, WS)) {
+            @RequestBody Map<String, String> payload) {
+        String callerId = authenticatedUser.id();
+        if (!rbacService.canManageRoles(callerId, WS)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Insufficient permissions"));
         }
         String newRole = payload.get("roleId");

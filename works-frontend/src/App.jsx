@@ -177,7 +177,6 @@ export default function App() {
   const headers = (extra = {}) => ({
     'Content-Type': 'application/json',
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-    ...(currentUser ? { 'X-User-Id': currentUser.id } : {}),
     ...extra
   });
 
@@ -727,7 +726,9 @@ export default function App() {
     const file = e.target.files[0]; if (!file) return;
     const fd = new FormData(); fd.append('file', file);
     fetch(`${API}/work-items/${selectedItem.id}/attachments`, {
-      method: 'POST', headers: { 'X-User-Id': currentUser?.id || '' }, body: fd
+      method: 'POST',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      body: fd
     }).then(r => r.json()).then(a => setAttachments(prev => [a, ...prev]));
   };
   const handleDeleteAttachment = (attId) => {

@@ -8,7 +8,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/work-items/{workItemId}/activity")
-@CrossOrigin(origins = "http://localhost:5173")
 public class ActivityController {
 
     private final JdbcTemplate jdbc;
@@ -18,7 +17,15 @@ public class ActivityController {
     }
 
     @GetMapping
-    public List<Map<String, Object>> getActivity(@PathVariable String workItemId) {
+    public List<Map<String, Object>> getActivity(@PathVariable String workItemId,
+                                                  @RequestParam(required = false) String eventType) {
+        if (eventType != null && !eventType.isBlank()) {
+            return jdbc.queryForList(
+                "SELECT e.id, e.event_type, e.payload, e.occurred_at, u.full_name as actor_name " +
+                "FROM events e LEFT JOIN users u ON u.id = e.actor_id " +
+                "WHERE e.aggregate_id = ? AND e.event_type = ? ORDER BY e.occurred_at DESC LIMIT 50",
+                workItemId, eventType);
+        }
         return jdbc.queryForList(
             "SELECT e.id, e.event_type, e.payload, e.occurred_at, u.full_name as actor_name " +
             "FROM events e LEFT JOIN users u ON u.id = e.actor_id " +
@@ -26,3 +33,4 @@ public class ActivityController {
             workItemId);
     }
 }
+

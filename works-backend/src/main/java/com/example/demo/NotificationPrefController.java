@@ -8,7 +8,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/notification-preferences")
-@CrossOrigin(origins = "http://localhost:5173")
 public class NotificationPrefController {
 
     private final JdbcTemplate jdbc;
@@ -48,3 +47,4 @@ public class NotificationPrefController {
         return Map.of("message", "Preferences saved");
     }
 }
+

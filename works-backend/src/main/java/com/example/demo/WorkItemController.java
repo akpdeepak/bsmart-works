@@ -10,7 +10,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/work-items")
-@CrossOrigin(origins = "http://localhost:5173")
 public class WorkItemController {
 
     private final WorkItemRepository repository;
@@ -30,8 +29,14 @@ public class WorkItemController {
     }
 
     @GetMapping
-    public List<WorkItem> getAllWorkItems() {
-        List<WorkItem> items = repository.findAll();
+    public List<WorkItem> getAllWorkItems(@RequestParam(required = false) String parentId) {
+        List<WorkItem> items;
+        if (parentId != null) {
+            items = jdbc.query("SELECT * FROM work_items WHERE parent_id = ? ORDER BY created_at ASC",
+                this::mapRow, parentId);
+        } else {
+            items = repository.findAll();
+        }
         items.forEach(this::attachTags);
         return items;
     }
@@ -41,6 +46,40 @@ public class WorkItemController {
         List<WorkItem> items = repository.search(q);
         items.forEach(this::attachTags);
         return items;
+    }
+
+    @GetMapping("/backlog")
+    public List<WorkItem> getBacklog(@RequestParam(required = false) String projectId) {
+        String sql = "SELECT * FROM work_items WHERE sprint_id IS NULL" +
+                (projectId != null ? " AND project_id = ?" : "") +
+                " ORDER BY backlog_order ASC, created_at ASC";
+        return projectId != null
+                ? jdbc.query(sql, this::mapRow, projectId)
+                : jdbc.query(sql, this::mapRow);
+    }
+
+    @PutMapping("/backlog/reorder")
+    public void reorderBacklog(@RequestBody java.util.List<java.util.Map<String, Object>> items) {
+        items.forEach(item -> {
+            int order = ((Number) item.get("order")).intValue();
+            jdbc.update("UPDATE work_items SET backlog_order = ? WHERE id = ?", order, item.get("id"));
+        });
+    }
+
+    private WorkItem mapRow(java.sql.ResultSet rs, int row) throws java.sql.SQLException {
+        WorkItem w = new WorkItem();
+        w.setId(rs.getString("id"));
+        w.setTitle(rs.getString("title"));
+        w.setStatus(rs.getString("status"));
+        w.setType(rs.getString("type"));
+        w.setAssigneeId(rs.getString("assignee_id"));
+        w.setSprintId(rs.getString("sprint_id"));
+        w.setStoryPoints(rs.getObject("story_points") != null ? rs.getInt("story_points") : 0);
+        w.setPriority(rs.getString("priority"));
+        w.setDueDate(rs.getDate("due_date") != null ? rs.getDate("due_date").toLocalDate() : null);
+        w.setProjectId(rs.getString("project_id"));
+        w.setParentId(rs.getString("parent_id"));
+        return w;
     }
 
     @GetMapping("/my")
@@ -53,8 +92,8 @@ public class WorkItemController {
     @PostMapping
     public WorkItem createWorkItem(@RequestBody WorkItem newItem,
                                    @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        int randomNum = (int)(Math.random() * 10000);
-        newItem.setId("WEB-" + randomNum);
+        String prefix = newItem.getProjectId() != null ? newItem.getProjectId().replace("PROJ-", "") : "WEB";
+        newItem.setId(prefix + "-" + java.util.UUID.randomUUID().toString().substring(0, 6).toUpperCase());
         newItem.setStatus("Todo");
         newItem.setCreatedBy(userId);
         newItem.setCreatedAt(OffsetDateTime.now());
@@ -91,6 +130,10 @@ public class WorkItemController {
             existing.setDescription(updatedItem.getDescription());
             existing.setAssigneeId(updatedItem.getAssigneeId());
             existing.setDueDate(updatedItem.getDueDate());
+            existing.setSprintId(updatedItem.getSprintId());
+            existing.setStoryPoints(updatedItem.getStoryPoints());
+            existing.setPriority(updatedItem.getPriority());
+            existing.setParentId(updatedItem.getParentId());
 
             WorkItem saved = repository.save(existing);
 
@@ -117,12 +160,16 @@ public class WorkItemController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteWorkItem(@PathVariable String id,
                                                 @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        if (!repository.existsById(id)) return ResponseEntity.notFound().build();
-        WorkItem item = repository.findById(id).get();
+        var opt = repository.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build();
+        var item = opt.get();
         jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);
         jdbc.update("DELETE FROM comments WHERE work_item_id = ?", id);
+        jdbc.update("DELETE FROM work_item_links WHERE source_id = ? OR target_id = ?", id, id);
+        jdbc.update("DELETE FROM attachments WHERE work_item_id = ?", id);
         repository.delete(item);
-        eventService.record(id, "WORK_ITEM_DELETED", userId, "{\"title\":\"" + item.getTitle() + "\"}");
+        eventService.record(id, "WORK_ITEM_DELETED", userId,
+                "{\"title\":\"" + item.getTitle().replace("\"", "'") + "\"}");
         return ResponseEntity.<Void>noContent().build();
     }
 
@@ -151,3 +198,4 @@ public class WorkItemController {
         notificationRepository.save(n);
     }
 }
+

@@ -10,7 +10,6 @@ import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/v1/work-items/{workItemId}/comments")
-@CrossOrigin(origins = "http://localhost:5173")
 public class CommentController {
 
     private final CommentRepository commentRepository;
@@ -52,7 +51,7 @@ public class CommentController {
 
         eventService.record(workItemId, "COMMENT_ADDED", userId, "{\"commentId\":" + saved.getId() + "}");
 
-        // Parse @mentions — match @FullName or @email
+        // Parse @mentions â€” match @FullName or @email
         String body = saved.getBody();
         if (body != null) {
             Pattern p = Pattern.compile("@([\\w.]+)");
@@ -84,3 +83,4 @@ public class CommentController {
         commentRepository.deleteById(commentId);
     }
 }
+

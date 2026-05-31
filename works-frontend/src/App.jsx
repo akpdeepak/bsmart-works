@@ -62,7 +62,8 @@ export default function App() {
   const [forgotEmail, setForgotEmail]   = useState('');
   const [forgotMsg, setForgotMsg]       = useState('');
 
-  const [view, setView]                 = useState('board');
+  const [view, setView]                 = useState('dashboard');
+  const [toast, setToast]               = useState(null); // { message, type }
   const [workItems, setWorkItems]       = useState([]);
   const [projects, setProjects]         = useState([]);
   const [users, setUsers]               = useState([]);
@@ -81,11 +82,13 @@ export default function App() {
   const [links, setLinks]               = useState([]);
   const [attachments, setAttachments]   = useState([]);
   const [newLink, setNewLink]           = useState({ targetId: '', linkType: 'RELATES_TO' });
+  const [tagInput, setTagInput]         = useState(''); // separate state for tag text field
   const fileInputRef                    = useRef(null);
+  const updateTimerRef                  = useRef(null);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isProjectOpen, setIsProjectOpen] = useState(false);
-  const [newItem, setNewItem]           = useState({ title: '', type: 'Task', description: '', assigneeId: '', dueDate: '', tags: '' });
+  const [newItem, setNewItem]           = useState({ title: '', type: 'Task', description: '', assigneeId: '', dueDate: '', tags: '', priority: 'MEDIUM', parentId: '', projectId: '' });
   const [newProject, setNewProject]     = useState({ name: '', keyPrefix: '', description: '' });
   const [createError, setCreateError]   = useState('');
 
@@ -104,23 +107,65 @@ export default function App() {
   // Dark mode
   const [darkMode, setDarkMode]         = useState(() => localStorage.getItem('bSmartTheme') === 'dark');
 
+  // RBAC
+  const [userRole, setUserRole]         = useState({ role: 'MEMBER', tier: 2, permissions: [] });
+  const can = (perm) => userRole.permissions.includes(perm) || userRole.tier >= 4;
+
   // My Works sub-tab
   const [myWorksTab, setMyWorksTab]     = useState('assigned'); // assigned | activity | mentions
 
   // Notification prefs
   const [notifPrefs, setNotifPrefs]     = useState({ notifyAssign: true, notifyComment: true, notifyMention: true, emailDigest: false });
 
+  // Iteration 2 — Sprints & Backlog
+  const [sprints, setSprints]           = useState([]);
+  const [activeSprint, setActiveSprint] = useState(null);
+  const [backlogItems, setBacklogItems] = useState([]);
+  const [sprintItems, setSprintItems]   = useState([]);
+  const [sprintReport, setSprintReport] = useState(null);
+  const [savedFilters, setSavedFilters] = useState([]);
+  const [activeFilter, setActiveFilter] = useState(null);
+  const [swimlaneBy, setSwimlaneBy]     = useState('none');
+  const [isSprintOpen, setIsSprintOpen] = useState(false);
+  const [newSprint, setNewSprint]       = useState({ name: '', goal: '', startDate: '', endDate: '', capacity: 40 });
+  const [selectedSprintId, setSelectedSprintId] = useState(null);
+  const [refinementMode, setRefinementMode] = useState(false);
+  const [dragOverId, setDragOverId]     = useState(null);
+  const [saveFilterName, setSaveFilterName] = useState('');
+  const [showSaveFilter, setShowSaveFilter] = useState(false);
+
   // Workspace switcher dropdown
   const [wsOpen, setWsOpen]             = useState(false);
   const wsRef                           = useRef(null);
+
+  // Iter 1 & 2 completion features
+  const [recentlyViewed, setRecentlyViewed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('bSmartRecentItems') || '[]'); } catch { return []; }
+  });
+  const [activityEventFilter, setActivityEventFilter] = useState('');
+  const [velocityData, setVelocityData] = useState([]);
+  const [deleteUndoItem, setDeleteUndoItem] = useState(null);
+  const deleteUndoTimer = useRef(null);
+  const [itemChildren, setItemChildren] = useState([]);
 
   const workspace = { id: 'WS-001', name: 'BCITS Master Workspace' };
 
   const headers = (extra = {}) => ({
     'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...(currentUser ? { 'X-User-Id': currentUser.id } : {}),
     ...extra
   });
+
+  // Shared fetch wrapper with error handling
+  const apiFetch = async (url, options = {}) => {
+    const res = await fetch(url, { ...options, headers: { ...headers(), ...(options.headers || {}) } });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      throw new Error(err.error || `Request failed: ${res.status}`);
+    }
+    return res.json();
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem('bSmartSession');
@@ -146,6 +191,8 @@ export default function App() {
   useEffect(() => {
     if (!selectedItem) return;
     const id = selectedItem.id;
+    setTagInput((selectedItem.tags || []).join(', '));
+    setActivityEventFilter('');
     fetch(`${API}/work-items/${id}/comments`).then(r => r.json()).then(d => setComments(Array.isArray(d) ? d : [])).catch(() => {});
     fetch(`${API}/work-items/${id}/activity`).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(() => {});
     fetch(`${API}/work-items/${id}/links`).then(r => r.json()).then(d => setLinks(Array.isArray(d) ? d : [])).catch(() => {});
@@ -160,19 +207,53 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Track recently viewed items
+  useEffect(() => {
+    if (!selectedItem) return;
+    setRecentlyViewed(prev => {
+      const filtered = prev.filter(i => i.id !== selectedItem.id);
+      const updated = [{ id: selectedItem.id, title: selectedItem.title, type: selectedItem.type }, ...filtered].slice(0, 8);
+      localStorage.setItem('bSmartRecentItems', JSON.stringify(updated));
+      return updated;
+    });
+    // Load children
+    fetch(`${API}/work-items?parentId=${selectedItem.id}`)
+      .then(r => r.json())
+      .then(d => setItemChildren((Array.isArray(d) ? d : []).filter(i => i.parentId === selectedItem.id)))
+      .catch(() => setItemChildren([]));
+  }, [selectedItem?.id]);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  function fetchUserRole() {
+    fetch(`${API}/rbac/me`, { headers: headers() })
+      .then(r => r.json()).then(d => setUserRole({
+        role: d.role || 'MEMBER',
+        tier: d.tier || 2,
+        permissions: Array.isArray(d.permissions) ? d.permissions : []
+      })).catch(() => {});
+  }
+
   function fetchAll() {
     setLoading(true);
     Promise.all([
-      fetch(`${API}/work-items`).then(r => r.json()),
-      fetch(`${API}/projects`).then(r => r.json()),
-      fetch(`${API}/users`).then(r => r.json()),
+      fetch(`${API}/work-items`, { headers: headers() }).then(r => r.json()),
+      fetch(`${API}/projects`, { headers: headers() }).then(r => r.json()),
+      fetch(`${API}/users`, { headers: headers() }).then(r => r.json()),
     ]).then(([items, projs, usrs]) => {
       setWorkItems(Array.isArray(items) ? items : []);
       setProjects(Array.isArray(projs) ? projs : []);
       setUsers(Array.isArray(usrs) ? usrs : []);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(err => {
+      setLoading(false);
+      showToast('Failed to load data. Check your connection.', 'error');
+    });
     fetchUnreadCount();
+    fetchUserRole();
   }
 
   function fetchUnreadCount() {
@@ -220,20 +301,55 @@ export default function App() {
     if (!newItem.title || newItem.title.length < 3) { setCreateError('Title must be at least 3 characters.'); return; }
     setCreateError('');
     const tags = newItem.tags ? newItem.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
-    fetch(`${API}/work-items`, {
-      method: 'POST', headers: headers(),
-      body: JSON.stringify({ ...newItem, tags, dueDate: newItem.dueDate || null, assigneeId: newItem.assigneeId || null })
-    }).then(r => r.json()).then(saved => {
+    const projectId = newItem.projectId || (projects.length > 0 ? projects[0].id : 'PROJ-001');
+    apiFetch(`${API}/work-items`, {
+      method: 'POST',
+      body: JSON.stringify({
+        ...newItem,
+        tags,
+        dueDate: newItem.dueDate || null,
+        assigneeId: newItem.assigneeId || null,
+        parentId: newItem.parentId || null,
+        projectId,
+        priority: newItem.priority || 'MEDIUM',
+      })
+    }).then(saved => {
       setWorkItems(prev => [...prev, saved]);
-      setNewItem({ title: '', type: 'Task', description: '', assigneeId: '', dueDate: '', tags: '' });
+      setNewItem({ title: '', type: 'Task', description: '', assigneeId: '', dueDate: '', tags: '', priority: 'MEDIUM', parentId: '', projectId: '' });
       setIsCreateOpen(false);
-    });
+      showToast('Work item created');
+    }).catch(err => setCreateError(err.message));
   };
 
   const handleDelete = (id) => {
-    if (!window.confirm('Delete this work item?')) return;
-    fetch(`${API}/work-items/${id}`, { method: 'DELETE', headers: headers() })
-      .then(() => { setWorkItems(prev => prev.filter(i => i.id !== id)); if (selectedItem?.id === id) setSelectedItem(null); });
+    const item = workItems.find(i => i.id === id);
+    if (!item) return;
+    // Optimistic remove
+    setWorkItems(prev => prev.filter(i => i.id !== id));
+    if (selectedItem?.id === id) setSelectedItem(null);
+    setDeleteUndoItem(item);
+    clearTimeout(deleteUndoTimer.current);
+    // Toast with undo — commit delete after 8 seconds
+    setToast({ message: `"${item.title.slice(0, 35)}${item.title.length > 35 ? '…' : ''}" deleted`, type: 'undo' });
+    deleteUndoTimer.current = setTimeout(() => {
+      apiFetch(`${API}/work-items/${id}`, { method: 'DELETE' }).catch(() => {
+        setWorkItems(prev => [...prev, item]);
+        showToast('Failed to delete item', 'error');
+      });
+      setDeleteUndoItem(null);
+      setToast(null);
+    }, 8000);
+  };
+
+  const handleUndoDelete = () => {
+    if (!deleteUndoItem) return;
+    clearTimeout(deleteUndoTimer.current);
+    setWorkItems(prev => {
+      const exists = prev.find(i => i.id === deleteUndoItem.id);
+      return exists ? prev : [...prev, deleteUndoItem];
+    });
+    setDeleteUndoItem(null);
+    setToast(null);
   };
 
   const handleDragStart = (e, id) => e.dataTransfer.setData('itemId', id);
@@ -243,21 +359,30 @@ export default function App() {
     const itemId = e.dataTransfer.getData('itemId');
     const item = workItems.find(i => i.id === itemId);
     if (!item || item.status === newStatus) return;
+    // Optimistic update
     setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: newStatus } : i));
-    fetch(`${API}/work-items/${itemId}`, {
-      method: 'PUT', headers: headers(),
+    apiFetch(`${API}/work-items/${itemId}`, {
+      method: 'PUT',
       body: JSON.stringify({ ...item, status: newStatus })
-    }).catch(() => {});
+    }).catch(() => {
+      // Revert on failure
+      setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: item.status } : i));
+      showToast('Failed to update status', 'error');
+    });
   };
 
+  // Debounced update — wait 600ms after last change before saving
   const handleUpdateItem = (updated) => {
-    fetch(`${API}/work-items/${updated.id}`, {
-      method: 'PUT', headers: headers(),
-      body: JSON.stringify({ ...updated, tags: updated.tags || [] })
-    }).then(r => r.json()).then(saved => {
-      setWorkItems(prev => prev.map(i => i.id === saved.id ? saved : i));
-      setSelectedItem(saved);
-    });
+    clearTimeout(updateTimerRef.current);
+    updateTimerRef.current = setTimeout(() => {
+      apiFetch(`${API}/work-items/${updated.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ...updated, tags: updated.tags || [] })
+      }).then(saved => {
+        setWorkItems(prev => prev.map(i => i.id === saved.id ? saved : i));
+        setSelectedItem(saved);
+      }).catch(err => showToast(err.message, 'error'));
+    }, 600);
   };
 
   // COMMENTS with @mention + internal flag
@@ -301,12 +426,14 @@ export default function App() {
   // PROJECTS
   const handleCreateProject = () => {
     if (!newProject.name || !newProject.keyPrefix) { setCreateError('Name and key prefix required.'); return; }
-    fetch(`${API}/projects`, { method: 'POST', headers: headers(), body: JSON.stringify(newProject) })
-      .then(r => r.json()).then(p => {
+    setCreateError('');
+    apiFetch(`${API}/projects`, { method: 'POST', body: JSON.stringify(newProject) })
+      .then(p => {
         setProjects(prev => [...prev, p]);
         setNewProject({ name: '', keyPrefix: '', description: '' });
         setIsProjectOpen(false);
-      });
+        showToast('Project created');
+      }).catch(err => setCreateError(err.message));
   };
 
   // WORKSPACE
@@ -316,10 +443,10 @@ export default function App() {
   };
 
   const handleInvite = () => {
-    fetch(`${API}/workspaces/WS-001/members`, {
-      method: 'POST', headers: headers(), body: JSON.stringify({ email: inviteEmail, role: 'MEMBER' })
-    }).then(r => r.json()).then(d => { setInviteMsg(d.message || 'Added!'); setInviteEmail(''); fetchMembers(); })
-      .catch(() => setInviteMsg('Error — user may not exist.'));
+    apiFetch(`${API}/workspaces/WS-001/members`, {
+      method: 'POST', body: JSON.stringify({ email: inviteEmail, role: 'MEMBER' })
+    }).then(d => { setInviteMsg(d.message || 'Added!'); setInviteEmail(''); fetchMembers(); })
+      .catch(err => setInviteMsg(err.message || 'Error — user may not exist.'));
   };
 
   const handleRemoveMember = (userId) => {
@@ -341,6 +468,111 @@ export default function App() {
     fetch(`${API}/notification-preferences`, { method: 'PUT', headers: headers(), body: JSON.stringify(prefs) })
       .then(() => setNotifPrefs(prefs));
   }
+
+  // SPRINT FUNCTIONS
+  function fetchSprints(projectId = 'PROJ-001') {
+    fetch(`${API}/sprints?projectId=${projectId}`, { headers: headers() })
+      .then(r => r.json()).then(d => {
+        const list = Array.isArray(d) ? d : [];
+        setSprints(list);
+        const active = list.find(s => s.status === 'ACTIVE') || list[0];
+        if (active) { setActiveSprint(active); fetchSprintItems(active.id); }
+      }).catch(() => {});
+  }
+  function fetchSprintItems(sprintId) {
+    fetch(`${API}/sprints/${sprintId}/items`, { headers: headers() })
+      .then(r => r.json()).then(d => setSprintItems(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchBacklog() {
+    fetch(`${API}/work-items/backlog`, { headers: headers() })
+      .then(r => r.json()).then(d => setBacklogItems(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchSprintReport(sprintId) {
+    fetch(`${API}/sprints/${sprintId}/report`, { headers: headers() })
+      .then(r => r.json()).then(setSprintReport).catch(() => {});
+  }
+  function fetchSavedFilters() {
+    fetch(`${API}/saved-filters`, { headers: headers() })
+      .then(r => r.json()).then(d => setSavedFilters(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function fetchVelocityData() {
+    fetch(`${API}/sprints/velocity`, { headers: headers() })
+      .then(r => r.json()).then(d => setVelocityData(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  const handleCreateSprint = () => {
+    fetch(`${API}/sprints`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...newSprint, projectId: 'PROJ-001' }) })
+      .then(r => r.json()).then(s => {
+        setSprints(prev => [s, ...prev]);
+        setNewSprint({ name: '', goal: '', startDate: '', endDate: '', capacity: 40 });
+        setIsSprintOpen(false);
+        if (!activeSprint) { setActiveSprint(s); }
+      });
+  };
+  const handleSprintStatusChange = (sprintId, newStatus) => {
+    const sprint = sprints.find(s => s.id === sprintId);
+    if (!sprint) return;
+    fetch(`${API}/sprints/${sprintId}`, { method: 'PUT', headers: headers(), body: JSON.stringify({ ...sprint, status: newStatus }) })
+      .then(r => r.json()).then(updated => {
+        setSprints(prev => prev.map(s => s.id === updated.id ? updated : s));
+        if (activeSprint?.id === updated.id) setActiveSprint(updated);
+      });
+  };
+  const handleMoveToSprint = (itemId, sprintId) => {
+    fetch(`${API}/sprints/${sprintId}/items/${itemId}`, { method: 'POST', headers: headers() })
+      .then(() => { fetchBacklog(); if (activeSprint) fetchSprintItems(activeSprint.id); });
+  };
+  const handleMoveToBacklog = (itemId, sprintId) => {
+    fetch(`${API}/sprints/${sprintId}/items/${itemId}`, { method: 'DELETE', headers: headers() })
+      .then(() => { fetchBacklog(); fetchSprintItems(sprintId); });
+  };
+
+  // Backlog drag-drop reorder
+  const handleBacklogDragStart = (e, id) => { e.dataTransfer.setData('backlogId', id); };
+  const handleBacklogDrop = (e, targetId) => {
+    e.preventDefault();
+    const sourceId = e.dataTransfer.getData('backlogId');
+    if (!sourceId || sourceId === targetId) { setDragOverId(null); return; }
+    const items = [...backlogItems];
+    const sourceIdx = items.findIndex(i => i.id === sourceId);
+    const targetIdx = items.findIndex(i => i.id === targetId);
+    const [moved] = items.splice(sourceIdx, 1);
+    items.splice(targetIdx, 0, moved);
+    const reordered = items.map((item, idx) => ({ ...item, backlogOrder: idx }));
+    setBacklogItems(reordered);
+    setDragOverId(null);
+    fetch(`${API}/work-items/backlog/reorder`, {
+      method: 'PUT', headers: headers(),
+      body: JSON.stringify(reordered.map((i, idx) => ({ id: i.id, order: idx })))
+    }).catch(() => {});
+  };
+
+  // Inline refinement update (story points, priority)
+  const handleRefinementUpdate = (itemId, field, value) => {
+    const item = backlogItems.find(i => i.id === itemId);
+    if (!item) return;
+    const updated = { ...item, [field]: value };
+    setBacklogItems(prev => prev.map(i => i.id === itemId ? updated : i));
+    fetch(`${API}/work-items/${itemId}`, { method: 'PUT', headers: headers(), body: JSON.stringify(updated) }).catch(() => {});
+  };
+
+  const handleSaveFilter = () => {
+    if (!saveFilterName.trim()) return;
+    fetch(`${API}/saved-filters`, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ name: saveFilterName, filterJson: JSON.stringify(activeFilter), isShared: false })
+    }).then(r => r.json()).then(f => { setSavedFilters(prev => [...prev, f]); setSaveFilterName(''); setShowSaveFilter(false); });
+  };
+
+  const applyFilter = (items) => {
+    if (!activeFilter) return items;
+    if (activeFilter.type === 'mine') return items.filter(i => i.assigneeId === currentUser.id);
+    if (activeFilter.type === 'priority') return items.filter(i => i.priority === activeFilter.value);
+    if (activeFilter.type === 'itemType') return items.filter(i => i.type === activeFilter.value);
+    if (activeFilter.type === 'blockers') return items.filter(i => i.priority === 'CRITICAL' || i.type === 'Incident');
+    return items;
+  };
 
   // LINKS
   const handleAddLink = () => {
@@ -493,6 +725,7 @@ export default function App() {
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5 text-sm overflow-y-auto">
+          <NavItem active={view === 'dashboard'} onClick={() => setView('dashboard')} icon="🏠">Home</NavItem>
           <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">My Work</p>
           <NavItem active={view === 'myworks'} onClick={() => { setView('myworks'); fetchNotifications(); }} icon="👤">
             My Works
@@ -505,6 +738,12 @@ export default function App() {
 
           <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">Projects</p>
           <NavItem active={view === 'board'} onClick={() => setView('board')} icon="📋">Board</NavItem>
+          <NavItem active={view === 'backlog'} onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); fetchSavedFilters(); }} icon="📝">Backlog</NavItem>
+          <NavItem active={view === 'sprint'} onClick={() => { setView('sprint'); fetchSprints(); fetchSavedFilters(); }} icon="⚡">
+            Active Sprint
+            {sprints.find(s => s.status === 'ACTIVE') && <span className="ml-auto w-2 h-2 rounded-full bg-brand-teal flex-shrink-0"></span>}
+          </NavItem>
+          <NavItem active={view === 'reports'} onClick={() => { setView('reports'); fetchSprints(); fetchVelocityData(); }} icon="📊">Reports</NavItem>
           <NavItem active={view === 'projects'} onClick={() => setView('projects')} icon="📁">
             Projects
             {projects.length > 0 && <span className="ml-auto text-[10px] bg-neutral-100 text-neutral-600 rounded-full px-1.5 py-0.5">{projects.length}</span>}
@@ -519,7 +758,9 @@ export default function App() {
             <Avatar name={currentUser.fullName} size={7} />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-neutral-900 truncate">{currentUser.fullName}</p>
-              <p className="text-[10px] text-neutral-400 truncate">{currentUser.email}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <RoleBadge role={userRole.role} tier={userRole.tier} small />
+              </div>
             </div>
             <button onClick={handleLogout} title="Sign out" className="text-neutral-400 hover:text-brand-orange text-sm">↩</button>
           </div>
@@ -556,20 +797,148 @@ export default function App() {
                 <p className="text-sm text-neutral-400">No results for "<span className="text-neutral-700">{searchQuery}</span>"</p>
               </div>
             )}
+            {searchOpen && !searchQuery.trim() && recentlyViewed.length > 0 && (
+              <div className="absolute top-full mt-1 w-80 bg-white rounded-lg shadow-xl border border-neutral-200 z-50 max-h-64 overflow-y-auto">
+                <div className="px-4 py-2 border-b border-neutral-100">
+                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Recently Viewed</p>
+                </div>
+                {recentlyViewed.map(item => {
+                  const full = workItems.find(i => i.id === item.id);
+                  return (
+                    <button key={item.id} onClick={() => { if (full) { setSelectedItem(full); } setSearchQuery(''); setSearchOpen(false); }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-neutral-50 border-b border-neutral-100 last:border-0">
+                      <div className="flex items-center gap-2">
+                        <TypeBadge type={item.type} compact />
+                        <span className="font-mono text-[10px] text-neutral-400">{item.id}</span>
+                      </div>
+                      <div className="text-sm text-neutral-900 font-medium mt-0.5 truncate">{item.title}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => setDarkMode(d => !d)} title="Toggle dark/light mode"
               className="w-8 h-8 rounded-md flex items-center justify-center text-neutral-400 hover:bg-neutral-100 transition-colors text-base">
               {darkMode ? '☀️' : '🌙'}
             </button>
-            <Button variant="action" onClick={() => { setView('board'); setIsCreateOpen(true); }}>
-              + Create
-            </Button>
+            {can('create_items') && (
+              <Button variant="action" onClick={() => { setView('board'); setIsCreateOpen(true); }}>
+                + Create
+              </Button>
+            )}
           </div>
         </header>
 
         {/* CONTENT */}
         <div className="flex-1 overflow-auto">
+
+          {/* DASHBOARD HOME */}
+          {view === 'dashboard' && (
+            <div className="p-6 max-w-6xl">
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold text-brand-navy">Good {getTimeOfDay()}, {currentUser.fullName.split(' ')[0]} 👋</h1>
+                <p className="text-sm text-neutral-400 mt-0.5">Here's what needs your attention today</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {/* My open items */}
+                <StatCard label="Assigned to me" value={myItems.filter(i => i.status !== 'Done').length} sub={`${myItems.length} total`} color="text-brand-navy" icon="👤" onClick={() => setView('myworks')} />
+                {/* Active sprint */}
+                <StatCard label="Active sprint items" value={sprints.find(s=>s.status==='ACTIVE') ? sprintItems.filter(i=>i.status!=='Done').length : '—'} sub={sprints.find(s=>s.status==='ACTIVE')?.name || 'No active sprint'} color="text-brand-teal" icon="⚡" onClick={() => { fetchSprints(); setView('sprint'); }} />
+                {/* Unread notifications */}
+                <StatCard label="Unread notifications" value={unreadCount} sub="Click to view all" color="text-brand-orange" icon="🔔" onClick={() => { fetchNotifications(); setView('notifications'); }} />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {/* Due soon */}
+                <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                  <h3 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2">
+                    <span>📅</span> Due Soon
+                  </h3>
+                  {workItems.filter(i => i.dueDate && i.status !== 'Done').sort((a,b) => new Date(a.dueDate)-new Date(b.dueDate)).slice(0,5).map(item => (
+                    <div key={item.id} onClick={() => setSelectedItem(item)} className="flex items-center gap-3 py-2 border-b border-neutral-50 last:border-0 cursor-pointer hover:bg-neutral-50 -mx-2 px-2 rounded">
+                      <TypeBadge type={item.type} compact />
+                      <span className="flex-1 text-sm text-neutral-900 truncate">{item.title}</span>
+                      <span className={`text-xs font-medium ${new Date(item.dueDate) < new Date() ? 'text-semantic-danger' : 'text-semantic-warning'}`}>{item.dueDate}</span>
+                    </div>
+                  ))}
+                  {workItems.filter(i => i.dueDate && i.status !== 'Done').length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No upcoming due dates 🎉</p>}
+                </div>
+
+                {/* Critical + High priority open items */}
+                <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                  <h3 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2">
+                    <span>🔥</span> High Priority Open
+                  </h3>
+                  {workItems.filter(i => (i.priority==='CRITICAL'||i.priority==='HIGH') && i.status!=='Done').slice(0,5).map(item => (
+                    <div key={item.id} onClick={() => setSelectedItem(item)} className="flex items-center gap-3 py-2 border-b border-neutral-50 last:border-0 cursor-pointer hover:bg-neutral-50 -mx-2 px-2 rounded">
+                      <PriorityBadge priority={item.priority} />
+                      <span className="flex-1 text-sm text-neutral-900 truncate">{item.title}</span>
+                      <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
+                    </div>
+                  ))}
+                  {workItems.filter(i => (i.priority==='CRITICAL'||i.priority==='HIGH') && i.status!=='Done').length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No critical/high items 🎉</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Project health */}
+                <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                  <h3 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2"><span>📁</span> Project Health</h3>
+                  {projects.filter(p => !p.archived).map(p => {
+                    const items = workItems.filter(i => i.projectId === p.id);
+                    const done = items.filter(i => i.status==='Done').length;
+                    const pct = items.length > 0 ? Math.round((done/items.length)*100) : 0;
+                    return (
+                      <div key={p.id} className="mb-3 last:mb-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-neutral-900">{p.name}</span>
+                          <span className="text-xs text-neutral-400">{done}/{items.length} done · {pct}%</span>
+                        </div>
+                        <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-brand-teal rounded-full" style={{width:`${pct}%`}}></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {projects.length===0 && <p className="text-sm text-neutral-400 text-center py-4">No projects yet</p>}
+                </div>
+
+                {/* Your role card */}
+                <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                  <h3 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2"><span>🔐</span> Your Access</h3>
+                  <div className="flex items-center gap-3 mb-4">
+                    <Avatar name={currentUser.fullName} size={8} />
+                    <div>
+                      <p className="font-semibold text-neutral-900">{currentUser.fullName}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <RoleBadge role={userRole.role} tier={userRole.tier} />
+                        <span className="text-xs text-neutral-400">Tier {userRole.tier}/5</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    {[
+                      { perm: 'create_items',    label: 'Create work items' },
+                      { perm: 'manage_sprints',  label: 'Manage sprints' },
+                      { perm: 'manage_projects', label: 'Manage projects' },
+                      { perm: 'invite_members',  label: 'Invite members' },
+                      { perm: 'manage_roles',    label: 'Manage roles' },
+                    ].map(p => (
+                      <div key={p.perm} className="flex items-center justify-between py-1 border-b border-neutral-50 last:border-0">
+                        <span className="text-sm text-neutral-700">{p.label}</span>
+                        <span className={`text-xs font-semibold ${userRole.permissions.includes(p.perm) ? 'text-semantic-success' : 'text-neutral-300'}`}>
+                          {userRole.permissions.includes(p.perm) ? '✓' : '✕'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* MY WORKS */}
           {view === 'myworks' && (
@@ -826,6 +1195,331 @@ export default function App() {
             </div>
           )}
 
+          {/* BACKLOG VIEW */}
+          {view === 'backlog' && (
+            <div className="p-6 max-w-5xl">
+              <div className="flex justify-between items-center mb-5">
+                <div>
+                  <h1 className="text-xl font-bold text-brand-navy">Backlog</h1>
+                  <p className="text-xs text-neutral-400 mt-0.5">{backlogItems.length} items not in any sprint</p>
+                </div>
+                <div className="flex gap-2 items-center">
+                  <label className="flex items-center gap-1.5 cursor-pointer mr-2">
+                    <input type="checkbox" checked={refinementMode} onChange={e => setRefinementMode(e.target.checked)} className="w-3 h-3 accent-brand-navy" />
+                    <span className="text-xs text-neutral-600 font-medium">Refinement mode</span>
+                  </label>
+                  <Button variant="secondary" size="sm" onClick={() => setIsSprintOpen(true)}>+ New Sprint</Button>
+                  <Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>+ Add Item</Button>
+                </div>
+              </div>
+
+              {/* Sprints with capacity bar */}
+              {sprints.map(sprint => {
+                const sprintCapUsed = sprint.capacity || 0;
+                return (
+                  <div key={sprint.id} className="bg-white border border-neutral-200 rounded-xl mb-4 overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 bg-neutral-50">
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${sprint.status === 'ACTIVE' ? 'bg-brand-teal/10 text-brand-teal' : sprint.status === 'COMPLETED' ? 'bg-neutral-200 text-neutral-500' : 'bg-brand-navy-tint/10 text-brand-navy-tint'}`}>{sprint.status}</span>
+                        <h3 className="font-semibold text-neutral-900">{sprint.name}</h3>
+                        {sprint.goal && <span className="text-xs text-neutral-400 italic hidden md:inline">"{sprint.goal}"</span>}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {/* Capacity bar */}
+                        {sprint.capacity > 0 && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-24 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+                              <div className="h-full bg-brand-teal rounded-full" style={{ width: `${Math.min(100, (sprintCapUsed / sprint.capacity) * 100)}%` }}></div>
+                            </div>
+                            <span className="text-xs text-neutral-400">{sprint.capacity}pt cap</span>
+                          </div>
+                        )}
+                        {sprint.startDate && <span className="text-xs text-neutral-400 hidden md:inline">{sprint.startDate} → {sprint.endDate}</span>}
+                        {sprint.status === 'PLANNING' && <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'ACTIVE')}>Start Sprint</Button>}
+                        {sprint.status === 'ACTIVE' && <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'COMPLETED')}>Complete</Button>}
+                      </div>
+                    </div>
+                    <SprintItemList sprintId={sprint.id} users={users} onMoveToBacklog={(id) => handleMoveToBacklog(id, sprint.id)} onSelect={setSelectedItem} />
+                  </div>
+                );
+              })}
+
+              {/* Backlog items with drag-drop reorder */}
+              <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 bg-neutral-50">
+                  <h3 className="font-semibold text-neutral-900">Backlog</h3>
+                  <span className="text-xs text-neutral-400">{backlogItems.length} items</span>
+                </div>
+                {backlogItems.length === 0
+                  ? <EmptyState icon="📝" title="Backlog is empty" subtitle="Create work items to add them to the backlog." action={<Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>Add to backlog</Button>} />
+                  : backlogItems.map((item, idx) => (
+                    <div key={item.id}
+                      draggable onDragStart={(e) => handleBacklogDragStart(e, item.id)}
+                      onDragOver={(e) => { e.preventDefault(); setDragOverId(item.id); }}
+                      onDragLeave={() => setDragOverId(null)}
+                      onDrop={(e) => handleBacklogDrop(e, item.id)}
+                      className={`flex items-center gap-3 px-5 py-3 border-b border-neutral-50 last:border-0 hover:bg-neutral-50 group transition-colors ${dragOverId === item.id ? 'border-t-2 border-t-brand-navy bg-brand-navy/5' : ''}`}>
+                      <span className="text-neutral-300 cursor-grab text-xs mr-1">⠿</span>
+                      <TypeBadge type={item.type} compact />
+                      <span className="font-mono text-[10px] text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
+                      <span className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate" onClick={() => setSelectedItem(item)}>{item.title}</span>
+                      {/* Refinement mode — inline edit */}
+                      {refinementMode ? (
+                        <div className="flex items-center gap-2">
+                          <select value={item.priority || 'MEDIUM'} onChange={e => handleRefinementUpdate(item.id, 'priority', e.target.value)}
+                            className="text-xs border border-neutral-200 rounded px-1.5 py-1 focus:outline-none text-neutral-600">
+                            {['LOW','MEDIUM','HIGH','CRITICAL'].map(p => <option key={p} value={p}>{p}</option>)}
+                          </select>
+                          <input type="number" min={0} max={100} value={item.storyPoints || 0}
+                            onChange={e => handleRefinementUpdate(item.id, 'storyPoints', parseInt(e.target.value) || 0)}
+                            className="w-14 text-xs border border-neutral-200 rounded px-1.5 py-1 focus:outline-none text-center"
+                            placeholder="pts" />
+                        </div>
+                      ) : (
+                        <>
+                          <PriorityBadge priority={item.priority} />
+                          {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
+                        </>
+                      )}
+                      {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}
+                      {sprints.filter(s => s.status !== 'COMPLETED').length > 0 && (
+                        <select className="opacity-0 group-hover:opacity-100 text-xs border border-neutral-200 rounded px-1 py-0.5 text-neutral-600 transition-opacity"
+                          onChange={e => e.target.value && handleMoveToSprint(item.id, e.target.value)} defaultValue="">
+                          <option value="" disabled>→ Sprint</option>
+                          {sprints.filter(s => s.status !== 'COMPLETED').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                      )}
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+          )}
+
+          {/* ACTIVE SPRINT VIEW */}
+          {view === 'sprint' && (
+            <div className="p-6 h-full flex flex-col">
+              {activeSprint ? (
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <div className="flex items-center gap-3 mb-0.5">
+                        <h1 className="text-xl font-bold text-brand-navy">{activeSprint.name}</h1>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${activeSprint.status === 'ACTIVE' ? 'bg-brand-teal/10 text-brand-teal' : 'bg-neutral-200 text-neutral-500'}`}>{activeSprint.status}</span>
+                      </div>
+                      {activeSprint.goal && <p className="text-sm text-neutral-400 italic">"{activeSprint.goal}"</p>}
+                      {activeSprint.startDate && <p className="text-xs text-neutral-400 mt-0.5">{activeSprint.startDate} → {activeSprint.endDate}</p>}
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                      <select value={activeSprint.id}
+                        onChange={e => { const s = sprints.find(x => x.id === e.target.value); if (s) { setActiveSprint(s); fetchSprintItems(s.id); } }}
+                        className="text-sm border border-neutral-200 rounded-md px-2 py-1.5 focus:outline-none">
+                        {sprints.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Capacity bar */}
+                  {activeSprint.capacity > 0 && (
+                    <div className="mb-3 bg-white border border-neutral-200 rounded-lg px-4 py-2.5 flex items-center gap-4">
+                      <span className="text-xs text-neutral-400 font-medium w-20">Capacity</span>
+                      <div className="flex-1 h-2 bg-neutral-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-brand-navy-tint rounded-full transition-all"
+                          style={{ width: `${Math.min(100, (sprintItems.reduce((a, i) => a + (i.storyPoints || 0), 0) / activeSprint.capacity) * 100)}%` }}></div>
+                      </div>
+                      <span className="text-xs text-neutral-600 font-medium w-28 text-right">
+                        {sprintItems.reduce((a, i) => a + (i.storyPoints || 0), 0)} / {activeSprint.capacity} pts
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Quick filters + Swimlane + Saved filters */}
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    {[
+                      { label: 'All', filter: null },
+                      { label: 'Mine', filter: { type: 'mine' } },
+                      { label: '🔥 Blockers', filter: { type: 'blockers' } },
+                      { label: '⬆ High Priority', filter: { type: 'priority', value: 'HIGH' } },
+                      { label: '🐛 Bugs', filter: { type: 'itemType', value: 'Bug' } },
+                    ].map(f => (
+                      <button key={f.label} onClick={() => setActiveFilter(f.filter)}
+                        className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${JSON.stringify(activeFilter) === JSON.stringify(f.filter) ? 'bg-brand-navy text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}>
+                        {f.label}
+                      </button>
+                    ))}
+                    {savedFilters.map(f => (
+                      <button key={f.id} onClick={() => setActiveFilter(JSON.parse(f.filterJson))}
+                        className="text-xs px-3 py-1.5 rounded-full bg-brand-navy/10 text-brand-navy font-medium hover:bg-brand-navy/20 transition-colors">
+                        ★ {f.name}
+                      </button>
+                    ))}
+                    {activeFilter && (
+                      <div className="flex items-center gap-1 ml-auto">
+                        {!showSaveFilter
+                          ? <button onClick={() => setShowSaveFilter(true)} className="text-xs text-neutral-400 hover:text-brand-navy">Save filter</button>
+                          : <div className="flex gap-1">
+                              <input type="text" value={saveFilterName} onChange={e => setSaveFilterName(e.target.value)}
+                                placeholder="Filter name" className="text-xs border border-neutral-200 rounded px-2 py-1 focus:outline-none" />
+                              <Button size="sm" variant="secondary" onClick={handleSaveFilter}>Save</Button>
+                              <button onClick={() => setShowSaveFilter(false)} className="text-xs text-neutral-400 px-1">✕</button>
+                            </div>
+                        }
+                      </div>
+                    )}
+                    <select value={swimlaneBy} onChange={e => setSwimlaneBy(e.target.value)}
+                      className="text-xs border border-neutral-200 rounded-md px-2 py-1.5 focus:outline-none text-neutral-600 ml-auto">
+                      <option value="none">No swimlane</option>
+                      <option value="assignee">By Assignee</option>
+                      <option value="type">By Type</option>
+                      <option value="priority">By Priority</option>
+                    </select>
+                  </div>
+
+                  <SprintBoard items={applyFilter(sprintItems)} columns={columns} users={users}
+                    swimlaneBy={swimlaneBy} onDragStart={handleDragStart} onDragOver={handleDragOver}
+                    onDrop={(e, status) => {
+                      e.preventDefault();
+                      const itemId = e.dataTransfer.getData('itemId');
+                      const item = sprintItems.find(i => i.id === itemId);
+                      if (!item || item.status === status) return;
+                      setSprintItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
+                      fetch(`${API}/work-items/${itemId}`, { method: 'PUT', headers: headers(), body: JSON.stringify({ ...item, status }) }).catch(() => {});
+                    }}
+                    onSelect={setSelectedItem} onDelete={handleDelete} density={density} />
+                </>
+              ) : (
+                <EmptyState icon="⚡" title="No sprints yet" subtitle="Create a sprint in the Backlog view to get started."
+                  action={<Button variant="action" onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); }}>Go to Backlog</Button>} />
+              )}
+            </div>
+          )}
+
+          {/* REPORTS VIEW */}
+          {view === 'reports' && (
+            <div className="p-8 max-w-5xl">
+              <h1 className="text-2xl font-bold text-brand-navy mb-1">Sprint Reports</h1>
+              <p className="text-sm text-neutral-400 mb-5">Velocity, delivery, and scope tracking</p>
+
+              {/* VELOCITY CHART — multi-sprint comparison */}
+              {velocityData.length > 0 && (
+                <div className="bg-white border border-neutral-200 rounded-xl p-5 mb-6">
+                  <h3 className="font-semibold text-neutral-900 mb-1">Velocity — All Sprints</h3>
+                  <p className="text-xs text-neutral-400 mb-4">Committed capacity vs. delivered story points</p>
+                  <div className="flex items-end gap-3 overflow-x-auto pb-2">
+                    {velocityData.map((s) => {
+                      const maxVal = Math.max(...velocityData.map(x => Math.max(x.capacity || 0, x.totalPoints, 1)));
+                      const capH = Math.round(((s.capacity || 0) / maxVal) * 120);
+                      const doneH = Math.round((s.donePoints / maxVal) * 120);
+                      const totalH = Math.round((s.totalPoints / maxVal) * 120);
+                      return (
+                        <div key={s.sprintId} className="flex flex-col items-center gap-1 min-w-[80px]">
+                          <div className="flex items-end gap-1 h-32">
+                            {/* Capacity bar */}
+                            <div className="flex flex-col justify-end h-32">
+                              <div className="w-5 rounded-t bg-neutral-200" style={{ height: `${capH}px` }} title={`Capacity: ${s.capacity}pt`}></div>
+                            </div>
+                            {/* Committed bar */}
+                            <div className="flex flex-col justify-end h-32">
+                              <div className="w-5 rounded-t bg-brand-navy-tint" style={{ height: `${totalH}px` }} title={`Committed: ${s.totalPoints}pt`}></div>
+                            </div>
+                            {/* Delivered bar */}
+                            <div className="flex flex-col justify-end h-32">
+                              <div className="w-5 rounded-t bg-brand-teal" style={{ height: `${doneH}px` }} title={`Delivered: ${s.donePoints}pt`}></div>
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-neutral-400 text-center leading-tight max-w-[80px] truncate">{s.sprintName.replace('Sprint ', 'S').replace(' — ', ' ')}</p>
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${s.status === 'ACTIVE' ? 'bg-brand-teal/10 text-brand-teal' : s.status === 'COMPLETED' ? 'bg-neutral-100 text-neutral-500' : 'bg-neutral-50 text-neutral-400'}`}>{s.status}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center gap-4 mt-3 text-xs text-neutral-400">
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-neutral-200 inline-block"></span>Capacity</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-brand-navy-tint inline-block"></span>Committed</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-brand-teal inline-block"></span>Delivered</span>
+                  </div>
+                </div>
+              )}
+
+              {sprints.length === 0
+                ? <EmptyState icon="📊" title="No sprints to report on" subtitle="Complete a sprint to see reports here." />
+                : <>
+                    <div className="flex gap-2 mb-5 flex-wrap">
+                      {sprints.map(s => (
+                        <button key={s.id} onClick={() => { setSelectedSprintId(s.id); fetchSprintReport(s.id); }}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedSprintId === s.id ? 'bg-brand-navy text-white' : 'bg-white border border-neutral-200 text-neutral-600 hover:border-brand-navy'}`}>
+                          {s.name}
+                        </button>
+                      ))}
+                    </div>
+                    {sprintReport ? (
+                      <div className="space-y-4">
+                        {/* KPI cards */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {[
+                            { label: 'Total Items', value: sprintReport.totalItems, color: 'text-neutral-900' },
+                            { label: 'Completed', value: sprintReport.doneItems, color: 'text-brand-teal' },
+                            { label: 'Completion', value: `${sprintReport.completionRate}%`, color: 'text-brand-navy' },
+                            { label: 'Velocity', value: `${sprintReport.donePoints}/${sprintReport.totalPoints}pt`, color: 'text-brand-orange' },
+                          ].map(card => (
+                            <div key={card.label} className="bg-white border border-neutral-200 rounded-xl p-5">
+                              <p className="text-xs text-neutral-400 mb-1">{card.label}</p>
+                              <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Burndown chart (visual) */}
+                        <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                          <h3 className="font-semibold text-neutral-900 mb-4">Burndown — Commitment vs Delivery</h3>
+                          <div className="flex gap-3 mb-3 text-xs text-neutral-400">
+                            <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-brand-teal inline-block"></span>Done ({sprintReport.doneItems})</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-brand-navy-tint inline-block"></span>In Progress ({sprintReport.inProgressItems})</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-neutral-200 inline-block"></span>Todo ({sprintReport.todoItems})</span>
+                          </div>
+                          {/* Stacked bar burndown */}
+                          <div className="h-8 bg-neutral-100 rounded-lg overflow-hidden flex mb-2">
+                            {sprintReport.totalItems > 0 && <>
+                              <div className="h-full bg-brand-teal transition-all flex items-center justify-center" style={{ width: `${(sprintReport.doneItems / sprintReport.totalItems) * 100}%` }}>
+                                {sprintReport.doneItems > 0 && <span className="text-white text-[10px] font-bold">{sprintReport.doneItems}</span>}
+                              </div>
+                              <div className="h-full bg-brand-navy-tint transition-all flex items-center justify-center" style={{ width: `${(sprintReport.inProgressItems / sprintReport.totalItems) * 100}%` }}>
+                                {sprintReport.inProgressItems > 0 && <span className="text-white text-[10px] font-bold">{sprintReport.inProgressItems}</span>}
+                              </div>
+                              <div className="h-full bg-neutral-200 transition-all flex items-center justify-center" style={{ width: `${(sprintReport.todoItems / sprintReport.totalItems) * 100}%` }}>
+                                {sprintReport.todoItems > 0 && <span className="text-neutral-600 text-[10px] font-bold">{sprintReport.todoItems}</span>}
+                              </div>
+                            </>}
+                          </div>
+                          <p className="text-xs text-neutral-400">{sprintReport.completionRate}% complete · {sprintReport.velocityRate}% of story points delivered</p>
+                        </div>
+
+                        {/* Item outcomes */}
+                        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+                          <div className="px-5 py-3 border-b border-neutral-100">
+                            <h3 className="font-semibold text-neutral-900">Item Outcomes</h3>
+                          </div>
+                          <div className="divide-y divide-neutral-50">
+                            {(sprintReport.items || []).map(item => (
+                              <div key={item.id} className="flex items-center gap-3 px-5 py-3">
+                                <TypeBadge type={item.type} compact />
+                                <span className="font-mono text-[10px] text-neutral-400 w-20">{item.id}</span>
+                                <span className="flex-1 text-sm text-neutral-900">{item.title}</span>
+                                {item.story_points > 0 && <span className="text-xs text-neutral-400">{item.story_points}pt</span>}
+                                <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-neutral-400 text-center py-10">Select a sprint above to view its report.</p>
+                    )}
+                  </>
+              }
+            </div>
+          )}
+
           {/* WORKSPACE SETTINGS */}
           {view === 'workspace' && (
             <div className="p-8 max-w-3xl">
@@ -884,6 +1578,54 @@ export default function App() {
                   </label>
                 ))}
               </div>
+
+              {/* Role Management — ADMIN+ only */}
+              {can('manage_roles') && (
+                <div className="bg-white rounded-xl border border-neutral-200 p-6">
+                  <h2 className="font-semibold text-neutral-900 mb-1">Role Management</h2>
+                  <p className="text-sm text-neutral-400 mb-4">Control what each member can do</p>
+                  <div className="mb-4 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+                    <p className="text-xs font-semibold text-neutral-600 mb-2">Tier Hierarchy</p>
+                    {[
+                      { role: 'VIEWER', tier: 1, desc: 'View only — no create/edit' },
+                      { role: 'MEMBER', tier: 2, desc: 'Create & edit own items' },
+                      { role: 'LEAD',   tier: 3, desc: 'Edit any item, manage sprints' },
+                      { role: 'ADMIN',  tier: 4, desc: 'Full workspace management' },
+                      { role: 'OWNER',  tier: 5, desc: 'Ownership + billing control' },
+                    ].map(r => (
+                      <div key={r.role} className="flex items-center gap-2 py-1">
+                        <RoleBadge role={r.role} tier={r.tier} />
+                        <span className="text-xs text-neutral-500">{r.desc}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-1">
+                    {workspaceMembers.map(m => (
+                      <div key={m.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 last:border-0">
+                        <Avatar name={m.fullName} size={7} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-neutral-900 truncate">{m.fullName}</p>
+                          <p className="text-xs text-neutral-400 truncate">{m.email}</p>
+                        </div>
+                        {m.id === currentUser.id
+                          ? <RoleBadge role={m.role || userRole.role} tier={userRole.tier} />
+                          : <select defaultValue={m.role || 'MEMBER'}
+                              onChange={e => {
+                                fetch(`${API}/rbac/members/${m.id}/role`, {
+                                  method: 'PUT', headers: headers(),
+                                  body: JSON.stringify({ roleId: e.target.value })
+                                }).then(r => r.json()).then(d => showToast(d.message || 'Role updated'))
+                                  .catch(err => showToast(err.message, 'error'));
+                              }}
+                              className="text-xs border border-neutral-200 rounded px-2 py-1 focus:outline-none text-neutral-700">
+                              {['VIEWER','MEMBER','LEAD','ADMIN'].map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                        }
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -898,8 +1640,10 @@ export default function App() {
               <span className="font-mono text-xs text-neutral-400">{selectedItem.id}</span>
             </div>
             <div className="flex gap-1">
-              <button onClick={() => handleDelete(selectedItem.id)}
-                className="text-xs text-neutral-400 hover:text-semantic-danger px-2 py-1 rounded hover:bg-neutral-50 transition-colors">Delete</button>
+              {can('delete_items') && (
+                <button onClick={() => handleDelete(selectedItem.id)}
+                  className="text-xs text-neutral-400 hover:text-semantic-danger px-2 py-1 rounded hover:bg-neutral-50 transition-colors">Delete</button>
+              )}
               <button onClick={() => setSelectedItem(null)}
                 className="text-neutral-400 hover:text-neutral-900 p-1 rounded hover:bg-neutral-50 transition-colors">✕</button>
             </div>
@@ -946,6 +1690,14 @@ export default function App() {
                 </select>
               </div>
               <div>
+                <label className="block text-xs text-neutral-400 mb-1 font-medium">Priority</label>
+                <select value={selectedItem.priority || 'MEDIUM'}
+                  onChange={e => { const u = { ...selectedItem, priority: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }}
+                  className="input">
+                  {['CRITICAL','HIGH','MEDIUM','LOW'].map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
                 <label className="block text-xs text-neutral-400 mb-1 font-medium">Assignee</label>
                 <select value={selectedItem.assigneeId || ''}
                   onChange={e => { const u = { ...selectedItem, assigneeId: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
@@ -960,24 +1712,77 @@ export default function App() {
                   onChange={e => { const u = { ...selectedItem, dueDate: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
                   className="input" />
               </div>
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1 font-medium">Story Points</label>
+                <input type="number" min={0} max={100} value={selectedItem.storyPoints || 0}
+                  onChange={e => { const u = { ...selectedItem, storyPoints: parseInt(e.target.value) || 0 }; setSelectedItem(u); handleUpdateItem(u); }}
+                  className="input" />
+              </div>
             </div>
+
+            {/* Parent item selector */}
+            <div>
+              <label className="block text-xs text-neutral-400 mb-1 font-medium">Parent Item</label>
+              <select value={selectedItem.parentId || ''}
+                onChange={e => { const u = { ...selectedItem, parentId: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
+                className="input">
+                <option value="">No parent</option>
+                {workItems.filter(i => i.id !== selectedItem.id && (i.type === 'Epic' || i.type === 'Story')).map(i => (
+                  <option key={i.id} value={i.id}>{i.id} — {i.title}</option>
+                ))}
+              </select>
+              {selectedItem.parentId && (() => {
+                const parent = workItems.find(i => i.id === selectedItem.parentId);
+                return parent ? (
+                  <div className="mt-1.5 flex items-center gap-2 text-xs text-brand-navy cursor-pointer hover:underline"
+                    onClick={() => setSelectedItem(parent)}>
+                    <span>↑</span><TypeBadge type={parent.type} compact /><span>{parent.title}</span>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+
+            {/* Children items */}
+            {itemChildren.length > 0 && (
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1 font-medium">Sub-items ({itemChildren.length})</label>
+                <div className="space-y-1">
+                  {itemChildren.map(child => (
+                    <div key={child.id} onClick={() => setSelectedItem(child)}
+                      className="flex items-center gap-2 p-2 bg-neutral-50 rounded-lg border border-neutral-100 cursor-pointer hover:border-brand-navy/30 transition-colors">
+                      <span className="text-neutral-300 text-xs">↳</span>
+                      <TypeBadge type={child.type} compact />
+                      <span className="font-mono text-[10px] text-neutral-400">{child.id}</span>
+                      <span className="flex-1 text-xs text-neutral-900 truncate">{child.title}</span>
+                      <StatusBadge category={statusToCategory(child.status)}>{child.status}</StatusBadge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-xs text-neutral-400 mb-1 font-medium">Tags</label>
-              <input type="text" value={(selectedItem.tags || []).join(', ')}
-                onChange={e => setSelectedItem({ ...selectedItem, tags: e.target.value.split(',').map(t => t.trim()) })}
-                onBlur={() => handleUpdateItem(selectedItem)}
+              <input type="text" value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onBlur={() => {
+                  const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
+                  const updated = { ...selectedItem, tags };
+                  setSelectedItem(updated);
+                  handleUpdateItem(updated);
+                }}
                 placeholder="frontend, urgent, api"
                 className="input" />
             </div>
 
             <div>
               <label className="block text-xs text-neutral-400 mb-1 font-medium">Description</label>
-              <textarea rows={4} value={selectedItem.description || ''}
-                onChange={e => setSelectedItem({ ...selectedItem, description: e.target.value })}
+              <RichTextEditor
+                value={selectedItem.description || ''}
+                onChange={val => setSelectedItem({ ...selectedItem, description: val })}
                 onBlur={() => handleUpdateItem(selectedItem)}
-                placeholder="Add a description..."
-                className="input resize-none" />
+                placeholder="Add a description... (supports **bold**, *italic*, `code`, - bullets)"
+              />
             </div>
 
             </> /* end details tab */}
@@ -997,7 +1802,7 @@ export default function App() {
                           <p className="text-xs font-semibold text-neutral-900">{c.authorName}</p>
                           {c.isInternal && <span className="text-[10px] bg-semantic-warning text-white px-1.5 py-0.5 rounded">Internal</span>}
                         </div>
-                        <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{c.body}</p>
+                        <p className="text-sm text-neutral-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMd(c.body) }} />
                         <p className="text-[10px] text-neutral-400 mt-1.5">{c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</p>
                       </div>
                     </div>
@@ -1076,18 +1881,36 @@ export default function App() {
                 </Button>
                 {attachments.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No files attached yet.</p>}
                 <div className="space-y-2">
-                  {attachments.map(a => (
-                    <div key={a.id} className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-100">
-                      <div className="w-8 h-8 rounded bg-neutral-200 flex items-center justify-center text-xs font-bold text-neutral-500 flex-shrink-0">
-                        {String(a.file_name || a.fileName || '?').split('.').pop().toUpperCase().slice(0, 3)}
+                  {attachments.map(a => {
+                    const mime = a.mime_type || a.mimeType || '';
+                    const isImage = mime.startsWith('image/');
+                    const fileName = a.file_name || a.fileName || '?';
+                    const previewUrl = `${API}/work-items/${selectedItem.id}/attachments/${a.id}/content`;
+                    const ext = fileName.split('.').pop().toUpperCase().slice(0, 3);
+                    return (
+                      <div key={a.id} className="bg-neutral-50 rounded-lg border border-neutral-100 overflow-hidden">
+                        {isImage && (
+                          <div className="border-b border-neutral-100 bg-neutral-100 flex items-center justify-center p-2 max-h-48 overflow-hidden">
+                            <img src={previewUrl} alt={fileName}
+                              className="max-h-44 max-w-full object-contain rounded"
+                              onError={e => { e.target.style.display = 'none'; }} />
+                          </div>
+                        )}
+                        <div className="flex items-center gap-3 p-3">
+                          <div className={`w-8 h-8 rounded flex items-center justify-center text-xs font-bold flex-shrink-0 ${isImage ? 'bg-brand-navy/10 text-brand-navy' : 'bg-neutral-200 text-neutral-500'}`}>
+                            {isImage ? '🖼' : ext}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-neutral-900 truncate">{fileName}</p>
+                            <p className="text-xs text-neutral-400">{a.uploaded_by_name || a.uploadedByName || 'You'} · {a.file_size ? `${Math.round(a.file_size / 1024)}KB` : ''}</p>
+                          </div>
+                          <a href={previewUrl} target="_blank" rel="noreferrer"
+                            className="text-xs text-brand-navy hover:underline flex-shrink-0 mr-2">View</a>
+                          <button onClick={() => handleDeleteAttachment(a.id)} className="text-neutral-300 hover:text-semantic-danger text-xs flex-shrink-0">✕</button>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-neutral-900 truncate">{a.file_name || a.fileName}</p>
-                        <p className="text-xs text-neutral-400">{a.uploaded_by_name || a.uploadedByName || 'You'} · {a.file_size ? `${Math.round(a.file_size / 1024)}KB` : ''}</p>
-                      </div>
-                      <button onClick={() => handleDeleteAttachment(a.id)} className="text-neutral-300 hover:text-semantic-danger text-xs flex-shrink-0">✕</button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1095,16 +1918,37 @@ export default function App() {
             {/* ACTIVITY TAB */}
             {detailTab === 'activity' && (
               <div>
+                {/* Event type filter */}
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  {['', 'WORK_ITEM_CREATED', 'WORK_ITEM_UPDATED', 'STATUS_CHANGED', 'COMMENT_ADDED', 'ASSIGNED'].map(et => (
+                    <button key={et} onClick={() => {
+                      setActivityEventFilter(et);
+                      const url = `${API}/work-items/${selectedItem.id}/activity${et ? `?eventType=${et}` : ''}`;
+                      fetch(url).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(() => {});
+                    }}
+                      className={`text-[10px] px-2 py-1 rounded-full font-medium transition-colors ${activityEventFilter === et ? 'bg-brand-navy text-white' : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'}`}>
+                      {et ? et.replace(/_/g, ' ') : 'All'}
+                    </button>
+                  ))}
+                </div>
                 {activity.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No activity recorded yet.</p>}
                 <div className="space-y-3">
                   {activity.map(a => (
                     <div key={a.id} className="flex gap-2.5">
-                      <div className="w-2 h-2 rounded-full bg-neutral-300 mt-1.5 flex-shrink-0"></div>
+                      <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                        a.event_type === 'WORK_ITEM_CREATED' ? 'bg-brand-teal' :
+                        a.event_type === 'STATUS_CHANGED' ? 'bg-brand-navy-tint' :
+                        a.event_type === 'COMMENT_ADDED' ? 'bg-brand-orange' :
+                        'bg-neutral-300'
+                      }`}></div>
                       <div className="flex-1">
                         <p className="text-xs text-neutral-700">
                           <span className="font-semibold">{a.actor_name || 'System'}</span>
                           {' '}{formatEventType(a.event_type)}
                         </p>
+                        {a.payload && a.payload !== '{}' && (
+                          <p className="text-[10px] text-neutral-400 font-mono mt-0.5 truncate">{a.payload}</p>
+                        )}
                         <p className="text-[10px] text-neutral-400 mt-0.5">{a.occurred_at ? new Date(a.occurred_at).toLocaleString() : ''}</p>
                       </div>
                     </div>
@@ -1114,6 +1958,47 @@ export default function App() {
             )}
           </div>
         </div>
+      )}
+
+      {/* TOAST NOTIFICATION */}
+      {toast && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-xl shadow-xl text-sm font-medium flex items-center gap-3 transition-all ${toast.type === 'error' ? 'bg-semantic-danger text-white' : 'bg-neutral-900 text-white'}`}>
+          <span>{toast.type === 'error' ? '✕' : toast.type === 'undo' ? '🗑' : '✓'}</span>
+          <span>{toast.message}</span>
+          {toast.type === 'undo' && deleteUndoItem && (
+            <button onClick={handleUndoDelete}
+              className="ml-1 text-brand-orange font-bold hover:text-orange-300 transition-colors text-xs border border-brand-orange/40 rounded px-2 py-0.5">
+              Undo
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* CREATE SPRINT MODAL */}
+      {isSprintOpen && (
+        <Modal title="New Sprint" onClose={() => setIsSprintOpen(false)}>
+          <div className="space-y-3">
+            <Field label="Sprint Name *">
+              <input type="text" value={newSprint.name} onChange={e => setNewSprint({ ...newSprint, name: e.target.value })}
+                className="input" placeholder="e.g. Sprint 1" autoFocus />
+            </Field>
+            <Field label="Sprint Goal">
+              <input type="text" value={newSprint.goal} onChange={e => setNewSprint({ ...newSprint, goal: e.target.value })}
+                className="input" placeholder="e.g. Stabilize portal, ship SAML" />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Start Date"><input type="date" value={newSprint.startDate} onChange={e => setNewSprint({ ...newSprint, startDate: e.target.value })} className="input" /></Field>
+              <Field label="End Date"><input type="date" value={newSprint.endDate} onChange={e => setNewSprint({ ...newSprint, endDate: e.target.value })} className="input" /></Field>
+            </div>
+            <Field label="Capacity (story points)">
+              <input type="number" value={newSprint.capacity} onChange={e => setNewSprint({ ...newSprint, capacity: parseInt(e.target.value) || 0 })} className="input" min={0} />
+            </Field>
+          </div>
+          <div className="flex justify-end gap-3 mt-5">
+            <Button variant="ghost" onClick={() => setIsSprintOpen(false)}>Cancel</Button>
+            <Button variant="action" onClick={handleCreateSprint}>Create Sprint</Button>
+          </div>
+        </Modal>
       )}
 
       {/* CREATE WORK ITEM MODAL */}
@@ -1131,13 +2016,31 @@ export default function App() {
                   {Object.keys(TYPES).map(t => <option key={t}>{t}</option>)}
                 </select>
               </Field>
+              <Field label="Priority">
+                <select value={newItem.priority} onChange={e => setNewItem({ ...newItem, priority: e.target.value })} className="input">
+                  {['CRITICAL','HIGH','MEDIUM','LOW'].map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </Field>
               <Field label="Assignee">
                 <select value={newItem.assigneeId} onChange={e => setNewItem({ ...newItem, assigneeId: e.target.value })} className="input">
                   <option value="">Unassigned</option>
                   {users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
                 </select>
               </Field>
+              <Field label="Project">
+                <select value={newItem.projectId} onChange={e => setNewItem({ ...newItem, projectId: e.target.value })} className="input">
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </Field>
             </div>
+            <Field label="Parent Item (optional)">
+              <select value={newItem.parentId} onChange={e => setNewItem({ ...newItem, parentId: e.target.value })} className="input">
+                <option value="">No parent</option>
+                {workItems.filter(i => i.type === 'Epic' || i.type === 'Story').map(i => (
+                  <option key={i.id} value={i.id}>{i.id} — {i.title}</option>
+                ))}
+              </select>
+            </Field>
             <Field label="Due Date">
               <input type="date" value={newItem.dueDate} onChange={e => setNewItem({ ...newItem, dueDate: e.target.value })} className="input" />
             </Field>
@@ -1147,7 +2050,7 @@ export default function App() {
             </Field>
             <Field label="Description">
               <textarea rows={3} value={newItem.description} onChange={e => setNewItem({ ...newItem, description: e.target.value })}
-                className="input resize-none" placeholder="Optional description..." />
+                className="input resize-none" placeholder="Optional description... (supports **bold**, *italic*, - bullets)" />
             </Field>
           </div>
           <div className="flex justify-end gap-3 mt-5">
@@ -1220,6 +2123,54 @@ function Field({ label, children }) {
   );
 }
 
+function renderMd(text) {
+  if (!text) return '';
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code style="background:#f3f4f6;padding:0 3px;border-radius:3px;font-size:11px">$1</code>')
+    .replace(/^- (.+)$/gm, '• $1')
+    .replace(/\n/g, '<br/>');
+}
+
+function getTimeOfDay() {
+  const h = new Date().getHours();
+  if (h < 12) return 'morning';
+  if (h < 17) return 'afternoon';
+  return 'evening';
+}
+
+const ROLE_CONFIG = {
+  OWNER:  { label: 'Owner',  bg: 'bg-purple-100',  text: 'text-purple-700', tier: 5 },
+  ADMIN:  { label: 'Admin',  bg: 'bg-brand-navy/10', text: 'text-brand-navy', tier: 4 },
+  LEAD:   { label: 'Lead',   bg: 'bg-brand-teal/10', text: 'text-brand-teal', tier: 3 },
+  MEMBER: { label: 'Member', bg: 'bg-neutral-100',   text: 'text-neutral-600', tier: 2 },
+  VIEWER: { label: 'Viewer', bg: 'bg-neutral-50',    text: 'text-neutral-400', tier: 1 },
+};
+
+function RoleBadge({ role, tier, small = false }) {
+  const r = ROLE_CONFIG[role] || ROLE_CONFIG.MEMBER;
+  return (
+    <span className={`inline-flex items-center gap-1 font-semibold rounded ${small ? 'text-[9px] px-1 py-0.5' : 'text-[10px] px-1.5 py-0.5'} ${r.bg} ${r.text}`}>
+      {r.label}
+    </span>
+  );
+}
+
+function StatCard({ label, value, sub, color, icon, onClick }) {
+  return (
+    <div onClick={onClick} className="bg-white border border-neutral-200 rounded-xl p-5 cursor-pointer hover:shadow-md transition-shadow group">
+      <div className="flex items-start justify-between mb-3">
+        <span className="text-2xl">{icon}</span>
+        <span className="text-xs text-neutral-400 group-hover:text-brand-navy transition-colors">View →</span>
+      </div>
+      <p className={`text-3xl font-bold ${color} mb-1`}>{value}</p>
+      <p className="text-sm font-medium text-neutral-700">{label}</p>
+      <p className="text-xs text-neutral-400 mt-0.5">{sub}</p>
+    </div>
+  );
+}
+
 function formatEventType(eventType) {
   const map = {
     WORK_ITEM_CREATED: 'created this item',
@@ -1232,4 +2183,203 @@ function formatEventType(eventType) {
     USER_SIGNED_UP:    'signed up',
   };
   return map[eventType] || (eventType || '').toLowerCase().replace(/_/g, ' ');
+}
+
+const PRIORITY_CONFIG = {
+  CRITICAL: { color: 'text-semantic-danger',  bg: 'bg-semantic-danger-surface',  label: 'Critical' },
+  HIGH:     { color: 'text-semantic-warning',  bg: 'bg-semantic-warning-surface', label: 'High' },
+  MEDIUM:   { color: 'text-neutral-600',       bg: 'bg-neutral-100',              label: 'Medium' },
+  LOW:      { color: 'text-neutral-400',       bg: 'bg-neutral-50',               label: 'Low' },
+};
+function PriorityBadge({ priority }) {
+  const p = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.MEDIUM;
+  return <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${p.bg} ${p.color}`}>{p.label}</span>;
+}
+
+function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
+  const [items, setItems] = React.useState([]);
+  React.useEffect(() => {
+    fetch(`${API}/sprints/${sprintId}/items`)
+      .then(r => r.json()).then(d => setItems(Array.isArray(d) ? d : [])).catch(() => {});
+  }, [sprintId]);
+
+  if (items.length === 0) return <div className="px-5 py-4 text-sm text-neutral-400 text-center">No items in this sprint yet.</div>;
+  return (
+    <div className="divide-y divide-neutral-50">
+      {items.map(item => (
+        <div key={item.id} className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 group">
+          <TypeBadge type={item.type} compact />
+          <span className="font-mono text-[10px] text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
+          <span className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate" onClick={() => onSelect(item)}>{item.title}</span>
+          <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
+          {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
+          {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}
+          <button onClick={() => { onMoveToBacklog(item.id); setItems(prev => prev.filter(i => i.id !== item.id)); }}
+            className="opacity-0 group-hover:opacity-100 text-xs text-neutral-400 hover:text-brand-navy transition-opacity">↓ Backlog</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Simple rich text editor with markdown toolbar
+function RichTextEditor({ value, onChange, onBlur, placeholder }) {
+  const textareaRef = useRef(null);
+
+  const wrap = (prefix, suffix = prefix) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = value.slice(start, end);
+    const before = value.slice(0, start);
+    const after = value.slice(end);
+    const newVal = before + prefix + selected + suffix + after;
+    onChange(newVal);
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(start + prefix.length, end + prefix.length);
+    }, 0);
+  };
+
+  const insertBullet = () => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const before = value.slice(0, start);
+    const after = value.slice(start);
+    const needsNewline = before.length > 0 && !before.endsWith('\n');
+    const newVal = before + (needsNewline ? '\n' : '') + '- ' + after;
+    onChange(newVal);
+    setTimeout(() => { ta.focus(); ta.setSelectionRange(start + (needsNewline ? 3 : 2), start + (needsNewline ? 3 : 2)); }, 0);
+  };
+
+  // Render markdown-like preview
+  const renderPreview = (text) => {
+    if (!text) return '';
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`(.+?)`/g, '<code class="bg-neutral-100 text-semantic-danger px-1 rounded text-[11px] font-mono">$1</code>')
+      .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
+      .replace(/^# (.+)$/gm, '<p class="font-bold text-base">$1</p>')
+      .replace(/\n/g, '<br/>');
+  };
+
+  const [showPreview, setShowPreview] = React.useState(false);
+
+  return (
+    <div className="border border-neutral-200 rounded-lg overflow-hidden focus-within:border-brand-navy transition-colors">
+      {/* Toolbar */}
+      <div className="flex items-center gap-0.5 px-2 py-1.5 bg-neutral-50 border-b border-neutral-200">
+        <button type="button" onClick={() => wrap('**')} title="Bold (Ctrl+B)"
+          className="w-6 h-6 flex items-center justify-center rounded text-xs font-bold text-neutral-600 hover:bg-neutral-200 transition-colors">B</button>
+        <button type="button" onClick={() => wrap('*')} title="Italic"
+          className="w-6 h-6 flex items-center justify-center rounded text-xs italic text-neutral-600 hover:bg-neutral-200 transition-colors">I</button>
+        <button type="button" onClick={() => wrap('`')} title="Inline code"
+          className="w-6 h-6 flex items-center justify-center rounded text-xs font-mono text-neutral-600 hover:bg-neutral-200 transition-colors">`</button>
+        <button type="button" onClick={insertBullet} title="Bullet point"
+          className="w-6 h-6 flex items-center justify-center rounded text-xs text-neutral-600 hover:bg-neutral-200 transition-colors">•</button>
+        <button type="button" onClick={() => wrap('# ', '')} title="Heading"
+          className="w-6 h-6 flex items-center justify-center rounded text-xs font-bold text-neutral-600 hover:bg-neutral-200 transition-colors">H</button>
+        <div className="h-4 w-px bg-neutral-200 mx-1"></div>
+        <button type="button" onClick={() => setShowPreview(p => !p)}
+          className={`text-[10px] px-2 py-0.5 rounded font-medium transition-colors ${showPreview ? 'bg-brand-navy text-white' : 'text-neutral-500 hover:bg-neutral-200'}`}>
+          {showPreview ? 'Edit' : 'Preview'}
+        </button>
+      </div>
+      {showPreview ? (
+        <div className="min-h-[80px] p-3 text-sm text-neutral-700 leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: renderPreview(value) || '<span class="text-neutral-300">Nothing to preview</span>' }} />
+      ) : (
+        <textarea
+          ref={textareaRef}
+          rows={4}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          onBlur={onBlur}
+          placeholder={placeholder}
+          className="w-full px-3 py-2 text-sm text-neutral-900 focus:outline-none resize-none bg-white"
+        />
+      )}
+    </div>
+  );
+}
+
+function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOver, onDrop, onSelect, onDelete, density }) {
+  const pad = { compact: 'p-2', comfortable: 'p-3', spacious: 'p-4' };
+
+  const getSwimlanes = () => {
+    if (swimlaneBy === 'none') return [{ key: 'all', label: null, items }];
+    if (swimlaneBy === 'assignee') {
+      const keys = [...new Set(items.map(i => i.assigneeId || 'unassigned'))];
+      return keys.map(k => ({ key: k, label: k === 'unassigned' ? 'Unassigned' : users.find(u => u.id === k)?.fullName || k, items: items.filter(i => (i.assigneeId || 'unassigned') === k) }));
+    }
+    if (swimlaneBy === 'type') {
+      const keys = [...new Set(items.map(i => i.type))];
+      return keys.map(k => ({ key: k, label: k, items: items.filter(i => i.type === k) }));
+    }
+    if (swimlaneBy === 'priority') {
+      return ['CRITICAL','HIGH','MEDIUM','LOW'].map(p => ({ key: p, label: p, items: items.filter(i => (i.priority || 'MEDIUM') === p) })).filter(s => s.items.length > 0);
+    }
+    return [{ key: 'all', label: null, items }];
+  };
+
+  return (
+    <div className="flex-1 overflow-auto">
+      {getSwimlanes().map(lane => (
+        <div key={lane.key}>
+          {lane.label && (
+            <div className="flex items-center gap-2 mb-2 mt-4 px-1">
+              <div className="h-px flex-1 bg-neutral-200"></div>
+              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider px-2">{lane.label}</span>
+              <div className="h-px flex-1 bg-neutral-200"></div>
+            </div>
+          )}
+          <div className="flex gap-4 min-h-40">
+            {columns.map(col => {
+              const colItems = lane.items.filter(i => i.status === col.name);
+              return (
+                <div key={col.name} className="flex-1 min-w-48 flex flex-col bg-neutral-100 rounded-xl p-3"
+                  onDragOver={onDragOver} onDrop={(e) => onDrop(e, col.name)}>
+                  {!lane.label && (
+                    <div className="flex items-center justify-between mb-3 px-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${col.dot}`}></span>
+                        <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{col.name}</h3>
+                      </div>
+                      <span className="text-xs bg-white text-neutral-500 px-2 py-0.5 rounded-full shadow-sm">{colItems.length}</span>
+                    </div>
+                  )}
+                  <div className="space-y-2 flex-1">
+                    {colItems.length === 0 && <div className="flex items-center justify-center py-6 border-2 border-dashed border-neutral-200 rounded-lg"><p className="text-xs text-neutral-300">Drop here</p></div>}
+                    {colItems.map(item => (
+                      <div key={item.id} draggable onDragStart={(e) => onDragStart(e, item.id)}
+                        className={`bg-white rounded-lg shadow-sm border border-neutral-200 cursor-grab hover:shadow-md transition-shadow group ${pad[density]}`}>
+                        <div className="flex items-start justify-between mb-1.5">
+                          <span className="font-mono text-[10px] text-neutral-400">{item.id}</span>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => onSelect(item)} className="text-neutral-400 hover:text-brand-navy text-xs p-0.5">✏</button>
+                            <button onClick={() => onDelete(item.id)} className="text-neutral-400 hover:text-semantic-danger text-xs p-0.5">✕</button>
+                          </div>
+                        </div>
+                        <p className="text-sm font-medium text-neutral-900 leading-snug mb-2 cursor-pointer" onClick={() => onSelect(item)}>{item.title}</p>
+                        <div className="flex items-center justify-between">
+                          <TypeBadge type={item.type} compact={density === 'compact'} />
+                          <div className="flex items-center gap-1.5">
+                            {(item.storyPoints > 0) && <span className="text-[10px] text-neutral-400 font-medium">{item.storyPoints}pt</span>}
+                            {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={5} />}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }

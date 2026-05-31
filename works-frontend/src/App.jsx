@@ -157,6 +157,38 @@ export default function App() {
   const [wsOpen, setWsOpen]             = useState(false);
   const wsRef                           = useRef(null);
 
+  // Iteration 3 — Workflows, Custom Fields, Permissions, WIQL
+  const [workflows, setWorkflows]           = useState([]);
+  const [fieldDefs, setFieldDefs]           = useState([]);
+  const [roles, setRoles]                   = useState([]);
+  const [wiqlQuery, setWiqlQuery]           = useState('');
+  const [wiqlResults, setWiqlResults]       = useState([]);
+  const [wiqlFilters, setWiqlFilters]       = useState([]);
+  const [wiqlFilterName, setWiqlFilterName] = useState('');
+  const [wiqlError, setWiqlError]           = useState('');
+  const [workItemTypes, setWorkItemTypes]   = useState({ builtIn: [], custom: [] });
+  const [permMatrix, setPermMatrix]         = useState(null);
+  const [settings3Tab, setSettings3Tab]     = useState('workflows'); // workflows | fields | permissions | types
+
+  // Iteration 4 — PM Artifacts
+  const [pmProjectId, setPmProjectId]       = useState('');
+  const [pmTab, setPmTab]                   = useState('raid');   // raid | risks | assumptions | issues | deps | decisions | meetings | actions | stakeholders | lessons
+  const [risks, setRisks]                   = useState([]);
+  const [assumptions, setAssumptions]       = useState([]);
+  const [pmIssues, setPmIssues]             = useState([]);
+  const [dependencies, setDependencies]     = useState([]);
+  const [decisions, setDecisions]           = useState([]);
+  const [meetings, setMeetings]             = useState([]);
+  const [actionItems, setActionItems]       = useState([]);
+  const [stakeholders, setStakeholders]     = useState([]);
+  const [lessonsLearned, setLessonsLearned] = useState([]);
+  const [raidDashboard, setRaidDashboard]   = useState(null);
+  const [selectedMeeting, setSelectedMeeting] = useState(null);
+  const [meetingNotes, setMeetingNotes]     = useState({});
+  const [pmForm, setPmForm]                 = useState({});
+  const [pmFormOpen, setPmFormOpen]         = useState(null); // 'risk'|'assumption'|...|null
+  const [selectedPmItem, setSelectedPmItem] = useState(null);
+
   // Iter 1 & 2 completion features
   const [recentlyViewed, setRecentlyViewed] = useState(() => {
     try { return JSON.parse(localStorage.getItem('bSmartRecentItems') || '[]'); } catch { return []; }
@@ -621,6 +653,108 @@ export default function App() {
     }).then(r => r.json()).then(d => { setBranding(d); showToast('Branding saved'); }).catch(() => {});
   }
 
+  // ---- Iteration 3 fetches ----
+  function fetchWorkflows(projectId) {
+    const q = projectId ? `?projectId=${projectId}` : '';
+    fetch(`${API}/workflows${q}`, { headers: headers() })
+      .then(r => r.json()).then(d => setWorkflows(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchFieldDefs(projectId) {
+    const q = projectId ? `?projectId=${projectId}` : '';
+    fetch(`${API}/field-defs${q}`, { headers: headers() })
+      .then(r => r.json()).then(d => setFieldDefs(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchRoles() {
+    fetch(`${API}/permission-schemes/roles`, { headers: headers() })
+      .then(r => r.json()).then(d => setRoles(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchWorkItemTypes() {
+    fetch(`${API}/work-item-types`, { headers: headers() })
+      .then(r => r.json()).then(d => setWorkItemTypes(d || { builtIn: [], custom: [] })).catch(() => {});
+  }
+  function fetchPermMatrix() {
+    fetch(`${API}/permission-schemes/matrix?workspaceId=WS-001`, { headers: headers() })
+      .then(r => r.json()).then(d => setPermMatrix(d)).catch(() => {});
+  }
+  function runWiql() {
+    setWiqlError('');
+    fetch(`${API}/wiql/execute`, { method: 'POST', headers: headers(), body: JSON.stringify({ query: wiqlQuery }) })
+      .then(r => r.json()).then(d => {
+        if (d.error) { setWiqlError(d.error); setWiqlResults([]); }
+        else setWiqlResults(Array.isArray(d) ? d : []);
+      }).catch(err => setWiqlError(err.message));
+  }
+  function fetchWiqlFilters() {
+    fetch(`${API}/wiql/filters`, { headers: headers() })
+      .then(r => r.json()).then(d => setWiqlFilters(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function saveWiqlFilter() {
+    if (!wiqlFilterName.trim() || !wiqlQuery.trim()) return;
+    fetch(`${API}/wiql/filters`, { method: 'POST', headers: headers(), body: JSON.stringify({ name: wiqlFilterName, query: wiqlQuery, isShared: false }) })
+      .then(r => r.json()).then(f => { setWiqlFilters(prev => [f, ...prev]); setWiqlFilterName(''); showToast('Filter saved'); })
+      .catch(() => showToast('Failed to save filter', 'error'));
+  }
+
+  // ---- Iteration 4 fetches ----
+  function fetchRaidDashboard(pid) {
+    if (!pid) return;
+    fetch(`${API}/raid-dashboard?projectId=${pid}`, { headers: headers() })
+      .then(r => r.json()).then(setRaidDashboard).catch(() => {});
+  }
+  function fetchRisks(pid)       { fetch(`${API}/risks?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setRisks(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchAssumptions(pid) { fetch(`${API}/assumptions?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setAssumptions(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchPmIssues(pid)    { fetch(`${API}/pm-issues?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setPmIssues(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchDependencies(pid){ fetch(`${API}/dependencies?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setDependencies(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchDecisions(pid)   { fetch(`${API}/decisions?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setDecisions(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchMeetings(pid)    { fetch(`${API}/meetings?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setMeetings(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchActionItems(pid) { fetch(`${API}/action-items?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setActionItems(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchStakeholders(pid){ fetch(`${API}/stakeholders?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setStakeholders(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchLessons(pid)     { fetch(`${API}/lessons-learned?projectId=${pid}`, { headers: headers() }).then(r => r.json()).then(d => setLessonsLearned(Array.isArray(d) ? d : [])).catch(() => {}); }
+
+  function pmCreate(type, payload) {
+    const endpoints = {
+      risk: 'risks', assumption: 'assumptions', issue: 'pm-issues', dependency: 'dependencies',
+      decision: 'decisions', meeting: 'meetings', action: 'action-items', stakeholder: 'stakeholders', lesson: 'lessons-learned'
+    };
+    const ep = endpoints[type];
+    if (!ep) return;
+    fetch(`${API}/${ep}`, { method: 'POST', headers: headers(), body: JSON.stringify({ ...payload, projectId: pmProjectId, workspaceId: 'WS-001' }) })
+      .then(r => r.json()).then(() => {
+        setPmFormOpen(null); setPmForm({});
+        if (type === 'risk')        { fetchRisks(pmProjectId); fetchRaidDashboard(pmProjectId); }
+        if (type === 'assumption')  { fetchAssumptions(pmProjectId); fetchRaidDashboard(pmProjectId); }
+        if (type === 'issue')       { fetchPmIssues(pmProjectId); fetchRaidDashboard(pmProjectId); }
+        if (type === 'dependency')  { fetchDependencies(pmProjectId); fetchRaidDashboard(pmProjectId); }
+        if (type === 'decision')    { fetchDecisions(pmProjectId); }
+        if (type === 'meeting')     { fetchMeetings(pmProjectId); }
+        if (type === 'action')      { fetchActionItems(pmProjectId); }
+        if (type === 'stakeholder') { fetchStakeholders(pmProjectId); }
+        if (type === 'lesson')      { fetchLessons(pmProjectId); }
+        showToast('Created successfully');
+      }).catch(err => showToast(err.message, 'error'));
+  }
+
+  function pmDelete(type, id) {
+    const endpoints = {
+      risk: 'risks', assumption: 'assumptions', issue: 'pm-issues', dependency: 'dependencies',
+      decision: 'decisions', meeting: 'meetings', action: 'action-items', stakeholder: 'stakeholders', lesson: 'lessons-learned'
+    };
+    const ep = endpoints[type];
+    if (!ep) return;
+    fetch(`${API}/${ep}/${id}`, { method: 'DELETE', headers: headers() }).then(() => {
+      if (type === 'risk')        { fetchRisks(pmProjectId); fetchRaidDashboard(pmProjectId); }
+      if (type === 'assumption')  { fetchAssumptions(pmProjectId); fetchRaidDashboard(pmProjectId); }
+      if (type === 'issue')       { fetchPmIssues(pmProjectId); fetchRaidDashboard(pmProjectId); }
+      if (type === 'dependency')  { fetchDependencies(pmProjectId); fetchRaidDashboard(pmProjectId); }
+      if (type === 'decision')    fetchDecisions(pmProjectId);
+      if (type === 'meeting')     fetchMeetings(pmProjectId);
+      if (type === 'action')      fetchActionItems(pmProjectId);
+      if (type === 'stakeholder') fetchStakeholders(pmProjectId);
+      if (type === 'lesson')      fetchLessons(pmProjectId);
+      showToast('Deleted');
+    }).catch(() => showToast('Delete failed', 'error'));
+  }
+
   function fetchTrash() {
     fetch(`${API}/work-items/trash`, { headers: headers() })
       .then(r => r.json()).then(d => setTrashItems(Array.isArray(d) ? d : [])).catch(() => {});
@@ -998,6 +1132,14 @@ export default function App() {
             {sprints.find(s => s.status === 'ACTIVE') && <span className="ml-auto w-2 h-2 rounded-full bg-semantic-success flex-shrink-0"></span>}
           </NavItem>
           <NavItem active={view === 'reports'} onClick={() => { setView('reports'); fetchSprints(); fetchVelocityData(); }} icon="📊">Reports</NavItem>
+
+          <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">Configuration</p>
+          <NavItem active={view === 'settings3'} onClick={() => { setView('settings3'); fetchWorkflows(); fetchFieldDefs(); fetchRoles(); fetchWorkItemTypes(); }} icon="⚙">Workflows & Fields</NavItem>
+          <NavItem active={view === 'wiql'} onClick={() => { setView('wiql'); fetchWiqlFilters(); }} icon="🔍">WIQL Query</NavItem>
+
+          <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 pt-3 pb-1">Project Management</p>
+          <NavItem active={view === 'pm'} onClick={() => { setView('pm'); if (projects.length) { const pid = projects[0].id; setPmProjectId(pid); fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); } }} icon="📋">PM Artifacts</NavItem>
+
           <NavItem active={view === 'projects'} onClick={() => setView('projects')} icon="📁">
             Projects
             {projects.length > 0 && <span className="ml-auto text-[10px] bg-neutral-100 text-neutral-600 rounded-full px-1.5 py-0.5">{projects.length}</span>}
@@ -2118,6 +2260,690 @@ export default function App() {
             </div>
           )}
 
+          {/* ======================================================
+               ITERATION 3 — WORKFLOWS & FIELDS SETTINGS
+             ====================================================== */}
+          {view === 'settings3' && (
+            <div className="p-8 max-w-5xl">
+              <h1 className="text-2xl font-bold text-brand-navy mb-1">Workflows & Fields</h1>
+              <p className="text-sm text-neutral-400 mb-5">Configure workflows, custom fields, permissions, and work item types</p>
+
+              {/* Sub-tabs */}
+              <div className="flex gap-1 mb-6 border-b border-neutral-200">
+                {[
+                  { key: 'workflows',   label: 'Workflows' },
+                  { key: 'fields',      label: 'Custom Fields' },
+                  { key: 'permissions', label: 'Permissions' },
+                  { key: 'types',       label: 'Item Types' },
+                ].map(t => (
+                  <button key={t.key} onClick={() => {
+                    setSettings3Tab(t.key);
+                    if (t.key === 'permissions') fetchPermMatrix();
+                  }}
+                    className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${settings3Tab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700'}`}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* WORKFLOWS TAB */}
+              {settings3Tab === 'workflows' && (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="font-semibold text-neutral-900">Workflow Definitions</h2>
+                    <Button variant="action" onClick={() => {
+                      fetch(`${API}/workflows`, { method: 'POST', headers: headers(), body: JSON.stringify({ name: 'New Workflow', workspaceId: 'WS-001', isDefault: false }) })
+                        .then(r => r.json()).then(() => fetchWorkflows());
+                    }}>+ New Workflow</Button>
+                  </div>
+                  {workflows.length === 0
+                    ? <EmptyState icon="⚙" title="No workflows yet" subtitle="Create a workflow to define statuses and transitions for your work items." action={<Button variant="action" onClick={() => { fetch(`${API}/workflows`, { method: 'POST', headers: headers(), body: JSON.stringify({ name: 'Default Workflow', workspaceId: 'WS-001', isDefault: true }) }).then(r => r.json()).then(() => fetchWorkflows()); }}>Create default workflow</Button>} />
+                    : <div className="space-y-3">
+                        {workflows.map(wf => (
+                          <div key={wf.id} className="bg-white border border-neutral-200 rounded-xl p-5">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <span className="font-semibold text-neutral-900">{wf.name}</span>
+                                {wf.isDefault && <span className="text-[10px] bg-brand-navy text-white px-2 py-0.5 rounded-full font-semibold">DEFAULT</span>}
+                                {wf.itemType && <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded">{wf.itemType}</span>}
+                              </div>
+                              <div className="flex gap-2">
+                                <span className="font-mono text-xs text-neutral-400">{wf.id}</span>
+                                <button onClick={() => fetch(`${API}/workflows/${wf.id}`, { method: 'DELETE', headers: headers() }).then(() => fetchWorkflows())}
+                                  className="text-xs text-semantic-danger hover:underline">Delete</button>
+                              </div>
+                            </div>
+                            <p className="text-xs text-neutral-400">Visual workflow editor — add statuses and transitions via the API or future drag-drop UI</p>
+                          </div>
+                        ))}
+                      </div>
+                  }
+                </div>
+              )}
+
+              {/* CUSTOM FIELDS TAB */}
+              {settings3Tab === 'fields' && (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="font-semibold text-neutral-900">Custom Field Library</h2>
+                    <Button variant="action" onClick={() => {
+                      const name = window.prompt('Field name:');
+                      const type = window.prompt('Field type (TEXT/NUMBER/SELECT/DATE/CHECKBOX/USER/URL/CURRENCY/MULTI_SELECT/TEXTAREA/EMAIL/PHONE/RATING/PROGRESS/FILE/JSON):') || 'TEXT';
+                      if (name) {
+                        fetch(`${API}/field-defs`, { method: 'POST', headers: headers(), body: JSON.stringify({ name, fieldType: type.toUpperCase(), fieldKey: name.toLowerCase().replace(/\s+/g,'_'), workspaceId: 'WS-001' }) })
+                          .then(r => r.json()).then(() => fetchFieldDefs());
+                      }
+                    }}>+ New Field</Button>
+                  </div>
+                  {fieldDefs.length === 0
+                    ? <EmptyState icon="📝" title="No custom fields" subtitle="Create custom fields to capture domain-specific data on work items." />
+                    : <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead className="bg-neutral-50 border-b border-neutral-200">
+                            <tr>
+                              {['Field Name', 'Type', 'Key', 'Required', ''].map(h => (
+                                <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-neutral-100">
+                            {fieldDefs.map(fd => (
+                              <tr key={fd.id} className="hover:bg-neutral-50">
+                                <td className="px-4 py-3 font-medium text-neutral-900">{fd.name}</td>
+                                <td className="px-4 py-3"><span className="text-xs bg-brand-navy/10 text-brand-navy px-2 py-0.5 rounded font-mono">{fd.fieldType}</span></td>
+                                <td className="px-4 py-3 font-mono text-xs text-neutral-400">{fd.fieldKey}</td>
+                                <td className="px-4 py-3"><span className={`text-xs font-semibold ${fd.required ? 'text-semantic-danger' : 'text-neutral-300'}`}>{fd.required ? '✓ Required' : 'Optional'}</span></td>
+                                <td className="px-4 py-3">
+                                  <button onClick={() => fetch(`${API}/field-defs/${fd.id}`, { method: 'DELETE', headers: headers() }).then(() => fetchFieldDefs())}
+                                    className="text-xs text-semantic-danger hover:underline">Delete</button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                  }
+                </div>
+              )}
+
+              {/* PERMISSIONS MATRIX TAB */}
+              {settings3Tab === 'permissions' && (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="font-semibold text-neutral-900">Roles & Permissions Matrix</h2>
+                    <Button variant="action" onClick={() => {
+                      const name = window.prompt('Role name:');
+                      if (name) {
+                        fetch(`${API}/permission-schemes/roles`, { method: 'POST', headers: headers(), body: JSON.stringify({ name, workspaceId: 'WS-001', tier: 2 }) })
+                          .then(r => r.json()).then(() => { fetchRoles(); fetchPermMatrix(); });
+                      }
+                    }}>+ New Role</Button>
+                  </div>
+                  {!permMatrix
+                    ? <div className="text-center py-12 text-neutral-400">Loading permissions matrix...</div>
+                    : permMatrix.matrix.length === 0
+                      ? <EmptyState icon="🔐" title="No custom roles" subtitle="Create roles to define fine-grained access control for your team." />
+                      : <div className="overflow-x-auto">
+                          <table className="w-full text-xs border border-neutral-200 rounded-xl overflow-hidden">
+                            <thead className="bg-neutral-50">
+                              <tr>
+                                <th className="text-left px-4 py-2.5 font-semibold text-neutral-700 sticky left-0 bg-neutral-50">Permission</th>
+                                {permMatrix.roles.map(r => (
+                                  <th key={r.id} className="px-3 py-2.5 font-semibold text-neutral-700 text-center min-w-[90px]">
+                                    <div>{r.name}</div>
+                                    <div className="font-normal text-neutral-400">Tier {r.tier}</div>
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-neutral-100">
+                              {permMatrix.allPermissions.map(perm => (
+                                <tr key={perm} className="hover:bg-neutral-50">
+                                  <td className="px-4 py-2 font-mono sticky left-0 bg-white">{perm}</td>
+                                  {permMatrix.matrix.map(row => (
+                                    <td key={row.role.id} className="px-3 py-2 text-center">
+                                      <span className={`text-sm font-bold ${row.permissions[perm] ? 'text-semantic-success' : 'text-neutral-200'}`}>
+                                        {row.permissions[perm] ? '✓' : '—'}
+                                      </span>
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                  }
+                </div>
+              )}
+
+              {/* ITEM TYPES TAB */}
+              {settings3Tab === 'types' && (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="font-semibold text-neutral-900">Work Item Types</h2>
+                    <Button variant="action" onClick={() => {
+                      const label = window.prompt('Type label (e.g. Meter Rollout):');
+                      const icon  = window.prompt('Icon emoji (e.g. 📟):') || '📦';
+                      if (label) {
+                        const key = label.toUpperCase().replace(/\s+/g,'_');
+                        fetch(`${API}/work-item-types`, { method: 'POST', headers: headers(), body: JSON.stringify({ label, typeKey: key, icon, color: '#6b7280', workspaceId: 'WS-001' }) })
+                          .then(r => r.json()).then(() => fetchWorkItemTypes());
+                      }
+                    }}>+ Custom Type</Button>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">Built-in Types</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {(workItemTypes.builtIn || []).map(t => (
+                          <div key={t.typeKey} className="bg-white border border-neutral-200 rounded-xl p-4 flex items-center gap-3">
+                            <span className="text-2xl">{t.icon}</span>
+                            <div>
+                              <p className="font-semibold text-neutral-900 text-sm">{t.label}</p>
+                              <p className="text-xs text-neutral-400 font-mono">{t.typeKey}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {(workItemTypes.custom || []).length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">Custom Types</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          {(workItemTypes.custom || []).map(t => (
+                            <div key={t.id} className="bg-white border border-brand-navy/20 rounded-xl p-4 flex items-center gap-3 relative group">
+                              <span className="text-2xl">{t.icon}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-neutral-900 text-sm">{t.label}</p>
+                                <p className="text-xs text-neutral-400 font-mono truncate">{t.typeKey}</p>
+                              </div>
+                              <button onClick={() => fetch(`${API}/work-item-types/${t.id}`, { method: 'DELETE', headers: headers() }).then(() => fetchWorkItemTypes())}
+                                className="opacity-0 group-hover:opacity-100 text-semantic-danger text-xs transition-opacity absolute top-2 right-2">✕</button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ======================================================
+               ITERATION 3 — WIQL QUERY
+             ====================================================== */}
+          {view === 'wiql' && (
+            <div className="p-8 max-w-5xl">
+              <h1 className="text-2xl font-bold text-brand-navy mb-1">WIQL — Work Item Query Language</h1>
+              <p className="text-sm text-neutral-400 mb-5">Write composable queries to filter work items. Use AND/OR, comparison operators, and functions like currentUser() and today().</p>
+
+              <div className="bg-white border border-neutral-200 rounded-xl p-5 mb-4">
+                <div className="mb-3">
+                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Query</label>
+                  <div className="flex gap-2 mt-2">
+                    <textarea
+                      className="input flex-1 font-mono text-sm resize-none"
+                      rows={3}
+                      placeholder={'priority = High AND assignee = currentUser()\nstatus != Done AND type = Bug\ndueDate < today() AND priority IN (High, Highest)'}
+                      value={wiqlQuery}
+                      onChange={e => setWiqlQuery(e.target.value)}
+                      onKeyDown={e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runWiql(); } }}
+                    />
+                  </div>
+                  {wiqlError && <p className="text-xs text-semantic-danger mt-2 font-mono">{wiqlError}</p>}
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button variant="action" onClick={runWiql}>Run Query (Ctrl+Enter)</Button>
+                  <div className="flex gap-2 items-center flex-1">
+                    <input className="input flex-1 text-sm" placeholder="Filter name..." value={wiqlFilterName} onChange={e => setWiqlFilterName(e.target.value)} />
+                    <Button variant="secondary" onClick={saveWiqlFilter}>Save Filter</Button>
+                  </div>
+                </div>
+                <div className="mt-3 text-xs text-neutral-400">
+                  <span className="font-semibold text-neutral-600">Fields:</span> priority, status, type, assignee, dueDate, sprint, storyPoints &nbsp;·&nbsp;
+                  <span className="font-semibold text-neutral-600">Ops:</span> = != {'<'} {'>'} {'<='} {'>='} IN CONTAINS STARTSWITH &nbsp;·&nbsp;
+                  <span className="font-semibold text-neutral-600">Functions:</span> currentUser() today() now()
+                </div>
+              </div>
+
+              {/* Saved filters */}
+              {wiqlFilters.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Saved Filters</p>
+                  <div className="flex flex-wrap gap-2">
+                    {wiqlFilters.map(f => (
+                      <button key={f.id} onClick={() => { setWiqlQuery(f.query); runWiql(); }}
+                        className="flex items-center gap-2 bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-sm hover:border-brand-navy transition-colors group">
+                        <span className="font-medium text-neutral-900">{f.name}</span>
+                        {f.isShared && <span className="text-[10px] text-neutral-400">shared</span>}
+                        <button onClick={e => { e.stopPropagation(); fetch(`${API}/wiql/filters/${f.id}`, { method: 'DELETE', headers: headers() }).then(() => fetchWiqlFilters()); }}
+                          className="text-neutral-300 hover:text-semantic-danger opacity-0 group-hover:opacity-100 transition-opacity ml-1">✕</button>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Results */}
+              {wiqlResults.length > 0 && (
+                <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+                  <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
+                    <span className="text-sm font-semibold text-neutral-900">{wiqlResults.length} result{wiqlResults.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="divide-y divide-neutral-50 max-h-96 overflow-y-auto">
+                    {wiqlResults.map((item, i) => (
+                      <div key={item.id || i} className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 cursor-pointer"
+                        onClick={() => { const full = workItems.find(w => w.id === item.id); if (full) setSelectedItem(full); }}>
+                        <span className="font-mono text-[10px] text-neutral-400 w-24 flex-shrink-0">{item.id}</span>
+                        <span className="flex-1 text-sm font-medium text-neutral-900 truncate">{item.title}</span>
+                        {item.status && <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>}
+                        {item.priority && <PriorityBadge priority={item.priority} />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {wiqlResults.length === 0 && wiqlQuery && !wiqlError && (
+                <div className="text-center py-12 text-neutral-400">
+                  <p className="text-sm">No results. Run the query to see results.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ======================================================
+               ITERATION 4 — PM ARTIFACTS
+             ====================================================== */}
+          {view === 'pm' && (
+            <div className="p-6 max-w-6xl">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h1 className="text-2xl font-bold text-brand-navy">Project Management</h1>
+                  <p className="text-sm text-neutral-400 mt-0.5">RAID logs, decisions, meetings, action items</p>
+                </div>
+                {/* Project selector */}
+                <select className="input text-sm w-48" value={pmProjectId} onChange={e => {
+                  const pid = e.target.value;
+                  setPmProjectId(pid);
+                  if (pid) { fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); }
+                }}>
+                  <option value="">— Select project —</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+
+              {!pmProjectId ? (
+                <EmptyState icon="📋" title="Select a project" subtitle="Choose a project above to view its PM artifacts." />
+              ) : (
+                <>
+                  {/* Sub-tabs */}
+                  <div className="flex gap-1 mb-5 border-b border-neutral-200 overflow-x-auto">
+                    {[
+                      { key: 'raid',         label: '🎯 RAID Dashboard' },
+                      { key: 'risks',        label: `⚠ Risks (${risks.length})` },
+                      { key: 'assumptions',  label: `💡 Assumptions (${assumptions.length})` },
+                      { key: 'issues',       label: `🔴 Issues (${pmIssues.length})` },
+                      { key: 'deps',         label: `🔗 Dependencies (${dependencies.length})` },
+                      { key: 'decisions',    label: `⚖ Decisions (${decisions.length})` },
+                      { key: 'meetings',     label: `📅 Meetings (${meetings.length})` },
+                      { key: 'actions',      label: `✅ Actions (${actionItems.length})` },
+                      { key: 'stakeholders', label: `👥 Stakeholders (${stakeholders.length})` },
+                      { key: 'lessons',      label: `📚 Lessons (${lessonsLearned.length})` },
+                    ].map(t => (
+                      <button key={t.key} onClick={() => setPmTab(t.key)}
+                        className={`text-xs font-medium px-3 py-2 border-b-2 whitespace-nowrap transition-colors ${pmTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700'}`}>
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* RAID DASHBOARD */}
+                  {pmTab === 'raid' && raidDashboard && (
+                    <div>
+                      {/* Health score */}
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                        <StatCard label="Health Score" value={`${raidDashboard.healthScore}%`} sub="Overall project health" color={raidDashboard.healthScore > 70 ? 'text-semantic-success' : raidDashboard.healthScore > 40 ? 'text-semantic-warning' : 'text-semantic-danger'} icon="❤" />
+                        <StatCard label="Open Risks" value={raidDashboard.riskSummary?.open || 0} sub={`${raidDashboard.riskSummary?.total || 0} total`} color="text-semantic-warning" icon="⚠" onClick={() => setPmTab('risks')} />
+                        <StatCard label="Open Issues" value={raidDashboard.issueSummary?.open || 0} sub={`${raidDashboard.issueSummary?.total || 0} total`} color="text-semantic-danger" icon="🔴" onClick={() => setPmTab('issues')} />
+                        <StatCard label="Blockers" value={raidDashboard.dependencySummary?.blockers || 0} sub={`${raidDashboard.dependencySummary?.total || 0} deps`} color="text-brand-orange" icon="🔗" onClick={() => setPmTab('deps')} />
+                        <StatCard label="Overdue Actions" value={raidDashboard.actionSummary?.overdue || 0} sub={`${raidDashboard.actionSummary?.open || 0} open`} color="text-semantic-danger" icon="⏰" onClick={() => setPmTab('actions')} />
+                      </div>
+
+                      {/* Risk heatmap */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                          <h3 className="font-semibold text-neutral-900 mb-3">Risk Heat Matrix</h3>
+                          {(() => {
+                            const probs = ['VERY_HIGH', 'HIGH', 'MEDIUM', 'LOW'];
+                            const impacts = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+                            return (
+                              <div>
+                                <div className="flex gap-1 mb-1">
+                                  <div className="w-16 flex-shrink-0"></div>
+                                  {impacts.map(i => <div key={i} className="flex-1 text-[9px] text-neutral-400 text-center uppercase">{i}</div>)}
+                                </div>
+                                {probs.map(p => (
+                                  <div key={p} className="flex gap-1 mb-1">
+                                    <div className="w-16 text-[9px] text-neutral-400 flex items-center flex-shrink-0">{p}</div>
+                                    {impacts.map(imp => {
+                                      const count = (raidDashboard.risks || []).filter(r => r.probability === p && r.impact === imp && r.status === 'OPEN').length;
+                                      const heat = (probs.indexOf(p) + impacts.indexOf(imp));
+                                      const bg = count === 0 ? 'bg-neutral-100' : heat >= 5 ? 'bg-semantic-danger' : heat >= 3 ? 'bg-semantic-warning' : 'bg-semantic-success';
+                                      return (
+                                        <div key={imp} className={`flex-1 h-8 rounded flex items-center justify-center text-xs font-bold ${bg} ${count > 0 ? 'text-white' : 'text-neutral-300'}`}>
+                                          {count > 0 ? count : ''}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                ))}
+                                <p className="text-[10px] text-neutral-400 mt-2">Rows = Probability, Columns = Impact. Color = severity.</p>
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Open action items */}
+                        <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                          <h3 className="font-semibold text-neutral-900 mb-3">Overdue & High-Priority Actions</h3>
+                          {(raidDashboard.actionItems || []).filter(a => a.status !== 'DONE').slice(0, 5).map(a => (
+                            <div key={a.id} className="flex items-center gap-3 py-2 border-b border-neutral-50 last:border-0">
+                              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${a.dueDate && new Date(a.dueDate) < new Date() ? 'bg-semantic-danger' : 'bg-semantic-warning'}`}></span>
+                              <span className="flex-1 text-sm text-neutral-900 truncate">{a.title}</span>
+                              {a.dueDate && <span className="text-xs text-neutral-400">{a.dueDate}</span>}
+                            </div>
+                          ))}
+                          {(raidDashboard.actionItems || []).filter(a => a.status !== 'DONE').length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No open action items 🎉</p>}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {pmTab === 'raid' && !raidDashboard && <div className="text-center py-12 text-neutral-400">Loading RAID dashboard...</div>}
+
+                  {/* RISKS */}
+                  {pmTab === 'risks' && (
+                    <PmArtifactList
+                      title="Risks Register" icon="⚠"
+                      items={risks}
+                      columns={['Title', 'Category', 'Probability', 'Impact', 'Status', 'Owner']}
+                      renderRow={r => [r.title, r.category || '—', r.probability, r.impact, r.status, users.find(u => u.id === r.ownerId)?.fullName || '—']}
+                      onDelete={id => pmDelete('risk', id)}
+                      onAdd={() => { setPmFormOpen('risk'); setPmForm({ probability: 'MEDIUM', impact: 'MEDIUM', status: 'OPEN' }); }}
+                    />
+                  )}
+
+                  {/* ASSUMPTIONS */}
+                  {pmTab === 'assumptions' && (
+                    <PmArtifactList
+                      title="Assumptions Log" icon="💡"
+                      items={assumptions}
+                      columns={['Title', 'Validation', 'Owner', 'Expiry']}
+                      renderRow={a => [a.title, a.validationStatus, users.find(u => u.id === a.ownerId)?.fullName || '—', a.expiryDate || '—']}
+                      onDelete={id => pmDelete('assumption', id)}
+                      onAdd={() => { setPmFormOpen('assumption'); setPmForm({ validationStatus: 'UNVALIDATED' }); }}
+                    />
+                  )}
+
+                  {/* PM ISSUES */}
+                  {pmTab === 'issues' && (
+                    <PmArtifactList
+                      title="Issues Log" icon="🔴"
+                      items={pmIssues}
+                      columns={['Title', 'Priority', 'Status', 'Owner']}
+                      renderRow={i => [i.title, i.priority, i.status, users.find(u => u.id === i.ownerId)?.fullName || '—']}
+                      onDelete={id => pmDelete('issue', id)}
+                      onAdd={() => { setPmFormOpen('issue'); setPmForm({ priority: 'MEDIUM', status: 'OPEN' }); }}
+                    />
+                  )}
+
+                  {/* DEPENDENCIES */}
+                  {pmTab === 'deps' && (
+                    <PmArtifactList
+                      title="Dependencies Tracker" icon="🔗"
+                      items={dependencies}
+                      columns={['Title', 'From', 'To', 'Status', 'Deadline', 'Blocker']}
+                      renderRow={d => [d.title, d.dependentTeam || '—', d.providingTeam || '—', d.status, d.deadline || '—', d.isBlocker ? '🚫 YES' : 'No']}
+                      onDelete={id => pmDelete('dependency', id)}
+                      onAdd={() => { setPmFormOpen('dependency'); setPmForm({ status: 'PENDING', isBlocker: false }); }}
+                    />
+                  )}
+
+                  {/* DECISIONS */}
+                  {pmTab === 'decisions' && (
+                    <PmArtifactList
+                      title="Decisions Register" icon="⚖"
+                      items={decisions}
+                      columns={['Title', 'Status', 'Decision Date', 'Owner']}
+                      renderRow={d => [d.title, d.status, d.decisionDate || '—', users.find(u => u.id === d.ownerId)?.fullName || '—']}
+                      onDelete={id => pmDelete('decision', id)}
+                      onAdd={() => { setPmFormOpen('decision'); setPmForm({ status: 'PROPOSED' }); }}
+                    />
+                  )}
+
+                  {/* MEETINGS */}
+                  {pmTab === 'meetings' && (
+                    <div>
+                      <div className="flex justify-between items-center mb-4">
+                        <h2 className="font-semibold text-neutral-900 flex items-center gap-2"><span>📅</span> Meeting Notes</h2>
+                        <Button variant="action" onClick={() => { setPmFormOpen('meeting'); setPmForm({ meetingType: 'GENERAL', status: 'SCHEDULED' }); }}>+ New Meeting</Button>
+                      </div>
+                      {meetings.length === 0
+                        ? <EmptyState icon="📅" title="No meetings yet" subtitle="Log meeting notes with structured agenda, notes, decisions, and action items." />
+                        : <div className="space-y-3">
+                            {meetings.map(m => (
+                              <div key={m.id} className="bg-white border border-neutral-200 rounded-xl p-5 cursor-pointer hover:shadow-sm transition-shadow"
+                                onClick={() => { setSelectedMeeting(m); setPmTab('meeting-detail'); fetch(`${API}/meetings/${m.id}`, { headers: headers() }).then(r => r.json()).then(d => setMeetingNotes(d.notes || [])); }}>
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-xs bg-brand-navy/10 text-brand-navy px-2 py-0.5 rounded font-medium">{m.meetingType}</span>
+                                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${m.status === 'COMPLETED' ? 'bg-semantic-success/10 text-semantic-success' : m.status === 'CANCELLED' ? 'bg-neutral-100 text-neutral-400' : 'bg-semantic-warning/10 text-semantic-warning'}`}>{m.status}</span>
+                                    </div>
+                                    <p className="font-semibold text-neutral-900">{m.title}</p>
+                                    {m.scheduledAt && <p className="text-xs text-neutral-400 mt-1">📅 {new Date(m.scheduledAt).toLocaleString()}{m.durationMins ? ` · ${m.durationMins}min` : ''}</p>}
+                                    {m.location && <p className="text-xs text-neutral-400">📍 {m.location}</p>}
+                                  </div>
+                                  <button onClick={e => { e.stopPropagation(); pmDelete('meeting', m.id); }} className="text-neutral-300 hover:text-semantic-danger text-xs ml-3">✕</button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                      }
+                    </div>
+                  )}
+
+                  {/* MEETING DETAIL */}
+                  {pmTab === 'meeting-detail' && selectedMeeting && (
+                    <div>
+                      <div className="flex items-center gap-3 mb-5">
+                        <button onClick={() => { setPmTab('meetings'); setSelectedMeeting(null); }} className="text-neutral-400 hover:text-brand-navy text-sm">← Back</button>
+                        <h2 className="font-bold text-brand-navy text-lg">{selectedMeeting.title}</h2>
+                        <span className="text-xs bg-brand-navy/10 text-brand-navy px-2 py-0.5 rounded">{selectedMeeting.meetingType}</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {['AGENDA', 'NOTES', 'DECISIONS', 'ACTIONS'].map(section => {
+                          const note = Array.isArray(meetingNotes) ? meetingNotes.find(n => n.section === section) : null;
+                          return (
+                            <div key={section} className="bg-white border border-neutral-200 rounded-xl p-4">
+                              <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">{section}</p>
+                              <textarea
+                                className="w-full text-sm text-neutral-900 border-none outline-none resize-none min-h-[100px] bg-transparent"
+                                placeholder={`Enter ${section.toLowerCase()}...`}
+                                defaultValue={note?.content || ''}
+                                onBlur={e => {
+                                  fetch(`${API}/meetings/${selectedMeeting.id}/notes/${section}`, {
+                                    method: 'PUT', headers: headers(),
+                                    body: JSON.stringify({ content: e.target.value })
+                                  }).catch(() => {});
+                                }}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ACTION ITEMS */}
+                  {pmTab === 'actions' && (
+                    <PmArtifactList
+                      title="Action Items" icon="✅"
+                      items={actionItems}
+                      columns={['Title', 'Owner', 'Due Date', 'Status', 'Priority']}
+                      renderRow={a => [a.title, users.find(u => u.id === a.ownerId)?.fullName || '—', a.dueDate || '—', a.status, a.priority]}
+                      onDelete={id => pmDelete('action', id)}
+                      onAdd={() => { setPmFormOpen('action'); setPmForm({ status: 'OPEN', priority: 'MEDIUM' }); }}
+                      statusColors={{ OPEN: 'text-semantic-warning', IN_PROGRESS: 'text-brand-navy', DONE: 'text-semantic-success', CANCELLED: 'text-neutral-400' }}
+                    />
+                  )}
+
+                  {/* STAKEHOLDERS */}
+                  {pmTab === 'stakeholders' && (
+                    <PmArtifactList
+                      title="Stakeholder Register" icon="👥"
+                      items={stakeholders}
+                      columns={['Name', 'Role', 'Org', 'Influence', 'Interest', 'Strategy']}
+                      renderRow={s => [s.name, s.role || '—', s.organization || '—', s.influence, s.interest, s.engagementStrategy]}
+                      onDelete={id => pmDelete('stakeholder', id)}
+                      onAdd={() => { setPmFormOpen('stakeholder'); setPmForm({ influence: 'MEDIUM', interest: 'MEDIUM', engagementStrategy: 'INFORM', communicationFreq: 'MONTHLY' }); }}
+                    />
+                  )}
+
+                  {/* LESSONS LEARNED */}
+                  {pmTab === 'lessons' && (
+                    <PmArtifactList
+                      title="Lessons Learned" icon="📚"
+                      items={lessonsLearned}
+                      columns={['Title', 'Category', 'Created']}
+                      renderRow={ll => [ll.title, ll.category || '—', ll.createdAt ? new Date(ll.createdAt).toLocaleDateString() : '—']}
+                      onDelete={id => pmDelete('lesson', id)}
+                      onAdd={() => { setPmFormOpen('lesson'); setPmForm({ category: 'PROCESS' }); }}
+                    />
+                  )}
+                </>
+              )}
+
+              {/* PM CREATE MODAL */}
+              {pmFormOpen && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={e => { if (e.target === e.currentTarget) { setPmFormOpen(null); setPmForm({}); } }}>
+                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+                    <h2 className="font-bold text-xl text-brand-navy mb-4 capitalize">New {pmFormOpen.replace('issue','PM Issue').replace('lesson','Lesson Learned').replace('action','Action Item').replace('dependency','Dependency')}</h2>
+                    <div className="space-y-3">
+                      <Field label="Title">
+                        <input className="input" placeholder="Brief title" value={pmForm.title || ''} onChange={e => setPmForm(p => ({ ...p, title: e.target.value }))} autoFocus />
+                      </Field>
+                      <Field label="Description">
+                        <textarea className="input" rows={2} placeholder="Details..." value={pmForm.description || ''} onChange={e => setPmForm(p => ({ ...p, description: e.target.value }))} />
+                      </Field>
+
+                      {pmFormOpen === 'risk' && <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Probability">
+                            <select className="input" value={pmForm.probability || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, probability: e.target.value }))}>
+                              {['LOW','MEDIUM','HIGH','VERY_HIGH'].map(v => <option key={v}>{v}</option>)}
+                            </select>
+                          </Field>
+                          <Field label="Impact">
+                            <select className="input" value={pmForm.impact || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, impact: e.target.value }))}>
+                              {['LOW','MEDIUM','HIGH','CRITICAL'].map(v => <option key={v}>{v}</option>)}
+                            </select>
+                          </Field>
+                        </div>
+                        <Field label="Mitigation Plan">
+                          <textarea className="input" rows={2} placeholder="How will you mitigate this risk?" value={pmForm.mitigationPlan || ''} onChange={e => setPmForm(p => ({ ...p, mitigationPlan: e.target.value }))} />
+                        </Field>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
+                          <Field label="Review Date"><input type="date" className="input" value={pmForm.reviewDate || ''} onChange={e => setPmForm(p => ({ ...p, reviewDate: e.target.value || null }))} /></Field>
+                        </div>
+                      </>}
+
+                      {pmFormOpen === 'assumption' && <>
+                        <Field label="Rationale"><textarea className="input" rows={2} placeholder="Why was this assumption made?" value={pmForm.rationale || ''} onChange={e => setPmForm(p => ({ ...p, rationale: e.target.value }))} /></Field>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
+                          <Field label="Expiry Date"><input type="date" className="input" value={pmForm.expiryDate || ''} onChange={e => setPmForm(p => ({ ...p, expiryDate: e.target.value || null }))} /></Field>
+                        </div>
+                      </>}
+
+                      {pmFormOpen === 'issue' && <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Priority"><select className="input" value={pmForm.priority || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, priority: e.target.value }))}>{['CRITICAL','HIGH','MEDIUM','LOW'].map(v => <option key={v}>{v}</option>)}</select></Field>
+                          <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
+                        </div>
+                        <Field label="Impact"><textarea className="input" rows={2} placeholder="Impact of this issue..." value={pmForm.impact || ''} onChange={e => setPmForm(p => ({ ...p, impact: e.target.value }))} /></Field>
+                      </>}
+
+                      {pmFormOpen === 'dependency' && <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Dependent Team"><input className="input" placeholder="Team that needs this" value={pmForm.dependentTeam || ''} onChange={e => setPmForm(p => ({ ...p, dependentTeam: e.target.value }))} /></Field>
+                          <Field label="Providing Team"><input className="input" placeholder="Team that provides this" value={pmForm.providingTeam || ''} onChange={e => setPmForm(p => ({ ...p, providingTeam: e.target.value }))} /></Field>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Deadline"><input type="date" className="input" value={pmForm.deadline || ''} onChange={e => setPmForm(p => ({ ...p, deadline: e.target.value || null }))} /></Field>
+                          <Field label="Status"><select className="input" value={pmForm.status || 'PENDING'} onChange={e => setPmForm(p => ({ ...p, status: e.target.value }))}>{['PENDING','IN_PROGRESS','RESOLVED','BLOCKED'].map(v => <option key={v}>{v}</option>)}</select></Field>
+                        </div>
+                        <label className="flex items-center gap-2 text-sm text-neutral-700"><input type="checkbox" checked={!!pmForm.isBlocker} onChange={e => setPmForm(p => ({ ...p, isBlocker: e.target.checked }))} /> <span>This is a blocker</span></label>
+                      </>}
+
+                      {pmFormOpen === 'decision' && <>
+                        <Field label="Alternatives Considered"><textarea className="input" rows={2} placeholder="What other options were considered?" value={pmForm.alternatives || ''} onChange={e => setPmForm(p => ({ ...p, alternatives: e.target.value }))} /></Field>
+                        <Field label="Rationale"><textarea className="input" rows={2} placeholder="Why was this decision made?" value={pmForm.rationale || ''} onChange={e => setPmForm(p => ({ ...p, rationale: e.target.value }))} /></Field>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
+                          <Field label="Decision Date"><input type="date" className="input" value={pmForm.decisionDate || ''} onChange={e => setPmForm(p => ({ ...p, decisionDate: e.target.value || null }))} /></Field>
+                        </div>
+                      </>}
+
+                      {pmFormOpen === 'meeting' && <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Type"><select className="input" value={pmForm.meetingType || 'GENERAL'} onChange={e => setPmForm(p => ({ ...p, meetingType: e.target.value }))}>{['GENERAL','STANDUP','PLANNING','RETRO','REVIEW','STEERING'].map(v => <option key={v}>{v}</option>)}</select></Field>
+                          <Field label="Scheduled"><input type="datetime-local" className="input" value={pmForm.scheduledAt || ''} onChange={e => setPmForm(p => ({ ...p, scheduledAt: e.target.value || null }))} /></Field>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Duration (min)"><input type="number" className="input" value={pmForm.durationMins || ''} onChange={e => setPmForm(p => ({ ...p, durationMins: parseInt(e.target.value) || null }))} /></Field>
+                          <Field label="Location"><input className="input" placeholder="Room / URL" value={pmForm.location || ''} onChange={e => setPmForm(p => ({ ...p, location: e.target.value }))} /></Field>
+                        </div>
+                      </>}
+
+                      {pmFormOpen === 'action' && <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
+                          <Field label="Due Date"><input type="date" className="input" value={pmForm.dueDate || ''} onChange={e => setPmForm(p => ({ ...p, dueDate: e.target.value || null }))} /></Field>
+                        </div>
+                        <Field label="Priority"><select className="input" value={pmForm.priority || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, priority: e.target.value }))}>{['CRITICAL','HIGH','MEDIUM','LOW'].map(v => <option key={v}>{v}</option>)}</select></Field>
+                      </>}
+
+                      {pmFormOpen === 'stakeholder' && <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Role"><input className="input" placeholder="PM / Sponsor / Customer..." value={pmForm.role || ''} onChange={e => setPmForm(p => ({ ...p, role: e.target.value }))} /></Field>
+                          <Field label="Organisation"><input className="input" placeholder="Company name" value={pmForm.organization || ''} onChange={e => setPmForm(p => ({ ...p, organization: e.target.value }))} /></Field>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Influence"><select className="input" value={pmForm.influence || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, influence: e.target.value }))}>{['LOW','MEDIUM','HIGH'].map(v => <option key={v}>{v}</option>)}</select></Field>
+                          <Field label="Interest"><select className="input" value={pmForm.interest || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, interest: e.target.value }))}>{['LOW','MEDIUM','HIGH'].map(v => <option key={v}>{v}</option>)}</select></Field>
+                        </div>
+                        <Field label="Strategy"><select className="input" value={pmForm.engagementStrategy || 'INFORM'} onChange={e => setPmForm(p => ({ ...p, engagementStrategy: e.target.value }))}>{['INFORM','CONSULT','INVOLVE','COLLABORATE','EMPOWER'].map(v => <option key={v}>{v}</option>)}</select></Field>
+                      </>}
+
+                      {pmFormOpen === 'lesson' && <>
+                        <Field label="Category"><select className="input" value={pmForm.category || 'PROCESS'} onChange={e => setPmForm(p => ({ ...p, category: e.target.value }))}>{['PROCESS','TECHNICAL','COMMUNICATION','RISK','OTHER'].map(v => <option key={v}>{v}</option>)}</select></Field>
+                        <Field label="What Worked"><textarea className="input" rows={2} value={pmForm.whatWorked || ''} onChange={e => setPmForm(p => ({ ...p, whatWorked: e.target.value }))} /></Field>
+                        <Field label="What Didn't Work"><textarea className="input" rows={2} value={pmForm.whatDidntWork || ''} onChange={e => setPmForm(p => ({ ...p, whatDidntWork: e.target.value }))} /></Field>
+                        <Field label="Recommendation"><textarea className="input" rows={2} value={pmForm.recommendation || ''} onChange={e => setPmForm(p => ({ ...p, recommendation: e.target.value }))} /></Field>
+                      </>}
+                    </div>
+                    <div className="flex gap-3 mt-5">
+                      <Button variant="action" onClick={() => pmCreate(pmFormOpen, pmForm)} disabled={!pmForm.title}>Create</Button>
+                      <Button variant="secondary" onClick={() => { setPmFormOpen(null); setPmForm({}); }}>Cancel</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* TRASH VIEW */}
           {view === 'trash' && (
             <div className="p-8 max-w-3xl">
@@ -2818,6 +3644,49 @@ const PRIORITY_CONFIG = {
 function PriorityBadge({ priority }) {
   const p = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.MEDIUM;
   return <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${p.bg} ${p.color}`}>{p.label}</span>;
+}
+
+function PmArtifactList({ title, icon, items, columns, renderRow, onDelete, onAdd, statusColors = {} }) {
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="font-semibold text-neutral-900 flex items-center gap-2"><span>{icon}</span> {title}</h2>
+        <Button variant="action" onClick={onAdd}>+ New</Button>
+      </div>
+      {items.length === 0
+        ? <EmptyState icon={icon} title={`No ${title.toLowerCase()} yet`} subtitle="Click + New to add your first entry." action={<Button variant="action" onClick={onAdd}>+ New</Button>} />
+        : <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-neutral-50 border-b border-neutral-200">
+                <tr>
+                  {columns.map(c => <th key={c} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{c}</th>)}
+                  <th className="px-4 py-2.5"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {items.map(item => {
+                  const cells = renderRow(item);
+                  return (
+                    <tr key={item.id} className="hover:bg-neutral-50">
+                      {cells.map((cell, i) => (
+                        <td key={i} className={`px-4 py-3 ${i === 0 ? 'font-medium text-neutral-900 max-w-xs truncate' : 'text-neutral-600 text-xs'}`}>
+                          {i === 0 ? cell : (statusColors[cell]
+                            ? <span className={`font-semibold ${statusColors[cell]}`}>{cell}</span>
+                            : cell)}
+                        </td>
+                      ))}
+                      <td className="px-4 py-3">
+                        <button onClick={() => onDelete(item.id)} className="text-neutral-300 hover:text-semantic-danger text-xs transition-colors">Delete</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+      }
+    </div>
+  );
 }
 
 function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {

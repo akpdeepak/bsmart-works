@@ -45,7 +45,7 @@ public class WorkItemController {
         } else {
             items = jdbc.query("SELECT * FROM work_items WHERE deleted_at IS NULL ORDER BY created_at ASC", this::mapRow);
         }
-        items.forEach(this::attachTags);
+        attachTagsBatch(items);
         attachStarred(items, userId);
         return items;
     }
@@ -55,7 +55,7 @@ public class WorkItemController {
         List<WorkItem> items = jdbc.query(
             "SELECT * FROM work_items WHERE deleted_at IS NOT NULL AND deleted_at > NOW() - INTERVAL '30 days' ORDER BY deleted_at DESC",
             this::mapRow);
-        items.forEach(this::attachTags);
+        attachTagsBatch(items);
         return items;
     }
 
@@ -89,7 +89,8 @@ public class WorkItemController {
         List<WorkItem> items = jdbc.query(
             "SELECT wi.* FROM work_items wi JOIN starred_items si ON si.work_item_id = wi.id WHERE si.user_id = ? AND wi.deleted_at IS NULL ORDER BY si.created_at DESC",
             this::mapRow, userId);
-        items.forEach(i -> { attachTags(i); i.setStarred(true); });
+        attachTagsBatch(items);
+        items.forEach(i -> i.setStarred(true));
         return items;
     }
 
@@ -107,7 +108,7 @@ public class WorkItemController {
             try { w.setStarred(rs.getInt("is_starred") == 1); } catch (Exception ignored) {}
             return w;
         }, userId, pattern, pattern);
-        items.forEach(this::attachTags);
+        attachTagsBatch(items);
         return items;
     }
 
@@ -149,7 +150,7 @@ public class WorkItemController {
     public List<WorkItem> myWorkItems(@RequestParam(required = false) String userId) {
         String requestedUserId = authenticatedUser.id();
         List<WorkItem> items = repository.findByAssigneeId(requestedUserId);
-        items.forEach(this::attachTags);
+        attachTagsBatch(items);
         return items;
     }
 
@@ -310,6 +311,24 @@ public class WorkItemController {
         List<String> tags = jdbc.queryForList(
                 "SELECT tag FROM tags WHERE work_item_id = ? ORDER BY id", String.class, item.getId());
         item.setTags(tags);
+    }
+
+    /**
+     * Batch-load tags for a list of work items in ONE query, avoiding the N+1
+     * pattern of calling attachTags() per item (e.g. 351 items -> 351 queries).
+     */
+    private void attachTagsBatch(List<WorkItem> items) {
+        if (items.isEmpty()) return;
+        List<String> ids = items.stream().map(WorkItem::getId).toList();
+        String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
+        java.util.Map<String, List<String>> tagsByItem = new java.util.HashMap<>();
+        jdbc.query(
+            "SELECT work_item_id, tag FROM tags WHERE work_item_id IN (" + placeholders + ") ORDER BY id",
+            (org.springframework.jdbc.core.RowCallbackHandler) rs ->
+                tagsByItem.computeIfAbsent(rs.getString("work_item_id"), k -> new java.util.ArrayList<>())
+                          .add(rs.getString("tag")),
+            ids.toArray());
+        items.forEach(i -> i.setTags(tagsByItem.getOrDefault(i.getId(), new java.util.ArrayList<>())));
     }
 
     private void saveTags(String workItemId, List<String> tags) {

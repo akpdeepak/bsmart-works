@@ -2,9 +2,9 @@ package com.example.demo;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import jakarta.transaction.Transactional;
 import java.time.OffsetDateTime;
 import java.util.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/permission-schemes")
@@ -15,17 +15,20 @@ public class PermissionSchemeController {
     private final RolePermissionRepository rolePermRepo;
     private final FieldVisibilityRepository fieldVisRepo;
     private final AuthenticatedUser authenticatedUser;
+    private final PermissionSchemeService permissionSchemeService;
 
     public PermissionSchemeController(PermissionSchemeRepository schemeRepo,
                                        RoleDefRepository roleDefRepo,
                                        RolePermissionRepository rolePermRepo,
                                        FieldVisibilityRepository fieldVisRepo,
-                                       AuthenticatedUser authenticatedUser) {
+                                       AuthenticatedUser authenticatedUser,
+                                       PermissionSchemeService permissionSchemeService) {
         this.schemeRepo = schemeRepo;
         this.roleDefRepo = roleDefRepo;
         this.rolePermRepo = rolePermRepo;
         this.fieldVisRepo = fieldVisRepo;
         this.authenticatedUser = authenticatedUser;
+        this.permissionSchemeService = permissionSchemeService;
     }
 
     @GetMapping
@@ -53,14 +56,14 @@ public class PermissionSchemeController {
     }
 
     @PostMapping
-    public PermissionScheme create(@RequestBody PermissionScheme scheme) {
+    public PermissionScheme create(@Valid @RequestBody PermissionScheme scheme) {
         scheme.setId("PS-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         scheme.setCreatedAt(OffsetDateTime.now());
         return schemeRepo.save(scheme);
     }
 
     @PutMapping("/{id}")
-    public PermissionScheme update(@PathVariable String id, @RequestBody PermissionScheme updated) {
+    public PermissionScheme update(@PathVariable String id, @Valid @RequestBody PermissionScheme updated) {
         return schemeRepo.findById(id).map(s -> {
             s.setName(updated.getName());
             s.setDescription(updated.getDescription());
@@ -83,14 +86,14 @@ public class PermissionSchemeController {
     }
 
     @PostMapping("/roles")
-    public RoleDef createRole(@RequestBody RoleDef role) {
+    public RoleDef createRole(@Valid @RequestBody RoleDef role) {
         role.setId("ROLE-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         role.setCreatedAt(OffsetDateTime.now());
         return roleDefRepo.save(role);
     }
 
     @PutMapping("/roles/{id}")
-    public RoleDef updateRole(@PathVariable String id, @RequestBody RoleDef updated) {
+    public RoleDef updateRole(@PathVariable String id, @Valid @RequestBody RoleDef updated) {
         return roleDefRepo.findById(id).map(r -> {
             r.setName(updated.getName());
             r.setDescription(updated.getDescription());
@@ -100,29 +103,16 @@ public class PermissionSchemeController {
     }
 
     @DeleteMapping("/roles/{id}")
-    @Transactional
     public ResponseEntity<Void> deleteRole(@PathVariable String id) {
-        rolePermRepo.deleteByRoleDefId(id);
-        roleDefRepo.deleteById(id);
+        permissionSchemeService.deleteRole(id);
         return ResponseEntity.noContent().build();
     }
 
     // Set permissions for a role (replaces all)
     @PutMapping("/roles/{id}/permissions")
-    @Transactional
     public List<RolePermission> setPermissions(@PathVariable String id,
-                                                @RequestBody List<Map<String, Object>> permissions) {
-        rolePermRepo.deleteByRoleDefId(id);
-        List<RolePermission> saved = new ArrayList<>();
-        for (Map<String, Object> perm : permissions) {
-            RolePermission rp = new RolePermission();
-            rp.setId("RP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-            rp.setRoleDefId(id);
-            rp.setPermission((String) perm.get("permission"));
-            rp.setGranted(perm.get("granted") == null || Boolean.TRUE.equals(perm.get("granted")));
-            saved.add(rolePermRepo.save(rp));
-        }
-        return saved;
+                                                @Valid @RequestBody List<Map<String, Object>> permissions) {
+        return permissionSchemeService.setPermissions(id, permissions);
     }
 
     // Get permissions matrix: all roles × all known permissions
@@ -164,7 +154,7 @@ public class PermissionSchemeController {
     @PutMapping("/field-visibility/{fieldDefId}/{roleDefId}")
     public FieldVisibility setFieldVisibility(@PathVariable String fieldDefId,
                                                @PathVariable String roleDefId,
-                                               @RequestBody Map<String, String> body) {
+                                               @Valid @RequestBody Map<String, String> body) {
         FieldVisibility fv = fieldVisRepo.findByFieldDefIdAndRoleDefId(fieldDefId, roleDefId)
                 .orElseGet(() -> {
                     FieldVisibility newFv = new FieldVisibility();

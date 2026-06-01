@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/articles")
@@ -63,7 +64,7 @@ public class ArticleController {
     }
 
     @PostMapping
-    public Article createArticle(@RequestBody Article article) {
+    public Article createArticle(@Valid @RequestBody Article article) {
         String userId = authenticatedUser.id();
         article.setId("ART-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         article.setStatus(article.getStatus() != null ? article.getStatus() : "DRAFT");
@@ -82,7 +83,7 @@ public class ArticleController {
     }
 
     @PutMapping("/{id}")
-    public Article updateArticle(@PathVariable String id, @RequestBody Article updated) {
+    public Article updateArticle(@PathVariable String id, @Valid @RequestBody Article updated) {
         String userId = authenticatedUser.id();
         return articleRepository.findById(id).map(a -> {
             a.setTitle(updated.getTitle());
@@ -110,7 +111,7 @@ public class ArticleController {
 
     @PostMapping("/{id}/links")
     public Map<String, String> linkWorkItem(@PathVariable String id,
-                                             @RequestBody Map<String, String> body) {
+                                             @Valid @RequestBody Map<String, String> body) {
         String userId = authenticatedUser.id();
         String workItemId = body.get("workItemId");
         String linkType = body.getOrDefault("linkType", "RELATED");

@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.List;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/cross-project-dependencies")
@@ -33,7 +34,7 @@ public class CrossProjectDependencyController {
     }
 
     @PostMapping
-    public CrossProjectDependency createDependency(@RequestBody CrossProjectDependency dep) {
+    public CrossProjectDependency createDependency(@Valid @RequestBody CrossProjectDependency dep) {
         String userId = authenticatedUser.id();
         dep.setId("DEP-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         dep.setStatus(dep.getStatus() != null ? dep.getStatus() : "PENDING");
@@ -47,7 +48,7 @@ public class CrossProjectDependencyController {
     }
 
     @PutMapping("/{id}")
-    public CrossProjectDependency updateDependency(@PathVariable String id, @RequestBody CrossProjectDependency updated) {
+    public CrossProjectDependency updateDependency(@PathVariable String id, @Valid @RequestBody CrossProjectDependency updated) {
         String userId = authenticatedUser.id();
         return dependencyRepository.findById(id).map(d -> {
             d.setTitle(updated.getTitle());

@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/workflows")
@@ -45,7 +46,7 @@ public class WorkflowController {
     }
 
     @PostMapping
-    public Workflow create(@RequestBody Workflow wf) {
+    public Workflow create(@Valid @RequestBody Workflow wf) {
         wf.setId("WF-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         wf.setCreatedAt(OffsetDateTime.now());
         wf.setUpdatedAt(OffsetDateTime.now());
@@ -53,7 +54,7 @@ public class WorkflowController {
     }
 
     @PutMapping("/{id}")
-    public Workflow update(@PathVariable String id, @RequestBody Workflow updated) {
+    public Workflow update(@PathVariable String id, @Valid @RequestBody Workflow updated) {
         return workflowRepo.findById(id).map(wf -> {
             wf.setName(updated.getName());
             wf.setItemType(updated.getItemType());
@@ -77,7 +78,7 @@ public class WorkflowController {
     }
 
     @PostMapping("/{id}/statuses")
-    public WorkflowStatus addStatus(@PathVariable String id, @RequestBody WorkflowStatus status) {
+    public WorkflowStatus addStatus(@PathVariable String id, @Valid @RequestBody WorkflowStatus status) {
         status.setId("WFS-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         status.setWorkflowId(id);
         return statusRepo.save(status);
@@ -85,7 +86,7 @@ public class WorkflowController {
 
     @PutMapping("/{id}/statuses/{statusId}")
     public WorkflowStatus updateStatus(@PathVariable String id, @PathVariable String statusId,
-                                       @RequestBody WorkflowStatus updated) {
+                                       @Valid @RequestBody WorkflowStatus updated) {
         return statusRepo.findById(statusId).map(s -> {
             s.setName(updated.getName());
             s.setCategory(updated.getCategory());
@@ -105,7 +106,7 @@ public class WorkflowController {
     // Reorder statuses in bulk
     @PutMapping("/{id}/statuses/reorder")
     public List<WorkflowStatus> reorderStatuses(@PathVariable String id,
-                                                 @RequestBody List<Map<String, Object>> order) {
+                                                 @Valid @RequestBody List<Map<String, Object>> order) {
         order.forEach(item -> {
             String statusId = (String) item.get("id");
             Integer pos = ((Number) item.get("position")).intValue();
@@ -123,7 +124,7 @@ public class WorkflowController {
 
     @PostMapping("/{id}/transitions")
     public WorkflowTransition addTransition(@PathVariable String id,
-                                             @RequestBody WorkflowTransition transition) {
+                                             @Valid @RequestBody WorkflowTransition transition) {
         transition.setId("WFT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         transition.setWorkflowId(id);
         if (transition.getConditions() == null) transition.setConditions("[]");
@@ -135,7 +136,7 @@ public class WorkflowController {
     @PutMapping("/{id}/transitions/{transId}")
     public WorkflowTransition updateTransition(@PathVariable String id,
                                                 @PathVariable String transId,
-                                                @RequestBody WorkflowTransition updated) {
+                                                @Valid @RequestBody WorkflowTransition updated) {
         return transitionRepo.findById(transId).map(t -> {
             t.setName(updated.getName());
             t.setFromStatus(updated.getFromStatus());

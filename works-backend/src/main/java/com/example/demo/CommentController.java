@@ -1,6 +1,7 @@
 package com.example.demo;
 
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -50,7 +51,7 @@ public class CommentController {
 
     @PostMapping
     public Comment addComment(@PathVariable String workItemId,
-                              @RequestBody Map<String, Object> payload) {
+                              @Valid @RequestBody Map<String, Object> payload) {
         String userId = authenticatedUser.id();
         Comment comment = new Comment();
         comment.setWorkItemId(workItemId);

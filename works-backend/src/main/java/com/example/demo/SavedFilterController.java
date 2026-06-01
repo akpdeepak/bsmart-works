@@ -3,6 +3,7 @@ package com.example.demo;
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.List;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/saved-filters")
@@ -23,7 +24,7 @@ public class SavedFilterController {
     }
 
     @PostMapping
-    public SavedFilter createFilter(@RequestBody SavedFilter filter) {
+    public SavedFilter createFilter(@Valid @RequestBody SavedFilter filter) {
         String userId = authenticatedUser.id();
         filter.setWorkspaceId("WS-001");
         filter.setCreatedBy(userId);

@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/action-items")
@@ -31,7 +32,7 @@ public class ActionItemController {
     public ActionItem get(@PathVariable String id) { return repo.findById(id).orElseThrow(); }
 
     @PostMapping
-    public ActionItem create(@RequestBody ActionItem item) {
+    public ActionItem create(@Valid @RequestBody ActionItem item) {
         item.setId("ACT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         item.setCreatedBy(authenticatedUser.id());
         item.setCreatedAt(OffsetDateTime.now());
@@ -40,7 +41,7 @@ public class ActionItemController {
     }
 
     @PutMapping("/{id}")
-    public ActionItem update(@PathVariable String id, @RequestBody ActionItem updated) {
+    public ActionItem update(@PathVariable String id, @Valid @RequestBody ActionItem updated) {
         return repo.findById(id).map(a -> {
             a.setTitle(updated.getTitle());
             a.setDescription(updated.getDescription());

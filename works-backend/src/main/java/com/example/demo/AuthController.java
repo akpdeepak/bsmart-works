@@ -141,7 +141,7 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody Map<String, String> payload) {
         String email = payload.get("email");
         if (email == null || email.isBlank()) {
             throw ApiException.badRequest("VALIDATION_ERROR", "Email is required.", "email");
@@ -153,7 +153,7 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody Map<String, String> payload) {
         String currentUserId = authenticatedUserId();
         if (currentUserId == null) {
             throw ApiException.unauthorized("Authentication required.");

@@ -4,6 +4,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/work-items/{itemId}/links")
@@ -27,7 +28,7 @@ public class WorkItemLinkController {
     }
 
     @PostMapping
-    public WorkItemLink createLink(@PathVariable String itemId, @RequestBody Map<String, String> payload) {
+    public WorkItemLink createLink(@PathVariable String itemId, @Valid @RequestBody Map<String, String> payload) {
         WorkItemLink link = new WorkItemLink();
         link.setSourceId(itemId);
         link.setTargetId(payload.get("targetId"));

@@ -3,6 +3,7 @@ package com.example.demo;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -45,7 +46,7 @@ public class SprintController {
     }
 
     @PostMapping
-    public Sprint createSprint(@RequestBody Sprint sprint) {
+    public Sprint createSprint(@Valid @RequestBody Sprint sprint) {
         String userId = authenticatedUser.id();
         String wsId = rbac.workspaceForProject(sprint.getProjectId());
         if (wsId != null) rbac.require(userId, wsId, "manage_sprints");
@@ -58,7 +59,7 @@ public class SprintController {
     }
 
     @PutMapping("/{id}")
-    public Sprint updateSprint(@PathVariable String id, @RequestBody Sprint updated) {
+    public Sprint updateSprint(@PathVariable String id, @Valid @RequestBody Sprint updated) {
         String userId = authenticatedUser.id();
         Sprint existing = sprintRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Sprint", id));

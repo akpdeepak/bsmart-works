@@ -2,6 +2,7 @@ package com.example.demo;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.Map;
@@ -47,7 +48,7 @@ public class WorkspaceController {
 
     @PostMapping("/{id}/members")
     public Map<String, String> addMember(@PathVariable String id,
-                                          @RequestBody Map<String, String> payload) {
+                                          @Valid @RequestBody Map<String, String> payload) {
         String callerId = authenticatedUser.id();
         rbac.require(callerId, id, "invite_members");
         String email = payload.get("email");
@@ -68,7 +69,7 @@ public class WorkspaceController {
     }
 
     @PutMapping("/{id}")
-    public Workspace updateWorkspace(@PathVariable String id, @RequestBody Workspace updated) {
+    public Workspace updateWorkspace(@PathVariable String id, @Valid @RequestBody Workspace updated) {
         String callerId = authenticatedUser.id();
         rbac.require(callerId, id, "manage_workspace");
         return workspaceRepository.findById(id).map(w -> {
@@ -91,7 +92,7 @@ public class WorkspaceController {
     }
 
     @PutMapping("/{id}/branding")
-    public Map<String, Object> updateBranding(@PathVariable String id, @RequestBody Map<String, String> payload) {
+    public Map<String, Object> updateBranding(@PathVariable String id, @Valid @RequestBody Map<String, String> payload) {
         rbac.require(authenticatedUser.id(), id, "manage_workspace");
         String color = payload.getOrDefault("primaryColor", "#E94E1B");
         String logoUrl = payload.getOrDefault("logoUrl", "");
@@ -111,7 +112,7 @@ public class WorkspaceController {
 
     @PostMapping("/{wsId}/projects/{projectId}/members")
     public Map<String, String> addProjectMember(@PathVariable String wsId, @PathVariable String projectId,
-                                                  @RequestBody Map<String, String> payload) {
+                                                  @Valid @RequestBody Map<String, String> payload) {
         rbac.require(authenticatedUser.id(), wsId, "manage_projects");
         String email = payload.get("email");
         String role = payload.getOrDefault("role", "MEMBER");

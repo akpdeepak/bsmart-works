@@ -3,6 +3,7 @@ package com.example.demo;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -44,7 +45,7 @@ public class ProjectController {
     }
 
     @PostMapping
-    public Project createProject(@RequestBody Project project) {
+    public Project createProject(@Valid @RequestBody Project project) {
         String userId = authenticatedUser.id();
         String wsId = project.getWorkspaceId() != null ? project.getWorkspaceId() : "WS-001";
         rbac.require(userId, wsId, "manage_projects");
@@ -61,7 +62,7 @@ public class ProjectController {
     }
 
     @PutMapping("/{id}")
-    public Project updateProject(@PathVariable String id, @RequestBody Project updated) {
+    public Project updateProject(@PathVariable String id, @Valid @RequestBody Project updated) {
         String userId = authenticatedUser.id();
         Project existing = projectRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Project", id));
@@ -90,7 +91,7 @@ public class ProjectController {
     }
 
     @PostMapping("/{id}/members")
-    public Map<String, String> addProjectMember(@PathVariable String id, @RequestBody Map<String, String> payload) {
+    public Map<String, String> addProjectMember(@PathVariable String id, @Valid @RequestBody Map<String, String> payload) {
         String userId = authenticatedUser.id();
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Project", id));

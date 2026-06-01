@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/assumptions")
@@ -27,7 +28,7 @@ public class AssumptionController {
     public Assumption get(@PathVariable String id) { return repo.findById(id).orElseThrow(); }
 
     @PostMapping
-    public Assumption create(@RequestBody Assumption a) {
+    public Assumption create(@Valid @RequestBody Assumption a) {
         a.setId("ASM-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         a.setCreatedBy(authenticatedUser.id());
         a.setCreatedAt(OffsetDateTime.now());
@@ -36,7 +37,7 @@ public class AssumptionController {
     }
 
     @PutMapping("/{id}")
-    public Assumption update(@PathVariable String id, @RequestBody Assumption updated) {
+    public Assumption update(@PathVariable String id, @Valid @RequestBody Assumption updated) {
         return repo.findById(id).map(a -> {
             a.setTitle(updated.getTitle());
             a.setDescription(updated.getDescription());

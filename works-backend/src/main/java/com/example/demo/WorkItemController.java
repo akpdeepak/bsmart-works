@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -126,7 +127,7 @@ public class WorkItemController {
     }
 
     @PutMapping("/backlog/reorder")
-    public void reorderBacklog(@RequestBody java.util.List<java.util.Map<String, Object>> items) {
+    public void reorderBacklog(@Valid @RequestBody java.util.List<java.util.Map<String, Object>> items) {
         items.forEach(item -> {
             int order = ((Number) item.get("order")).intValue();
             jdbc.update("UPDATE work_items SET backlog_order = ? WHERE id = ?", order, item.get("id"));
@@ -158,7 +159,7 @@ public class WorkItemController {
     }
 
     @PostMapping
-    public WorkItem createWorkItem(@RequestBody WorkItem newItem) {
+    public WorkItem createWorkItem(@Valid @RequestBody WorkItem newItem) {
         String userId = authenticatedUser.id();
         String wsId = rbac.workspaceForProject(newItem.getProjectId());
         if (wsId != null) rbac.require(userId, wsId, "create_items");
@@ -191,7 +192,7 @@ public class WorkItemController {
     }
 
     @PutMapping("/{id}")
-    public WorkItem updateWorkItem(@PathVariable String id, @RequestBody WorkItem updatedItem) {
+    public WorkItem updateWorkItem(@PathVariable String id, @Valid @RequestBody WorkItem updatedItem) {
         String userId = authenticatedUser.id();
         WorkItem existing0 = repository.findById(id).orElseThrow(() -> ApiException.notFound("Work item", id));
         String wsId = rbac.workspaceForProject(existing0.getProjectId());

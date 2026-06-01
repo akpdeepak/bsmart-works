@@ -2,6 +2,7 @@ package com.example.demo;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.Map;
@@ -33,7 +34,7 @@ public class NotificationPrefController {
 
     @PutMapping
     public Map<String, String> updatePrefs(
-            @RequestBody Map<String, Boolean> payload) {
+            @Valid @RequestBody Map<String, Boolean> payload) {
         String userId = authenticatedUser.id();
         jdbc.update(
             "INSERT INTO notification_preferences (user_id, notify_assign, notify_comment, notify_mention, email_digest) " +

@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/dependencies")
@@ -27,7 +28,7 @@ public class DependencyController {
     public Dependency get(@PathVariable String id) { return repo.findById(id).orElseThrow(); }
 
     @PostMapping
-    public Dependency create(@RequestBody Dependency dep) {
+    public Dependency create(@Valid @RequestBody Dependency dep) {
         dep.setId("DEP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         dep.setCreatedBy(authenticatedUser.id());
         dep.setCreatedAt(OffsetDateTime.now());
@@ -36,7 +37,7 @@ public class DependencyController {
     }
 
     @PutMapping("/{id}")
-    public Dependency update(@PathVariable String id, @RequestBody Dependency updated) {
+    public Dependency update(@PathVariable String id, @Valid @RequestBody Dependency updated) {
         return repo.findById(id).map(d -> {
             d.setTitle(updated.getTitle());
             d.setDescription(updated.getDescription());

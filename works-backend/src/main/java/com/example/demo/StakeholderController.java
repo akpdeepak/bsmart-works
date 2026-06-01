@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/stakeholders")
@@ -27,7 +28,7 @@ public class StakeholderController {
     public Stakeholder get(@PathVariable String id) { return repo.findById(id).orElseThrow(); }
 
     @PostMapping
-    public Stakeholder create(@RequestBody Stakeholder s) {
+    public Stakeholder create(@Valid @RequestBody Stakeholder s) {
         s.setId("STK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         s.setCreatedBy(authenticatedUser.id());
         s.setCreatedAt(OffsetDateTime.now());
@@ -36,7 +37,7 @@ public class StakeholderController {
     }
 
     @PutMapping("/{id}")
-    public Stakeholder update(@PathVariable String id, @RequestBody Stakeholder updated) {
+    public Stakeholder update(@PathVariable String id, @Valid @RequestBody Stakeholder updated) {
         return repo.findById(id).map(s -> {
             s.setName(updated.getName());
             s.setRole(updated.getRole());

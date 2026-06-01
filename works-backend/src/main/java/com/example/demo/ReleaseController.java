@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/releases")
@@ -46,7 +47,7 @@ public class ReleaseController {
     }
 
     @PostMapping
-    public Release createRelease(@RequestBody Release release) {
+    public Release createRelease(@Valid @RequestBody Release release) {
         String userId = authenticatedUser.id();
         release.setId("REL-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         release.setStatus(release.getStatus() != null ? release.getStatus() : "PLANNED");
@@ -59,7 +60,7 @@ public class ReleaseController {
     }
 
     @PutMapping("/{id}")
-    public Release updateRelease(@PathVariable String id, @RequestBody Release updated) {
+    public Release updateRelease(@PathVariable String id, @Valid @RequestBody Release updated) {
         String userId = authenticatedUser.id();
         return releaseRepository.findById(id).map(r -> {
             r.setName(updated.getName());

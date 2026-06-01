@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/decisions")
@@ -27,7 +28,7 @@ public class DecisionController {
     public Decision get(@PathVariable String id) { return repo.findById(id).orElseThrow(); }
 
     @PostMapping
-    public Decision create(@RequestBody Decision d) {
+    public Decision create(@Valid @RequestBody Decision d) {
         d.setId("DEC-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         d.setCreatedBy(authenticatedUser.id());
         d.setCreatedAt(OffsetDateTime.now());
@@ -37,7 +38,7 @@ public class DecisionController {
     }
 
     @PutMapping("/{id}")
-    public Decision update(@PathVariable String id, @RequestBody Decision updated) {
+    public Decision update(@PathVariable String id, @Valid @RequestBody Decision updated) {
         return repo.findById(id).map(d -> {
             d.setTitle(updated.getTitle());
             d.setDescription(updated.getDescription());

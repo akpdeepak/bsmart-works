@@ -3,6 +3,7 @@ package com.example.demo;
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/field-layouts")
@@ -44,7 +45,7 @@ public class FieldLayoutController {
     public FieldLayout saveLayout(@PathVariable String itemType,
                                    @RequestParam(required = false) String projectId,
                                    @RequestParam(required = false) String workspaceId,
-                                   @RequestBody Map<String, Object> body) {
+                                   @Valid @RequestBody Map<String, Object> body) {
         String wsId = workspaceId != null ? workspaceId : "WS-001";
         FieldLayout fl = (projectId != null
             ? layoutRepo.findByProjectIdAndItemType(projectId, itemType)

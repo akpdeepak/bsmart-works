@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/risks")
@@ -29,7 +30,7 @@ public class RiskController {
     }
 
     @PostMapping
-    public Risk create(@RequestBody Risk risk) {
+    public Risk create(@Valid @RequestBody Risk risk) {
         risk.setId("RSK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         risk.setCreatedBy(authenticatedUser.id());
         risk.setCreatedAt(OffsetDateTime.now());
@@ -38,7 +39,7 @@ public class RiskController {
     }
 
     @PutMapping("/{id}")
-    public Risk update(@PathVariable String id, @RequestBody Risk updated) {
+    public Risk update(@PathVariable String id, @Valid @RequestBody Risk updated) {
         return riskRepo.findById(id).map(r -> {
             r.setTitle(updated.getTitle());
             r.setDescription(updated.getDescription());

@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/pm-issues")
@@ -27,7 +28,7 @@ public class PmIssueController {
     public PmIssue get(@PathVariable String id) { return repo.findById(id).orElseThrow(); }
 
     @PostMapping
-    public PmIssue create(@RequestBody PmIssue issue) {
+    public PmIssue create(@Valid @RequestBody PmIssue issue) {
         issue.setId("PMI-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         issue.setCreatedBy(authenticatedUser.id());
         issue.setCreatedAt(OffsetDateTime.now());
@@ -36,7 +37,7 @@ public class PmIssueController {
     }
 
     @PutMapping("/{id}")
-    public PmIssue update(@PathVariable String id, @RequestBody PmIssue updated) {
+    public PmIssue update(@PathVariable String id, @Valid @RequestBody PmIssue updated) {
         return repo.findById(id).map(i -> {
             i.setTitle(updated.getTitle());
             i.setDescription(updated.getDescription());

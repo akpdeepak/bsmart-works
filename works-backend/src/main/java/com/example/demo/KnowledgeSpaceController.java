@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.List;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/knowledge-spaces")
@@ -42,7 +43,7 @@ public class KnowledgeSpaceController {
     }
 
     @PostMapping
-    public KnowledgeSpace createSpace(@RequestBody KnowledgeSpace space) {
+    public KnowledgeSpace createSpace(@Valid @RequestBody KnowledgeSpace space) {
         String userId = authenticatedUser.id();
         space.setId("KS-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         space.setVisibility(space.getVisibility() != null ? space.getVisibility() : "TEAM");
@@ -56,7 +57,7 @@ public class KnowledgeSpaceController {
     }
 
     @PutMapping("/{id}")
-    public KnowledgeSpace updateSpace(@PathVariable String id, @RequestBody KnowledgeSpace updated) {
+    public KnowledgeSpace updateSpace(@PathVariable String id, @Valid @RequestBody KnowledgeSpace updated) {
         String userId = authenticatedUser.id();
         return knowledgeSpaceRepository.findById(id).map(s -> {
             s.setName(updated.getName());

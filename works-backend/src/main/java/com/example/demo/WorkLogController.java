@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/worklogs")
@@ -31,7 +32,7 @@ public class WorkLogController {
     }
 
     @PostMapping
-    public WorkLog createWorkLog(@RequestBody WorkLog workLog) {
+    public WorkLog createWorkLog(@Valid @RequestBody WorkLog workLog) {
         String userId = authenticatedUser.id();
         workLog.setUserId(userId);
         if (workLog.getWorkDate() == null) workLog.setWorkDate(LocalDate.now());

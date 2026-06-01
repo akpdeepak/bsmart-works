@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/work-item-types")
@@ -41,7 +42,7 @@ public class WorkItemTypeConfigController {
     }
 
     @PostMapping
-    public WorkItemTypeConfig create(@RequestBody WorkItemTypeConfig config) {
+    public WorkItemTypeConfig create(@Valid @RequestBody WorkItemTypeConfig config) {
         config.setId("WIT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         config.setIsCustom(true);
         config.setCreatedAt(OffsetDateTime.now());
@@ -49,7 +50,7 @@ public class WorkItemTypeConfigController {
     }
 
     @PutMapping("/{id}")
-    public WorkItemTypeConfig update(@PathVariable String id, @RequestBody WorkItemTypeConfig updated) {
+    public WorkItemTypeConfig update(@PathVariable String id, @Valid @RequestBody WorkItemTypeConfig updated) {
         return typeConfigRepo.findById(id).map(c -> {
             c.setLabel(updated.getLabel());
             c.setIcon(updated.getIcon());

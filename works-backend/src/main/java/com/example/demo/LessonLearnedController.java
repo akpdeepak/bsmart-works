@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/lessons-learned")
@@ -29,7 +30,7 @@ public class LessonLearnedController {
     public LessonLearned get(@PathVariable String id) { return repo.findById(id).orElseThrow(); }
 
     @PostMapping
-    public LessonLearned create(@RequestBody LessonLearned ll) {
+    public LessonLearned create(@Valid @RequestBody LessonLearned ll) {
         ll.setId("LL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         ll.setCreatedBy(authenticatedUser.id());
         ll.setCreatedAt(OffsetDateTime.now());
@@ -39,7 +40,7 @@ public class LessonLearnedController {
     }
 
     @PutMapping("/{id}")
-    public LessonLearned update(@PathVariable String id, @RequestBody LessonLearned updated) {
+    public LessonLearned update(@PathVariable String id, @Valid @RequestBody LessonLearned updated) {
         return repo.findById(id).map(ll -> {
             ll.setTitle(updated.getTitle());
             ll.setDescription(updated.getDescription());

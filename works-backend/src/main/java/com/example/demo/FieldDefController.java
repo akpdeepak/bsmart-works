@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/field-defs")
@@ -36,7 +37,7 @@ public class FieldDefController {
     }
 
     @PostMapping
-    public FieldDef create(@RequestBody FieldDef fd) {
+    public FieldDef create(@Valid @RequestBody FieldDef fd) {
         fd.setId("FD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         fd.setCreatedAt(OffsetDateTime.now());
         if (fd.getConfig() == null) fd.setConfig("{}");
@@ -44,7 +45,7 @@ public class FieldDefController {
     }
 
     @PutMapping("/{id}")
-    public FieldDef update(@PathVariable String id, @RequestBody FieldDef updated) {
+    public FieldDef update(@PathVariable String id, @Valid @RequestBody FieldDef updated) {
         return fieldDefRepo.findById(id).map(fd -> {
             fd.setName(updated.getName());
             fd.setFieldType(updated.getFieldType());
@@ -70,7 +71,7 @@ public class FieldDefController {
     @PutMapping("/values/{workItemId}/{fieldDefId}")
     public WorkItemFieldValue setValue(@PathVariable String workItemId,
                                        @PathVariable String fieldDefId,
-                                       @RequestBody Map<String, Object> body) {
+                                       @Valid @RequestBody Map<String, Object> body) {
         WorkItemFieldValue fv = valueRepo.findByWorkItemIdAndFieldDefId(workItemId, fieldDefId)
                 .orElseGet(() -> {
                     WorkItemFieldValue newFv = new WorkItemFieldValue();

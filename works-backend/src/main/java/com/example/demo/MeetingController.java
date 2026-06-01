@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/meetings")
@@ -43,7 +44,7 @@ public class MeetingController {
     }
 
     @PostMapping
-    public Meeting create(@RequestBody Meeting meeting) {
+    public Meeting create(@Valid @RequestBody Meeting meeting) {
         String userId = authenticatedUser.id();
         meeting.setId("MTG-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         meeting.setCreatedBy(userId);
@@ -67,7 +68,7 @@ public class MeetingController {
     }
 
     @PutMapping("/{id}")
-    public Meeting update(@PathVariable String id, @RequestBody Meeting updated) {
+    public Meeting update(@PathVariable String id, @Valid @RequestBody Meeting updated) {
         return meetingRepo.findById(id).map(m -> {
             m.setTitle(updated.getTitle());
             m.setMeetingType(updated.getMeetingType());
@@ -97,7 +98,7 @@ public class MeetingController {
 
     @PutMapping("/{id}/notes/{section}")
     public MeetingNote upsertNote(@PathVariable String id, @PathVariable String section,
-                                   @RequestBody Map<String, String> body) {
+                                   @Valid @RequestBody Map<String, String> body) {
         String userId = authenticatedUser.id();
         MeetingNote note = noteRepo.findByMeetingIdAndSection(id, section.toUpperCase())
                 .orElseGet(() -> {

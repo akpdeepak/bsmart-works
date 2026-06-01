@@ -4,6 +4,7 @@ import com.eatthepath.otp.TimeBasedOneTimePasswordGenerator;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -70,7 +71,7 @@ public class MfaController {
 
     @PostMapping("/confirm")
     public ResponseEntity<?> confirm(@RequestHeader("X-User-Id") String userId,
-                                     @RequestBody Map<String, String> body) {
+                                     @Valid @RequestBody Map<String, String> body) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> ApiException.notFound("User", userId));
         if (user.getMfaSecret() == null) {
@@ -86,7 +87,7 @@ public class MfaController {
 
     @PostMapping("/disable")
     public ResponseEntity<?> disable(@RequestHeader("X-User-Id") String userId,
-                                     @RequestBody Map<String, String> body) {
+                                     @Valid @RequestBody Map<String, String> body) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> ApiException.notFound("User", userId));
         if (!user.isMfaEnabled()) {
@@ -102,7 +103,7 @@ public class MfaController {
     }
 
     @PostMapping("/verify")
-    public ResponseEntity<?> verifyMfa(@RequestBody Map<String, String> body) {
+    public ResponseEntity<?> verifyMfa(@Valid @RequestBody Map<String, String> body) {
         String userId = body.get("userId");
         String code   = body.get("totp");
         if (userId == null || code == null) {

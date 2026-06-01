@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.regex.*;
+import jakarta.validation.Valid;
 
 /**
  * WIQL — Work Item Query Language
@@ -31,7 +32,7 @@ public class WiqlController {
     }
 
     @PostMapping("/execute")
-    public List<Map<String, Object>> execute(@RequestBody Map<String, String> body) {
+    public List<Map<String, Object>> execute(@Valid @RequestBody Map<String, String> body) {
         String query = body.getOrDefault("query", "").trim();
         String userId = authenticatedUser.id();
         if (query.isEmpty()) {
@@ -48,7 +49,7 @@ public class WiqlController {
     }
 
     @PostMapping("/validate")
-    public Map<String, Object> validate(@RequestBody Map<String, String> body) {
+    public Map<String, Object> validate(@Valid @RequestBody Map<String, String> body) {
         String query = body.getOrDefault("query", "").trim();
         Map<String, Object> result = new LinkedHashMap<>();
         try {
@@ -76,7 +77,7 @@ public class WiqlController {
     }
 
     @PostMapping("/filters")
-    public WiqlFilter saveFilter(@RequestBody WiqlFilter filter) {
+    public WiqlFilter saveFilter(@Valid @RequestBody WiqlFilter filter) {
         String userId = authenticatedUser.id();
         filter.setId("WIQL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         filter.setCreatedBy(userId);

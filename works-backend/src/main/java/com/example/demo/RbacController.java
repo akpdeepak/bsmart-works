@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -45,7 +46,7 @@ public class RbacController {
     @PutMapping("/members/{targetUserId}/role")
     public ResponseEntity<?> updateRole(
             @PathVariable String targetUserId,
-            @RequestBody Map<String, String> payload) {
+            @Valid @RequestBody Map<String, String> payload) {
         String callerId = authenticatedUser.id();
         if (!rbacService.canManageRoles(callerId, WS)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Insufficient permissions"));

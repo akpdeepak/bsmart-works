@@ -849,9 +849,151 @@ This keeps CLAUDE.md accurate for all AI tools (no stale advice).
 > z-index, Flyway naming, RBAC placement), run in pre-commit + CI; (3) the CI workflow's
 > "AI rules in sync" job, which fails if the derived rules files drift from this CLAUDE.md;
 > (4) `scripts/check-dod-sync.sh` — verifies the PR template's DoD version tag matches CLAUDE.md.
-> Lint is currently advisory in CI (App.jsx baseline debt); the **build** and **guardrails** jobs block.
+> All CI jobs block: **lint** (App.jsx baseline suppressed with file-level disable — new files must pass
+> clean), **build**, **guardrails**, and **coverage** (JaCoCo 60% LINE minimum on unit tests).
 
 <!-- dod-version: 2026-06-01-r2 -->
+
+---
+
+## 7. Branching Strategy
+
+### 7.1 Model — GitHub Flow
+
+Single `main` branch — always deployable. All work lives on short-lived feature branches that
+branch from and merge back to `main` via PR. No `develop` branch.
+
+- `main` is the only permanent branch. Everything else is temporary.
+- Never commit directly to `main`. Never force-push to `main`.
+- Branch lifetime target: closed within **5 working days**. Branches open longer must be rebased
+  or their scope reduced.
+- Delete branches immediately after merge (enable GitHub's auto-delete in repo Settings).
+- No shared feature branches between two developers — one leads the branch, the other reviews.
+
+### 7.2 Branch Naming Convention
+
+Format: `<type>/<issue-id>-<short-slug>` (issue ID optional for hotfixes and chores)
+
+| Prefix | When to use | Example |
+|--------|-------------|---------|
+| `feat/` | New feature, iteration work | `feat/47-sprint-velocity-chart` |
+| `fix/` | Bug fix | `fix/52-workitem-assignee-null` |
+| `hotfix/` | Critical prod fix — no issue required if urgent | `hotfix/auth-token-expiry` |
+| `chore/` | Maintenance, tooling, dependency updates | `chore/bump-spring-boot-4.0.2` |
+| `docs/` | Documentation only | `docs/branching-strategy` |
+| `refactor/` | Restructure with no behavior change | `refactor/extract-rbac-helpers` |
+| `ci/` | CI/CD pipeline changes | `ci/add-dependency-scan` |
+
+Rules:
+- Use the GitHub issue number when one exists — creates the traceability link automatically.
+- Slug is lowercase kebab-case, ≤40 characters, no special characters other than `-`.
+- Never include a person's name in the branch name.
+- The branch prefix must match the Conventional Commits type of the primary change on that branch.
+- The `claude/` prefix is reserved for AI-agent branches — never use it for human-authored work.
+
+### 7.3 Merge Strategy — Squash Merge Only
+
+All PRs are squash-merged into `main`. This produces one commit per PR.
+
+The squash commit message = the PR title, which must follow Conventional Commits format
+(`type(scope): description`). The `commit-lint` CI job validates this on every PR.
+
+**Why squash:** preserves a readable, bisectable, linear history. WIP commits ("fix typo", "wip",
+"try this") disappear. The record of what changed is the PR diff + the single squash commit.
+
+**Rebase is allowed within a feature branch** to keep it current with `main`. Amend freely
+before a PR is open. Never amend or force-push a commit already on `main`.
+
+### 7.4 Branch Protection (Current State → Target)
+
+**Current:** CI jobs in `ci.yml` must pass before a PR can merge. No required human approvals
+(Deepak has CODEOWNER bypass — no teammate is blocked waiting for a second review).
+
+**Target (activate explicitly when ≥3 active contributors):**
+- Require all CI jobs to pass (already enforced)
+- Require 1 review from a CODEOWNER (enable in GitHub branch protection settings — NOT YET ACTIVE)
+- Dismiss stale approvals when new commits are pushed
+- No direct push to `main`
+
+**Do not enable required reviews without explicit instruction from Deepak. The current model
+is CI-gates-only — that is intentional and correct for the current team size.**
+
+### 7.5 Stale Branch Policy
+
+| State | Action |
+|-------|--------|
+| Merged | Delete immediately (GitHub auto-delete or manual) |
+| Open PR, no commits for 7 days | Author rebases or marks as draft with a note |
+| Unmerged, no PR, no commits for 14 days | Close and delete |
+| Superseded by a different approach | Close PR with a comment explaining why, delete branch |
+
+---
+
+## 8. Environments & Secrets
+
+### 8.1 Environment Tiers
+
+| Tier | Purpose | Who uses it | Data |
+|------|---------|-------------|------|
+| **Local** | Individual development + exploratory testing | Each developer | Local Docker Compose DB, seeded from Flyway |
+| **Staging** | Shared integration, QA, UAT, demo | Whole team + stakeholders | Anonymized prod-like dataset |
+| **Production** | Live system | Customers | Real data |
+
+`main` branch code is what runs in every tier — there is no separate production branch.
+Staging must mirror production config (same env vars, same secrets pattern) except for the data.
+
+### 8.2 Environment Variable Conventions
+
+All runtime secrets and environment-specific config use the `BSMART_*` prefix. The
+`application.properties` embeds dev-safe defaults via `${BSMART_VAR:default}` — these are
+**only safe for local development** and must be overridden in staging and production.
+
+| Variable | Dev default | Override required? |
+|----------|-------------|-------------------|
+| `BSMART_DB_URL` | `jdbc:postgresql://localhost:5432/works_db` | Staging + Prod |
+| `BSMART_DB_USERNAME` | `bcits_admin` | Staging + Prod |
+| `BSMART_DB_PASSWORD` | `works_secure_pass` | Staging + Prod |
+| `BSMART_JWT_SECRET` | `dev-only-change-me-…` | **Staging + Prod — min 32 random chars** |
+| `BSMART_CORS_ALLOWED_ORIGINS` | `http://localhost:5173,…` | Staging + Prod |
+| `BSMART_EXPOSE_DEV_VERIFICATION_TOKEN` | `true` | **Must be `false` in Staging + Prod** |
+| `BSMART_CLAMAV_HOST` | `172.25.215.11` | Staging + Prod |
+| `BSMART_CLAMAV_PORT` | `3310` | If port differs |
+
+Frontend env vars use the `VITE_*` prefix (Vite convention). See `works-frontend/.env.example`.
+
+**Generate a production JWT secret:** `openssl rand -base64 48`
+
+### 8.3 Local Development Services
+
+All local backing services run via Docker Compose (repo root):
+
+```bash
+docker compose up -d          # start Postgres, MailHog, ClamAV in background
+docker compose down           # stop all services (data persists in named volumes)
+docker compose down -v        # stop + wipe all volumes — fresh database on next start
+docker compose logs -f        # tail service logs
+```
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| PostgreSQL 16 | 5432 | Primary database — Flyway migrations run on backend start |
+| MailHog | 1025 (SMTP) / 8025 (Web UI) | Captures all outbound email; browse at `http://localhost:8025` |
+| ClamAV | 3310 | Virus scanning for attachments — first start downloads virus definitions (~2–3 min) |
+
+Flyway migrations run automatically when the Spring Boot app starts. If a migration fails:
+- Fix the migration SQL first — do not use `repair-on-migrate` to skip a broken migration in staging/prod.
+- For local resets: `docker compose down -v` wipes the DB; migrations re-run from scratch on next start.
+
+### 8.4 Secrets Rules (Enforced + Manual)
+
+- `.env` files are gitignored — never commit them.
+- `.env.example` files ARE committed — they document the variable shape without real values.
+- Never embed a secret in `application.properties` — use the `${BSMART_VAR:default}` pattern.
+- Never log secrets — SLF4J is enforced; `System.out.println` is blocked by `guardrails.sh`.
+- Never use CORS `*` as an allowed origin outside local development.
+- Never share staging or production credentials in code, comments, or PR descriptions.
+- JWT secret must be ≥32 cryptographically random characters in staging/production.
+- `BSMART_EXPOSE_DEV_VERIFICATION_TOKEN=false` must be verified before any staging/prod deploy.
 
 ---
 

@@ -70,7 +70,7 @@ Never create capability-specific data tables, auth flows, or UI conventions.
 |-------|--------|
 | Framework | **React 19.2** + Vite 8 (per `package.json`) — *not React 18* |
 | Language | **JavaScript / JSX** — *not TypeScript, despite spec; stray `@types/react` are unused* |
-| Styling | Tailwind CSS 3.4 — token classes only (see §4) |
+| Styling | Tailwind CSS 4 — token classes only; the v3-style `tailwind.config.js` is loaded via `@config` in `src/index.css` (see §4) |
 | Component pattern | `class-variance-authority` (cva) + `clsx` + `tailwind-merge`, via `@/lib/utils` `cn()` |
 | Icons | `lucide-react` |
 | API client | Single `apiClient` wrapper (target) — no inline fetch/axios per component |
@@ -832,7 +832,7 @@ This keeps CLAUDE.md accurate for all AI tools (no stale advice).
 - Don't hand-format dates/numbers inline — use `@/lib/format`; never locale-ambiguous numeric dates (`05/31/26`).
 - Don't render `null`/`undefined`/blank for missing values — use an em-dash `—` in `text-neutral-400`.
 - Don't reuse a `lucide` icon for two different meanings, or mix icon stroke widths (§4.23).
-- Don't add `eslint-plugin-tailwindcss` back — it's incompatible with this ESLint 10 + Tailwind 3.4 stack (§ see `eslint.config.js`).
+- Don't add `eslint-plugin-tailwindcss` back — it's incompatible with this ESLint 10 + Tailwind 4 stack (§ see `eslint.config.js`).
 
 **Developer workflow**
 - Don't use `System.out.println` — always use an SLF4J `Logger` (guardrails.sh enforces this).

@@ -12,13 +12,11 @@ updates:
       time: "09:00"
       timezone: Asia/Kolkata
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - frontend
     commit-message:
       prefix: chore
       prefix-development: chore
       include: scope
+
   # Backend Maven dependencies
   - package-ecosystem: maven
     directory: /works-backend
@@ -28,9 +26,6 @@ updates:
       time: "09:00"
       timezone: Asia/Kolkata
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - backend
     commit-message:
       prefix: chore
       include: scope

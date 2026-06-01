@@ -11,6 +11,33 @@
 
 ---
 
+## 0. Product & Engineering Principles
+
+> **These are permanent operational constants. Apply them to every task, in order, before writing any code or making any architectural decision.**
+
+### 0.1 Core Product Ethos
+- **Cognitive Ease:** Interfaces must be clean, minimal, and professional. Prioritise user focus and reduce visual noise.
+- **Responsive Adaptability:** UI components must support fluid expand/collapse and fluid resize behaviours.
+- **Visual Engagement:** Maintain the modern, sleek aesthetic defined in §4. Everything built must be consistent with the established design system.
+
+### 0.2 Engineering Standards
+- **Modular Architecture:** Solutions must be decoupled and modular. Avoid monolithic patterns. Prioritise maintainability and testability.
+- **Efficiency & Performance:** Solutions must be technically efficient, aligned with the core tech stack (§2), and optimised for speed.
+- **Tech Stack Alignment:** All suggestions must strictly adhere to the project's chosen technologies and patterns (§2, §3).
+
+### 0.3 Operational Workflow — The Multidimensional Mandate
+Before writing code or defining a solution for any assigned task, analyse the request through three lenses:
+
+1. **User Perspective** — How does this impact look, feel, and usability?
+2. **System / Maintainability Perspective** — How does this impact long-term technical debt and modularity?
+3. **Performance Perspective** — Is this the most effective and efficient way to achieve the goal?
+
+Then perform an **Alignment Check**: explicitly verify the proposed solution satisfies §0.1 and §0.2 before proceeding.
+
+> **Conflict handling:** If a request appears to conflict with these standards, pause and flag the conflict to the user for clarification before executing.
+
+---
+
 ## 1. What This Product Is
 
 **bSmart Works** is an AI-native, role-tuned project management and delivery workspace.
@@ -756,6 +783,8 @@ This keeps CLAUDE.md accurate for all AI tools (no stale advice).
 ---
 
 ## 6. What NOT To Do
+
+- Don't start implementing a task without running the §0.3 Multidimensional Discovery + Alignment Check first.
 
 **Architecture / Backend**
 - Don't add features, abstractions, or generalization beyond the task.

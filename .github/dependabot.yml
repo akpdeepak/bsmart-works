@@ -19,11 +19,6 @@ updates:
       prefix: chore
       prefix-development: chore
       include: scope
-    ignore:
-      # Major version bumps require manual review — Dependabot will still open the PR
-      # but the policy is to review before merging (CLAUDE.md §12.2)
-      []
-
   # Backend Maven dependencies
   - package-ecosystem: maven
     directory: /works-backend

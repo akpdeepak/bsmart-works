@@ -8,14 +8,19 @@
     font-family: 'Inter', -apple-system, 'Segoe UI', Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: #F7F9FC;
-    color: #0F1A2A;
+    @apply bg-neutral-50 text-neutral-900;
   }
   .dark body {
-    background-color: #0F1A2A;
-    color: #F2F4F8;
+    @apply bg-neutral-900 text-neutral-100;
   }
   code, .font-mono { font-family: 'JetBrains Mono', monospace; }
+}
+
+@layer components {
+  /* Inline code rendered from markdown via renderMd() — uses token values */
+  .prose-md-code {
+    @apply bg-neutral-100 text-neutral-700 font-mono text-xs rounded px-1;
+  }
 }
 
 @layer components {

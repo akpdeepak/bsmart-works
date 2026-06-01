@@ -1,89 +1,149 @@
-import React, { useRef, useEffect } from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import Placeholder from '@tiptap/extension-placeholder';
+import { Code, Code2 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 /**
- * WYSIWYG Rich Text Editor using contentEditable + execCommand.
- * Formatting is applied and rendered immediately — no preview mode.
- * Stores and emits HTML.
+ * WYSIWYG rich-text editor built on TipTap / ProseMirror.
+ * Stores and emits HTML. Props: value / onChange / onBlur / placeholder.
+ *
+ * When swapping the item being edited (e.g. switching selectedItem in a detail panel),
+ * add key={item.id} on the parent so TipTap mounts fresh rather than relying on the
+ * external-sync effect below.
  */
 export function RichTextEditor({ value, onChange, onBlur, placeholder }) {
-  const editorRef = useRef(null);
-  const isComposing = useRef(false);
+  // Track the last HTML we emitted so the sync effect doesn't echo our own changes back
+  const lastEmittedRef = useRef(value ?? '');
 
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({ heading: { levels: [2, 3] } }),
+      Underline,
+      Placeholder.configure({ placeholder: placeholder ?? '' }),
+    ],
+    content: value || '',
+    onUpdate({ editor }) {
+      const html = editor.getHTML();
+      lastEmittedRef.current = html;
+      onChange(html);
+    },
+    onBlur({ editor }) {
+      const html = editor.getHTML();
+      lastEmittedRef.current = html;
+      onChange(html);
+      onBlur?.();
+    },
+    editorProps: {
+      attributes: {
+        class: [
+          'min-h-[100px] max-h-64 overflow-y-auto px-3 py-2 outline-none',
+          'text-sm text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800',
+          '[&_h2]:text-base [&_h2]:font-bold [&_h2]:mb-1',
+          '[&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mb-1',
+          '[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5',
+          '[&_li]:mb-0.5',
+          '[&_strong]:font-semibold [&_em]:italic [&_u]:underline [&_s]:line-through',
+          '[&_code]:bg-neutral-100 dark:[&_code]:bg-neutral-900 [&_code]:rounded [&_code]:px-1 [&_code]:font-mono [&_code]:text-xs',
+          '[&_pre]:bg-neutral-100 dark:[&_pre]:bg-neutral-900 [&_pre]:rounded-md [&_pre]:px-3 [&_pre]:py-2 [&_pre]:my-1 [&_pre]:font-mono [&_pre]:text-xs [&_pre]:overflow-x-auto',
+          '[&_pre_code]:bg-transparent [&_pre_code]:p-0',
+        ].join(' '),
+      },
+    },
+  });
+
+  // Sync when value changes externally (e.g. parent loads a different record).
+  // Skipped when value matches lastEmittedRef to avoid echoing our own updates back.
   useEffect(() => {
-    const el = editorRef.current;
-    if (!el) return;
-    if (el.innerHTML !== (value || '')) {
-      el.innerHTML = value || '';
-    }
-  }, []); // mount-only; ongoing changes come from user input
+    if (!editor || value === lastEmittedRef.current) return;
+    lastEmittedRef.current = value ?? '';
+    editor.commands.setContent(value || '', false);
+  }, [value, editor]);
 
-  const exec = (cmd, arg = null) => {
-    editorRef.current?.focus();
-    document.execCommand(cmd, false, arg);
-    onChange(editorRef.current?.innerHTML || '');
-  };
+  if (!editor) return null;
 
-  const handleInput = () => {
-    if (!isComposing.current) onChange(editorRef.current?.innerHTML || '');
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.ctrlKey || e.metaKey) {
-      if (e.key === 'b') { e.preventDefault(); exec('bold'); }
-      if (e.key === 'i') { e.preventDefault(); exec('italic'); }
-      if (e.key === 'u') { e.preventDefault(); exec('underline'); }
-    }
-  };
-
-  const handleBlur = () => {
-    onChange(editorRef.current?.innerHTML || '');
-    onBlur?.();
-  };
-
-  const ToolBtn = ({ cmd, arg, title, children }) => (
-    <button type="button" title={title}
-      onMouseDown={e => { e.preventDefault(); exec(cmd, arg); }}
-      className="w-7 h-7 flex items-center justify-center rounded text-xs transition-colors text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700">
+  const Btn = ({ onClick, active, title, children }) => (
+    <button
+      type="button"
+      title={title}
+      onMouseDown={e => { e.preventDefault(); onClick(); }}
+      className={`w-7 h-7 flex items-center justify-center rounded text-xs transition-colors ${
+        active
+          ? 'bg-brand-navy text-white'
+          : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+      }`}
+    >
       {children}
     </button>
   );
 
+  const Sep = () => <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1" />;
+
   return (
-    <div className="border border-neutral-200 dark:border-neutral-600 rounded-lg overflow-hidden focus-within:border-brand-navy transition-colors dark:bg-neutral-800">
+    <div className="border border-neutral-200 dark:border-neutral-600 rounded-lg overflow-hidden focus-within:border-brand-navy transition-colors">
       <div className="flex items-center gap-0.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 flex-wrap">
-        <ToolBtn cmd="bold"          title="Bold (Ctrl+B)"><strong>B</strong></ToolBtn>
-        <ToolBtn cmd="italic"        title="Italic (Ctrl+I)"><em>I</em></ToolBtn>
-        <ToolBtn cmd="underline"     title="Underline (Ctrl+U)"><u>U</u></ToolBtn>
-        <ToolBtn cmd="strikeThrough" title="Strikethrough"><s>S</s></ToolBtn>
-        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1"/>
-        <ToolBtn cmd="formatBlock" arg="h2" title="Heading 2"><span className="font-bold text-[10px]">H2</span></ToolBtn>
-        <ToolBtn cmd="formatBlock" arg="h3" title="Heading 3"><span className="font-bold text-[10px]">H3</span></ToolBtn>
-        <ToolBtn cmd="formatBlock" arg="p"  title="Paragraph"><span className="text-[10px]">¶</span></ToolBtn>
-        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1"/>
-        <ToolBtn cmd="insertUnorderedList" title="Bullet list"><span className="text-[11px]">• —</span></ToolBtn>
-        <ToolBtn cmd="insertOrderedList"   title="Numbered list"><span className="text-[11px]">1.</span></ToolBtn>
-        <ToolBtn cmd="indent"              title="Indent"><span className="text-[11px]">→</span></ToolBtn>
-        <ToolBtn cmd="outdent"             title="Outdent"><span className="text-[11px]">←</span></ToolBtn>
-        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1"/>
-        <ToolBtn cmd="removeFormat" title="Clear formatting"><span className="text-[10px]">✕</span></ToolBtn>
-        <span className="ml-auto text-[9px] text-neutral-300 pr-1">WYSIWYG</span>
+        <Btn
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          active={editor.isActive('bold')}
+          title="Bold (Ctrl+B)"
+        ><strong>B</strong></Btn>
+        <Btn
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          active={editor.isActive('italic')}
+          title="Italic (Ctrl+I)"
+        ><em>I</em></Btn>
+        <Btn
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          active={editor.isActive('underline')}
+          title="Underline (Ctrl+U)"
+        ><u>U</u></Btn>
+        <Btn
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          active={editor.isActive('strike')}
+          title="Strikethrough"
+        ><s>S</s></Btn>
+        <Sep />
+        <Btn
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          active={editor.isActive('heading', { level: 2 })}
+          title="Heading 2"
+        ><span className="font-bold text-[10px]">H2</span></Btn>
+        <Btn
+          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          active={editor.isActive('heading', { level: 3 })}
+          title="Heading 3"
+        ><span className="font-bold text-[10px]">H3</span></Btn>
+        <Sep />
+        <Btn
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          active={editor.isActive('bulletList')}
+          title="Bullet list"
+        ><span className="text-[11px]">• —</span></Btn>
+        <Btn
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          active={editor.isActive('orderedList')}
+          title="Numbered list"
+        ><span className="text-[11px]">1.</span></Btn>
+        <Sep />
+        <Btn
+          onClick={() => editor.chain().focus().toggleCode().run()}
+          active={editor.isActive('code')}
+          title="Inline code"
+        ><Code className="h-3.5 w-3.5" /></Btn>
+        <Btn
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          active={editor.isActive('codeBlock')}
+          title="Code block"
+        ><Code2 className="h-3.5 w-3.5" /></Btn>
+        <Sep />
+        <Btn
+          onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+          active={false}
+          title="Clear formatting"
+        ><span className="text-[10px]">✕</span></Btn>
       </div>
-      <div
-        ref={editorRef}
-        contentEditable
-        suppressContentEditableWarning
-        onInput={handleInput}
-        onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
-        onCompositionStart={() => { isComposing.current = true; }}
-        onCompositionEnd={() => { isComposing.current = false; handleInput(); }}
-        data-placeholder={placeholder}
-        className="min-h-[100px] max-h-64 overflow-y-auto px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 focus:outline-none bg-white dark:bg-neutral-800
-          [&_h2]:text-base [&_h2]:font-bold [&_h2]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mb-1
-          [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5
-          [&_li]:mb-0.5 [&_strong]:font-semibold [&_em]:italic [&_u]:underline [&_s]:line-through
-          empty:before:content-[attr(data-placeholder)] empty:before:text-neutral-300"
-      />
+      <EditorContent editor={editor} />
     </div>
   );
 }

@@ -28,3 +28,14 @@
     @apply w-full border border-neutral-200 dark:border-neutral-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-brand-navy transition-colors bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100;
   }
 }
+
+@layer components {
+  /* TipTap Placeholder extension — shown when the editor content is empty */
+  .tiptap p.is-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    color: theme('colors.neutral.300');
+    pointer-events: none;
+    height: 0;
+  }
+}

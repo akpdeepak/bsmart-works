@@ -5,6 +5,7 @@ import { Button } from '@/components/works/button';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
+import { RichTextEditor } from '@/components/works/rich-text-editor';
 import { api } from '@/lib/apiClient';
 
 const NavCollapsedCtx = React.createContext(false);
@@ -5195,8 +5196,11 @@ export default function App() {
                 className="input" placeholder="frontend, urgent" />
             </Field>
             <Field label="Description">
-              <textarea rows={3} value={newItem.description} onChange={e => setNewItem({ ...newItem, description: e.target.value })}
-                className="input resize-none" placeholder="Optional description... (supports **bold**, *italic*, - bullets)" />
+              <RichTextEditor
+                value={newItem.description}
+                onChange={val => setNewItem(prev => ({ ...prev, description: val }))}
+                placeholder="Add a description — supports headings, lists, bold, code…"
+              />
             </Field>
           </div>
           <div className="flex justify-end gap-3 mt-5">
@@ -5409,103 +5413,6 @@ function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
             className="opacity-0 group-hover:opacity-100 text-xs text-neutral-400 hover:text-brand-navy transition-opacity">↓ Backlog</button>
         </div>
       ))}
-    </div>
-  );
-}
-
-/**
- * WYSIWYG Rich Text Editor
- * Uses contentEditable + execCommand for true what-you-see-is-what-you-get editing.
- * Formatting (bold, italic, lists, headings, links) is applied and rendered immediately —
- * no separate "preview" mode needed. Stores and emits HTML.
- */
-function RichTextEditor({ value, onChange, onBlur, placeholder }) {
-  const editorRef = useRef(null);
-  const isComposing = useRef(false);
-
-  // Sync initial value into the editor DOM (only on mount or external value change)
-  useEffect(() => {
-    const el = editorRef.current;
-    if (!el) return;
-    // Only update DOM if it differs (avoids cursor jump on every keystroke)
-    if (el.innerHTML !== (value || '')) {
-      el.innerHTML = value || '';
-    }
-  }, []);  // mount-only; ongoing changes come from user input
-
-  const exec = (cmd, arg = null) => {
-    editorRef.current?.focus();
-    document.execCommand(cmd, false, arg);
-    // Emit updated HTML after command
-    onChange(editorRef.current?.innerHTML || '');
-  };
-
-  const handleInput = () => {
-    if (!isComposing.current) onChange(editorRef.current?.innerHTML || '');
-  };
-
-  const handleKeyDown = (e) => {
-    // Ctrl/Cmd shortcuts
-    if (e.ctrlKey || e.metaKey) {
-      if (e.key === 'b') { e.preventDefault(); exec('bold'); }
-      if (e.key === 'i') { e.preventDefault(); exec('italic'); }
-      if (e.key === 'u') { e.preventDefault(); exec('underline'); }
-    }
-  };
-
-  const handleBlur = () => {
-    onChange(editorRef.current?.innerHTML || '');
-    onBlur?.();
-  };
-
-  const ToolBtn = ({ cmd, arg, title, children, active }) => (
-    <button type="button" title={title}
-      onMouseDown={e => { e.preventDefault(); exec(cmd, arg); }}
-      className={`w-7 h-7 flex items-center justify-center rounded text-xs transition-colors
-        ${active ? 'bg-brand-navy text-white' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'}`}>
-      {children}
-    </button>
-  );
-
-  return (
-    <div className="border border-neutral-200 dark:border-neutral-600 rounded-lg overflow-hidden focus-within:border-brand-navy transition-colors dark:bg-neutral-800">
-      {/* WYSIWYG Toolbar */}
-      <div className="flex items-center gap-0.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 flex-wrap">
-        <ToolBtn cmd="bold"          title="Bold (Ctrl+B)"><strong>B</strong></ToolBtn>
-        <ToolBtn cmd="italic"        title="Italic (Ctrl+I)"><em>I</em></ToolBtn>
-        <ToolBtn cmd="underline"     title="Underline (Ctrl+U)"><u>U</u></ToolBtn>
-        <ToolBtn cmd="strikeThrough" title="Strikethrough"><s>S</s></ToolBtn>
-        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1"/>
-        <ToolBtn cmd="formatBlock" arg="h2"  title="Heading 2"><span className="font-bold text-xs">H2</span></ToolBtn>
-        <ToolBtn cmd="formatBlock" arg="h3"  title="Heading 3"><span className="font-bold text-xs">H3</span></ToolBtn>
-        <ToolBtn cmd="formatBlock" arg="p"   title="Paragraph"><span className="text-xs">¶</span></ToolBtn>
-        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1"/>
-        <ToolBtn cmd="insertUnorderedList" title="Bullet list"><span className="text-[11px]">• —</span></ToolBtn>
-        <ToolBtn cmd="insertOrderedList"   title="Numbered list"><span className="text-[11px]">1.</span></ToolBtn>
-        <ToolBtn cmd="indent"              title="Indent"><span className="text-[11px]">→</span></ToolBtn>
-        <ToolBtn cmd="outdent"             title="Outdent"><span className="text-[11px]">←</span></ToolBtn>
-        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1"/>
-        <ToolBtn cmd="removeFormat" title="Clear formatting"><span className="text-xs">✕</span></ToolBtn>
-        <span className="ml-auto text-xs text-neutral-300 pr-1">WYSIWYG</span>
-      </div>
-
-      {/* Editable area — true WYSIWYG */}
-      <div
-        ref={editorRef}
-        contentEditable
-        suppressContentEditableWarning
-        onInput={handleInput}
-        onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
-        onCompositionStart={() => { isComposing.current = true; }}
-        onCompositionEnd={() => { isComposing.current = false; handleInput(); }}
-        data-placeholder={placeholder}
-        className="min-h-[100px] max-h-64 overflow-y-auto px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 focus:outline-none bg-white dark:bg-neutral-800
-          [&_h2]:text-base [&_h2]:font-bold [&_h2]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mb-1
-          [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5
-          [&_li]:mb-0.5 [&_strong]:font-semibold [&_em]:italic [&_u]:underline [&_s]:line-through
-          empty:before:content-[attr(data-placeholder)] empty:before:text-neutral-300"
-      />
     </div>
   );
 }

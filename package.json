@@ -11,6 +11,8 @@
     "verify": "npm run guardrails && npm run ai-rules:check"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
     "autoprefixer": "^10.5.0",
     "husky": "^9.1.7",
     "postcss": "^8.5.15",

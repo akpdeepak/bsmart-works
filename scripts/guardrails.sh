@@ -78,6 +78,12 @@ if [ -d "$MIG" ]; then
   check BLOCK "Flyway files follow V{n}__snake_case.sql (CLAUDE.md §3)" "$bad"
 fi
 
+# Backend: System.out.println is banned — use SLF4J Logger. Currently zero usages; keep clean.
+if [ -d "$BE" ]; then
+  check BLOCK "No System.out.println in backend (use SLF4J — CLAUDE.md §2)" \
+    "$(grep -RIn 'System\.out\.print' "$BE" 2>/dev/null || true)"
+fi
+
 # ── WARN rules (baseline debt in App.jsx — flip to BLOCK after remediation) ─────
 
 # Raw hex colours in component JSX (the global index.css token defs are exempt).

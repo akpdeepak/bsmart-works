@@ -76,11 +76,12 @@ package-by-feature migration is formally scheduled.
 - `RbacService` is the single entry point for all permission checks.
 - Privacy: individual data private by default; manager drill-down is API-enforced, not UI-hidden.
 
-### Database (Flyway — current high-water mark: **V19** on `main`; note V16 was skipped)
+### Database (Flyway — current high-water mark: **V26** on `main`; note V16 was skipped, V23 does not exist)
 - **All schema changes via Flyway migrations only.** Never alter the DB manually.
-- Next migration is **`V20__<description>.sql`**. Naming: `V{n}__{snake_case_description}.sql`.
-  (Existing on `main`: …V14, V15 seed_brand_and_identity, V17 mfa_totp, V18 project_slugs,
-  V19 data_quality_cleanup, V20 drop_dead_event_log.)
+- Next migration is **`V27__<description>.sql`**. Naming: `V{n}__{snake_case_description}.sql`.
+  (Existing on `main`: …V17 mfa_totp, V18 project_slugs, V19 data_quality_cleanup,
+  V20 drop_dead_event_log, V21 iteration3_workflows_fields_permissions, V22 iteration4_pm_artifacts,
+  V24 knowledge_repository, V25 releases_and_worklogs, V26 cross_project_dependencies.)
 - **Table names are PLURAL.** Verified existing tables:
   `users, projects, project_members, workspaces, workspace_members, work_items,
   work_item_links, sprints, comments, attachments, notifications, notification_preferences,
@@ -728,9 +729,29 @@ Icons are from `lucide-react` only (§2). Consistency in size, weight, and meani
 | Role Surfaces | 13–16 | Integrations, developer/SM/PO/leadership/admin surfaces |
 | Enterprise | 17–20 | Customization engine, mobile/realtime, security certs, polish + marketplace |
 
-**Current status (inferred from migrations V1–V19 on `main`):** the project is around **iteration 2–3**
-(work items + sprints landed; RBAC/tiers seeded). Confirm the active iteration with Deepak
+**Current status (inferred from migrations V1–V26 on `main`):** the project is around **iteration 5**
+(work items, sprints, PM artifacts RAID, knowledge repository, custom fields, cross-project
+dependencies, releases, and worklogs are all landed). Confirm the active iteration with Deepak
 before building forward. **Do not implement iteration N+1 features while iteration N is in scope.**
+
+### PM Traceability (non-negotiable process)
+
+Every unit of work follows this path. Skipping steps creates invisible scope and blocks audits.
+
+**Before sprint:** every work item must meet the **Definition of Ready** before entering an iteration:
+- Acceptance criteria are specific and testable (the feature spec template `.github/ISSUE_TEMPLATE/feature-spec.md` enforces this)
+- Iteration confirmed; capability map reference noted
+- API contract agreed if backend is involved; UI behaviour or Figma ref provided if frontend
+- Flyway migration identified (next: V27+); RBAC/privacy implications noted; AI fallback documented
+
+**During development:** every commit must follow the **Conventional Commits** format (`type(scope): description`),
+enforced by `.husky/commit-msg` and the `commit-lint` CI job. The iteration number appears in the PR metadata.
+
+**Before merge:** the PR checklist in `.github/pull_request_template.md` is the **Definition of Done**.
+Every item is either auto-enforced by CI or ticked manually. A PR that skips items is not mergeable.
+
+**After each iteration:** update the "Current status" paragraph above and the Flyway next-migration reference.
+This keeps CLAUDE.md accurate for all AI tools (no stale advice).
 
 ---
 
@@ -739,7 +760,7 @@ before building forward. **Do not implement iteration N+1 features while iterati
 **Architecture / Backend**
 - Don't add features, abstractions, or generalization beyond the task.
 - Don't create capability-specific auth, data models, or UI patterns. One of each, unified.
-- Don't change DB schema without a Flyway migration (next is `V21`).
+- Don't change DB schema without a Flyway migration (next is `V27`).
 - Don't use singular table names — the convention is plural (`work_items`, `users`).
 - Don't create `com.bcits.works.*` packages yet — match existing `com.example.demo`.
 - Don't put RBAC logic in controllers.
@@ -781,9 +802,15 @@ before building forward. **Do not implement iteration N+1 features while iterati
 - Don't reuse a `lucide` icon for two different meanings, or mix icon stroke widths (§4.23).
 - Don't add `eslint-plugin-tailwindcss` back — it's incompatible with this ESLint 10 + Tailwind 3.4 stack (§ see `eslint.config.js`).
 
+**Developer workflow**
+- Don't use `System.out.println` — always use an SLF4J `Logger` (guardrails.sh enforces this).
+- Don't write commit messages outside the Conventional Commits format (`type(scope): description`).
+  Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`, `build`, `revert`.
+  Enforced by `.husky/commit-msg` + the `commit-lint` CI job.
+
 **Backend**
 - [ ] New endpoints have `@Valid` DTO validation, under `/api/v1/`, plural kebab path
-- [ ] New tables/columns have a Flyway migration (`V21+`), plural table names
+- [ ] New tables/columns have a Flyway migration (`V27+`), plural table names
 - [ ] RBAC check in service layer (not controller)
 - [ ] Errors use the standard `{ code, message, field? }` shape
 - [ ] New code added to `com.example.demo` (no new top-level packages without a rename plan)
@@ -820,8 +847,11 @@ before building forward. **Do not implement iteration N+1 features while iterati
 > `eslint-plugin-jsx-a11y` (a11y) + custom rules (tokens, no inline fetch, no arbitrary px);
 > (2) `scripts/guardrails.sh` — brand/architecture greps (no `gray-*`, no `works-*`, no arbitrary
 > z-index, Flyway naming, RBAC placement), run in pre-commit + CI; (3) the CI workflow's
-> "AI rules in sync" job, which fails if the derived rules files drift from this CLAUDE.md.
+> "AI rules in sync" job, which fails if the derived rules files drift from this CLAUDE.md;
+> (4) `scripts/check-dod-sync.sh` — verifies the PR template's DoD version tag matches CLAUDE.md.
 > Lint is currently advisory in CI (App.jsx baseline debt); the **build** and **guardrails** jobs block.
+
+<!-- dod-version: 2026-06-01-r2 -->
 
 ---
 

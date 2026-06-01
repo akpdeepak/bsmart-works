@@ -1,6 +1,6 @@
 <!-- bSmart Works PR. The checklist mirrors CLAUDE.md §7 (Definition of Done).
      CI enforces most of these automatically; tick the rest honestly.
-     dod-version: 2026-06-01-r1 — must match the tag in CLAUDE.md §7. -->
+     dod-version: 2026-06-01-r2 — must match the tag in CLAUDE.md §7. -->
 
 ## What & why
 <!-- One or two sentences. Link the iteration/work item. -->
@@ -16,6 +16,7 @@
 - [ ] RBAC checks are in the service layer via `RbacService`, not in controllers
 - [ ] Errors use the standard `{ code, message, field? }` shape via `@ControllerAdvice`
 - [ ] New code is in `com.example.demo` (no new top-level packages without a rename plan)
+- [ ] Logging uses SLF4J `Logger` — no `System.out.println`
 - [ ] AI features have a documented deterministic fallback
 
 **Frontend / UI**

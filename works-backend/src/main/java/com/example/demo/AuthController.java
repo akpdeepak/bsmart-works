@@ -11,12 +11,15 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.time.OffsetDateTime;
 import java.util.*;
 
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
@@ -56,9 +59,9 @@ public class AuthController {
         eventService.record(newUser.getId(), "USER_SIGNED_UP", newUser.getId(),
                 "{\"email\":\"" + newUser.getEmail() + "\"}");
 
-        // In production: send email. For now log the verification link.
-        System.out.println("[EMAIL] Verification link for " + newUser.getEmail()
-                + ": http://localhost:5173/verify?token=" + verificationToken);
+        // In production: send via the email service. For now log to server output.
+        log.info("[EMAIL] Verification link for {}: http://localhost:5173/verify?token={}",
+                newUser.getEmail(), verificationToken);
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("requiresVerification", true);
@@ -144,7 +147,7 @@ public class AuthController {
             throw ApiException.badRequest("VALIDATION_ERROR", "Email is required.", "email");
         }
         userRepository.findByEmail(email.toLowerCase().trim()).ifPresent(u ->
-            System.out.println("[EMAIL] Password reset requested for: " + u.getEmail())
+            log.info("[EMAIL] Password reset requested for: {}", u.getEmail())
         );
         return ResponseEntity.ok(Map.of("message", "If that email exists, a reset link has been sent."));
     }

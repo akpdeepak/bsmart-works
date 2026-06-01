@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+# Conventional Commits gate — enforces type(scope): description format.
+# Valid types: feat, fix, docs, style, refactor, perf, test, chore, ci, build, revert
+# Examples:
+#   feat(work-items): add inline quick-capture on N key
+#   fix(backend): handle null assigneeId in WorkItemService
+#   docs: encode dev/PM practices into ENGINEERING-PRINCIPLES.md
+npx --no -- commitlint --edit "$1"

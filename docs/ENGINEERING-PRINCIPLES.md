@@ -107,8 +107,8 @@ feature wants its own silo, that's the smell to stop and reuse the shared layer.
 ### 3.2 Event-source from day one
 Every state change emits an event to the append-only event table. Events are never updated or
 deleted. This is what makes audit, compliance reconstruction, and time-travel debugging possible
-later — and it cannot be retrofitted. *(Open issue: the repo currently has two event tables,
-`event_log` and `events` — consolidate to one before building further on event sourcing.)*
+later — and it cannot be retrofitted. The single event store is **`events`** (mapped by `AppEvent`,
+written by `EventService`); the dead `event_log` table was dropped in V20.
 
 ### 3.3 Canonical vocabulary, everywhere
 One concept, one name, across Java / DB / REST:
@@ -144,9 +144,13 @@ Principles that rely on memory decay. Each rule below is wired to a check that f
 |-----------|-------------|---------------|
 | Tokens not literals (§2.2) | ESLint rules in `works-frontend/eslint.config.js` | On save, pre-commit, CI |
 | No inline fetch/axios (§2.3) | ESLint `no-restricted-syntax` / `no-restricted-imports` | On save, pre-commit, CI |
-| Brand/arch cross-cutting rules | `scripts/guardrails.sh` (hex, `works-*`, packages, migrations, RBAC-in-controller) | Pre-commit, CI |
+| WCAG 2.1 AA a11y (§2.2) | `eslint-plugin-jsx-a11y` in `eslint.config.js` | On save, pre-commit, CI |
+| Brand/arch cross-cutting rules | `scripts/guardrails.sh` (hex, `works-*`, packages, migrations, RBAC-in-controller, `gray-*`, z-index) | Pre-commit, CI |
 | Java style consistency (§2.1) | Checkstyle (`works-backend/config/checkstyle/checkstyle.xml`) | `./mvnw verify`, CI |
 | AI rules never drift | `scripts/generate-ai-rules.mjs --check` | Pre-commit, CI |
+| DoD checklist never drifts | `scripts/check-dod-sync.sh` (version tag in CLAUDE.md + PR template must match) | Pre-commit, CI |
+| Frontend behavior verified | Vitest + React Testing Library (`npm test`) | Pre-commit, CI |
+| Backend logic verified | JUnit 5 + JaCoCo coverage gate (`./mvnw -B test`) | CI |
 | Definition of Done (§2.5, §1.4) | `.github/pull_request_template.md` | Every PR |
 | The whole gate | `.github/workflows/ci.yml` | Every push & PR — **blocks merge** |
 

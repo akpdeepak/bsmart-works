@@ -118,6 +118,59 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
+			<!-- JaCoCo: coverage instrumentation, reporting, and an advisory gate.
+			     Runs in verify phase (not test), so `./mvnw -Dgroups=unit test` is always green
+			     if tests pass, regardless of coverage ratio. Advisory mode (haltOnFailure=false)
+			     mirrors the Checkstyle approach: violations are logged but don't break the build
+			     until the baseline is clean. Once unit tests cover >60% of core logic, flip
+			     haltOnFailure to `true` and set an appropriate minimum. -->
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.8.13</version>
+				<executions>
+					<execution>
+						<id>jacoco-prepare</id>
+						<goals><goal>prepare-agent</goal></goals>
+					</execution>
+					<execution>
+						<id>jacoco-report</id>
+						<phase>verify</phase>
+						<goals><goal>report</goal></goals>
+					</execution>
+					<execution>
+						<id>jacoco-check</id>
+						<phase>verify</phase>
+						<goals><goal>check</goal></goals>
+						<configuration>
+							<haltOnFailure>false</haltOnFailure>
+							<rules>
+								<rule>
+									<element>BUNDLE</element>
+									<limits>
+										<limit>
+											<counter>LINE</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>0.60</minimum>
+										</limit>
+									</limits>
+								</rule>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- Surefire: when running unit tests only (./mvnw -B -Dgroups=unit test),
+			     skip integration tests that need a live database. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>**/*IntegrationTest.java</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
 			<!-- Checkstyle: enforces Java style consistency across all contributors and AI tools.
 			     Runs at the `verify` phase (so CI catches it). Shipped in reporting mode
 			     (failOnViolation=false) so it does not break the existing baseline on day one.

@@ -12,17 +12,10 @@ updates:
       time: "09:00"
       timezone: Asia/Kolkata
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - frontend
     commit-message:
       prefix: chore
       prefix-development: chore
       include: scope
-    ignore:
-      # Major version bumps require manual review — Dependabot will still open the PR
-      # but the policy is to review before merging (CLAUDE.md §12.2)
-      []
 
   # Backend Maven dependencies
   - package-ecosystem: maven
@@ -33,9 +26,6 @@ updates:
       time: "09:00"
       timezone: Asia/Kolkata
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - backend
     commit-message:
       prefix: chore
       include: scope

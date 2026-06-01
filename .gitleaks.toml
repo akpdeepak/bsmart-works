@@ -3,6 +3,12 @@
 # Never suppress a real secret — fix it by rotating the credential and rewriting history.
 title = "bSmart Works gitleaks config"
 
+[allowlist]
+description = "Global allowlist — test sources routinely contain fake credentials"
+paths = [
+    '''src/test/.*''',
+]
+
 [extend]
 # Use the default ruleset as the base
 useDefault = true

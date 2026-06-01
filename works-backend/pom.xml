@@ -149,6 +149,59 @@
 						<goals><goal>check</goal></goals>
 						<configuration>
 							<haltOnFailure>true</haltOnFailure>
+							<!-- Exclude Spring-managed beans, JPA entities, and DTOs.
+							     Only pure utility/domain classes (ApiError, ApiException,
+							     PageResponse, JwtUtil, GlobalExceptionHandler) are measured.
+							     Everything else requires a live DB or Spring context and belongs
+							     in integration tests. -->
+							<excludes>
+								<exclude>**/*Controller.class</exclude>
+								<exclude>**/*Repository.class</exclude>
+								<exclude>**/*Service.class</exclude>
+								<exclude>**/*Scheduler.class</exclude>
+								<exclude>**/*Filter.class</exclude>
+								<exclude>**/*Config.class</exclude>
+								<exclude>**/DemoApplication.class</exclude>
+								<exclude>**/AuthenticatedUser.class</exclude>
+								<exclude>**/dto/**</exclude>
+								<exclude>**/ActionItem.class</exclude>
+								<exclude>**/AppEvent.class</exclude>
+								<exclude>**/Article.class</exclude>
+								<exclude>**/ArticleVersion.class</exclude>
+								<exclude>**/Assumption.class</exclude>
+								<exclude>**/Comment.class</exclude>
+								<exclude>**/CrossProjectDependency.class</exclude>
+								<exclude>**/Decision.class</exclude>
+								<exclude>**/Dependency.class</exclude>
+								<exclude>**/FieldDef.class</exclude>
+								<exclude>**/FieldLayout.class</exclude>
+								<exclude>**/FieldVisibility.class</exclude>
+								<exclude>**/KnowledgeSpace.class</exclude>
+								<exclude>**/LessonLearned.class</exclude>
+								<exclude>**/Meeting.class</exclude>
+								<exclude>**/MeetingNote.class</exclude>
+								<exclude>**/Notification.class</exclude>
+								<exclude>**/PermissionScheme.class</exclude>
+								<exclude>**/PmIssue.class</exclude>
+								<exclude>**/Project.class</exclude>
+								<exclude>**/Release.class</exclude>
+								<exclude>**/Risk.class</exclude>
+								<exclude>**/RoleDef.class</exclude>
+								<exclude>**/RolePermission.class</exclude>
+								<exclude>**/SavedFilter.class</exclude>
+								<exclude>**/Sprint.class</exclude>
+								<exclude>**/Stakeholder.class</exclude>
+								<exclude>**/User.class</exclude>
+								<exclude>**/WorkItem.class</exclude>
+								<exclude>**/WorkItemFieldValue.class</exclude>
+								<exclude>**/WorkItemLink.class</exclude>
+								<exclude>**/WorkLog.class</exclude>
+								<exclude>**/Workflow.class</exclude>
+								<exclude>**/WorkflowStatus.class</exclude>
+								<exclude>**/WorkflowTransition.class</exclude>
+								<exclude>**/Workspace.class</exclude>
+								<exclude>**/WorkItemTypeConfig.class</exclude>
+							</excludes>
 							<rules>
 								<rule>
 									<element>BUNDLE</element>

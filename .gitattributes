@@ -1,0 +1,21 @@
+# Line-ending policy — store text as LF in the repo and check out LF everywhere.
+# Keeps `scripts/generate-ai-rules.mjs --check` deterministic across Windows / macOS /
+# Linux / CI: a Windows checkout can no longer turn the generated AI-rules files into
+# CRLF and trip the strict-string sync gate (the `ai-rules-in-sync` CI job — CLAUDE.md §8),
+# and Windows contributors stop getting spurious local "stale" failures.
+* text=auto eol=lf
+
+# Shell scripts and git hooks must be LF to run.
+*.sh    text eol=lf
+*.mjs   text eol=lf
+
+# Binary assets — never normalize.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
+*.zip   binary
+*.pdf   binary

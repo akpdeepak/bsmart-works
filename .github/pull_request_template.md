@@ -1,6 +1,6 @@
 <!-- bSmart Works PR. The checklist mirrors CLAUDE.md §6 (Definition of Done).
      CI enforces most of these automatically; tick the rest honestly.
-     dod-version: 2026-06-01-r3 — must match the tag in CLAUDE.md §6. -->
+     dod-version: 2026-06-01-r4 — must match the tag in CLAUDE.md §6. -->
 
 ## What & why
 <!-- One or two sentences. Link the iteration/work item. -->
@@ -18,6 +18,7 @@
 - [ ] New code is in `com.example.demo` (no new top-level packages without a rename plan)
 - [ ] Logging uses SLF4J `Logger` — no `System.out.println`
 - [ ] AI features have a documented deterministic fallback
+- [ ] Any PR touching auth, CORS, RBAC, JWT, or file upload is labelled `security-review`
 
 **Frontend / UI**
 - [ ] No raw hex / arbitrary px — token classes only (`brand-*`, `neutral-*`, `semantic-*`)
@@ -38,6 +39,7 @@
 - [ ] Mutations use optimistic UI — UI updates before API response
 - [ ] Z-index uses named tokens (`z-modal`, `z-toast` …), not arbitrary values
 - [ ] All HTTP goes through the `apiClient` wrapper (no inline fetch/axios)
+- [ ] New list endpoints use `PageResponse<T>` + `Pageable` — no bare `findAll()` on user data
 
 **Cross-cutting**
 - [ ] Scope matches the task — no speculative features or abstractions

@@ -810,7 +810,8 @@ This keeps CLAUDE.md accurate for all AI tools (no stale advice).
 - [ ] RBAC check in service layer (not controller)
 - [ ] Errors use the standard `{ code, message, field? }` shape
 - [ ] New code added to `com.example.demo` (no new top-level packages without a rename plan)
-- [ ] AI features have documented fallback behavior
+- [ ] AI features have a documented deterministic fallback
+- [ ] Any PR touching auth, CORS, RBAC, JWT, or file upload is labelled `security-review`
 
 **Frontend / UI**
 - [ ] No raw hex/px/font in frontend — token classes only (`brand-*`, `neutral-*`, `semantic-*`)
@@ -838,6 +839,8 @@ This keeps CLAUDE.md accurate for all AI tools (no stale advice).
 - [ ] Z-index uses named tokens (§4.21), not arbitrary values
 - [ ] Dates/numbers formatted per §4.22 (relative ≤7d, `31 May 2026` absolute, em-dash for empty)
 - [ ] Icons from `lucide` at standard sizes (§4.23); icon-only buttons have `aria-label`
+- [ ] All HTTP goes through the `apiClient` wrapper (no inline fetch/axios)
+- [ ] New list endpoints use `PageResponse<T>` + `Pageable` — no bare `findAll()` on user data
 
 **Cross-cutting**
 - [ ] Scope matches the task — no speculative features or abstractions
@@ -855,7 +858,7 @@ This keeps CLAUDE.md accurate for all AI tools (no stale advice).
 > All CI jobs block: **lint** (App.jsx baseline suppressed with file-level disable — new files must pass
 > clean), **build**, **guardrails**, and **coverage** (JaCoCo 60% LINE minimum on unit tests).
 
-<!-- dod-version: 2026-06-01-r3 -->
+<!-- dod-version: 2026-06-01-r4 -->
 
 ---
 
@@ -1450,6 +1453,260 @@ qc.invalidateQueries({ queryKey: ['work-items', { projectId }] })
 // Broad — use after bulk operations only
 qc.invalidateQueries({ queryKey: ['work-items'] })
 ```
+
+---
+
+## 17. Security Hardening
+
+### 17.1 HTTP Security Headers
+
+Added to `SecurityConfig.java` via Spring Security's `.headers()` DSL. Current headers sent on every response:
+
+| Header | Value | Protection |
+|--------|-------|-----------|
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'` | XSS, clickjacking |
+| `X-Frame-Options` | `DENY` | Clickjacking fallback |
+| `X-Content-Type-Options` | `nosniff` | MIME sniffing |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Referrer leakage |
+
+**Updating CSP:** edit the policy string in `SecurityConfig.java`. Tighten `style-src` once inline styles are eliminated (remove `'unsafe-inline'`). Never add `'unsafe-eval'`.
+
+**HSTS:** add `Strict-Transport-Security` only in staging/production (it must not be sent over HTTP). Wire it via a Spring profile condition or an environment variable check.
+
+### 17.2 CORS
+
+CORS is configured in `SecurityConfig.corsConfigurationSource()`. Allowed origins come from `BSMART_CORS_ALLOWED_ORIGINS` (comma-separated list). Rules:
+
+- Never use `*` as an allowed origin — always name the exact origin(s)
+- Only add an origin to `BSMART_CORS_ALLOWED_ORIGINS` in staging/prod when you own that domain
+- Allowed methods are fixed: `GET, POST, PUT, DELETE, OPTIONS` — do not add `PATCH` or `TRACE` without security review
+- `allowedHeaders(List.of("*"))` is acceptable here because requests are authenticated via JWT (not cookies) and the CSP policy further restricts what scripts can do
+
+### 17.3 XSS Prevention
+
+**Backend:** JPA/Hibernate parameterised queries prevent SQL injection by default. For any native query (annotated `@Query(nativeQuery = true)` or via `EntityManager.createNativeQuery`):
+- Always use bind parameters (`:paramName` or `?1`) — never string-concatenate user input
+- `guardrails.sh` blocks string-concatenated query patterns in controller and service files
+
+**Frontend:** React's JSX escapes output by default. Additional rules:
+- Never use `dangerouslySetInnerHTML` on user-supplied content without sanitisation
+- If rich text rendering is needed, use DOMPurify: `DOMPurify.sanitize(html)` before passing to `dangerouslySetInnerHTML`
+- Never construct a URL from user input without `encodeURIComponent`
+- Never store sensitive data in `localStorage` beyond the JWT session token (already done in `apiClient.js`)
+
+### 17.4 Rate Limiting
+
+Not yet implemented. Recommended approach when needed:
+
+**Option A — API Gateway / load balancer (preferred for production):** configure rate limiting at the infrastructure layer (Nginx, Cloudflare, AWS API Gateway). No application code needed.
+
+**Option B — In-application with Bucket4j:**
+```xml
+<dependency>
+  <groupId>com.giffing.bucket4j.spring.boot.starter</groupId>
+  <artifactId>bucket4j-spring-boot-starter</artifactId>
+</dependency>
+```
+Add to `pom.xml` and configure per-endpoint limits in `application.properties`. See [Bucket4j docs](https://github.com/MarcGiffing/bucket4j-spring-boot-starter).
+
+Implement rate limiting before any endpoint is exposed to external/untrusted callers.
+
+### 17.5 Security Review Trigger
+
+A PR **must** be flagged for security review (add label `security-review` on the GitHub PR) when it touches any of:
+- `SecurityConfig.java` or any security filter
+- JWT generation, validation, or storage (`JwtUtil`)
+- `RbacService` or any permission check
+- Authentication endpoints (`/api/v1/auth/*`)
+- File upload or attachment handling
+- Any new endpoint that accepts user-supplied file paths or URLs
+- CORS origin list changes
+- Any native SQL query
+
+For small teams (current state): Deepak self-reviews these changes and verifies the security checklist in the PR description. The `security-review` label is the signal — no separate approval process until the team grows.
+
+### 17.6 OWASP Top 10 Self-Check (for Security-Flagged PRs)
+
+Before merging a security-flagged PR, verify these are not introduced:
+
+| # | Risk | Check |
+|---|------|-------|
+| A01 | Broken access control | RBAC check in service layer via `RbacService`? |
+| A02 | Cryptographic failures | JWT secret ≥32 chars? No sensitive data in logs? |
+| A03 | Injection | Bind parameters in all queries? No string concat? |
+| A04 | Insecure design | Auth bypass possible? |
+| A05 | Security misconfiguration | Dev token disabled in prod? CORS origins named? |
+| A06 | Vulnerable components | `npm audit` + OWASP check clean? |
+| A07 | Auth & session failures | JWT expiry enforced? Stateless? |
+| A08 | Integrity failures | No `unsafe-eval` in CSP? |
+| A09 | Logging failures | No PII/secrets in logs? |
+| A10 | SSRF | No user-controlled URLs fetched server-side? |
+
+---
+
+## 18. Database Best Practices
+
+### 18.1 Query Performance Guidelines
+
+- **Never call `findAll()` on a table that can grow without bound.** Every list endpoint that returns user-generated data (work items, comments, events, notifications) must use `Pageable` and `PageResponse<T>` (CLAUDE.md §15). The `findAll()` calls currently in the codebase are flagged as pagination debt — migrate them as you touch each endpoint.
+- Prefer **Spring Data derived queries** (`findByProjectIdAndStatus(...)`) over JPQL for simple filters — they are type-checked at startup.
+- For complex filters, use **JPQL with bind parameters** (`@Query("SELECT w FROM WorkItem w WHERE w.projectId = :projectId")`). Never native SQL unless there is no JPQL equivalent.
+- **Never SELECT in a loop.** If you find yourself calling a repository inside a `for` loop, rewrite to a single `IN (...)` query or use a join.
+
+### 18.2 N+1 Prevention
+
+N+1 is the most common JPA performance bug. Detect and fix it before it ships:
+
+**Identify:** enable `spring.jpa.show-sql=true` locally. If you see the same query repeated N times in a loop, that is N+1.
+
+**Fix options (in order of preference):**
+1. `@EntityGraph(attributePaths = {"association"})` on the repository method — fetches the association in one JOIN
+2. `JOIN FETCH` in a JPQL `@Query`
+3. `@BatchSize(size = 25)` on the collection field (Hibernate batch loading)
+
+**Never fix N+1 with `FetchType.EAGER`** — it replaces one problem with a permanent tax on every query.
+
+### 18.3 Indexing Strategy
+
+Flyway migrations that add a new table or foreign key **must** include an index migration or a comment explaining why one is not needed.
+
+Default indexing rules:
+- Every foreign key column (`project_id`, `assignee_id`, `sprint_id`) gets an index
+- Every column used as a filter in a list endpoint (`status`, `priority`, `created_at`) gets an index if the table can exceed ~10k rows
+- Unique constraints (email, slug) already imply an index — do not add a duplicate
+- Composite index when two columns are always filtered together
+
+```sql
+-- Example in a Flyway migration:
+CREATE INDEX idx_work_items_project_status ON work_items(project_id, status);
+CREATE INDEX idx_work_items_assignee       ON work_items(assignee_id);
+```
+
+### 18.4 HikariCP Connection Pool
+
+Configured in `application.properties` under `spring.datasource.hikari.*`. Override via env vars:
+
+| Property | Default | Env var override | Notes |
+|----------|---------|-----------------|-------|
+| `maximum-pool-size` | 10 | `BSMART_DB_POOL_MAX` | Raise if connection wait time >30ms under load |
+| `minimum-idle` | 2 | `BSMART_DB_POOL_MIN_IDLE` | Keep low to avoid idle connections in staging |
+| `connection-timeout` | 30s | — | 30s is generous; lower to 5s in prod |
+| `idle-timeout` | 10min | — | Release idle connections back to Postgres |
+| `max-lifetime` | 30min | — | Recycle connections before Postgres kills them |
+| `leak-detection-threshold` | 60s | — | Logs a warning if a connection is not returned |
+
+Monitor pool health at `/actuator/health` — it reports HikariCP pool status when `show-details=when-authorized`.
+
+### 18.5 Backup Strategy
+
+**Not yet implemented** (no production deployment). When a hosting target is confirmed:
+
+| Tier | Backup frequency | Retention | Method |
+|------|-----------------|-----------|--------|
+| Production | Every 6 hours (continuous WAL preferred) | 30 days | Managed Postgres provider auto-backup, or `pg_dump` via cron |
+| Staging | Daily | 7 days | `pg_dump` to S3/GCS |
+| Local | N/A — use `docker compose down -v` to reset | — | |
+
+Rules when implemented:
+- Test restore at least once before go-live — a backup that has never been restored is not a backup
+- Store backups in a different region/account from the database
+- Encrypt backups at rest (most managed Postgres providers do this automatically)
+- Never store backup credentials in the repo — use the secrets management approach (CLAUDE.md §8)
+
+---
+
+## 19. API Documentation & Versioning
+
+### 19.1 OpenAPI / Swagger UI
+
+**Tool: springdoc-openapi**
+
+Add to `works-backend/pom.xml` when a compatible version for Spring Boot 4.0.x is confirmed (check [springdoc.org](https://springdoc.org) — target version 2.9+):
+```xml
+<dependency>
+  <groupId>org.springdoc</groupId>
+  <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+  <version>2.9.x</version>
+</dependency>
+```
+
+Once added:
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+- Restrict in production: `springdoc.api-docs.enabled=false` (or restrict to internal network)
+
+**Annotation standard** (add to all controllers once springdoc is active):
+```java
+@Operation(summary = "List work items for a project", description = "Paginated, filterable.")
+@ApiResponse(responseCode = "200", description = "Page of work items")
+@ApiResponse(responseCode = "403", description = "Not a member of this project")
+```
+
+Until springdoc is wired, document new endpoints in the PR description with request/response examples.
+
+### 19.2 API Versioning
+
+Current API is `/api/v1/`. Versioning strategy when a breaking change is needed:
+
+**URL path versioning** (keep it simple):
+- Breaking change → introduce `/api/v2/<resource>` endpoint
+- Run v1 and v2 in parallel until all clients are migrated
+- Deprecate v1 with a `Deprecation` response header and a sunset date
+- Remove v1 only after the sunset date has passed and no active client is on v1
+
+**What counts as a breaking change:**
+- Removing or renaming a field in a response body
+- Changing a field's type
+- Removing an endpoint
+- Changing required/optional status of a request field
+- Changing error codes that clients may be checking
+
+**What is NOT a breaking change:**
+- Adding a new optional response field
+- Adding a new optional request parameter
+- Adding a new endpoint
+- Fixing a bug in existing behavior (document it clearly)
+
+### 19.3 Deprecation Process
+
+1. Add `@Deprecated` to the Java method + a Javadoc note pointing to the replacement
+2. Return a `Deprecation: true` and `Sunset: <date>` response header
+3. Log a WARN on every call to the deprecated endpoint so usage is visible
+4. Document in `CHANGELOG.md` under the version that introduces the deprecation
+5. Remove only after the sunset date
+
+---
+
+## 20. Technical Debt Management
+
+### 20.1 What Goes in the Debt Register
+
+**Technical debt** is a deliberate decision to use a suboptimal solution now in exchange for speed, with the intent to fix it later. It is not bugs (fix immediately) or future features (in the roadmap). Every item of acknowledged tech debt belongs in `TECH-DEBT.md`.
+
+Categories:
+- **Architecture debt** — structural decisions that limit future scale (e.g. flat package structure)
+- **Code debt** — known suboptimal code that passes CI but should be improved (e.g. App.jsx monolith)
+- **Tooling debt** — missing tooling that would improve quality (e.g. OpenAPI not yet wired)
+- **Migration debt** — temporary incompatibilities between spec and code (e.g. `com.example.demo` package)
+
+### 20.2 TECH-DEBT.md
+
+`TECH-DEBT.md` in the repo root is the single register. Every entry has:
+- **What:** one sentence describing the debt
+- **Why accepted:** why the shortcut was taken
+- **Impact:** what breaks or degrades if left unaddressed
+- **Trigger:** the condition that should prompt fixing it (e.g. "when team > 3 devs", "before v1.0")
+
+### 20.3 Adding Debt
+
+When you intentionally take a shortcut, add an entry to `TECH-DEBT.md` in the same PR. If you discover existing debt (not logged), add it. The register is never a blocker — it is a visibility tool.
+
+### 20.4 Paying Down Debt
+
+- Debt items with a "Trigger" whose condition is now met should be scheduled in the current or next iteration
+- Each iteration review (after the iteration PR merges): scan `TECH-DEBT.md` for triggered items
+- Paying down debt gets its own PR with `refactor(...)` or `chore(...)` prefix — never bundled into a feature PR
+- Remove the entry from `TECH-DEBT.md` when the debt is fully resolved
 
 ---
 

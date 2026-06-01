@@ -84,6 +84,20 @@ if [ -d "$BE" ]; then
     "$(grep -RIn 'System\.out\.print' "$BE" 2>/dev/null || true)"
 fi
 
+# @Transactional belongs in the service layer, not controllers (CLAUDE.md §3).
+if [ -d "$BE" ]; then
+  check BLOCK "No @Transactional in controllers (belongs in service layer — CLAUDE.md §3)" \
+    "$(grep -RInE '@Transactional' "$BE"/*Controller.java 2>/dev/null || true)"
+fi
+
+# Native JPQL/SQL queries must use bind parameters, never string concatenation (CLAUDE.md §17).
+# WARN (not BLOCK): pre-existing hits in ApiException.java (message concat, not a query) and
+# WiqlController.java (JPQL builder debt — TD-004). Flip to BLOCK after remediation.
+if [ -d "$BE" ]; then
+  check WARN "No string-concatenated queries (use bind parameters — CLAUDE.md §17)" \
+    "$(grep -RInE '"[^"]*\+\s*(userId|id|name|title|email|input|param|value)' "$BE" 2>/dev/null || true)"
+fi
+
 # ── WARN rules (baseline debt in App.jsx — flip to BLOCK after remediation) ─────
 
 # Raw hex colours in component JSX (the global index.css token defs are exempt).

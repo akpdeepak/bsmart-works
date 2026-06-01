@@ -29,4 +29,15 @@ public class ArticleAnalyticsService {
         if (!ArticleWorkflowService.PUBLISHED.equals(status)) return false;
         return daysSince(updatedAt, now) > thresholdDays;
     }
+
+    /**
+     * Normalize a raw search query for term analytics: trim, collapse internal
+     * whitespace, lowercase so "  Meter  Reset " and "meter reset" count as one.
+     * Returns {@code null} for blank input (nothing worth recording).
+     */
+    public String normalizeSearchTerm(String raw) {
+        if (raw == null) return null;
+        String t = raw.trim().replaceAll("\\s+", " ").toLowerCase();
+        return t.isEmpty() ? null : t;
+    }
 }

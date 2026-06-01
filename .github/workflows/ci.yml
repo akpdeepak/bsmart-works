@@ -81,11 +81,9 @@ jobs:
           cache: npm
           cache-dependency-path: works-frontend/package-lock.json
       - run: npm ci
-      # Lint is advisory for now: main carries pre-existing base-rule debt (e.g. App.jsx
-      # react-hooks errors) unrelated to this change. The blocking design-token/architecture
-      # rules run in the `guardrails` job. Remove continue-on-error once the baseline is clean.
+      # Lint is now enforced. App.jsx legacy debt is suppressed with a file-level eslint-disable
+      # comment; all new files must pass clean. Architecture/token rules also run in `guardrails`.
       - run: npm run lint
-        continue-on-error: true
       - run: npm run build   # blocking — the app must compile
 
   backend:
@@ -101,10 +99,10 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      # Compile + run Checkstyle (reporting mode). Tests are skipped here because the full suite
-      # needs a live database; unit tests run in the backend-unit-test job below.
+      # Compile + run Checkstyle only. Tests and JaCoCo are skipped here — the coverage gate
+      # runs in the backend-unit-test job which executes the full verify phase with unit tests.
       - name: Compile + checkstyle
-        run: ./mvnw -B -DskipTests verify
+        run: ./mvnw -B -DskipTests -Djacoco.skip=true verify
 
   backend-unit-test:
     name: Backend (unit tests)
@@ -120,6 +118,7 @@ jobs:
           java-version: '21'
           cache: maven
       # Run only @Tag("unit") tests — no live database required.
-      # JaCoCo report is written to target/site/jacoco/ for inspection but check is advisory.
-      - name: Unit tests
-        run: ./mvnw -B -Dgroups=unit test
+      # Runs the full verify phase so JaCoCo coverage check is enforced (≥60% LINE, haltOnFailure=true).
+      # Report is written to target/site/jacoco/index.html for local inspection.
+      - name: Unit tests + coverage gate
+        run: ./mvnw -B -Dgroups=unit verify

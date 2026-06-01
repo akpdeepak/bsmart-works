@@ -118,12 +118,12 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
-			<!-- JaCoCo: coverage instrumentation, reporting, and an advisory gate.
-			     Runs in verify phase (not test), so `./mvnw -Dgroups=unit test` is always green
-			     if tests pass, regardless of coverage ratio. Advisory mode (haltOnFailure=false)
-			     mirrors the Checkstyle approach: violations are logged but don't break the build
-			     until the baseline is clean. Once unit tests cover >60% of core logic, flip
-			     haltOnFailure to `true` and set an appropriate minimum. -->
+			<!-- JaCoCo: coverage instrumentation, reporting, and an enforced gate.
+			     The check runs in the verify phase. The CI backend-unit-test job runs
+			     `./mvnw -Dgroups=unit verify` so coverage is measured against unit tests only
+			     (no live DB required). The compile+checkstyle job skips JaCoCo via
+			     -Djacoco.skip=true so that `-DskipTests verify` does not report 0% coverage.
+			     Minimum: 60% LINE coverage on the BUNDLE (all @Tag("unit") tests combined). -->
 			<plugin>
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
@@ -143,7 +143,7 @@
 						<phase>verify</phase>
 						<goals><goal>check</goal></goals>
 						<configuration>
-							<haltOnFailure>false</haltOnFailure>
+							<haltOnFailure>true</haltOnFailure>
 							<rules>
 								<rule>
 									<element>BUNDLE</element>

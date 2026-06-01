@@ -8,3 +8,13 @@ works-backend/target/
 .vscode/
 .husky/_/
 *.log
+
+# Environment variable files — never commit real secrets
+# .env.example files ARE committed — they document variable shape without real values
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+works-backend/.env
+works-frontend/.env.local

@@ -5,6 +5,15 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import jsxA11y from 'eslint-plugin-jsx-a11y'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
+// Vitest globals (describe, it, expect, vi, …) for test files.
+// Avoids `'expect' is not defined` no-undef errors in *.test.jsx files.
+const vitestTestConfig = {
+  files: ['src/**/*.test.{js,jsx}', 'src/**/*.spec.{js,jsx}'],
+  languageOptions: {
+    globals: { ...globals.browser, describe: 'readonly', it: 'readonly', expect: 'readonly', vi: 'readonly', beforeEach: 'readonly', afterEach: 'readonly', beforeAll: 'readonly', afterAll: 'readonly' },
+  },
+}
+
 // bSmart Works — design-system & architecture guardrails.
 // These rules enforce CLAUDE.md §4 (brand tokens) and §3 (one apiClient) at lint time,
 // so violations fail locally, in pre-commit, and in CI — regardless of which AI tool or
@@ -86,6 +95,7 @@ const worksA11yRules = {
 
 export default defineConfig([
   globalIgnores(['dist']),
+  vitestTestConfig,
   {
     files: ['**/*.{js,jsx}'],
     extends: [

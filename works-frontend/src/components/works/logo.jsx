@@ -1,4 +1,3 @@
-import * as React from 'react';
 
 // bSmart Works logo. Brand spec §2 — four variants.
 // SVGs live in public/ and are never recreated inline.

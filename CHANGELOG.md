@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Added
+- Knowledge: inline article comments (threaded, resolvable) on knowledge articles
+- Knowledge: Author → Review → Publish workflow (submit / publish / request-changes / archive / restore) with reviewer + submission tracking
+- Knowledge: article analytics panel — views, helpful votes, work-item citations, open comments, versions, and stale-article detection
+
+### Fixed
+- Knowledge: article search now honours the `search` query parameter (was silently ignored)
+- Knowledge: the publish action now hits a real endpoint and enforces the review gate (previously a no-op route)
+
 ---
 
 ## [0.6.0] — 2026-05-31

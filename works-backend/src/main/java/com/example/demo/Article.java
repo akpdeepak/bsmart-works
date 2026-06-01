@@ -14,6 +14,8 @@ public class Article {
     private String templateType; // RUNBOOK | ADR | POSTMORTEM | ONBOARDING | KB | TROUBLESHOOTING | CUSTOM
     private String status;       // DRAFT | IN_REVIEW | PUBLISHED | ARCHIVED
     private String authorId;
+    private String reviewerId;
+    private OffsetDateTime submittedAt;
     private OffsetDateTime publishedAt;
     private Integer versionNumber;
     private Integer helpfulVotes;
@@ -38,6 +40,10 @@ public class Article {
     public void setStatus(String status) { this.status = status; }
     public String getAuthorId() { return authorId; }
     public void setAuthorId(String authorId) { this.authorId = authorId; }
+    public String getReviewerId() { return reviewerId; }
+    public void setReviewerId(String reviewerId) { this.reviewerId = reviewerId; }
+    public OffsetDateTime getSubmittedAt() { return submittedAt; }
+    public void setSubmittedAt(OffsetDateTime submittedAt) { this.submittedAt = submittedAt; }
     public OffsetDateTime getPublishedAt() { return publishedAt; }
     public void setPublishedAt(OffsetDateTime publishedAt) { this.publishedAt = publishedAt; }
     public Integer getVersionNumber() { return versionNumber; }

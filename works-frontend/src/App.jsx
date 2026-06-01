@@ -259,8 +259,11 @@ export default function App() {
   const [articleForm, setArticleForm] = useState({ title: '', content: '', templateType: 'KB', status: 'DRAFT' });
   const [isSpaceFormOpen, setIsSpaceFormOpen] = useState(false);
   const [isArticleFormOpen, setIsArticleFormOpen] = useState(false);
-  const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [editingArticle, setEditingArticle] = useState(false);
+  const [articlePanel, setArticlePanel] = useState(null); // 'history' | 'comments' | 'analytics' | null
+  const [articleComments, setArticleComments] = useState([]);
+  const [newArticleComment, setNewArticleComment] = useState('');
+  const [articleAnalytics, setArticleAnalytics] = useState(null);
 
   // Iter 1 & 2 completion features
   const [recentlyViewed, setRecentlyViewed] = useState(() => {
@@ -973,10 +976,56 @@ export default function App() {
       .catch(() => showToast('Failed to save article', 'error'));
   }
 
-  function publishArticle(id) {
-    api.send(`/articles/${id}/publish`, { method: 'PUT' })
-      .then(d => { setSelectedArticle(d); showToast('Article published'); fetchKnowledgeArticles(selectedSpace?.id); })
-      .catch(() => showToast('Failed to publish', 'error'));
+  // Publishing workflow: DRAFT → IN_REVIEW → PUBLISHED → ARCHIVED.
+  function articleWorkflow(id, action, successMsg) {
+    api.send(`/articles/${id}/${action}`, { method: 'PUT' })
+      .then(d => { setSelectedArticle(d); showToast(successMsg); fetchKnowledgeArticles(selectedSpace?.id); })
+      .catch(e => showToast(e.message || 'Action failed', 'error'));
+  }
+  const submitArticleForReview = id => articleWorkflow(id, 'submit',  'Submitted for review');
+  const publishArticle        = id => articleWorkflow(id, 'publish', 'Article published');
+  const rejectArticle         = id => articleWorkflow(id, 'reject',  'Returned to draft');
+  const archiveArticle        = id => articleWorkflow(id, 'archive', 'Article archived');
+  const restoreArticle        = id => articleWorkflow(id, 'restore', 'Article restored to draft');
+
+  function fetchArticleComments(articleId) {
+    api.raw(`/articles/${articleId}/comments`)
+      .then(r => r.json()).then(d => setArticleComments(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function addArticleComment(articleId) {
+    const body = newArticleComment.trim();
+    if (!body) return;
+    api.send(`/articles/${articleId}/comments`, { method: 'POST', body: JSON.stringify({ body }) })
+      .then(() => { setNewArticleComment(''); fetchArticleComments(articleId); })
+      .catch(() => showToast('Failed to add comment', 'error'));
+  }
+
+  function toggleArticleComment(articleId, commentId, resolved) {
+    api.send(`/articles/${articleId}/comments/${commentId}/resolve`, { method: 'PUT', body: JSON.stringify({ resolved }) })
+      .then(() => fetchArticleComments(articleId))
+      .catch(() => showToast('Failed to update comment', 'error'));
+  }
+
+  function deleteArticleComment(articleId, commentId) {
+    api.send(`/articles/${articleId}/comments/${commentId}`, { method: 'DELETE' })
+      .then(() => fetchArticleComments(articleId))
+      .catch(() => showToast('Failed to delete comment', 'error'));
+  }
+
+  function fetchArticleAnalytics(articleId) {
+    api.raw(`/articles/${articleId}/analytics`)
+      .then(r => r.json()).then(d => setArticleAnalytics(d)).catch(() => setArticleAnalytics(null));
+  }
+
+  function openArticlePanel(panel) {
+    setArticlePanel(prev => {
+      const next = prev === panel ? null : panel;
+      if (next === 'history' && selectedArticle) fetchArticleVersions(selectedArticle.id);
+      if (next === 'comments' && selectedArticle) fetchArticleComments(selectedArticle.id);
+      if (next === 'analytics' && selectedArticle) fetchArticleAnalytics(selectedArticle.id);
+      return next;
+    });
   }
 
   function deleteArticle(id) {
@@ -4211,7 +4260,7 @@ export default function App() {
                         ) : (
                           <div className="space-y-2">
                             {knowledgeSearchResults.map(art => (
-                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setShowVersionHistory(false); }}
+                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); }}
                                 className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all">
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
@@ -4251,7 +4300,7 @@ export default function App() {
                         ) : (
                           <div className="space-y-2">
                             {knowledgeArticles.map(art => (
-                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setShowVersionHistory(false); fetchArticleVersions(art.id); }}
+                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); }}
                                 className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all">
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
@@ -4286,7 +4335,7 @@ export default function App() {
                     {/* Article header */}
                     <div className="border-b border-neutral-200 dark:border-neutral-700 px-6 py-4 flex items-center justify-between bg-white dark:bg-neutral-800 flex-shrink-0">
                       <div className="flex items-center gap-3 min-w-0">
-                        <button onClick={() => { setSelectedArticle(null); setEditingArticle(false); setShowVersionHistory(false); }} className="text-xs text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0">←</button>
+                        <button onClick={() => { setSelectedArticle(null); setEditingArticle(false); setArticlePanel(null); }} className="text-xs text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0">←</button>
                         <div className="min-w-0">
                           <h1 className="font-bold text-lg text-neutral-900 dark:text-white truncate">{selectedArticle.title}</h1>
                           <div className="flex items-center gap-2 mt-0.5">
@@ -4298,11 +4347,31 @@ export default function App() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <button onClick={() => setShowVersionHistory(v => !v)} className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${showVersionHistory ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 text-neutral-600 hover:border-brand-navy'}`}>
-                          History ({articleVersions.length})
-                        </button>
-                        {selectedArticle.status !== 'PUBLISHED' && (
+                        {[
+                          { key: 'history',   label: `History (${articleVersions.length})` },
+                          { key: 'comments',  label: 'Comments' },
+                          { key: 'analytics', label: 'Analytics' },
+                        ].map(p => (
+                          <button key={p.key} onClick={() => openArticlePanel(p.key)} aria-pressed={articlePanel === p.key}
+                            className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${articlePanel === p.key ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy'}`}>
+                            {p.label}
+                          </button>
+                        ))}
+                        {/* Status-aware publishing workflow — single primary action per state */}
+                        {selectedArticle.status === 'IN_REVIEW' && (
+                          <button onClick={() => rejectArticle(selectedArticle.id)} className="text-xs text-semantic-warning hover:underline">Request changes</button>
+                        )}
+                        {(!selectedArticle.status || selectedArticle.status === 'DRAFT') && (
+                          <Button variant="action" onClick={() => submitArticleForReview(selectedArticle.id)}>Submit for review</Button>
+                        )}
+                        {selectedArticle.status === 'IN_REVIEW' && (
                           <Button variant="action" onClick={() => publishArticle(selectedArticle.id)}>Publish</Button>
+                        )}
+                        {selectedArticle.status === 'PUBLISHED' && (
+                          <Button variant="secondary" onClick={() => archiveArticle(selectedArticle.id)}>Archive</Button>
+                        )}
+                        {selectedArticle.status === 'ARCHIVED' && (
+                          <Button variant="secondary" onClick={() => restoreArticle(selectedArticle.id)}>Restore</Button>
                         )}
                         <Button variant="secondary" onClick={() => setEditingArticle(e => !e)}>
                           {editingArticle ? 'View' : 'Edit'}
@@ -4353,10 +4422,10 @@ export default function App() {
                         )}
                       </div>
 
-                      {/* Version history sidebar */}
-                      {showVersionHistory && (
-                        <div className="w-56 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
-                          <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Version History</h3>
+                      {/* Contextual side panel — history / comments / analytics */}
+                      {articlePanel === 'history' && (
+                        <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
+                          <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Version history</h3>
                           {articleVersions.length === 0 ? (
                             <p className="text-xs text-neutral-400">No versions saved yet.</p>
                           ) : (
@@ -4370,6 +4439,68 @@ export default function App() {
                                     className="text-[10px] text-brand-navy hover:underline mt-1">Restore</button>
                                 </div>
                               ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {articlePanel === 'comments' && (
+                        <div className="w-72 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4 flex flex-col">
+                          <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Comments ({articleComments.length})</h3>
+                          <div className="flex-1 space-y-2">
+                            {articleComments.length === 0 && (
+                              <p className="text-xs text-neutral-400">No comments yet. Start the discussion below.</p>
+                            )}
+                            {articleComments.map(c => (
+                              <div key={c.id} className={`rounded-lg p-3 border ${c.resolved ? 'bg-semantic-success-surface border-semantic-success/30' : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700'}`}>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-[10px] font-semibold text-neutral-700 dark:text-neutral-300">{c.authorName || 'Unknown'}</span>
+                                  <span className="text-[10px] text-neutral-400">{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : ''}</span>
+                                </div>
+                                <p className="text-xs text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">{c.body}</p>
+                                <div className="flex items-center gap-3 mt-1.5">
+                                  <button onClick={() => toggleArticleComment(selectedArticle.id, c.id, !c.resolved)}
+                                    className="text-[10px] text-brand-navy hover:underline">{c.resolved ? 'Reopen' : 'Resolve'}</button>
+                                  <button onClick={() => deleteArticleComment(selectedArticle.id, c.id)}
+                                    className="text-[10px] text-semantic-danger hover:underline">Delete</button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
+                            <textarea rows={3} value={newArticleComment} onChange={e => setNewArticleComment(e.target.value)}
+                              placeholder="Add a comment…" className="input resize-none text-xs w-full" />
+                            <Button variant="action" className="mt-2 w-full" onClick={() => addArticleComment(selectedArticle.id)}>Comment</Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {articlePanel === 'analytics' && (
+                        <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
+                          <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Analytics</h3>
+                          {!articleAnalytics ? (
+                            <p className="text-xs text-neutral-400">Loading…</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {[
+                                { label: 'Views', value: articleAnalytics.viewCount },
+                                { label: 'Helpful votes', value: articleAnalytics.helpfulVotes },
+                                { label: 'Work-item citations', value: articleAnalytics.citationCount },
+                                { label: 'Open comments', value: articleAnalytics.openComments },
+                                { label: 'Versions', value: articleAnalytics.versionCount },
+                                { label: 'Days since update', value: articleAnalytics.daysSinceUpdate },
+                              ].map(m => (
+                                <div key={m.label} className="bg-white dark:bg-neutral-800 rounded-lg p-3 border border-neutral-200 dark:border-neutral-700 flex items-center justify-between">
+                                  <span className="text-xs text-neutral-600 dark:text-neutral-400">{m.label}</span>
+                                  <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{m.value ?? '—'}</span>
+                                </div>
+                              ))}
+                              {articleAnalytics.stale && (
+                                <div className="bg-semantic-warning-surface border border-semantic-warning/30 rounded-lg p-3 flex items-center gap-2">
+                                  <span className="text-semantic-warning text-sm">⚠</span>
+                                  <span className="text-xs text-semantic-warning font-medium">Stale — published over {90} days ago without an update.</span>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

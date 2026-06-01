@@ -14,16 +14,25 @@ public class ArticleController {
 
     private final ArticleRepository articleRepository;
     private final ArticleVersionRepository articleVersionRepository;
+    private final ArticleCommentRepository articleCommentRepository;
+    private final ArticleWorkflowService workflowService;
+    private final ArticleAnalyticsService analyticsService;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
     private final JdbcTemplate jdbc;
 
     public ArticleController(ArticleRepository articleRepository,
                               ArticleVersionRepository articleVersionRepository,
+                              ArticleCommentRepository articleCommentRepository,
+                              ArticleWorkflowService workflowService,
+                              ArticleAnalyticsService analyticsService,
                               EventService eventService, AuthenticatedUser authenticatedUser,
                               JdbcTemplate jdbc) {
         this.articleRepository = articleRepository;
         this.articleVersionRepository = articleVersionRepository;
+        this.articleCommentRepository = articleCommentRepository;
+        this.workflowService = workflowService;
+        this.analyticsService = analyticsService;
         this.eventService = eventService;
         this.authenticatedUser = authenticatedUser;
         this.jdbc = jdbc;
@@ -31,9 +40,11 @@ public class ArticleController {
 
     @GetMapping
     public List<Article> getArticles(@RequestParam(required = false) String spaceId,
-                                      @RequestParam(required = false) String query) {
-        if (query != null && !query.isBlank()) {
-            return articleRepository.findByTitleContainingIgnoreCaseOrderByUpdatedAtDesc(query);
+                                      @RequestParam(required = false) String query,
+                                      @RequestParam(required = false) String search) {
+        String q = query != null ? query : search;
+        if (q != null && !q.isBlank()) {
+            return articleRepository.findByTitleContainingIgnoreCaseOrderByUpdatedAtDesc(q);
         }
         return spaceId != null
             ? articleRepository.findBySpaceIdOrderByUpdatedAtDesc(spaceId)
@@ -63,6 +74,32 @@ public class ArticleController {
             "WHERE l.article_id = ? ORDER BY l.created_at DESC", id);
     }
 
+    @GetMapping("/{id}/analytics")
+    public Map<String, Object> getAnalytics(@PathVariable String id) {
+        Article a = articleRepository.findById(id).orElseThrow();
+        long citations = countCitations(id);
+        long openComments = articleCommentRepository.countByArticleIdAndResolvedFalse(id);
+        long versions = articleVersionRepository.findByArticleIdOrderByVersionNumberDesc(id).size();
+        OffsetDateTime now = OffsetDateTime.now();
+        return Map.of(
+            "viewCount", a.getViewCount() == null ? 0 : a.getViewCount(),
+            "helpfulVotes", a.getHelpfulVotes() == null ? 0 : a.getHelpfulVotes(),
+            "citationCount", citations,
+            "openComments", openComments,
+            "versionCount", versions,
+            "status", a.getStatus() == null ? "DRAFT" : a.getStatus(),
+            "daysSinceUpdate", analyticsService.daysSince(a.getUpdatedAt(), now),
+            "stale", analyticsService.isStale(a.getStatus(), a.getUpdatedAt(), now,
+                                              ArticleAnalyticsService.STALE_THRESHOLD_DAYS)
+        );
+    }
+
+    private long countCitations(String articleId) {
+        Long n = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM article_work_item_links WHERE article_id = ?", Long.class, articleId);
+        return n == null ? 0 : n;
+    }
+
     @PostMapping
     public Article createArticle(@Valid @RequestBody Article article) {
         String userId = authenticatedUser.id();
@@ -82,6 +119,8 @@ public class ArticleController {
         return saved;
     }
 
+    // Content edits only — status changes go through the workflow endpoints so the
+    // Author -> Review -> Publish gate cannot be bypassed (CLAUDE.md §5 iteration 5).
     @PutMapping("/{id}")
     public Article updateArticle(@PathVariable String id, @Valid @RequestBody Article updated) {
         String userId = authenticatedUser.id();
@@ -89,11 +128,6 @@ public class ArticleController {
             a.setTitle(updated.getTitle());
             a.setContent(updated.getContent());
             a.setTemplateType(updated.getTemplateType());
-            String oldStatus = a.getStatus();
-            a.setStatus(updated.getStatus());
-            if ("PUBLISHED".equals(updated.getStatus()) && !"PUBLISHED".equals(oldStatus)) {
-                a.setPublishedAt(OffsetDateTime.now());
-            }
             a.setVersionNumber(a.getVersionNumber() + 1);
             a.setUpdatedAt(OffsetDateTime.now());
             Article saved = articleRepository.save(a);
@@ -101,6 +135,41 @@ public class ArticleController {
             eventService.record(id, "ARTICLE_UPDATED", userId, "{\"version\":" + saved.getVersionNumber() + "}");
             return saved;
         }).orElseThrow();
+    }
+
+    // ── Publishing workflow ───────────────────────────────────────────────────
+    @PutMapping("/{id}/submit")
+    public Article submitForReview(@PathVariable String id) { return applyTransition(id, "submit"); }
+
+    @PutMapping("/{id}/publish")
+    public Article publish(@PathVariable String id) { return applyTransition(id, "publish"); }
+
+    @PutMapping("/{id}/reject")
+    public Article reject(@PathVariable String id) { return applyTransition(id, "reject"); }
+
+    @PutMapping("/{id}/archive")
+    public Article archive(@PathVariable String id) { return applyTransition(id, "archive"); }
+
+    @PutMapping("/{id}/restore")
+    public Article restore(@PathVariable String id) { return applyTransition(id, "restore"); }
+
+    private Article applyTransition(String id, String action) {
+        String userId = authenticatedUser.id();
+        Article a = articleRepository.findById(id).orElseThrow();
+        String newStatus = workflowService.transition(a.getStatus(), action);
+        OffsetDateTime now = OffsetDateTime.now();
+        a.setStatus(newStatus);
+        if (ArticleWorkflowService.IN_REVIEW.equals(newStatus)) {
+            a.setSubmittedAt(now);
+        } else if (ArticleWorkflowService.PUBLISHED.equals(newStatus)) {
+            a.setPublishedAt(now);
+            a.setReviewerId(userId);
+        }
+        a.setUpdatedAt(now);
+        Article saved = articleRepository.save(a);
+        eventService.record(id, "ARTICLE_" + action.toUpperCase(), userId,
+                "{\"status\":\"" + newStatus + "\"}");
+        return saved;
     }
 
     @PostMapping("/{id}/vote")

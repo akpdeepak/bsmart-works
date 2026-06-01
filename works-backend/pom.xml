@@ -167,6 +167,7 @@
 								<exclude>**/ActionItem.class</exclude>
 								<exclude>**/AppEvent.class</exclude>
 								<exclude>**/Article.class</exclude>
+								<exclude>**/ArticleComment.class</exclude>
 								<exclude>**/ArticleVersion.class</exclude>
 								<exclude>**/Assumption.class</exclude>
 								<exclude>**/Comment.class</exclude>

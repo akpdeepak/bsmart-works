@@ -103,12 +103,13 @@ package-by-feature migration is formally scheduled.
 - `RbacService` is the single entry point for all permission checks.
 - Privacy: individual data private by default; manager drill-down is API-enforced, not UI-hidden.
 
-### Database (Flyway — current high-water mark: **V26** on `main`; note V16 was skipped, V23 does not exist)
+### Database (Flyway — current high-water mark: **V27** on `main`; note V16 was skipped, V23 does not exist)
 - **All schema changes via Flyway migrations only.** Never alter the DB manually.
-- Next migration is **`V27__<description>.sql`**. Naming: `V{n}__{snake_case_description}.sql`.
+- Next migration is **`V28__<description>.sql`**. Naming: `V{n}__{snake_case_description}.sql`.
   (Existing on `main`: …V17 mfa_totp, V18 project_slugs, V19 data_quality_cleanup,
   V20 drop_dead_event_log, V21 iteration3_workflows_fields_permissions, V22 iteration4_pm_artifacts,
-  V24 knowledge_repository, V25 releases_and_worklogs, V26 cross_project_dependencies.)
+  V24 knowledge_repository, V25 releases_and_worklogs, V26 cross_project_dependencies,
+  V27 article_comments_and_publishing.)
 - **Table names are PLURAL.** Verified existing tables:
   `users, projects, project_members, workspaces, workspace_members, work_items,
   work_item_links, sprints, comments, attachments, notifications, notification_preferences,
@@ -756,10 +757,12 @@ Icons are from `lucide-react` only (§2). Consistency in size, weight, and meani
 | Role Surfaces | 13–16 | Integrations, developer/SM/PO/leadership/admin surfaces |
 | Enterprise | 17–20 | Customization engine, mobile/realtime, security certs, polish + marketplace |
 
-**Current status (inferred from migrations V1–V26 on `main`):** the project is around **iteration 5**
+**Current status (inferred from migrations V1–V27 on `main`):** the project is around **iteration 5**
 (work items, sprints, PM artifacts RAID, knowledge repository, custom fields, cross-project
-dependencies, releases, and worklogs are all landed). Confirm the active iteration with Deepak
-before building forward. **Do not implement iteration N+1 features while iteration N is in scope.**
+dependencies, releases, and worklogs are all landed). Iteration 5 is now feature-complete:
+inline article comments, the Author→Review→Publish workflow, and article analytics
+(views, helpful votes, citations, stale detection) landed in V27. Confirm the active iteration
+with Deepak before building forward. **Do not implement iteration N+1 features while iteration N is in scope.**
 
 ### PM Traceability (non-negotiable process)
 
@@ -1809,7 +1812,7 @@ Browser (React SPA)
 - Schema: Flyway-only (never manual). Sequential integers, no gaps on a branch.
 - Tables: plural snake_case (`work_items`, `project_members`).
 - Events: append-only (`events`). Never UPDATE or DELETE from this table.
-- Current high-water mark on `main`: **V26**. Next new migration: **V27__.sql**.
+- Current high-water mark on `main`: **V27**. Next new migration: **V28__.sql**.
 
 ---
 

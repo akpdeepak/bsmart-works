@@ -205,6 +205,28 @@ export default function App() {
   const [pmFormOpen, setPmFormOpen]         = useState(null); // 'risk'|'assumption'|...|null
   const [selectedPmItem, setSelectedPmItem] = useState(null);
 
+  // Iteration 6 — Role-tuned Dashboards
+  const [dashboardRole, setDashboardRole]       = useState('developer');
+  const [developerDash, setDeveloperDash]       = useState(null);
+  const [smDash, setSmDash]                     = useState(null);
+  const [poDash, setPoDash]                     = useState(null);
+  const [execDash, setExecDash]                 = useState(null);
+  const [adminDash, setAdminDash]               = useState(null);
+  const [dashLoading, setDashLoading]           = useState(false);
+
+  // Iteration 6 — Releases
+  const [releases, setReleases]                 = useState([]);
+  const [selectedRelease, setSelectedRelease]   = useState(null);
+  const [releaseItems, setReleaseItems]         = useState([]);
+  const [isReleaseOpen, setIsReleaseOpen]       = useState(false);
+  const [newRelease, setNewRelease]             = useState({ name: '', version: '', description: '', releaseDate: '', projectId: '', status: 'PLANNED' });
+  const [releaseSearch, setReleaseSearch]       = useState('');
+
+  // Iteration 6 — Worklogs
+  const [myWorklogs, setMyWorklogs]             = useState([]);
+  const [worklogForm, setWorklogForm]           = useState({ timeSpentMinutes: 30, description: '', workDate: '' });
+  const [isWorklogOpen, setIsWorklogOpen]       = useState(false);
+
   // Iteration 3 completions
   const [fieldValues, setFieldValues] = useState({});
   const [fieldLayouts, setFieldLayouts] = useState([]);
@@ -268,6 +290,8 @@ export default function App() {
   useEffect(() => {
     if (currentUser) {
       fetchAll();
+      fetchDashboard('developer');
+      fetchReleases();
       const iv = setInterval(fetchUnreadCount, 30000);
       return () => clearInterval(iv);
     }
@@ -959,6 +983,78 @@ export default function App() {
       .then(r => r.json()).then(d => setKnowledgeSearchResults(Array.isArray(d) ? d : [])).catch(() => {});
   }
 
+  // ── Iteration 6 — Dashboards ─────────────────────────────────────────────────
+
+  function fetchDashboard(role) {
+    setDashLoading(true);
+    const wsId = 'WS-001';
+    const uid = currentUser?.id;
+    let url;
+    if (role === 'developer') url = `/dashboards/developer?userId=${uid}`;
+    else if (role === 'scrum-master') url = `/dashboards/scrum-master?workspaceId=${wsId}`;
+    else if (role === 'product-owner') url = `/dashboards/product-owner?workspaceId=${wsId}`;
+    else if (role === 'executive') url = `/dashboards/executive?workspaceId=${wsId}`;
+    else if (role === 'admin') url = `/dashboards/admin?workspaceId=${wsId}`;
+    api.raw(url).then(r => r.json()).then(d => {
+      if (role === 'developer') setDeveloperDash(d);
+      else if (role === 'scrum-master') setSmDash(d);
+      else if (role === 'product-owner') setPoDash(d);
+      else if (role === 'executive') setExecDash(d);
+      else if (role === 'admin') setAdminDash(d);
+      setDashLoading(false);
+    }).catch(() => setDashLoading(false));
+  }
+
+  // ── Iteration 6 — Releases ────────────────────────────────────────────────────
+
+  function fetchReleases(projectId) {
+    const url = projectId ? `/releases?projectId=${projectId}` : `/releases`;
+    api.raw(url).then(r => r.json()).then(d => setReleases(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function fetchReleaseItems(releaseId) {
+    api.raw(`/releases/${releaseId}/items`).then(r => r.json()).then(d => setReleaseItems(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function createRelease() {
+    if (!newRelease.name || !newRelease.version) { showToast('Name and version are required', 'error'); return; }
+    api.send(`/releases`, { method: 'POST', body: JSON.stringify({ ...newRelease, workspaceId: 'WS-001' }) })
+      .then(() => { showToast('Release created'); setIsReleaseOpen(false); setNewRelease({ name: '', version: '', description: '', releaseDate: '', projectId: '', status: 'PLANNED' }); fetchReleases(); })
+      .catch(() => showToast('Failed to create release', 'error'));
+  }
+
+  function updateRelease(id, patch) {
+    api.send(`/releases/${id}`, { method: 'PUT', body: JSON.stringify(patch) })
+      .then(d => { setSelectedRelease(d); showToast('Release updated'); fetchReleases(); })
+      .catch(() => showToast('Failed to update release', 'error'));
+  }
+
+  function deleteRelease(id) {
+    api.send(`/releases/${id}`, { method: 'DELETE' })
+      .then(() => { showToast('Release deleted'); setSelectedRelease(null); setReleaseItems([]); fetchReleases(); })
+      .catch(() => showToast('Failed to delete release', 'error'));
+  }
+
+  function addItemToRelease(releaseId, workItemId) {
+    api.send(`/releases/${releaseId}/items/${workItemId}`, { method: 'POST' })
+      .then(() => { showToast('Item added to release'); fetchReleaseItems(releaseId); })
+      .catch(() => showToast('Failed to add item', 'error'));
+  }
+
+  function removeItemFromRelease(releaseId, workItemId) {
+    api.send(`/releases/${releaseId}/items/${workItemId}`, { method: 'DELETE' })
+      .then(() => { showToast('Item removed'); fetchReleaseItems(releaseId); })
+      .catch(() => showToast('Failed to remove item', 'error'));
+  }
+
+  function logWork() {
+    if (!worklogForm.timeSpentMinutes || !selectedItem?.id) { showToast('Time and work item required', 'error'); return; }
+    const date = worklogForm.workDate || new Date().toISOString().split('T')[0];
+    api.send(`/worklogs`, { method: 'POST', body: JSON.stringify({ ...worklogForm, workDate: date, workItemId: selectedItem.id }) })
+      .then(() => { showToast('Time logged'); setIsWorklogOpen(false); setWorklogForm({ timeSpentMinutes: 30, description: '', workDate: '' }); })
+      .catch(() => showToast('Failed to log time', 'error'));
+  }
+
   function fetchTrash() {
     api.raw(`/work-items/trash`)
       .then(r => r.json()).then(d => setTrashItems(Array.isArray(d) ? d : [])).catch(() => {});
@@ -1346,7 +1442,7 @@ export default function App() {
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5 text-sm overflow-y-auto">
-          <NavItem active={view === 'dashboard'} onClick={() => setView('dashboard')} icon="🏠">Home</NavItem>
+          <NavItem active={view === 'dashboard'} onClick={() => { setView('dashboard'); fetchDashboard(dashboardRole); }} icon="🏠">Home</NavItem>
           <p className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-3 pt-3 pb-1">My Work</p>
           <NavItem active={view === 'myworks'} onClick={() => { setView('myworks'); fetchNotifications(); }} icon="👤">
             My Works
@@ -1365,6 +1461,7 @@ export default function App() {
             {sprints.find(s => s.status === 'ACTIVE') && <span className="ml-auto w-2 h-2 rounded-full bg-semantic-success flex-shrink-0"></span>}
           </NavItem>
           <NavItem active={view === 'reports'} onClick={() => { setView('reports'); fetchSprints(); fetchVelocityData(); }} icon="📊">Reports</NavItem>
+          <NavItem active={view === 'releases'} onClick={() => { setView('releases'); fetchReleases(); }} icon="🚀">Releases</NavItem>
 
           <p className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-3 pt-3 pb-1">Configuration</p>
           <NavItem active={view === 'settings3'} onClick={() => { setView('settings3'); fetchWorkflows(); fetchFieldDefs(); fetchRoles(); fetchWorkItemTypes(); }} icon="⚙">Workflows & Fields</NavItem>
@@ -1467,109 +1564,418 @@ export default function App() {
         {/* CONTENT */}
         <div className="flex-1 overflow-auto dark:bg-neutral-900">
 
-          {/* DASHBOARD HOME */}
+          {/* ======================================================
+               ITERATION 6 — ROLE-TUNED DASHBOARD
+             ====================================================== */}
           {view === 'dashboard' && (
-            <div className="p-6 max-w-6xl">
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold text-brand-navy">Good {getTimeOfDay()}, {currentUser.fullName.split(' ')[0]} 👋</h1>
-                <p className="text-sm text-neutral-400 mt-0.5">Here's what needs your attention today</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                {/* My open items */}
-                <StatCard label="Assigned to me" value={myItems.filter(i => i.status !== 'Done').length} sub={`${myItems.length} total`} color="text-brand-navy" icon="👤" onClick={() => setView('myworks')} />
-                {/* Active sprint */}
-                <StatCard label="Active sprint items" value={sprints.find(s=>s.status==='ACTIVE') ? sprintItems.filter(i=>i.status!=='Done').length : '—'} sub={sprints.find(s=>s.status==='ACTIVE')?.name || 'No active sprint'} color="text-semantic-success" icon="⚡" onClick={() => { fetchSprints(); setView('sprint'); }} />
-                {/* Unread notifications */}
-                <StatCard label="Unread notifications" value={unreadCount} sub="Click to view all" color="text-brand-orange" icon="🔔" onClick={() => { fetchNotifications(); setView('notifications'); }} />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                {/* Due soon */}
-                <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                  <h3 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2">
-                    <span>📅</span> Due Soon
-                  </h3>
-                  {workItems.filter(i => i.dueDate && i.status !== 'Done').sort((a,b) => new Date(a.dueDate)-new Date(b.dueDate)).slice(0,5).map(item => (
-                    <div key={item.id} onClick={() => setSelectedItem(item)} className="flex items-center gap-3 py-2 border-b border-neutral-50 dark:border-neutral-700 last:border-0 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 -mx-2 px-2 rounded">
-                      <TypeBadge type={item.type} compact />
-                      <span className="flex-1 text-sm text-neutral-900 truncate">{item.title}</span>
-                      <span className={`text-xs font-medium ${new Date(item.dueDate) < new Date() ? 'text-semantic-danger' : 'text-semantic-warning'}`}>{item.dueDate}</span>
-                    </div>
-                  ))}
-                  {workItems.filter(i => i.dueDate && i.status !== 'Done').length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No upcoming due dates 🎉</p>}
+            <div className="p-6 max-w-7xl">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-brand-navy dark:text-white">
+                    Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {currentUser?.fullName?.split(' ')[0]}
+                  </h1>
+                  <p className="text-sm text-neutral-400 mt-0.5">Here's your workspace at a glance</p>
                 </div>
-
-                {/* Critical + High priority open items */}
-                <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                  <h3 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2">
-                    <span>🔥</span> High Priority Open
-                  </h3>
-                  {workItems.filter(i => (i.priority==='CRITICAL'||i.priority==='HIGH') && i.status!=='Done').slice(0,5).map(item => (
-                    <div key={item.id} onClick={() => setSelectedItem(item)} className="flex items-center gap-3 py-2 border-b border-neutral-50 dark:border-neutral-700 last:border-0 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 -mx-2 px-2 rounded">
-                      <PriorityBadge priority={item.priority} />
-                      <span className="flex-1 text-sm text-neutral-900 truncate">{item.title}</span>
-                      <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
-                    </div>
-                  ))}
-                  {workItems.filter(i => (i.priority==='CRITICAL'||i.priority==='HIGH') && i.status!=='Done').length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No critical/high items 🎉</p>}
-                </div>
+                <Button variant="action" onClick={() => setIsCreateOpen(true)}>+ New Item</Button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Project health */}
-                <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                  <h3 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2"><span>📁</span> Project Health</h3>
-                  {projects.filter(p => !p.archived).map(p => {
-                    const items = workItems.filter(i => i.projectId === p.id);
-                    const done = items.filter(i => i.status==='Done').length;
-                    const pct = items.length > 0 ? Math.round((done/items.length)*100) : 0;
-                    return (
-                      <div key={p.id} className="mb-3 last:mb-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-neutral-900">{p.name}</span>
-                          <span className="text-xs text-neutral-400">{done}/{items.length} done · {pct}%</span>
+              {/* Role tabs */}
+              <div className="flex gap-1 mb-6 border-b border-neutral-200 dark:border-neutral-700 overflow-x-auto">
+                {[
+                  { key: 'developer',     label: '💻 Developer',     minTier: 1 },
+                  { key: 'scrum-master',  label: '🏃 Scrum Master',  minTier: 2 },
+                  { key: 'product-owner', label: '📋 Product Owner', minTier: 2 },
+                  { key: 'executive',     label: '📈 Executive',     minTier: 3 },
+                  { key: 'admin',         label: '⚙ Admin',          minTier: 4 },
+                ].filter(t => userRole.tier >= t.minTier).map(t => (
+                  <button key={t.key} onClick={() => { setDashboardRole(t.key); fetchDashboard(t.key); }}
+                    className={`text-xs font-medium px-4 py-2 border-b-2 whitespace-nowrap transition-colors ${dashboardRole === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {dashLoading && <div className="text-center py-16 text-neutral-400">Loading dashboard...</div>}
+
+              {/* ── DEVELOPER ── */}
+              {!dashLoading && dashboardRole === 'developer' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <StatCard label="My Open Items" value={developerDash?.myOpenItemCount ?? workItems.filter(i => i.assigneeId === currentUser?.id && i.status !== 'Done').length} sub="Assigned to me" color="text-brand-navy" icon="📌" onClick={() => setView('myworks')} />
+                    <StatCard label="In Active Sprint" value={developerDash?.mySprintItems?.length ?? '—'} sub={developerDash?.activeSprint?.name || 'No active sprint'} color="text-semantic-success" icon="⚡" onClick={() => setView('sprint')} />
+                    <StatCard label="Hours This Week" value={developerDash?.weeklyMinutes ? `${Math.round(developerDash.weeklyMinutes / 60 * 10) / 10}h` : '0h'} sub="Time logged (7 days)" color="text-brand-amber" icon="⏱" />
+                    <StatCard label="Blockers" value={developerDash?.blockers?.length ?? 0} sub="Items blocked on me" color={developerDash?.blockers?.length > 0 ? 'text-semantic-danger' : 'text-neutral-400'} icon="🚫" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">📌 My Open Items</h3>
+                      {(developerDash?.myOpenItems ?? workItems.filter(i => i.assigneeId === currentUser?.id && i.status !== 'Done')).slice(0, 7).map(item => (
+                        <div key={item.id} onClick={() => setSelectedItem(item)} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 -mx-2 px-2 rounded transition-colors">
+                          <TypeBadge type={item.type} compact />
+                          <span className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate">{item.title}</span>
+                          <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
+                          {item.due_date && new Date(item.due_date) < new Date() && <span className="text-[10px] text-semantic-danger font-bold">OVERDUE</span>}
                         </div>
-                        <div className="h-1.5 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
-                          <div className="h-full bg-semantic-success rounded-full" style={{width:`${pct}%`}}></div>
+                      ))}
+                      {(developerDash?.myOpenItemCount ?? 0) === 0 && (developerDash?.myOpenItems?.length ?? workItems.filter(i => i.assigneeId === currentUser?.id && i.status !== 'Done').length) === 0 && <p className="text-sm text-neutral-400 text-center py-4">All caught up! 🎉</p>}
+                    </div>
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">⚡ Active Sprint</h3>
+                      {developerDash?.activeSprint ? (
+                        <div>
+                          <p className="text-sm font-semibold text-brand-navy dark:text-blue-300 mb-1">{developerDash.activeSprint.name}</p>
+                          {developerDash.activeSprint.goal && <p className="text-xs text-neutral-400 mb-3 italic">"{developerDash.activeSprint.goal}"</p>}
+                          <div className="flex gap-4 mb-2 text-xs text-neutral-600 dark:text-neutral-300">
+                            <span><strong>{developerDash.activeSprint.done_items}</strong>/{developerDash.activeSprint.total_items} items</span>
+                            <span><strong>{developerDash.activeSprint.done_points}</strong>/{developerDash.activeSprint.total_points}pt</span>
+                          </div>
+                          {developerDash.activeSprint.total_items > 0 && (
+                            <div className="h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden mb-1">
+                              <div className="h-full bg-semantic-success rounded-full" style={{ width: `${Math.round(developerDash.activeSprint.done_items * 100 / developerDash.activeSprint.total_items)}%` }} />
+                            </div>
+                          )}
+                          <p className="text-[10px] text-neutral-400 mb-3">{developerDash.activeSprint.total_items > 0 ? Math.round(developerDash.activeSprint.done_items * 100 / developerDash.activeSprint.total_items) : 0}% complete</p>
+                          <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">My Sprint Items</h4>
+                          {(developerDash.mySprintItems || []).map(i => (
+                            <div key={i.id} className="flex items-center gap-2 py-1.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                              <TypeBadge type={i.type} compact />
+                              <span className="flex-1 text-xs text-neutral-900 dark:text-neutral-100 truncate">{i.title}</span>
+                              <StatusBadge category={statusToCategory(i.status)}>{i.status}</StatusBadge>
+                            </div>
+                          ))}
+                          {(developerDash.mySprintItems || []).length === 0 && <p className="text-xs text-neutral-400">No items assigned in this sprint.</p>}
                         </div>
+                      ) : <p className="text-sm text-neutral-400 text-center py-4">No active sprint right now.</p>}
+                    </div>
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">🚫 Blockers</h3>
+                      {(developerDash?.blockers || []).length === 0
+                        ? <p className="text-sm text-neutral-400 text-center py-4">No blockers — you're clear! ✓</p>
+                        : (developerDash.blockers || []).map(b => (
+                            <div key={b.id} className="py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                              <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{b.title}</p>
+                              <p className="text-xs text-semantic-danger mt-0.5">Blocked by: {b.blocking_title}</p>
+                            </div>
+                          ))}
+                    </div>
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">⏱ My Time Logs</h3>
+                        <button onClick={() => selectedItem ? setIsWorklogOpen(true) : showToast('Open a work item first', 'error')} className="text-xs text-brand-navy hover:underline">+ Log Time</button>
                       </div>
-                    );
-                  })}
-                  {projects.length===0 && <p className="text-sm text-neutral-400 text-center py-4">No projects yet</p>}
-                </div>
-
-                {/* Your role card */}
-                <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                  <h3 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2"><span>🔐</span> Your Access</h3>
-                  <div className="flex items-center gap-3 mb-4">
-                    <Avatar name={currentUser.fullName} size={8} />
-                    <div>
-                      <p className="font-semibold text-neutral-900">{currentUser.fullName}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <RoleBadge role={userRole.role} tier={userRole.tier} />
-                        <span className="text-xs text-neutral-400">Tier {userRole.tier}/5</span>
-                      </div>
+                      {(developerDash?.recentWorklogs || []).slice(0, 5).map(wl => (
+                        <div key={wl.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                          <span className="text-xs font-bold text-brand-navy w-10">{Math.round((wl.time_spent_minutes || 0) / 60 * 10) / 10}h</span>
+                          <span className="flex-1 text-xs text-neutral-900 dark:text-neutral-100 truncate">{wl.work_item_title || wl.work_item_id}</span>
+                          <span className="text-[10px] text-neutral-400">{wl.work_date}</span>
+                        </div>
+                      ))}
+                      {(developerDash?.recentWorklogs || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No time logged this week.</p>}
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    {[
-                      { perm: 'create_items',    label: 'Create work items' },
-                      { perm: 'manage_sprints',  label: 'Manage sprints' },
-                      { perm: 'manage_projects', label: 'Manage projects' },
-                      { perm: 'invite_members',  label: 'Invite members' },
-                      { perm: 'manage_roles',    label: 'Manage roles' },
-                    ].map(p => (
-                      <div key={p.perm} className="flex items-center justify-between py-1 border-b border-neutral-50 dark:border-neutral-700 last:border-0">
-                        <span className="text-sm text-neutral-700">{p.label}</span>
-                        <span className={`text-xs font-semibold ${userRole.permissions.includes(p.perm) ? 'text-semantic-success' : 'text-neutral-300'}`}>
-                          {userRole.permissions.includes(p.perm) ? '✓' : '✕'}
-                        </span>
-                      </div>
-                    ))}
+                </div>
+              )}
+
+              {/* ── SCRUM MASTER ── */}
+              {!dashLoading && dashboardRole === 'scrum-master' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <StatCard label="Sprint Health" value={`${smDash?.sprintHealth ?? 0}%`} sub={smDash?.activeSprints?.[0]?.name || 'No active sprint'} color={smDash?.sprintHealth >= 70 ? 'text-semantic-success' : smDash?.sprintHealth >= 40 ? 'text-semantic-warning' : 'text-semantic-danger'} icon="❤" />
+                    <StatCard label="Velocity" value={smDash?.activeSprints?.[0] ? `${smDash.activeSprints[0].done_points}pt` : '—'} sub="Points delivered" color="text-brand-navy" icon="⚡" />
+                    <StatCard label="Capacity" value={smDash?.activeSprints?.[0]?.capacity ? `${smDash.activeSprints[0].capacity}pt` : '—'} sub="Sprint capacity" color="text-brand-amber" icon="📊" />
+                    <StatCard label="High Risk" value={smDash?.highRiskItems?.length ?? 0} sub="Critical or High priority" color={smDash?.highRiskItems?.length > 0 ? 'text-semantic-danger' : 'text-neutral-400'} icon="⚠" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-4">📈 Velocity Trend</h3>
+                      {[...(smDash?.velocityTrend || [])].reverse().map(s => (
+                        <div key={s.id} className="mb-3">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="font-medium text-neutral-700 dark:text-neutral-200 truncate max-w-[150px]">{s.name}</span>
+                            <span className="text-neutral-500">{s.done_points}/{s.total_points}pt</span>
+                          </div>
+                          <div className="h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
+                            <div className="h-full bg-brand-navy rounded-full" style={{ width: s.total_points > 0 ? `${Math.round(s.done_points * 100 / s.total_points)}%` : '0%' }} />
+                          </div>
+                        </div>
+                      ))}
+                      {(smDash?.velocityTrend || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No sprint data yet.</p>}
+                    </div>
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">👥 Team Capacity (14 days)</h3>
+                      {(smDash?.teamCapacity || []).slice(0, 8).map(m => (
+                        <div key={m.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                          <Avatar name={m.full_name} size={6} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-neutral-900 dark:text-neutral-100 truncate">{m.full_name}</p>
+                            <div className="h-1.5 bg-neutral-100 dark:bg-neutral-700 rounded-full mt-1 overflow-hidden">
+                              <div className="h-full bg-brand-navy-tint rounded-full" style={{ width: `${Math.min(100, Math.round((m.logged_minutes || 0) / (8 * 60) * 100))}%` }} />
+                            </div>
+                          </div>
+                          <span className="text-xs text-neutral-500">{Math.round((m.logged_minutes || 0) / 60 * 10) / 10}h</span>
+                        </div>
+                      ))}
+                      {(smDash?.teamCapacity || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No time logs found.</p>}
+                    </div>
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">⚠ High Risk Items</h3>
+                      {(smDash?.highRiskItems || []).slice(0, 5).map(i => (
+                        <div key={i.id} onClick={() => setSelectedItem(i)} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 -mx-2 px-2 rounded">
+                          <TypeBadge type={i.type} compact />
+                          <span className="flex-1 text-xs text-neutral-900 dark:text-neutral-100 truncate">{i.title}</span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${i.priority === 'CRITICAL' ? 'bg-semantic-danger text-white' : 'bg-semantic-warning-surface text-semantic-warning'}`}>{i.priority}</span>
+                        </div>
+                      ))}
+                      {(smDash?.highRiskItems || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No high-risk items — great!</p>}
+                    </div>
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">🔄 Scope Changes</h3>
+                      {(smDash?.scopeChanges || []).slice(0, 5).map(c => (
+                        <div key={c.id} className="flex items-start gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                          <span className="text-xs font-bold flex-shrink-0 mt-0.5 text-semantic-success">+</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-neutral-900 dark:text-neutral-100 truncate">{c.title}</p>
+                            <p className="text-[10px] text-neutral-400">{c.actor_name} · {c.occurred_at ? new Date(c.occurred_at).toLocaleDateString() : ''}</p>
+                          </div>
+                        </div>
+                      ))}
+                      {(smDash?.scopeChanges || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No scope changes recorded.</p>}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* ── PRODUCT OWNER ── */}
+              {!dashLoading && dashboardRole === 'product-owner' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <StatCard label="Upcoming Releases" value={poDash?.upcomingReleases?.length ?? 0} sub="Planned or in progress" color="text-brand-navy" icon="🚀" onClick={() => setView('releases')} />
+                    <StatCard label="Ungroomed Items" value={poDash?.ungroomedCount ?? 0} sub="Not in any sprint" color="text-semantic-warning" icon="📝" onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); }} />
+                    <StatCard label="Features Done" value={poDash?.featureStats ? `${poDash.featureStats.total > 0 ? Math.round(poDash.featureStats.done * 100 / poDash.featureStats.total) : 0}%` : '—'} sub="Stories complete" color="text-semantic-success" icon="✓" />
+                    <StatCard label="Critical Priority" value={(poDash?.priorityDistribution || []).find(p => p.priority === 'CRITICAL')?.count ?? 0} sub="Needs immediate attention" color="text-semantic-danger" icon="🔴" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">🚀 Releases</h3>
+                        <button onClick={() => setView('releases')} className="text-xs text-brand-navy hover:underline">View all →</button>
+                      </div>
+                      {(poDash?.releases || []).slice(0, 5).map(r => (
+                        <div key={r.id} className="py-3 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${r.status === 'RELEASED' ? 'bg-semantic-success text-white' : r.status === 'IN_PROGRESS' ? 'bg-brand-navy text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{r.status}</span>
+                              <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{r.name}</span>
+                              <span className="text-xs font-mono text-neutral-400">v{r.version}</span>
+                            </div>
+                            {r.release_date && <span className="text-xs text-neutral-400">{new Date(r.release_date).toLocaleDateString()}</span>}
+                          </div>
+                          {r.total_items > 0 && (
+                            <div>
+                              <div className="h-1.5 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden mt-1">
+                                <div className="h-full bg-semantic-success rounded-full" style={{ width: `${Math.round((r.done_items || 0) * 100 / r.total_items)}%` }} />
+                              </div>
+                              <p className="text-[10px] text-neutral-400 mt-0.5">{r.done_items}/{r.total_items} items · {r.done_points}/{r.total_points}pt</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {(poDash?.releases || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No releases defined yet.</p>}
+                    </div>
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">📊 Backlog Breakdown</h3>
+                      {(poDash?.backlogByType || []).map(b => (
+                        <div key={b.type} className="flex items-center gap-3 py-2">
+                          <TypeBadge type={b.type} compact />
+                          <div className="flex-1 h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
+                            <div className="h-full bg-brand-navy rounded-full" style={{ width: `${poDash?.ungroomedCount > 0 ? Math.round(b.count * 100 / poDash.ungroomedCount) : 0}%` }} />
+                          </div>
+                          <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200 w-8 text-right">{b.count}</span>
+                        </div>
+                      ))}
+                      {(poDash?.backlogByType || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">Backlog is empty.</p>}
+                      <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-700">
+                        <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">Priority</h4>
+                        {(poDash?.priorityDistribution || []).map(p => (
+                          <div key={p.priority} className="flex items-center justify-between text-xs py-1">
+                            <span className={`font-medium ${p.priority === 'CRITICAL' ? 'text-semantic-danger' : p.priority === 'HIGH' ? 'text-semantic-warning' : 'text-neutral-600 dark:text-neutral-300'}`}>{p.priority}</span>
+                            <span className="font-bold text-neutral-700 dark:text-neutral-200">{p.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="md:col-span-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">📝 Ungroomed Backlog</h3>
+                        <button onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); }} className="text-xs text-brand-navy hover:underline">Open backlog →</button>
+                      </div>
+                      {(poDash?.ungroomedItems || []).map(i => (
+                        <div key={i.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                          <TypeBadge type={i.type} compact />
+                          <span className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate">{i.title}</span>
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${i.priority === 'CRITICAL' ? 'bg-semantic-danger text-white' : i.priority === 'HIGH' ? 'bg-semantic-warning-surface text-semantic-warning' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{i.priority}</span>
+                          {i.story_points > 0 && <span className="text-[10px] text-neutral-400">{i.story_points}pt</span>}
+                        </div>
+                      ))}
+                      {(poDash?.ungroomedItems || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">All items are in sprints.</p>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── EXECUTIVE ── */}
+              {!dashLoading && dashboardRole === 'executive' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <StatCard label="Portfolio Health" value={`${execDash?.overallHealth ?? 0}%`} sub="Items completed" color={execDash?.overallHealth >= 70 ? 'text-semantic-success' : execDash?.overallHealth >= 40 ? 'text-semantic-warning' : 'text-semantic-danger'} icon="❤" />
+                    <StatCard label="Active Projects" value={execDash?.projectPortfolio?.length ?? 0} sub="Non-archived" color="text-brand-navy" icon="📁" onClick={() => setView('projects')} />
+                    <StatCard label="Upcoming Releases" value={(execDash?.releaseSchedule || []).filter(r => r.status !== 'RELEASED').length} sub="Planned or in progress" color="text-brand-amber" icon="🚀" onClick={() => setView('releases')} />
+                    <StatCard label="Overdue Actions" value={execDash?.overdueActions?.length ?? 0} sub="Past due date" color={execDash?.overdueActions?.length > 0 ? 'text-semantic-danger' : 'text-neutral-400'} icon="⚡" onClick={() => setView('pm')} />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-4">📁 Project Portfolio</h3>
+                      {(execDash?.projectPortfolio || []).map(p => {
+                        const pct = p.total_items > 0 ? Math.round(p.done_items * 100 / p.total_items) : 0;
+                        return (
+                          <div key={p.id} className="py-3 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{p.name}</span>
+                              <div className="flex items-center gap-2">
+                                {p.high_priority_open > 0 && <span className="text-[10px] text-semantic-danger font-bold">{p.high_priority_open} at risk</span>}
+                                <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200">{pct}%</span>
+                              </div>
+                            </div>
+                            <div className="h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full ${pct >= 70 ? 'bg-semantic-success' : pct >= 40 ? 'bg-brand-amber' : 'bg-semantic-danger'}`} style={{ width: `${pct}%` }} />
+                            </div>
+                            <p className="text-[10px] text-neutral-400 mt-0.5">{p.done_items}/{p.total_items} items</p>
+                          </div>
+                        );
+                      })}
+                      {(execDash?.projectPortfolio || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No projects found.</p>}
+                    </div>
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">🚀 Release Schedule</h3>
+                      {(execDash?.releaseSchedule || []).map(r => (
+                        <div key={r.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${r.status === 'RELEASED' ? 'bg-semantic-success' : r.status === 'IN_PROGRESS' ? 'bg-brand-navy' : 'bg-neutral-300'}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 truncate">{r.name} <span className="font-mono font-normal text-neutral-400">v{r.version}</span></p>
+                            <p className="text-[10px] text-neutral-400">{r.project_name}</p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className={`text-[10px] font-bold ${r.status === 'RELEASED' ? 'text-semantic-success' : r.status === 'IN_PROGRESS' ? 'text-brand-navy' : 'text-neutral-400'}`}>{r.status}</p>
+                            {r.release_date && <p className="text-[10px] text-neutral-400">{new Date(r.release_date).toLocaleDateString()}</p>}
+                          </div>
+                        </div>
+                      ))}
+                      {(execDash?.releaseSchedule || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No releases defined.</p>}
+                    </div>
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">🎯 RAID Summary</h3>
+                      {(execDash?.raidSummary || []).map(r => (
+                        <div key={r.type} className="flex items-center justify-between py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                          <span className="text-sm text-neutral-700 dark:text-neutral-200 capitalize">{r.type}</span>
+                          <div className="flex gap-3 text-xs">
+                            <span className="text-neutral-500">{r.total} total</span>
+                            <span className={`font-bold ${r.open > 0 ? 'text-semantic-danger' : 'text-neutral-400'}`}>{r.open} open</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">👥 Team Utilization (30 days)</h3>
+                      {(execDash?.teamUtilization || []).slice(0, 6).map(m => (
+                        <div key={m.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                          <Avatar name={m.full_name} size={6} />
+                          <span className="flex-1 text-xs text-neutral-900 dark:text-neutral-100 truncate">{m.full_name}</span>
+                          <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200">{Math.round((m.logged_minutes || 0) / 60 * 10) / 10}h</span>
+                        </div>
+                      ))}
+                      {(execDash?.teamUtilization || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No time logs found.</p>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── ADMIN ── */}
+              {!dashLoading && dashboardRole === 'admin' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <StatCard label="Members" value={adminDash?.memberCount ?? 0} sub="Workspace members" color="text-brand-navy" icon="👥" />
+                    <StatCard label="Events This Week" value={adminDash?.totalEventsWeek ?? 0} sub="All activity (7 days)" color="text-brand-amber" icon="📊" />
+                    <StatCard label="MFA Enabled" value={adminDash?.mfaStats ? `${Math.round((adminDash.mfaStats.mfa_enabled || 0) * 100 / Math.max(1, adminDash.mfaStats.total))}%` : '—'} sub="of active users" color="text-semantic-success" icon="🔐" />
+                    <StatCard label="Audit Changes" value={adminDash?.recentAuditLog?.length ?? 0} sub="Permission changes" color="text-neutral-600" icon="📋" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">👥 Members</h3>
+                        <button onClick={() => { setView('workspace'); fetchMembers(); }} className="text-xs text-brand-navy hover:underline">Manage →</button>
+                      </div>
+                      {(adminDash?.members || []).slice(0, 8).map(m => (
+                        <div key={m.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                          <Avatar name={m.full_name} size={7} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-neutral-900 dark:text-neutral-100 truncate">{m.full_name}</p>
+                            <p className="text-[10px] text-neutral-400 truncate">{m.email}</p>
+                          </div>
+                          <span className="text-[10px] bg-neutral-100 dark:bg-neutral-700 text-neutral-500 px-2 py-0.5 rounded-full">{m.role}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">🔐 Role Distribution</h3>
+                      {(adminDash?.roleDistribution || []).map(r => (
+                        <div key={r.role} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                          <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 w-20">{r.role}</span>
+                          <div className="flex-1 h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
+                            <div className="h-full bg-brand-navy rounded-full" style={{ width: `${adminDash?.memberCount > 0 ? Math.round(r.count * 100 / adminDash.memberCount) : 0}%` }} />
+                          </div>
+                          <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200">{r.count}</span>
+                        </div>
+                      ))}
+                      <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mt-4 mb-2">Activity (7 days)</h4>
+                      {(adminDash?.activityStats || []).slice(0, 5).map(a => (
+                        <div key={a.event_type} className="flex items-center justify-between text-xs py-1">
+                          <span className="text-neutral-600 dark:text-neutral-300 font-mono">{a.event_type}</span>
+                          <span className="font-bold text-neutral-700 dark:text-neutral-200">{a.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="md:col-span-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">📋 Permission Audit Log</h3>
+                      {(adminDash?.recentAuditLog || []).length === 0
+                        ? <p className="text-sm text-neutral-400 text-center py-4">No permission changes recorded yet.</p>
+                        : <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="text-neutral-500 border-b border-neutral-100 dark:border-neutral-700">
+                                  {['When', 'Actor', 'Target', 'From', 'To', 'Action'].map(h => (
+                                    <th key={h} className="text-left py-2 px-2 font-semibold uppercase tracking-wider">{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+                                {(adminDash.recentAuditLog).map(log => (
+                                  <tr key={log.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
+                                    <td className="py-2 px-2 text-neutral-400">{log.changed_at ? new Date(log.changed_at).toLocaleDateString() : '—'}</td>
+                                    <td className="py-2 px-2 font-medium text-neutral-900 dark:text-neutral-100">{log.actor_name || '—'}</td>
+                                    <td className="py-2 px-2 text-neutral-600 dark:text-neutral-300">{log.target_name || '—'}</td>
+                                    <td className="py-2 px-2 text-neutral-400">{log.old_role || '—'}</td>
+                                    <td className="py-2 px-2 text-semantic-success font-semibold">{log.new_role || '—'}</td>
+                                    <td className="py-2 px-2 text-neutral-400">{log.action_type || 'CHANGED'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                      }
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -3944,6 +4350,105 @@ export default function App() {
             </div>
           )}
 
+          {/* ======================================================
+               ITERATION 6 — RELEASES
+             ====================================================== */}
+          {view === 'releases' && (
+            <div className="flex h-full overflow-hidden">
+              <div className="w-72 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col">
+                <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">Releases</h2>
+                    <button onClick={() => setIsReleaseOpen(true)} className="w-6 h-6 flex items-center justify-center rounded bg-brand-navy text-white text-sm hover:opacity-80">+</button>
+                  </div>
+                  <input type="text" placeholder="Search releases..." value={releaseSearch} onChange={e => setReleaseSearch(e.target.value)} className="input text-xs py-1.5 w-full" />
+                </div>
+                <div className="px-3 py-2 border-b border-neutral-200 dark:border-neutral-700">
+                  <select className="input text-xs w-full py-1" onChange={e => fetchReleases(e.target.value || null)}>
+                    <option value="">All Projects</option>
+                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+                <div className="flex-1 overflow-y-auto px-2 py-2">
+                  {releases.filter(r => !releaseSearch || r.name?.toLowerCase().includes(releaseSearch.toLowerCase()) || r.version?.includes(releaseSearch)).map(r => (
+                    <button key={r.id} onClick={() => { setSelectedRelease(r); fetchReleaseItems(r.id); }}
+                      className={`w-full text-left px-3 py-3 rounded-xl mb-1 transition-colors border ${selectedRelease?.id === r.id ? 'bg-brand-navy/10 border-brand-navy/30' : 'hover:bg-neutral-100 dark:hover:bg-neutral-700 border-transparent'}`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{r.name}</span>
+                        <span className="text-[10px] font-mono text-neutral-400 ml-1">v{r.version}</span>
+                      </div>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${r.status === 'RELEASED' ? 'bg-semantic-success text-white' : r.status === 'IN_PROGRESS' ? 'bg-brand-navy text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{r.status}</span>
+                      {r.releaseDate && <span className="text-[10px] text-neutral-400 ml-2">{new Date(r.releaseDate).toLocaleDateString()}</span>}
+                    </button>
+                  ))}
+                  {releases.length === 0 && <p className="text-xs text-neutral-400 text-center py-6">No releases yet. Create one to get started.</p>}
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                {!selectedRelease ? (
+                  <EmptyState icon="🚀" title="Select a release" subtitle="Choose a release from the left to view its details and linked work items." action={<Button variant="action" onClick={() => setIsReleaseOpen(true)}>New Release</Button>} />
+                ) : (
+                  <div>
+                    <div className="flex items-start justify-between mb-5">
+                      <div>
+                        <div className="flex items-center gap-3 mb-1">
+                          <h1 className="text-2xl font-bold text-brand-navy dark:text-white">{selectedRelease.name}</h1>
+                          <span className="font-mono text-neutral-400">v{selectedRelease.version}</span>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded ${selectedRelease.status === 'RELEASED' ? 'bg-semantic-success text-white' : selectedRelease.status === 'IN_PROGRESS' ? 'bg-brand-navy text-white' : 'bg-neutral-100 text-neutral-500'}`}>{selectedRelease.status}</span>
+                        </div>
+                        {selectedRelease.description && <p className="text-sm text-neutral-500">{selectedRelease.description}</p>}
+                        {selectedRelease.releaseDate && <p className="text-xs text-neutral-400 mt-1">Target: {new Date(selectedRelease.releaseDate).toLocaleDateString()}</p>}
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        {selectedRelease.status !== 'RELEASED' && <Button variant="action" onClick={() => updateRelease(selectedRelease.id, { ...selectedRelease, status: 'RELEASED' })}>Mark Released</Button>}
+                        {selectedRelease.status === 'PLANNED' && <Button variant="secondary" onClick={() => updateRelease(selectedRelease.id, { ...selectedRelease, status: 'IN_PROGRESS' })}>Start</Button>}
+                        <button onClick={() => deleteRelease(selectedRelease.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
+                      </div>
+                    </div>
+                    {releaseItems.length > 0 && (
+                      <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 mb-5">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">Progress</span>
+                          <span className="text-xs text-neutral-500">{releaseItems.filter(i => i.status === 'Done').length}/{releaseItems.length} done</span>
+                        </div>
+                        <div className="h-3 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
+                          <div className="h-full bg-semantic-success rounded-full" style={{ width: `${Math.round(releaseItems.filter(i => i.status === 'Done').length * 100 / releaseItems.length)}%` }} />
+                        </div>
+                      </div>
+                    )}
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 mb-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Work Items ({releaseItems.length})</h3>
+                      {releaseItems.length === 0 ? <p className="text-sm text-neutral-400 text-center py-4">No work items linked yet.</p>
+                        : releaseItems.map(item => (
+                          <div key={item.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                            <TypeBadge type={item.type} compact />
+                            <span className="font-mono text-[10px] text-neutral-400">{item.id}</span>
+                            <span className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate cursor-pointer hover:text-brand-navy" onClick={() => setSelectedItem(item)}>{item.title}</span>
+                            <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
+                            <button onClick={() => removeItemFromRelease(selectedRelease.id, item.id)} className="text-[10px] text-semantic-danger hover:underline">Remove</button>
+                          </div>
+                        ))
+                      }
+                    </div>
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Add Items to Release</h3>
+                      <div className="space-y-1 max-h-64 overflow-y-auto">
+                        {workItems.filter(wi => !releaseItems.find(ri => ri.id === wi.id)).slice(0, 20).map(item => (
+                          <div key={item.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                            <TypeBadge type={item.type} compact />
+                            <span className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate">{item.title}</span>
+                            <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
+                            <button onClick={() => addItemToRelease(selectedRelease.id, item.id)} className="text-xs text-brand-navy hover:underline">+ Add</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
         </div>
       </main>
 
@@ -3961,6 +4466,7 @@ export default function App() {
                 className={`text-sm px-2 py-1 rounded transition-colors ${selectedItem.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}`}>
                 {selectedItem.starred ? '★' : '☆'}
               </button>
+              <button onClick={() => setIsWorklogOpen(true)} className="text-xs text-neutral-400 hover:text-brand-navy transition-colors px-2 py-1 rounded border border-neutral-200 dark:border-neutral-600">⏱ Log Work</button>
               {can('delete_items') && (
                 <button onClick={() => handleDelete(selectedItem.id)}
                   className="text-xs text-neutral-400 hover:text-semantic-danger px-2 py-1 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">Delete</button>
@@ -4511,6 +5017,61 @@ export default function App() {
           <div className="flex justify-end gap-3 mt-5">
             <Button variant="ghost" onClick={() => setIsArticleFormOpen(false)}>Cancel</Button>
             <Button variant="action" onClick={createArticle}>Create Article</Button>
+          </div>
+        </Modal>
+      )}
+
+      {/* CREATE RELEASE MODAL */}
+      {isReleaseOpen && (
+        <Modal title="New Release" onClose={() => setIsReleaseOpen(false)}>
+          <div className="space-y-3">
+            <Field label="Release Name *">
+              <input type="text" className="input" placeholder="e.g. Q2 Feature Release" value={newRelease.name} onChange={e => setNewRelease(r => ({ ...r, name: e.target.value }))} autoFocus />
+            </Field>
+            <Field label="Version *">
+              <input type="text" className="input" placeholder="e.g. 2.1.0" value={newRelease.version} onChange={e => setNewRelease(r => ({ ...r, version: e.target.value }))} />
+            </Field>
+            <Field label="Description">
+              <textarea rows={2} className="input resize-none" placeholder="What's in this release?" value={newRelease.description} onChange={e => setNewRelease(r => ({ ...r, description: e.target.value }))} />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Project">
+                <select className="input" value={newRelease.projectId} onChange={e => setNewRelease(r => ({ ...r, projectId: e.target.value }))}>
+                  <option value="">— Select project —</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </Field>
+              <Field label="Target Date">
+                <input type="date" className="input" value={newRelease.releaseDate} onChange={e => setNewRelease(r => ({ ...r, releaseDate: e.target.value }))} />
+              </Field>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 mt-5">
+            <Button variant="ghost" onClick={() => setIsReleaseOpen(false)}>Cancel</Button>
+            <Button variant="action" onClick={createRelease}>Create Release</Button>
+          </div>
+        </Modal>
+      )}
+
+      {/* LOG WORK MODAL */}
+      {isWorklogOpen && selectedItem && (
+        <Modal title="Log Work" onClose={() => setIsWorklogOpen(false)}>
+          <p className="text-xs text-neutral-400 mb-3">{selectedItem.title}</p>
+          <div className="space-y-3">
+            <Field label="Time Spent (minutes) *">
+              <input type="number" className="input" min={1} value={worklogForm.timeSpentMinutes} onChange={e => setWorklogForm(f => ({ ...f, timeSpentMinutes: parseInt(e.target.value) || 0 }))} autoFocus />
+              <p className="text-xs text-neutral-400 mt-0.5">{Math.round(worklogForm.timeSpentMinutes / 60 * 10) / 10} hours</p>
+            </Field>
+            <Field label="Date">
+              <input type="date" className="input" value={worklogForm.workDate} onChange={e => setWorklogForm(f => ({ ...f, workDate: e.target.value }))} />
+            </Field>
+            <Field label="Description (optional)">
+              <textarea rows={2} className="input resize-none" placeholder="What did you work on?" value={worklogForm.description} onChange={e => setWorklogForm(f => ({ ...f, description: e.target.value }))} />
+            </Field>
+          </div>
+          <div className="flex justify-end gap-3 mt-5">
+            <Button variant="ghost" onClick={() => setIsWorklogOpen(false)}>Cancel</Button>
+            <Button variant="action" onClick={logWork}>Log Work</Button>
           </div>
         </Modal>
       )}

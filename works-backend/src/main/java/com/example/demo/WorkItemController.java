@@ -102,17 +102,20 @@ public class WorkItemController {
     @GetMapping("/search")
     public List<WorkItem> search(@RequestParam String q) {
         String userId = authenticatedUser.id();
-        // Starred items get priority in search results
+        // Starred items get priority in search results. Match spans title, description,
+        // and any comment body (spec: full-text search covers comments too). EXISTS keeps
+        // one row per item — no duplicates from the comment join.
         String sql = "SELECT wi.*, (CASE WHEN si.work_item_id IS NOT NULL THEN 1 ELSE 0 END) AS is_starred " +
             "FROM work_items wi LEFT JOIN starred_items si ON si.work_item_id = wi.id AND si.user_id = ? " +
-            "WHERE wi.deleted_at IS NULL AND (wi.title ILIKE ? OR wi.description ILIKE ?) " +
+            "WHERE wi.deleted_at IS NULL AND (wi.title ILIKE ? OR wi.description ILIKE ? " +
+            "OR EXISTS (SELECT 1 FROM comments c WHERE c.work_item_id = wi.id AND c.body ILIKE ?)) " +
             "ORDER BY is_starred DESC, wi.created_at DESC LIMIT 20";
         String pattern = "%" + q + "%";
         List<WorkItem> items = jdbc.query(sql, (rs, row) -> {
             WorkItem w = mapRow(rs, row);
             try { w.setStarred(rs.getInt("is_starred") == 1); } catch (Exception ignored) {}
             return w;
-        }, userId, pattern, pattern);
+        }, userId, pattern, pattern, pattern);
         attachTagsBatch(items);
         return items;
     }

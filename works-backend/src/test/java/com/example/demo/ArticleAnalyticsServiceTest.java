@@ -52,4 +52,15 @@ class ArticleAnalyticsServiceTest {
         OffsetDateTime now = OffsetDateTime.parse("2026-06-01T00:00:00Z");
         assertThat(service.isStale("ARCHIVED", now.minusDays(999), now, 90)).isFalse();
     }
+
+    @Test
+    void normalizeSearchTerm_trimsCollapsesAndLowercases() {
+        assertThat(service.normalizeSearchTerm("  Meter   Reset ")).isEqualTo("meter reset");
+    }
+
+    @Test
+    void normalizeSearchTerm_blankOrNull_isNull() {
+        assertThat(service.normalizeSearchTerm("   ")).isNull();
+        assertThat(service.normalizeSearchTerm(null)).isNull();
+    }
 }

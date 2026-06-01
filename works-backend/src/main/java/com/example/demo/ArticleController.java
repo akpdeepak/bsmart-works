@@ -17,6 +17,7 @@ public class ArticleController {
     private final ArticleCommentRepository articleCommentRepository;
     private final ArticleWorkflowService workflowService;
     private final ArticleAnalyticsService analyticsService;
+    private final ArticleDiffService diffService;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
     private final JdbcTemplate jdbc;
@@ -26,6 +27,7 @@ public class ArticleController {
                               ArticleCommentRepository articleCommentRepository,
                               ArticleWorkflowService workflowService,
                               ArticleAnalyticsService analyticsService,
+                              ArticleDiffService diffService,
                               EventService eventService, AuthenticatedUser authenticatedUser,
                               JdbcTemplate jdbc) {
         this.articleRepository = articleRepository;
@@ -33,6 +35,7 @@ public class ArticleController {
         this.articleCommentRepository = articleCommentRepository;
         this.workflowService = workflowService;
         this.analyticsService = analyticsService;
+        this.diffService = diffService;
         this.eventService = eventService;
         this.authenticatedUser = authenticatedUser;
         this.jdbc = jdbc;
@@ -44,11 +47,30 @@ public class ArticleController {
                                       @RequestParam(required = false) String search) {
         String q = query != null ? query : search;
         if (q != null && !q.isBlank()) {
+            recordSearchTerm(q);
             return articleRepository.findByTitleContainingIgnoreCaseOrderByUpdatedAtDesc(q);
         }
         return spaceId != null
             ? articleRepository.findBySpaceIdOrderByUpdatedAtDesc(spaceId)
             : articleRepository.findAll();
+    }
+
+    // Top search terms typed into the KB — completes iteration-5 article analytics
+    // (per-article views/votes/citations/stale live on /{id}/analytics; this is workspace-wide).
+    @GetMapping("/analytics/search-terms")
+    public List<Map<String, Object>> topSearchTerms(@RequestParam(defaultValue = "20") int limit) {
+        return jdbc.queryForList(
+            "SELECT term, search_count, last_searched_at FROM article_search_terms " +
+            "ORDER BY search_count DESC, last_searched_at DESC LIMIT ?", Math.min(limit, 100));
+    }
+
+    private void recordSearchTerm(String raw) {
+        String term = analyticsService.normalizeSearchTerm(raw);
+        if (term == null) return;
+        jdbc.update(
+            "INSERT INTO article_search_terms (term, search_count, last_searched_at) VALUES (?, 1, NOW()) " +
+            "ON CONFLICT (term) DO UPDATE SET search_count = article_search_terms.search_count + 1, last_searched_at = NOW()",
+            term);
     }
 
     @GetMapping("/{id}")
@@ -63,6 +85,41 @@ public class ArticleController {
     @GetMapping("/{id}/versions")
     public List<ArticleVersion> getVersions(@PathVariable String id) {
         return articleVersionRepository.findByArticleIdOrderByVersionNumberDesc(id);
+    }
+
+    // Line-level diff between two stored versions, for the version "diff view".
+    @GetMapping("/{id}/versions/{from}/diff/{to}")
+    public Map<String, Object> diffVersions(@PathVariable String id,
+                                            @PathVariable Integer from, @PathVariable Integer to) {
+        ArticleVersion vFrom = articleVersionRepository.findByArticleIdAndVersionNumber(id, from).orElseThrow();
+        ArticleVersion vTo = articleVersionRepository.findByArticleIdAndVersionNumber(id, to).orElseThrow();
+        return Map.of(
+            "articleId", id,
+            "fromVersion", from,
+            "toVersion", to,
+            "fromTitle", vFrom.getTitle(),
+            "toTitle", vTo.getTitle(),
+            "titleChanged", !java.util.Objects.equals(vFrom.getTitle(), vTo.getTitle()),
+            "lines", diffService.diff(vFrom.getContent(), vTo.getContent())
+        );
+    }
+
+    // Restore a prior version: copies its title/content onto the article as a new
+    // version (history is preserved — the restore is itself the latest version).
+    @PostMapping("/{id}/versions/{versionNumber}/restore")
+    public Article restoreVersion(@PathVariable String id, @PathVariable Integer versionNumber) {
+        String userId = authenticatedUser.id();
+        Article a = articleRepository.findById(id).orElseThrow();
+        ArticleVersion v = articleVersionRepository.findByArticleIdAndVersionNumber(id, versionNumber).orElseThrow();
+        a.setTitle(v.getTitle());
+        a.setContent(v.getContent());
+        a.setVersionNumber(a.getVersionNumber() + 1);
+        a.setUpdatedAt(OffsetDateTime.now());
+        Article saved = articleRepository.save(a);
+        saveVersion(saved, userId);
+        eventService.record(id, "ARTICLE_VERSION_RESTORED", userId,
+                "{\"restoredFrom\":" + versionNumber + ",\"newVersion\":" + saved.getVersionNumber() + "}");
+        return saved;
     }
 
     @GetMapping("/{id}/links")

@@ -11,6 +11,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 - Knowledge: inline article comments (threaded, resolvable) on knowledge articles
 - Knowledge: Author → Review → Publish workflow (submit / publish / request-changes / archive / restore) with reviewer + submission tracking
 - Knowledge: article analytics panel — views, helpful votes, work-item citations, open comments, versions, and stale-article detection
+- Knowledge: article version history adds restore-to-version and line-level version diff
+- Knowledge: knowledge-base search-term analytics (most-searched terms), completing article analytics
+- Search: work-item search now matches comment bodies, not just title and description
 
 ### Fixed
 - Knowledge: article search now honours the `search` query parameter (was silently ignored)

@@ -1,4 +1,5 @@
 import React from 'react';
+import DOMPurify from 'dompurify';
 
 // ── Shared utilities ─────────────────────────────────────────────────────────
 
@@ -8,14 +9,21 @@ export function getInitials(name) {
   return parts.length > 1 ? (parts[0][0] + parts[1][0]).toUpperCase() : name.substring(0, 2).toUpperCase();
 }
 
+// Article/comment bodies are user-supplied, so the generated HTML is sanitised
+// (tight tag/attr allowlist) before any call site hands it to dangerouslySetInnerHTML.
+// CLAUDE.md §17.3 — never inject unsanitised user content.
 export function renderMd(text) {
   if (!text) return '';
-  return text
+  const html = text
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`(.+?)`/g, '<code style="background:#f3f4f6;padding:0 3px;border-radius:3px;font-size:11px">$1</code>')
+    .replace(/`(.+?)`/g, '<code class="prose-md-code">$1</code>')
     .replace(/^- (.+)$/gm, '• $1')
     .replace(/\n/g, '<br/>');
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['strong', 'em', 'code', 'br'],
+    ALLOWED_ATTR: ['class'],
+  });
 }
 
 export function getTimeOfDay() {

@@ -1259,6 +1259,204 @@ Do NOT merge a Dependabot PR if CI is red. Never manually edit a `package-lock.j
 
 ---
 
+## 13. CD Pipeline & Deployment
+
+### 13.1 Deploy Workflow
+
+`.github/workflows/deploy.yml` is a `workflow_dispatch`-triggered workflow. Run it from the
+GitHub Actions UI by selecting the target environment (`staging` or `production`). A production
+deploy requires typing `DEPLOY` in the confirmation field to prevent accidental triggers.
+
+The workflow builds the backend JAR and the frontend `dist/` and has TODO placeholders for
+the actual deployment steps. Wire the real steps (§13.2) once a hosting target is confirmed.
+
+**Deploy trigger rules:**
+- Only deploy after all CI jobs on the target commit have passed
+- Never deploy a commit that has not been tagged with a release version (§9.3)
+- Never deploy directly from a feature branch — only from `main`
+- Staging deploys can be triggered by any team member; production deploys require Deepak's confirmation
+
+### 13.2 Deployment Decision Checklist
+
+Before wiring real deployment steps, decide:
+
+| Question | Options |
+|----------|---------|
+| Hosting model | VPS (SSH + systemd) · Docker on a host · PaaS (Render, Railway, Fly.io) · Kubernetes |
+| Database hosting | Managed Postgres (Supabase, Neon, RDS) · Self-hosted on VPS |
+| Frontend hosting | Same server · CDN/static host (Vercel, Cloudflare Pages, S3 + CloudFront) |
+| Container registry | GitHub Container Registry (GHCR) · Docker Hub · ECR |
+| Secrets injection | GitHub Environment secrets · Vault · Platform-native secrets manager |
+
+Once decided, replace the TODO steps in `deploy.yml` with real deployment commands.
+
+### 13.3 Health Check Standard
+
+Every deployed backend instance must respond at `GET /actuator/health` → `{"status":"UP"}`.
+Spring Actuator is already configured — only `health` and `info` are exposed over HTTP.
+The deploy workflow's final step must call this endpoint and fail if the status is not `UP`.
+
+---
+
+## 14. Logging & Observability
+
+### 14.1 Log Levels by Environment
+
+| Environment | Root level | `com.example.demo` | Hibernate SQL |
+|-------------|-----------|-------------------|--------------|
+| Local / test | INFO | DEBUG | DEBUG |
+| Staging | INFO | INFO | WARN |
+| Production | WARN | INFO | WARN |
+
+Set the active Spring profile via `SPRING_PROFILES_ACTIVE=staging` or `production`.
+`logback-spring.xml` in `src/main/resources/` switches format and level automatically.
+
+### 14.2 Structured Logging Rules
+
+- **Always use SLF4J `Logger`** — `System.out.println` is blocked by `guardrails.sh`
+- Log at the right level: DEBUG for dev detail, INFO for notable business events,
+  WARN for recoverable issues, ERROR for failures needing attention
+- **Never log PII** (email, name, phone) or secrets (tokens, passwords)
+- Use parameterised messages: `log.info("Work item created id={} projectId={}", id, projectId)`
+  — never string-concatenate into log messages (log injection risk + performance)
+- Local: human-readable console output. Staging/prod: JSON per line (ready for log aggregation)
+
+### 14.3 Observability Roadmap
+
+| Tool | Purpose | When to add |
+|------|---------|-------------|
+| `logstash-logback-encoder` | Full JSON + ECS fields in staging/prod | When a log aggregator is wired |
+| Sentry | Error tracking + stack traces | Before first external users |
+| Micrometer + Prometheus | App metrics (request rate, latency, DB pool) | When infra monitoring exists |
+| OpenTelemetry | Distributed tracing | If microservices are ever introduced |
+
+---
+
+## 15. API Pagination & Filtering
+
+### 15.1 Pagination Standard — Offset-Based
+
+All list endpoints that can return more than 50 items **must** be paginated using Spring's
+`Pageable` and the `PageResponse<T>` wrapper class (`com.example.demo.PageResponse`).
+
+**Query parameters (always these exact names):**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `page` | int | 0 | Zero-based page number |
+| `size` | int | 25 | Items per page — max 100, enforced in service |
+| `sort` | string | `createdAt,desc` | `field,direction` — multiple allowed |
+
+**Response envelope** (`PageResponse<T>`):
+```json
+{ "items": [...], "total": 142, "page": 0, "size": 25, "totalPages": 6 }
+```
+
+**Controller pattern:**
+```java
+@GetMapping
+public PageResponse<WorkItemDto> list(
+        @RequestParam(defaultValue = "0")  int page,
+        @RequestParam(defaultValue = "25") int size,
+        @RequestParam(defaultValue = "createdAt,desc") String sort) {
+    Pageable pageable = PageRequest.of(page, Math.min(size, 100),
+            Sort.by(Sort.Direction.fromString(sort.split(",")[1]), sort.split(",")[0]));
+    return PageResponse.of(workItemRepository.findAll(pageable).map(WorkItemDto::from));
+}
+```
+
+### 15.2 Filtering Conventions
+
+| Pattern | Example | Meaning |
+|---------|---------|---------|
+| `field=value` | `status=IN_PROGRESS` | Exact match |
+| `field=v1,v2` | `priority=HIGH,CRITICAL` | Multi-value OR |
+| `field_from=date` | `createdAt_from=2026-01-01` | Range start (ISO-8601) |
+| `field_to=date` | `createdAt_to=2026-06-30` | Range end (ISO-8601) |
+| `q=text` | `q=auth+bug` | Full-text search |
+| `projectId=id` | `projectId=p_456` | Scope filter (required on most list endpoints) |
+
+All filter parameters are optional; filters combine with AND semantics unless noted.
+Debounce filter inputs at 250ms on the frontend (CLAUDE.md §4.18).
+
+### 15.3 Existing Endpoints — Migration Path
+
+Many existing controllers use `findAll()` with no pagination — this is `⚠️ pagination debt`.
+Migrate each endpoint to `PageResponse` as you touch it: add `Pageable` → switch repository
+method → wrap in `PageResponse.of()`. Never introduce a new `findAll()` call.
+
+---
+
+## 16. Frontend Data Fetching — TanStack Query
+
+### 16.1 Setup
+
+`@tanstack/react-query` is installed. `QueryClientProvider` is wired in `main.jsx`.
+The shared `queryClient` instance lives in `src/lib/query-client.js`.
+
+**Never use raw `useEffect` + `useState` for data fetching in new components.** That pattern
+is legacy debt in App.jsx. All new pages and components use `useQuery` / `useMutation`.
+
+### 16.2 Query Key Conventions
+
+```js
+['work-items', { projectId, status, page, size }]  // list with filters
+['work-items', itemId]                              // single entity
+['projects', projectId, 'sprints']                 // nested resource
+```
+
+First element = entity name (matches REST path segment). Filters go in the second element
+as an object. The same logical query always uses the same key shape.
+
+### 16.3 Data Fetching Template
+
+```jsx
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { api } from '@/lib/apiClient'
+
+// Query
+function useWorkItems({ projectId, page = 0, size = 25 }) {
+  return useQuery({
+    queryKey: ['work-items', { projectId, page, size }],
+    queryFn: () => api.send(`/work-items?projectId=${projectId}&page=${page}&size=${size}`),
+    enabled: !!projectId,
+  })
+}
+
+// Mutation — optimistic UI (CLAUDE.md §4.16)
+function useCreateWorkItem() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body) => api.send('/work-items', { method: 'POST', body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['work-items'] }),
+  })
+}
+```
+
+### 16.4 Loading / Error / Empty States
+
+```jsx
+const { data, isLoading, isError } = useWorkItems({ projectId })
+if (isLoading) return <WorkItemListSkeleton />   // skeleton — CLAUDE.md §4.11
+if (isError)   return <ErrorMessage ... />
+if (!data?.items?.length) return <EmptyState ... />
+```
+
+`isLoading` (first load) → skeleton screen. `isFetching` (background refetch) → subtle header
+indicator only. `isError` → inline error with a "retry" CTA that calls `refetch()`.
+
+### 16.5 Cache Invalidation After Mutations
+
+```js
+// Narrow (preferred) — only re-fetches the specific project's work items
+qc.invalidateQueries({ queryKey: ['work-items', { projectId }] })
+
+// Broad — use after bulk operations only
+qc.invalidateQueries({ queryKey: ['work-items'] })
+```
+
+---
+
 *Verified against the codebase on 2026-06-01. Source specs: Capability Map v3.5, Complete
 Iteration Guide, Tech Stack & Architecture, Brand & Identity (bSmart Works master package).
 Where spec and code conflict, code is canonical and the conflict is flagged ⚠️.*

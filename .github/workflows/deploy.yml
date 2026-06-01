@@ -1,0 +1,105 @@
+name: Deploy
+
+# Manual-trigger deploy workflow (CLAUDE.md §13).
+# Triggered manually from GitHub Actions UI → select environment.
+# TODO: wire up the actual deployment steps once a hosting target is confirmed.
+# Until then this workflow documents the expected shape and validates the build is deployable.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options: [staging, production]
+      confirm_production:
+        description: "Type DEPLOY to confirm production deploy (ignored for staging)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  pre-flight:
+    name: Pre-flight checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Block unconfirmed production deploy
+        if: inputs.environment == 'production' && inputs.confirm_production != 'DEPLOY'
+        run: |
+          echo "Production deploy requires confirm_production = 'DEPLOY'" >&2
+          exit 1
+
+  build-backend:
+    name: Build backend JAR
+    needs: pre-flight
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: works-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Package (skip tests — CI already ran them)
+        run: ./mvnw -B -DskipTests package
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jar
+          path: works-backend/target/*.jar
+          retention-days: 7
+
+  build-frontend:
+    name: Build frontend static files
+    needs: pre-flight
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: works-frontend
+    env:
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: works-frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: works-frontend/dist/
+          retention-days: 7
+
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    needs: [build-backend, build-frontend]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+      # ── TODO: replace the steps below with your actual deployment mechanism ──────
+      # Options (choose one):
+      #   A) SSH + systemd:   scp the JAR, restart the service
+      #   B) Docker:          build image, push to registry, deploy to host
+      #   C) PaaS (Render, Railway, Fly.io): use their CLI action
+      #   D) Kubernetes:      apply updated deployment manifest
+      # See CLAUDE.md §13 for the deployment decision checklist.
+      - name: Deploy backend (TODO)
+        run: echo "TODO — wire actual backend deploy for ${{ inputs.environment }}"
+      - name: Deploy frontend (TODO)
+        run: echo "TODO — wire actual frontend deploy (CDN/static host) for ${{ inputs.environment }}"
+      - name: Health check
+        run: |
+          echo "TODO — curl https://<host>/actuator/health and assert {status:UP}"
+          # Example:
+          # curl -f https://api.bsmart.example.com/actuator/health | jq '.status == "UP"'

@@ -1,0 +1,18 @@
+# bSmart Works — gitleaks configuration (CLAUDE.md §12.3).
+# Add allowlist entries here for known false positives.
+# Never suppress a real secret — fix it by rotating the credential and rewriting history.
+title = "bSmart Works gitleaks config"
+
+[extend]
+# Use the default ruleset as the base
+useDefault = true
+
+[[rules]]
+id = "bsmart-dev-jwt-secret"
+description = "Allow the documented dev-only JWT secret placeholder in .env.example and application.properties"
+regex = '''dev-only-change-me-bSmartWorksSecretKey2026'''
+allowlist.paths = [
+    "works-backend/.env.example",
+    "works-backend/src/main/resources/application.properties",
+    "CLAUDE.md",
+]

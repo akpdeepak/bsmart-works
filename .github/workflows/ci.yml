@@ -11,6 +11,20 @@ permissions:
   contents: read
 
 jobs:
+  secrets-scan:
+    name: Secrets scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so gitleaks can scan all commits on the branch
+      # Scans for accidentally committed secrets (API keys, passwords, tokens).
+      # See CLAUDE.md §12.3. Config: .gitleaks.toml (add allowlist rules there, not here).
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   guardrails:
     name: Architecture & brand guardrails
     runs-on: ubuntu-latest

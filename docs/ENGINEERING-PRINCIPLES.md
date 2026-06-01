@@ -107,8 +107,8 @@ feature wants its own silo, that's the smell to stop and reuse the shared layer.
 ### 3.2 Event-source from day one
 Every state change emits an event to the append-only event table. Events are never updated or
 deleted. This is what makes audit, compliance reconstruction, and time-travel debugging possible
-later — and it cannot be retrofitted. *(Open issue: the repo currently has two event tables,
-`event_log` and `events` — consolidate to one before building further on event sourcing.)*
+later — and it cannot be retrofitted. The single event store is **`events`** (append-only); the
+legacy `event_log` table was dropped in migration V20.
 
 ### 3.3 Canonical vocabulary, everywhere
 One concept, one name, across Java / DB / REST:
@@ -144,7 +144,7 @@ Principles that rely on memory decay. Each rule below is wired to a check that f
 |-----------|-------------|---------------|
 | Tokens not literals (§2.2) | ESLint rules in `works-frontend/eslint.config.js` | On save, pre-commit, CI |
 | No inline fetch/axios (§2.3) | ESLint `no-restricted-syntax` / `no-restricted-imports` | On save, pre-commit, CI |
-| Brand/arch cross-cutting rules | `scripts/guardrails.sh` (hex, `works-*`, packages, migrations, RBAC-in-controller) | Pre-commit, CI |
+| Brand/arch cross-cutting rules | `scripts/guardrails.sh` (`works-*`, packages, migration naming + **plural tables**, RBAC-in-controller) | Pre-commit, CI |
 | Java style consistency (§2.1) | Checkstyle (`works-backend/config/checkstyle/checkstyle.xml`) | `./mvnw verify`, CI |
 | AI rules never drift | `scripts/generate-ai-rules.mjs --check` | Pre-commit, CI |
 | Definition of Done (§2.5, §1.4) | `.github/pull_request_template.md` | Every PR |

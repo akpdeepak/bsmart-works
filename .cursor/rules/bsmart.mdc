@@ -52,7 +52,7 @@ Never create capability-specific data tables, auth flows, or UI conventions.
 | Styling | Tailwind CSS 3.4 — token classes only (see §4) |
 | Component pattern | `class-variance-authority` (cva) + `clsx` + `tailwind-merge`, via `@/lib/utils` `cn()` |
 | Icons | `lucide-react` |
-| API client | Single `apiClient` wrapper (target) — no inline fetch/axios per component |
+| API client | Single `apiClient` wrapper — `works-frontend/src/lib/apiClient.js` (built; no inline fetch/axios per component) |
 
 ### ⚠️ Reality gaps to resolve (do not silently "fix" — confirm with Deepak)
 - **Backend package is `com.example.demo` (flat).** The spec's target is `com.bcits.works.<feature>`.
@@ -61,6 +61,10 @@ Never create capability-specific data tables, auth flows, or UI conventions.
 - **Event store: resolved → `events` is canonical.** The schema once had two tables; the dead
   `event_log` was dropped in V20. **`events`** is the single event store (mapped by `AppEvent`,
   written by `EventService`). Any future audit-log explorer reads from `events`.
+- **Frontend is a monolith.** `works-frontend/src/App.jsx` is ~4,200 lines and holds most
+  screens + state — it contradicts the "render one thing" rule in §3. A feature-module split is
+  planned; until then, extend it carefully and prefer pulling shared bits into
+  `components/works/` rather than growing `App.jsx` further.
 
 ---
 
@@ -82,16 +86,26 @@ package-by-feature migration is formally scheduled.
 - `RbacService` is the single entry point for all permission checks.
 - Privacy: individual data private by default; manager drill-down is API-enforced, not UI-hidden.
 
-### Database (Flyway — current high-water mark: **V19** on `main`; note V16 was skipped)
+### Database (Flyway — current high-water mark: **V26** on `main`; note V16 and V23 were skipped)
 - **All schema changes via Flyway migrations only.** Never alter the DB manually.
-- Next migration is **`V20__<description>.sql`**. Naming: `V{n}__{snake_case_description}.sql`.
-  (Existing on `main`: …V14, V15 seed_brand_and_identity, V17 mfa_totp, V18 project_slugs,
-  V19 data_quality_cleanup, V20 drop_dead_event_log.)
-- **Table names are PLURAL.** Verified existing tables:
+- Next migration is **`V27__<description>.sql`**. Naming: `V{n}__{snake_case_description}.sql`.
+  (Recent: V18 project_slugs, V19 data_quality_cleanup, V20 drop_dead_event_log,
+  V21 iteration3_workflows_fields_permissions, V22 iteration4_pm_artifacts,
+  V24 knowledge_repository, V25 releases_and_worklogs, V26 cross_project_dependencies.)
+- **New tables are PLURAL** (`work_items`, `users`, `releases`, `worklogs`, …).
+  ⚠️ **Known convention break:** the V21/V22 tables are **singular** — `workflow`,
+  `workflow_status`, `workflow_transition`, `field_def`, `work_item_field_value`,
+  `permission_scheme`, `role_def`, `role_permission`, `field_visibility`,
+  `work_item_type_config`, `field_layout`, `wiql_filter` (V21); `risk`, `assumption`,
+  `pm_issue`, `dependency`, `decision`, `meeting`, `meeting_note`, `action_item`,
+  `stakeholder`, `lesson_learned` (V22). Match the existing name when touching those tables;
+  use **plural** for any NEW table. Don't rename without a migration.
+- **Verified plural tables (core + V24–V26):**
   `users, projects, project_members, workspaces, workspace_members, work_items,
   work_item_links, sprints, comments, attachments, notifications, notification_preferences,
   tags, starred_items, saved_filters, roles, permissions, role_audit_log,
-  password_reset_tokens, events`
+  password_reset_tokens, events, knowledge_spaces, articles, article_versions,
+  article_work_item_links, releases, work_item_releases, worklogs, cross_project_dependencies`
 - Event sourcing: the single store is **`events`** (append-only — never delete/update rows).
 
 ### JWT / Auth
@@ -102,7 +116,8 @@ package-by-feature migration is formally scheduled.
 - All endpoints under `/api/v1/` — verified (e.g. `/api/v1/work-items`, `/api/v1/auth`).
 - Paths are **plural, kebab-case**: `/api/v1/work-items`, `/api/v1/workspaces`.
 - Define request/response DTOs before implementing. `@Valid` on every incoming DTO.
-- Error shape `{ code, message, field? }` via one `@ControllerAdvice`.
+- Error shape `{ code, message, field? }` via one `@ControllerAdvice` (implemented:
+  `GlobalExceptionHandler` + typed `ApiException`).
 
 ### AI Features
 - All AI calls go through the server-side AI orchestration service. Never client-side.
@@ -153,15 +168,22 @@ Existing pattern (from `logo.jsx`): "bSmart" in `font-light text-neutral-600`, "
 - Spacing: Tailwind scale only (4px grid). No arbitrary values like `p-[13px]`.
 - Radius tokens (verified): `sm 4px` · `DEFAULT/md 8px` · `lg 12px` · `xl 16px`.
 - Transition: `duration-[120ms]` is the house default (see `button.jsx`).
+- Dark mode: implemented via Tailwind `dark:` variants throughout. Every new surface must
+  define both light and `dark:` token classes — don't ship light-only UI.
 
-### Components (Current Reality — only 3 exist)
-The component library lives in `works-frontend/src/components/works/`. **Currently:**
-`Button` (`button.jsx`, cva variants: primary/secondary/ghost/danger/action/link),
-`Logo` (`logo.jsx`), `StatusBadge` (`status-badge.jsx`).
+### Components (Current Reality — `works-frontend/src/components/works/`)
+Built so far (verified):
+- `Button` — `button.jsx` (cva variants: primary/secondary/ghost/danger/action/link)
+- `Logo` — `logo.jsx`
+- `StatusBadge` — `status-badge.jsx`
+- `RichTextEditor` — `rich-text-editor.jsx`
+- Shared primitives — `ui.jsx`: `Avatar`, `TypeBadge`, `PriorityBadge`, `RoleBadge`, `StatCard`,
+  `EmptyState`, `NavItem`, `Modal`, `Field` (plus helpers `getInitials` / `renderMd` /
+  `formatEventType` and the `TYPES` / `ROLE_CONFIG` / `PRIORITY_CONFIG` maps).
 
-When adding components: follow the `button.jsx` pattern (cva + `cn()`), use token classes only,
-and add to this folder. The brand doc defines a target inventory — build toward it incrementally;
-do not assume a 30-component library already exists.
+When adding components: follow the `button.jsx` pattern (cva + `cn()`), use token classes only
+(light + `dark:`), and add to this folder. The brand doc defines a larger target inventory —
+build toward it incrementally; do not assume it all already exists.
 
 ### Logo Usage (assets in `works-frontend/public/`)
 - `logo-primary.svg` — light backgrounds   · `logo-reverse.svg` — navy/dark backgrounds
@@ -188,9 +210,12 @@ wrong + what to do.
 | Role Surfaces | 13–16 | Integrations, developer/SM/PO/leadership/admin surfaces |
 | Enterprise | 17–20 | Customization engine, mobile/realtime, security certs, polish + marketplace |
 
-**Current status (inferred from migrations V1–V19 on `main`):** the project is around **iteration 2–3**
-(work items + sprints landed; RBAC/tiers seeded). Confirm the active iteration with Deepak
-before building forward. **Do not implement iteration N+1 features while iteration N is in scope.**
+**Current status (verified against migrations V1–V26 + `ITERATION-0x-COMPLETE.md` on `main`):**
+Iterations **1–4 are complete** — work items, sprints, workflows/custom-fields/permissions/WIQL,
+and PM artifacts (RAID/decisions/meetings/actions). **Iteration 5** (Knowledge + Releases +
+Worklogs) has the **backend landed** (V24/V25 + controllers) but **no frontend UI yet**.
+Iterations 6–20 not started. Confirm the active iteration with Deepak before building forward.
+**Do not implement iteration N+1 features while iteration N is in scope.**
 
 ---
 
@@ -199,12 +224,13 @@ before building forward. **Do not implement iteration N+1 features while iterati
 - Don't add features, abstractions, or generalization beyond the task.
 - Don't create capability-specific auth, data models, or UI patterns. One of each, unified.
 - Don't put raw hex, px, or font names in components — use token classes.
-- Don't change DB schema without a Flyway migration (next is `V20`).
-- Don't use singular table names — the convention is plural (`work_items`, `users`).
+- Don't change DB schema without a Flyway migration (next is `V27`).
+- Don't use singular names for NEW tables — convention is plural. (V21/V22 tables are singular;
+  match them when editing those, but make new tables plural — see §3.)
 - Don't create `com.bcits.works.*` packages yet — match existing `com.example.demo`.
 - Don't put RBAC logic in controllers.
 - Don't make AI calls from the frontend.
-- Don't assume the 30-component library exists — only Button, Logo, StatusBadge do.
+- Don't assume the full target component library exists — see §4 for what's actually built.
 - Don't add error handling for scenarios that cannot happen.
 - Don't write comments describing WHAT the code does — only WHY, and only when non-obvious.
 - Don't implement iteration N+1 features while iteration N is in scope.
@@ -214,7 +240,7 @@ before building forward. **Do not implement iteration N+1 features while iterati
 ## 7. Definition of Done (Every PR)
 
 - [ ] New endpoints have `@Valid` DTO validation, under `/api/v1/`, plural kebab path
-- [ ] New tables/columns have a Flyway migration (`V20+`), plural table names
+- [ ] New tables/columns have a Flyway migration (`V27+`), plural names for new tables
 - [ ] RBAC check in service layer (not controller)
 - [ ] Errors use the standard `{ code, message, field? }` shape
 - [ ] No raw hex/px/font in frontend — token classes only (`brand-*`, `neutral-*`, `semantic-*`)
@@ -224,6 +250,42 @@ before building forward. **Do not implement iteration N+1 features while iterati
 
 ---
 
-*Verified against the codebase on 2026-05-31. Source specs: Capability Map v3.5, Complete
-Iteration Guide, Tech Stack & Architecture, Brand & Identity (bSmart Works master package).
-Where spec and code conflict, code is canonical and the conflict is flagged ⚠️.*
+## 8. How These Rules Stay True (Sync & Enforcement)
+
+**This file is the single source of truth.** The per-tool rule files are *generated* from it —
+never hand-edit them. Editing `CLAUDE.md` is the only manual step: the Husky pre-commit hook runs
+`scripts/generate-ai-rules.mjs`, which regenerates and **auto-stages**
+`.github/copilot-instructions.md` (Copilot), `.windsurfrules` (Windsurf), `AGENTS.md`
+(cross-tool), and `.cursor/rules/bsmart.mdc` (Cursor). CI (`ai-rules-in-sync`) re-runs it with
+`--check`, so nothing merges out of sync even if the hook is bypassed.
+
+**Machine-enforced** — a violation fails the build regardless of which tool or person wrote the
+code (pre-commit + CI):
+- **ESLint** (`works-frontend/eslint.config.js`, severity `error`): raw hex in Tailwind
+  arbitrary values, `works-*` token names, inline `fetch()`, `axios` import. (§3, §4)
+- **`scripts/guardrails.sh` BLOCK:** `works-*` token names (§4) · new `com.bcits.works.*`
+  packages (§3) · RBAC annotations in controllers (§3) · Flyway filename format (§3) ·
+  **new tables must be plural** (§3).
+- **CI also:** `generate-ai-rules.mjs --check`, frontend `npm run build`, backend compile +
+  Checkstyle.
+
+**Soft / baseline-debt** (`guardrails.sh` WARN — reported, non-blocking until the `App.jsx`
+baseline is clean, then `guardrails.sh --strict`): broad raw-hex scan · arbitrary px/rem
+spacing · inline fetch/axios scan.
+
+**Guidance-only** (everything else here — enforced by review, not a gate): `@Valid` DTO-first,
+AI-feature fallbacks, scope discipline, comments-explain-why, iteration discipline, "render one
+thing," event-sourcing. *If you add a rule that can be checked mechanically, wire it into
+`eslint.config.js` or `guardrails.sh` and cite the section here — keep the doc and the gate in
+lockstep.*
+
+> Companions (kept consistent with this file): [`docs/ENGINEERING-PRINCIPLES.md`](docs/ENGINEERING-PRINCIPLES.md)
+> (the *why*) · [`CONTRIBUTING.md`](CONTRIBUTING.md) (setup) ·
+> [`.github/pull_request_template.md`](.github/pull_request_template.md) (PR checklist).
+
+---
+
+*Verified against the codebase on 2026-06-01 (migrations V1–V26, `components/works/`, `pom.xml`,
+`package.json`). Source specs: Capability Map v3.5, Complete Iteration Guide, Tech Stack &
+Architecture, Brand & Identity (bSmart Works master package). Where spec and code conflict, code
+is canonical and the conflict is flagged ⚠️.*

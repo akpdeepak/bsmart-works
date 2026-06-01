@@ -5,11 +5,14 @@
 # 1. Architecture & brand guardrails (whole repo, fast).
 bash scripts/guardrails.sh || exit 1
 
-# 2. AI-rules files must stay in sync with CLAUDE.md.
-node scripts/generate-ai-rules.mjs --check || {
-  echo "AI rules are stale. Run: node scripts/generate-ai-rules.mjs  then re-stage."
-  exit 1
-}
+# 2. AI-rules files stay in sync with CLAUDE.md automatically — regenerate and stage them, so
+#    editing CLAUDE.md is the only manual step. (Paths mirror scripts/generate-ai-rules.mjs.)
+node scripts/generate-ai-rules.mjs >/dev/null
+derived=".github/copilot-instructions.md .windsurfrules AGENTS.md .cursor/rules/bsmart.mdc"
+if ! git diff --quiet -- $derived; then
+  git add -- $derived
+  echo "↻ Synced AI-rules files from CLAUDE.md and staged them."
+fi
 
 # 3. Lint staged frontend files (relative paths — robust against spaces in repo path).
 staged=$(git diff --cached --name-only --diff-filter=ACM \

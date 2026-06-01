@@ -4,14 +4,14 @@
 ## What & why
 <!-- One or two sentences. Link the iteration/work item. -->
 
-- Iteration: <!-- e.g. 2 — confirm this work belongs to the active iteration -->
+- Iteration: <!-- e.g. 5 — confirm this work belongs to the active iteration -->
 - Work item / issue:
 
 ## Definition of Done
 
 **Backend**
 - [ ] New endpoints validate input with `@Valid`, sit under `/api/v1/`, plural kebab path
-- [ ] Schema changes are a Flyway migration (`V15+`, `V{n}__snake_case.sql`), plural table names
+- [ ] Schema changes are a Flyway migration (`V27+`, `V{n}__snake_case.sql`), plural names for new tables
 - [ ] RBAC checks are in the service layer via `RbacService`, not in controllers
 - [ ] Errors use the standard `{ code, message, field? }` shape via `@ControllerAdvice`
 - [ ] New code is in `com.example.demo` (no new top-level packages without a rename plan)

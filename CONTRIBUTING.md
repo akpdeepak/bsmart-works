@@ -14,18 +14,16 @@ cd ../works-backend && ./mvnw verify   # backend build + tests + checkstyle
 ## Daily loop
 - **Frontend:** `cd works-frontend && npm run dev`
 - **Backend:** `cd works-backend && ./mvnw spring-boot:run`
-- **Before committing:** the pre-commit hook runs guardrails, the AI-rules sync check, and
-  lints your staged frontend files. To run the checks manually: `npm run verify`.
+- **Before committing:** the pre-commit hook runs guardrails, regenerates the AI-rules files
+  from `CLAUDE.md` (auto-staged), and lints your staged frontend files. To run the checks
+  manually: `npm run verify`.
 
 ## Editing the rules
-The AI-tool rules files are **generated**. To change a rule:
-```bash
-# 1. edit CLAUDE.md
-node scripts/generate-ai-rules.mjs   # 2. regenerate derived files
-# 3. commit CLAUDE.md + the regenerated files together
-```
-Never hand-edit `.github/copilot-instructions.md`, `.cursor/rules/bsmart.mdc`,
-`.windsurfrules`, or `AGENTS.md` — your changes will be overwritten.
+[`CLAUDE.md`](CLAUDE.md) is the single source of truth; the AI-tool rules files are **generated**
+from it. To change a rule, **just edit `CLAUDE.md` and commit** — the pre-commit hook regenerates
+and stages `.github/copilot-instructions.md`, `.cursor/rules/bsmart.mdc`, `.windsurfrules`, and
+`AGENTS.md` for you. (To regenerate by hand: `npm run ai-rules`.) Never hand-edit the generated
+files — your changes will be overwritten.
 
 ## Definition of Done
 Every PR must satisfy the checklist in [`CLAUDE.md` §7](CLAUDE.md) — also reproduced in the

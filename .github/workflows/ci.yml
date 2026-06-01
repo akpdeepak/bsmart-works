@@ -67,6 +67,25 @@ jobs:
       - run: npm ci
       - run: npm test   # Vitest — unit + component tests; fails on any failure
 
+  frontend-security:
+    name: Frontend (security audit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: works-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: works-frontend/package-lock.json
+      - run: npm ci
+      # Fail on HIGH or CRITICAL vulnerabilities. Moderate and below are reported but non-blocking.
+      # To investigate: npm audit  |  To fix automatically: npm audit fix
+      - name: npm audit (high+)
+        run: npm audit --audit-level=high
+
   frontend:
     name: Frontend (lint + build)
     runs-on: ubuntu-latest

@@ -1,6 +1,6 @@
-<!-- bSmart Works PR. The checklist mirrors CLAUDE.md §7 (Definition of Done).
+<!-- bSmart Works PR. The checklist mirrors CLAUDE.md §6 (Definition of Done).
      CI enforces most of these automatically; tick the rest honestly.
-     dod-version: 2026-06-01-r2 — must match the tag in CLAUDE.md §7. -->
+     dod-version: 2026-06-01-r3 — must match the tag in CLAUDE.md §6. -->
 
 ## What & why
 <!-- One or two sentences. Link the iteration/work item. -->
@@ -41,6 +41,8 @@
 
 **Cross-cutting**
 - [ ] Scope matches the task — no speculative features or abstractions
+- [ ] PR diff ≤ 400 lines of changed code, or the description explains why it is larger
+- [ ] Any new npm/Maven dependency is documented in the PR description (why added, license, bundle impact)
 - [ ] `node scripts/generate-ai-rules.mjs --check` passes (AI rules in sync with CLAUDE.md)
 - [ ] `bash scripts/check-dod-sync.sh` passes (DoD version tag in sync)
 

@@ -843,6 +843,13 @@ This keeps CLAUDE.md accurate for all AI tools (no stale advice).
 - [ ] Dates/numbers formatted per §4.22 (relative ≤7d, `31 May 2026` absolute, em-dash for empty)
 - [ ] Icons from `lucide` at standard sizes (§4.23); icon-only buttons have `aria-label`
 
+**Cross-cutting**
+- [ ] Scope matches the task — no speculative features or abstractions
+- [ ] PR diff ≤ 400 lines of changed code, or the description explains why it is larger
+- [ ] Any new npm/Maven dependency is documented in the PR description (why added, license, bundle impact)
+- [ ] `node scripts/generate-ai-rules.mjs --check` passes (AI rules in sync with CLAUDE.md)
+- [ ] `bash scripts/check-dod-sync.sh` passes (DoD version tag in sync)
+
 > **How these are enforced (so they hold without re-stating them):** (1) `eslint.config.js` —
 > `eslint-plugin-jsx-a11y` (a11y) + custom rules (tokens, no inline fetch, no arbitrary px);
 > (2) `scripts/guardrails.sh` — brand/architecture greps (no `gray-*`, no `works-*`, no arbitrary
@@ -852,7 +859,7 @@ This keeps CLAUDE.md accurate for all AI tools (no stale advice).
 > All CI jobs block: **lint** (App.jsx baseline suppressed with file-level disable — new files must pass
 > clean), **build**, **guardrails**, and **coverage** (JaCoCo 60% LINE minimum on unit tests).
 
-<!-- dod-version: 2026-06-01-r2 -->
+<!-- dod-version: 2026-06-01-r3 -->
 
 ---
 
@@ -997,6 +1004,261 @@ Flyway migrations run automatically when the Spring Boot app starts. If a migrat
 
 ---
 
-*Verified against the codebase on 2026-05-31. Source specs: Capability Map v3.5, Complete
+## 9. Release Management
+
+### 9.1 Versioning — Semantic Versioning (SemVer)
+
+Releases follow `MAJOR.MINOR.PATCH`:
+- **PATCH** — bug fixes with no API or schema change (e.g. `0.5.1`)
+- **MINOR** — each completed iteration; additive new features, backward-compatible API (e.g. `0.6.0`)
+- **MAJOR** — reserved for breaking API/schema changes or a v1.0 production launch
+
+Current version corresponds to iteration 6 (role-tuned dashboards + releases + worklogs): **`0.6.0`**.
+Every iteration completion bumps the MINOR version; hotfixes bump PATCH.
+
+Pre-production versions carry a `0.` major (i.e. `0.x.y`). The jump to `1.0.0` marks production launch.
+
+### 9.2 Release Cadence
+
+- One release per completed iteration. Releases are tagged on `main` after the iteration PR is merged.
+- Patch releases happen as needed for critical fixes — no fixed schedule.
+- Planned release for the next iteration: `0.7.0` (confirm active iteration with Deepak first).
+
+### 9.3 Tagging Convention
+
+```bash
+# Tag a release (on main, after the iteration squash-merge)
+git tag -a v0.6.0 -m "Release v0.6.0 — iteration 6: role-tuned dashboards, releases, worklogs"
+git push origin v0.6.0
+```
+
+Tag format: `v{MAJOR}.{MINOR}.{PATCH}` — always the `v` prefix. Tags are annotated (`-a`), never lightweight.
+Tags are immutable — never delete or force-push a tag.
+
+### 9.4 CHANGELOG
+
+`CHANGELOG.md` in the repo root documents every release. Format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) conventions:
+
+```
+## [0.7.0] — YYYY-MM-DD
+### Added
+### Changed
+### Fixed
+### Removed
+```
+
+Update `CHANGELOG.md` as the final commit of every iteration PR. The dod-version tag change (§5
+PM Traceability) and the CHANGELOG entry are part of the same commit.
+
+### 9.5 Hotfix Process
+
+A hotfix is a PATCH release to fix a critical defect on `main` without waiting for the next iteration.
+
+```
+1. Branch from main:        git checkout -b hotfix/auth-token-expiry
+2. Fix the defect + tests
+3. Open PR to main with title:  fix(auth): correct JWT expiry window
+4. CI must pass — no exceptions
+5. Squash-merge to main
+6. Tag immediately:         git tag -a v0.6.1 -m "Hotfix v0.6.1 — JWT expiry fix"
+                            git push origin v0.6.1
+7. Update CHANGELOG.md under [0.6.1]
+```
+
+Hotfix branches have the same 5-day lifetime rule. If the fix takes longer than 5 days it is not a hotfix — it is regular iteration work.
+
+---
+
+## 10. Testing Strategy
+
+### 10.1 Testing Pyramid
+
+| Layer | Framework | Scope | Target coverage |
+|-------|-----------|-------|----------------|
+| **Unit** | JUnit 5 (`@Tag("unit")`) / Vitest + RTL | Pure logic, single class/component, no I/O | ≥ 60% LINE (backend), ≥ 60% lines/functions/statements (frontend) |
+| **Integration** | JUnit 5 + Testcontainers (real Postgres) | Service + repository wiring, Flyway migrations, API contracts | Key service paths + every Flyway migration |
+| **E2E** | Playwright (not yet installed — see §10.4) | Critical user journeys end-to-end | Top 5–10 user flows once a stable deployment exists |
+
+**Unit tests are the default.** Integration tests prove the wiring. E2E tests protect the golden paths. Never invert the pyramid.
+
+### 10.2 Backend Testing Conventions
+
+**Unit tests** (`@Tag("unit")`) — no live database, no Spring context:
+- Test pure service logic by mocking repositories with Mockito
+- Test domain objects, validators, and utility classes directly
+- File location: `src/test/java/com/example/demo/<EntityName>Test.java` (no `Controller`/`Service` suffix on test class)
+- Tag every test class: `@Tag("unit")`
+- Run with: `./mvnw -B -Dgroups=unit verify` (also runs JaCoCo gate)
+
+**Integration tests** (`@Tag("integration")`) — require a live Postgres via Testcontainers:
+- Tag: `@Tag("integration")`
+- Use `@SpringBootTest` + `@Testcontainers` with a `@Container PostgreSQLContainer`
+- Test a full request-to-database cycle for each service
+- Run with: `./mvnw -B -Dgroups=integration test` (CI future job — not yet in ci.yml)
+- Do NOT run in the `backend-unit-test` CI job (requires Docker)
+
+**What to test (unit tier):**
+- Every `Service` class: happy path, edge cases, permission checks (`RbacService` calls)
+- Every `@ControllerAdvice` exception handler
+- Domain record/value objects with custom logic
+- Flyway migration tests: write a `MigrationTest` using Testcontainers to verify schema (integration tag)
+
+**What not to test:**
+- Spring Boot auto-configuration
+- JPA repository interfaces with no custom query logic
+- DTOs with only getters/setters
+
+### 10.3 Frontend Testing Conventions
+
+**Unit / component tests** (Vitest + RTL):
+- File location: co-located with the component: `atoms/badge.test.jsx` beside `atoms/badge.jsx`
+- What to test: render output, variant classes, user interactions (click, keyboard), accessibility attributes
+- Coverage enforced by Vitest (`test:coverage` script). Thresholds in `vite.config.js`:
+  - lines: 60%, functions: 60%, statements: 60%, branches: 50%
+  - Coverage scope: `src/components/works/**` only — not App.jsx (legacy monolith)
+- Run with: `npm run test:coverage`
+
+**Test conventions:**
+- Use `@testing-library/user-event` for user interactions, not `fireEvent` directly
+- Query priority: `getByRole` > `getByLabelText` > `getByText` > `getByTestId`
+- Never test implementation details (className strings are acceptable for design-system component tests; internal state is not)
+- Every component test file must cover: renders without crashing, variant/prop differences, keyboard interaction if the component is interactive
+
+**What not to test:**
+- Page-level components in App.jsx (legacy debt)
+- Pure Tailwind class application without logic (snapshot tests add noise without value)
+
+### 10.4 E2E Testing — Playwright (Not Yet Active)
+
+**Decision: Playwright** (over Cypress) — better multi-browser support, faster execution, native TypeScript, no iframe limitations for future embedded views.
+
+**Install when:** a stable staging environment exists and at least 3 iteration-complete features are deployed.
+
+```bash
+# When ready to activate:
+cd works-frontend
+npm install -D @playwright/test
+npx playwright install
+```
+
+Config will live at `works-frontend/playwright.config.js`. Tests at `works-frontend/e2e/`.
+
+**First 5 E2E flows to cover (in order):**
+1. Register → verify email → log in → see dashboard
+2. Create project → create work item → assign to user → change status
+3. Create sprint → add work items → start sprint → complete sprint
+4. Create RAID item (risk/assumption/issue/dependency)
+5. Search via command palette (⌘K)
+
+### 10.5 Test Data Strategy
+
+- **Local:** Flyway migrations seed reference data (`roles`, `permissions`). No synthetic user/project data is seeded by default — use the registration flow or the API to create test data locally.
+- **Unit tests:** create test data inline (factory methods or builders). No shared fixtures.
+- **Integration tests:** each test creates and tears down its own data within a transaction rollback or isolated Testcontainers instance.
+- **E2E:** a dedicated seed script (`scripts/e2e-seed.sql`) will create a stable test workspace, project, and user set. Run before the Playwright suite.
+
+---
+
+## 11. PR Workflow & Size
+
+### 11.1 PR Size Guidelines
+
+| Diff size | Expectation |
+|-----------|-------------|
+| ≤ 200 lines | Ideal — review in under 15 minutes |
+| 200–400 lines | Acceptable — include a summary section in the PR description |
+| 400–800 lines | Needs justification in the PR description ("this is large because…") |
+| > 800 lines | Must be split unless it is a single atomic migration + tests that cannot be separated |
+
+Count only changed code lines (not generated files, lock files, migration SQL, or CLAUDE.md). The DoD checklist item asks: "PR diff ≤ 400 lines, or the description justifies the size."
+
+**Practical split strategies:**
+- Separate the data layer (migration + repository + service) from the API layer (controller + DTOs + tests)
+- Separate the backend contract from the frontend implementation
+- Separate component additions from the page that uses them
+
+### 11.2 Draft PR Convention
+
+Open a PR as **draft** when:
+- Work is in progress and you want early CI feedback
+- You need a proof-of-concept reviewed before completing the implementation
+- The branch is blocked waiting for another PR to merge
+
+Rules for draft PRs:
+- Title prefix: `[WIP]` is NOT used — GitHub's Draft status communicates this
+- A draft PR does not block the branch lifetime limit (5 working days applies to ready PRs)
+- Convert to "Ready for review" before requesting formal feedback
+- Draft PRs should still have a filled PR description and the iteration/work-item fields populated
+
+### 11.3 Self-Review Checklist (Before Opening PR)
+
+Before marking a PR as "Ready for review" (or self-merging as the current single maintainer), run through this mentally:
+
+1. Read the diff top-to-bottom — does every change belong to the stated task?
+2. Does the commit message / PR title follow Conventional Commits format?
+3. Have you run `npm run verify` (frontend) and `./mvnw -Dgroups=unit verify` (backend) locally?
+4. Are new UI components covered by at least basic tests?
+5. Are new service methods covered by `@Tag("unit")` tests?
+6. Does the PR description explain the *why*, not just the *what*?
+7. Are screenshots included for any UI change?
+
+---
+
+## 12. Dependency Management
+
+### 12.1 Adding a New Dependency — The Approval Checklist
+
+Before adding any npm package or Maven dependency, answer all of these:
+
+| Question | Requirement |
+|----------|-------------|
+| Is this already solved by an existing dep? | Check existing `package.json` / `pom.xml` first |
+| Is the package actively maintained? | Last commit < 6 months, no unresolved critical CVEs |
+| What is the license? | MIT, Apache 2.0, BSD — acceptable. GPL/AGPL — discuss with Deepak first |
+| Is it a runtime or dev dependency? | Classify correctly (`dependencies` vs `devDependencies` / `<scope>test</scope>`) |
+| What is the bundle size impact? | Use [bundlephobia.com](https://bundlephobia.com) for npm; prefer tree-shakeable packages |
+
+Document the reason for adding the dependency in the PR description under a **"New dependency"** heading.
+
+### 12.2 Automated Updates — Dependabot
+
+`.github/dependabot.yml` configures Dependabot to open weekly PRs for:
+- npm dependencies (`works-frontend/`)
+- Maven dependencies (`works-backend/`)
+
+Rules for Dependabot PRs:
+- PATCH updates: merge immediately if CI passes (no manual review required for patch bumps)
+- MINOR updates: check the release notes; merge if no breaking changes
+- MAJOR updates: review manually — these may require code changes
+
+Do NOT merge a Dependabot PR if CI is red. Never manually edit a `package-lock.json` or `pom.xml` to force a version — let Dependabot manage it.
+
+### 12.3 Security Scanning
+
+**Frontend — `npm audit`:**
+- CI runs `npm audit --audit-level=high` on every push. This fails the build on HIGH or CRITICAL vulnerabilities.
+- For local checks: `cd works-frontend && npm audit`
+- To fix: `npm audit fix` (for minor fixes). For major version bumps, let Dependabot handle it.
+
+**Backend — OWASP Dependency Check (on demand):**
+- Not in the regular CI pipeline (too slow — ~5 min NVD download). Run locally before releases:
+  ```bash
+  cd works-backend
+  ./mvnw org.owasp:dependency-check-maven:check
+  # Report at target/dependency-check-report.html
+  ```
+- Add `-Dnvd.api.key=YOUR_KEY` for faster NVD fetches (get a free key at https://nvd.nist.gov/developers/request-an-api-key)
+- Integrate into CI as a scheduled weekly job once the team has an NVD API key.
+
+### 12.4 Lockfile Policy
+
+- `works-frontend/package-lock.json` IS committed and must stay in sync with `package.json`.
+- Maven has no lockfile — `pom.xml` pins versions explicitly. Never use version ranges (`[1.0,2.0)`) for production dependencies.
+- Never commit `node_modules/` or `works-backend/target/`.
+
+---
+
+*Verified against the codebase on 2026-06-01. Source specs: Capability Map v3.5, Complete
 Iteration Guide, Tech Stack & Architecture, Brand & Identity (bSmart Works master package).
 Where spec and code conflict, code is canonical and the conflict is flagged ⚠️.*

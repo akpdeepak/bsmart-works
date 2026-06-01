@@ -16,6 +16,7 @@ updates:
       prefix: chore
       prefix-development: chore
       include: scope
+
   # Backend Maven dependencies
   - package-ecosystem: maven
     directory: /works-backend

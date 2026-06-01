@@ -1,0 +1,26 @@
+# bSmart Works — Code Ownership
+#
+# @akpdeepak (Deepak) is the primary owner of the entire codebase.
+# This means:
+#   - Deepak's review satisfies any "required reviewer" rule for every file.
+#   - On any branch protection rule that allows owner bypass, Deepak can merge
+#     his own PRs without waiting for another reviewer.
+#   - Other team members' PRs will auto-request Deepak as reviewer.
+#
+# GitHub resolves CODEOWNERS by the LAST matching rule, so the catch-all (*) below
+# covers every file not matched by a more specific rule.
+
+# Default owner — everything
+*  @akpdeepak
+
+# Backend domain
+works-backend/  @akpdeepak
+
+# Frontend / design system
+works-frontend/  @akpdeepak
+
+# AI rules, architecture docs, CI — Deepak always owns these
+CLAUDE.md  @akpdeepak
+AGENTS.md  @akpdeepak
+.github/   @akpdeepak
+docs/      @akpdeepak

@@ -1,9 +1,12 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
+import { Mail, ShieldCheck, PanelLeft } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
 import { api } from '@/lib/apiClient';
+
+const NavCollapsedCtx = React.createContext(false);
 
 const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
@@ -14,7 +17,7 @@ function getInitials(name) {
 }
 
 function Avatar({ name, size = 8 }) {
-  const sz = { 5: 'w-5 h-5 text-[9px]', 6: 'w-6 h-6 text-[10px]', 7: 'w-7 h-7 text-xs', 8: 'w-8 h-8 text-xs' };
+  const sz = { 5: 'w-5 h-5 text-xs', 6: 'w-6 h-6 text-xs', 7: 'w-7 h-7 text-xs', 8: 'w-8 h-8 text-xs' };
   return (
     <div className={`${sz[size] || 'w-8 h-8 text-xs'} rounded-full bg-brand-navy text-white flex items-center justify-center font-semibold flex-shrink-0`}>
       {getInitials(name)}
@@ -34,7 +37,7 @@ const TYPES = {
   Task:            { color: 'bg-brand-navy-tint',      icon: '✓' },
   Story:           { color: 'bg-semantic-success',           icon: '📖' },
   Bug:             { color: 'bg-semantic-danger',       icon: '🐛' },
-  Epic:            { color: 'bg-purple-700',            icon: '⚡' },
+  Epic:            { color: 'bg-neutral-700',            icon: '⚡' },
   'Sub-task':      { color: 'bg-neutral-600',          icon: '↳' },
   Incident:        { color: 'bg-semantic-warning',     icon: '🔥' },
   'Service Request': { color: 'bg-brand-navy',         icon: '🎫' },
@@ -43,18 +46,18 @@ const TYPES = {
 function TypeBadge({ type, compact = false }) {
   const t = TYPES[type] || TYPES.Task;
   return (
-    <span className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold text-white px-1.5 py-0.5 rounded-sm ${t.color}`}>
+    <span className={`inline-flex items-center gap-1 text-xs uppercase tracking-wider font-bold text-white px-1.5 py-0.5 rounded-sm ${t.color}`}>
       {!compact && <span>{t.icon}</span>}
       {type}
     </span>
   );
 }
 
-// Empty state helper
+// Empty state helper — icon should be a lucide element (h-10 w-10 text-neutral-300) or emoji
 function EmptyState({ icon, title, subtitle, action }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center text-3xl mb-4">{icon}</div>
+      <div className="h-10 w-10 rounded-xl bg-neutral-100 flex items-center justify-center text-neutral-300 mb-4">{icon}</div>
       <h3 className="text-base font-semibold text-neutral-700 mb-1">{title}</h3>
       <p className="text-sm text-neutral-400 mb-5 max-w-xs">{subtitle}</p>
       {action}
@@ -125,6 +128,9 @@ export default function App() {
 
   // Kanban density: compact | comfortable | spacious
   const [density, setDensity]           = useState('comfortable');
+
+  // Sidebar collapse (w-56 expanded ↔ w-12 icon-only)
+  const [navCollapsed, setNavCollapsed] = useState(false);
 
   // Dark mode
   const [darkMode, setDarkMode]         = useState(() => localStorage.getItem('bSmartTheme') === 'dark');
@@ -1255,12 +1261,12 @@ export default function App() {
   if (!currentUser) {
     // Email verification pending screen
     if (verifyPending) return (
-      <div className="flex h-screen bg-neutral-100 dark:bg-neutral-900 items-center justify-center font-sans">
+      <div className="flex h-screen bg-neutral-50 dark:bg-neutral-900 items-center justify-center font-sans">
         <div className="bg-white dark:bg-neutral-800 p-8 rounded-xl shadow-xl w-96 border border-neutral-200 dark:border-neutral-700">
           <div className="flex justify-center mb-6"><Logo /></div>
-          <div className="w-14 h-14 rounded-full bg-semantic-success/10 flex items-center justify-center text-2xl mx-auto mb-4">📧</div>
+          <div className="h-10 w-10 rounded-xl bg-semantic-success-surface flex items-center justify-center mx-auto mb-4"><Mail className="h-5 w-5 text-semantic-success" /></div>
           <h2 className="text-xl font-bold text-brand-navy text-center mb-2">Check your email</h2>
-          <p className="text-sm text-neutral-500 text-center mb-5">
+          <p className="text-sm text-neutral-400 text-center mb-5">
             We sent a verification link to <strong>{verifyPending.email}</strong>.<br/>
             Click it to activate your account.
           </p>
@@ -1268,12 +1274,12 @@ export default function App() {
           {/* DEV/UAT only — show token so testers can verify without email */}
           {verifyPending.devToken && (
             <div className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3 mb-4">
-              <p className="text-[10px] text-neutral-400 uppercase tracking-wider mb-1">UAT — One-click verify</p>
+              <p className="text-xs text-neutral-400 uppercase tracking-wider mb-1">UAT — One-click verify</p>
               <button onClick={() => handleVerifyEmail(verifyPending.devToken)}
                 className="w-full py-2 bg-brand-navy text-white rounded-lg text-sm font-semibold hover:bg-brand-navy/90 transition-colors">
                 ✓ Verify my email (UAT shortcut)
               </button>
-              <p className="text-[10px] text-neutral-400 mt-2 text-center">In production this arrives by email</p>
+              <p className="text-xs text-neutral-400 mt-2 text-center">In production this arrives by email</p>
             </div>
           )}
           <button onClick={() => { setVerifyPending(null); setAuthMode('login'); }}
@@ -1286,12 +1292,12 @@ export default function App() {
 
     // MFA challenge screen
     if (mfaChallenge) return (
-      <div className="flex h-screen bg-neutral-100 dark:bg-neutral-900 items-center justify-center font-sans">
+      <div className="flex h-screen bg-neutral-50 dark:bg-neutral-900 items-center justify-center font-sans">
         <div className="bg-white dark:bg-neutral-800 p-8 rounded-xl shadow-xl w-96 border border-neutral-200 dark:border-neutral-700">
           <div className="flex justify-center mb-6"><Logo /></div>
-          <div className="w-14 h-14 rounded-full bg-brand-navy/10 flex items-center justify-center text-2xl mx-auto mb-4">🔐</div>
+          <div className="h-10 w-10 rounded-xl bg-semantic-info-surface flex items-center justify-center mx-auto mb-4"><ShieldCheck className="h-5 w-5 text-semantic-info" /></div>
           <h2 className="text-xl font-bold text-brand-navy text-center mb-2">Two-factor authentication</h2>
-          <p className="text-sm text-neutral-500 text-center mb-5">Enter the 6-digit code from your authenticator app.</p>
+          <p className="text-sm text-neutral-400 text-center mb-5">Enter the 6-digit code from your authenticator app.</p>
           {mfaError && <p className="text-sm text-semantic-danger text-center mb-3">{mfaError}</p>}
           <input type="text" inputMode="numeric" maxLength={6} placeholder="000000"
             value={mfaCode} onChange={e => setMfaCode(e.target.value.replace(/\D/g,''))}
@@ -1308,7 +1314,7 @@ export default function App() {
     );
 
     if (forgotMode) return (
-      <div className="flex h-screen bg-neutral-100 dark:bg-neutral-900 items-center justify-center font-sans">
+      <div className="flex h-screen bg-neutral-50 dark:bg-neutral-900 items-center justify-center font-sans">
         <div className="bg-white dark:bg-neutral-800 p-8 rounded-xl shadow-xl w-96 border border-neutral-200 dark:border-neutral-700">
           <div className="flex justify-center mb-6"><Logo /></div>
           <h2 className="text-xl font-bold text-brand-navy text-center mb-4">Reset Password</h2>
@@ -1329,7 +1335,7 @@ export default function App() {
     );
 
     return (
-      <div className="flex h-screen bg-neutral-100 dark:bg-neutral-900 items-center justify-center font-sans">
+      <div className="flex h-screen bg-neutral-50 dark:bg-neutral-900 items-center justify-center font-sans">
         <div className="bg-white dark:bg-neutral-800 p-8 rounded-xl shadow-xl w-96 border border-neutral-200 dark:border-neutral-700">
           <div className="flex justify-center mb-8"><Logo /></div>
           <h2 className="text-xl font-bold text-brand-navy text-center mb-6">
@@ -1408,25 +1414,41 @@ export default function App() {
     <div className="flex h-screen bg-neutral-50 dark:bg-neutral-900 font-sans text-neutral-900 dark:text-neutral-100">
 
       {/* SIDEBAR */}
-      <aside className="w-60 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-700 flex flex-col z-10 flex-shrink-0">
-        {/* Workspace switcher */}
-        <div className="h-14 flex items-center px-3 border-b border-neutral-200 dark:border-neutral-700 relative" ref={wsRef}>
-          <button onClick={() => setWsOpen(o => !o)}
-            className="flex-1 flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-neutral-100 transition-colors text-left">
-            <div className="w-6 h-6 rounded bg-brand-navy flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-[10px] font-bold">BC</span>
-            </div>
-            <span className="text-sm font-semibold text-neutral-900 truncate flex-1">{workspace.name}</span>
-            <span className="text-neutral-400 text-xs">⌄</span>
-          </button>
-          {wsOpen && (
+      <NavCollapsedCtx.Provider value={navCollapsed}>
+      <aside className={`${navCollapsed ? 'w-12' : 'w-56'} bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-700 flex flex-col z-10 flex-shrink-0 transition-[width] duration-[150ms] ease-out-quint overflow-hidden`}>
+        {/* Workspace switcher + collapse toggle */}
+        <div className="h-14 flex items-center border-b border-neutral-200 dark:border-neutral-700 relative flex-shrink-0" ref={wsRef}>
+          {navCollapsed ? (
+            <button onClick={() => setNavCollapsed(false)} title="Expand sidebar"
+              className="w-full flex items-center justify-center h-full text-neutral-400 hover:text-brand-navy transition-colors duration-[120ms]">
+              <div className="w-6 h-6 rounded bg-brand-navy flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-xs font-bold">BC</span>
+              </div>
+            </button>
+          ) : (
+            <>
+              <button onClick={() => setWsOpen(o => !o)}
+                className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-neutral-100 transition-colors text-left">
+                <div className="w-6 h-6 rounded bg-brand-navy flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-xs font-bold">BC</span>
+                </div>
+                <span className="text-sm font-semibold text-neutral-900 truncate flex-1">{workspace.name}</span>
+                <span className="text-neutral-400 text-xs">⌄</span>
+              </button>
+              <button onClick={() => setNavCollapsed(true)} title="Collapse sidebar"
+                className="mr-2 p-1 text-neutral-300 hover:text-neutral-600 transition-colors duration-[120ms] rounded flex-shrink-0">
+                <PanelLeft className="h-4 w-4" />
+              </button>
+            </>
+          )}
+          {wsOpen && !navCollapsed && (
             <div className="absolute top-full left-3 right-3 mt-1 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 z-50 py-1">
               <div className="px-3 py-2 border-b border-neutral-100 dark:border-neutral-700">
                 <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Workspaces</p>
               </div>
               <button className="w-full flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-left">
                 <div className="w-5 h-5 rounded bg-brand-navy flex items-center justify-center">
-                  <span className="text-white text-[9px] font-bold">BC</span>
+                  <span className="text-white text-xs font-bold">BC</span>
                 </div>
                 <span className="text-sm font-medium text-neutral-900">{workspace.name}</span>
                 <span className="ml-auto text-brand-orange text-xs">✓</span>
@@ -1441,19 +1463,19 @@ export default function App() {
           )}
         </div>
 
-        <nav className="flex-1 p-3 space-y-0.5 text-sm overflow-y-auto">
+        <nav className="flex-1 p-2 space-y-0.5 text-sm overflow-y-auto">
           <NavItem active={view === 'dashboard'} onClick={() => { setView('dashboard'); fetchDashboard(dashboardRole); }} icon="🏠">Home</NavItem>
-          <p className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-3 pt-3 pb-1">My Work</p>
+          {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">My Work</p>}
           <NavItem active={view === 'myworks'} onClick={() => { setView('myworks'); fetchNotifications(); }} icon="👤">
             My Works
-            {myItems.length > 0 && <span className="ml-auto text-[10px] bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-full px-1.5 py-0.5">{myItems.length}</span>}
+            {myItems.length > 0 && <span className="ml-auto text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-full px-1.5 py-0.5">{myItems.length}</span>}
           </NavItem>
           <NavItem active={view === 'notifications'} onClick={() => { setView('notifications'); fetchNotifications(); }} icon="🔔">
             Notifications
-            {unreadCount > 0 && <span className="ml-auto text-[10px] bg-brand-orange text-white rounded-full px-1.5 py-0.5">{unreadCount}</span>}
+            {unreadCount > 0 && <span className="ml-auto text-xs bg-brand-orange text-white rounded-full px-1.5 py-0.5">{unreadCount}</span>}
           </NavItem>
 
-          <p className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-3 pt-3 pb-1">Projects</p>
+          {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">Projects</p>}
           <NavItem active={view === 'board'} onClick={() => setView('board')} icon="📋">Board</NavItem>
           <NavItem active={view === 'backlog'} onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); fetchSavedFilters(); }} icon="📝">Backlog</NavItem>
           <NavItem active={view === 'sprint'} onClick={() => { setView('sprint'); fetchSprints(); fetchSavedFilters(); }} icon="⚡">
@@ -1463,39 +1485,46 @@ export default function App() {
           <NavItem active={view === 'reports'} onClick={() => { setView('reports'); fetchSprints(); fetchVelocityData(); }} icon="📊">Reports</NavItem>
           <NavItem active={view === 'releases'} onClick={() => { setView('releases'); fetchReleases(); }} icon="🚀">Releases</NavItem>
 
-          <p className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-3 pt-3 pb-1">Configuration</p>
+          {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">Configuration</p>}
           <NavItem active={view === 'settings3'} onClick={() => { setView('settings3'); fetchWorkflows(); fetchFieldDefs(); fetchRoles(); fetchWorkItemTypes(); }} icon="⚙">Workflows & Fields</NavItem>
           <NavItem active={view === 'wiql'} onClick={() => { setView('wiql'); fetchWiqlFilters(); }} icon="🔍">WIQL Query</NavItem>
           <NavItem active={view === 'knowledge'} onClick={() => { setView('knowledge'); fetchKnowledgeSpaces(); setKnowledgeTab('spaces'); setSelectedSpace(null); setSelectedArticle(null); }} icon="📚">Knowledge</NavItem>
 
-          <p className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-3 pt-3 pb-1">Project Management</p>
+          {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">Project Management</p>}
           <NavItem active={view === 'pm'} onClick={() => { setView('pm'); if (projects.length) { const pid = projects[0].id; setPmProjectId(pid); fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); } }} icon="📋">PM Artifacts</NavItem>
 
           <NavItem active={view === 'projects'} onClick={() => setView('projects')} icon="📁">
             Projects
-            {projects.length > 0 && <span className="ml-auto text-[10px] bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-full px-1.5 py-0.5">{projects.length}</span>}
+            {projects.length > 0 && <span className="ml-auto text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-full px-1.5 py-0.5">{projects.length}</span>}
           </NavItem>
 
-          <p className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-3 pt-3 pb-1">Workspace</p>
+          {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">Workspace</p>}
           <NavItem active={view === 'workspace'} onClick={() => { setView('workspace'); fetchMembers(); fetchNotifPrefs(); fetchBranding(); }} icon="⚙️">Settings</NavItem>
           <NavItem active={view === 'trash'} onClick={() => { setView('trash'); fetchTrash(); }} icon="🗑">
             Trash
           </NavItem>
         </nav>
 
-        <div className="p-3 border-t border-neutral-200 dark:border-neutral-700">
-          <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer">
-            <Avatar name={currentUser.fullName} size={7} />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-neutral-900 truncate">{currentUser.fullName}</p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <RoleBadge role={userRole.role} tier={userRole.tier} small />
-              </div>
+        <div className="p-2 border-t border-neutral-200 dark:border-neutral-700">
+          {navCollapsed ? (
+            <div className="flex justify-center py-1">
+              <Avatar name={currentUser.fullName} size={7} />
             </div>
-            <button onClick={handleLogout} title="Sign out" className="text-neutral-400 hover:text-brand-orange text-sm">↩</button>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer">
+              <Avatar name={currentUser.fullName} size={7} />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-neutral-900 truncate">{currentUser.fullName}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <RoleBadge role={userRole.role} tier={userRole.tier} small />
+                </div>
+              </div>
+              <button onClick={handleLogout} title="Sign out" className="text-neutral-400 hover:text-brand-orange text-sm">↩</button>
+            </div>
+          )}
         </div>
       </aside>
+      </NavCollapsedCtx.Provider>
 
       {/* MAIN */}
       <main className="flex-1 flex flex-col min-w-0 dark:bg-neutral-900">
@@ -1515,7 +1544,7 @@ export default function App() {
                     className="w-full text-left px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-700 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                     <div className="flex items-center gap-2">
                       <TypeBadge type={item.type} compact />
-                      <span className="font-mono text-[10px] text-neutral-400">{item.id}</span>
+                      <span className="font-mono text-xs text-neutral-400">{item.id}</span>
                     </div>
                     <div className="text-sm text-neutral-900 font-medium mt-0.5">{item.title}</div>
                   </button>
@@ -1530,7 +1559,7 @@ export default function App() {
             {searchOpen && !searchQuery.trim() && recentlyViewed.length > 0 && (
               <div className="absolute top-full mt-1 w-80 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 z-50 max-h-64 overflow-y-auto">
                 <div className="px-4 py-2 border-b border-neutral-100 dark:border-neutral-700">
-                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Recently Viewed</p>
+                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Recently Viewed</p>
                 </div>
                 {recentlyViewed.map(item => {
                   const full = workItems.find(i => i.id === item.id);
@@ -1539,7 +1568,7 @@ export default function App() {
                       className="w-full text-left px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-700 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                       <div className="flex items-center gap-2">
                         <TypeBadge type={item.type} compact />
-                        <span className="font-mono text-[10px] text-neutral-400">{item.id}</span>
+                        <span className="font-mono text-xs text-neutral-400">{item.id}</span>
                       </div>
                       <div className="text-sm text-neutral-900 font-medium mt-0.5 truncate">{item.title}</div>
                     </button>
@@ -1993,7 +2022,7 @@ export default function App() {
                   { key: 'activity', label: 'Recent Activity' },
                 ].map(t => (
                   <button key={t.key} onClick={() => setMyWorksTab(t.key)}
-                    className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${myWorksTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
+                    className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${myWorksTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-600 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                     {t.label}
                   </button>
                 ))}
@@ -2009,7 +2038,7 @@ export default function App() {
                         <TypeBadge type={item.type} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-neutral-900 truncate">{item.title}</p>
-                          <p className="text-xs text-neutral-400 dark:text-neutral-500 font-mono">{item.id}</p>
+                          <p className="text-xs text-neutral-400 dark:text-neutral-600 font-mono">{item.id}</p>
                         </div>
                         <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
                         {item.dueDate && <span className="text-xs text-semantic-warning font-medium whitespace-nowrap">Due {item.dueDate}</span>}
@@ -2029,7 +2058,7 @@ export default function App() {
                           <TypeBadge type={item.type} />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-neutral-900 truncate">{item.title}</p>
-                            <p className="text-xs text-neutral-400 dark:text-neutral-500 font-mono">{item.id}</p>
+                            <p className="text-xs text-neutral-400 dark:text-neutral-600 font-mono">{item.id}</p>
                           </div>
                           <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
                         </div>
@@ -2129,7 +2158,7 @@ export default function App() {
                               <span className={`w-2 h-2 rounded-full ${col.dot}`}></span>
                               <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{col.name}</h3>
                             </div>
-                            <span className="text-xs bg-white dark:bg-neutral-700 text-neutral-500 dark:text-neutral-300 px-2 py-0.5 rounded-full shadow-sm">{colItems.length}</span>
+                            <span className="text-xs bg-white dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full shadow-sm">{colItems.length}</span>
                           </div>
                           <div className="space-y-2 flex-1">
                             {colItems.length === 0 && (
@@ -2142,7 +2171,7 @@ export default function App() {
                                 onDragStart={(e) => handleDragStart(e, item.id)}
                                 className={`bg-white dark:bg-neutral-700 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-600 cursor-grab hover:shadow-md transition-shadow group ${densityPad[density]} ${item.starred ? 'border-brand-orange/40' : ''}`}>
                                 <div className="flex items-start justify-between mb-1.5">
-                                  <span className="font-mono text-[10px] text-neutral-400">{item.id}</span>
+                                  <span className="font-mono text-xs text-neutral-400">{item.id}</span>
                                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button onClick={() => toggleStar(item)} title={item.starred ? 'Unstar' : 'Star'}
                                       className={`text-xs p-0.5 transition-colors ${item.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}`}>★</button>
@@ -2158,14 +2187,14 @@ export default function App() {
                                 <div className="flex items-center justify-between">
                                   <TypeBadge type={item.type} compact={density === 'compact'} />
                                   <div className="flex items-center gap-1.5">
-                                    {item.dueDate && <span className="text-[10px] text-semantic-warning font-medium">{item.dueDate}</span>}
+                                    {item.dueDate && <span className="text-xs text-semantic-warning font-medium">{item.dueDate}</span>}
                                     {item.assigneeId && <Avatar name={userName(item.assigneeId)} size={5} />}
                                   </div>
                                 </div>
                                 {density !== 'compact' && item.tags && item.tags.length > 0 && (
                                   <div className="flex flex-wrap gap-1 mt-2">
                                     {item.tags.map(t => (
-                                      <span key={t} className="text-[10px] bg-neutral-100 dark:bg-neutral-600 text-neutral-500 dark:text-neutral-300 px-1.5 py-0.5 rounded">{t}</span>
+                                      <span key={t} className="text-xs bg-neutral-100 dark:bg-neutral-600 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{t}</span>
                                     ))}
                                   </div>
                                 )}
@@ -2213,7 +2242,7 @@ export default function App() {
                               <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="font-semibold text-neutral-900">{p.name}</h3>
                                 {p.slug && (
-                                  <span className="text-[10px] font-mono bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-300 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-600"
+                                  <span className="text-xs font-mono bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-600"
                                     title="Slug-based project URL">
                                     /projects/{p.slug}
                                   </span>
@@ -2236,7 +2265,7 @@ export default function App() {
                               <div className="h-1.5 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
                                 <div className="h-full bg-semantic-success rounded-full transition-all" style={{ width: `${Math.round((done / count) * 100)}%` }}></div>
                               </div>
-                              <p className="text-[10px] text-neutral-400 mt-1">{Math.round((done / count) * 100)}% complete</p>
+                              <p className="text-xs text-neutral-400 mt-1">{Math.round((done / count) * 100)}% complete</p>
                             </div>
                           )}
                         </div>
@@ -2314,7 +2343,7 @@ export default function App() {
                   <div key={sprint.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl mb-4 overflow-hidden">
                     <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900">
                       <div className="flex items-center gap-3">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${sprint.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : sprint.status === 'COMPLETED' ? 'bg-neutral-200 text-neutral-500' : 'bg-brand-navy-tint/10 text-brand-navy-tint'}`}>{sprint.status}</span>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${sprint.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : sprint.status === 'COMPLETED' ? 'bg-neutral-200 text-neutral-600' : 'bg-brand-navy-tint/10 text-brand-navy-tint'}`}>{sprint.status}</span>
                         <h3 className="font-semibold text-neutral-900">{sprint.name}</h3>
                         {sprint.goal && <span className="text-xs text-neutral-400 italic hidden md:inline">"{sprint.goal}"</span>}
                       </div>
@@ -2357,7 +2386,7 @@ export default function App() {
                       className={`flex items-center gap-3 px-5 py-3 border-b border-neutral-50 dark:border-neutral-700 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-700 group transition-colors ${dragOverId === item.id ? 'border-t-2 border-t-brand-navy bg-brand-navy/5' : ''}`}>
                       <span className="text-neutral-300 cursor-grab text-xs mr-1">⠿</span>
                       <TypeBadge type={item.type} compact />
-                      <span className="font-mono text-[10px] text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
+                      <span className="font-mono text-xs text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
                       <span className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate" onClick={() => setSelectedItem(item)}>{item.title}</span>
                       {/* Refinement mode — inline edit */}
                       {refinementMode ? (
@@ -2401,7 +2430,7 @@ export default function App() {
                     <div>
                       <div className="flex items-center gap-3 mb-0.5">
                         <h1 className="text-xl font-bold text-brand-navy">{activeSprint.name}</h1>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${activeSprint.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : 'bg-neutral-200 text-neutral-500'}`}>{activeSprint.status}</span>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${activeSprint.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : 'bg-neutral-200 text-neutral-600'}`}>{activeSprint.status}</span>
                       </div>
                       {activeSprint.goal && <p className="text-sm text-neutral-400 italic">"{activeSprint.goal}"</p>}
                       {activeSprint.startDate && <p className="text-xs text-neutral-400 mt-0.5">{activeSprint.startDate} → {activeSprint.endDate}</p>}
@@ -2456,7 +2485,7 @@ export default function App() {
                               .catch(() => {});
                           }}
                             title={f.shared ? 'Make private' : 'Share with team'}
-                            className={`text-[10px] px-1.5 py-1.5 rounded-r-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/20 text-semantic-success hover:bg-semantic-success/30' : 'bg-neutral-100 text-neutral-400 hover:bg-neutral-200'}`}>
+                            className={`text-xs px-1.5 py-1.5 rounded-r-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/20 text-semantic-success hover:bg-semantic-success/30' : 'bg-neutral-100 text-neutral-400 hover:bg-neutral-200'}`}>
                             {f.shared ? '🔓' : '🔒'}
                           </button>
                         )}
@@ -2523,7 +2552,7 @@ export default function App() {
                       const doneH = Math.round((s.donePoints / maxVal) * 120);
                       const totalH = Math.round((s.totalPoints / maxVal) * 120);
                       return (
-                        <div key={s.sprintId} className="flex flex-col items-center gap-1 min-w-[80px]">
+                        <div key={s.sprintId} className="flex flex-col items-center gap-1 min-w-20">
                           <div className="flex items-end gap-1 h-32">
                             {/* Capacity bar */}
                             <div className="flex flex-col justify-end h-32">
@@ -2538,8 +2567,8 @@ export default function App() {
                               <div className="w-5 rounded-t bg-semantic-success" style={{ height: `${doneH}px` }} title={`Delivered: ${s.donePoints}pt`}></div>
                             </div>
                           </div>
-                          <p className="text-[10px] text-neutral-400 text-center leading-tight max-w-[80px] truncate">{s.sprintName.replace('Sprint ', 'S').replace(' — ', ' ')}</p>
-                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${s.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : s.status === 'COMPLETED' ? 'bg-neutral-100 text-neutral-500' : 'bg-neutral-50 text-neutral-400'}`}>{s.status}</span>
+                          <p className="text-xs text-neutral-400 text-center leading-tight max-w-20 truncate">{s.sprintName.replace('Sprint ', 'S').replace(' — ', ' ')}</p>
+                          <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${s.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : s.status === 'COMPLETED' ? 'bg-neutral-100 text-neutral-600' : 'bg-neutral-50 text-neutral-400'}`}>{s.status}</span>
                         </div>
                       );
                     })}
@@ -2592,13 +2621,13 @@ export default function App() {
                           <div className="h-8 bg-neutral-100 dark:bg-neutral-700 rounded-lg overflow-hidden flex mb-2">
                             {sprintReport.totalItems > 0 && <>
                               <div className="h-full bg-semantic-success transition-all flex items-center justify-center" style={{ width: `${(sprintReport.doneItems / sprintReport.totalItems) * 100}%` }}>
-                                {sprintReport.doneItems > 0 && <span className="text-white text-[10px] font-bold">{sprintReport.doneItems}</span>}
+                                {sprintReport.doneItems > 0 && <span className="text-white text-xs font-bold">{sprintReport.doneItems}</span>}
                               </div>
                               <div className="h-full bg-brand-navy-tint transition-all flex items-center justify-center" style={{ width: `${(sprintReport.inProgressItems / sprintReport.totalItems) * 100}%` }}>
-                                {sprintReport.inProgressItems > 0 && <span className="text-white text-[10px] font-bold">{sprintReport.inProgressItems}</span>}
+                                {sprintReport.inProgressItems > 0 && <span className="text-white text-xs font-bold">{sprintReport.inProgressItems}</span>}
                               </div>
                               <div className="h-full bg-neutral-200 transition-all flex items-center justify-center" style={{ width: `${(sprintReport.todoItems / sprintReport.totalItems) * 100}%` }}>
-                                {sprintReport.todoItems > 0 && <span className="text-neutral-600 text-[10px] font-bold">{sprintReport.todoItems}</span>}
+                                {sprintReport.todoItems > 0 && <span className="text-neutral-600 text-xs font-bold">{sprintReport.todoItems}</span>}
                               </div>
                             </>}
                           </div>
@@ -2617,11 +2646,11 @@ export default function App() {
                                 { label: 'Delivered', value: sprintReport.donePoints, max: Math.max(sprintReport.sprint?.capacity || 0, sprintReport.totalPoints), color: 'bg-semantic-success' },
                               ].map(row => (
                                 <div key={row.label} className="flex items-center gap-3">
-                                  <span className="text-xs text-neutral-500 w-20 flex-shrink-0">{row.label}</span>
+                                  <span className="text-xs text-neutral-600 w-20 flex-shrink-0">{row.label}</span>
                                   <div className="flex-1 h-5 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
                                     <div className={`h-full rounded-full ${row.color} transition-all flex items-center justify-end pr-2`}
                                       style={{ width: `${row.max > 0 ? Math.round((row.value / row.max) * 100) : 0}%` }}>
-                                      {row.value > 0 && <span className="text-[10px] text-white font-bold">{row.value}pt</span>}
+                                      {row.value > 0 && <span className="text-xs text-white font-bold">{row.value}pt</span>}
                                     </div>
                                   </div>
                                   <span className="text-xs font-semibold text-neutral-700 w-12 text-right">{row.max > 0 ? Math.round((row.value / row.max) * 100) : 0}%</span>
@@ -2643,7 +2672,7 @@ export default function App() {
                             {(sprintReport.items || []).map(item => (
                               <div key={item.id} className="flex items-center gap-3 px-5 py-3">
                                 <TypeBadge type={item.type} compact />
-                                <span className="font-mono text-[10px] text-neutral-400 w-20">{item.id}</span>
+                                <span className="font-mono text-xs text-neutral-400 w-20">{item.id}</span>
                                 <span className="flex-1 text-sm text-neutral-900">{item.title}</span>
                                 {item.story_points > 0 && <span className="text-xs text-neutral-400">{item.story_points}pt</span>}
                                 <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
@@ -2670,7 +2699,7 @@ export default function App() {
                                   {c.type && <TypeBadge type={c.type} compact />}
                                   <span className="flex-1 text-sm text-neutral-900">{c.title || c.work_item_id}</span>
                                   <span className="text-xs text-neutral-400">{c.actor_name || 'System'}</span>
-                                  <span className="text-[10px] text-neutral-300">{c.occurred_at ? new Date(c.occurred_at).toLocaleDateString() : ''}</span>
+                                  <span className="text-xs text-neutral-300">{c.occurred_at ? new Date(c.occurred_at).toLocaleDateString() : ''}</span>
                                 </div>
                               ))}
                             </div>
@@ -2760,7 +2789,7 @@ export default function App() {
                         <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(mfaSetup.otpAuthUri)}&size=160x160`}
                           alt="TOTP QR Code" className="mx-auto w-40 h-40" />
                       </div>
-                      <p className="text-xs text-neutral-500 mb-1">Or enter this secret manually:</p>
+                      <p className="text-xs text-neutral-600 mb-1">Or enter this secret manually:</p>
                       <code className="text-xs bg-neutral-100 dark:bg-neutral-700 dark:text-neutral-200 px-2 py-1 rounded font-mono break-all">{mfaSetup.secret}</code>
                     </div>
                     <div>
@@ -2798,7 +2827,7 @@ export default function App() {
                     ].map(r => (
                       <div key={r.role} className="flex items-center gap-2 py-1">
                         <RoleBadge role={r.role} tier={r.tier} />
-                        <span className="text-xs text-neutral-500">{r.desc}</span>
+                        <span className="text-xs text-neutral-600">{r.desc}</span>
                       </div>
                     ))}
                   </div>
@@ -2924,7 +2953,7 @@ export default function App() {
                     if (t.key === 'layout') { fetchFieldDefs(); fetchFieldLayouts(); }
                     if (t.key === 'visibility') { fetchFieldDefs(); fetchRoles(); fetchFieldVisibility(); }
                   }}
-                    className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${settings3Tab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
+                    className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${settings3Tab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-600 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                     {t.label}
                   </button>
                 ))}
@@ -2962,7 +2991,7 @@ export default function App() {
                                 <div className="flex items-center gap-3">
                                   <span className={`transition-transform ${isExpanded ? 'rotate-90' : ''} text-neutral-400 text-sm`}>▶</span>
                                   <span className="font-semibold text-neutral-900 dark:text-neutral-100">{wf.name}</span>
-                                  {wf.isDefault && <span className="text-[10px] bg-brand-navy text-white px-2 py-0.5 rounded-full font-semibold">DEFAULT</span>}
+                                  {wf.isDefault && <span className="text-xs bg-brand-navy text-white px-2 py-0.5 rounded-full font-semibold">DEFAULT</span>}
                                   {wf.itemType && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded">{wf.itemType}</span>}
                                 </div>
                                 <div className="flex gap-3 items-center" onClick={e => e.stopPropagation()}>
@@ -2979,14 +3008,14 @@ export default function App() {
                                     <>
                                       {/* Statuses */}
                                       <div>
-                                        <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">Statuses ({statuses.length})</p>
+                                        <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-3">Statuses ({statuses.length})</p>
                                         <div className="flex flex-wrap gap-2 mb-3">
                                           {statuses.map(s => (
                                             <div key={s.id} className="flex items-center gap-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5">
                                               <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: s.color || '#0B2F5C' }}></span>
                                               <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{s.name}</span>
-                                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${catColor[s.category] || 'bg-neutral-100 text-neutral-500'}`}>{s.category}</span>
-                                              {s.isInitial && <span className="text-[10px] text-brand-amber font-bold">INITIAL</span>}
+                                              <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${catColor[s.category] || 'bg-neutral-100 text-neutral-600'}`}>{s.category}</span>
+                                              {s.isInitial && <span className="text-xs text-brand-amber font-bold">INITIAL</span>}
                                               <button onClick={() => deleteStatus(wf.id, s.id)} className="text-neutral-300 hover:text-semantic-danger ml-1 text-xs">✕</button>
                                             </div>
                                           ))}
@@ -2994,19 +3023,19 @@ export default function App() {
                                         {/* Add status inline form */}
                                         <div className="flex gap-2 items-end flex-wrap">
                                           <div>
-                                            <label className="text-[10px] font-semibold text-neutral-400 uppercase block mb-1">Status Name</label>
+                                            <label className="text-xs font-semibold text-neutral-400 uppercase block mb-1">Status Name</label>
                                             <input className="input text-sm w-36" placeholder="e.g. In Review" value={newStatusForm.name}
                                               onChange={e => setNewStatusForm(f => ({ ...f, name: e.target.value }))} />
                                           </div>
                                           <div>
-                                            <label className="text-[10px] font-semibold text-neutral-400 uppercase block mb-1">Category</label>
+                                            <label className="text-xs font-semibold text-neutral-400 uppercase block mb-1">Category</label>
                                             <select className="input text-sm" value={newStatusForm.category}
                                               onChange={e => setNewStatusForm(f => ({ ...f, category: e.target.value }))}>
                                               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                             </select>
                                           </div>
                                           <div>
-                                            <label className="text-[10px] font-semibold text-neutral-400 uppercase block mb-1">Color</label>
+                                            <label className="text-xs font-semibold text-neutral-400 uppercase block mb-1">Color</label>
                                             <input type="color" className="h-9 w-12 rounded border border-neutral-200 cursor-pointer" value={newStatusForm.color}
                                               onChange={e => setNewStatusForm(f => ({ ...f, color: e.target.value }))} />
                                           </div>
@@ -3016,7 +3045,7 @@ export default function App() {
 
                                       {/* Transitions */}
                                       <div>
-                                        <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">Transitions ({transitions.length})</p>
+                                        <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-3">Transitions ({transitions.length})</p>
                                         {transitions.length > 0 && (
                                           <div className="space-y-1.5 mb-3">
                                             {transitions.map(t => {
@@ -3037,12 +3066,12 @@ export default function App() {
                                         {statuses.length >= 2 && (
                                           <div className="flex gap-2 items-end flex-wrap">
                                             <div>
-                                              <label className="text-[10px] font-semibold text-neutral-400 uppercase block mb-1">Transition Name</label>
+                                              <label className="text-xs font-semibold text-neutral-400 uppercase block mb-1">Transition Name</label>
                                               <input className="input text-sm w-32" placeholder="e.g. Start Review" value={newTransitionForm.name}
                                                 onChange={e => setNewTransitionForm(f => ({ ...f, name: e.target.value }))} />
                                             </div>
                                             <div>
-                                              <label className="text-[10px] font-semibold text-neutral-400 uppercase block mb-1">From</label>
+                                              <label className="text-xs font-semibold text-neutral-400 uppercase block mb-1">From</label>
                                               <select className="input text-sm" value={newTransitionForm.fromStatus}
                                                 onChange={e => setNewTransitionForm(f => ({ ...f, fromStatus: e.target.value }))}>
                                                 <option value="">— From —</option>
@@ -3050,7 +3079,7 @@ export default function App() {
                                               </select>
                                             </div>
                                             <div>
-                                              <label className="text-[10px] font-semibold text-neutral-400 uppercase block mb-1">To</label>
+                                              <label className="text-xs font-semibold text-neutral-400 uppercase block mb-1">To</label>
                                               <select className="input text-sm" value={newTransitionForm.toStatus}
                                                 onChange={e => setNewTransitionForm(f => ({ ...f, toStatus: e.target.value }))}>
                                                 <option value="">— To —</option>
@@ -3090,12 +3119,12 @@ export default function App() {
                       <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">New Custom Field</p>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Field Name *</label>
+                          <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Field Name *</label>
                           <input className="input text-sm w-full" placeholder="e.g. Meter Serial Number" value={newFieldForm.name}
                             onChange={e => setNewFieldForm(f => ({ ...f, name: e.target.value }))} />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Field Type *</label>
+                          <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Field Type *</label>
                           <select className="input text-sm w-full" value={newFieldForm.fieldType}
                             onChange={e => setNewFieldForm(f => ({ ...f, fieldType: e.target.value }))}>
                             {['TEXT','NUMBER','CURRENCY','DATE','SELECT','MULTI_SELECT','USER','URL','CHECKBOX','FILE','JSON','TEXTAREA','EMAIL','PHONE','RATING','PROGRESS'].map(t => (
@@ -3104,7 +3133,7 @@ export default function App() {
                           </select>
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Description</label>
+                          <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Description</label>
                           <input className="input text-sm w-full" placeholder="What is this field for?" value={newFieldForm.description}
                             onChange={e => setNewFieldForm(f => ({ ...f, description: e.target.value }))} />
                         </div>
@@ -3128,7 +3157,7 @@ export default function App() {
                           <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
                             <tr>
                               {['Field Name', 'Type', 'Key', 'Required', ''].map(h => (
-                                <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{h}</th>
+                                <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">{h}</th>
                               ))}
                             </tr>
                           </thead>
@@ -3309,12 +3338,12 @@ export default function App() {
                       <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 mb-3">New Custom Role</p>
                       <div className="flex gap-4 items-end flex-wrap">
                         <div>
-                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Role Name *</label>
+                          <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Role Name *</label>
                           <input className="input text-sm w-44" placeholder="e.g. Support Agent" value={newRoleForm.name}
                             onChange={e => setNewRoleForm(f => ({ ...f, name: e.target.value }))} />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Tier (1-5)</label>
+                          <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Tier (1-5)</label>
                           <select className="input text-sm" value={newRoleForm.tier}
                             onChange={e => setNewRoleForm(f => ({ ...f, tier: Number(e.target.value) }))}>
                             {[1,2,3,4,5].map(t => <option key={t} value={t}>Tier {t} — {['Viewer','Member','Lead','Admin','Owner'][t-1]}</option>)}
@@ -3332,7 +3361,7 @@ export default function App() {
                       <>
                         {/* System roles legend */}
                         <div className="mb-4 p-4 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700">
-                          <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">System Roles</p>
+                          <p className="text-xs font-semibold text-neutral-600 uppercase tracking-wider mb-2">System Roles</p>
                           <div className="flex flex-wrap gap-3">
                             {[{id:'VIEWER',tier:1},{id:'MEMBER',tier:2},{id:'LEAD',tier:3},{id:'ADMIN',tier:4},{id:'OWNER',tier:5}].map(r => (
                               <div key={r.id} className="flex items-center gap-2 text-xs">
@@ -3341,7 +3370,7 @@ export default function App() {
                               </div>
                             ))}
                           </div>
-                          <p className="text-[10px] text-neutral-400 mt-2">System roles are tier-based. A role can do anything its tier permits. ✓ = permitted, — = not permitted.</p>
+                          <p className="text-xs text-neutral-400 mt-2">System roles are tier-based. A role can do anything its tier permits. ✓ = permitted, — = not permitted.</p>
                         </div>
                         {permMatrix.matrix.length === 0
                           ? <EmptyState icon="🔐" title="No custom roles" subtitle="Create roles to define fine-grained access control for your team." />
@@ -3351,7 +3380,7 @@ export default function App() {
                                   <tr>
                                     <th className="text-left px-4 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 sticky left-0 bg-neutral-50 dark:bg-neutral-900">Permission</th>
                                     {permMatrix.roles.map(r => (
-                                      <th key={r.id} className="px-3 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 text-center min-w-[90px]">
+                                      <th key={r.id} className="px-3 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 text-center min-w-24">
                                         <div>{r.name}</div>
                                         <div className="font-normal text-neutral-400">Tier {r.tier}</div>
                                       </th>
@@ -3399,17 +3428,17 @@ export default function App() {
                       <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 mb-3">New Custom Type</p>
                       <div className="flex gap-4 items-end flex-wrap">
                         <div>
-                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Label *</label>
+                          <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Label *</label>
                           <input className="input text-sm w-44" placeholder="e.g. Meter Rollout" value={newTypeForm.label}
                             onChange={e => setNewTypeForm(f => ({ ...f, label: e.target.value, typeKey: e.target.value.toUpperCase().replace(/\s+/g,'_') }))} />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Key</label>
+                          <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Key</label>
                           <input className="input text-sm w-36 font-mono" placeholder="METER_ROLLOUT" value={newTypeForm.typeKey}
                             onChange={e => setNewTypeForm(f => ({ ...f, typeKey: e.target.value.toUpperCase() }))} />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Icon</label>
+                          <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Icon</label>
                           <input className="input text-sm w-16 text-center text-lg" placeholder="📦" value={newTypeForm.icon}
                             onChange={e => setNewTypeForm(f => ({ ...f, icon: e.target.value }))} />
                         </div>
@@ -3471,7 +3500,7 @@ export default function App() {
 
               <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 mb-4">
                 <div className="mb-3">
-                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Query</label>
+                  <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider">Query</label>
                   <div className="flex gap-2 mt-2">
                     <textarea
                       className="input flex-1 font-mono text-sm resize-none"
@@ -3507,7 +3536,7 @@ export default function App() {
                       <button key={f.id} onClick={() => { setWiqlQuery(f.query); runWiql(); }}
                         className="flex items-center gap-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5 text-sm hover:border-brand-navy transition-colors group">
                         <span className="font-medium text-neutral-900">{f.name}</span>
-                        {f.isShared && <span className="text-[10px] text-neutral-400">shared</span>}
+                        {f.isShared && <span className="text-xs text-neutral-400">shared</span>}
                         <button onClick={e => { e.stopPropagation(); api.raw(`/wiql/filters/${f.id}`, { method: 'DELETE' }).then(() => fetchWiqlFilters()); }}
                           className="text-neutral-300 hover:text-semantic-danger opacity-0 group-hover:opacity-100 transition-opacity ml-1">✕</button>
                       </button>
@@ -3526,7 +3555,7 @@ export default function App() {
                     {wiqlResults.map((item, i) => (
                       <div key={item.id || i} className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 cursor-pointer"
                         onClick={() => { const full = workItems.find(w => w.id === item.id); if (full) setSelectedItem(full); }}>
-                        <span className="font-mono text-[10px] text-neutral-400 w-24 flex-shrink-0">{item.id}</span>
+                        <span className="font-mono text-xs text-neutral-400 w-24 flex-shrink-0">{item.id}</span>
                         <span className="flex-1 text-sm font-medium text-neutral-900 truncate">{item.title}</span>
                         {item.status && <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>}
                         {item.priority && <PriorityBadge priority={item.priority} />}
@@ -3584,7 +3613,7 @@ export default function App() {
                       { key: 'cross-deps',   label: `🌐 Cross-Project (${crossProjectDeps.length})` },
                     ].map(t => (
                       <button key={t.key} onClick={() => { setPmTab(t.key); if (t.key === 'cross-deps') fetchCrossProjectDeps(); }}
-                        className={`text-xs font-medium px-3 py-2 border-b-2 whitespace-nowrap transition-colors ${pmTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
+                        className={`text-xs font-medium px-3 py-2 border-b-2 whitespace-nowrap transition-colors ${pmTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-600 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                         {t.label}
                       </button>
                     ))}
@@ -3613,11 +3642,11 @@ export default function App() {
                               <div>
                                 <div className="flex gap-1 mb-1">
                                   <div className="w-16 flex-shrink-0"></div>
-                                  {impacts.map(i => <div key={i} className="flex-1 text-[9px] text-neutral-400 text-center uppercase">{i}</div>)}
+                                  {impacts.map(i => <div key={i} className="flex-1 text-xs text-neutral-400 text-center uppercase">{i}</div>)}
                                 </div>
                                 {probs.map(p => (
                                   <div key={p} className="flex gap-1 mb-1">
-                                    <div className="w-16 text-[9px] text-neutral-400 flex items-center flex-shrink-0">{p}</div>
+                                    <div className="w-16 text-xs text-neutral-400 flex items-center flex-shrink-0">{p}</div>
                                     {impacts.map(imp => {
                                       const count = (raidDashboard.risks || []).filter(r => r.probability === p && r.impact === imp && r.status === 'OPEN').length;
                                       const heat = (probs.indexOf(p) + impacts.indexOf(imp));
@@ -3630,7 +3659,7 @@ export default function App() {
                                     })}
                                   </div>
                                 ))}
-                                <p className="text-[10px] text-neutral-400 mt-2">Rows = Probability, Columns = Impact. Color = severity.</p>
+                                <p className="text-xs text-neutral-400 mt-2">Rows = Probability, Columns = Impact. Color = severity.</p>
                               </div>
                             );
                           })()}
@@ -3730,7 +3759,7 @@ export default function App() {
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
                                       <span className="text-xs bg-brand-navy/10 text-brand-navy px-2 py-0.5 rounded font-medium">{m.meetingType}</span>
-                                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${m.status === 'COMPLETED' ? 'bg-semantic-success/10 text-semantic-success' : m.status === 'CANCELLED' ? 'bg-neutral-100 text-neutral-400' : 'bg-semantic-warning/10 text-semantic-warning'}`}>{m.status}</span>
+                                      <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${m.status === 'COMPLETED' ? 'bg-semantic-success/10 text-semantic-success' : m.status === 'CANCELLED' ? 'bg-neutral-100 text-neutral-400' : 'bg-semantic-warning/10 text-semantic-warning'}`}>{m.status}</span>
                                     </div>
                                     <p className="font-semibold text-neutral-900">{m.title}</p>
                                     {m.scheduledAt && <p className="text-xs text-neutral-400 mt-1">📅 {new Date(m.scheduledAt).toLocaleString()}{m.durationMins ? ` · ${m.durationMins}min` : ''}</p>}
@@ -3758,7 +3787,7 @@ export default function App() {
                           const note = Array.isArray(meetingNotes) ? meetingNotes.find(n => n.section === section) : null;
                           return (
                             <div key={section} className="bg-white border border-neutral-200 rounded-xl p-4">
-                              <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">{section}</p>
+                              <p className="text-xs font-bold text-neutral-600 uppercase tracking-wider mb-2">{section}</p>
                               <textarea
                                 className="w-full text-sm text-neutral-900 dark:text-neutral-100 border-none outline-none resize-none min-h-[100px] bg-transparent"
                                 placeholder={`Enter ${section.toLowerCase()}...`}
@@ -3961,7 +3990,7 @@ export default function App() {
               {/* PM CREATE MODAL */}
               {pmFormOpen && (
                 <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-center justify-center z-50 p-4" onClick={e => { if (e.target === e.currentTarget) { setPmFormOpen(null); setPmForm({}); } }}>
-                  <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl w-full max-w-lg p-6">
+                  <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl w-full max-w-lg p-6">
                     <h2 className="font-bold text-xl text-brand-navy mb-4 capitalize">New {pmFormOpen.replace('issue','PM Issue').replace('lesson','Lesson Learned').replace('action','Action Item').replace('dependency','Dependency')}</h2>
                     <div className="space-y-3">
                       <Field label="Title">
@@ -4096,7 +4125,7 @@ export default function App() {
                         <TypeBadge type={item.type} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-neutral-900 truncate">{item.title}</p>
-                          <p className="text-xs text-neutral-400 dark:text-neutral-500 font-mono">{item.id} · Deleted {item.deletedAt ? new Date(item.deletedAt).toLocaleDateString() : ''}</p>
+                          <p className="text-xs text-neutral-400 dark:text-neutral-600 font-mono">{item.id} · Deleted {item.deletedAt ? new Date(item.deletedAt).toLocaleDateString() : ''}</p>
                         </div>
                         <div className="flex gap-2 flex-shrink-0">
                           <Button variant="secondary" size="sm" onClick={() => restoreFromTrash(item.id)}>Restore</Button>
@@ -4486,7 +4515,7 @@ export default function App() {
               { key: 'activity',     label: 'Activity' },
             ].map(t => (
               <button key={t.key} onClick={() => setDetailTab(t.key)}
-                className={`text-xs font-medium px-3 py-2.5 border-b-2 transition-colors whitespace-nowrap ${detailTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
+                className={`text-xs font-medium px-3 py-2.5 border-b-2 transition-colors whitespace-nowrap ${detailTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-600 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                 {t.label}
               </button>
             ))}
@@ -4580,7 +4609,7 @@ export default function App() {
                       className="flex items-center gap-2 p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700 cursor-pointer hover:border-brand-navy/30 transition-colors">
                       <span className="text-neutral-300 text-xs">↳</span>
                       <TypeBadge type={child.type} compact />
-                      <span className="font-mono text-[10px] text-neutral-400">{child.id}</span>
+                      <span className="font-mono text-xs text-neutral-400">{child.id}</span>
                       <span className="flex-1 text-xs text-neutral-900 truncate">{child.title}</span>
                       <StatusBadge category={statusToCategory(child.status)}>{child.status}</StatusBadge>
                     </div>
@@ -4716,12 +4745,12 @@ export default function App() {
                         <div className={`flex-1 rounded-xl px-3 py-2.5 border ${c.isInternal ? 'bg-semantic-warning-surface border-semantic-warning/30' : 'bg-neutral-50 dark:bg-neutral-800 border-neutral-100 dark:border-neutral-700'}`}>
                           <div className="flex items-center gap-2 mb-0.5">
                             <p className="text-xs font-semibold text-neutral-900">{c.authorName}</p>
-                            {c.isInternal && <span className="text-[10px] bg-semantic-warning text-white px-1.5 py-0.5 rounded">Internal</span>}
-                            <span className="text-[10px] text-neutral-400 ml-auto">{c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</span>
+                            {c.isInternal && <span className="text-xs bg-semantic-warning text-white px-1.5 py-0.5 rounded">Internal</span>}
+                            <span className="text-xs text-neutral-400 ml-auto">{c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</span>
                           </div>
                           <p className="text-sm text-neutral-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMd(c.body) }} />
                           <button onClick={() => setReplyingTo(replyingTo === c.id ? null : c.id)}
-                            className="text-[10px] text-neutral-400 hover:text-brand-navy mt-1.5 transition-colors">
+                            className="text-xs text-neutral-400 hover:text-brand-navy mt-1.5 transition-colors">
                             ↩ Reply {c.replies?.length > 0 && `(${c.replies.length})`}
                           </button>
                         </div>
@@ -4734,8 +4763,8 @@ export default function App() {
                               <Avatar name={r.authorName || '?'} size={6} />
                               <div className="flex-1 bg-white dark:bg-neutral-800 rounded-lg px-3 py-2 border border-neutral-100 dark:border-neutral-700">
                                 <div className="flex items-center gap-2 mb-0.5">
-                                  <p className="text-[10px] font-semibold text-neutral-900">{r.authorName}</p>
-                                  <span className="text-[10px] text-neutral-400 ml-auto">{r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}</span>
+                                  <p className="text-xs font-semibold text-neutral-900">{r.authorName}</p>
+                                  <span className="text-xs text-neutral-400 ml-auto">{r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}</span>
                                 </div>
                                 <p className="text-xs text-neutral-700" dangerouslySetInnerHTML={{ __html: renderMd(r.body) }} />
                               </div>
@@ -4803,7 +4832,7 @@ export default function App() {
                 {/* Visual Link Graph */}
                 {links.length > 0 && (
                   <div className="mb-4 bg-neutral-50 dark:bg-neutral-800 rounded-xl p-4 border border-neutral-100 dark:border-neutral-700">
-                    <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-3">Link Graph</p>
+                    <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">Link Graph</p>
                     <div className="flex flex-col items-center gap-2">
                       {/* Current item — center node */}
                       <div className="bg-brand-navy text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm max-w-full truncate">
@@ -4817,18 +4846,18 @@ export default function App() {
                             BLOCKED_BY: 'border-semantic-danger bg-semantic-danger-surface text-semantic-danger',
                             RELATES_TO: 'border-brand-navy-tint bg-brand-navy/5 text-brand-navy',
                             DUPLICATES: 'border-semantic-warning bg-semantic-warning-surface text-semantic-warning',
-                            PARENT: 'border-purple-400 bg-purple-50 text-purple-700',
+                            PARENT: 'border-neutral-300 bg-neutral-100 text-neutral-700',
                             CHILD: 'border-semantic-success bg-semantic-success/10 text-semantic-success',
                           };
                           const colorClass = LINK_COLORS[l.linkType] || LINK_COLORS.RELATES_TO;
                           return (
                             <div key={l.id} className="flex items-center gap-2">
                               <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-700"></div>
-                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${colorClass} flex-shrink-0`}>
+                              <span className={`text-xs font-bold px-1.5 py-0.5 rounded border ${colorClass} flex-shrink-0`}>
                                 {l.linkType?.replace('_', ' ')}
                               </span>
                               <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-700"></div>
-                              <div className={`text-[10px] font-semibold px-2 py-1 rounded-lg border ${colorClass} cursor-pointer hover:opacity-80 truncate max-w-32`}
+                              <div className={`text-xs font-semibold px-2 py-1 rounded-lg border ${colorClass} cursor-pointer hover:opacity-80 truncate max-w-32`}
                                 onClick={() => { const t = workItems.find(i => i.id === l.targetId); if (t) setSelectedItem(t); }}
                                 title={l.targetTitle || l.targetId}>
                                 {l.targetId}
@@ -4845,7 +4874,7 @@ export default function App() {
                 <div className="space-y-2 mb-4">
                   {links.map(l => (
                     <div key={l.id} className="flex items-center gap-3 p-2.5 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700">
-                      <span className="text-[10px] font-semibold bg-neutral-200 text-neutral-600 px-1.5 py-0.5 rounded uppercase">{l.linkType?.replace('_', ' ')}</span>
+                      <span className="text-xs font-semibold bg-neutral-200 text-neutral-600 px-1.5 py-0.5 rounded uppercase">{l.linkType?.replace('_', ' ')}</span>
                       <span className="flex-1 text-sm text-neutral-900 font-mono">{l.targetId}</span>
                       {l.targetTitle && <span className="text-xs text-neutral-400 truncate max-w-24">{l.targetTitle}</span>}
                       <button onClick={() => handleDeleteLink(l.id)} className="text-neutral-300 hover:text-semantic-danger text-xs">✕</button>
@@ -4876,8 +4905,8 @@ export default function App() {
                     ↑ Upload file
                   </Button>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-neutral-400">Max {MAX_UPLOAD_MB} MB per file</span>
-                    <span className="text-[10px] bg-semantic-success-surface text-semantic-success px-1.5 py-0.5 rounded flex items-center gap-1">
+                    <span className="text-xs text-neutral-400">Max {MAX_UPLOAD_MB} MB per file</span>
+                    <span className="text-xs bg-semantic-success-surface text-semantic-success px-1.5 py-0.5 rounded flex items-center gap-1">
                       🛡 Virus scan active
                     </span>
                   </div>
@@ -4900,7 +4929,7 @@ export default function App() {
                           </div>
                         )}
                         <div className="flex items-center gap-3 p-3">
-                          <div className={`w-8 h-8 rounded flex items-center justify-center text-xs font-bold flex-shrink-0 ${isImage ? 'bg-brand-navy/10 text-brand-navy' : 'bg-neutral-200 text-neutral-500'}`}>
+                          <div className={`w-8 h-8 rounded flex items-center justify-center text-xs font-bold flex-shrink-0 ${isImage ? 'bg-brand-navy/10 text-brand-navy' : 'bg-neutral-200 text-neutral-600'}`}>
                             {isImage ? '🖼' : ext}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -4929,7 +4958,7 @@ export default function App() {
                       const url = `/work-items/${selectedItem.id}/activity${et ? `?eventType=${et}` : ''}`;
                       api.raw(url).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(() => {});
                     }}
-                      className={`text-[10px] px-2 py-1 rounded-full font-medium transition-colors ${activityEventFilter === et ? 'bg-brand-navy text-white' : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'}`}>
+                      className={`text-xs px-2 py-1 rounded-full font-medium transition-colors ${activityEventFilter === et ? 'bg-brand-navy text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}>
                       {et ? et.replace(/_/g, ' ') : 'All'}
                     </button>
                   ))}
@@ -4952,13 +4981,13 @@ export default function App() {
                         {/* Field diff display */}
                         {a.field_name && a.old_value !== null && a.new_value !== null && (
                           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                            <span className="text-[10px] text-neutral-400 font-medium capitalize">{String(a.field_name).replace(/_/g,' ')}:</span>
-                            {a.old_value && <span className="text-[10px] bg-semantic-danger-surface text-semantic-danger px-1.5 py-0.5 rounded line-through">{a.old_value}</span>}
-                            <span className="text-[10px] text-neutral-400">→</span>
-                            {a.new_value && <span className="text-[10px] bg-semantic-success-surface text-semantic-success px-1.5 py-0.5 rounded">{a.new_value}</span>}
+                            <span className="text-xs text-neutral-400 font-medium capitalize">{String(a.field_name).replace(/_/g,' ')}:</span>
+                            {a.old_value && <span className="text-xs bg-semantic-danger-surface text-semantic-danger px-1.5 py-0.5 rounded line-through">{a.old_value}</span>}
+                            <span className="text-xs text-neutral-400">→</span>
+                            {a.new_value && <span className="text-xs bg-semantic-success-surface text-semantic-success px-1.5 py-0.5 rounded">{a.new_value}</span>}
                           </div>
                         )}
-                        <p className="text-[10px] text-neutral-400 mt-0.5">{a.occurred_at ? new Date(a.occurred_at).toLocaleString() : ''}</p>
+                        <p className="text-xs text-neutral-400 mt-0.5">{a.occurred_at ? new Date(a.occurred_at).toLocaleString() : ''}</p>
                       </div>
                     </div>
                   ))}
@@ -5207,11 +5236,13 @@ export default function App() {
 }
 
 function NavItem({ active, onClick, icon, children }) {
+  const collapsed = React.useContext(NavCollapsedCtx);
+  const label = typeof children === 'string' ? children : undefined;
   return (
-    <button onClick={onClick}
-      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${active ? 'bg-neutral-100 dark:bg-neutral-800 text-brand-navy font-semibold' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100'}`}>
-      <span className="text-base leading-none">{icon}</span>
-      <span className="flex-1 text-left flex items-center">{children}</span>
+    <button onClick={onClick} title={collapsed ? label : undefined}
+      className={`w-full flex items-center ${collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-md text-sm transition-colors duration-[120ms] ${active ? 'bg-neutral-100 dark:bg-neutral-800 text-brand-navy font-semibold' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100'}`}>
+      <span className="text-base leading-none flex-shrink-0">{icon}</span>
+      {!collapsed && <span className="flex-1 text-left flex items-center">{children}</span>}
     </button>
   );
 }
@@ -5219,7 +5250,7 @@ function NavItem({ active, onClick, icon, children }) {
 function Modal({ title, onClose, children }) {
   return (
     <div className="fixed inset-0 bg-neutral-900/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-2xl w-full max-w-md">
+      <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl w-full max-w-md">
         <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-700 flex justify-between items-center">
           <h2 className="text-lg font-bold text-brand-navy">{title}</h2>
           <button onClick={onClose} className="text-neutral-400 hover:text-neutral-900 text-xl leading-none">✕</button>
@@ -5244,7 +5275,7 @@ function renderMd(text) {
   return text
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`(.+?)`/g, '<code style="background:#f3f4f6;padding:0 3px;border-radius:3px;font-size:11px">$1</code>')
+    .replace(/`(.+?)`/g, '<code class="prose-md-code">$1</code>')
     .replace(/^- (.+)$/gm, '• $1')
     .replace(/\n/g, '<br/>');
 }
@@ -5257,7 +5288,7 @@ function getTimeOfDay() {
 }
 
 const ROLE_CONFIG = {
-  OWNER:  { label: 'Owner',  bg: 'bg-purple-100',  text: 'text-purple-700', tier: 5 },
+  OWNER:  { label: 'Owner',  bg: 'bg-brand-amber/10', text: 'text-brand-amber', tier: 5 },
   ADMIN:  { label: 'Admin',  bg: 'bg-brand-navy/10', text: 'text-brand-navy', tier: 4 },
   LEAD:   { label: 'Lead',   bg: 'bg-semantic-success/10', text: 'text-semantic-success', tier: 3 },
   MEMBER: { label: 'Member', bg: 'bg-neutral-100',   text: 'text-neutral-600', tier: 2 },
@@ -5267,7 +5298,7 @@ const ROLE_CONFIG = {
 function RoleBadge({ role, tier, small = false }) {
   const r = ROLE_CONFIG[role] || Object.values(ROLE_CONFIG).find(config => config.tier === tier) || ROLE_CONFIG.MEMBER;
   return (
-    <span className={`inline-flex items-center gap-1 font-semibold rounded ${small ? 'text-[9px] px-1 py-0.5' : 'text-[10px] px-1.5 py-0.5'} ${r.bg} ${r.text}`}>
+    <span className={`inline-flex items-center gap-1 font-semibold rounded ${small ? 'text-xs px-1 py-0.5' : 'text-xs px-1.5 py-0.5'} ${r.bg} ${r.text}`}>
       {r.label}
     </span>
   );
@@ -5309,7 +5340,7 @@ const PRIORITY_CONFIG = {
 };
 function PriorityBadge({ priority }) {
   const p = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.MEDIUM;
-  return <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${p.bg} ${p.color}`}>{p.label}</span>;
+  return <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${p.bg} ${p.color}`}>{p.label}</span>;
 }
 
 function PmArtifactList({ title, icon, items, columns, renderRow, onDelete, onAdd, statusColors = {} }) {
@@ -5325,7 +5356,7 @@ function PmArtifactList({ title, icon, items, columns, renderRow, onDelete, onAd
             <table className="w-full text-sm">
               <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
                 <tr>
-                  {columns.map(c => <th key={c} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{c}</th>)}
+                  {columns.map(c => <th key={c} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">{c}</th>)}
                   <th className="px-4 py-2.5"></th>
                 </tr>
               </thead>
@@ -5368,7 +5399,7 @@ function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
       {items.map(item => (
         <div key={item.id} className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-700 group">
           <TypeBadge type={item.type} compact />
-          <span className="font-mono text-[10px] text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
+          <span className="font-mono text-xs text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
           <span className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate" onClick={() => onSelect(item)}>{item.title}</span>
           <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
           {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
@@ -5444,17 +5475,17 @@ function RichTextEditor({ value, onChange, onBlur, placeholder }) {
         <ToolBtn cmd="underline"     title="Underline (Ctrl+U)"><u>U</u></ToolBtn>
         <ToolBtn cmd="strikeThrough" title="Strikethrough"><s>S</s></ToolBtn>
         <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1"/>
-        <ToolBtn cmd="formatBlock" arg="h2"  title="Heading 2"><span className="font-bold text-[10px]">H2</span></ToolBtn>
-        <ToolBtn cmd="formatBlock" arg="h3"  title="Heading 3"><span className="font-bold text-[10px]">H3</span></ToolBtn>
-        <ToolBtn cmd="formatBlock" arg="p"   title="Paragraph"><span className="text-[10px]">¶</span></ToolBtn>
+        <ToolBtn cmd="formatBlock" arg="h2"  title="Heading 2"><span className="font-bold text-xs">H2</span></ToolBtn>
+        <ToolBtn cmd="formatBlock" arg="h3"  title="Heading 3"><span className="font-bold text-xs">H3</span></ToolBtn>
+        <ToolBtn cmd="formatBlock" arg="p"   title="Paragraph"><span className="text-xs">¶</span></ToolBtn>
         <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1"/>
         <ToolBtn cmd="insertUnorderedList" title="Bullet list"><span className="text-[11px]">• —</span></ToolBtn>
         <ToolBtn cmd="insertOrderedList"   title="Numbered list"><span className="text-[11px]">1.</span></ToolBtn>
         <ToolBtn cmd="indent"              title="Indent"><span className="text-[11px]">→</span></ToolBtn>
         <ToolBtn cmd="outdent"             title="Outdent"><span className="text-[11px]">←</span></ToolBtn>
         <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1"/>
-        <ToolBtn cmd="removeFormat" title="Clear formatting"><span className="text-[10px]">✕</span></ToolBtn>
-        <span className="ml-auto text-[9px] text-neutral-300 pr-1">WYSIWYG</span>
+        <ToolBtn cmd="removeFormat" title="Clear formatting"><span className="text-xs">✕</span></ToolBtn>
+        <span className="ml-auto text-xs text-neutral-300 pr-1">WYSIWYG</span>
       </div>
 
       {/* Editable area — true WYSIWYG */}
@@ -5546,7 +5577,7 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
           {lane.label && (
             <div className="flex items-center gap-2 mb-2 mt-4 px-1">
               <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700"></div>
-              <span className="text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-2">{lane.label}</span>
+              <span className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-2">{lane.label}</span>
               <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700"></div>
             </div>
           )}
@@ -5562,7 +5593,7 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
                         <span className={`w-2 h-2 rounded-full ${col.dot}`}></span>
                         <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{col.name}</h3>
                       </div>
-                      <span className="text-xs bg-white dark:bg-neutral-700 text-neutral-500 dark:text-neutral-300 px-2 py-0.5 rounded-full shadow-sm">{colItems.length}</span>
+                      <span className="text-xs bg-white dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full shadow-sm">{colItems.length}</span>
                     </div>
                   )}
                   <div className="space-y-2 flex-1">
@@ -5571,7 +5602,7 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
                       <div key={item.id} draggable onDragStart={(e) => onDragStart(e, item.id)}
                         className={`bg-white dark:bg-neutral-700 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-600 cursor-grab hover:shadow-md transition-shadow group ${pad[density]}`}>
                         <div className="flex items-start justify-between mb-1.5">
-                          <span className="font-mono text-[10px] text-neutral-400">{item.id}</span>
+                          <span className="font-mono text-xs text-neutral-400">{item.id}</span>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => onSelect(item)} className="text-neutral-400 hover:text-brand-navy text-xs p-0.5">✏</button>
                             <button onClick={() => onDelete(item.id)} className="text-neutral-400 hover:text-semantic-danger text-xs p-0.5">✕</button>
@@ -5581,7 +5612,7 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
                         <div className="flex items-center justify-between">
                           <TypeBadge type={item.type} compact={density === 'compact'} />
                           <div className="flex items-center gap-1.5">
-                            {(item.storyPoints > 0) && <span className="text-[10px] text-neutral-400 font-medium">{item.storyPoints}pt</span>}
+                            {(item.storyPoints > 0) && <span className="text-xs text-neutral-400 font-medium">{item.storyPoints}pt</span>}
                             {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={5} />}
                           </div>
                         </div>

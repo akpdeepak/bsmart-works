@@ -78,6 +78,25 @@ if [ -d "$MIG" ]; then
   check BLOCK "Flyway files follow V{n}__snake_case.sql (CLAUDE.md §3)" "$bad"
 fi
 
+# New tables must be PLURAL (CLAUDE.md §3 / §6). Every non-plural name below is historical — the
+# V21/V22 singular tables, the core role_audit_log, and the dropped event_log — and is
+# grandfathered. Any NEW CREATE TABLE that isn't plural is a violation. If you ever introduce a
+# legitimately non-"s" plural (e.g. "media"), add it to this allowlist with a note.
+if [ -d "$MIG" ]; then
+  grandfathered='^(action_item|assumption|decision|dependency|event_log|field_def|field_layout|field_visibility|lesson_learned|meeting|meeting_note|permission_scheme|pm_issue|risk|role_audit_log|role_def|role_permission|stakeholder|wiql_filter|work_item_field_value|work_item_type_config|workflow|workflow_transition)$'
+  singular=""
+  while IFS= read -r t; do
+    [ -z "$t" ] && continue
+    case "$t" in *s) continue ;; esac                  # plural — ok
+    echo "$t" | grep -qE "$grandfathered" && continue  # historical — grandfathered
+    singular="${singular:+$singular$'\n'}$t"
+  done < <(grep -rhiE '^[[:space:]]*create table' "$MIG" 2>/dev/null \
+            | tr 'A-Z' 'a-z' \
+            | sed -E 's/^[[:space:]]*create table (if not exists )?//; s/[[:space:](].*$//' \
+            | sort -u)
+  check BLOCK "New tables must be PLURAL (CLAUDE.md §3; legacy singular tables grandfathered)" "$singular"
+fi
+
 # Backend: System.out.println is banned — use SLF4J Logger. Currently zero usages; keep clean.
 if [ -d "$BE" ]; then
   check BLOCK "No System.out.println in backend (use SLF4J — CLAUDE.md §2)" \

@@ -17,6 +17,7 @@ public class Dashboard {
     private Integer layoutCols;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
+    private String shareToken;
 
     @Transient
     private java.util.List<DashboardWidget> widgets = new java.util.ArrayList<>();
@@ -39,6 +40,8 @@ public class Dashboard {
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public String getShareToken() { return shareToken; }
+    public void setShareToken(String shareToken) { this.shareToken = shareToken; }
     public java.util.List<DashboardWidget> getWidgets() { return widgets; }
     public void setWidgets(java.util.List<DashboardWidget> widgets) { this.widgets = widgets; }
 }

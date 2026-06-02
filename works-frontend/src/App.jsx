@@ -282,6 +282,7 @@ export default function App() {
   const [dashboardTeamId, setDashboardTeamId] = useState(null);
   const [dashboardAggregate, setDashboardAggregate] = useState(null); // server scope aggregate, or null for PROJECT
   const [teams, setTeams] = useState([]);
+  const [shareInfo, setShareInfo] = useState(null); // { id, token } when the share panel is open
   const [reports, setReports] = useState([]);
   const [reportTemplates, setReportTemplates] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
@@ -737,7 +738,7 @@ export default function App() {
   function openDashboard(id) {
     api.raw(`/dashboards/${id}`)
       .then(r => r.json()).then(d => {
-        setSelectedDashboard(d); setDashboardEditMode(false);
+        setSelectedDashboard(d); setDashboardEditMode(false); setShareInfo(null);
         setDashboardScope('PROJECT'); setDashboardTeamId(null); setDashboardAggregate(null);
       }).catch(() => {});
   }
@@ -758,6 +759,18 @@ export default function App() {
     api.raw(`/insights/work-items?${qs}`)
       .then(r => r.json()).then(d => setDashboardAggregate(d))
       .catch(() => { setDashboardAggregate(null); showToast('Could not load scoped data', 'error'); });
+  }
+
+  // Mint (idempotent) / revoke a dashboard's public share token for read-only embedding.
+  function mintShare(id) {
+    api.send(`/dashboards/${id}/share`, { method: 'POST' })
+      .then(d => setShareInfo({ id, token: d.shareToken }))
+      .catch(() => showToast('Could not create share link', 'error'));
+  }
+  function stopShare(id) {
+    api.send(`/dashboards/${id}/share`, { method: 'DELETE' })
+      .then(() => { setShareInfo(null); showToast('Sharing stopped'); })
+      .catch(() => showToast('Could not stop sharing', 'error'));
   }
 
   function createDashboard() {
@@ -1480,6 +1493,11 @@ export default function App() {
   const densityPad = { compact: 'p-2', comfortable: 'p-3', spacious: 'p-4' };
   const userName = u => users.find(x => x.id === u)?.fullName || '';
   const myItems  = workItems.filter(i => i.assigneeId === currentUser?.id);
+
+  // Public, unauthenticated, read-only dashboard embed (?share=<token>) — short-circuits
+  // before the auth gate so it renders without a login (iteration 6).
+  const shareToken = new URLSearchParams(window.location.search).get('share');
+  if (shareToken) return <PublicDashboardEmbed token={shareToken} />;
 
   // ==========================================
   // AUTH SCREENS
@@ -4417,12 +4435,28 @@ export default function App() {
                       {!dashboardEditMode && <ExportButtons targetId="dashboard-export-area"
                         rows={workItems.map(i => ({ ID: i.id, Title: i.title, Type: i.type, Status: i.status, Priority: i.priority, Assignee: i.assigneeId }))}
                         filename={selectedDashboard.name || 'dashboard'} onError={() => showToast('Export failed — try again', 'error')} />}
+                      {!dashboardEditMode && (
+                        <button onClick={() => mintShare(selectedDashboard.id)}
+                          className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">Share</button>
+                      )}
                       <Button variant={dashboardEditMode ? 'action' : 'secondary'} onClick={() => setDashboardEditMode(e => !e)}>
                         {dashboardEditMode ? 'Done' : 'Edit'}
                       </Button>
                       <button onClick={() => deleteDashboard(selectedDashboard.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
                     </div>
                   </div>
+
+                  {shareInfo && shareInfo.id === selectedDashboard.id && shareInfo.token && (
+                    <div className="flex items-center gap-2 mb-4 p-3 rounded-md bg-semantic-info-surface border border-neutral-200 dark:border-neutral-700">
+                      <span className="text-xs font-semibold text-neutral-700 flex-shrink-0">Public link</span>
+                      <input readOnly aria-label="Public embed link"
+                        value={`${window.location.origin}${window.location.pathname}?share=${shareInfo.token}`}
+                        className="flex-1 min-w-0 text-xs font-mono rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-2 py-1" />
+                      <button onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}${window.location.pathname}?share=${shareInfo.token}`); showToast('Link copied'); }}
+                        className="text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors flex-shrink-0">Copy</button>
+                      <button onClick={() => stopShare(selectedDashboard.id)} className="text-xs text-semantic-danger hover:underline flex-shrink-0">Stop sharing</button>
+                    </div>
+                  )}
 
                   <div className="flex flex-wrap items-center gap-2 mb-4">
                     <span className="text-[10px] uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Scope</span>
@@ -5990,6 +6024,63 @@ function ReportSectionCard({ section, index, total, workItems, editMode, onChang
               : <p className="text-sm text-neutral-600 dark:text-neutral-400">—</p>)
       )}
     </section>
+  );
+}
+
+// Iteration 6 — public, read-only embed of a shared dashboard. Rendered before the auth
+// gate from ?share=<token>; fetches the token-scoped public endpoint and renders the widgets
+// from the server aggregate (no app shell, no auth, no drill).
+function PublicDashboardEmbed({ token }) {
+  const [data, setData] = useState(null);
+  const [status, setStatus] = useState('loading'); // loading | ok | error
+  useEffect(() => {
+    let alive = true;
+    api.raw(`/public/dashboards/${encodeURIComponent(token)}`)
+      .then(r => { if (!r.ok) throw new Error('not found'); return r.json(); })
+      .then(d => { if (alive) { setData(d); setStatus('ok'); } })
+      .catch(() => { if (alive) setStatus('error'); });
+    return () => { alive = false; };
+  }, [token]);
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center font-sans">
+        <div className="h-8 w-8 rounded-full border-2 border-neutral-200 border-t-brand-navy animate-spin" aria-label="Loading dashboard" />
+      </div>
+    );
+  }
+  if (status === 'error' || !data) {
+    return (
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center font-sans p-6">
+        <div className="text-center max-w-sm">
+          <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Dashboard unavailable</p>
+          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">This share link is invalid or has been revoked.</p>
+        </div>
+      </div>
+    );
+  }
+  const widgets = data.widgets || [];
+  return (
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 font-sans">
+      <header className="bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <Logo />
+          <span className="text-sm font-semibold text-neutral-900 dark:text-white truncate">{data.name}</span>
+        </div>
+        <span className="text-[10px] uppercase tracking-wide text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-700 rounded-full px-2 py-0.5 flex-shrink-0">Read-only</span>
+      </header>
+      <main className="p-6">
+        {widgets.length === 0 ? (
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">This dashboard has no widgets.</p>
+        ) : (
+          <div className="grid grid-cols-12 gap-4 max-w-7xl mx-auto">
+            {widgets.map(w => (
+              <DashboardWidgetCard key={w.id} widget={w} workItems={[]} aggregate={data.aggregate} editMode={false} />
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
 

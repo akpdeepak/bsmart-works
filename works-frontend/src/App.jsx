@@ -278,6 +278,10 @@ export default function App() {
   const [dashboardEditMode, setDashboardEditMode] = useState(false);
   const [dragWidgetId, setDragWidgetId] = useState(null);
   const [dashboardDrill, setDashboardDrill] = useState(null); // { title, items } — drill-down modal
+  const [dashboardScope, setDashboardScope] = useState('PROJECT'); // PROJECT (loaded set) | TEAM | ORG
+  const [dashboardTeamId, setDashboardTeamId] = useState(null);
+  const [dashboardAggregate, setDashboardAggregate] = useState(null); // server scope aggregate, or null for PROJECT
+  const [teams, setTeams] = useState([]);
   const [reports, setReports] = useState([]);
   const [reportTemplates, setReportTemplates] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
@@ -732,7 +736,28 @@ export default function App() {
 
   function openDashboard(id) {
     api.raw(`/dashboards/${id}`)
-      .then(r => r.json()).then(d => { setSelectedDashboard(d); setDashboardEditMode(false); }).catch(() => {});
+      .then(r => r.json()).then(d => {
+        setSelectedDashboard(d); setDashboardEditMode(false);
+        setDashboardScope('PROJECT'); setDashboardTeamId(null); setDashboardAggregate(null);
+      }).catch(() => {});
+  }
+
+  // Teams power the TEAM scope selector on dashboards.
+  function fetchTeams() {
+    api.raw(`/teams?workspaceId=WS-001`)
+      .then(r => r.json()).then(d => setTeams(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  // Fetch the server-side scope aggregate for a dashboard. PROJECT uses the client-loaded
+  // work items (aggregate = null); TEAM/ORG aggregate across many projects (iteration 6).
+  function fetchDashboardAggregate(scope, teamId) {
+    if (scope === 'PROJECT') { setDashboardAggregate(null); return; }
+    const qs = scope === 'TEAM'
+      ? `scope=TEAM&teamId=${encodeURIComponent(teamId || '')}`
+      : `scope=ORG&workspaceId=WS-001`;
+    api.raw(`/insights/work-items?${qs}`)
+      .then(r => r.json()).then(d => setDashboardAggregate(d))
+      .catch(() => { setDashboardAggregate(null); showToast('Could not load scoped data', 'error'); });
   }
 
   function createDashboard() {
@@ -1684,7 +1709,7 @@ export default function App() {
             {sprints.find(s => s.status === 'ACTIVE') && <span className="ml-auto w-2 h-2 rounded-full bg-semantic-success flex-shrink-0"></span>}
           </NavItem>
           <NavItem active={view === 'reports'} onClick={() => { setView('reports'); fetchSprints(); fetchVelocityData(); }} icon="📊">Reports</NavItem>
-          <NavItem active={view === 'dashboards'} onClick={() => { setView('dashboards'); setSelectedDashboard(null); fetchCustomDashboards(); }} icon="📐">Dashboards</NavItem>
+          <NavItem active={view === 'dashboards'} onClick={() => { setView('dashboards'); setSelectedDashboard(null); fetchCustomDashboards(); fetchTeams(); }} icon="📐">Dashboards</NavItem>
           <NavItem active={view === 'reportbuilder'} onClick={() => { setView('reportbuilder'); setSelectedReport(null); fetchReports(); fetchReportTemplates(); }} icon="📄">Report builder</NavItem>
           <NavItem active={view === 'releases'} onClick={() => { setView('releases'); fetchReleases(); }} icon="🚀">Releases</NavItem>
 
@@ -4399,6 +4424,28 @@ export default function App() {
                     </div>
                   </div>
 
+                  <div className="flex flex-wrap items-center gap-2 mb-4">
+                    <span className="text-[10px] uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Scope</span>
+                    {['PROJECT', 'TEAM', 'ORG'].map(s => (
+                      <button key={s} type="button"
+                        onClick={() => { setDashboardScope(s); fetchDashboardAggregate(s, dashboardTeamId); }}
+                        className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${dashboardScope === s ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy'}`}>
+                        {s === 'PROJECT' ? 'Project' : s === 'TEAM' ? 'Team' : 'Organization'}
+                      </button>
+                    ))}
+                    {dashboardScope === 'TEAM' && (
+                      <select value={dashboardTeamId || ''} aria-label="Team"
+                        onChange={e => { setDashboardTeamId(e.target.value); fetchDashboardAggregate('TEAM', e.target.value); }}
+                        className="text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-1.5 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
+                        <option value="">Select a team…</option>
+                        {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                    )}
+                    {dashboardScope !== 'PROJECT' && (
+                      <span className="text-[10px] text-neutral-600 dark:text-neutral-400">Aggregated across {dashboardScope === 'TEAM' ? "the team's projects" : 'the workspace'}</span>
+                    )}
+                  </div>
+
                   {dashboardEditMode && (
                     <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-md bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700">
                       <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mr-1">Add widget</span>
@@ -4418,7 +4465,7 @@ export default function App() {
                   ) : (
                     <div id="dashboard-export-area" className="grid grid-cols-12 gap-4">
                       {selectedDashboard.widgets.map(w => (
-                        <DashboardWidgetCard key={w.id} widget={w} workItems={workItems} editMode={dashboardEditMode}
+                        <DashboardWidgetCard key={w.id} widget={w} workItems={workItems} aggregate={dashboardAggregate} editMode={dashboardEditMode}
                           onRemove={() => removeDashboardWidget(w.id)}
                           onResize={gridW => resizeDashboardWidget(w, gridW)}
                           onConfigChange={cfg => updateDashboardWidgetConfig(w, cfg)}
@@ -5949,7 +5996,7 @@ function ReportSectionCard({ section, index, total, workItems, editMode, onChang
 // Iteration 6 — renders a single dashboard widget from the live work-item set.
 // Widget data is computed client-side from the config (metric + filter) so the
 // designer is fully functional without a per-widget query endpoint.
-function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, onConfigChange, onDrill, onDragStart, onDrop }) {
+function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove, onResize, onConfigChange, onDrill, onDragStart, onDrop }) {
   let config = {};
   try { config = JSON.parse(widget.config || '{}'); } catch { config = {}; }
   const filter = config.filter || {};
@@ -5960,11 +6007,20 @@ function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, 
     if (filter.type && i.type !== filter.type) return false;
     return true;
   });
-  const isChart = widget.widgetType === 'PIE' || widget.widgetType === 'BAR';
   const dimension = config.dimension || 'status';
-  const chartData = isChart ? aggregateByDimension(items, dimension) : [];
+  // When a server scope aggregate is present (TEAM/ORG), it takes precedence over the
+  // client-loaded items; its by-dimension series is already [{ label, value }].
+  const aggKey = 'by' + dimension.charAt(0).toUpperCase() + dimension.slice(1);
+  const chartData = aggregate ? (aggregate[aggKey] || []) : aggregateByDimension(items, dimension);
+  const scorecardCount = aggregate ? (aggregate.total ?? 0) : items.length;
+  const statusSeries = aggregate
+    ? (aggregate.byStatus || [])
+    : Object.entries(items.reduce((acc, i) => { const k = i.status || 'Unknown'; acc[k] = (acc[k] || 0) + 1; return acc; }, {}))
+        .map(([label, value]) => ({ label, value }));
+  const listItems = aggregate ? (aggregate.recent || []) : items;
   const span = Math.max(1, Math.min(widget.gridW || 4, 12));
-  const canDrill = !editMode && !!onDrill;
+  // Drill needs the underlying item set, which the aggregate doesn't carry — disable it then.
+  const canDrill = !editMode && !!onDrill && !aggregate;
   const drillBy = (label) => items.filter(i => (i[dimension] || 'None') === label);
 
   return (
@@ -6007,22 +6063,20 @@ function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, 
         canDrill ? (
           <button type="button" onClick={() => onDrill({ title: widget.title || 'Items', items })}
             className="text-3xl font-bold text-brand-navy dark:text-white rounded hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
-            {items.length}
+            {scorecardCount}
           </button>
         ) : (
-          <p className="text-3xl font-bold text-brand-navy dark:text-white">{items.length}</p>
+          <p className="text-3xl font-bold text-brand-navy dark:text-white">{scorecardCount}</p>
         )
       )}
 
       {widget.widgetType === 'STATUS_BAR' && (
         <div className="space-y-1.5 mt-1">
           {(() => {
-            const byStatus = {};
-            items.forEach(i => { byStatus[i.status || 'Unknown'] = (byStatus[i.status || 'Unknown'] || 0) + 1; });
-            const entries = Object.entries(byStatus);
-            const max = Math.max(1, ...entries.map(([, c]) => c));
-            if (entries.length === 0) return <p className="text-xs text-neutral-400">No matching items.</p>;
-            return entries.map(([status, count]) => {
+            const entries = statusSeries;
+            const max = Math.max(1, ...entries.map(e => e.value));
+            if (entries.length === 0) return <p className="text-xs text-neutral-600 dark:text-neutral-400">No matching items.</p>;
+            return entries.map(({ label: status, value: count }) => {
               const row = (
                 <>
                   <span className="text-xs text-neutral-600 dark:text-neutral-400 w-24 truncate text-left">{status}</span>
@@ -6048,8 +6102,8 @@ function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, 
 
       {widget.widgetType === 'ITEM_LIST' && (
         <div className="space-y-1 mt-1">
-          {items.length === 0 && <p className="text-xs text-neutral-400">No matching items.</p>}
-          {items.slice(0, config.limit || 6).map(i => (
+          {listItems.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-400">No matching items.</p>}
+          {listItems.slice(0, config.limit || 6).map(i => (
             <div key={i.id} className="flex items-center justify-between gap-2 py-1 border-b border-neutral-100 dark:border-neutral-700/50 last:border-0">
               <span className="text-xs text-neutral-700 dark:text-neutral-300 truncate">{i.title}</span>
               <span className="text-[10px] font-medium text-neutral-600 dark:text-neutral-400 flex-shrink-0">{i.status}</span>

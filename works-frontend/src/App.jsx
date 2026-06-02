@@ -1414,7 +1414,9 @@ export default function App() {
     if (!item) return;
     const updated = { ...item, [field]: value };
     setBacklogItems(prev => prev.map(i => i.id === itemId ? updated : i));
-    api.raw(`/work-items/${itemId}`, { method: 'PUT', body: JSON.stringify(updated) }).catch(() => {});
+    api.raw(`/work-items/${itemId}`, { method: 'PUT', body: JSON.stringify(updated) })
+      .then(r => { if (r.status === 409) { showToast('That item changed elsewhere — refreshing', 'error'); fetchBacklog(); } })
+      .catch(() => {});
   };
 
   const handleSaveFilter = () => {
@@ -2769,7 +2771,9 @@ export default function App() {
                       const item = sprintItems.find(i => i.id === itemId);
                       if (!item || item.status === status) return;
                       setSprintItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
-                      api.raw(`/work-items/${itemId}`, { method: 'PUT', body: JSON.stringify({ ...item, status }) }).catch(() => {});
+                      api.raw(`/work-items/${itemId}`, { method: 'PUT', body: JSON.stringify({ ...item, status }) })
+                        .then(r => { if (r.status === 409) { showToast('That item changed elsewhere — refreshing', 'error'); fetchSprints(); } })
+                        .catch(() => {});
                     }}
                     onSelect={setSelectedItem} onDelete={handleDelete} density={density} />
                 </>

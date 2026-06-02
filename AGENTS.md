@@ -1973,6 +1973,129 @@ spend 30 seconds on steps 1–4) and thorough for large features (a new capabili
 
 ---
 
+### 21.0 Step 0 — Orchestrate: Map the Task to Its Rules
+
+**Run this before every other step.** Its sole job is to prevent silent rule omissions — the
+most common way quality quietly degrades. Match the task's signals to the five domains below.
+Read every triggered section before touching code. Reading a section you don't need costs
+30 seconds; missing a section you do need costs hours of rework.
+
+#### Universal — applies to every task without exception
+
+| Section | Governs |
+|---------|---------|
+| **§0** | Product ethos · engineering standards · §0.3 multidimensional mandate (user / system / performance lenses) — alignment check before every solution |
+| **§6** | Anti-patterns — what NOT to do, architecture, UI, and workflow |
+| **§21** | This protocol — every step, every task |
+
+---
+
+#### Domain 1 — Product & Scope
+
+> Trigger: new requirement, new screen, new capability, or any iteration boundary question.
+
+| Signal | Sections to read |
+|--------|-----------------|
+| New requirement or user story | §1 (what bSmart Works is), §5 (active iteration — confirm you are NOT building N+1 scope) |
+| Deciding what / how much to build | §0.3 (analyse through user / system / performance lenses before proposing a solution) |
+| Feature touches AI | §3 → AI rules: all AI calls server-side, fallback documented before writing a line |
+| Any mutation emits an event | §3 → EventService: `events` table is append-only — never DELETE or UPDATE rows |
+| Release or version bump | §9 (SemVer, tagging, CHANGELOG update) |
+
+---
+
+#### Domain 2 — Architecture & Engineering Principles
+
+> Trigger: any backend Java file, new endpoint, DB change, auth/security, or new dependency.
+
+| Signal | Sections to read |
+|--------|-----------------|
+| Any backend Java change | §3 (layer responsibilities — Controller HTTP-only, Service owns logic + RBAC, Repository data-only), §0.2 |
+| New API endpoint | §3 (API contract: plural kebab path `/api/v1/`, `@Valid` on every DTO, error shape `{code, message, field?}`), §15 (pagination — no bare `findAll()`) |
+| DB schema / Flyway migration | §3 (DB rules: next migration **V28**, plural tables, sequential numbering), §18 (indexes, N+1 prevention, pool config) |
+| Auth · JWT · CORS · security | **§17 (entire section)**, §8.4 (secrets — never commit, `BSMART_*` env vars) |
+| RBAC / permission check | §3 → RBAC: `RbacService` is the only entry point — **never in controller, never in UI** |
+| New npm or Maven dependency | §12.1 (approval checklist: license, bundle size, maintenance, classify runtime vs dev) |
+| Data fetching in React | §16 (TanStack Query: `useQuery`/`useMutation`, query-key conventions, cache invalidation) |
+| API versioning or deprecation | §19 (URL-path versioning, `Deprecation` header, sunset process) |
+
+---
+
+#### Domain 3 — UI/UX Design System
+
+> Trigger: any change under `works-frontend/src/`. Read **§4 in full** — it is never optional for UI work.
+
+| Signal | Sections to read |
+|--------|-----------------|
+| **Any UI change** | **§4 (entire section)**, **§22** — both mandatory, always |
+| New React component | §4.13 (component inventory — check what already exists before creating), §4.19 (atomic design: atoms / molecules / organisms / templates), §22.4 (cva + cn() pattern) |
+| New page or full screen | §4.6 (three-zone layout — the only layout shell), §4.12 (navigation: page-level actions top-right sticky header only), §4.15 (Hick / Fitts / Miller / Gestalt / Jakob / Progressive Disclosure) |
+| Any interactive element | §4.8 (all 5 states: default / hover / active / disabled / focus — never skip any), §4.17 (WCAG 2.1 AA a11y), §4.23 (icon sizing + meaning + aria-label) |
+| Colour or token decision | §4.2 (token names only — no raw hex anywhere), §4.17 (contrast: `neutral-400` on white = FAIL for body text) |
+| Loading / empty / error state | §4.11 (skeleton screens, empty-state formula, toast vs inline rules), §4.18 (skeleton must match content dimensions — no layout shift), §22.4 |
+| Expand / collapse | §4.7 (every section must support collapse — this is the core interaction model), §22.3 (motion tokens) |
+| List or data table | §4.10 (zebra rows, sticky header, sort chevrons), §15.2 (filter conventions), §4.18 (virtual scroll if >100 rows) |
+| Form | §4.11 (inline errors **beneath** the field — never a toast for validation), §4.20 (copy: label / placeholder / helper text standards) |
+| Motion or animation | §4.5 (duration tokens: 120ms micro / 200ms panel / 300ms page), §22.3 (named motion tokens — no bounce/spring on functional surfaces) |
+| Z-index | §4.21 (named scale only: `z-sticky` / `z-dropdown` / `z-panel` / `z-modal` / `z-toast` — never `z-[100]`) |
+| Date / number display | §4.22 (centralise in `@/lib/format` — relative ≤7d, `31 May 2026` absolute, em-dash `—` for empty/null) |
+| Mutation (create / update / delete) | §4.16 → Optimistic UI is the **default**: update the UI immediately, API fires in background, revert silently on failure |
+| Command palette (⌘K) | §4.16 → every major action must be reachable via command palette |
+| Bulk actions | §4.16 → bulk action bar spec (fixed bottom, slides up on selection) |
+| Notification / feedback | §4.16 → ambient notifications only — nothing interrupts the user's view |
+
+---
+
+#### Domain 4 — Branching, Commits & PRs
+
+> Trigger: creating a branch, writing a commit, pushing, or opening a PR.
+
+| Signal | Sections to read |
+|--------|-----------------|
+| Creating a branch | §7.2 (naming: `type/issue-id-short-slug` — `claude/` prefix reserved for AI agents) |
+| Writing a commit message | §7.3 (Conventional Commits: `type(scope): description` — enforced by `.husky/commit-msg` + CI `commit-lint` job) |
+| Opening or sizing a PR | §11 (≤400 lines target, draft convention, self-review checklist) |
+| PR touches auth / CORS / JWT / security | §17.5 (**security-review label required** — Deepak self-reviews before merge) |
+| PR title | Must match Conventional Commits format — it becomes the squash-commit message on main |
+
+---
+
+#### Domain 5 — Quality & Testing
+
+> Trigger: writing tests, checking coverage, updating deps, or signing off on DoD.
+
+| Signal | Sections to read |
+|--------|-----------------|
+| Backend unit tests | §10.2 (`@Tag("unit")`, Mockito — no live DB, no Spring context) |
+| Frontend component tests | §10.3 (Vitest + RTL, co-located `.test.jsx`, query priority: `getByRole` first) |
+| Coverage gate | §10.1 (≥60% LINE backend via JaCoCo; ≥60% lines/functions/statements frontend via v8) |
+| Dependency update | §12.2 (Dependabot rules: PATCH auto-merge, MINOR check notes, MAJOR manual) |
+| Security scan | §12.3 (`npm audit --audit-level=high` in CI; OWASP check before releases) |
+
+---
+
+#### Pre-flight checklist — tick before Step 1 (§21.1)
+
+```
+□ §0 alignment check done — solution satisfies product ethos + engineering standards
+□ §6 scanned — none of the anti-patterns are in the plan
+□ Domains triggered (check all that apply):
+    [ ] Domain 1: Product & Scope
+    [ ] Domain 2: Architecture & Engineering
+    [ ] Domain 3: UI/UX Design System
+    [ ] Domain 4: Branching & PRs
+    [ ] Domain 5: Quality & Testing
+□ Every triggered domain's sections have been READ — no deferred or skipped sections
+□ Iteration confirmed (§5) — no N+1 scope
+□ If security-touching: §17 read in full, PR will receive the security-review label
+□ If DB-touching: next migration number confirmed (V28+), plural table names, indexes planned
+□ If UI-touching: §4 and §22 read end-to-end, §4.8 (5 states) and §4.17 (a11y) noted
+□ If new dependency: §12.1 checklist answered (license · bundle · maintenance)
+□ Conflict between signals? → §0.3 is the tiebreaker; unresolvable conflicts go to the user
+```
+
+---
+
 ### 21.1 Step 1 — Orient: Read Before You Write
 
 Before touching any code or file, answer these four questions from CLAUDE.md and the codebase:

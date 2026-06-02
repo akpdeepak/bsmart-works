@@ -8,7 +8,7 @@ import java.util.regex.*;
 import jakarta.validation.Valid;
 
 /**
- * WIQL — Work Item Query Language
+ * BQL — bSmart Query Language
  * Composable filter syntax: field operator value [AND/OR ...]
  * Examples:
  *   priority = Highest AND assignee = currentUser()
@@ -16,15 +16,15 @@ import jakarta.validation.Valid;
  *   dueDate < today() AND priority IN (High, Highest)
  */
 @RestController
-@RequestMapping("/api/v1/wiql")
-public class WiqlController {
+@RequestMapping("/api/v1/bql")
+public class BqlController {
 
     private final JdbcTemplate jdbc;
-    private final WiqlFilterRepository filterRepo;
+    private final BqlFilterRepository filterRepo;
     private final AuthenticatedUser authenticatedUser;
 
-    public WiqlController(JdbcTemplate jdbc,
-                          WiqlFilterRepository filterRepo,
+    public BqlController(JdbcTemplate jdbc,
+                          BqlFilterRepository filterRepo,
                           AuthenticatedUser authenticatedUser) {
         this.jdbc = jdbc;
         this.filterRepo = filterRepo;
@@ -44,7 +44,7 @@ public class WiqlController {
             String sql = buildSql(query, userId);
             return jdbc.queryForList(sql);
         } catch (Exception e) {
-            throw new IllegalArgumentException("WIQL parse error: " + e.getMessage());
+            throw new IllegalArgumentException("BQL parse error: " + e.getMessage());
         }
     }
 
@@ -62,24 +62,24 @@ public class WiqlController {
         return result;
     }
 
-    // Saved WIQL filters
+    // Saved BQL filters
     @GetMapping("/filters")
-    public List<WiqlFilter> listFilters() {
+    public List<BqlFilter> listFilters() {
         String userId = authenticatedUser.id();
         String workspaceId = getWorkspaceForUser(userId);
-        List<WiqlFilter> mine = filterRepo.findByWorkspaceIdAndCreatedBy(workspaceId, userId);
-        List<WiqlFilter> shared = filterRepo.findByWorkspaceIdAndIsSharedTrue(workspaceId);
+        List<BqlFilter> mine = filterRepo.findByWorkspaceIdAndCreatedBy(workspaceId, userId);
+        List<BqlFilter> shared = filterRepo.findByWorkspaceIdAndIsSharedTrue(workspaceId);
         Set<String> ids = new HashSet<>();
-        List<WiqlFilter> combined = new ArrayList<>();
-        for (WiqlFilter f : mine) { ids.add(f.getId()); combined.add(f); }
-        for (WiqlFilter f : shared) { if (!ids.contains(f.getId())) combined.add(f); }
+        List<BqlFilter> combined = new ArrayList<>();
+        for (BqlFilter f : mine) { ids.add(f.getId()); combined.add(f); }
+        for (BqlFilter f : shared) { if (!ids.contains(f.getId())) combined.add(f); }
         return combined;
     }
 
     @PostMapping("/filters")
-    public WiqlFilter saveFilter(@Valid @RequestBody WiqlFilter filter) {
+    public BqlFilter saveFilter(@Valid @RequestBody BqlFilter filter) {
         String userId = authenticatedUser.id();
-        filter.setId("WIQL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        filter.setId("BQL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         filter.setCreatedBy(userId);
         filter.setWorkspaceId(getWorkspaceForUser(userId));
         filter.setCreatedAt(OffsetDateTime.now());
@@ -93,7 +93,7 @@ public class WiqlController {
     }
 
     // ---------------------------------------------------------------
-    // WIQL → SQL translator
+    // BQL → SQL translator
     // ---------------------------------------------------------------
 
     private String buildSql(String query, String currentUserId) {
@@ -101,13 +101,13 @@ public class WiqlController {
             "SELECT id, title, status, type, priority, assignee_id, project_id, due_date, created_at " +
             "FROM work_items WHERE deleted_at IS NULL");
 
-        String where = translateWiql(query.trim(), currentUserId);
+        String where = translateBql(query.trim(), currentUserId);
         if (!where.isEmpty()) sb.append(" AND (").append(where).append(")");
         sb.append(" ORDER BY created_at DESC LIMIT 500");
         return sb.toString();
     }
 
-    private String translateWiql(String query, String currentUserId) {
+    private String translateBql(String query, String currentUserId) {
         // Tokenize: split on AND/OR (case-insensitive) while keeping delimiters
         // Each token is a single condition like: priority = Highest
         List<String> parts = new ArrayList<>();

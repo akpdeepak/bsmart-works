@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "wiql_filter")
-public class WiqlFilter {
+@Table(name = "bql_filter")
+public class BqlFilter {
     @Id private String id;
     private String workspaceId;
     private String createdBy;

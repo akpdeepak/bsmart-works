@@ -88,10 +88,11 @@ const worksA11yRules = {
 }
 
 // NOTE: eslint-plugin-tailwindcss is intentionally NOT used. No published version fits this
-// stack — the v4 line requires Tailwind 4 (we're on 3.4) and the v3 line calls the removed
-// `context.getSourceCode()` API (we're on ESLint 10). Tailwind token/class enforcement instead
-// lives in: (a) the worksArchRules below (no raw hex, no works-*), and (b) scripts/guardrails.sh
-// (no gray-*, arbitrary-value checks). Revisit if the plugin ships an ESLint-10 + TW-3 build.
+// stack: we're on Tailwind 4 + ESLint 10, and the plugin's released lines don't support
+// ESLint 10 — they still call the `context.getSourceCode()` API that ESLint 9 removed.
+// Tailwind token/class enforcement instead lives in: (a) the worksArchRules below (no raw hex,
+// no works-*), and (b) scripts/guardrails.sh (no gray-*, arbitrary-value checks). Revisit if
+// the plugin ships an ESLint-10-compatible build.
 
 export default defineConfig([
   globalIgnores(['dist']),

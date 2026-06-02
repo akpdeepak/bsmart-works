@@ -74,14 +74,22 @@ npm run dev
 The pre-commit hook runs automatically. To run the same checks manually:
 
 ```bash
-# From the repo root:
-npm run verify          # guardrails + AI-rules sync + frontend lint
+# Single command — runs ALL Definition of Done gates (CLAUDE.md §21.9):
+bash scripts/verify.sh
+
+# Faster variants:
+bash scripts/verify.sh --frontend   # frontend gates only (no JVM startup)
+bash scripts/verify.sh --backend    # backend gates only
+bash scripts/verify.sh --fast       # skip backend unit tests (lint + build only)
 
 # Or individually:
 bash scripts/guardrails.sh                           # brand/arch checks
 node scripts/generate-ai-rules.mjs --check           # AI rules in sync
+bash scripts/check-dod-sync.sh                       # DoD version tag in sync
 cd works-frontend && npm run lint                    # ESLint
-cd works-backend && ./mvnw -Dgroups=unit verify      # unit tests + coverage check
+cd works-frontend && npm test                        # Vitest unit + component tests
+cd works-frontend && npm run build                   # Vite production build
+cd works-backend && ./mvnw -B -Dgroups=unit verify   # unit tests + JaCoCo coverage gate
 ```
 
 ---

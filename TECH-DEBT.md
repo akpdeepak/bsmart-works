@@ -70,3 +70,26 @@ Format: What · Why accepted · Impact · Trigger to fix.
 - **What:** `deploy.yml` has TODO stubs for actual deployment commands
 - **Why accepted:** Hosting target not yet decided
 - **Trigger:** When hosting target is confirmed (CLAUDE.md §13.2 decision checklist)
+
+### TD-011 — Inline date/number formatting in App.jsx and older components
+- **What:** Many components format dates and numbers directly (e.g. `new Date(x).toLocaleDateString()`, manual time-diff strings) rather than using `@/lib/format.js`
+- **Why accepted:** `@/lib/format.js` did not exist when these components were written; it has now been created (CLAUDE.md §4.22)
+- **Impact:** Inconsistent date display (locale-ambiguous `05/31/26` risk), hard to change the format globally
+- **Trigger:** Remediate as App.jsx is extracted; all new components must use `@/lib/format.js` from day one
+
+### TD-012 — `molecules/` and `organisms/` component layers not yet populated
+- **What:** Atomic Design directories exist as scaffolds only; no molecules or organisms have been extracted yet (CLAUDE.md §4.19)
+- **Why accepted:** Features were built as organisms-in-App.jsx; extraction happens progressively per iteration
+- **Impact:** No reusable mid-level components → developers either duplicate or inflate atoms
+- **Trigger:** Extract the first molecule (SearchInput or FormField) and organism (WorkItemRow) during the next UI iteration
+
+### TD-013 — No integration test infrastructure (Testcontainers)
+- **What:** The integration test tier (§10.1) is documented but not set up; no `@Tag("integration")` tests exist
+- **Why accepted:** Integration tests require Docker; CI job for them is a future addition
+- **Impact:** Flyway migrations and service-to-repository wiring are only verified against a live local DB, not in CI
+- **Trigger:** When the team needs CI confidence on DB migrations; add `spring-boot-testcontainers` and the first `MigrationTest`
+
+### TD-014 — Storybook not installed
+- **What:** §4.19 requires each component to have a co-located `.stories.jsx`; Storybook is not set up
+- **Why accepted:** Visual component library is not the immediate priority; components are tested via Vitest + RTL
+- **Trigger:** When the component library reaches ~10 components and visual regression testing becomes valuable

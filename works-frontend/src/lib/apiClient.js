@@ -41,12 +41,19 @@ export const api = {
   // Returns the raw Response — drop-in for fetch().
   raw: apiRaw,
 
-  // Throw-on-error + parsed JSON (the old apiFetch behaviour).
+  // Throw-on-error + parsed JSON.
+  // Maps the standard API error shape { code, message, field? } (CLAUDE.md §3) to an Error
+  // whose message is the human-readable string. Falls back to err.error for legacy callers.
   async send(path, opts = {}) {
     const res = await apiRaw(path, opts);
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-      throw new Error(err.error || `Request failed: ${res.status}`);
+      const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
+      const message = err.message || err.error || `Request failed: ${res.status}`;
+      const apiError = new Error(message);
+      apiError.code = err.code ?? null;
+      apiError.field = err.field ?? null;
+      apiError.status = res.status;
+      throw apiError;
     }
     return res.json();
   },

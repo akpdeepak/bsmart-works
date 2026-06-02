@@ -5,6 +5,7 @@ import { Button } from '@/components/works/button';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
+import { DonutChart, BarChart } from '@/components/works/molecules';
 import { api } from '@/lib/apiClient';
 
 const NavCollapsedCtx = React.createContext(false);
@@ -762,6 +763,16 @@ export default function App() {
     })
       .then(() => openDashboard(selectedDashboard.id))
       .catch(() => showToast('Failed to resize widget', 'error'));
+  }
+
+  // Persist a widget's config (e.g. a chart's group-by dimension) via the same PUT as resize.
+  function updateDashboardWidgetConfig(widget, config) {
+    api.send(`/dashboards/${selectedDashboard.id}/widgets/${widget.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ ...widget, config: JSON.stringify(config) }),
+    })
+      .then(() => openDashboard(selectedDashboard.id))
+      .catch(() => showToast('Failed to update widget', 'error'));
   }
 
   // Reorder widgets by dropping one onto another, then persist the new order.
@@ -4320,6 +4331,8 @@ export default function App() {
                       <button onClick={() => addDashboardWidget('SCORECARD', { metric: 'count', filter: { open: true } }, 'Open items')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Scorecard</button>
                       <button onClick={() => addDashboardWidget('STATUS_BAR', { metric: 'byStatus' }, 'By status')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Status breakdown</button>
                       <button onClick={() => addDashboardWidget('ITEM_LIST', { metric: 'list', filter: { open: true }, limit: 6 }, 'Open work items')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Item list</button>
+                      <button onClick={() => addDashboardWidget('PIE', { dimension: 'status' }, 'Items by status')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Pie chart</button>
+                      <button onClick={() => addDashboardWidget('BAR', { dimension: 'priority' }, 'Items by priority')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Bar chart</button>
                       <span className="text-xs text-neutral-600 dark:text-neutral-400 ml-auto">Drag widgets to reorder</span>
                     </div>
                   )}
@@ -4334,6 +4347,7 @@ export default function App() {
                         <DashboardWidgetCard key={w.id} widget={w} workItems={workItems} editMode={dashboardEditMode}
                           onRemove={() => removeDashboardWidget(w.id)}
                           onResize={gridW => resizeDashboardWidget(w, gridW)}
+                          onConfigChange={cfg => updateDashboardWidgetConfig(w, cfg)}
                           onDragStart={() => setDragWidgetId(w.id)}
                           onDrop={() => reorderDashboardWidgets(w.id)} />
                       ))}
@@ -5602,10 +5616,23 @@ function StatCard({ label, value, sub, color, icon, onClick }) {
   );
 }
 
+// Count work items grouped by one dimension (status/type/priority), sorted desc.
+// Feeds the PIE and BAR dashboard widgets (iteration 6).
+function aggregateByDimension(items, dimension) {
+  const counts = {};
+  (items || []).forEach(i => {
+    const key = i[dimension] || 'None';
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  return Object.entries(counts)
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value);
+}
+
 // Iteration 6 — renders a single dashboard widget from the live work-item set.
 // Widget data is computed client-side from the config (metric + filter) so the
 // designer is fully functional without a per-widget query endpoint.
-function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, onDragStart, onDrop }) {
+function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, onConfigChange, onDragStart, onDrop }) {
   let config = {};
   try { config = JSON.parse(widget.config || '{}'); } catch { config = {}; }
   const filter = config.filter || {};
@@ -5616,6 +5643,9 @@ function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, 
     if (filter.type && i.type !== filter.type) return false;
     return true;
   });
+  const isChart = widget.widgetType === 'PIE' || widget.widgetType === 'BAR';
+  const dimension = config.dimension || 'status';
+  const chartData = isChart ? aggregateByDimension(items, dimension) : [];
   const span = Math.max(1, Math.min(widget.gridW || 4, 12));
 
   return (
@@ -5640,6 +5670,19 @@ function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, 
           </div>
         )}
       </div>
+
+      {editMode && isChart && (
+        <div className="flex items-center gap-2 mb-2">
+          <label htmlFor={`dim-${widget.id}`} className="text-[10px] uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Group by</label>
+          <select id={`dim-${widget.id}`} value={dimension}
+            onChange={e => onConfigChange && onConfigChange({ ...config, dimension: e.target.value })}
+            className="text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
+            <option value="status">Status</option>
+            <option value="type">Type</option>
+            <option value="priority">Priority</option>
+          </select>
+        </div>
+      )}
 
       {widget.widgetType === 'SCORECARD' && (
         <p className="text-3xl font-bold text-brand-navy dark:text-white">{items.length}</p>
@@ -5677,6 +5720,10 @@ function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, 
           ))}
         </div>
       )}
+
+      {widget.widgetType === 'PIE' && <DonutChart data={chartData} />}
+
+      {widget.widgetType === 'BAR' && <BarChart data={chartData} />}
     </div>
   );
 }

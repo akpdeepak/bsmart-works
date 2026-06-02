@@ -16,3 +16,6 @@
  *   - File naming: kebab-case.jsx beside kebab-case.test.jsx.
  *   - Export each molecule from this index once it exists.
  */
+
+export { DonutChart } from './donut-chart';
+export { BarChart } from './bar-chart';

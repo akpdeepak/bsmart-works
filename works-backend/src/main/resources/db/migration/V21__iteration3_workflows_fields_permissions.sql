@@ -1,5 +1,5 @@
 -- =====================================================================
--- Iteration 3: Workflows, Custom Fields, Permissions, WIQL
+-- Iteration 3: Workflows, Custom Fields, Permissions, BQL
 -- =====================================================================
 
 -- Workflow per project/type
@@ -121,8 +121,8 @@ CREATE TABLE field_layout (
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Saved WIQL filters
-CREATE TABLE wiql_filter (
+-- Saved BQL filters
+CREATE TABLE bql_filter (
     id           VARCHAR(36) PRIMARY KEY,
     workspace_id VARCHAR(36) NOT NULL,
     created_by   VARCHAR(36) NOT NULL,
@@ -139,4 +139,4 @@ CREATE INDEX idx_field_def_workspace ON field_def(workspace_id);
 CREATE INDEX idx_field_def_project   ON field_def(project_id);
 CREATE INDEX idx_wifv_work_item ON work_item_field_value(work_item_id);
 CREATE INDEX idx_role_def_workspace ON role_def(workspace_id);
-CREATE INDEX idx_wiql_workspace ON wiql_filter(workspace_id, created_by);
+CREATE INDEX idx_bql_workspace ON bql_filter(workspace_id, created_by);

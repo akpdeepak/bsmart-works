@@ -165,10 +165,10 @@ Unification is the discipline that keeps the product coherent across 20 iteratio
 - Same identity across web, mobile, API, IDE extension, command bar
 - Field-level security defined once, enforced everywhere
 
-#### Layer 3: Query — WIQL is the one query language
+#### Layer 3: Query — BQL is the one query language
 
 - Same syntax in filters, automations, compliance rules, KPI definitions, dashboards
-- Natural language → WIQL is the AI surface on one query language
+- Natural language → BQL is the AI surface on one query language
 
 #### Layer 4: AI Orchestration — one service powers every AI feature
 
@@ -589,7 +589,7 @@ Custom sprint length (1, 2, 3, 4 weeks). Custom board columns per project. Custo
 > Cap C  ·  Workflow conditions, validators, post-functions
 > Per-transition rules — 'only assignee can resolve', 'require comment on rejection', 'auto-set field'.
 >
-> Cap E  ·  WIQL — Work Item Query Language
+> Cap E  ·  BQL — bSmart Query Language
 > Composable query syntax used in filters, automations, rules, dashboards. One language everywhere.
 >
 
@@ -598,14 +598,14 @@ Custom sprint length (1, 2, 3, 4 weeks). Custom board columns per project. Custo
 - BCITS AMR team adds 'Substation Code', 'Meter Make', 'Firmware Version' fields to track utility-specific data
 - Admin restricts customer-PII fields to support-agent role only — engineers cannot see customer details
 - BCITS workflow: Bug → Triage → Investigating → Fix → Code Review → QA → Verified → Closed with role-gated transitions
-- Power user writes WIQL filter 'priority = Highest AND assignee = currentUser() AND status != Done' for daily focus
+- Power user writes BQL filter 'priority = Highest AND assignee = currentUser() AND status != Done' for daily focus
 
 #### Benefits
 
 - Domain data lives with the work — no spreadsheet sidebars
 - Permission system protects sensitive customer data while enabling collaboration
 - Workflow rigor without external scripting — process compliance built in
-- WIQL is one syntax across all of Works — learn once, apply everywhere
+- BQL is one syntax across all of Works — learn once, apply everywhere
 
 #### UI / UX considerations
 
@@ -613,11 +613,11 @@ Workflow editor is a horizontal flow diagram with drag-drop status nodes. Permis
 
 #### AI integration
 
-Still no AI surface. Underlying data being captured (field types chosen, common WIQL queries) will feed AI suggestions later.
+Still no AI surface. Underlying data being captured (field types chosen, common BQL queries) will feed AI suggestions later.
 
 #### Customization extension points
 
-This iteration is largely about customization. Workflow per type per workspace. Field visibility per role per field. WIQL anywhere a filter appears.
+This iteration is largely about customization. Workflow per type per workspace. Field visibility per role per field. BQL anywhere a filter appears.
 
 #### Estimated time
 
@@ -840,7 +840,7 @@ Custom dashboard layouts. Custom widget extensions. Custom report templates. Cus
 #### Features in this iteration
 
 > Cap K  ·  Rule definition (visual builder)
-> WIQL scope + assertion + threshold + severity + notify-to. Test-before-activate. Save as template.
+> BQL scope + assertion + threshold + severity + notify-to. Test-before-activate. Save as template.
 >
 > Cap K  ·  Seeded rule library (20+ templates)
 > Orphan story, stale item, missing estimate, scope creep, sprint without goal, unassigned in-progress.
@@ -909,7 +909,7 @@ The visual rule builder is itself the customization framework. Custom severities
 #### Features in this iteration
 
 > Cap M  ·  SLA policy definition
-> Scope (WIQL) + business-hours calendar + targets (response, resolution) + start/pause/stop triggers.
+> Scope (BQL) + business-hours calendar + targets (response, resolution) + start/pause/stop triggers.
 >
 > Cap M  ·  Business-hours calendars
 > Per-policy calendar (Mon-Fri 9-6 IST) with holidays and time zones.
@@ -1080,8 +1080,8 @@ Domain customization (custom subdomain or full custom domain). Branding per cust
 > Cap Z  ·  Data boundary controls
 > Admin restricts which data types can be sent to AI (e.g., no PII, no financial).
 >
-> Cap O  ·  Natural language → WIQL
-> First AI surface: 'open bugs assigned to me last week' becomes WIQL with preview.
+> Cap O  ·  Natural language → BQL
+> First AI surface: 'open bugs assigned to me last week' becomes BQL with preview.
 >
 > Cap O  ·  Summarization
 > Second AI surface: comment threads, sprints, dashboards summarized.
@@ -1093,7 +1093,7 @@ Domain customization (custom subdomain or full custom domain). Branding per cust
 - BCITS admin enables AI for engineering teams, disables it for the compliance team (deterministic only)
 - Individual engineer toggles AI off for themselves — prefers cleaner UI without suggestions
 - Cost-conscious admin sets ₹50,000/month AI budget — system auto-degrades at 80% consumed
-- Engineer types 'open bugs assigned to Rahul fixed last week' — AI generates WIQL, shows preview, user confirms
+- Engineer types 'open bugs assigned to Rahul fixed last week' — AI generates BQL, shows preview, user confirms
 
 #### Benefits
 
@@ -1109,7 +1109,7 @@ AI button (topbar) is Works Orange — the highest-visibility accent. When AI is
 
 #### AI integration
 
-This iteration IS about AI. Two surfaces ship — natural language to WIQL (high-utility, low-risk) and summarization (no-mutation). More in iteration 11.
+This iteration IS about AI. Two surfaces ship — natural language to BQL (high-utility, low-risk) and summarization (no-mutation). More in iteration 11.
 
 #### Customization extension points
 
@@ -1184,7 +1184,7 @@ The AI Control Plane is the customization surface for AI itself. Every AI behavi
 
 #### Benefits
 
-- Natural language access for non-power users — no learning WIQL or workflow editor
+- Natural language access for non-power users — no learning BQL or workflow editor
 - Story / test case / runbook writing accelerated 5-10x
 - Customer self-service deflection rate increases via KB suggestions
 - Dashboards explain themselves — no need to ask an analyst what changed
@@ -1948,7 +1948,7 @@ Higher-level restriction wins. Admin can't force AI on for a user who wants it o
 ### 8.3 What still works when AI is off
 
 - All work item CRUD, board operations, sprints, comments
-- All search — full-text and WIQL (natural language → WIQL hidden)
+- All search — full-text and BQL (natural language → BQL hidden)
 - Conversational command bar — degrades to keyword search + exact commands
 - All compliance rules, SLA tracking, KPI computation
 - All dashboards (without AI narrative), integrations, automations, customizations

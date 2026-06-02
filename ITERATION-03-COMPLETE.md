@@ -16,17 +16,17 @@
 
 7. **Workflow conditions, validators, post-functions** — stored as JSONB arrays on `workflow_transition`. Evaluated/executed server-side (JSONB schema extensible).
 
-8. **WIQL — Work Item Query Language** — `/api/v1/wiql/execute` accepts composable queries (field = value AND/OR chains, IN lists, comparison operators, functions: currentUser() today() now()). Saved filters at `/api/v1/wiql/filters`.
+8. **BQL — bSmart Query Language** — `/api/v1/bql/execute` accepts composable queries (field = value AND/OR chains, IN lists, comparison operators, functions: currentUser() today() now()). Saved filters at `/api/v1/bql/filters`.
 
 ## UI
 
 - **Workflows & Fields** view in sidebar with 4 sub-tabs: Workflows, Custom Fields, Permissions Matrix, Item Types
-- **WIQL Query** view with textarea editor, syntax reference, saved filters bar, results table
+- **BQL Query** view with textarea editor, syntax reference, saved filters bar, results table
 - Both accessible from new "Configuration" sidebar section
 
 ## Key decisions
 
 - Workflow statuses and transitions use JSONB for conditions/validators/post-functions (future scripting layer)
-- WIQL translator generates parameterised SQL (no raw user input in queries)
+- BQL translator generates parameterised SQL (no raw user input in queries)
 - Field values stored as three columns (text/number/json) covering all 17 types
 - Permission matrix endpoint returns pre-joined data to avoid N+1 in the UI

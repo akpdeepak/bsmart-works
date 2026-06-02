@@ -192,7 +192,7 @@ THEN the audit log shows: STARTED at 09:00, PAUSED at 09:47 (reason: "Waiting fo
 ('WRK-809', 'Bulk SLA application — apply policy to existing items with preview', 'Todo', 'Story',
  'Cap M · Iteration 8. When a new SLA policy is created or updated, it should be applicable to existing in-flight items — not just new ones. Bulk application with a preview before commit.',
  '- Admin selects a policy and clicks "Apply to existing items"
-- Preview shows: number of items that match the WIQL scope, example items, estimated clock start time
+- Preview shows: number of items that match the BQL scope, example items, estimated clock start time
 - "Apply" creates sla_record entries for all matching items; clock starts from creation time (configurable: from now OR from item created_at)
 - Items already resolved/closed are excluded from bulk application
 - Bulk operation is async: progress shown in admin dashboard
@@ -281,7 +281,7 @@ THEN they see the spend chart, "Projected: 113% of budget by month end", and the
  'PROJ-WORKS', 'USR-DEV1', 'SPR-ITER10', 5, 'HIGH', NOW()),
 
 ('WRK-1011', 'Summarization — AI surface for comment threads, sprints, dashboards', 'Todo', 'Story',
- 'Cap O · Iteration 10. The second AI surface to ship (after natural language → WIQL). Summarization is low-risk (read-only, no mutation) and high-value. Ships with the AI foundation.',
+ 'Cap O · Iteration 10. The second AI surface to ship (after natural language → BQL). Summarization is low-risk (read-only, no mutation) and high-value. Ships with the AI foundation.',
  '- Comment thread summarization: "Summarize thread" button on work items with 5+ comments → AI summary in a collapsible panel above the comments
 - Sprint summarization: "Summarize sprint" on the sprint board → AI summary of what was done, what slipped, key blockers
 - Dashboard widget: "AI Summary" widget that summarizes underlying data in plain language
@@ -325,7 +325,7 @@ THEN a dialog shows "Sandbox mode: this would have created Story [title] in WEB 
  '- For every AI feature in iterations 10-11: document the fallback in code (AiFeature enum with fallbackBehavior field)
 - Fallback table maintained in admin AI Settings > Fallback Reference:
   | Feature | AI On | AI Off |
-  | Natural language → WIQL | Translates free text | Manual WIQL editor shown |
+  | Natural language → BQL | Translates free text | Manual BQL editor shown |
   | Summarization | Summary panel | Full content shown, no summary |
   | Smart triage | Suggested assignee/priority | Empty fields, user picks manually |
   | Story generation | AI draft | Blank template with field labels |
@@ -1062,13 +1062,13 @@ THEN the conditional field appears only when the threshold condition is met; sub
 ('WRK-1710', 'Custom views and pages — build custom landing pages with chosen widgets per role', 'Todo', 'Story',
  'Cap R · Iteration 17. Role-tuned surfaces (iterations 14-16) provide built-in views. Custom pages let admins build additional views specific to their team — a field engineer''s site visit tracker, a finance manager''s cost overview.',
  '- Page builder: drag-drop widget canvas (uses same widget library as dashboards — WRK-601)
-- Widget types available for pages: KPI card, work item list (with WIQL filter), chart, knowledge article embed, external URL embed, custom text block, image
+- Widget types available for pages: KPI card, work item list (with BQL filter), chart, knowledge article embed, external URL embed, custom text block, image
 - Page access control: assign a page to specific roles or specific users
 - Navigation: custom pages appear in the sidenav under "Workspace" section
 - Mobile: custom pages render responsively on mobile (touch-friendly widgets)
 - Template: save a custom page layout as a template reusable across workspaces
 GIVEN BCITS field engineers need a "Today''s Site Visits" page showing only their assigned Meter Rollout items due today
-WHEN admin builds this page with a filtered work item list (WIQL: type=MeterRollout AND assignee=currentUser() AND due_date=today)
+WHEN admin builds this page with a filtered work item list (BQL: type=MeterRollout AND assignee=currentUser() AND due_date=today)
 THEN field engineers see this page as their default view in the mobile app',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-ITER17', 5, 'MEDIUM', NOW()),
 
@@ -1077,12 +1077,12 @@ THEN field engineers see this page as their default view in the mobile app',
  '- Extension types supported:
   1. Custom field renderer: render a field value with custom HTML/CSS (e.g. render a meter serial number as a QR code)
   2. Custom workflow action: call external system on transition (beyond the built-in webhook — synchronous with Works waiting for response)
-  3. Custom WIQL function: add a custom function to WIQL (e.g. isInMaintenanceWindow())
+  3. Custom BQL function: add a custom function to BQL (e.g. isInMaintenanceWindow())
   4. Custom dashboard widget: render arbitrary data from an external API as a Works widget
 - Sandboxed execution: runs in a V8 isolate; max 500ms execution time; no filesystem access; HTTP calls allowed to allow-listed domains only
 - Developer portal (iteration 20) will host public extensions
 - Audit: every extension execution logged with: extension name, trigger, duration, outcome
-GIVEN BCITS needs a custom WIQL function isInRegulatoryFreeze() that calls their internal compliance calendar API
+GIVEN BCITS needs a custom BQL function isInRegulatoryFreeze() that calls their internal compliance calendar API
 WHEN they install the extension
 THEN compliance rules can use: WHERE isInRegulatoryFreeze() = true AND type = "Change Request"',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-ITER17', 8, 'MEDIUM', NOW())
@@ -1210,7 +1210,7 @@ INSERT INTO work_items (id, title, status, type, description, acceptance_criteri
  'Cap I · Iteration 20. The knowledge repository (iteration 5) covers articles. Advanced features in the final iteration add: real-time multi-author collaboration, structured data extraction from articles, and a document template system for formal documents.',
  '- Multi-author collaboration: two authors can edit the same article simultaneously (same SSE/CRDT system as real-time co-presence WRK-1803)
 - Conflict resolution: operational transformation ensures no content lost during simultaneous edits
-- Structured data extraction: admin defines a schema (e.g. "extract all IP addresses from runbooks") → AI extracts and stores as structured JSON on the article — queryable via WIQL
+- Structured data extraction: admin defines a schema (e.g. "extract all IP addresses from runbooks") → AI extracts and stores as structured JSON on the article — queryable via BQL
 - Document templates: formal document generator — "Generate a project charter from this template using project data" → fills in team, dates, objectives from Works data automatically
 - Article translation: AI translates an article to Hindi or another supported language (WRK-2007 localization foundation)
 - Content versioning improvements: version compare now shows visual diff for images and tables (not just text)

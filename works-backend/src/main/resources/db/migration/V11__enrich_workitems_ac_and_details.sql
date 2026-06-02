@@ -107,14 +107,14 @@ UPDATE work_items SET
 - Transition guards server-side: only-assignee-can-resolve, require-AC-before-In-Progress, auto-set-field
 - Roles and permissions matrix: VIEWER / MEMBER / LEAD / ADMIN / OWNER — enforced at Spring Security @PreAuthorize level
 - Field-level visibility: Hidden / Read-only / Editable per role per field — server-enforced
-- Automation engine: When [trigger], if [WIQL condition], then [action] — multi-step chains (iteration 13)
-- WIQL: parse and evaluate queries for filter, automation, compliance — one language everywhere
+- Automation engine: When [trigger], if [BQL condition], then [action] — multi-step chains (iteration 13)
+- BQL: parse and evaluate queries for filter, automation, compliance — one language everywhere
 GIVEN an admin creates a custom workflow for "Bug" type with transition "Fix → Code Review → QA → Verified → Closed"
 WHEN an engineer tries to move a bug from Fix to Closed directly
-THEN the transition is blocked with a clear error; only the WIQL-allowed path works',
+THEN the transition is blocked with a clear error; only the BQL-allowed path works',
   definition_of_done = '- Custom workflows stored in DB; changes versioned and sandbox-testable
 - Permission matrix enforced at API layer — not just UI
-- WIQL parser covers: AND/OR, field comparisons, currentUser(), relative dates, IN lists'
+- BQL parser covers: AND/OR, field comparisons, currentUser(), relative dates, IN lists'
 WHERE id = 'WRK-CC';
 
 
@@ -127,7 +127,7 @@ UPDATE work_items SET
 GIVEN a BCITS admin adds a "Substation Code" (Text) and "Meter Make" (Select) field to the "Meter Rollout" type
 WHEN an engineer creates a Meter Rollout work item
 THEN they see those fields in the form, values are validated, and stored correctly',
-  definition_of_done = '- Custom field values indexed for WIQL querying
+  definition_of_done = '- Custom field values indexed for BQL querying
 - Layout changes previewed before saving
 - Hidden fields return no data in API response for unauthorised roles'
 WHERE id = 'WRK-CD';
@@ -136,16 +136,16 @@ WHERE id = 'WRK-CD';
 UPDATE work_items SET
   acceptance_criteria = '- Full-text search across title, description, comments — PostgreSQL tsvector with trigram index
 - Debounced (300ms) type-ahead dropdown with type badge on each result
-- WIQL: composable syntax — fields, operators, functions (currentUser(), NOW(), relative dates)
+- BQL: composable syntax — fields, operators, functions (currentUser(), NOW(), relative dates)
 - Saved filters: name, save, apply, list, share with team
-- Natural language → WIQL translation via AI (iteration 11): "open bugs assigned to me last week" → WIQL
-- When AI is off: search is full-text + WIQL only; natural language surface hidden
+- Natural language → BQL translation via AI (iteration 11): "open bugs assigned to me last week" → BQL
+- When AI is off: search is full-text + BQL only; natural language surface hidden
 GIVEN a user types "priority = Highest AND assignee = currentUser() AND status != Done" in the filter bar
-THEN the board filters correctly using WIQL
+THEN the board filters correctly using BQL
 GIVEN a user types "open bugs blocked by WRK-001" in natural language (AI on)
-THEN AI generates the correct WIQL, shows preview, user confirms',
+THEN AI generates the correct BQL, shows preview, user confirms',
   definition_of_done = '- Search P95 < 500ms on a 10,000 item workspace
-- WIQL parser rejects malformed queries with clear error messages
+- BQL parser rejects malformed queries with clear error messages
 - Saved filters shared across team members; private filters visible only to creator'
 WHERE id = 'WRK-CE';
 
@@ -254,7 +254,7 @@ When any user moves an item to In Review
 Then the item assignee is automatically set to that user with an event logged
 
 AC CHECKLIST:
-- [ ] Condition types: field-not-empty, role-gate, WIQL-expression
+- [ ] Condition types: field-not-empty, role-gate, BQL-expression
 - [ ] Post-function types: set-field, send-notification, create-linked-item, call-webhook
 - [ ] Condition evaluated server-side on every status change API call
 - [ ] Post-functions run synchronously for field-set; async for notifications/webhooks
@@ -265,16 +265,16 @@ WHERE id = 'WRK-301';
 
 
 UPDATE work_items SET
-  description = 'WIQL (Work Item Query Language) — the one query language used everywhere in Works.
-Filters, automations, compliance rules, KPI definitions, dashboard gadgets all use the same WIQL syntax.
-Users learn it once; it works everywhere. AI surface translates natural language → WIQL.',
+  description = 'BQL (bSmart Query Language) — the one query language used everywhere in Works.
+Filters, automations, compliance rules, KPI definitions, dashboard gadgets all use the same BQL syntax.
+Users learn it once; it works everywhere. AI surface translates natural language → BQL.',
   acceptance_criteria = 'Given a user enters: priority = "High" AND assignee = currentUser() AND status != "Done"
 Then the board filters to only matching items
 
 Given a user enters: created > -7d AND type = "Bug"
 Then items created in the last 7 days of type Bug are shown
 
-WIQL grammar must support:
+BQL grammar must support:
 - [ ] Field comparisons: =, !=, >, <, >=, <=, IN, NOT IN, CONTAINS, IS EMPTY, IS NOT EMPTY
 - [ ] Logical: AND, OR, NOT, parentheses for grouping
 - [ ] Functions: currentUser(), NOW(), startOfSprint(), endOfSprint()
@@ -282,10 +282,10 @@ WIQL grammar must support:
 - [ ] String literals with single or double quotes
 - [ ] Field names match Java camelCase and snake_case aliases (assignee_id / assignee both work)
 
-WIQL parser returns structured AST; SQL translator converts to parameterised JDBC query (no string interpolation — SQL injection impossible).',
-  definition_of_done = '- WIQL parser rejects malformed queries with line/column error location
+BQL parser returns structured AST; SQL translator converts to parameterised JDBC query (no string interpolation — SQL injection impossible).',
+  definition_of_done = '- BQL parser rejects malformed queries with line/column error location
 - Parser has unit test suite covering 50+ valid and 20+ invalid queries
-- Natural language → WIQL AI surface ready to plug in at iteration 11'
+- Natural language → BQL AI surface ready to plug in at iteration 11'
 WHERE id = 'WRK-320';
 
 
@@ -295,7 +295,7 @@ WHERE id = 'WRK-320';
 
 UPDATE work_items SET
   description = 'Visual compliance rule builder — the UX for defining what "compliant" means for a BCITS workspace.
-Rules use WIQL for scope (which items this rule applies to) and assertion (what must be true).
+Rules use BQL for scope (which items this rule applies to) and assertion (what must be true).
 This is the feature that most differentiates Works from Jira / Azure DevOps / OpenProject.',
   acceptance_criteria = 'Given an admin opens the compliance rule builder
 When they select: scope = "type = Story AND status = In Progress", assertion = "acceptance_criteria IS NOT EMPTY", severity = HIGH, notify = Project Lead
@@ -310,7 +310,7 @@ When the engine runs the rule against existing items
 Then a preview shows: "23 items would currently violate this rule" before activating
 
 AC CHECKLIST:
-- [ ] Rule has: name, description, scope (WIQL), assertion (WIQL), severity (CRITICAL/HIGH/MEDIUM/LOW), notification targets, active/inactive toggle
+- [ ] Rule has: name, description, scope (BQL), assertion (BQL), severity (CRITICAL/HIGH/MEDIUM/LOW), notification targets, active/inactive toggle
 - [ ] Visual builder: scope picker (type, project, sprint) + assertion builder (field conditions)
 - [ ] Save as template for reuse
 - [ ] Test-before-activate dry-run
@@ -592,16 +592,16 @@ WHERE id = 'WRK-BUG-02';
 
 
 UPDATE work_items SET
-  description = 'Filter parameters and search terms are passed through to SQL without proper parameterisation in some query paths. Confirmed in the WIQL filter-to-SQL translation path (before WIQL parser is built in iteration 3). This is a CRITICAL security vulnerability.',
+  description = 'Filter parameters and search terms are passed through to SQL without proper parameterisation in some query paths. Confirmed in the BQL filter-to-SQL translation path (before BQL parser is built in iteration 3). This is a CRITICAL security vulnerability.',
   acceptance_criteria = '- [ ] All database queries use Spring Data JPA, jOOQ parameterised queries, or Spring''s JdbcTemplate with ? placeholders — NO string concatenation into SQL
-- [ ] WIQL-to-SQL translator uses parameterised binding for all user-supplied values
+- [ ] BQL-to-SQL translator uses parameterised binding for all user-supplied values
 - [ ] Security test: attempt SQL injection via filter field — must return 422 (invalid query) not execute
 - [ ] Penetration test scenario added to CI: SQLMap scan on filter endpoints returns zero injections
 - [ ] Code review: grep codebase for "+" + "query" patterns — zero occurrences in production code paths',
   steps_to_reproduce = '1. In the filter bar, enter: title = "test'' OR ''1''=''1"
 2. Observe the query sent to the backend
 3. If the query executes without error and returns unexpected results → SQL injection is possible',
-  expected_result = 'The input should be rejected at the WIQL parser level with a 422 error.',
+  expected_result = 'The input should be rejected at the BQL parser level with a 422 error.',
   actual_result = 'Potential for unparameterised string interpolation in early filter implementation.',
   severity = 'CRITICAL',
   environment = 'All environments'

@@ -206,6 +206,8 @@ public class WorkItemController {
             }
         }
         return repository.findById(id).map(existing -> {
+            // Optimistic concurrency — reject a stale write (no-op if the client sent no version).
+            ConcurrencyGuard.requireCurrentVersion(existing.getVersion(), updatedItem.getVersion());
             String oldStatus = existing.getStatus();
             String oldAssignee = existing.getAssigneeId();
             String oldPriority = existing.getPriority();
@@ -226,6 +228,7 @@ public class WorkItemController {
             existing.setStoryPoints(updatedItem.getStoryPoints());
             existing.setPriority(updatedItem.getPriority());
             existing.setParentId(updatedItem.getParentId());
+            existing.setVersion(ConcurrencyGuard.nextVersion(existing.getVersion()));
 
             WorkItem saved = repository.save(existing);
 

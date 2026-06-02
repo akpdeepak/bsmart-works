@@ -1,0 +1,48 @@
+package com.example.demo;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import java.time.OffsetDateTime;
+
+@Entity
+@Table(name = "dashboard_widgets")
+public class DashboardWidget {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String dashboardId;
+    @NotBlank
+    private String widgetType;
+    private String title;
+    @Column(columnDefinition = "jsonb")
+    private String config = "{}";
+    private Integer gridX;
+    private Integer gridY;
+    private Integer gridW;
+    private Integer gridH;
+    private Integer position;
+    private OffsetDateTime createdAt;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getDashboardId() { return dashboardId; }
+    public void setDashboardId(String dashboardId) { this.dashboardId = dashboardId; }
+    public String getWidgetType() { return widgetType; }
+    public void setWidgetType(String widgetType) { this.widgetType = widgetType; }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+    public String getConfig() { return config; }
+    public void setConfig(String config) { this.config = config; }
+    public Integer getGridX() { return gridX; }
+    public void setGridX(Integer gridX) { this.gridX = gridX; }
+    public Integer getGridY() { return gridY; }
+    public void setGridY(Integer gridY) { this.gridY = gridY; }
+    public Integer getGridW() { return gridW; }
+    public void setGridW(Integer gridW) { this.gridW = gridW; }
+    public Integer getGridH() { return gridH; }
+    public void setGridH(Integer gridH) { this.gridH = gridH; }
+    public Integer getPosition() { return position; }
+    public void setPosition(Integer position) { this.position = position; }
+    public OffsetDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
+}

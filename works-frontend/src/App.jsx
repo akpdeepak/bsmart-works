@@ -6,6 +6,7 @@ import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
 import { DonutChart, BarChart } from '@/components/works/molecules';
+import { exportElementToPng, exportElementToPdf, exportRowsToCsv } from '@/lib/export';
 import { api } from '@/lib/apiClient';
 
 const NavCollapsedCtx = React.createContext(false);
@@ -4388,6 +4389,9 @@ export default function App() {
                       <h1 className="text-xl font-semibold text-neutral-900 dark:text-white truncate">{selectedDashboard.name}</h1>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      {!dashboardEditMode && <ExportButtons targetId="dashboard-export-area"
+                        rows={workItems.map(i => ({ ID: i.id, Title: i.title, Type: i.type, Status: i.status, Priority: i.priority, Assignee: i.assigneeId }))}
+                        filename={selectedDashboard.name || 'dashboard'} onError={() => showToast('Export failed — try again', 'error')} />}
                       <Button variant={dashboardEditMode ? 'action' : 'secondary'} onClick={() => setDashboardEditMode(e => !e)}>
                         {dashboardEditMode ? 'Done' : 'Edit'}
                       </Button>
@@ -4412,7 +4416,7 @@ export default function App() {
                       subtitle="Turn on Edit and add your first widget to start tracking."
                       action={<Button variant="action" onClick={() => setDashboardEditMode(true)}>Edit dashboard</Button>} />
                   ) : (
-                    <div className="grid grid-cols-12 gap-4">
+                    <div id="dashboard-export-area" className="grid grid-cols-12 gap-4">
                       {selectedDashboard.widgets.map(w => (
                         <DashboardWidgetCard key={w.id} widget={w} workItems={workItems} editMode={dashboardEditMode}
                           onRemove={() => removeDashboardWidget(w.id)}
@@ -4493,6 +4497,9 @@ export default function App() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      {!reportEditMode && <ExportButtons targetId="report-export-area"
+                        rows={workItems.map(i => ({ ID: i.id, Title: i.title, Type: i.type, Status: i.status, Priority: i.priority, Assignee: i.assigneeId }))}
+                        filename={selectedReport.name || 'report'} onError={() => showToast('Export failed — try again', 'error')} />}
                       {reportEditMode && <Button variant="action" onClick={() => { saveReport(); setReportEditMode(false); }}>Save</Button>}
                       <Button variant={reportEditMode ? 'secondary' : 'action'} onClick={() => { if (reportEditMode) { openReport(selectedReport.id); } else { setReportEditMode(true); } }}>{reportEditMode ? 'Cancel' : 'Edit'}</Button>
                       <button onClick={() => deleteReport(selectedReport.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
@@ -4514,7 +4521,7 @@ export default function App() {
                       subtitle="Turn on Edit and add sections — KPIs, charts, tables, narrative."
                       action={<Button variant="action" onClick={() => setReportEditMode(true)}>Edit report</Button>} />
                   ) : (
-                    <div className="space-y-4 max-w-4xl">
+                    <div id="report-export-area" className="space-y-4 max-w-4xl">
                       {reportSections.map((sec, i) => (
                         <ReportSectionCard key={i} section={sec} index={i} total={reportSections.length}
                           workItems={workItems} editMode={reportEditMode}
@@ -5783,6 +5790,22 @@ function StatCard({ label, value, sub, color, icon, onClick }) {
       <p className={`text-3xl font-bold ${color} mb-1`}>{value}</p>
       <p className="text-sm font-medium text-neutral-700">{label}</p>
       <p className="text-xs text-neutral-400 mt-0.5">{sub}</p>
+    </div>
+  );
+}
+
+// Iteration 6 — PNG/PDF/CSV export controls for a dashboard or report. PNG/PDF capture
+// the element with id=targetId; CSV uses the supplied flat rows. Heavy libs are
+// lazy-loaded inside the export helpers (CLAUDE.md §4.18).
+function ExportButtons({ targetId, rows, filename, onError }) {
+  const run = async (fn) => { try { await fn(); } catch { if (onError) onError(); } };
+  const cls = 'text-[10px] px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors';
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-[10px] uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mr-0.5">Export</span>
+      <button type="button" className={cls} onClick={() => run(() => exportElementToPdf(document.getElementById(targetId), filename))}>PDF</button>
+      <button type="button" className={cls} onClick={() => run(() => exportRowsToCsv(rows, filename))}>CSV</button>
+      <button type="button" className={cls} onClick={() => run(() => exportElementToPng(document.getElementById(targetId), filename))}>PNG</button>
     </div>
   );
 }

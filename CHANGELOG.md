@@ -14,6 +14,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 - Knowledge: article version history adds restore-to-version and line-level version diff
 - Knowledge: knowledge-base search-term analytics (most-searched terms), completing article analytics
 - Search: work-item search now matches comment bodies, not just title and description
+- Dashboards (iteration 6): user-built custom dashboards — create/rename/delete, a 12-column widget grid with drag-reorder and resize, and a starter widget set (scorecard, status breakdown, item list) rendering live work-item data (V29)
 
 ### Fixed
 - Knowledge: article search now honours the `search` query parameter (was silently ignored)

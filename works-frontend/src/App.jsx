@@ -270,6 +270,11 @@ export default function App() {
   });
   const [activityEventFilter, setActivityEventFilter] = useState('');
   const [velocityData, setVelocityData] = useState([]);
+  // Iteration 6 — custom dashboards
+  const [customDashboards, setCustomDashboards] = useState([]);
+  const [selectedDashboard, setSelectedDashboard] = useState(null); // { ...dashboard, widgets: [] }
+  const [dashboardEditMode, setDashboardEditMode] = useState(false);
+  const [dragWidgetId, setDragWidgetId] = useState(null);
   const [deleteUndoItem, setDeleteUndoItem] = useState(null);
   const deleteUndoTimer = useRef(null);
   const [itemChildren, setItemChildren] = useState([]);
@@ -709,6 +714,71 @@ export default function App() {
   function fetchVelocityData() {
     api.raw(`/sprints/velocity`)
       .then(r => r.json()).then(d => setVelocityData(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  // ── Iteration 6 — custom dashboards ──────────────────────────────────────────
+  function fetchCustomDashboards() {
+    api.raw(`/dashboards`)
+      .then(r => r.json()).then(d => setCustomDashboards(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+
+  function openDashboard(id) {
+    api.raw(`/dashboards/${id}`)
+      .then(r => r.json()).then(d => { setSelectedDashboard(d); setDashboardEditMode(false); }).catch(() => {});
+  }
+
+  function createDashboard() {
+    const name = prompt('Dashboard name'); // simple capture; inline form is a later refinement
+    if (!name || !name.trim()) return;
+    api.send(`/dashboards`, { method: 'POST', body: JSON.stringify({ name: name.trim(), scope: 'PERSONAL', workspaceId: 'WS-001' }) })
+      .then(d => { showToast('Dashboard created'); fetchCustomDashboards(); openDashboard(d.id); setDashboardEditMode(true); })
+      .catch(() => showToast('Failed to create dashboard', 'error'));
+  }
+
+  function deleteDashboard(id) {
+    api.send(`/dashboards/${id}`, { method: 'DELETE' })
+      .then(() => { showToast('Dashboard deleted'); setSelectedDashboard(null); fetchCustomDashboards(); })
+      .catch(() => showToast('Failed to delete dashboard', 'error'));
+  }
+
+  function addDashboardWidget(widgetType, config, title) {
+    if (!selectedDashboard) return;
+    const body = { widgetType, title, config: JSON.stringify(config || {}), gridW: 4, gridH: 2 };
+    api.send(`/dashboards/${selectedDashboard.id}/widgets`, { method: 'POST', body: JSON.stringify(body) })
+      .then(() => openDashboard(selectedDashboard.id))
+      .catch(() => showToast('Failed to add widget', 'error'));
+  }
+
+  function removeDashboardWidget(widgetId) {
+    api.send(`/dashboards/${selectedDashboard.id}/widgets/${widgetId}`, { method: 'DELETE' })
+      .then(() => openDashboard(selectedDashboard.id))
+      .catch(() => showToast('Failed to remove widget', 'error'));
+  }
+
+  function resizeDashboardWidget(widget, gridW) {
+    api.send(`/dashboards/${selectedDashboard.id}/widgets/${widget.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ ...widget, gridW }),
+    })
+      .then(() => openDashboard(selectedDashboard.id))
+      .catch(() => showToast('Failed to resize widget', 'error'));
+  }
+
+  // Reorder widgets by dropping one onto another, then persist the new order.
+  function reorderDashboardWidgets(targetId) {
+    if (!selectedDashboard || dragWidgetId == null || dragWidgetId === targetId) return;
+    const ws = [...selectedDashboard.widgets];
+    const from = ws.findIndex(w => w.id === dragWidgetId);
+    const to = ws.findIndex(w => w.id === targetId);
+    if (from < 0 || to < 0) return;
+    const [moved] = ws.splice(from, 1);
+    ws.splice(to, 0, moved);
+    const payload = ws.map((w, i) => ({ id: w.id, gridX: w.gridX, gridY: w.gridY, gridW: w.gridW, gridH: w.gridH, position: i }));
+    setSelectedDashboard(d => ({ ...d, widgets: ws })); // optimistic
+    setDragWidgetId(null);
+    api.send(`/dashboards/${selectedDashboard.id}/layout`, { method: 'PUT', body: JSON.stringify(payload) })
+      .then(() => openDashboard(selectedDashboard.id))
+      .catch(() => showToast('Failed to save layout', 'error'));
   }
 
   function fetchBranding() {
@@ -1533,6 +1603,7 @@ export default function App() {
             {sprints.find(s => s.status === 'ACTIVE') && <span className="ml-auto w-2 h-2 rounded-full bg-semantic-success flex-shrink-0"></span>}
           </NavItem>
           <NavItem active={view === 'reports'} onClick={() => { setView('reports'); fetchSprints(); fetchVelocityData(); }} icon="📊">Reports</NavItem>
+          <NavItem active={view === 'dashboards'} onClick={() => { setView('dashboards'); setSelectedDashboard(null); fetchCustomDashboards(); }} icon="📐">Dashboards</NavItem>
           <NavItem active={view === 'releases'} onClick={() => { setView('releases'); fetchReleases(); }} icon="🚀">Releases</NavItem>
 
           {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">Configuration</p>}
@@ -4193,6 +4264,87 @@ export default function App() {
           )}
 
           {/* ======================================================
+               ITERATION 6 — CUSTOM DASHBOARDS (designer + persistence)
+             ====================================================== */}
+          {view === 'dashboards' && (
+            <div className="p-6 overflow-y-auto h-full">
+              {!selectedDashboard ? (
+                <>
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h1 className="text-xl font-semibold text-neutral-900 dark:text-white">Dashboards</h1>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">Build your own views — add widgets, arrange the grid, save.</p>
+                    </div>
+                    <Button variant="action" onClick={createDashboard}>New dashboard</Button>
+                  </div>
+                  {customDashboards.length === 0 ? (
+                    <EmptyState icon="📐" title="No dashboards yet"
+                      subtitle="Create a dashboard and drop in widgets to track what matters to you."
+                      action={<Button variant="action" onClick={createDashboard}>New dashboard</Button>} />
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {customDashboards.map(d => (
+                        <div key={d.id} onClick={() => openDashboard(d.id)}
+                          className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all">
+                          <div className="flex items-start justify-between">
+                            <span className="text-2xl">📐</span>
+                            <span className="text-[10px] font-semibold text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-700 rounded-full px-2 py-0.5">{d.scope || 'PERSONAL'}</span>
+                          </div>
+                          <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mt-2 truncate">{d.name}</p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
+                            {d.updatedAt ? `Updated ${new Date(d.updatedAt).toLocaleDateString()}` : '—'}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <button onClick={() => setSelectedDashboard(null)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0">← Dashboards</button>
+                      <h1 className="text-xl font-semibold text-neutral-900 dark:text-white truncate">{selectedDashboard.name}</h1>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Button variant={dashboardEditMode ? 'action' : 'secondary'} onClick={() => setDashboardEditMode(e => !e)}>
+                        {dashboardEditMode ? 'Done' : 'Edit'}
+                      </Button>
+                      <button onClick={() => deleteDashboard(selectedDashboard.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
+                    </div>
+                  </div>
+
+                  {dashboardEditMode && (
+                    <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-md bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700">
+                      <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mr-1">Add widget</span>
+                      <button onClick={() => addDashboardWidget('SCORECARD', { metric: 'count', filter: { open: true } }, 'Open items')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Scorecard</button>
+                      <button onClick={() => addDashboardWidget('STATUS_BAR', { metric: 'byStatus' }, 'By status')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Status breakdown</button>
+                      <button onClick={() => addDashboardWidget('ITEM_LIST', { metric: 'list', filter: { open: true }, limit: 6 }, 'Open work items')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Item list</button>
+                      <span className="text-xs text-neutral-600 dark:text-neutral-400 ml-auto">Drag widgets to reorder</span>
+                    </div>
+                  )}
+
+                  {(selectedDashboard.widgets || []).length === 0 ? (
+                    <EmptyState icon="🧩" title="Empty dashboard"
+                      subtitle="Turn on Edit and add your first widget to start tracking."
+                      action={<Button variant="action" onClick={() => setDashboardEditMode(true)}>Edit dashboard</Button>} />
+                  ) : (
+                    <div className="grid grid-cols-12 gap-4">
+                      {selectedDashboard.widgets.map(w => (
+                        <DashboardWidgetCard key={w.id} widget={w} workItems={workItems} editMode={dashboardEditMode}
+                          onRemove={() => removeDashboardWidget(w.id)}
+                          onResize={gridW => resizeDashboardWidget(w, gridW)}
+                          onDragStart={() => setDragWidgetId(w.id)}
+                          onDrop={() => reorderDashboardWidgets(w.id)} />
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ======================================================
                ITERATION 5 — KNOWLEDGE REPOSITORY
              ====================================================== */}
           {view === 'knowledge' && (
@@ -5446,6 +5598,85 @@ function StatCard({ label, value, sub, color, icon, onClick }) {
       <p className={`text-3xl font-bold ${color} mb-1`}>{value}</p>
       <p className="text-sm font-medium text-neutral-700">{label}</p>
       <p className="text-xs text-neutral-400 mt-0.5">{sub}</p>
+    </div>
+  );
+}
+
+// Iteration 6 — renders a single dashboard widget from the live work-item set.
+// Widget data is computed client-side from the config (metric + filter) so the
+// designer is fully functional without a per-widget query endpoint.
+function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, onDragStart, onDrop }) {
+  let config = {};
+  try { config = JSON.parse(widget.config || '{}'); } catch { config = {}; }
+  const filter = config.filter || {};
+  const items = (workItems || []).filter(i => {
+    if (filter.open && i.status === 'Done') return false;
+    if (filter.status && i.status !== filter.status) return false;
+    if (filter.priority && i.priority !== filter.priority) return false;
+    if (filter.type && i.type !== filter.type) return false;
+    return true;
+  });
+  const span = Math.max(1, Math.min(widget.gridW || 4, 12));
+
+  return (
+    <div
+      style={{ gridColumn: `span ${span} / span ${span}` }}
+      draggable={editMode}
+      onDragStart={editMode ? onDragStart : undefined}
+      onDragOver={editMode ? (e => e.preventDefault()) : undefined}
+      onDrop={editMode ? onDrop : undefined}
+      className={`bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 ${editMode ? 'cursor-move ring-1 ring-brand-navy/20' : ''}`}>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide truncate">{widget.title || widget.widgetType}</p>
+        {editMode && (
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {[4, 6, 12].map(w => (
+              <button key={w} onClick={() => onResize(w)} aria-label={`Set width ${w}`}
+                className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${span === w ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy'}`}>
+                {w === 12 ? 'Full' : `${w}`}
+              </button>
+            ))}
+            <button onClick={onRemove} aria-label="Remove widget" className="text-[10px] text-semantic-danger hover:underline ml-1">Remove</button>
+          </div>
+        )}
+      </div>
+
+      {widget.widgetType === 'SCORECARD' && (
+        <p className="text-3xl font-bold text-brand-navy dark:text-white">{items.length}</p>
+      )}
+
+      {widget.widgetType === 'STATUS_BAR' && (
+        <div className="space-y-1.5 mt-1">
+          {(() => {
+            const byStatus = {};
+            items.forEach(i => { byStatus[i.status || 'Unknown'] = (byStatus[i.status || 'Unknown'] || 0) + 1; });
+            const entries = Object.entries(byStatus);
+            const max = Math.max(1, ...entries.map(([, c]) => c));
+            if (entries.length === 0) return <p className="text-xs text-neutral-400">No matching items.</p>;
+            return entries.map(([status, count]) => (
+              <div key={status} className="flex items-center gap-2">
+                <span className="text-xs text-neutral-600 dark:text-neutral-400 w-24 truncate">{status}</span>
+                <div className="flex-1 h-2 rounded-full bg-neutral-100 dark:bg-neutral-700 overflow-hidden">
+                  <div className="h-full bg-brand-navy-tint rounded-full" style={{ width: `${(count / max) * 100}%` }} />
+                </div>
+                <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 w-6 text-right">{count}</span>
+              </div>
+            ));
+          })()}
+        </div>
+      )}
+
+      {widget.widgetType === 'ITEM_LIST' && (
+        <div className="space-y-1 mt-1">
+          {items.length === 0 && <p className="text-xs text-neutral-400">No matching items.</p>}
+          {items.slice(0, config.limit || 6).map(i => (
+            <div key={i.id} className="flex items-center justify-between gap-2 py-1 border-b border-neutral-100 dark:border-neutral-700/50 last:border-0">
+              <span className="text-xs text-neutral-700 dark:text-neutral-300 truncate">{i.title}</span>
+              <span className="text-[10px] font-medium text-neutral-600 dark:text-neutral-400 flex-shrink-0">{i.status}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

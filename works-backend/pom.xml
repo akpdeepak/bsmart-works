@@ -173,6 +173,8 @@
 								<exclude>**/Assumption.class</exclude>
 								<exclude>**/Comment.class</exclude>
 								<exclude>**/CrossProjectDependency.class</exclude>
+								<exclude>**/Dashboard.class</exclude>
+								<exclude>**/DashboardWidget.class</exclude>
 								<exclude>**/Decision.class</exclude>
 								<exclude>**/Dependency.class</exclude>
 								<exclude>**/FieldDef.class</exclude>

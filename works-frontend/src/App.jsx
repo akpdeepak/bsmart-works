@@ -277,6 +277,11 @@ export default function App() {
   const [dashboardEditMode, setDashboardEditMode] = useState(false);
   const [dragWidgetId, setDragWidgetId] = useState(null);
   const [dashboardDrill, setDashboardDrill] = useState(null); // { title, items } — drill-down modal
+  const [reports, setReports] = useState([]);
+  const [reportTemplates, setReportTemplates] = useState([]);
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [reportSections, setReportSections] = useState([]);
+  const [reportEditMode, setReportEditMode] = useState(false);
   const [deleteUndoItem, setDeleteUndoItem] = useState(null);
   const deleteUndoTimer = useRef(null);
   const [itemChildren, setItemChildren] = useState([]);
@@ -741,6 +746,69 @@ export default function App() {
     api.send(`/dashboards/${id}`, { method: 'DELETE' })
       .then(() => { showToast('Dashboard deleted'); setSelectedDashboard(null); fetchCustomDashboards(); })
       .catch(() => showToast('Failed to delete dashboard', 'error'));
+  }
+
+  // ── Iteration 6 — custom reports ─────────────────────────────────────────────
+  function fetchReports() {
+    api.raw(`/reports`).then(r => r.json()).then(d => setReports(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchReportTemplates() {
+    api.raw(`/reports/templates`).then(r => r.json()).then(d => setReportTemplates(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function openReport(id) {
+    api.raw(`/reports/${id}`).then(r => r.json()).then(d => {
+      setSelectedReport(d);
+      try { setReportSections(JSON.parse(d.sections || '[]')); } catch { setReportSections([]); }
+      setReportEditMode(false);
+    }).catch(() => {});
+  }
+  function createBlankReport() {
+    const name = prompt('Report name'); // simple capture; inline form is a later refinement
+    if (!name || !name.trim()) return;
+    api.send(`/reports`, { method: 'POST', body: JSON.stringify({ name: name.trim(), sections: '[]', workspaceId: 'WS-001' }) })
+      .then(d => { showToast('Report created'); fetchReports(); openReport(d.id); setReportEditMode(true); })
+      .catch(() => showToast('Failed to create report', 'error'));
+  }
+  function createReportFromTemplate(tpl) {
+    api.send(`/reports`, { method: 'POST', body: JSON.stringify({ name: tpl.name, description: tpl.description, sections: tpl.sections, workspaceId: 'WS-001' }) })
+      .then(d => { showToast('Report created from template'); fetchReports(); openReport(d.id); setReportEditMode(true); })
+      .catch(() => showToast('Failed to create report', 'error'));
+  }
+  function saveReport() {
+    if (!selectedReport) return;
+    api.send(`/reports/${selectedReport.id}`, { method: 'PUT', body: JSON.stringify({ ...selectedReport, sections: JSON.stringify(reportSections) }) })
+      .then(d => { setSelectedReport(d); showToast('Report saved'); fetchReports(); })
+      .catch(() => showToast('Failed to save report', 'error'));
+  }
+  function deleteReport(id) {
+    api.send(`/reports/${id}`, { method: 'DELETE' })
+      .then(() => { showToast('Report deleted'); setSelectedReport(null); fetchReports(); })
+      .catch(() => showToast('Failed to delete report', 'error'));
+  }
+  function addReportSection(type) {
+    const defaults = {
+      kpi:       { title: 'Open items', config: { metric: 'count', filter: { open: true } } },
+      chart:     { title: 'By status', config: { chartType: 'bar', dimension: 'status' } },
+      table:     { title: 'Work items', config: { limit: 20 } },
+      narrative: { title: 'Summary', config: { text: '' } },
+    };
+    const base = defaults[type] || defaults.kpi;
+    setReportSections(s => [...s, { type, title: base.title, config: base.config }]);
+  }
+  function updateReportSection(index, section) {
+    setReportSections(s => s.map((x, i) => (i === index ? section : x)));
+  }
+  function moveReportSection(index, delta) {
+    setReportSections(s => {
+      const j = index + delta;
+      if (j < 0 || j >= s.length) return s;
+      const next = [...s];
+      [next[index], next[j]] = [next[j], next[index]];
+      return next;
+    });
+  }
+  function removeReportSection(index) {
+    setReportSections(s => s.filter((_, i) => i !== index));
   }
 
   function addDashboardWidget(widgetType, config, title) {
@@ -1616,6 +1684,7 @@ export default function App() {
           </NavItem>
           <NavItem active={view === 'reports'} onClick={() => { setView('reports'); fetchSprints(); fetchVelocityData(); }} icon="📊">Reports</NavItem>
           <NavItem active={view === 'dashboards'} onClick={() => { setView('dashboards'); setSelectedDashboard(null); fetchCustomDashboards(); }} icon="📐">Dashboards</NavItem>
+          <NavItem active={view === 'reportbuilder'} onClick={() => { setView('reportbuilder'); setSelectedReport(null); fetchReports(); fetchReportTemplates(); }} icon="📄">Report builder</NavItem>
           <NavItem active={view === 'releases'} onClick={() => { setView('releases'); fetchReleases(); }} icon="🚀">Releases</NavItem>
 
           {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">Configuration</p>}
@@ -4365,6 +4434,101 @@ export default function App() {
               onOpenItem={item => { setSelectedItem(item); setDashboardDrill(null); }} />
           )}
 
+          {view === 'reportbuilder' && (
+            <div className="p-6 overflow-y-auto h-full">
+              {!selectedReport ? (
+                <>
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h1 className="text-xl font-semibold text-neutral-900 dark:text-white">Report builder</h1>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">Compose full-page reports from sections — KPIs, charts, tables and narrative.</p>
+                    </div>
+                    <Button variant="action" onClick={createBlankReport}>New report</Button>
+                  </div>
+
+                  {reportTemplates.length > 0 && (
+                    <div className="mb-6">
+                      <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mb-3">Start from a template</h2>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {reportTemplates.map(t => (
+                          <div key={t.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 flex flex-col">
+                            <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{t.name}</p>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5 mb-3 flex-1">{t.description || '—'}</p>
+                            <div><Button variant="secondary" onClick={() => createReportFromTemplate(t)}>Use template</Button></div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mb-3">Your reports</h2>
+                  {reports.length === 0 ? (
+                    <EmptyState icon="📄" title="No reports yet"
+                      subtitle="Create a report from scratch or start from a template above."
+                      action={<Button variant="action" onClick={createBlankReport}>New report</Button>} />
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {reports.map(r => (
+                        <div key={r.id} onClick={() => openReport(r.id)}
+                          className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all">
+                          <span className="text-2xl">📄</span>
+                          <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mt-2 truncate">{r.name}</p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{r.updatedAt ? `Updated ${new Date(r.updatedAt).toLocaleDateString()}` : '—'}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <button onClick={() => setSelectedReport(null)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0">← Reports</button>
+                      {reportEditMode ? (
+                        <input value={selectedReport.name || ''} onChange={e => setSelectedReport(r => ({ ...r, name: e.target.value }))}
+                          aria-label="Report name"
+                          className="text-xl font-semibold text-neutral-900 dark:text-white bg-transparent border-b border-neutral-200 dark:border-neutral-700 focus-visible:outline-none focus-visible:border-brand-navy" />
+                      ) : (
+                        <h1 className="text-xl font-semibold text-neutral-900 dark:text-white truncate">{selectedReport.name}</h1>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {reportEditMode && <Button variant="action" onClick={() => { saveReport(); setReportEditMode(false); }}>Save</Button>}
+                      <Button variant={reportEditMode ? 'secondary' : 'action'} onClick={() => { if (reportEditMode) { openReport(selectedReport.id); } else { setReportEditMode(true); } }}>{reportEditMode ? 'Cancel' : 'Edit'}</Button>
+                      <button onClick={() => deleteReport(selectedReport.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
+                    </div>
+                  </div>
+
+                  {reportEditMode && (
+                    <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-md bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700">
+                      <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mr-1">Add section</span>
+                      <button onClick={() => addReportSection('kpi')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ KPI</button>
+                      <button onClick={() => addReportSection('chart')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Chart</button>
+                      <button onClick={() => addReportSection('table')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Table</button>
+                      <button onClick={() => addReportSection('narrative')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Narrative</button>
+                    </div>
+                  )}
+
+                  {reportSections.length === 0 ? (
+                    <EmptyState icon="🧩" title="Empty report"
+                      subtitle="Turn on Edit and add sections — KPIs, charts, tables, narrative."
+                      action={<Button variant="action" onClick={() => setReportEditMode(true)}>Edit report</Button>} />
+                  ) : (
+                    <div className="space-y-4 max-w-4xl">
+                      {reportSections.map((sec, i) => (
+                        <ReportSectionCard key={i} section={sec} index={i} total={reportSections.length}
+                          workItems={workItems} editMode={reportEditMode}
+                          onChange={s => updateReportSection(i, s)}
+                          onMove={delta => moveReportSection(i, delta)}
+                          onRemove={() => removeReportSection(i)} />
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
           {/* ======================================================
                ITERATION 5 — KNOWLEDGE REPOSITORY
              ====================================================== */}
@@ -5634,6 +5798,129 @@ function aggregateByDimension(items, dimension) {
   return Object.entries(counts)
     .map(([label, value]) => ({ label, value }))
     .sort((a, b) => b.value - a.value);
+}
+
+// Apply a report section's filter to the work-item set (mirrors the dashboard widget filter).
+function filterReportItems(items, filter = {}) {
+  return (items || []).filter(i => {
+    if (filter.open && i.status === 'Done') return false;
+    if (filter.status && i.status !== filter.status) return false;
+    if (filter.priority && i.priority !== filter.priority) return false;
+    if (filter.type && i.type !== filter.type) return false;
+    return true;
+  });
+}
+
+// Iteration 6 — edit controls for a report section's config (chart type/dimension,
+// table limit, open-only filter). Shown only in edit mode.
+function ReportSectionControls({ section, onChange }) {
+  const config = section.config || {};
+  const setConfig = (patch) => onChange({ ...section, config: { ...config, ...patch } });
+  const setFilter = (patch) => setConfig({ filter: { ...(config.filter || {}), ...patch } });
+  return (
+    <div className="flex flex-wrap items-center gap-3 mb-3 p-2 rounded-md bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-700">
+      {section.type === 'chart' && (
+        <>
+          <label className="text-xs text-neutral-600 dark:text-neutral-400 flex items-center gap-1">Chart
+            <select value={config.chartType || 'bar'} onChange={e => setConfig({ chartType: e.target.value })}
+              className="text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-1 py-0.5">
+              <option value="bar">Bar</option>
+              <option value="pie">Pie</option>
+            </select>
+          </label>
+          <label className="text-xs text-neutral-600 dark:text-neutral-400 flex items-center gap-1">Group by
+            <select value={config.dimension || 'status'} onChange={e => setConfig({ dimension: e.target.value })}
+              className="text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-1 py-0.5">
+              <option value="status">Status</option>
+              <option value="type">Type</option>
+              <option value="priority">Priority</option>
+            </select>
+          </label>
+        </>
+      )}
+      {section.type === 'table' && (
+        <label className="text-xs text-neutral-600 dark:text-neutral-400 flex items-center gap-1">Limit
+          <input type="number" min="1" max="100" value={config.limit || 20}
+            onChange={e => setConfig({ limit: Math.max(1, Math.min(100, Number(e.target.value) || 20)) })}
+            className="w-16 text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-1 py-0.5" />
+        </label>
+      )}
+      {section.type !== 'narrative' && (
+        <label className="text-xs text-neutral-600 dark:text-neutral-400 flex items-center gap-1.5">
+          <input type="checkbox" checked={!!(config.filter && config.filter.open)}
+            onChange={e => setFilter({ open: e.target.checked })} />
+          Open items only
+        </label>
+      )}
+    </div>
+  );
+}
+
+// Iteration 6 — renders one section of a custom report from the live work-item set.
+// type: kpi | chart | table | narrative. In edit mode it shows title + config controls.
+function ReportSectionCard({ section, index, total, workItems, editMode, onChange, onMove, onRemove }) {
+  const config = section.config || {};
+  const items = filterReportItems(workItems, config.filter);
+
+  return (
+    <section className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-5">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        {editMode ? (
+          <input value={section.title || ''} onChange={e => onChange({ ...section, title: e.target.value })}
+            aria-label="Section title" placeholder="Section title"
+            className="flex-1 text-sm font-semibold text-neutral-900 dark:text-white bg-transparent border-b border-neutral-200 dark:border-neutral-700 focus-visible:outline-none focus-visible:border-brand-navy" />
+        ) : (
+          <h3 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide">{section.title || section.type}</h3>
+        )}
+        {editMode && (
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button onClick={() => onMove(-1)} disabled={index === 0} aria-label="Move section up"
+              className="text-xs px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy disabled:opacity-40 disabled:pointer-events-none">↑</button>
+            <button onClick={() => onMove(1)} disabled={index === total - 1} aria-label="Move section down"
+              className="text-xs px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy disabled:opacity-40 disabled:pointer-events-none">↓</button>
+            <button onClick={onRemove} aria-label="Remove section" className="text-xs text-semantic-danger hover:underline ml-1">Remove</button>
+          </div>
+        )}
+      </div>
+
+      {editMode && <ReportSectionControls section={section} onChange={onChange} />}
+
+      {section.type === 'kpi' && (
+        <p className="text-3xl font-bold text-brand-navy dark:text-white">{items.length}</p>
+      )}
+
+      {section.type === 'chart' && (
+        config.chartType === 'pie'
+          ? <DonutChart data={aggregateByDimension(items, config.dimension || 'status')} />
+          : <BarChart data={aggregateByDimension(items, config.dimension || 'status')} />
+      )}
+
+      {section.type === 'table' && (
+        <div className="divide-y divide-neutral-100 dark:divide-neutral-700/50">
+          {items.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-400">No matching items.</p>}
+          {items.slice(0, config.limit || 20).map(i => (
+            <div key={i.id} className="flex items-center justify-between gap-2 py-1.5">
+              <span className="min-w-0 flex-1 truncate text-sm text-neutral-800 dark:text-neutral-200">{i.title}</span>
+              <span className="flex items-center gap-3 flex-shrink-0">
+                <span className="text-xs text-neutral-600 dark:text-neutral-400">{i.priority || '—'}</span>
+                <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">{i.status}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {section.type === 'narrative' && (
+        editMode
+          ? <textarea value={config.text || ''} rows={3} placeholder="Write the narrative for this section…"
+              onChange={e => onChange({ ...section, config: { ...config, text: e.target.value } })}
+              className="w-full text-sm text-neutral-800 dark:text-neutral-200 bg-neutral-50 dark:bg-neutral-900 rounded-md border border-neutral-200 dark:border-neutral-700 p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40" />
+          : (config.text
+              ? <p className="text-sm text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">{config.text}</p>
+              : <p className="text-sm text-neutral-600 dark:text-neutral-400">—</p>)
+      )}
+    </section>
+  );
 }
 
 // Iteration 6 — renders a single dashboard widget from the live work-item set.

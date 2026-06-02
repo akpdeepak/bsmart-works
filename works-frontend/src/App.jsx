@@ -6,6 +6,7 @@ import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
 import { api } from '@/lib/apiClient';
+import { WIDGET_CATALOG, WIDGET_CATEGORIES, SERIES_BG, widgetSpec, computeWidget } from '@/lib/dashboard-widgets';
 
 const NavCollapsedCtx = React.createContext(false);
 
@@ -741,11 +742,12 @@ export default function App() {
       .catch(() => showToast('Failed to delete dashboard', 'error'));
   }
 
-  function addDashboardWidget(widgetType, config, title) {
+  function addDashboardWidget(widgetType) {
     if (!selectedDashboard) return;
-    const body = { widgetType, title, config: JSON.stringify(config || {}), gridW: 4, gridH: 2 };
+    const spec = widgetSpec(widgetType);
+    const body = { widgetType, title: spec.label, config: '{}', gridW: spec.w || 4, gridH: spec.h || 2 };
     api.send(`/dashboards/${selectedDashboard.id}/widgets`, { method: 'POST', body: JSON.stringify(body) })
-      .then(() => openDashboard(selectedDashboard.id))
+      .then(() => { openDashboard(selectedDashboard.id); showToast(`Added ${spec.label}`); })
       .catch(() => showToast('Failed to add widget', 'error'));
   }
 
@@ -4315,12 +4317,24 @@ export default function App() {
                   </div>
 
                   {dashboardEditMode && (
-                    <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-md bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700">
-                      <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mr-1">Add widget</span>
-                      <button onClick={() => addDashboardWidget('SCORECARD', { metric: 'count', filter: { open: true } }, 'Open items')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Scorecard</button>
-                      <button onClick={() => addDashboardWidget('STATUS_BAR', { metric: 'byStatus' }, 'By status')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Status breakdown</button>
-                      <button onClick={() => addDashboardWidget('ITEM_LIST', { metric: 'list', filter: { open: true }, limit: 6 }, 'Open work items')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Item list</button>
-                      <span className="text-xs text-neutral-600 dark:text-neutral-400 ml-auto">Drag widgets to reorder</span>
+                    <div className="mb-4 p-3 rounded-md bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide">Widget library</span>
+                        <span className="text-xs text-neutral-600 dark:text-neutral-400">Drag widgets to reorder</span>
+                      </div>
+                      <div className="space-y-2">
+                        {WIDGET_CATEGORIES.map(cat => (
+                          <div key={cat} className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider w-20 flex-shrink-0">{cat}</span>
+                            {Object.entries(WIDGET_CATALOG).filter(([, s]) => s.category === cat).map(([type, s]) => (
+                              <button key={type} onClick={() => addDashboardWidget(type)}
+                                className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">
+                                <span className="mr-1" aria-hidden="true">{s.icon}</span>{s.label}
+                              </button>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
@@ -4331,7 +4345,8 @@ export default function App() {
                   ) : (
                     <div className="grid grid-cols-12 gap-4">
                       {selectedDashboard.widgets.map(w => (
-                        <DashboardWidgetCard key={w.id} widget={w} workItems={workItems} editMode={dashboardEditMode}
+                        <DashboardWidgetCard key={w.id} widget={w} editMode={dashboardEditMode}
+                          ctx={{ workItems, sprints, velocity: velocityData, currentUserId: currentUser?.id, users }}
                           onRemove={() => removeDashboardWidget(w.id)}
                           onResize={gridW => resizeDashboardWidget(w, gridW)}
                           onDragStart={() => setDragWidgetId(w.id)}
@@ -5605,18 +5620,15 @@ function StatCard({ label, value, sub, color, icon, onClick }) {
 // Iteration 6 — renders a single dashboard widget from the live work-item set.
 // Widget data is computed client-side from the config (metric + filter) so the
 // designer is fully functional without a per-widget query endpoint.
-function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, onDragStart, onDrop }) {
-  let config = {};
-  try { config = JSON.parse(widget.config || '{}'); } catch { config = {}; }
-  const filter = config.filter || {};
-  const items = (workItems || []).filter(i => {
-    if (filter.open && i.status === 'Done') return false;
-    if (filter.status && i.status !== filter.status) return false;
-    if (filter.priority && i.priority !== filter.priority) return false;
-    if (filter.type && i.type !== filter.type) return false;
-    return true;
-  });
+const WIDGET_TONE = {
+  danger: 'text-semantic-danger', warning: 'text-semantic-warning',
+  success: 'text-semantic-success', info: 'text-semantic-info',
+};
+
+function DashboardWidgetCard({ widget, ctx, editMode, onRemove, onResize, onDragStart, onDrop }) {
+  const result = computeWidget(widget, ctx);
   const span = Math.max(1, Math.min(widget.gridW || 4, 12));
+  const empty = <p className="text-xs text-neutral-400">No matching data.</p>;
 
   return (
     <div
@@ -5641,40 +5653,122 @@ function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, 
         )}
       </div>
 
-      {widget.widgetType === 'SCORECARD' && (
-        <p className="text-3xl font-bold text-brand-navy dark:text-white">{items.length}</p>
+      {result.kind === 'number' && (
+        <p className={`text-3xl font-bold ${WIDGET_TONE[result.tone] || 'text-brand-navy dark:text-white'}`}>{result.value}</p>
       )}
 
-      {widget.widgetType === 'STATUS_BAR' && (
-        <div className="space-y-1.5 mt-1">
-          {(() => {
-            const byStatus = {};
-            items.forEach(i => { byStatus[i.status || 'Unknown'] = (byStatus[i.status || 'Unknown'] || 0) + 1; });
-            const entries = Object.entries(byStatus);
-            const max = Math.max(1, ...entries.map(([, c]) => c));
-            if (entries.length === 0) return <p className="text-xs text-neutral-400">No matching items.</p>;
-            return entries.map(([status, count]) => (
-              <div key={status} className="flex items-center gap-2">
-                <span className="text-xs text-neutral-600 dark:text-neutral-400 w-24 truncate">{status}</span>
-                <div className="flex-1 h-2 rounded-full bg-neutral-100 dark:bg-neutral-700 overflow-hidden">
-                  <div className="h-full bg-brand-navy-tint rounded-full" style={{ width: `${(count / max) * 100}%` }} />
+      {result.kind === 'bars' && (
+        result.series.length === 0 ? empty : (
+          <div className="space-y-1.5 mt-1">
+            {(() => {
+              const max = Math.max(1, ...result.series.map(s => s.value));
+              return result.series.map((s, idx) => (
+                <div key={s.label} className="flex items-center gap-2">
+                  <span className="text-xs text-neutral-600 dark:text-neutral-400 w-24 truncate" title={s.label}>{s.label}</span>
+                  <div className="flex-1 h-2 rounded-full bg-neutral-100 dark:bg-neutral-700 overflow-hidden">
+                    <div className={`h-full rounded-full ${SERIES_BG[idx % SERIES_BG.length]}`} style={{ width: `${(s.value / max) * 100}%` }} />
+                  </div>
+                  <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 w-6 text-right">{s.value}</span>
                 </div>
-                <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 w-6 text-right">{count}</span>
-              </div>
-            ));
-          })()}
+              ));
+            })()}
+          </div>
+        )
+      )}
+
+      {(result.kind === 'pie' || result.kind === 'stacked') && (
+        result.series.length === 0 ? empty : (
+          <div className="mt-1">
+            {(() => {
+              const total = result.series.reduce((a, b) => a + b.value, 0) || 1;
+              return (
+                <>
+                  <div className="flex w-full h-3 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-700">
+                    {result.series.map((s, idx) => (
+                      <div key={s.label} className={SERIES_BG[idx % SERIES_BG.length]} style={{ width: `${(s.value / total) * 100}%` }} title={`${s.label}: ${s.value}`} />
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                    {result.series.map((s, idx) => (
+                      <span key={s.label} className="flex items-center gap-1 text-[10px] text-neutral-600 dark:text-neutral-400">
+                        <span className={`w-2 h-2 rounded-full ${SERIES_BG[idx % SERIES_BG.length]}`} />
+                        {s.label} <span className="font-semibold text-neutral-700 dark:text-neutral-300">{Math.round((s.value / total) * 100)}%</span>
+                      </span>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )
+      )}
+
+      {result.kind === 'line' && (
+        result.points.length === 0 ? empty : (
+          <div className="mt-1 text-brand-navy dark:text-brand-amber">
+            {(() => {
+              const max = Math.max(1, ...result.points.map(p => p.value));
+              const n = result.points.length;
+              const pts = result.points.map((p, i) => `${n <= 1 ? 0 : (i / (n - 1)) * 100},${30 - (p.value / max) * 28}`).join(' ');
+              return (
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="w-full h-14" aria-hidden="true">
+                  <polyline points={pts} fill="none" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+                </svg>
+              );
+            })()}
+            <div className="flex justify-between text-[10px] text-neutral-500 mt-1">
+              <span>{result.points[0]?.label}</span>
+              <span>{result.points[result.points.length - 1]?.label}</span>
+            </div>
+          </div>
+        )
+      )}
+
+      {result.kind === 'progress' && (
+        <div className="mt-1">
+          <div className="flex items-end justify-between mb-1">
+            <span className="text-3xl font-bold text-brand-navy dark:text-white">{result.max ? Math.round((result.value / result.max) * 100) : 0}%</span>
+            <span className="text-xs text-neutral-600 dark:text-neutral-400">{result.value}/{result.max || 0} pt · {result.label}</span>
+          </div>
+          <div className="w-full h-2 rounded-full bg-neutral-100 dark:bg-neutral-700 overflow-hidden">
+            <div className="h-full bg-semantic-success rounded-full" style={{ width: `${result.max ? Math.min((result.value / result.max) * 100, 100) : 0}%` }} />
+          </div>
+          <p className="text-[10px] text-neutral-500 mt-1 truncate">{result.sprint?.name || 'No active sprint'}</p>
         </div>
       )}
 
-      {widget.widgetType === 'ITEM_LIST' && (
+      {result.kind === 'list' && (
         <div className="space-y-1 mt-1">
-          {items.length === 0 && <p className="text-xs text-neutral-400">No matching items.</p>}
-          {items.slice(0, config.limit || 6).map(i => (
+          {result.items.length === 0 && empty}
+          {result.items.map(i => (
             <div key={i.id} className="flex items-center justify-between gap-2 py-1 border-b border-neutral-100 dark:border-neutral-700/50 last:border-0">
               <span className="text-xs text-neutral-700 dark:text-neutral-300 truncate">{i.title}</span>
               <span className="text-[10px] font-medium text-neutral-600 dark:text-neutral-400 flex-shrink-0">{i.status}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {result.kind === 'matrix' && (
+        <div className="mt-1 overflow-x-auto">
+          <table className="w-full text-[10px]">
+            <thead>
+              <tr className="text-neutral-500">
+                <th className="text-left font-semibold py-1 pr-2">Status</th>
+                {result.cols.map(c => <th key={c} className="text-right font-semibold py-1 px-1">{c}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {result.rows.map(row => (
+                <tr key={row.label} className="border-t border-neutral-100 dark:border-neutral-700/50">
+                  <td className="py-1 pr-2 text-neutral-700 dark:text-neutral-300 truncate">{row.label}</td>
+                  {row.cells.map((c, idx) => (
+                    <td key={idx} className={`text-right py-1 px-1 ${c > 0 ? 'text-neutral-900 dark:text-neutral-100 font-semibold' : 'text-neutral-400'}`}>{c || '—'}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

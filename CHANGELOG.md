@@ -15,6 +15,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 - Knowledge: knowledge-base search-term analytics (most-searched terms), completing article analytics
 - Search: work-item search now matches comment bodies, not just title and description
 - Dashboards (iteration 6): user-built custom dashboards — create/rename/delete, a 12-column widget grid with drag-reorder and resize, and a starter widget set (scorecard, status breakdown, item list) rendering live work-item data (V29)
+- Dashboards (iteration 6): widget library expansion — 22 widget presets across Metrics, Breakdowns (bar/pie/matrix), Trends (velocity line), Sprint (health/burndown/cumulative flow), and Lists, picked from a categorized palette; rendered token-only (no chart dependency) from live data
 
 ### Fixed
 - Knowledge: article search now honours the `search` query parameter (was silently ignored)

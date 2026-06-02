@@ -86,6 +86,32 @@ public class CustomDashboardController {
         return ResponseEntity.noContent().build();
     }
 
+    // Mint (or return the existing) unguessable share token for public read-only embedding.
+    @PostMapping("/{id}/share")
+    public Dashboard share(@PathVariable String id) {
+        String userId = authenticatedUser.id();
+        Dashboard d = dashboardRepository.findById(id).orElseThrow();
+        if (d.getShareToken() == null || d.getShareToken().isBlank()) {
+            d.setShareToken(java.util.UUID.randomUUID().toString().replace("-", ""));
+            d.setUpdatedAt(OffsetDateTime.now());
+            dashboardRepository.save(d);
+            eventService.record(id, "DASHBOARD_SHARED", userId, "{}");
+        }
+        return d;
+    }
+
+    // Revoke the share token — existing embed URLs stop resolving immediately.
+    @DeleteMapping("/{id}/share")
+    public Dashboard unshare(@PathVariable String id) {
+        String userId = authenticatedUser.id();
+        Dashboard d = dashboardRepository.findById(id).orElseThrow();
+        d.setShareToken(null);
+        d.setUpdatedAt(OffsetDateTime.now());
+        dashboardRepository.save(d);
+        eventService.record(id, "DASHBOARD_UNSHARED", userId, "{}");
+        return d;
+    }
+
     // ── Widgets ────────────────────────────────────────────────────────────────
     @PostMapping("/{id}/widgets")
     public DashboardWidget addWidget(@PathVariable String id, @Valid @RequestBody DashboardWidget widget) {

@@ -357,16 +357,16 @@ Tu ne kaha 'configuration requires no code'. This section is explicit about what
 | Sprints | Form: name, start, end, goal. Drag items in. |
 | Versions | Form: name, dates, description. Release / archive actions. |
 | Components | Form: name, lead, default assignee, description. |
-| Saved filters (WIQL) | Two modes — visual filter builder for common cases, raw WIQL editor with syntax highlighting and validation for advanced. |
+| Saved filters (BQL) | Two modes — visual filter builder for common cases, raw BQL editor with syntax highlighting and validation for advanced. |
 | Dashboards and gadgets | Drag-drop layout. Each gadget configured via form, powered by a saved filter or built-in data source. |
 | Automation rules | Trigger / Condition / Action builder. Drag-drop. Smart values via picker. |
-| Compliance rules | Template-pick or build-from-scratch. WIQL scope + assertion via guided builder. Threshold sliders, severity dropdown. |
+| Compliance rules | Template-pick or build-from-scratch. BQL scope + assertion via guided builder. Threshold sliders, severity dropdown. |
 | KPI metrics | Built-in catalog with enable / disable toggles and visibility settings. Custom metrics via constrained formula builder (not raw SQL). |
-| SLA policies | Form: scope WIQL, calendar, target time, start/pause/stop triggers picked from event list. |
+| SLA policies | Form: scope BQL, calendar, target time, start/pause/stop triggers picked from event list. |
 | SLA calendars | Visual editor for working hours, holidays. |
 | Service portal | Form: branding (logo, colors, custom domain), request types, form fields per request type, public/private toggle. |
 | Email templates | Rich-text WYSIWYG editor with merge fields picked from a list. |
-| Webhooks | Form: URL, events, scope WIQL, secret. Test-fire button. |
+| Webhooks | Form: URL, events, scope BQL, secret. Test-fire button. |
 | Notification routing | Per-project rules: which events notify which roles, channels, batching cadence. |
 | Onboarding / welcome experience | Per-workspace customizable empty states, welcome message, suggested first project template. |
 | Branding (white-label tier) | Upload logo, set primary color, accent color. UI re-themes automatically with verified contrast checks. |

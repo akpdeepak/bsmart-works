@@ -83,7 +83,7 @@ fi
 # grandfathered. Any NEW CREATE TABLE that isn't plural is a violation. If you ever introduce a
 # legitimately non-"s" plural (e.g. "media"), add it to this allowlist with a note.
 if [ -d "$MIG" ]; then
-  grandfathered='^(action_item|assumption|decision|dependency|event_log|field_def|field_layout|field_visibility|lesson_learned|meeting|meeting_note|permission_scheme|pm_issue|risk|role_audit_log|role_def|role_permission|stakeholder|wiql_filter|work_item_field_value|work_item_type_config|workflow|workflow_transition)$'
+  grandfathered='^(action_item|assumption|decision|dependency|event_log|field_def|field_layout|field_visibility|lesson_learned|meeting|meeting_note|permission_scheme|pm_issue|risk|role_audit_log|role_def|role_permission|stakeholder|bql_filter|work_item_field_value|work_item_type_config|workflow|workflow_transition)$'
   singular=""
   while IFS= read -r t; do
     [ -z "$t" ] && continue
@@ -111,7 +111,7 @@ fi
 
 # Native JPQL/SQL queries must use bind parameters, never string concatenation (CLAUDE.md §17).
 # WARN (not BLOCK): pre-existing hits in ApiException.java (message concat, not a query) and
-# WiqlController.java (JPQL builder debt — TD-004). Flip to BLOCK after remediation.
+# BqlController.java (JPQL builder debt — TD-004). Flip to BLOCK after remediation.
 if [ -d "$BE" ]; then
   check WARN "No string-concatenated queries (use bind parameters — CLAUDE.md §17)" \
     "$(grep -RInE '"[^"]*\+\s*(userId|id|name|title|email|input|param|value)' "$BE" 2>/dev/null || true)"

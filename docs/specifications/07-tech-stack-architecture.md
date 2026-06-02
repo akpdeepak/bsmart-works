@@ -79,7 +79,7 @@ From BCITS's public materials and hiring signals (as of May 2026):
 | Framework | Spring Boot 3.2+ | Industry standard for Java enterprise. Mature, well-documented, AI models know it well. |
 | Web layer | Spring MVC (REST) + Spring WebFlux where streaming needed | REST for CRUD; reactive only where high-throughput streaming demands it. |
 | Security | Spring Security 6 + OAuth2 + SAML | Enterprise-grade auth; SSO-ready; aligns with utility-customer requirements. |
-| Persistence | Spring Data JPA (Hibernate) + jOOQ | JPA for standard CRUD; jOOQ for complex reporting and WIQL translation. |
+| Persistence | Spring Data JPA (Hibernate) + jOOQ | JPA for standard CRUD; jOOQ for complex reporting and BQL translation. |
 | Validation | Jakarta Bean Validation | Declarative request validation. |
 | Migrations | Flyway | Versioned, ordered DB migrations — one file per logical change. |
 | Build | Gradle (Kotlin DSL) or Maven | Standard Java build. Gradle preferred for multi-module. |

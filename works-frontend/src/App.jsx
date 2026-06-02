@@ -169,15 +169,15 @@ export default function App() {
   const [wsOpen, setWsOpen]             = useState(false);
   const wsRef                           = useRef(null);
 
-  // Iteration 3 — Workflows, Custom Fields, Permissions, WIQL
+  // Iteration 3 — Workflows, Custom Fields, Permissions, BQL
   const [workflows, setWorkflows]           = useState([]);
   const [fieldDefs, setFieldDefs]           = useState([]);
   const [roles, setRoles]                   = useState([]);
-  const [wiqlQuery, setWiqlQuery]           = useState('');
-  const [wiqlResults, setWiqlResults]       = useState([]);
-  const [wiqlFilters, setWiqlFilters]       = useState([]);
-  const [wiqlFilterName, setWiqlFilterName] = useState('');
-  const [wiqlError, setWiqlError]           = useState('');
+  const [bqlQuery, setBqlQuery]           = useState('');
+  const [bqlResults, setBqlResults]       = useState([]);
+  const [bqlFilters, setBqlFilters]       = useState([]);
+  const [bqlFilterName, setBqlFilterName] = useState('');
+  const [bqlError, setBqlError]           = useState('');
   const [workItemTypes, setWorkItemTypes]   = useState({ builtIn: [], custom: [] });
   const [permMatrix, setPermMatrix]         = useState(null);
   const [settings3Tab, setSettings3Tab]     = useState('workflows'); // workflows | fields | permissions | types
@@ -878,22 +878,22 @@ export default function App() {
     api.raw(`/permission-schemes/roles`, { method: 'POST', body: JSON.stringify({ ...newRoleForm, workspaceId: 'WS-001' }) })
       .then(r => r.json()).then(() => { fetchRoles(); fetchPermMatrix(); setShowRoleForm(false); setNewRoleForm({ name: '', tier: 2 }); }).catch(() => {});
   }
-  function runWiql() {
-    setWiqlError('');
-    api.raw(`/wiql/execute`, { method: 'POST', body: JSON.stringify({ query: wiqlQuery }) })
+  function runBql() {
+    setBqlError('');
+    api.raw(`/bql/execute`, { method: 'POST', body: JSON.stringify({ query: bqlQuery }) })
       .then(r => r.json()).then(d => {
-        if (d.error) { setWiqlError(d.error); setWiqlResults([]); }
-        else setWiqlResults(Array.isArray(d) ? d : []);
-      }).catch(err => setWiqlError(err.message));
+        if (d.error) { setBqlError(d.error); setBqlResults([]); }
+        else setBqlResults(Array.isArray(d) ? d : []);
+      }).catch(err => setBqlError(err.message));
   }
-  function fetchWiqlFilters() {
-    api.raw(`/wiql/filters`)
-      .then(r => r.json()).then(d => setWiqlFilters(Array.isArray(d) ? d : [])).catch(() => {});
+  function fetchBqlFilters() {
+    api.raw(`/bql/filters`)
+      .then(r => r.json()).then(d => setBqlFilters(Array.isArray(d) ? d : [])).catch(() => {});
   }
-  function saveWiqlFilter() {
-    if (!wiqlFilterName.trim() || !wiqlQuery.trim()) return;
-    api.raw(`/wiql/filters`, { method: 'POST', body: JSON.stringify({ name: wiqlFilterName, query: wiqlQuery, isShared: false }) })
-      .then(r => r.json()).then(f => { setWiqlFilters(prev => [f, ...prev]); setWiqlFilterName(''); showToast('Filter saved'); })
+  function saveBqlFilter() {
+    if (!bqlFilterName.trim() || !bqlQuery.trim()) return;
+    api.raw(`/bql/filters`, { method: 'POST', body: JSON.stringify({ name: bqlFilterName, query: bqlQuery, isShared: false }) })
+      .then(r => r.json()).then(f => { setBqlFilters(prev => [f, ...prev]); setBqlFilterName(''); showToast('Filter saved'); })
       .catch(() => showToast('Failed to save filter', 'error'));
   }
 
@@ -1620,7 +1620,7 @@ export default function App() {
 
           {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">Configuration</p>}
           <NavItem active={view === 'settings3'} onClick={() => { setView('settings3'); fetchWorkflows(); fetchFieldDefs(); fetchRoles(); fetchWorkItemTypes(); }} icon="⚙">Workflows & Fields</NavItem>
-          <NavItem active={view === 'wiql'} onClick={() => { setView('wiql'); fetchWiqlFilters(); }} icon="🔍">WIQL Query</NavItem>
+          <NavItem active={view === 'bql'} onClick={() => { setView('bql'); fetchBqlFilters(); }} icon="🔍">BQL Query</NavItem>
           <NavItem active={view === 'knowledge'} onClick={() => { setView('knowledge'); fetchKnowledgeSpaces(); setKnowledgeTab('spaces'); setSelectedSpace(null); setSelectedArticle(null); }} icon="📚">Knowledge</NavItem>
 
           {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">Project Management</p>}
@@ -3624,11 +3624,11 @@ export default function App() {
           )}
 
           {/* ======================================================
-               ITERATION 3 — WIQL QUERY
+               ITERATION 3 — BQL QUERY
              ====================================================== */}
-          {view === 'wiql' && (
+          {view === 'bql' && (
             <div className="p-8 max-w-5xl">
-              <h1 className="text-2xl font-bold text-brand-navy mb-1">WIQL — Work Item Query Language</h1>
+              <h1 className="text-2xl font-bold text-brand-navy mb-1">BQL — bSmart Query Language</h1>
               <p className="text-sm text-neutral-400 mb-5">Write composable queries to filter work items. Use AND/OR, comparison operators, and functions like currentUser() and today().</p>
 
               <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 mb-4">
@@ -3639,18 +3639,18 @@ export default function App() {
                       className="input flex-1 font-mono text-sm resize-none"
                       rows={3}
                       placeholder={'priority = High AND assignee = currentUser()\nstatus != Done AND type = Bug\ndueDate < today() AND priority IN (High, Highest)'}
-                      value={wiqlQuery}
-                      onChange={e => setWiqlQuery(e.target.value)}
-                      onKeyDown={e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runWiql(); } }}
+                      value={bqlQuery}
+                      onChange={e => setBqlQuery(e.target.value)}
+                      onKeyDown={e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runBql(); } }}
                     />
                   </div>
-                  {wiqlError && <p className="text-xs text-semantic-danger mt-2 font-mono">{wiqlError}</p>}
+                  {bqlError && <p className="text-xs text-semantic-danger mt-2 font-mono">{bqlError}</p>}
                 </div>
                 <div className="flex items-center gap-3">
-                  <Button variant="action" onClick={runWiql}>Run Query (Ctrl+Enter)</Button>
+                  <Button variant="action" onClick={runBql}>Run Query (Ctrl+Enter)</Button>
                   <div className="flex gap-2 items-center flex-1">
-                    <input className="input flex-1 text-sm" placeholder="Filter name..." value={wiqlFilterName} onChange={e => setWiqlFilterName(e.target.value)} />
-                    <Button variant="secondary" onClick={saveWiqlFilter}>Save Filter</Button>
+                    <input className="input flex-1 text-sm" placeholder="Filter name..." value={bqlFilterName} onChange={e => setBqlFilterName(e.target.value)} />
+                    <Button variant="secondary" onClick={saveBqlFilter}>Save Filter</Button>
                   </div>
                 </div>
                 <div className="mt-3 text-xs text-neutral-400">
@@ -3661,16 +3661,16 @@ export default function App() {
               </div>
 
               {/* Saved filters */}
-              {wiqlFilters.length > 0 && (
+              {bqlFilters.length > 0 && (
                 <div className="mb-4">
                   <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Saved Filters</p>
                   <div className="flex flex-wrap gap-2">
-                    {wiqlFilters.map(f => (
-                      <button key={f.id} onClick={() => { setWiqlQuery(f.query); runWiql(); }}
+                    {bqlFilters.map(f => (
+                      <button key={f.id} onClick={() => { setBqlQuery(f.query); runBql(); }}
                         className="flex items-center gap-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5 text-sm hover:border-brand-navy transition-colors group">
                         <span className="font-medium text-neutral-900">{f.name}</span>
                         {f.isShared && <span className="text-xs text-neutral-400">shared</span>}
-                        <button onClick={e => { e.stopPropagation(); api.raw(`/wiql/filters/${f.id}`, { method: 'DELETE' }).then(() => fetchWiqlFilters()); }}
+                        <button onClick={e => { e.stopPropagation(); api.raw(`/bql/filters/${f.id}`, { method: 'DELETE' }).then(() => fetchBqlFilters()); }}
                           className="text-neutral-300 hover:text-semantic-danger opacity-0 group-hover:opacity-100 transition-opacity ml-1">✕</button>
                       </button>
                     ))}
@@ -3679,13 +3679,13 @@ export default function App() {
               )}
 
               {/* Results */}
-              {wiqlResults.length > 0 && (
+              {bqlResults.length > 0 && (
                 <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
                   <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
-                    <span className="text-sm font-semibold text-neutral-900">{wiqlResults.length} result{wiqlResults.length !== 1 ? 's' : ''}</span>
+                    <span className="text-sm font-semibold text-neutral-900">{bqlResults.length} result{bqlResults.length !== 1 ? 's' : ''}</span>
                   </div>
                   <div className="divide-y divide-neutral-50 max-h-96 overflow-y-auto">
-                    {wiqlResults.map((item, i) => (
+                    {bqlResults.map((item, i) => (
                       <div key={item.id || i} className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 cursor-pointer"
                         onClick={() => { const full = workItems.find(w => w.id === item.id); if (full) setSelectedItem(full); }}>
                         <span className="font-mono text-xs text-neutral-400 w-24 flex-shrink-0">{item.id}</span>
@@ -3697,7 +3697,7 @@ export default function App() {
                   </div>
                 </div>
               )}
-              {wiqlResults.length === 0 && wiqlQuery && !wiqlError && (
+              {bqlResults.length === 0 && bqlQuery && !bqlError && (
                 <div className="text-center py-12 text-neutral-400">
                   <p className="text-sm">No results. Run the query to see results.</p>
                 </div>

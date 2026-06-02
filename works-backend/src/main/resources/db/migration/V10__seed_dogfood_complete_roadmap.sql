@@ -86,15 +86,15 @@ INSERT INTO work_items (id, title, status, type, description, project_id, create
  'PROJ-WORKS', 'USR-DEV1', 21, 'HIGH', NOW() - INTERVAL '30 days'),
 
 ('WRK-CC', 'Cap C — Workflow & Process Automation', 'Todo', 'Epic',
- '12 sub-features: visual workflow editor, status conditions/validators/post-functions, automation engine, WIQL rules. Iter 3 + 13.',
+ '12 sub-features: visual workflow editor, status conditions/validators/post-functions, automation engine, BQL rules. Iter 3 + 13.',
  'PROJ-WORKS', 'USR-DEV1', 21, 'HIGH', NOW() - INTERVAL '15 days'),
 
 ('WRK-CD', 'Cap D — Custom Fields & Schema Extensibility', 'Todo', 'Epic',
  '10 sub-features: 17+ field types, custom work item types, layout designer, field visibility per role. Iter 3.',
  'PROJ-WORKS', 'USR-DEV1', 13, 'HIGH', NOW() - INTERVAL '15 days'),
 
-('WRK-CE', 'Cap E — Search, Filters & Query Language (WIQL)', 'In Progress', 'Epic',
- '10 sub-features: full-text search, WIQL everywhere, saved filters, natural language → WIQL (AI). Iter 1 + 3 + 11.',
+('WRK-CE', 'Cap E — Search, Filters & Query Language (BQL)', 'In Progress', 'Epic',
+ '10 sub-features: full-text search, BQL everywhere, saved filters, natural language → BQL (AI). Iter 1 + 3 + 11.',
  'PROJ-WORKS', 'USR-DEV1', 13, 'HIGH', NOW() - INTERVAL '30 days'),
 
 ('WRK-CF', 'Cap F — Agile Execution Surface', 'In Progress', 'Epic',
@@ -200,7 +200,7 @@ INSERT INTO work_items (id, title, status, type, description, project_id, create
  'Drag-drop builder for statuses and transitions per WorkItem type. Status categories. Color coding. POST /api/workflows.',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-ITER3', 8, 'HIGH', NOW()),
 ('WRK-301', 'Workflow conditions, validators, and post-functions', 'Todo', 'Story',
- 'Per-transition: only-assignee-can-resolve, require-comment-on-rejection, auto-set-field. Uses WIQL conditions.',
+ 'Per-transition: only-assignee-can-resolve, require-comment-on-rejection, auto-set-field. Uses BQL conditions.',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-ITER3', 8, 'HIGH', NOW()),
 ('WRK-302', 'Roles and permissions matrix', 'Todo', 'Story',
  'Permission scheme: rows are permissions, columns are roles. Role assignment per project. Roles: VIEWER/MEMBER/LEAD/ADMIN/OWNER.',
@@ -220,9 +220,9 @@ INSERT INTO work_items (id, title, status, type, description, project_id, create
  'WYSIWYG drag-drop layout per type: field grouping, ordering, sections, columns. Stored in field_layout table.',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-ITER3', 5, 'MEDIUM', NOW()),
 
--- Stories (Cap E — WIQL)
-('WRK-320', 'WIQL — Work Item Query Language foundation', 'Todo', 'Story',
- 'Composable query syntax used in filters, automations, rules, dashboards. WIQL parser in Spring backend.',
+-- Stories (Cap E — BQL)
+('WRK-320', 'BQL — bSmart Query Language foundation', 'Todo', 'Story',
+ 'Composable query syntax used in filters, automations, rules, dashboards. BQL parser in Spring backend.',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-ITER3', 13, 'HIGH', NOW()),
 
 -- Tasks
@@ -365,8 +365,8 @@ INSERT INTO work_items (id, title, status, type, description, project_id, create
  'Strategic differentiator — Works becomes meaningfully different from Jira/ADO. Est 6–8 weeks.',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-ITER7', 80, 'HIGH', NOW()),
 
-('WRK-700', 'Rule definition — visual builder (WIQL scope + assertion + threshold + severity)', 'Todo', 'Story',
- 'WIQL scope + assertion + threshold + severity + notify-to. Test-before-activate. Save as template. compliance_rule table.',
+('WRK-700', 'Rule definition — visual builder (BQL scope + assertion + threshold + severity)', 'Todo', 'Story',
+ 'BQL scope + assertion + threshold + severity + notify-to. Test-before-activate. Save as template. compliance_rule table.',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-ITER7', 13, 'HIGH', NOW()),
 ('WRK-701', 'Seeded rule library — 20+ built-in templates', 'Todo', 'Story',
  'Orphan story, stale item, missing estimate, scope creep, sprint without goal, unassigned in-progress.',
@@ -406,7 +406,7 @@ INSERT INTO work_items (id, title, status, type, description, project_id, create
  'PROJ-WORKS', 'USR-DEV1', 'SPR-ITER8', 60, 'HIGH', NOW()),
 
 ('WRK-800', 'SLA policy definition — scope + business-hours + targets + triggers', 'Todo', 'Story',
- 'WIQL scope + business-hours calendar + targets (response, resolution) + start/pause/stop triggers. sla_policy table.',
+ 'BQL scope + business-hours calendar + targets (response, resolution) + start/pause/stop triggers. sla_policy table.',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-ITER8', 8, 'HIGH', NOW()),
 ('WRK-801', 'Business-hours calendars with holidays and time zones', 'Todo', 'Story',
  'Per-policy calendar (Mon-Fri 9-6 IST) with holidays and time zones. business_hours_calendar table.',
@@ -488,8 +488,8 @@ INSERT INTO work_items (id, title, status, type, description, project_id, create
 ('WRK-1004', 'AI audit log — every AI call logged with tokens, cost, on/off state', 'Todo', 'Story',
  'ai_audit_log table. Every AI invocation: timestamp, user, capability, prompt size, model, tokens, cost.',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-ITER10', 5, 'HIGH', NOW()),
-('WRK-1005', 'Natural language → WIQL — first AI surface', 'Todo', 'Story',
- 'open bugs assigned to me last week becomes WIQL with preview before applying.',
+('WRK-1005', 'Natural language → BQL — first AI surface', 'Todo', 'Story',
+ 'open bugs assigned to me last week becomes BQL with preview before applying.',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-ITER10', 8, 'HIGH', NOW()),
 ('WRK-1006', 'AI off-state UI — buttons hidden, command bar degrades to keyword search', 'Todo', 'Task',
  'AI buttons hidden (not dimmed) when AI is off. Clean, not broken.',
@@ -947,7 +947,7 @@ INSERT INTO work_items (id, title, status, type, description, project_id, create
  'Restructure to com.bcits.works.{auth, workitem, sprint, project, workspace, compliance, sla, ai, audit}.',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-FIXES', 5, 'HIGH', NOW()),
 ('WRK-ARCH-03', 'Architecture: add jOOQ for complex reporting queries', 'Todo', 'Task',
- 'Spring Data JPA for standard CRUD; add jOOQ for WIQL translation and complex dashboard queries.',
+ 'Spring Data JPA for standard CRUD; add jOOQ for BQL translation and complex dashboard queries.',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-ITER3', 5, 'MEDIUM', NOW()),
 ('WRK-ARCH-04', 'Architecture: OpenTelemetry tracing across all Spring services', 'Todo', 'Task',
  'Distributed tracing via OpenTelemetry. Structured JSON logging with correlation IDs.',
@@ -991,13 +991,13 @@ INSERT INTO work_items (id, title, status, type, description, project_id, create
 ('WRK-BUG-04', 'Bug: No rate limiting on auth endpoints — brute force vulnerability', 'Todo', 'Bug',
  'Login and signup have no rate limiting. Add Spring Security rate limiting filter or use API Gateway throttling.',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-FIXES', 5, 'HIGH', NOW()),
-('WRK-BUG-05', 'Bug: WIQL not yet implemented — filter builder uses raw SQL', 'Todo', 'Bug',
- 'Filters currently use direct SQL construction. Must refactor to WIQL parser before iteration 7 compliance rules.',
+('WRK-BUG-05', 'Bug: BQL not yet implemented — filter builder uses raw SQL', 'Todo', 'Bug',
+ 'Filters currently use direct SQL construction. Must refactor to BQL parser before iteration 7 compliance rules.',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-ITER3', 13, 'HIGH', NOW()),
 ('WRK-BUG-06', 'Bug: Event store not called on all state changes — compliance audit gaps', 'Todo', 'Bug',
  'EventService.record() called on work item create but not on all updates. Compliance audit log will have gaps.',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-FIXES', 5, 'HIGH', NOW()),
-('WRK-BUG-07', 'Bug: No input validation on WIQL/filter parameters — SQL injection risk', 'Todo', 'Bug',
+('WRK-BUG-07', 'Bug: No input validation on BQL/filter parameters — SQL injection risk', 'Todo', 'Bug',
  'Filter parameters passed through without sanitization. Must use parameterized queries everywhere.',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-FIXES', 5, 'CRITICAL', NOW()),
 ('WRK-BUG-08', 'Bug: Password reset does not expire tokens — security gap', 'Todo', 'Bug',
@@ -1033,7 +1033,7 @@ INSERT INTO work_items (id, title, status, type, description, project_id, create
 ('WRK-ST-701', 'Sub-task: ComplianceRuleEntity + Flyway migration V7xx', 'Todo', 'Sub-task',
  'ComplianceRule JPA entity, compliance_rule table migration, ComplianceRuleRepository.',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-ITER7', 2, 'HIGH', 'WRK-700', NOW()),
-('WRK-ST-702', 'Sub-task: WIQL rule evaluator — parse and run rules against work items', 'Todo', 'Sub-task',
+('WRK-ST-702', 'Sub-task: BQL rule evaluator — parse and run rules against work items', 'Todo', 'Sub-task',
  'ComplianceRuleEvaluator.evaluate(rule, workItem) — returns ViolationDTO or null.',
  'PROJ-WORKS', 'USR-DEV1', 'SPR-ITER7', 5, 'HIGH', 'WRK-700', NOW()),
 ('WRK-ST-703', 'Sub-task: Rule evaluation trigger — on every WorkItem state change event', 'Todo', 'Sub-task',
@@ -1095,9 +1095,9 @@ INSERT INTO work_item_links (source_id, target_id, link_type, created_at) VALUES
 ('WRK-E24',  'WRK-E25', 'BLOCKS', NOW()),
 ('WRK-E27',  'WRK-E28', 'BLOCKS', NOW()),  -- AI Control Plane before AI Expansion
 
--- WIQL blocks compliance
-('WRK-320',  'WRK-700', 'BLOCKS', NOW()),  -- WIQL must exist before compliance rules use it
-('WRK-320',  'WRK-800', 'BLOCKS', NOW()),  -- WIQL scope used in SLA policies too
+-- BQL blocks compliance
+('WRK-320',  'WRK-700', 'BLOCKS', NOW()),  -- BQL must exist before compliance rules use it
+('WRK-320',  'WRK-800', 'BLOCKS', NOW()),  -- BQL scope used in SLA policies too
 
 -- SLA engine precedes customer portal
 ('WRK-E25',  'WRK-E26', 'BLOCKS', NOW()),

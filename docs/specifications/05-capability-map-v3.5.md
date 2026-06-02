@@ -101,7 +101,7 @@ Every AI feature in v3 has a documented deterministic fallback. The product neve
 | B — Work Management Core | Full CRUD, custom types, fields, history | Story drafts, duplicate detection, AC generation | Manual entry replaces auto-drafts |
 | C — Workflow & Automation | All workflows, automations, rules | AI rule suggestions, plain-language rule creation | Rules created via visual builder only |
 | D — Custom Fields & Schema | All field types, layouts, validation | AI field-type suggestions | Admin manually picks field types |
-| E — Search & Query | Full-text search, manual WIQL | Natural language → WIQL | Users learn WIQL or rely on visual filter builder |
+| E — Search & Query | Full-text search, manual BQL | Natural language → BQL | Users learn BQL or rely on visual filter builder |
 | F — Agile Execution Surface | Boards, sprints, backlogs, reports | AI sprint commit suggestion, anomaly explanations | SM uses velocity math; charts show raw data |
 | G — Collaboration | Comments, attachments, @mentions, real-time | AI summaries, AI-drafted comments | Users read full threads; write comments manually |
 | H — PM Artifacts | RAID logs, decisions, meetings, actions | AI risk suggestions, action item extraction | PM categorizes manually |
@@ -544,11 +544,11 @@ Works has seven layers where unification is enforced. Each layer has one canonic
 - Same permission system across all capabilities — no capability has its own auth
 - Field-level security, role-based access, conditional access — all defined once, enforced everywhere
 
-#### Layer 3 — Query: WIQL is the one query language
+#### Layer 3 — Query: BQL is the one query language
 
-- Same WIQL syntax used in filters, automations, compliance rules, KPI definitions, dashboard gadgets, SLA scopes
+- Same BQL syntax used in filters, automations, compliance rules, KPI definitions, dashboard gadgets, SLA scopes
 - Users learn it once; it works everywhere
-- Natural language → WIQL translation is the AI surface on top of one query language, not five different syntaxes
+- Natural language → BQL translation is the AI surface on top of one query language, not five different syntaxes
 
 #### Layer 4 — AI Orchestration: one service powers every AI feature
 
@@ -583,7 +583,7 @@ Works has seven layers where unification is enforced. Each layer has one canonic
 > 1. They use the same command bar everyone uses (UI unification)
 > 2. Their identity and permissions come from the same auth system (identity unification)
 > 3. The work item create writes to the shared event store (data unification)
-> 4. The new bug is queryable via the same WIQL anyone else uses (query unification)
+> 4. The new bug is queryable via the same BQL anyone else uses (query unification)
 > 5. AI smart-routing uses the same AI service that powers other features (AI unification)
 > 6. The compliance engine evaluates rules against the new bug using the shared query system (no double-write)
 > 7. The KPI framework counts the bug in cycle-time metrics from the shared event store
@@ -618,7 +618,7 @@ With AI Control Plane and 5 role surfaces added, the roadmap expands from 18 to 
 | 2 | Projects & WorkItems (core) | B (work item CRUD) |
 | 3 | Workflows + Permissions + Field Visibility | C (workflows), B (field-level permissions) |
 | 4 | Custom Fields & Layouts | D (custom fields) |
-| 5 | Search & WIQL | E (search & query) |
+| 5 | Search & BQL | E (search & query) |
 | 6 | Boards + Backlog + Sprints + Links | F (agile execution) |
 | 7 | Comments + Attachments + Activity + Notifications | G (collaboration) |
 | 8 | Versions + Time + Dashboards + Reports + SLA | J (reports), M (SLA engine) |

@@ -16,9 +16,13 @@ public class DashboardWidget {
     private String title;
     @Column(columnDefinition = "jsonb")
     private String config = "{}";
+    @Column(name = "grid_x")
     private Integer gridX;
+    @Column(name = "grid_y")
     private Integer gridY;
+    @Column(name = "grid_w")
     private Integer gridW;
+    @Column(name = "grid_h")
     private Integer gridH;
     private Integer position;
     private OffsetDateTime createdAt;

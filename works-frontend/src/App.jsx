@@ -276,6 +276,7 @@ export default function App() {
   const [selectedDashboard, setSelectedDashboard] = useState(null); // { ...dashboard, widgets: [] }
   const [dashboardEditMode, setDashboardEditMode] = useState(false);
   const [dragWidgetId, setDragWidgetId] = useState(null);
+  const [dashboardDrill, setDashboardDrill] = useState(null); // { title, items } — drill-down modal
   const [deleteUndoItem, setDeleteUndoItem] = useState(null);
   const deleteUndoTimer = useRef(null);
   const [itemChildren, setItemChildren] = useState([]);
@@ -4348,6 +4349,7 @@ export default function App() {
                           onRemove={() => removeDashboardWidget(w.id)}
                           onResize={gridW => resizeDashboardWidget(w, gridW)}
                           onConfigChange={cfg => updateDashboardWidgetConfig(w, cfg)}
+                          onDrill={setDashboardDrill}
                           onDragStart={() => setDragWidgetId(w.id)}
                           onDrop={() => reorderDashboardWidgets(w.id)} />
                       ))}
@@ -4356,6 +4358,11 @@ export default function App() {
                 </>
               )}
             </div>
+          )}
+
+          {view === 'dashboards' && dashboardDrill && (
+            <DashboardDrillModal drill={dashboardDrill} onClose={() => setDashboardDrill(null)}
+              onOpenItem={item => { setSelectedItem(item); setDashboardDrill(null); }} />
           )}
 
           {/* ======================================================
@@ -5632,7 +5639,7 @@ function aggregateByDimension(items, dimension) {
 // Iteration 6 — renders a single dashboard widget from the live work-item set.
 // Widget data is computed client-side from the config (metric + filter) so the
 // designer is fully functional without a per-widget query endpoint.
-function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, onConfigChange, onDragStart, onDrop }) {
+function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, onConfigChange, onDrill, onDragStart, onDrop }) {
   let config = {};
   try { config = JSON.parse(widget.config || '{}'); } catch { config = {}; }
   const filter = config.filter || {};
@@ -5647,6 +5654,8 @@ function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, 
   const dimension = config.dimension || 'status';
   const chartData = isChart ? aggregateByDimension(items, dimension) : [];
   const span = Math.max(1, Math.min(widget.gridW || 4, 12));
+  const canDrill = !editMode && !!onDrill;
+  const drillBy = (label) => items.filter(i => (i[dimension] || 'None') === label);
 
   return (
     <div
@@ -5685,7 +5694,14 @@ function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, 
       )}
 
       {widget.widgetType === 'SCORECARD' && (
-        <p className="text-3xl font-bold text-brand-navy dark:text-white">{items.length}</p>
+        canDrill ? (
+          <button type="button" onClick={() => onDrill({ title: widget.title || 'Items', items })}
+            className="text-3xl font-bold text-brand-navy dark:text-white rounded hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
+            {items.length}
+          </button>
+        ) : (
+          <p className="text-3xl font-bold text-brand-navy dark:text-white">{items.length}</p>
+        )
       )}
 
       {widget.widgetType === 'STATUS_BAR' && (
@@ -5696,15 +5712,26 @@ function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, 
             const entries = Object.entries(byStatus);
             const max = Math.max(1, ...entries.map(([, c]) => c));
             if (entries.length === 0) return <p className="text-xs text-neutral-400">No matching items.</p>;
-            return entries.map(([status, count]) => (
-              <div key={status} className="flex items-center gap-2">
-                <span className="text-xs text-neutral-600 dark:text-neutral-400 w-24 truncate">{status}</span>
-                <div className="flex-1 h-2 rounded-full bg-neutral-100 dark:bg-neutral-700 overflow-hidden">
-                  <div className="h-full bg-brand-navy-tint rounded-full" style={{ width: `${(count / max) * 100}%` }} />
-                </div>
-                <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 w-6 text-right">{count}</span>
-              </div>
-            ));
+            return entries.map(([status, count]) => {
+              const row = (
+                <>
+                  <span className="text-xs text-neutral-600 dark:text-neutral-400 w-24 truncate text-left">{status}</span>
+                  <div className="flex-1 h-2 rounded-full bg-neutral-100 dark:bg-neutral-700 overflow-hidden">
+                    <div className="h-full bg-brand-navy-tint rounded-full" style={{ width: `${(count / max) * 100}%` }} />
+                  </div>
+                  <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 w-6 text-right">{count}</span>
+                </>
+              );
+              return canDrill ? (
+                <button key={status} type="button" aria-label={`${status}: ${count} — show items`}
+                  onClick={() => onDrill({ title: `${widget.title || 'Items'} · Status: ${status}`, items: items.filter(i => (i.status || 'Unknown') === status) })}
+                  className="flex w-full items-center gap-2 rounded px-1 -mx-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors">
+                  {row}
+                </button>
+              ) : (
+                <div key={status} className="flex items-center gap-2">{row}</div>
+              );
+            });
           })()}
         </div>
       )}
@@ -5721,9 +5748,54 @@ function DashboardWidgetCard({ widget, workItems, editMode, onRemove, onResize, 
         </div>
       )}
 
-      {widget.widgetType === 'PIE' && <DonutChart data={chartData} />}
+      {widget.widgetType === 'PIE' && (
+        <DonutChart data={chartData}
+          onSelect={canDrill ? (e => onDrill({ title: `${widget.title || 'Items'} · ${dimension}: ${e.label}`, items: drillBy(e.label) })) : undefined} />
+      )}
 
-      {widget.widgetType === 'BAR' && <BarChart data={chartData} />}
+      {widget.widgetType === 'BAR' && (
+        <BarChart data={chartData}
+          onSelect={canDrill ? (e => onDrill({ title: `${widget.title || 'Items'} · ${dimension}: ${e.label}`, items: drillBy(e.label) })) : undefined} />
+      )}
+    </div>
+  );
+}
+
+// Iteration 6 — drill-down modal: lists the work items behind a clicked widget
+// element. Each row opens that item's detail (no navigation away from the dashboard).
+function DashboardDrillModal({ drill, onClose, onOpenItem }) {
+  const items = drill.items || [];
+  return (
+    <div className="fixed inset-0 bg-neutral-900/50 dark:bg-black/70 flex items-center justify-center z-50 p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
+      role="dialog" aria-modal="true" aria-label={drill.title}>
+      <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-lg border border-neutral-100 dark:border-neutral-700 w-full max-w-md max-h-[80vh] flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-700">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-neutral-900 dark:text-white truncate">{drill.title}</h2>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{items.length} {items.length === 1 ? 'item' : 'items'}</p>
+          </div>
+          <button onClick={onClose} aria-label="Close" autoFocus
+            className="flex-shrink-0 ml-2 text-lg leading-none text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+        <div className="overflow-y-auto p-2">
+          {items.length === 0 ? (
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 p-4 text-center">No matching items.</p>
+          ) : items.map(i => (
+            <button key={i.id} type="button" onClick={() => onOpenItem(i)}
+              className="flex w-full items-center justify-between gap-2 px-3 py-2 rounded-md text-left hover:bg-neutral-50 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors">
+              <span className="min-w-0 flex-1 truncate text-sm text-neutral-800 dark:text-neutral-200">{i.title}</span>
+              <span className="flex items-center gap-2 flex-shrink-0">
+                {i.priority && <span className="text-xs text-neutral-600 dark:text-neutral-400">{i.priority}</span>}
+                <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">{i.status}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

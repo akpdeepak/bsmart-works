@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { BarChart } from './bar-chart';
 
 const data = [
@@ -30,5 +31,12 @@ describe('BarChart', () => {
   it('shows an empty hint when there is no data', () => {
     render(<BarChart data={[]} />);
     expect(screen.getByText('No matching items.')).toBeInTheDocument();
+  });
+
+  it('renders bars as buttons and calls onSelect with the entry on click', async () => {
+    const onSelect = vi.fn();
+    render(<BarChart data={data} onSelect={onSelect} />);
+    await userEvent.click(screen.getByRole('button', { name: /High: 6/ }));
+    expect(onSelect).toHaveBeenCalledWith({ label: 'High', value: 6 });
   });
 });

@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { DonutChart } from './donut-chart';
 
 const data = [
@@ -36,5 +37,17 @@ describe('DonutChart', () => {
   it('shows an empty hint when there is no data', () => {
     render(<DonutChart data={[]} />);
     expect(screen.getByText('No matching items.')).toBeInTheDocument();
+  });
+
+  it('renders legend rows as buttons and calls onSelect with the slice on click', async () => {
+    const onSelect = vi.fn();
+    render(<DonutChart data={data} onSelect={onSelect} />);
+    await userEvent.click(screen.getByRole('button', { name: /Todo: 5/ }));
+    expect(onSelect).toHaveBeenCalledWith({ label: 'Todo', value: 5 });
+  });
+
+  it('renders legend rows as non-interactive when onSelect is omitted', () => {
+    render(<DonutChart data={data} />);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 });

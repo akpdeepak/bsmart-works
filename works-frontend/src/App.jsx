@@ -8,6 +8,10 @@ import { Logo } from '@/components/works/logo';
 import { DonutChart, BarChart } from '@/components/works/molecules';
 import { exportElementToPng, exportElementToPdf, exportRowsToCsv } from '@/lib/export';
 import { api } from '@/lib/apiClient';
+import {
+  filterItems as filterWidgetItems, statusBreakdown, statusPriorityMatrix,
+  sprintProgress, velocityPoints, SERIES_BG, EXTRA_WIDGET_PRESETS, EXTRA_WIDGET_CATEGORIES,
+} from '@/lib/dashboard-metrics';
 
 const NavCollapsedCtx = React.createContext(false);
 
@@ -850,9 +854,9 @@ export default function App() {
     setReportSections(s => s.filter((_, i) => i !== index));
   }
 
-  function addDashboardWidget(widgetType, config, title) {
+  function addDashboardWidget(widgetType, config, title, gridW = 4) {
     if (!selectedDashboard) return;
-    const body = { widgetType, title, config: JSON.stringify(config || {}), gridW: 4, gridH: 2 };
+    const body = { widgetType, title, config: JSON.stringify(config || {}), gridW, gridH: 2 };
     api.send(`/dashboards/${selectedDashboard.id}/widgets`, { method: 'POST', body: JSON.stringify(body) })
       .then(() => openDashboard(selectedDashboard.id))
       .catch(() => showToast('Failed to add widget', 'error'));
@@ -4485,14 +4489,32 @@ export default function App() {
                   </div>
 
                   {dashboardEditMode && (
-                    <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-md bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700">
-                      <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mr-1">Add widget</span>
-                      <button onClick={() => addDashboardWidget('SCORECARD', { metric: 'count', filter: { open: true } }, 'Open items')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Scorecard</button>
-                      <button onClick={() => addDashboardWidget('STATUS_BAR', { metric: 'byStatus' }, 'By status')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Status breakdown</button>
-                      <button onClick={() => addDashboardWidget('ITEM_LIST', { metric: 'list', filter: { open: true }, limit: 6 }, 'Open work items')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Item list</button>
-                      <button onClick={() => addDashboardWidget('PIE', { dimension: 'status' }, 'Items by status')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Pie chart</button>
-                      <button onClick={() => addDashboardWidget('BAR', { dimension: 'priority' }, 'Items by priority')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Bar chart</button>
-                      <span className="text-xs text-neutral-600 dark:text-neutral-400 ml-auto">Drag widgets to reorder</span>
+                    <div className="mb-4 p-3 rounded-md bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide">Widget library</span>
+                        <span className="text-xs text-neutral-600 dark:text-neutral-400">Drag widgets to reorder</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider w-20 flex-shrink-0">Basics</span>
+                          <button onClick={() => addDashboardWidget('SCORECARD', { filter: { open: true } }, 'Open items')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Scorecard</button>
+                          <button onClick={() => addDashboardWidget('STATUS_BAR', {}, 'By status')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Status breakdown</button>
+                          <button onClick={() => addDashboardWidget('ITEM_LIST', { filter: { open: true }, limit: 6 }, 'Open work items')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Item list</button>
+                          <button onClick={() => addDashboardWidget('PIE', { dimension: 'status' }, 'Items by status')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Pie chart</button>
+                          <button onClick={() => addDashboardWidget('BAR', { dimension: 'priority' }, 'Items by priority')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Bar chart</button>
+                        </div>
+                        {EXTRA_WIDGET_CATEGORIES.map(cat => (
+                          <div key={cat} className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider w-20 flex-shrink-0">{cat}</span>
+                            {EXTRA_WIDGET_PRESETS.filter(p => p.category === cat).map(p => (
+                              <button key={p.title} onClick={() => addDashboardWidget(p.type, p.config, p.title, p.w)}
+                                className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">
+                                {p.title}
+                              </button>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
@@ -4504,6 +4526,7 @@ export default function App() {
                     <div id="dashboard-export-area" className="grid grid-cols-12 gap-4">
                       {selectedDashboard.widgets.map(w => (
                         <DashboardWidgetCard key={w.id} widget={w} workItems={workItems} aggregate={dashboardAggregate} editMode={dashboardEditMode}
+                          sprints={sprints} velocity={velocityData} currentUserId={currentUser?.id}
                           onRemove={() => removeDashboardWidget(w.id)}
                           onResize={gridW => resizeDashboardWidget(w, gridW)}
                           onConfigChange={cfg => updateDashboardWidgetConfig(w, cfg)}
@@ -6091,17 +6114,12 @@ function PublicDashboardEmbed({ token }) {
 // Iteration 6 — renders a single dashboard widget from the live work-item set.
 // Widget data is computed client-side from the config (metric + filter) so the
 // designer is fully functional without a per-widget query endpoint.
-function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove, onResize, onConfigChange, onDrill, onDragStart, onDrop }) {
+function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove, onResize, onConfigChange, onDrill, onDragStart, onDrop, sprints, velocity, currentUserId }) {
   let config = {};
   try { config = JSON.parse(widget.config || '{}'); } catch { config = {}; }
   const filter = config.filter || {};
-  const items = (workItems || []).filter(i => {
-    if (filter.open && i.status === 'Done') return false;
-    if (filter.status && i.status !== filter.status) return false;
-    if (filter.priority && i.priority !== filter.priority) return false;
-    if (filter.type && i.type !== filter.type) return false;
-    return true;
-  });
+  const items = filterWidgetItems(workItems, filter, { currentUserId });
+  const isChart = widget.widgetType === 'PIE' || widget.widgetType === 'BAR';
   const dimension = config.dimension || 'status';
   // When a server scope aggregate is present (TEAM/ORG), it takes precedence over the
   // client-loaded items; its by-dimension series is already [{ label, value }].
@@ -6216,6 +6234,90 @@ function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove,
         <BarChart data={chartData}
           onSelect={canDrill ? (e => onDrill({ title: `${widget.title || 'Items'} · ${dimension}: ${e.label}`, items: drillBy(e.label) })) : undefined} />
       )}
+
+      {(widget.widgetType === 'SPRINT_HEALTH' || widget.widgetType === 'BURNDOWN') && (() => {
+        const p = sprintProgress(sprints, config.mode || (widget.widgetType === 'BURNDOWN' ? 'burndown' : 'health'));
+        const pct = p.max ? Math.round((p.value / p.max) * 100) : 0;
+        return (
+          <div className="mt-1">
+            <div className="flex items-end justify-between mb-1">
+              <span className="text-3xl font-bold text-brand-navy dark:text-white">{pct}%</span>
+              <span className="text-xs text-neutral-600 dark:text-neutral-400">{p.value}/{p.max || 0} pt · {p.label}</span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-neutral-100 dark:bg-neutral-700 overflow-hidden">
+              <div className="h-full bg-semantic-success rounded-full" style={{ width: `${p.max ? Math.min((p.value / p.max) * 100, 100) : 0}%` }} />
+            </div>
+            <p className="text-[10px] text-neutral-500 mt-1 truncate">{p.sprint?.name || 'No active sprint'}</p>
+          </div>
+        );
+      })()}
+
+      {widget.widgetType === 'VELOCITY_LINE' && (() => {
+        const points = velocityPoints(velocity);
+        if (points.length === 0) return <p className="text-xs text-neutral-400">No sprint history yet.</p>;
+        const max = Math.max(1, ...points.map(p => p.value));
+        const n = points.length;
+        const path = points.map((p, i) => `${n <= 1 ? 0 : (i / (n - 1)) * 100},${30 - (p.value / max) * 28}`).join(' ');
+        return (
+          <div className="mt-1 text-brand-navy dark:text-brand-amber">
+            <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="w-full h-14" aria-hidden="true">
+              <polyline points={path} fill="none" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+            </svg>
+            <div className="flex justify-between text-[10px] text-neutral-500 mt-1">
+              <span>{points[0]?.label}</span><span>{points[points.length - 1]?.label}</span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {widget.widgetType === 'CUMULATIVE_FLOW' && (() => {
+        const series = statusBreakdown(items);
+        const total = series.reduce((a, b) => a + b.value, 0) || 1;
+        if (series.length === 0) return <p className="text-xs text-neutral-400">No matching items.</p>;
+        return (
+          <div className="mt-1">
+            <div className="flex w-full h-3 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-700">
+              {series.map((s, idx) => (
+                <div key={s.label} className={SERIES_BG[idx % SERIES_BG.length]} style={{ width: `${(s.value / total) * 100}%` }} title={`${s.label}: ${s.value}`} />
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+              {series.map((s, idx) => (
+                <span key={s.label} className="flex items-center gap-1 text-[10px] text-neutral-600 dark:text-neutral-400">
+                  <span className={`w-2 h-2 rounded-full ${SERIES_BG[idx % SERIES_BG.length]}`} />
+                  {s.label} <span className="font-semibold text-neutral-700 dark:text-neutral-300">{s.value}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {widget.widgetType === 'MATRIX' && (() => {
+        const m = statusPriorityMatrix(items);
+        return (
+          <div className="mt-1 overflow-x-auto">
+            <table className="w-full text-[10px]">
+              <thead>
+                <tr className="text-neutral-500">
+                  <th className="text-left font-semibold py-1 pr-2">Status</th>
+                  {m.cols.map(c => <th key={c} className="text-right font-semibold py-1 px-1">{c}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {m.rows.map(row => (
+                  <tr key={row.label} className="border-t border-neutral-100 dark:border-neutral-700/50">
+                    <td className="py-1 pr-2 text-neutral-700 dark:text-neutral-300 truncate">{row.label}</td>
+                    {row.cells.map((c, idx) => (
+                      <td key={idx} className={`text-right py-1 px-1 ${c > 0 ? 'text-neutral-900 dark:text-neutral-100 font-semibold' : 'text-neutral-400'}`}>{c || '—'}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
     </div>
   );
 }

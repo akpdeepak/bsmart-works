@@ -20,7 +20,7 @@
 | 6 | 6.0 | Reports, Dashboards & Insights | 8 | 8 |
 | 7 | 7.0 | Compliance Rules Engine | 9 | 9 |
 | 8 | 8.0 | SLA Engine — Internal & Generalized | 9 | 0 |
-| 9 | 9.0 | Service Management — Customer Portal | 10 | 0 |
+| 9 | 9.0 | Service Management — Customer Portal | 10 | 10 |
 | 10 | 10.0 | AI Orchestration Foundation + AI Control Plane | 13 | 0 |
 | 11 | 11.0 | AI Expansion + Conversational Command Bar | 15 | 0 |
 | 12 | 12.0 | KPI Framework with Privacy Guardrails | 12 | 0 |
@@ -32,7 +32,7 @@
 | 18 | 18.0 | Mobile + Real-time + Performance | 12 | 0 |
 | 19 | 19.0 | Enterprise Security + Compliance Certifications | 12 | 0 |
 | 20 | 20.0 | Polish, Advanced AI, Marketplace Foundation | 12 | 0 |
-| **Total** | | | **224** | **29** |
+| **Total** | | | **224** | **39** |
 
 ## Specs
 
@@ -155,16 +155,16 @@
 
 | ID | Cap | Spec | Status | Branch | PR | Date | Notes |
 |---|---|---|---|---|---|---|---|
-| I09-S01 | N | Customer accounts | Pending | — | — | — | — |
-| I09-S02 | N | Branded customer portal | Pending | — | — | — | — |
-| I09-S03 | N | Request types | Pending | — | — | — | — |
-| I09-S04 | N | Portal forms per request type | Pending | — | — | — | — |
-| I09-S05 | N | Agent queues | Pending | — | — | — | — |
-| I09-S06 | M | Customer-facing SLA | Pending | — | — | — | — |
-| I09-S07 | N | Customer-facing knowledge base | Pending | — | — | — | — |
-| I09-S08 | N | Customer satisfaction (CSAT) | Pending | — | — | — | — |
-| I09-S09 | N | Customer dashboard | Pending | — | — | — | — |
-| I09-S10 | N | Multi-tier customer SLAs | Pending | — | — | — | — |
+| I09-S01 | N | Customer accounts | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | V38 customer_accounts + customer_users (separate identity); workspace-scoped CRUD + portal-user provisioning (manage_service); password hashes never returned |
+| I09-S02 | N | Branded customer portal | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | Separate /portal app (main.jsx path route), lighter identity, per-account branding (logo/colour/subdomain), separate customer session |
+| I09-S03 | N | Request types | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | Incident/Change/Service seeded as system types + admin-defined custom; workspace-scoped CRUD |
+| I09-S04 | N | Portal forms per request type | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | JSON form_schema per type with conditional showIf fields; validated as JSON on save; portal renders + validates |
+| I09-S05 | N | Agent queues | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | All open · Mine · Unassigned · High priority; pick-up, assign, status lifecycle (work_service) |
+| I09-S06 | M | Customer-facing SLA | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | Server-computed countdown (ON_TRACK/AT_RISK/BREACHED/MET) shown to both agent and customer — one engine, two contexts. Self-contained tier engine (iteration 8 not yet built) |
+| I09-S07 | N | Customer-facing knowledge base | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | articles.portal_published flag + agent publish/unpublish; workspace-scoped portal read/search |
+| I09-S08 | N | Customer satisfaction (CSAT) | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | 1–5 + comment, one per resolved request; workspace-scoped trends (count/avg/distribution/%satisfied) |
+| I09-S09 | N | Customer dashboard | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | Open/resolved/total + SLA-breached counts + recent resolutions, account-scoped |
+| I09-S10 | M | Multi-tier customer SLAs | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | Per-workspace tiers (Platinum/Gold/Silver); account tier selects response/resolution targets applied on submit |
 
 ### Iteration 10 — Release 10.0 · AI Orchestration Foundation + AI Control Plane
 

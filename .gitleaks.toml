@@ -8,6 +8,10 @@ description = "Global allowlist — test sources routinely contain fake credenti
 paths = [
     '''src/test/.*''',
 ]
+regexes = [
+    # Dev-only customer-portal seed BCrypt hash (iteration 9 V41 seed) — not a real credential.
+    '''\$2a\$10\$nIXd2ULNak3UIBYere4e2uV81feYYTautemSSEO7q5BX3\.j5eotK6''',
+]
 
 [extend]
 # Use the default ruleset as the base

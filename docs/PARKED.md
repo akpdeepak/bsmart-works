@@ -12,3 +12,4 @@
 | I01-S01 | No refresh-token / JWT revocation (blacklist) mechanism | Iteration 19 — Enterprise Security | Stateless JWT acceptable for MVP. |
 | I01-S01 | Legacy SHA-256 password path still active | Iteration 19 / chore | Remove after auditing all users migrated to BCrypt. |
 | I01-S01 | No workspace-level "enforce MFA" policy | Iteration 19 — Enterprise Security | MFA is opt-in for MVP. |
+| I01-S01 | Unauthenticated requests to protected endpoints return `403` instead of `401` (no `AuthenticationEntryPoint` configured in `SecurityConfig`) | Chore / Iteration 19 — Enterprise Security | Found during live validation. App-wide behaviour, pre-existing; security property (access denied) holds. Add a 401 entry point — affects all protected routes + frontend 401-handling, so do deliberately, not inside a feature PR. |

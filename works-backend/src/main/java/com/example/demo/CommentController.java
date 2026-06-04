@@ -19,20 +19,34 @@ public class CommentController {
     private final EventService eventService;
     private final EmailService emailService;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
     public CommentController(CommentRepository commentRepository, UserRepository userRepository,
                              NotificationRepository notificationRepository, EventService eventService,
-                             EmailService emailService, AuthenticatedUser authenticatedUser) {
+                             EmailService emailService, AuthenticatedUser authenticatedUser,
+                             RbacService rbac) {
         this.commentRepository = commentRepository;
         this.userRepository = userRepository;
         this.notificationRepository = notificationRepository;
         this.eventService = eventService;
         this.emailService = emailService;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
+    }
+
+    /** Resolve the work item's workspace and require the caller is a member (RB-40 §1). 404 hides
+     *  both a missing item and a foreign-tenant one. Returns the workspace id for further checks. */
+    private String requireItemAccess(String callerId, String workItemId) {
+        String wsId = rbac.workspaceForWorkItem(workItemId);
+        if (wsId == null || rbac.getUserTier(callerId, wsId) < 1) {
+            throw ApiException.notFound("Work item", workItemId);
+        }
+        return wsId;
     }
 
     @GetMapping
     public List<Comment> getComments(@PathVariable String workItemId) {
+        requireItemAccess(authenticatedUser.id(), workItemId);
         List<Comment> all = commentRepository.findByWorkItemIdOrderByCreatedAtAsc(workItemId);
         all.forEach(c -> userRepository.findById(c.getAuthorId()).ifPresent(u -> c.setAuthorName(u.getFullName())));
         Map<Long, Comment> byId = new java.util.LinkedHashMap<>();
@@ -53,6 +67,8 @@ public class CommentController {
     public Comment addComment(@PathVariable String workItemId,
                               @Valid @RequestBody Map<String, Object> payload) {
         String userId = authenticatedUser.id();
+        String wsId = requireItemAccess(userId, workItemId);
+        rbac.require(userId, wsId, "comment");
         Comment comment = new Comment();
         comment.setWorkItemId(workItemId);
         comment.setAuthorId(userId);
@@ -65,12 +81,14 @@ public class CommentController {
         Comment saved = commentRepository.save(comment);
         userRepository.findById(saved.getAuthorId()).ifPresent(u -> saved.setAuthorName(u.getFullName()));
 
-        eventService.record(workItemId, "COMMENT_ADDED", userId, "{\"commentId\":" + saved.getId() + "}");
+        eventService.recordInWorkspace(wsId, workItemId, "COMMENT_ADDED", userId,
+                Map.of("workspaceId", wsId, "commentId", saved.getId()));
 
         String actorName = saved.getAuthorName() != null ? saved.getAuthorName() : "Someone";
         String snippet = truncate(saved.getBody(), 120);
 
-        // @mention notifications + emails
+        // @mention notifications + emails — only fellow workspace members can be mentioned, so a
+        // mention never notifies (or leaks the item to) someone outside the tenant (RB-40 §1).
         String body = saved.getBody();
         if (body != null) {
             Pattern p = Pattern.compile("@([\\w.]+)");
@@ -81,6 +99,7 @@ public class CommentController {
                     .filter(u -> u.getFullName().toLowerCase().replace(" ", "").contains(mention)
                             || u.getEmail().toLowerCase().contains(mention))
                     .filter(u -> !u.getId().equals(userId))
+                    .filter(u -> rbac.getUserTier(u.getId(), wsId) >= 1)   // must share the workspace
                     .forEach(u -> {
                         Notification n = new Notification();
                         n.setUserId(u.getId());
@@ -90,7 +109,6 @@ public class CommentController {
                         n.setRead(false);
                         n.setCreatedAt(OffsetDateTime.now());
                         notificationRepository.save(n);
-                        // Send email for mention
                         emailService.sendMentionEmail(u.getId(), actorName, workItemId, snippet);
                     });
             }
@@ -101,6 +119,14 @@ public class CommentController {
 
     @DeleteMapping("/{commentId}")
     public void deleteComment(@PathVariable String workItemId, @PathVariable Long commentId) {
+        String userId = authenticatedUser.id();
+        String wsId = requireItemAccess(userId, workItemId);
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> ApiException.notFound("Comment", String.valueOf(commentId)));
+        // Author can delete their own comment; otherwise an elevated role is required.
+        if (!userId.equals(comment.getAuthorId()) && !rbac.canDo(userId, wsId, "edit_any_item")) {
+            throw ApiException.forbidden("You can only delete your own comments.");
+        }
         commentRepository.deleteById(commentId);
     }
 

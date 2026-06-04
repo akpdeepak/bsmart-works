@@ -176,10 +176,11 @@ public class WorkItemController {
         return w;
     }
 
+    /** Personal home (I01-S12): the signed-in user's assigned items. Identity comes from the JWT —
+     *  a client cannot request another user's items (the old, ignored userId param is removed). */
     @GetMapping("/my")
-    public List<WorkItem> myWorkItems(@RequestParam(required = false) String userId) {
-        String requestedUserId = authenticatedUser.id();
-        List<WorkItem> items = repository.findByAssigneeId(requestedUserId);
+    public List<WorkItem> myWorkItems() {
+        List<WorkItem> items = repository.findByAssigneeId(authenticatedUser.id());
         attachTagsBatch(items);
         return items;
     }

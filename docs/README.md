@@ -18,6 +18,18 @@ it) next to the canonical `.docx`. Regenerate the mirrors with `python3 scripts/
 | [07-tech-stack-architecture.md](specifications/07-tech-stack-architecture.md) | `specifications/07-Tech-Stack-and-Architecture.docx` |
 | — | `specifications/00-Expert-Product-Review.docx` |
 
+## Spec-refactor pipeline
+A reusable, self-iterating workflow that walks every capability-tagged feature spec across all 20
+iterations, one spec per run, refactoring/building each to the guide.
+- [REFACTOR_MASTER_PROMPT.md](REFACTOR_MASTER_PROMPT.md) — the master prompt; parameters set once,
+  then pasted **verbatim** every run. `GUIDE_PATH` → the guide below; `AI_RULES_PATH` → `CLAUDE.md`;
+  `DEPLOY_TARGET` → local production build.
+- [bsmart-works-iteration-guide.md](bsmart-works-iteration-guide.md) — `GUIDE_PATH`: the
+  markdown-formatted export of `06-Complete-Iteration-Guide` the pipeline parses (Part 7). Same
+  source as the machine-extracted [06-iteration-guide.md](specifications/06-iteration-guide.md);
+  this copy preserves the heading/bold structure spec-selection relies on.
+- `REFACTOR_TRACKER.md` — the living spec ledger; **generated on the pipeline's first run**, not committed here.
+
 ## Brand
 - [brand/README.md](brand/README.md) — logo variants, construction, exact colours, usage rules
 - [brand/brand-and-identity.md](brand/brand-and-identity.md) — full brand spec (Markdown mirror)

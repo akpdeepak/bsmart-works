@@ -8,6 +8,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 ## [Unreleased]
 
 ### Added
+- SLA Engine (iteration 8, Cap M): unified internal SLA engine — policies scoped by BQL with multiple targets (first response, resolution, custom), business-hours calendars (per-weekday windows, holidays, timezone), pause/resume on configured statuses, visible countdown timers (OK/WARN/BREACH), threshold + on-breach escalation (notify/reassign), met/breached reporting, and an append-only SLA audit log with CSV export; bulk-apply with preview (V38). One engine, ready for customer-facing SLAs in iteration 9.
+- SLA frontend: `SlaCountdownBadge` ("Resolve in 2h 14m", colour-shifting, accessible) and a four-tab SLA management surface (policies, live clocks, report, audit).
 - Knowledge: inline article comments (threaded, resolvable) on knowledge articles
 - Knowledge: Author → Review → Publish workflow (submit / publish / request-changes / archive / restore) with reviewer + submission tracking
 - Knowledge: article analytics panel — views, helpful votes, work-item citations, open comments, versions, and stale-article detection

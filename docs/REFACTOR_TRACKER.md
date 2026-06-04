@@ -19,7 +19,7 @@
 | 5 | 5.0 | Knowledge Repository + Versions | 10 | 0 |
 | 6 | 6.0 | Reports, Dashboards & Insights | 8 | 0 |
 | 7 | 7.0 | Compliance Rules Engine | 9 | 9 |
-| 8 | 8.0 | SLA Engine — Internal & Generalized | 9 | 0 |
+| 8 | 8.0 | SLA Engine — Internal & Generalized | 9 | 9 |
 | 9 | 9.0 | Service Management — Customer Portal | 10 | 0 |
 | 10 | 10.0 | AI Orchestration Foundation + AI Control Plane | 13 | 0 |
 | 11 | 11.0 | AI Expansion + Conversational Command Bar | 15 | 0 |
@@ -32,7 +32,7 @@
 | 18 | 18.0 | Mobile + Real-time + Performance | 12 | 0 |
 | 19 | 19.0 | Enterprise Security + Compliance Certifications | 12 | 0 |
 | 20 | 20.0 | Polish, Advanced AI, Marketplace Foundation | 12 | 0 |
-| **Total** | | | **224** | **2** |
+| **Total** | | | **224** | **11** |
 
 ## Specs
 
@@ -141,15 +141,15 @@
 
 | ID | Cap | Spec | Status | Branch | PR | Date | Notes |
 |---|---|---|---|---|---|---|---|
-| I08-S01 | M | SLA policy definition | Pending | — | — | — | — |
-| I08-S02 | M | Business-hours calendars | Pending | — | — | — | — |
-| I08-S03 | M | Multiple SLA targets per policy | Pending | — | — | — | — |
-| I08-S04 | M | Pause / resume triggers | Pending | — | — | — | — |
-| I08-S05 | M | Visible countdown timers | Pending | — | — | — | — |
-| I08-S06 | M | SLA escalation | Pending | — | — | — | — |
-| I08-S07 | M | SLA reporting | Pending | — | — | — | — |
-| I08-S08 | M | SLA audit log | Pending | — | — | — | — |
-| I08-S09 | M | Bulk SLA application | Pending | — | — | — | — |
+| I08-S01 | M | SLA policy definition | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | V38 model; scope BQL + calendar + targets + start/pause/stop triggers; test-before-activate (preview), activate needs ≥1 target |
+| I08-S02 | M | Business-hours calendars | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | Per-weekday windows + holidays + timezone; pure business-time math in SlaCalculationService (unit-tested) |
+| I08-S03 | M | Multiple SLA targets per policy | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | sla_targets (FIRST_RESPONSE/RESOLUTION/custom), independent clocks per target |
+| I08-S04 | M | Pause / resume triggers | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | Auto-pause on configured statuses, auto-resume on exit; business-time accrual freezes while paused; events recorded |
+| I08-S05 | M | Visible countdown timers | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | Instance read API (live remaining/percent/band) + SlaCountdownBadge (OK/WARN/BREACH, a11y) |
+| I08-S06 | M | SLA escalation | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | Threshold-percent + on-breach steps; NOTIFY/REASSIGN; idempotent per clock (escalated_steps) |
+| I08-S07 | M | SLA reporting | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | Met/breached/at-risk rates overall + per policy |
+| I08-S08 | M | SLA audit log | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | Append-only events (start/pause/resume/breach/escalation) + regulator-ready CSV export |
+| I08-S09 | M | Bulk SLA application | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | Apply policy across current scope with pre-commit preview |
 
 ### Iteration 9 — Release 9.0 · Service Management — Customer Portal
 

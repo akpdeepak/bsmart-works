@@ -1,6 +1,6 @@
-<!-- bSmart Works PR. The checklist mirrors CLAUDE.md §6 (Definition of Done).
+<!-- bSmart Works PR. The checklist mirrors the Orchestrator's Definition of Done (ai-rules/00-ORCHESTRATOR.md §4).
      CI enforces most of these automatically; tick the rest honestly.
-     dod-version: 2026-06-01-r4 — must match the tag in CLAUDE.md §6. -->
+     dod-version: 2026-06-04-r1 — must match the tag in ai-rules/00-ORCHESTRATOR.md. -->
 
 ## What & why
 <!-- One or two sentences. Link the iteration/work item. -->
@@ -12,7 +12,7 @@
 
 **Backend**
 - [ ] New endpoints validate input with `@Valid`, sit under `/api/v1/`, plural kebab path
-- [ ] Schema changes are a Flyway migration (`V27+`, `V{n}__snake_case.sql`), plural table names
+- [ ] Schema changes are a Flyway migration (next sequential `V{n}__snake_case.sql` — Orchestrator §6), plural table names
 - [ ] RBAC checks are in the service layer via `RbacService`, not in controllers
 - [ ] Errors use the standard `{ code, message, field? }` shape via `@ControllerAdvice`
 - [ ] New code is in `com.example.demo` (no new top-level packages without a rename plan)

@@ -2,11 +2,11 @@
 
 ## Before you write a line of code
 
-1. Read [`CLAUDE.md`](CLAUDE.md) — the canonical rules (every AI tool reads it too).
+1. Read [`ai-rules/00-ORCHESTRATOR.md`](ai-rules/00-ORCHESTRATOR.md) — the canonical rules. Every AI tool reads a generated view of `ai-rules/`; `CLAUDE.md` is one of those generated views.
 2. Read [`docs/ENGINEERING-PRINCIPLES.md`](docs/ENGINEERING-PRINCIPLES.md) — the *why*.
 3. Confirm the **active iteration** with Deepak. Do not build iteration N+1 while N is in scope.
-4. For any backend change: identify the next Flyway migration number (currently `V27+`) and the
-   API contract before touching code.
+4. For any backend change: identify the next Flyway migration number (see the Orchestrator §6 —
+   the single source of truth for it) and the API contract before touching code.
 
 ---
 
@@ -74,7 +74,7 @@ npm run dev
 The pre-commit hook runs automatically. To run the same checks manually:
 
 ```bash
-# Single command — runs ALL Definition of Done gates (CLAUDE.md §21.9):
+# Single command — runs ALL Definition of Done gates:
 bash scripts/verify.sh
 
 # Faster variants:
@@ -128,26 +128,29 @@ Always include the issue number: `feat/47-short-description`.
 
 ---
 
-## Editing the rules (CLAUDE.md)
+## Editing the rules (`ai-rules/`)
 
-The AI-tool rules files are **generated** from CLAUDE.md. Never hand-edit them:
+The canonical rules live in **`ai-rules/`** (`00-ORCHESTRATOR.md`, `SOURCE-OF-TRUTH.md`, and `rulebooks/`). Every per-tool file is **generated** from it — never hand-edit the generated files:
 
 ```bash
-# 1. Edit CLAUDE.md directly
-# 2. Regenerate all derived AI rules files
+# 1. Edit the source in ai-rules/
+# 2. Regenerate every per-tool file
 node scripts/generate-ai-rules.mjs
 
-# 3. Commit CLAUDE.md + all regenerated files together
+# 3. Commit the ai-rules/ change + all regenerated files together
 ```
 
 Files that are auto-generated (never edit these directly):
-- `.github/copilot-instructions.md`
-- `.cursor/rules/bsmart.mdc`
-- `.windsurfrules`
+- `CLAUDE.md`
 - `AGENTS.md`
+- `.windsurfrules`
+- `.cursor/rules/bsmart.mdc`
+- `.github/copilot-instructions.md`
+- `.github/instructions/*.instructions.md`
 
-If you change the Definition of Done checklist in CLAUDE.md, bump the `dod-version` tag in both
-CLAUDE.md and `.github/pull_request_template.md` to the same value (`YYYY-MM-DD-rN`).
+If you change the Definition of Done contract (Orchestrator §4 in `ai-rules/00-ORCHESTRATOR.md`),
+bump the `dod-version` tag in both that file and `.github/pull_request_template.md` to the same
+value (`YYYY-MM-DD-rN`).
 
 ---
 

@@ -6,6 +6,7 @@ import { Button } from '@/components/works/button';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
+import { ResetPasswordScreen } from '@/components/works/reset-password-screen';
 import { DonutChart, BarChart } from '@/components/works/molecules';
 import { exportElementToPng, exportElementToPdf, exportRowsToCsv } from '@/lib/export';
 import { api } from '@/lib/apiClient';
@@ -87,6 +88,11 @@ export default function App() {
   const [forgotEmail, setForgotEmail]   = useState('');
   const [forgotMsg, setForgotMsg]       = useState('');
   const [verifyPending, setVerifyPending] = useState(null); // { email, devToken }
+  // Token from the emailed /reset-password?token=… link (read once on load).
+  const [resetToken, setResetToken] = useState(() => {
+    if (!window.location.pathname.includes('reset-password')) return null;
+    return new URLSearchParams(window.location.search).get('token') || '';
+  });
   const [verifyMsg, setVerifyMsg]       = useState('');
   const [mfaChallenge, setMfaChallenge] = useState(null); // { userId } — awaiting TOTP
   const [mfaCode, setMfaCode]           = useState('');
@@ -442,7 +448,7 @@ export default function App() {
           setVerifyMsg('Please verify your email before signing in. Check your inbox.');
           return;
         }
-        throw new Error(data.error || 'Authentication failed');
+        throw new Error(data.message || data.error || 'Authentication failed');
       }
       return data;
     }).then(data => {
@@ -466,7 +472,7 @@ export default function App() {
     api.raw(`/auth/verify?token=${token}`)
       .then(async res => {
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Verification failed');
+        if (!res.ok) throw new Error(data.message || data.error || 'Verification failed');
         return data;
       })
       .then(data => {
@@ -484,7 +490,7 @@ export default function App() {
       body: JSON.stringify({ userId: mfaChallenge.userId, totp: mfaCode })
     }).then(async res => {
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Invalid code');
+      if (!res.ok) throw new Error(data.message || data.error || 'Invalid code');
       return data;
     }).then(data => {
       setMfaChallenge(null); setMfaCode('');
@@ -493,29 +499,44 @@ export default function App() {
     }).catch(err => setMfaError(err.message));
   };
 
+  // MFA enroll/confirm act on the logged-in user; apiClient attaches the JWT, and the server
+  // derives identity from it (no client-supplied X-User-Id — that header is no longer trusted).
   const handleMfaEnroll = () => {
-    api.raw(`/auth/mfa/enroll`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-User-Id': currentUser?.id }
-    }).then(r => r.json()).then(d => { setMfaSetup(d); setMfaSetupCode(''); setMfaSetupMsg(''); })
+    api.raw(`/auth/mfa/enroll`, { method: 'POST' })
+      .then(r => r.json()).then(d => { setMfaSetup(d); setMfaSetupCode(''); setMfaSetupMsg(''); })
       .catch(() => showToast('MFA enroll failed', 'error'));
   };
 
   const handleMfaConfirm = () => {
     api.raw(`/auth/mfa/confirm`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-User-Id': currentUser?.id },
+      method: 'POST',
       body: JSON.stringify({ totp: mfaSetupCode })
     }).then(r => r.json()).then(d => {
       if (d.message) { setMfaSetup(null); setMfaSetupMsg(''); showToast('MFA enabled! ✓'); }
-      else setMfaSetupMsg(d.error || 'Failed');
+      else setMfaSetupMsg(d.message || d.error || 'Failed');
     }).catch(() => setMfaSetupMsg('Confirmation failed'));
   };
 
   const handleForgotPassword = (e) => {
     e.preventDefault();
     api.raw(`/auth/forgot-password`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
       body: JSON.stringify({ email: forgotEmail })
     }).then(r => r.json()).then(d => setForgotMsg(d.message)).catch(() => setForgotMsg('Error. Please try again.'));
+  };
+
+  // Token-based reset reached from the emailed /reset-password?token=… link.
+  // Returns the success message (or throws) so ResetPasswordScreen can render its own states.
+  const handleResetPassword = (token, newPassword) =>
+    api.send(`/auth/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    }).then(d => d.message);
+
+  const goToSignIn = () => {
+    window.history.replaceState({}, '', '/');
+    setResetToken(null);
+    setForgotMode(false); setForgotMsg('');
   };
 
   const handleLogout = () => {
@@ -1506,6 +1527,11 @@ export default function App() {
   const shareToken = new URLSearchParams(window.location.search).get('share');
   if (shareToken) return <PublicDashboardEmbed token={shareToken} />;
 
+  // Password-reset link (forgot-password flow) — renders without a session.
+  if (resetToken !== null) {
+    return <ResetPasswordScreen token={resetToken} onSubmit={handleResetPassword} onBackToSignIn={goToSignIn} />;
+  }
+
   // ==========================================
   // AUTH SCREENS
   // ==========================================
@@ -1517,7 +1543,7 @@ export default function App() {
           <div className="flex justify-center mb-6"><Logo /></div>
           <div className="h-10 w-10 rounded-xl bg-semantic-success-surface flex items-center justify-center mx-auto mb-4"><Mail className="h-5 w-5 text-semantic-success" /></div>
           <h2 className="text-xl font-bold text-brand-navy text-center mb-2">Check your email</h2>
-          <p className="text-sm text-neutral-400 text-center mb-5">
+          <p className="text-sm text-neutral-600 text-center mb-5">
             We sent a verification link to <strong>{verifyPending.email}</strong>.<br/>
             Click it to activate your account.
           </p>
@@ -1548,7 +1574,7 @@ export default function App() {
           <div className="flex justify-center mb-6"><Logo /></div>
           <div className="h-10 w-10 rounded-xl bg-semantic-info-surface flex items-center justify-center mx-auto mb-4"><ShieldCheck className="h-5 w-5 text-semantic-info" /></div>
           <h2 className="text-xl font-bold text-brand-navy text-center mb-2">Two-factor authentication</h2>
-          <p className="text-sm text-neutral-400 text-center mb-5">Enter the 6-digit code from your authenticator app.</p>
+          <p className="text-sm text-neutral-600 text-center mb-5">Enter the 6-digit code from your authenticator app.</p>
           {mfaError && <p className="text-sm text-semantic-danger text-center mb-3">{mfaError}</p>}
           <input type="text" inputMode="numeric" maxLength={6} placeholder="000000"
             value={mfaCode} onChange={e => setMfaCode(e.target.value.replace(/\D/g,''))}

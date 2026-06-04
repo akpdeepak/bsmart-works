@@ -41,7 +41,7 @@
 
 | ID | Cap | Spec | Status | Branch | PR | Date | Notes |
 |---|---|---|---|---|---|---|---|
-| I01-S01 | A | Authentication & identity | Pending | — | — | — | — |
+| I01-S01 | A | Authentication & identity | In-Progress | refactor/iter-01/s01-authentication-identity | — | 2026-06-04 | — |
 | I01-S02 | A | Workspaces | Pending | — | — | — | — |
 | I01-S03 | A | App shell — topbar, sidenav, workspace switcher | Pending | — | — | — | — |
 | I01-S04 | A | Event store foundation | Pending | — | — | — | — |

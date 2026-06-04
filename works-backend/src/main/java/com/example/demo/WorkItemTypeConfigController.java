@@ -13,15 +13,8 @@ public class WorkItemTypeConfigController {
     private final WorkItemTypeConfigRepository typeConfigRepo;
     private final AuthenticatedUser authenticatedUser;
 
-    private static final List<Map<String, Object>> BUILT_IN_TYPES = List.of(
-        Map.of("typeKey", "STORY",           "label", "Story",           "icon", "📖", "color", "#22c55e", "isCustom", false),
-        Map.of("typeKey", "TASK",            "label", "Task",            "icon", "✓",  "color", "#3b82f6", "isCustom", false),
-        Map.of("typeKey", "BUG",             "label", "Bug",             "icon", "🐛", "color", "#ef4444", "isCustom", false),
-        Map.of("typeKey", "EPIC",            "label", "Epic",            "icon", "⚡", "color", "#a855f7", "isCustom", false),
-        Map.of("typeKey", "SUBTASK",         "label", "Sub-task",        "icon", "↳",  "color", "#6b7280", "isCustom", false),
-        Map.of("typeKey", "INCIDENT",        "label", "Incident",        "icon", "🔥", "color", "#f97316", "isCustom", false),
-        Map.of("typeKey", "SERVICE_REQUEST", "label", "Service Request", "icon", "🎫", "color", "#0b2f5c", "isCustom", false)
-    );
+    // The 7 MVP defaults live in one place (DefaultWorkItemTypes) so backend + frontend never drift.
+    private static final List<Map<String, Object>> BUILT_IN_TYPES = DefaultWorkItemTypes.ALL;
 
     public WorkItemTypeConfigController(WorkItemTypeConfigRepository typeConfigRepo,
                                          AuthenticatedUser authenticatedUser) {

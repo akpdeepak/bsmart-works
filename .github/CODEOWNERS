@@ -19,7 +19,11 @@ works-backend/  @akpdeepak
 # Frontend / design system
 works-frontend/  @akpdeepak
 
-# AI rules, architecture docs, CI — Deepak always owns these
+# AI rules, architecture docs, CI — Deepak always owns these.
+# ai-rules/ is the CANONICAL source; CLAUDE.md / AGENTS.md / .cursor / .windsurfrules /
+# copilot are generated from it (Orchestrator §7) — guard the source, not just the output.
+ai-rules/                       @akpdeepak
+scripts/generate-ai-rules.mjs   @akpdeepak
 CLAUDE.md  @akpdeepak
 AGENTS.md  @akpdeepak
 .github/   @akpdeepak

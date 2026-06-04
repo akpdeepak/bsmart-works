@@ -52,16 +52,37 @@ capability calls a model on its own terms.
 
 Required: data export, **right-to-be-forgotten**, access audit, data residency (GDPR / India DPDP).
 
-> **[DECISION REQUIRED — Deepak]** There is a head-on conflict no document has resolved: the
-> architecture commits to an **append-only event log that is never deleted** (RB-10 §3,
-> ENGINEERING-PRINCIPLES §1.6 & §3.2), yet DPDP/GDPR require **erasure** of personal data. These
-> cannot both be literally true.
+**The conflict:** the architecture commits to an **append-only event log that is never deleted**
+(RB-10 §3, ENGINEERING-PRINCIPLES §1.6 & §3.2), yet DPDP/GDPR require **erasure** of personal data.
+Both cannot be literally true if personal data lives inside the immutable log.
+
+> **DECISION (2026-06-04 — Deepak): crypto-shredding + PII-vault tokenization.** The event log stays
+> append-only and immutable; **raw personal data is never stored inside an event** (or projection,
+> index, or log line). Instead:
 >
-> **Recommended resolution: crypto-shredding / PII-vault tokenization.** Keep the event log
-> append-only and immutable, but store personal fields indirected through a per-subject key (or a
-> separate PII vault keyed by token). "Forget" then means destroying the key / vault record: the
-> event history stays intact and auditable, while the personal data becomes unrecoverable. This
-> preserves both invariants. Confirm this approach before the compliance iterations (7–9) begin.
+> - **PII lives in a separate, mutable PII vault**, keyed by an opaque per-subject token. Events and
+>   read-models reference the **token**, never the raw personal field.
+> - Each subject's vault record is encrypted under a **per-subject data key**, envelope-encrypted via
+>   the KMS in §4 (BYOK where a tenant requires it).
+> - **"Forget" = destroy the per-subject key and purge the vault record.** The event history and its
+>   causal structure stay intact and auditable; the personal data becomes cryptographically
+>   unrecoverable. This satisfies erasure **and** preserves the immutable audit trail.
+>
+> **Binding rules (detailed design lands with the compliance iterations, 7–9):**
+> 1. **No raw PII outside the vault** — not in event payloads, projections, search indexes, logs, or
+>    metrics; only tokens/ciphertext. (A `guardrails.sh` "no-PII-in-events" check is added once the
+>    PII field inventory exists.)
+> 2. **Backups must honour erasure** — a backup that can resurrect a destroyed key or pre-shred PII
+>    defeats the right. Key retention ≤ backup retention, and key destruction propagates to
+>    replicas/caches.
+> 3. **Projections re-derivable from tokenized events alone** — a read-model rebuild after erasure
+>    must never need the purged PII.
+> 4. **Maintain a PII field inventory + data-residency map** (which vault, which region) — the single
+>    artifact the access-audit and residency requirements both read from.
+>
+> *Scope:* this fixes the **architecture**. The PII field inventory, key-management/rotation design,
+> retention windows, and backup-expiry mechanics are detailed designs to produce — and validate with
+> legal/DPO — at the **start of iterations 7–9**, before any of this is built.
 
 ## 4. Security depth *(spec `06 §5.4`, `07 §4.6`)*
 

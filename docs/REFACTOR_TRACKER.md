@@ -17,7 +17,7 @@
 | 3 | 3.0 | Workflows, Permissions & Custom Fields | 8 | 0 |
 | 4 | 4.0 | PM Artifacts — RAID, Decisions, Meetings | 10 | 0 |
 | 5 | 5.0 | Knowledge Repository + Versions | 10 | 0 |
-| 6 | 6.0 | Reports, Dashboards & Insights | 8 | 0 |
+| 6 | 6.0 | Reports, Dashboards & Insights | 8 | 8 |
 | 7 | 7.0 | Compliance Rules Engine | 9 | 9 |
 | 8 | 8.0 | SLA Engine — Internal & Generalized | 9 | 0 |
 | 9 | 9.0 | Service Management — Customer Portal | 10 | 0 |
@@ -32,7 +32,7 @@
 | 18 | 18.0 | Mobile + Real-time + Performance | 12 | 0 |
 | 19 | 19.0 | Enterprise Security + Compliance Certifications | 12 | 0 |
 | 20 | 20.0 | Polish, Advanced AI, Marketplace Foundation | 12 | 0 |
-| **Total** | | | **224** | **2** |
+| **Total** | | | **224** | **19** |
 
 ## Specs
 
@@ -114,14 +114,14 @@
 
 | ID | Cap | Spec | Status | Branch | PR | Date | Notes |
 |---|---|---|---|---|---|---|---|
-| I06-S01 | J | Dashboard designer | Pending | — | — | — | — |
-| I06-S02 | J | Widget library (20+ widgets) | Pending | — | — | — | — |
-| I06-S03 | J | Custom report builder | Pending | — | — | — | — |
-| I06-S04 | J | Scheduled report delivery | Pending | — | — | — | — |
-| I06-S05 | J | Report templates | Pending | — | — | — | — |
-| I06-S06 | J | Drill-down navigation | Pending | — | — | — | — |
-| I06-S07 | J | Export PDF / Excel / PNG | Pending | — | — | — | — |
-| I06-S08 | J | Embeddable read-only dashboards | Pending | — | — | — | — |
+| I06-S01 | J | Dashboard designer | Done | (pre-existing on main) | — | 2026-06-04 | Drag-drop grid + personal/team/project/org scopes (CustomDashboardController, V29) |
+| I06-S02 | J | Widget library (20+ widgets) | Done | claude/iteration-6-remaining-work | [#84](https://github.com/akpdeepak/bsmart-works/pull/84) | 2026-06-04 | Palette expanded 11→21 presets over 10 render types; +unassigned/dueSoon filters |
+| I06-S03 | J | Custom report builder | Done | (pre-existing on main) | — | 2026-06-04 | Section-based builder (kpi/chart/table/narrative), ReportController, V30 |
+| I06-S04 | J | Scheduled report delivery | Done | claude/iteration-6-remaining-work | [#84](https://github.com/akpdeepak/bsmart-works/pull/84) | 2026-06-04 | UI added over existing backend: cadence/channel/recipients, pause/resume/remove |
+| I06-S05 | J | Report templates | Done | claude/iteration-6-remaining-work | [#84](https://github.com/akpdeepak/bsmart-works/pull/84) | 2026-06-04 | V38 adds Release / Monthly-exec / Customer templates (6 total) |
+| I06-S06 | J | Drill-down navigation | Done | (pre-existing on main) | — | 2026-06-04 | DashboardDrillModal; widget elements open underlying items |
+| I06-S07 | J | Export PDF / Excel / PNG | Done | (pre-existing on main) | — | 2026-06-04 | PDF+PNG+CSV; XLSX intentionally CSV (SheetJS advisory, export.js) |
+| I06-S08 | J | Embeddable read-only dashboards | Done | (pre-existing on main) | — | 2026-06-04 | Share tokens + PublicDashboardController + embed (V33) |
 
 ### Iteration 7 — Release 7.0 · Compliance Rules Engine
 

@@ -1,5 +1,5 @@
 -- ============================================================
--- V35: Seed a second workspace (I01-S02 Workspaces)
+-- V37: Seed a second workspace (I01-S02 Workspaces)
 -- Makes multi-workspace tenant context real and demonstrable: the canonical dogfood users
 -- belong to two workspaces, so the switcher shows two and switching exercises real isolation.
 -- Seed data only — no schema change. Forward-only.

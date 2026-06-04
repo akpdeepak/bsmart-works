@@ -41,7 +41,7 @@ Authority is split by domain. Decide what the task touches, then open the rule b
 | # | Rule book | Owns | Applies when you touch… |
 |---|-----------|------|--------------------------|
 | 05 | [Task Execution & Ways of Working](./rulebooks/05-TASK-EXECUTION.md) | How any task — raised by the user or self-identified — goes from idea to merged-on-remote, gated end to end | **Every task, before anything else** |
-| 10 | [Engineering & Architecture](./rulebooks/10-ENGINEERING.md) | Stack, layers, data/Flyway, API contract, WIQL, testing, security hardening, branching/PR/CD/observability/tech-debt | `**/*.java`, `**/pom.xml`, `db/migration/**`, any service/repository/controller/API |
+| 10 | [Engineering & Architecture](./rulebooks/10-ENGINEERING.md) | Stack, layers, data/Flyway, API contract, BQL, testing, security hardening, branching/PR/CD/observability/tech-debt | `**/*.java`, `**/pom.xml`, `db/migration/**`, any service/repository/controller/API |
 | 20 | [Product & Delivery](./rulebooks/20-PRODUCT.md) | What earns its place, iteration discipline, defaults-vs-customization, compliance-as-data, PM traceability | Any new feature, scope decision, capability, or roadmap question |
 | 30 | [Design & UX](./rulebooks/30-DESIGN.md) | Design tokens, layout, interaction, states, accessibility, content, iconography — the single design system | `works-frontend/**`, any component, screen, or copy |
 | 40 | [Governance, Security & Compliance](./rulebooks/40-GOVERNANCE.md) | Multi-tenant isolation, AI Control Plane, data governance/DPDP, security depth, NFR budgets | Anything touching tenant data, AI features, audit/compliance, or performance |

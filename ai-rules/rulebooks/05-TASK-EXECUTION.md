@@ -48,7 +48,7 @@ touches**, write what it requires — this *is* what "multidimensional" means he
 
 - **Product (RB-20):** which capability/iteration; does it earn its place.
 - **Engineering (RB-10):** layers touched; data + migration (expand-contract if schema changes);
-  API contract; WIQL.
+  API contract; BQL.
 - **Design (RB-30):** screens/components; the five states; tokens.
 - **Governance (RB-40):** workspace scoping; field-level security; AI Control Plane (scope, budget,
   fallback, audit); NFR budget; audit/compliance; data-governance.

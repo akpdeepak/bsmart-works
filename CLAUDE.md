@@ -578,15 +578,28 @@ and the cert roadmap live in RB-40 §4.*
 
 ## 9. Operations
 
-- **Branching:** GitHub Flow; short-lived branches off `main`; `type/scope-short-desc` naming;
-  **squash-merge only**; stale branches pruned.
+- **Branching:** GitHub Flow. `main` is the **single, always-shippable trunk** — the only
+  long-lived branch (no `develop`, no `master`/release branch). Work on short-lived
+  `type/scope-short-desc` branches off `main` → PR → CI green → **squash-merge** → delete the
+  branch. "Shippable" is marked by a **release tag**, never a second long-lived branch (a branch
+  keeps moving; a tag is frozen and is what you roll back to).
 - **PRs:** small and single-purpose; draft early; self-review checklist before opening; the PR
   template **is** the Definition of Done (Orchestrator §4).
 - **Dependencies:** new deps go through the approval checklist; Dependabot for updates; security
   scanning; lockfiles committed.
-- **CD:** deploy from `main` after the iteration squash-merge; deployment decision checklist;
-  standard health-check endpoint. *(Target infra — AWS/ECS, RDS, ElastiCache, Terraform, OTel —
-  is RB-40 §5.)*
+- **Releases & promotion (trunk-based — this is what protects the shippable state from disruption):**
+  - **A release is an annotated SemVer tag `vX.Y.Z` + a GitHub Release**, cut from `main` when an
+    iteration is verified complete (one release per completed iteration; PATCH for hotfixes). The
+    tag is the immutable, known-good snapshot — later `main` commits cannot disturb it.
+  - **Promote to production by deploying that tagged commit** (`deploy.yml`), gated by a GitHub
+    **`production` Environment** with a required-approval rule. "What's in production" is the
+    deployed Release, tracked there — not a branch.
+  - **Hotfix:** branch off `main` → fix + test → PR → squash-merge → tag `vX.Y.(Z+1)` → deploy.
+    No cross-branch back-merging.
+  - **Tagging, releasing, and deploying are irreversible/remote → explicit human go-ahead**
+    (Orchestrator §5, RB-05 Stage 7). Tags are immutable: never force-move or delete a published one.
+- **CD:** deploy a release tag (above) via `deploy.yml`; deployment decision checklist; standard
+  health-check endpoint. *(Target infra — AWS/ECS, RDS, ElastiCache, Terraform, OTel — is RB-40 §5.)*
 - **Observability:** environment-appropriate log levels; structured logging; no secrets or PII in
   logs.
 - **Technical debt:** recorded in `TECH-DEBT.md` with rationale and payoff trigger; paid down

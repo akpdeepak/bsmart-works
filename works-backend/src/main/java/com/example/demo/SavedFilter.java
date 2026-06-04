@@ -14,6 +14,8 @@ public class SavedFilter {
     @Column(columnDefinition = "TEXT") private String filterJson;
     private boolean isShared;
     private OffsetDateTime createdAt;
+    private boolean subscribed;
+    private OffsetDateTime lastNotifiedAt;
 
     public Long getId() { return id; }
     public String getWorkspaceId() { return workspaceId; }
@@ -28,4 +30,8 @@ public class SavedFilter {
     public void setShared(boolean s) { this.isShared = s; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime c) { this.createdAt = c; }
+    public boolean isSubscribed() { return subscribed; }
+    public void setSubscribed(boolean s) { this.subscribed = s; }
+    public OffsetDateTime getLastNotifiedAt() { return lastNotifiedAt; }
+    public void setLastNotifiedAt(OffsetDateTime l) { this.lastNotifiedAt = l; }
 }

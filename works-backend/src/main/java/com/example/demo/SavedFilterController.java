@@ -40,6 +40,15 @@ public class SavedFilterController {
         }).orElseThrow();
     }
 
+    // Subscribe / unsubscribe to be notified when new work items match this filter (V34).
+    @PutMapping("/{id}/subscribe")
+    public SavedFilter toggleSubscribe(@PathVariable Long id) {
+        return repository.findById(id).map(f -> {
+            f.setSubscribed(!f.isSubscribed());
+            return repository.save(f);
+        }).orElseThrow();
+    }
+
     @DeleteMapping("/{id}")
     public void deleteFilter(@PathVariable Long id) {
         repository.deleteById(id);

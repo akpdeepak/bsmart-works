@@ -5,4 +5,5 @@ import java.util.List;
 
 public interface SavedFilterRepository extends JpaRepository<SavedFilter, Long> {
     List<SavedFilter> findByWorkspaceIdAndIsSharedOrCreatedBy(String workspaceId, boolean isShared, String createdBy);
+    List<SavedFilter> findBySubscribedTrue();
 }

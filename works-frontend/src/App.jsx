@@ -2728,6 +2728,17 @@ export default function App() {
                         </button>
                         {f.createdBy === currentUser?.id && (
                           <button onClick={() => {
+                            api.raw(`/saved-filters/${f.id}/subscribe`, { method: 'PUT', headers: headers() })
+                              .then(r => r.json()).then(() => fetchSavedFilters())
+                              .catch(() => {});
+                          }}
+                            title={f.subscribed ? 'Unsubscribe from new matches' : 'Notify me of new matches'}
+                            className={`text-xs px-1.5 py-1.5 font-medium transition-colors ${f.subscribed ? 'bg-brand-navy/20 text-brand-navy hover:bg-brand-navy/30' : 'bg-neutral-100 text-neutral-400 hover:bg-neutral-200'}`}>
+                            {f.subscribed ? '🔔' : '🔕'}
+                          </button>
+                        )}
+                        {f.createdBy === currentUser?.id && (
+                          <button onClick={() => {
                             api.raw(`/saved-filters/${f.id}/share`, { method: 'PUT', headers: headers() })
                               .then(r => r.json()).then(() => fetchSavedFilters())
                               .catch(() => {});

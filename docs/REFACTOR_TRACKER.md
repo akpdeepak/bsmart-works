@@ -12,7 +12,7 @@
 
 | Iteration | Release | Theme | Specs | Done |
 |---|---|---|---:|---:|
-| 1 | 1.0 | Foundation — The Works MVP | 12 | 9 |
+| 1 | 1.0 | Foundation — The Works MVP | 12 | 10 |
 | 2 | 2.0 | Sprints — Scrum + Reports | 8 | 0 |
 | 3 | 3.0 | Workflows, Permissions & Custom Fields | 8 | 0 |
 | 4 | 4.0 | PM Artifacts — RAID, Decisions, Meetings | 10 | 0 |
@@ -32,7 +32,7 @@
 | 18 | 18.0 | Mobile + Real-time + Performance | 12 | 0 |
 | 19 | 19.0 | Enterprise Security + Compliance Certifications | 12 | 0 |
 | 20 | 20.0 | Polish, Advanced AI, Marketplace Foundation | 12 | 0 |
-| **Total** | | | **224** | **26** |
+| **Total** | | | **224** | **27** |
 
 ## Specs
 
@@ -50,8 +50,8 @@
 | I01-S07 | B | WorkItem CRUD with rich text | Done | claude/spec-refactor-i01-s07-workitem-crud | [#88](https://github.com/akpdeepak/bsmart-works/pull/88) | 2026-06-04 | Tenant-scope list/search/backlog/trash reads (RB-40 §1); guard restore/reorder writes. |
 | I01-S08 | F | Kanban board (basic) | Done | claude/spec-refactor-i01-s08-kanban | [#89](https://github.com/akpdeepak/bsmart-works/pull/89) | 2026-06-04 | Board loading uses the column skeleton, not a spinner (Part-4); drag-drop optimistic+revert + density already met spec. |
 | I01-S09 | G | Comments with @mentions | Done | claude/spec-refactor-i01-s09-comments | [#90](https://github.com/akpdeepak/bsmart-works/pull/90) | 2026-06-04 | Membership-gated comment read/add/delete (RB-40 §1); author-only delete; mentions confined to workspace. |
-| I01-S10 | G | Notifications — in-app + email | In-Progress | claude/spec-refactor-i01-s10-notifications | — | — | Fix markRead IDOR (own-notification only, 404 otherwise); prefs/batching/digest already met spec. |
-| I01-S11 | E | Full-text search | Pending | — | — | — | — |
+| I01-S10 | G | Notifications — in-app + email | Done | claude/spec-refactor-i01-s10-notifications | [#91](https://github.com/akpdeepak/bsmart-works/pull/91) | 2026-06-04 | Fix markRead IDOR (own-notification only, 404 otherwise); prefs/batching/digest already met spec. |
+| I01-S11 | E | Full-text search | In-Progress | claude/spec-refactor-i01-s11-search | — | — | Escape LIKE wildcards + blank-query guard; title/desc/comments + starred/recent boosts + tenant scope (S07) already met spec. |
 | I01-S12 | J | Personal home (My Works) | Pending | — | — | — | — |
 
 ### Iteration 2 — Release 2.0 · Sprints — Scrum + Reports

@@ -13,6 +13,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -51,5 +52,12 @@ class WorkItemTenantScopeTest {
         assertThat(sql.getValue())
                 .contains("workspace_members")          // joins through the tenant boundary
                 .contains("wm.user_id = ?");            // scoped to the caller
+    }
+
+    @Test
+    void search_blankQuery_returnsEmptyWithoutTouchingTheDatabase() {
+        when(authenticatedUser.id()).thenReturn("USR-1");
+        assertThat(controller.search("   ")).isEmpty();
+        verifyNoInteractions(jdbc);   // a blank query must not run an unbounded scan
     }
 }

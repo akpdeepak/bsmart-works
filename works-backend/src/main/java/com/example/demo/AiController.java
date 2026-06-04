@@ -1,0 +1,99 @@
+package com.example.demo;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * AI Control Plane management API (RB-40 §2): scope policies, the per-workspace budget, the audit
+ * log, and the capability catalogue. Reads require workspace membership; all writes and the audit
+ * log require {@code manage_ai} (ADMIN). RBAC is enforced here at the service boundary (RB-10 §2),
+ * and every endpoint is workspace-scoped (RB-40 §1) so one tenant can never read or alter another's
+ * AI configuration or spend.
+ */
+@RestController
+@RequestMapping("/api/v1/ai")
+public class AiController {
+
+    private final AiControlPlaneService controlPlane;
+    private final AiInvocationRepository invocations;
+    private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
+
+    public AiController(AiControlPlaneService controlPlane, AiInvocationRepository invocations,
+                        AuthenticatedUser authenticatedUser, RbacService rbac) {
+        this.controlPlane = controlPlane;
+        this.invocations = invocations;
+        this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
+    }
+
+    /** The capability catalogue with each capability's effective enabled state for the caller and
+     *  its documented deterministic fallback — drives the "what AI can do here" panel (RB-40 §2). */
+    @GetMapping("/capabilities")
+    public List<Map<String, Object>> capabilities(@RequestParam String workspaceId) {
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "view_items");
+        return AiCapabilities.all().stream().map(d -> Map.<String, Object>of(
+            "id", d.id(),
+            "label", d.label(),
+            "defaultTier", d.defaultTier().name(),
+            "fallback", d.fallback(),
+            "enabled", controlPlane.resolve(workspaceId, d.id(), userId, true).enabled()
+        )).toList();
+    }
+
+    @GetMapping("/policies")
+    public List<AiPolicy> policies(@RequestParam String workspaceId) {
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "view_items");
+        return controlPlane.listPolicies(workspaceId);
+    }
+
+    public record PolicyRequest(String scopeType, String capability, String userId, boolean enabled) { }
+
+    @PutMapping("/policies")
+    public AiPolicy setPolicy(@RequestParam String workspaceId, @RequestBody PolicyRequest req) {
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "manage_ai");
+        String scope = req.scopeType() == null ? "" : req.scopeType().toUpperCase();
+        if (!List.of("WORKSPACE", "CAPABILITY", "USER").contains(scope)) {
+            throw ApiException.badRequest("INVALID_SCOPE", "scopeType must be WORKSPACE, CAPABILITY or USER.");
+        }
+        if ("CAPABILITY".equals(scope) && !AiCapabilities.isKnown(req.capability())) {
+            throw ApiException.badRequest("UNKNOWN_CAPABILITY", "Unknown AI capability: " + req.capability());
+        }
+        return controlPlane.setPolicy(workspaceId, scope, req.capability(), req.userId(), req.enabled());
+    }
+
+    @GetMapping("/budget")
+    public AiControlPlaneService.BudgetStatus budget(@RequestParam String workspaceId) {
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "view_items");
+        return controlPlane.budgetStatus(workspaceId);
+    }
+
+    public record BudgetRequest(long monthlyCapCents) { }
+
+    @PutMapping("/budget")
+    public AiBudget setBudget(@RequestParam String workspaceId, @RequestBody BudgetRequest req) {
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "manage_ai");
+        if (req.monthlyCapCents() < 0) {
+            throw ApiException.badRequest("INVALID_CAP", "monthlyCapCents must be >= 0.");
+        }
+        return controlPlane.setBudgetCap(workspaceId, req.monthlyCapCents());
+    }
+
+    @GetMapping("/invocations")
+    public PageResponse<AiInvocation> auditLog(@RequestParam String workspaceId,
+                                               @RequestParam(defaultValue = "0") int page,
+                                               @RequestParam(defaultValue = "50") int size) {
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "manage_ai");   // the audit log is admin-only
+        return PageResponse.of(invocations.findByWorkspaceIdOrderByCreatedAtDesc(
+            workspaceId, PageRequest.of(Math.max(0, page), Math.min(200, Math.max(1, size)))));
+    }
+}

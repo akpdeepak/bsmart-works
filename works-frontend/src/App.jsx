@@ -8,6 +8,7 @@ import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
 import { ResetPasswordScreen } from '@/components/works/reset-password-screen';
 import { DonutChart, BarChart } from '@/components/works/molecules';
+import { SlaView } from '@/components/works/organisms/sla-view';
 import { exportElementToPng, exportElementToPdf, exportRowsToCsv } from '@/lib/export';
 import { api } from '@/lib/apiClient';
 import {
@@ -1983,6 +1984,7 @@ export default function App() {
           <NavItem active={view === 'bql'} onClick={() => { setView('bql'); fetchBqlFilters(); }} icon="🔍">BQL Query</NavItem>
           <NavItem active={view === 'knowledge'} onClick={() => { setView('knowledge'); fetchKnowledgeSpaces(); setKnowledgeTab('spaces'); setSelectedSpace(null); setSelectedArticle(null); }} icon="📚">Knowledge</NavItem>
           <NavItem active={view === 'compliance'} onClick={() => { setView('compliance'); setComplianceTab('dashboard'); setRuleBuilder(null); fetchComplianceDashboard(); fetchComplianceRules(); fetchComplianceViolations(); }} icon="🛡">Compliance</NavItem>
+          <NavItem active={view === 'sla'} onClick={() => setView('sla')} icon="⏱">SLA</NavItem>
 
           {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">Project Management</p>}
           <NavItem active={view === 'pm'} onClick={() => { setView('pm'); if (projects.length) { const pid = projects[0].id; setPmProjectId(pid); fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); } }} icon="📋">PM Artifacts</NavItem>
@@ -5302,6 +5304,10 @@ export default function App() {
                 )}
               </div>
             </div>
+          )}
+
+          {view === 'sla' && (
+            <SlaView workspaceId="WS-001" canManage={can('manage_sla')} onToast={showToast} />
           )}
 
           {view === 'compliance' && (

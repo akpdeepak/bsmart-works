@@ -113,6 +113,17 @@ export function formatDuration(totalSeconds) {
 }
 
 /**
+ * Compact duration from whole minutes (SLA budgets/countdowns are minute-grained).
+ * formatMinutes(134) → "2h 14m", formatMinutes(45) → "45m", formatMinutes(0) → "0m".
+ */
+export function formatMinutes(totalMinutes) {
+  if (totalMinutes == null || isNaN(totalMinutes)) return '—';
+  const m = Math.max(0, Math.floor(totalMinutes));
+  if (m < 60) return `${m}m`;
+  return formatDuration(m * 60);
+}
+
+/**
  * Thousands-separated integer: 1240 → "1,240".
  */
 export function formatNumber(value) {

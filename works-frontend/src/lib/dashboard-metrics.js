@@ -21,10 +21,12 @@ const MATRIX_PRIORITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
  */
 export function filterItems(items, filter = {}, ctx = {}) {
   const today = ctx.today ? new Date(ctx.today) : new Date();
+  const weekAhead = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
   return (items || []).filter(i => {
     if (filter.open && i.status === 'Done') return false;
     if (filter.done && i.status !== 'Done') return false;
     if (filter.mine && i.assigneeId !== ctx.currentUserId) return false;
+    if (filter.unassigned && i.assigneeId) return false;
     if (filter.status && i.status !== filter.status) return false;
     if (filter.priority && i.priority !== filter.priority) return false;
     if (filter.type && i.type !== filter.type) return false;
@@ -33,6 +35,11 @@ export function filterItems(items, filter = {}, ctx = {}) {
     if (filter.overdue) {
       if (!i.dueDate || i.status === 'Done') return false;
       if (new Date(i.dueDate) >= today) return false;
+    }
+    if (filter.dueSoon) {
+      if (!i.dueDate || i.status === 'Done') return false;
+      const due = new Date(i.dueDate);
+      if (due < today || due > weekAhead) return false;
     }
     return true;
   });
@@ -83,13 +90,24 @@ export function velocityPoints(velocity) {
  */
 export const EXTRA_WIDGET_PRESETS = [
   // Metrics — SCORECARD with extended filters
+  { category: 'Metrics', type: 'SCORECARD', title: 'Total items',    config: { filter: {} } },
+  { category: 'Metrics', type: 'SCORECARD', title: 'Open items',     config: { filter: { open: true } } },
   { category: 'Metrics', type: 'SCORECARD', title: 'Overdue',        config: { filter: { overdue: true } } },
+  { category: 'Metrics', type: 'SCORECARD', title: 'Due this week',  config: { filter: { dueSoon: true } } },
   { category: 'Metrics', type: 'SCORECARD', title: 'My open items',  config: { filter: { mine: true, open: true } } },
+  { category: 'Metrics', type: 'SCORECARD', title: 'Unassigned',     config: { filter: { unassigned: true, open: true } } },
   { category: 'Metrics', type: 'SCORECARD', title: 'High priority',  config: { filter: { highPriority: true } } },
   { category: 'Metrics', type: 'SCORECARD', title: 'Blocked',        config: { filter: { blocked: true } } },
   { category: 'Metrics', type: 'SCORECARD', title: 'Completed',      config: { filter: { done: true } } },
   { category: 'Metrics', type: 'SCORECARD', title: 'Bugs',           config: { filter: { type: 'Bug' } } },
-  // Sprint & trends — new widget types
+  { category: 'Metrics', type: 'SCORECARD', title: 'Stories',        config: { filter: { type: 'Story' } } },
+  // Distribution — config-driven PIE/BAR/STATUS_BAR/ITEM_LIST over a dimension
+  { category: 'Distribution', type: 'PIE',        title: 'Status (pie)',     config: { dimension: 'status' } },
+  { category: 'Distribution', type: 'BAR',        title: 'Priority (bar)',   config: { dimension: 'priority' } },
+  { category: 'Distribution', type: 'PIE',        title: 'Type (pie)',       config: { dimension: 'type' } },
+  { category: 'Distribution', type: 'STATUS_BAR', title: 'Items by status',  config: {} },
+  { category: 'Distribution', type: 'ITEM_LIST',  title: 'Recent items',     config: { limit: 6 } },
+  // Sprint & trends — dedicated widget types
   { category: 'Sprint',  type: 'SPRINT_HEALTH',   title: 'Sprint health',   config: {} },
   { category: 'Sprint',  type: 'BURNDOWN',        title: 'Sprint burndown', config: { mode: 'burndown' } },
   { category: 'Sprint',  type: 'VELOCITY_LINE',   title: 'Velocity trend',  config: {}, w: 6 },
@@ -98,4 +116,4 @@ export const EXTRA_WIDGET_PRESETS = [
   { category: 'Advanced', type: 'MATRIX', title: 'Status × priority', config: {}, w: 6 },
 ];
 
-export const EXTRA_WIDGET_CATEGORIES = ['Metrics', 'Sprint', 'Advanced'];
+export const EXTRA_WIDGET_CATEGORIES = ['Metrics', 'Distribution', 'Sprint', 'Advanced'];

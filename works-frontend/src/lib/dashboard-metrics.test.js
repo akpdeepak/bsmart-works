@@ -31,6 +31,18 @@ describe('filterItems', () => {
   it('overdue: past due and not Done', () => {
     expect(filterItems(items, { overdue: true }, ctx).map(i => i.id)).toEqual(['2']);
   });
+  it('unassigned matches items with no assignee', () => {
+    expect(filterItems(items, { unassigned: true }, ctx).map(i => i.id)).toEqual(['4']);
+  });
+  it('dueSoon: due within the next 7 days and not Done', () => {
+    const soon = [
+      { id: 'a', status: 'To Do', dueDate: '2026-06-03' }, // 2 days out
+      { id: 'b', status: 'To Do', dueDate: '2026-07-01' }, // beyond a week
+      { id: 'c', status: 'Done',  dueDate: '2026-06-03' }, // soon but done
+      { id: 'd', status: 'To Do' },                        // no due date
+    ];
+    expect(filterItems(soon, { dueSoon: true }, ctx).map(i => i.id)).toEqual(['a']);
+  });
   it('empty filter returns all', () => {
     expect(filterItems(items, {}, ctx)).toHaveLength(4);
   });
@@ -75,8 +87,10 @@ describe('velocityPoints', () => {
 });
 
 describe('presets', () => {
+  it('ships a 20+ widget library (spec S02)', () => {
+    expect(EXTRA_WIDGET_PRESETS.length).toBeGreaterThanOrEqual(20);
+  });
   it('every preset has a known category and type', () => {
-    expect(EXTRA_WIDGET_PRESETS.length).toBeGreaterThanOrEqual(10);
     EXTRA_WIDGET_PRESETS.forEach(p => {
       expect(EXTRA_WIDGET_CATEGORIES).toContain(p.category);
       expect(p.type).toBeTruthy();

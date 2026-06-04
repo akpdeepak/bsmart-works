@@ -213,6 +213,11 @@
 								<exclude>**/WorkflowTransition.class</exclude>
 								<exclude>**/Workspace.class</exclude>
 								<exclude>**/WorkItemTypeConfig.class</exclude>
+								<exclude>**/SlaCalendar.class</exclude>
+								<exclude>**/SlaPolicy.class</exclude>
+								<exclude>**/SlaTarget.class</exclude>
+								<exclude>**/SlaInstance.class</exclude>
+								<exclude>**/SlaEscalation.class</exclude>
 							</excludes>
 							<rules>
 								<rule>

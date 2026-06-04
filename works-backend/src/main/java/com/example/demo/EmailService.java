@@ -63,7 +63,34 @@ public class EmailService {
             "View item: http://localhost:5173");
     }
 
+    /** Email verification link sent at signup. Always sent (not preference-gated). */
+    @Async
+    public void sendVerificationEmail(String toEmail, String fullName, String verifyUrl) {
+        sendTo(toEmail,
+            "Verify your email",
+            "Hi " + safeName(fullName) + ",\n\n" +
+            "Welcome to bSmart Works! Confirm your email address to finish setting up your account:\n\n" +
+            verifyUrl + "\n\n" +
+            "If you didn't create an account, you can ignore this message.");
+    }
+
+    /** Password-reset link sent from the forgot-password flow. Always sent (not preference-gated). */
+    @Async
+    public void sendPasswordResetEmail(String toEmail, String fullName, String resetUrl) {
+        sendTo(toEmail,
+            "Reset your password",
+            "Hi " + safeName(fullName) + ",\n\n" +
+            "We received a request to reset your password. Use the link below to choose a new one " +
+            "(it expires in 60 minutes):\n\n" +
+            resetUrl + "\n\n" +
+            "If you didn't request this, you can safely ignore this email — your password won't change.");
+    }
+
     // ---- helpers ----
+
+    private String safeName(String fullName) {
+        return (fullName == null || fullName.isBlank()) ? "there" : fullName.trim();
+    }
 
     /** Check a single boolean preference for a user (defaults to true if row missing). */
     private boolean pref(String userId, String column) {
@@ -82,7 +109,11 @@ public class EmailService {
     private void send(String recipientUserId, String subject, String body) {
         Optional<User> userOpt = users.findById(recipientUserId);
         if (userOpt.isEmpty()) return;
-        String toEmail = userOpt.get().getEmail();
+        sendTo(userOpt.get().getEmail(), subject, body);
+    }
+
+    /** Send directly to an email address (used by auth flows that already hold the address). */
+    private void sendTo(String toEmail, String subject, String body) {
         try {
             SimpleMailMessage msg = new SimpleMailMessage();
             msg.setFrom(FROM);

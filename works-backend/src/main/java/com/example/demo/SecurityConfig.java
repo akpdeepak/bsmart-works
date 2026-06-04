@@ -59,7 +59,9 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/login", "/api/v1/auth/signup",
-                                 "/api/v1/auth/verify", "/api/v1/auth/forgot-password").permitAll()
+                                 "/api/v1/auth/verify", "/api/v1/auth/forgot-password",
+                                 // token-based reset (no session yet) + MFA challenge during login
+                                 "/api/v1/auth/reset-password", "/api/v1/auth/mfa/verify").permitAll()
                 // Public, read-only, token-scoped dashboard embeds (iteration 6). GET only.
                 .requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll()
                 .anyRequest().authenticated()

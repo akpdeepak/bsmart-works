@@ -32,6 +32,14 @@ public class ComplianceRule {
     private String notifyTo = "[]";
     private Boolean active = false;
     private Boolean isTemplate = false;
+    @Column(name = "evaluation_mode")
+    private String evaluationMode = "CONTINUOUS";   // CONTINUOUS | SCHEDULED
+    @Column(name = "escalate_after_hours")
+    private Integer escalateAfterHours;             // NULL = no escalation
+    @Column(name = "escalate_to", columnDefinition = "jsonb")
+    private String escalateTo = "[]";               // routing targets for escalation
+    @Column(name = "last_evaluated_at")
+    private OffsetDateTime lastEvaluatedAt;
     private String createdBy;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
@@ -58,6 +66,14 @@ public class ComplianceRule {
     public void setActive(Boolean active) { this.active = active; }
     public Boolean getIsTemplate() { return isTemplate; }
     public void setIsTemplate(Boolean isTemplate) { this.isTemplate = isTemplate; }
+    public String getEvaluationMode() { return evaluationMode; }
+    public void setEvaluationMode(String evaluationMode) { this.evaluationMode = evaluationMode; }
+    public Integer getEscalateAfterHours() { return escalateAfterHours; }
+    public void setEscalateAfterHours(Integer escalateAfterHours) { this.escalateAfterHours = escalateAfterHours; }
+    public String getEscalateTo() { return escalateTo; }
+    public void setEscalateTo(String escalateTo) { this.escalateTo = escalateTo; }
+    public OffsetDateTime getLastEvaluatedAt() { return lastEvaluatedAt; }
+    public void setLastEvaluatedAt(OffsetDateTime lastEvaluatedAt) { this.lastEvaluatedAt = lastEvaluatedAt; }
     public String getCreatedBy() { return createdBy; }
     public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
     public OffsetDateTime getCreatedAt() { return createdAt; }

@@ -16,6 +16,8 @@ public class ComplianceRuleService {
 
     static final Set<String> SEVERITIES = Set.of("CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO");
     static final String DEFAULT_SEVERITY = "MEDIUM";
+    static final Set<String> EVALUATION_MODES = Set.of("CONTINUOUS", "SCHEDULED");
+    static final String DEFAULT_EVALUATION_MODE = "CONTINUOUS";
 
     /** Coerce a free-text severity to a known value; unknown/blank falls back to MEDIUM. */
     public String normalizeSeverity(String severity) {
@@ -26,7 +28,16 @@ public class ComplianceRuleService {
         return SEVERITIES.contains(s) ? s : DEFAULT_SEVERITY;
     }
 
-    /** notify_to defaults to an empty JSON array when absent. */
+    /** Coerce evaluation mode to a known value; unknown/blank falls back to CONTINUOUS. */
+    public String normalizeEvaluationMode(String mode) {
+        if (mode == null) {
+            return DEFAULT_EVALUATION_MODE;
+        }
+        String m = mode.trim().toUpperCase();
+        return EVALUATION_MODES.contains(m) ? m : DEFAULT_EVALUATION_MODE;
+    }
+
+    /** notify_to / escalate_to default to an empty JSON array when absent. */
     public String normalizeNotifyTo(String notifyTo) {
         return notifyTo == null || notifyTo.isBlank() ? "[]" : notifyTo;
     }
@@ -38,6 +49,8 @@ public class ComplianceRuleService {
         rule.setScopeBql(rule.getScopeBql() == null ? "" : rule.getScopeBql().trim());
         rule.setSeverity(normalizeSeverity(rule.getSeverity()));
         rule.setNotifyTo(normalizeNotifyTo(rule.getNotifyTo()));
+        rule.setEvaluationMode(normalizeEvaluationMode(rule.getEvaluationMode()));
+        rule.setEscalateTo(normalizeNotifyTo(rule.getEscalateTo()));
         rule.setActive(false); // test-before-activate: a new rule is never live on creation
         rule.setIsTemplate(rule.getIsTemplate() != null && rule.getIsTemplate());
         OffsetDateTime now = OffsetDateTime.now();
@@ -65,6 +78,14 @@ public class ComplianceRuleService {
         if (updated.getNotifyTo() != null) {
             existing.setNotifyTo(normalizeNotifyTo(updated.getNotifyTo()));
         }
+        if (updated.getEvaluationMode() != null) {
+            existing.setEvaluationMode(normalizeEvaluationMode(updated.getEvaluationMode()));
+        }
+        if (updated.getEscalateTo() != null) {
+            existing.setEscalateTo(normalizeNotifyTo(updated.getEscalateTo()));
+        }
+        // escalateAfterHours is nullable by design (null = no escalation); copy as-is.
+        existing.setEscalateAfterHours(updated.getEscalateAfterHours());
         existing.setUpdatedAt(OffsetDateTime.now());
         return existing;
     }

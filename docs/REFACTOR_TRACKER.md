@@ -18,7 +18,7 @@
 | 4 | 4.0 | PM Artifacts — RAID, Decisions, Meetings | 10 | 0 |
 | 5 | 5.0 | Knowledge Repository + Versions | 10 | 0 |
 | 6 | 6.0 | Reports, Dashboards & Insights | 8 | 0 |
-| 7 | 7.0 | Compliance Rules Engine | 9 | 0 |
+| 7 | 7.0 | Compliance Rules Engine | 9 | 9 |
 | 8 | 8.0 | SLA Engine — Internal & Generalized | 9 | 0 |
 | 9 | 9.0 | Service Management — Customer Portal | 10 | 0 |
 | 10 | 10.0 | AI Orchestration Foundation + AI Control Plane | 13 | 0 |
@@ -127,15 +127,15 @@
 
 | ID | Cap | Spec | Status | Branch | PR | Date | Notes |
 |---|---|---|---|---|---|---|---|
-| I07-S01 | K | Rule definition (visual builder) | Pending | — | — | — | — |
-| I07-S02 | K | Seeded rule library (20+ templates) | Pending | — | — | — | — |
-| I07-S03 | K | Continuous rule evaluation | Pending | — | — | — | — |
-| I07-S04 | K | Violation lifecycle | Pending | — | — | — | — |
-| I07-S05 | K | Severity routing | Pending | — | — | — | — |
-| I07-S06 | K | Escalation policies | Pending | — | — | — | — |
-| I07-S07 | K | Compliance dashboard | Pending | — | — | — | — |
-| I07-S08 | K | Compliance audit log | Pending | — | — | — | — |
-| I07-S09 | B | Auto status duration tracking | Pending | — | — | — | — |
+| I07-S01 | K | Rule definition (visual builder) | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | V34 model (PR #65) + controller (CRUD/clone/test/activate) + builder UI; BQL validated before save |
+| I07-S02 | K | Seeded rule library (20+ templates) | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | V36 seeds 22 templates; one-click clone-to-workspace |
+| I07-S03 | K | Continuous rule evaluation | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | Workspace-scoped scope+assertion engine; continuous (2m) + scheduled (hourly) sweeps + on-demand |
+| I07-S04 | K | Violation lifecycle | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | OPEN→ACK→RESOLVED/WONT_FIX, auto-resolve, bulk ack; events recorded |
+| I07-S05 | K | Severity routing | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | ITEM_OWNER/PROJECT_ADMIN/USER/EMAIL/SLACK targets; Slack stubbed (no broker yet) |
+| I07-S06 | K | Escalation policies | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | Escalate-after-hours window; 15m runner; acknowledged stops the clock |
+| I07-S07 | K | Compliance dashboard | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | Severity/status totals, 30-day trend, rules×projects heatmap, top rules |
+| I07-S08 | K | Compliance audit log | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | Append-only events view + regulator-ready CSV export |
+| I07-S09 | B | Auto status duration tracking | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | Per-status time projected from the event log; shown on the work item |
 
 ### Iteration 8 — Release 8.0 · SLA Engine — Internal & Generalized
 

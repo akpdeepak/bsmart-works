@@ -203,3 +203,26 @@ by a follow-up forward migration.
 
 > Default recommendation if approved as-is: **B + Yes + No-migration** → deliver items 1–6 with no
 > schema change, identity-only JWT, membership-enforced isolation, and a real switcher.
+
+---
+
+## 7. DECISIONS (resolved 2026-06-04 — Deepak)
+
+- **Decision A → Design B (Membership-enforced, identity-only JWT)** — operator deferred to the
+  recommended route. JWT stays identity-only; the active workspace is client-held + server-validated
+  against `workspace_members` on every workspace-scoped request. The membership check is the
+  isolation guarantee.
+- **Decision B → Yes, fix the cross-tenant read leak now** (item 2). Foreign-workspace reads return
+  **404**.
+- **Decision C → Add `V35__seed_second_workspace.sql`** — seed a second workspace (WS-002) with
+  USR-DEV1/USR-DEV2 as members so multi-workspace switching is demonstrable end-to-end.
+
+**Note on event `workspace_id`:** RB-40 §1 wants `workspace_id` on every event. The `events` table /
+`AppEvent` have no such column today; adding it is an event-store **contract change** that touches
+every `EventService` caller. That belongs to **I01-S04 Event store foundation**, not here — building
+it now would be ahead of its spec. This spec attributes workspace events via `aggregate_id` (the
+workspace *is* the aggregate) and **parks the column addition to I01-S04**.
+
+**Frontend switch behavior (MVP):** switching the active workspace persists the id and reloads so all
+tenant-scoped data refetches cleanly under the new workspace — no risk of stale cross-tenant data in
+the 6700-line `App.jsx`. An in-place soft refetch is parked to I01-S03 (App shell).

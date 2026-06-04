@@ -6,9 +6,12 @@
 
 | Found in | Item | Target spec | Notes |
 |----------|------|-------------|-------|
-| I01-S01 Authentication & identity | RBAC checks performed in `WorkspaceController` instead of the service layer (CLAUDE.md §4 / RB-10 §2) | I01-S02 Workspaces / Iteration 3 permissions | Move `rbac.require(...)` calls into the service. |
-| I01-S01 | Multi-workspace selection at login + tenant context (`workspace_id`) in the JWT/session | I01-S02 Workspaces | Governance-sensitive (RB-40 §1) — do not change the tenant model silently. |
-| I01-S01 | `App.jsx` is a ~2500-line monolith; only the auth surface is being extracted now | Tech-debt (`TECH-DEBT.md`) | Cross-cutting; affects every frontend spec — decompose deliberately. |
+| ~~I01-S01~~ | ~~RBAC checks in `WorkspaceController` instead of the service layer~~ | ~~I01-S02~~ | **RESOLVED in I01-S02** — moved into `WorkspaceService`. |
+| ~~I01-S01~~ | ~~Multi-workspace selection at login + tenant context~~ | ~~I01-S02~~ | **RESOLVED in I01-S02** — `/workspaces/mine` + real switcher + membership-enforced isolation (identity-only JWT, Decision B). |
+| I01-S02 Workspaces | `workspace_id` column on the `events` table / `AppEvent` (RB-40 §1 wants it on every event) | I01-S04 Event store foundation | Event-store **contract change** touching every `EventService` caller — belongs with the event-store spec, not a feature PR. I01-S02 attributes workspace events via `aggregate_id`. |
+| I01-S02 | Workspace switch does a full page reload to refetch tenant-scoped data | I01-S03 App shell | Replace with an in-place soft refetch once the app shell / data layer is decomposed. |
+| I01-S02 | The other 4 controllers still call RBAC directly (`Project`, `Sprint`, `WorkItem`, `Rbac`); a global "no-RBAC-in-controller" ArchUnit rule would force their refactor | I01-S05 / I02-S02 / I01-S07 / Iteration 3 | Relocate each in its own spec, then add the global rule — avoid building ahead. |
+| I01-S01 | `App.jsx` is a ~6700-line monolith; only the auth surface is being extracted now | Tech-debt (`TECH-DEBT.md`) | Cross-cutting; affects every frontend spec — decompose deliberately. |
 | I01-S01 | No refresh-token / JWT revocation (blacklist) mechanism | Iteration 19 — Enterprise Security | Stateless JWT acceptable for MVP. |
 | I01-S01 | Legacy SHA-256 password path still active | Iteration 19 / chore | Remove after auditing all users migrated to BCrypt. |
 | I01-S01 | No workspace-level "enforce MFA" policy | Iteration 19 — Enterprise Security | MFA is opt-in for MVP. |

@@ -36,9 +36,16 @@ class WorkspaceControllerAccessTest {
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
+    private final EventService eventService = mock(EventService.class);
+
+    // The controller is a thin HTTP layer (I01-S02): it delegates to WorkspaceService, where RBAC
+    // is enforced. Wiring a real service through mocked deps keeps this an end-to-end controller
+    // test of the cross-tenant write guard — rbac.require(...) still throws 403 before any mutation.
+    private final WorkspaceService workspaceService = new WorkspaceService(
+            workspaceRepository, userRepository, rbac, eventService, jdbc);
 
     private final WorkspaceController controller = new WorkspaceController(
-            workspaceRepository, userRepository, jdbc, authenticatedUser, rbac);
+            workspaceService, authenticatedUser);
 
     WorkspaceControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

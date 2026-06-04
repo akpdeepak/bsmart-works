@@ -116,15 +116,19 @@ public class WorkItemController {
     @GetMapping("/search")
     public List<WorkItem> search(@RequestParam String q) {
         String userId = authenticatedUser.id();
+        if (q == null || q.isBlank()) return List.of();
         // Starred items get priority in search results. Match spans title, description,
         // and any comment body (spec: full-text search covers comments too). EXISTS keeps
-        // one row per item — no duplicates from the comment join.
+        // one row per item — no duplicates from the comment join. ESCAPE makes a user-typed
+        // % or _ match literally instead of acting as a LIKE wildcard.
         String sql = "SELECT wi.*, (CASE WHEN si.work_item_id IS NOT NULL THEN 1 ELSE 0 END) AS is_starred " +
             "FROM work_items wi LEFT JOIN starred_items si ON si.work_item_id = wi.id AND si.user_id = ? " +
-            "WHERE wi.deleted_at IS NULL AND wi." + MEMBER_PROJECTS + " AND (wi.title ILIKE ? OR wi.description ILIKE ? " +
-            "OR EXISTS (SELECT 1 FROM comments c WHERE c.work_item_id = wi.id AND c.body ILIKE ?)) " +
+            "WHERE wi.deleted_at IS NULL AND wi." + MEMBER_PROJECTS + " AND (wi.title ILIKE ? ESCAPE '\\' " +
+            "OR wi.description ILIKE ? ESCAPE '\\' " +
+            "OR EXISTS (SELECT 1 FROM comments c WHERE c.work_item_id = wi.id AND c.body ILIKE ? ESCAPE '\\')) " +
             "ORDER BY is_starred DESC, wi.created_at DESC LIMIT 20";
-        String pattern = "%" + q + "%";
+        String escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+        String pattern = "%" + escaped + "%";
         List<WorkItem> items = jdbc.query(sql, (rs, row) -> {
             WorkItem w = mapRow(rs, row);
             try { w.setStarred(rs.getInt("is_starred") == 1); } catch (Exception ignored) {}

@@ -35,8 +35,16 @@ ENGINEERING-PRINCIPLES). Build to the code that exists.
 
 ## 2. Architecture rules
 
-**Modular monolith, microservice-ready.** One deployable; clear domain modules inside. Do not add
-Kafka, a search cluster, or a new language until scale demands it.
+**Modular monolith today, evolving to extractable services.** One deployable now, but every domain is
+a **service-in-waiting**: an enforced module with its own schema, a versioned public API, and events on
+the shared backbone — so it can be lifted out without a rewrite. The target service map, capability and
+iteration mapping, and cross-service patterns (CQRS read-models, transactional outbox, tenant-context
+propagation) live in [ADR-0001](../../docs/architecture/ADR-0001-service-decomposition.md). **Extract on
+demand, never preemptively** — split a module into its own deployable only when reuse in another app or
+scale calls for it, **platform / unification-layer services first** (Identity, AI Control Plane,
+Knowledge, Collaboration). Do not add Kafka, a search cluster, or a new language until that trigger
+fires. **Never fragment a unification layer** (one identity, one event store, one AI plane, one query
+language) across services.
 
 **One job per layer:**
 

@@ -16,7 +16,7 @@ belongs to, then apply that domain's source of truth.
 | Domain | Source of truth | What it covers |
 |--------|-----------------|----------------|
 | **Tech Stack** (implementation reality) | `CLAUDE.md` + `AGENTS.md` | The stack as actually built: language, framework, build tool, frontend framework + language, auth mechanism, ORM/query approach, package naming, table naming, API versioning/path style, event-store table, dependency choices, "how it is built today". |
-| **Software Specs** (product + architecture requirements) | `05-Capability-Map-Expansion-v3.5` + `06-Complete-Iteration-Guide` + `07-Tech-Stack-and-Architecture` (architectural-attributes content only) | Capabilities, the 20 iterations, the 5 architectural commitments, the 7 unification layers, the AI Control Plane, multi-tenancy, NFR/performance targets, security/privacy/data-governance requirements, WIQL, field-level security — "what must be true / what we are building toward". |
+| **Software Specs** (product + architecture requirements) | `05-Capability-Map-Expansion-v3.5` + `06-Complete-Iteration-Guide` + `07-Tech-Stack-and-Architecture` (architectural-attributes content only) | Capabilities, the 20 iterations, the 5 architectural commitments, the 7 unification layers, the AI Control Plane, multi-tenancy, NFR/performance targets, security/privacy/data-governance requirements, BQL, field-level security — "what must be true / what we are building toward". |
 | **Runbook / Playbook** (how to build, run, deploy, operate) | **All five documents combined** | Branching, environments/secrets, release, testing, PR flow, dependencies, CD, observability, tech-debt, the execution protocol, plus the specs' operational intent (AWS topology, Terraform, OpenTelemetry, performance budgets to test against, AI cost-ops thresholds, security/compliance ops). |
 
 ---
@@ -81,7 +81,7 @@ them; that is a documentation gap to close, not a reason to skip them.
 |-------------|--------|-------------------------|
 | Multi-tenant **hard workspace isolation** (every query workspace-scoped; `workspace_id` on events) | `06 §5.2`, `07 §4.5`, event schema | Absent — add |
 | **AI Control Plane**: 4-level scope (most-restrictive-wins), per-workspace budget caps (80%→Haiku, 100%→auto-disable), response caching, model tiering, per-call audit schema | `05 §1.2–1.6` | Principle only; detail missing |
-| **WIQL** — the one query language across filters, automations, compliance, KPIs, dashboards | `06 §3 Layer 3` | Absent — add |
+| **BQL** — the one query language across filters, automations, compliance, KPIs, dashboards | `06 §3 Layer 3` | Absent — add |
 | **Field-level security** (per-field, per-role, server-enforced) | `06 §5.5`, `06 §3 Layer 2` | Absent (RBAC ≠ field-level) |
 | **NFR / performance budgets** (P50/P95/P99 table) | `06 §5.3` | Absent — add |
 | **Data governance**: GDPR/DPDP, right-to-be-forgotten, data residency, AI data-boundary; reconcile vs append-only audit | `06 §5.5` + `06 §5.1` | Absent — add + resolve tension |

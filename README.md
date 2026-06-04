@@ -11,7 +11,7 @@ Edit the rules **here**, regenerate, commit. Never hand-edit a generated file.
 | `00-ORCHESTRATOR.md` | **Read first.** Control plane: what / why / when / how, enforcement binding, routing to the rule books, and the single home for volatile facts (iteration, migration number). |
 | `SOURCE-OF-TRUTH.md` | Precedence policy + stack reconciliation ledger (code-vs-spec). |
 | `rulebooks/05-TASK-EXECUTION.md` | How any task — user-raised or self-identified — goes from idea to merged-on-remote, gated end to end. |
-| `rulebooks/10-ENGINEERING.md` | Stack, architecture, data/Flyway, API, WIQL, testing, security surface, ops. |
+| `rulebooks/10-ENGINEERING.md` | Stack, architecture, data/Flyway, API, BQL, testing, security surface, ops. |
 | `rulebooks/20-PRODUCT.md` | Earns-its-place, iteration discipline, defaults-vs-customization, compliance-as-data, traceability. |
 | `rulebooks/30-DESIGN.md` | The single design system (tokens, layout, interaction, states, a11y, content). |
 | `rulebooks/40-GOVERNANCE.md` | Multi-tenant isolation, AI Control Plane, security depth, data governance/DPDP, NFR budgets. |

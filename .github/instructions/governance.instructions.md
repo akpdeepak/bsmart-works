@@ -26,7 +26,7 @@ guarantees they can never see *another* tenant's data.
 - **Every query is workspace-scoped — no exceptions.** No repository method returns rows across
   workspaces. Scoping is applied centrally (e.g. a Hibernate filter / mandatory predicate), not
   re-typed per query, so it cannot be forgotten.
-- **WIQL is scoped at compilation** (RB-10 §6) — a user-authored query cannot escape its tenant.
+- **BQL is scoped at compilation** (RB-10 §6) — a user-authored query cannot escape its tenant.
 - **Field-level security** *(spec `06 §5.5`)*: sensitive fields are visible per-field, per-role,
   **enforced server-side** — not hidden in the UI. Manager drill-down into individuals is blocked
   at the API.
@@ -43,7 +43,7 @@ capability calls a model on its own terms.
   user → in-context**. The most restrictive enabled scope governs. Off at workspace = off
   everywhere downstream.
 - **Fallback contract — mandatory per capability.** Every AI feature answers *"what happens when
-  AI is off, over budget, or unavailable?"* The deterministic fallback (e.g. manual WIQL/visual
+  AI is off, over budget, or unavailable?"* The deterministic fallback (e.g. manual BQL/visual
   builder, rules engine) is part of the feature, not an afterthought. **No fallback documented = it
   does not ship.**
 - **Cost discipline (per workspace):** a monthly budget cap; at **80%** spend, degrade to the

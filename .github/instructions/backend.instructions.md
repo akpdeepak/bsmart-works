@@ -94,19 +94,19 @@ One concept, one name, across Java / DB / REST — a rename ripples through all 
 
 ---
 
-## 6. WIQL — the one query language *(added; spec `06 §3 Layer 3`)*
+## 6. BQL — the one query language *(added; spec `06 §3 Layer 3`)*
 
-WIQL (Work Item Query Language) is the **single** query language across the product — filters,
+BQL (bSmart Query Language) is the **single** query language across the product — filters,
 saved views, automation conditions, compliance rules, KPI definitions, and dashboard widgets all
-compile to WIQL. It is one of the seven unification layers (RB-40 / ENGINEERING-PRINCIPLES §3.1):
+compile to BQL. It is one of the seven unification layers (RB-40 / ENGINEERING-PRINCIPLES §3.1):
 **no capability invents its own query syntax.**
 
-- Server-side parse → validated AST → parameterized SQL. **Never** string-concatenate WIQL into SQL.
-- Every WIQL query is **workspace-scoped at compilation** (RB-40 §1) — a query cannot escape its
+- Server-side parse → validated AST → parameterized SQL. **Never** string-concatenate BQL into SQL.
+- Every BQL query is **workspace-scoped at compilation** (RB-40 §1) — a query cannot escape its
   tenant regardless of what the user types.
-- AI "natural language → filter" features compile to WIQL and **fall back to a manual WIQL/visual
+- AI "natural language → filter" features compile to BQL and **fall back to a manual BQL/visual
   builder** when AI is off or over budget (RB-40 §2).
-- Field access inside WIQL respects field-level security (RB-40 §1).
+- Field access inside BQL respects field-level security (RB-40 §1).
 
 ---
 

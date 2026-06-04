@@ -41,7 +41,7 @@ Authority is split by domain. Decide what the task touches, then open the rule b
 | # | Rule book | Owns | Applies when you touch… |
 |---|-----------|------|--------------------------|
 | 05 | [Task Execution & Ways of Working](./rulebooks/05-TASK-EXECUTION.md) | How any task — raised by the user or self-identified — goes from idea to merged-on-remote, gated end to end | **Every task, before anything else** |
-| 10 | [Engineering & Architecture](./rulebooks/10-ENGINEERING.md) | Stack, layers, data/Flyway, API contract, WIQL, testing, security hardening, branching/PR/CD/observability/tech-debt | `**/*.java`, `**/pom.xml`, `db/migration/**`, any service/repository/controller/API |
+| 10 | [Engineering & Architecture](./rulebooks/10-ENGINEERING.md) | Stack, layers, data/Flyway, API contract, BQL, testing, security hardening, branching/PR/CD/observability/tech-debt | `**/*.java`, `**/pom.xml`, `db/migration/**`, any service/repository/controller/API |
 | 20 | [Product & Delivery](./rulebooks/20-PRODUCT.md) | What earns its place, iteration discipline, defaults-vs-customization, compliance-as-data, PM traceability | Any new feature, scope decision, capability, or roadmap question |
 | 30 | [Design & UX](./rulebooks/30-DESIGN.md) | Design tokens, layout, interaction, states, accessibility, content, iconography — the single design system | `works-frontend/**`, any component, screen, or copy |
 | 40 | [Governance, Security & Compliance](./rulebooks/40-GOVERNANCE.md) | Multi-tenant isolation, AI Control Plane, data governance/DPDP, security depth, NFR budgets | Anything touching tenant data, AI features, audit/compliance, or performance |
@@ -197,7 +197,7 @@ belongs to, then apply that domain's source of truth.
 | Domain | Source of truth | What it covers |
 |--------|-----------------|----------------|
 | **Tech Stack** (implementation reality) | `CLAUDE.md` + `AGENTS.md` | The stack as actually built: language, framework, build tool, frontend framework + language, auth mechanism, ORM/query approach, package naming, table naming, API versioning/path style, event-store table, dependency choices, "how it is built today". |
-| **Software Specs** (product + architecture requirements) | `05-Capability-Map-Expansion-v3.5` + `06-Complete-Iteration-Guide` + `07-Tech-Stack-and-Architecture` (architectural-attributes content only) | Capabilities, the 20 iterations, the 5 architectural commitments, the 7 unification layers, the AI Control Plane, multi-tenancy, NFR/performance targets, security/privacy/data-governance requirements, WIQL, field-level security — "what must be true / what we are building toward". |
+| **Software Specs** (product + architecture requirements) | `05-Capability-Map-Expansion-v3.5` + `06-Complete-Iteration-Guide` + `07-Tech-Stack-and-Architecture` (architectural-attributes content only) | Capabilities, the 20 iterations, the 5 architectural commitments, the 7 unification layers, the AI Control Plane, multi-tenancy, NFR/performance targets, security/privacy/data-governance requirements, BQL, field-level security — "what must be true / what we are building toward". |
 | **Runbook / Playbook** (how to build, run, deploy, operate) | **All five documents combined** | Branching, environments/secrets, release, testing, PR flow, dependencies, CD, observability, tech-debt, the execution protocol, plus the specs' operational intent (AWS topology, Terraform, OpenTelemetry, performance budgets to test against, AI cost-ops thresholds, security/compliance ops). |
 
 ---
@@ -262,7 +262,7 @@ them; that is a documentation gap to close, not a reason to skip them.
 |-------------|--------|-------------------------|
 | Multi-tenant **hard workspace isolation** (every query workspace-scoped; `workspace_id` on events) | `06 §5.2`, `07 §4.5`, event schema | Absent — add |
 | **AI Control Plane**: 4-level scope (most-restrictive-wins), per-workspace budget caps (80%→Haiku, 100%→auto-disable), response caching, model tiering, per-call audit schema | `05 §1.2–1.6` | Principle only; detail missing |
-| **WIQL** — the one query language across filters, automations, compliance, KPIs, dashboards | `06 §3 Layer 3` | Absent — add |
+| **BQL** — the one query language across filters, automations, compliance, KPIs, dashboards | `06 §3 Layer 3` | Absent — add |
 | **Field-level security** (per-field, per-role, server-enforced) | `06 §5.5`, `06 §3 Layer 2` | Absent (RBAC ≠ field-level) |
 | **NFR / performance budgets** (P50/P95/P99 table) | `06 §5.3` | Absent — add |
 | **Data governance**: GDPR/DPDP, right-to-be-forgotten, data residency, AI data-boundary; reconcile vs append-only audit | `06 §5.5` + `06 §5.1` | Absent — add + resolve tension |
@@ -348,7 +348,7 @@ touches**, write what it requires — this *is* what "multidimensional" means he
 
 - **Product (RB-20):** which capability/iteration; does it earn its place.
 - **Engineering (RB-10):** layers touched; data + migration (expand-contract if schema changes);
-  API contract; WIQL.
+  API contract; BQL.
 - **Design (RB-30):** screens/components; the five states; tokens.
 - **Governance (RB-40):** workspace scoping; field-level security; AI Control Plane (scope, budget,
   fallback, audit); NFR budget; audit/compliance; data-governance.
@@ -538,19 +538,19 @@ One concept, one name, across Java / DB / REST — a rename ripples through all 
 
 ---
 
-## 6. WIQL — the one query language *(added; spec `06 §3 Layer 3`)*
+## 6. BQL — the one query language *(added; spec `06 §3 Layer 3`)*
 
-WIQL (Work Item Query Language) is the **single** query language across the product — filters,
+BQL (bSmart Query Language) is the **single** query language across the product — filters,
 saved views, automation conditions, compliance rules, KPI definitions, and dashboard widgets all
-compile to WIQL. It is one of the seven unification layers (RB-40 / ENGINEERING-PRINCIPLES §3.1):
+compile to BQL. It is one of the seven unification layers (RB-40 / ENGINEERING-PRINCIPLES §3.1):
 **no capability invents its own query syntax.**
 
-- Server-side parse → validated AST → parameterized SQL. **Never** string-concatenate WIQL into SQL.
-- Every WIQL query is **workspace-scoped at compilation** (RB-40 §1) — a query cannot escape its
+- Server-side parse → validated AST → parameterized SQL. **Never** string-concatenate BQL into SQL.
+- Every BQL query is **workspace-scoped at compilation** (RB-40 §1) — a query cannot escape its
   tenant regardless of what the user types.
-- AI "natural language → filter" features compile to WIQL and **fall back to a manual WIQL/visual
+- AI "natural language → filter" features compile to BQL and **fall back to a manual BQL/visual
   builder** when AI is off or over budget (RB-40 §2).
-- Field access inside WIQL respects field-level security (RB-40 §1).
+- Field access inside BQL respects field-level security (RB-40 §1).
 
 ---
 
@@ -774,7 +774,7 @@ guarantees they can never see *another* tenant's data.
 - **Every query is workspace-scoped — no exceptions.** No repository method returns rows across
   workspaces. Scoping is applied centrally (e.g. a Hibernate filter / mandatory predicate), not
   re-typed per query, so it cannot be forgotten.
-- **WIQL is scoped at compilation** (RB-10 §6) — a user-authored query cannot escape its tenant.
+- **BQL is scoped at compilation** (RB-10 §6) — a user-authored query cannot escape its tenant.
 - **Field-level security** *(spec `06 §5.5`)*: sensitive fields are visible per-field, per-role,
   **enforced server-side** — not hidden in the UI. Manager drill-down into individuals is blocked
   at the API.
@@ -791,7 +791,7 @@ capability calls a model on its own terms.
   user → in-context**. The most restrictive enabled scope governs. Off at workspace = off
   everywhere downstream.
 - **Fallback contract — mandatory per capability.** Every AI feature answers *"what happens when
-  AI is off, over budget, or unavailable?"* The deterministic fallback (e.g. manual WIQL/visual
+  AI is off, over budget, or unavailable?"* The deterministic fallback (e.g. manual BQL/visual
   builder, rules engine) is part of the feature, not an afterthought. **No fallback documented = it
   does not ship.**
 - **Cost discipline (per workspace):** a monthly budget cap; at **80%** spend, degrade to the

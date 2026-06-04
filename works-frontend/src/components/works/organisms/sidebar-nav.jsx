@@ -63,7 +63,7 @@ const NAV_SECTIONS = [
     label: 'Configuration',
     items: [
       { id: 'settings3', label: 'Workflows & fields', icon: Settings },
-      { id: 'wiql',      label: 'WIQL query',         icon: Search },
+      { id: 'bql',      label: 'BQL query',         icon: Search },
       { id: 'knowledge', label: 'Knowledge',           icon: BookOpen },
     ],
   },

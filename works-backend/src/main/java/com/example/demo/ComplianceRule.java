@@ -25,6 +25,7 @@ public class ComplianceRule {
     private String description;
     @Column(name = "scope_bql", columnDefinition = "TEXT")
     private String scopeBql = "";
+    @NotBlank
     @Column(name = "assertion_bql", columnDefinition = "TEXT")
     private String assertionBql;
     private String severity = "MEDIUM";

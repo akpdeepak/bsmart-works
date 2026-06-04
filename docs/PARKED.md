@@ -12,6 +12,7 @@
 | I01-S02 | Workspace switch does a full page reload to refetch tenant-scoped data | I01-S03 App shell | Replace with an in-place soft refetch once the app shell / data layer is decomposed. |
 | I01-S02 | The other 4 controllers still call RBAC directly (`Project`, `Sprint`, `WorkItem`, `Rbac`); a global "no-RBAC-in-controller" ArchUnit rule would force their refactor | I01-S05 / I02-S02 / I01-S07 / Iteration 3 | Relocate each in its own spec, then add the global rule — avoid building ahead. |
 | I01-S01 | `App.jsx` is a ~6700-line monolith; only the auth surface is being extracted now | Tech-debt (`TECH-DEBT.md`) | Cross-cutting; affects every frontend spec — decompose deliberately. |
+| I01-S03 App shell | App.jsx renders a legacy inline white sidebar while a polished `SidebarNav` organism sits unused — a second parallel shell implementation | Tech-debt / monolith decomposition | Converge onto `SidebarNav` without regressing the S02 workspace switcher; large, do deliberately. |
 | I01-S01 | No refresh-token / JWT revocation (blacklist) mechanism | Iteration 19 — Enterprise Security | Stateless JWT acceptable for MVP. |
 | I01-S01 | Legacy SHA-256 password path still active | Iteration 19 / chore | Remove after auditing all users migrated to BCrypt. |
 | I01-S01 | No workspace-level "enforce MFA" policy | Iteration 19 — Enterprise Security | MFA is opt-in for MVP. |

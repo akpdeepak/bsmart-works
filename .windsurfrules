@@ -249,7 +249,7 @@ these is ever intentionally reverted (e.g. the package rename), **update this le
 | Entity / mapping | `<Domain>Entity` + MapStruct mapper + `<Domain>EventPublisher` | **`<Entity>` + `EventService` / `AppEvent`** | |
 | API path | `/api/work-items` (unversioned) | **`/api/v1/work-items`** (versioned, kebab) | |
 | Event store table | `event_log` | **`events`** | `event_log` dropped in V20 |
-| Message broker | RabbitMQ / SQS early, Kafka at scale | **none yet** — no Kafka/bus until scale | per CLAUDE §21.1 |
+| Message broker | RabbitMQ / SQS early, Kafka at scale | **in-process events + outbox now; broker on service extraction** | per [ADR-0001](../docs/architecture/ADR-0001-service-decomposition.md) + RB-10 §2 |
 
 ---
 
@@ -479,8 +479,16 @@ ENGINEERING-PRINCIPLES). Build to the code that exists.
 
 ## 2. Architecture rules
 
-**Modular monolith, microservice-ready.** One deployable; clear domain modules inside. Do not add
-Kafka, a search cluster, or a new language until scale demands it.
+**Modular monolith today, evolving to extractable services.** One deployable now, but every domain is
+a **service-in-waiting**: an enforced module with its own schema, a versioned public API, and events on
+the shared backbone — so it can be lifted out without a rewrite. The target service map, capability and
+iteration mapping, and cross-service patterns (CQRS read-models, transactional outbox, tenant-context
+propagation) live in [ADR-0001](../../docs/architecture/ADR-0001-service-decomposition.md). **Extract on
+demand, never preemptively** — split a module into its own deployable only when reuse in another app or
+scale calls for it, **platform / unification-layer services first** (Identity, AI Control Plane,
+Knowledge, Collaboration). Do not add Kafka, a search cluster, or a new language until that trigger
+fires. **Never fragment a unification layer** (one identity, one event store, one AI plane, one query
+language) across services.
 
 **One job per layer:**
 

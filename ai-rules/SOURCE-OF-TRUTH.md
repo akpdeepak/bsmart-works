@@ -68,7 +68,7 @@ these is ever intentionally reverted (e.g. the package rename), **update this le
 | Entity / mapping | `<Domain>Entity` + MapStruct mapper + `<Domain>EventPublisher` | **`<Entity>` + `EventService` / `AppEvent`** | |
 | API path | `/api/work-items` (unversioned) | **`/api/v1/work-items`** (versioned, kebab) | |
 | Event store table | `event_log` | **`events`** | `event_log` dropped in V20 |
-| Message broker | RabbitMQ / SQS early, Kafka at scale | **none yet** — no Kafka/bus until scale | per CLAUDE §21.1 |
+| Message broker | RabbitMQ / SQS early, Kafka at scale | **in-process events + outbox now; broker on service extraction** | per [ADR-0001](../docs/architecture/ADR-0001-service-decomposition.md) + RB-10 §2 |
 
 ---
 

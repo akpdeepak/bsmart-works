@@ -134,10 +134,10 @@ to make the gate non-optional; the checks do the enforcing.
 
 **Definition of Done (the gate's contract):** acceptance criteria met · tests prove behavior ·
 no new lint/guardrail/style violations · tenant-scoped + RBAC-enforced · tokens not literals ·
-migration (if any) is `V30+` and forward-only · PR describes change/why/rule-books/verification ·
+migration (if any) is the next sequential number (§6) and forward-only · PR describes change/why/rule-books/verification ·
 in-scope RB-40 commitments satisfied.
 
-<!-- dod-version: 2026-06-01-r4 — keep in sync with .github/pull_request_template.md; verified by scripts/check-dod-sync.sh. Bump in both places when the §4 DoD contract changes. -->
+<!-- dod-version: 2026-06-04-r1 — keep in sync with .github/pull_request_template.md; verified by scripts/check-dod-sync.sh. Bump in both places when the §4 DoD contract changes. -->
 
 ---
 
@@ -158,8 +158,8 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
 
 - **Iterations:** 20 total · 26 capabilities · ~346 sub-features.
 - **Active iteration:** **6 (in progress)**; iteration 5 complete.
-- **Flyway high-water mark on `main`:** **V29** (note: V16 was skipped, V23 does not exist).
-- **Next migration:** **`V30__<description>.sql`**. *(Supersedes every stale "V27"/"V28" reference.)*
+- **Flyway high-water mark on `main`:** **V33** (note: V16 was skipped, V23 does not exist).
+- **Next migration:** **`V34__<description>.sql`**. *(Supersedes every stale lower-numbered reference, e.g. "V27"/"V28"/"V30".)*
 
 ---
 
@@ -731,7 +731,7 @@ spec lists `neutral-700` as `#3C4858` vs the config's value — confirm the inte
   `duration-base` 220ms (panels, accordions, drawers), `duration-slow` 320ms (page/large
   transitions). Respect `prefers-reduced-motion`.
 - **State treatments (single canonical values):** focus → `focus-visible:ring-2
-  ring-brand-navy-tint/40 ring-offset-2`; active/press → `active:scale-[0.98]`; disabled →
+  ring-brand-navy-tint/40 ring-offset-2`; active/press → `active:translate-y-px`; disabled →
   `opacity-50` + `cursor-not-allowed`.
 
 ## 6. States, feedback & accessibility

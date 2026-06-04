@@ -32,7 +32,7 @@ labels: feature
 ## Definition of Ready (tick all before sprint start)
 - [ ] Acceptance criteria are specific and testable
 - [ ] The iteration this belongs to is confirmed
-- [ ] Any Flyway migration needed is identified (next: V27+)
+- [ ] Any Flyway migration needed is identified (next sequential number — Orchestrator §6)
 - [ ] API contract (request/response shape) is agreed if backend work is involved
 - [ ] UI behaviour is described if frontend work is involved (or Figma ref linked)
 - [ ] RBAC / privacy implications are noted

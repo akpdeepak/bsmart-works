@@ -65,7 +65,7 @@ spec lists `neutral-700` as `#3C4858` vs the config's value — confirm the inte
   `duration-base` 220ms (panels, accordions, drawers), `duration-slow` 320ms (page/large
   transitions). Respect `prefers-reduced-motion`.
 - **State treatments (single canonical values):** focus → `focus-visible:ring-2
-  ring-brand-navy-tint/40 ring-offset-2`; active/press → `active:scale-[0.98]`; disabled →
+  ring-brand-navy-tint/40 ring-offset-2`; active/press → `active:translate-y-px`; disabled →
   `opacity-50` + `cursor-not-allowed`.
 
 ## 6. States, feedback & accessibility

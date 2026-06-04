@@ -9,6 +9,8 @@ import { Logo } from '@/components/works/logo';
 import { ResetPasswordScreen } from '@/components/works/reset-password-screen';
 import { DonutChart, BarChart } from '@/components/works/molecules';
 import { SlaWorkspace } from '@/components/works/organisms/sla-workspace';
+import { SlaBadge } from '@/components/works/molecules/sla-badge';
+import { absoluteDateTime } from '@/lib/format';
 import { exportElementToPng, exportElementToPdf, exportRowsToCsv } from '@/lib/export';
 import { api } from '@/lib/apiClient';
 import {
@@ -119,6 +121,8 @@ export default function App() {
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionOpen, setMentionOpen]   = useState(false);
   const [activity, setActivity]         = useState([]);
+  const [slaInstances, setSlaInstances] = useState([]);
+  const [slaAudit, setSlaAudit]         = useState([]);
   const [links, setLinks]               = useState([]);
   const [attachments, setAttachments]   = useState([]);
   const [newLink, setNewLink]           = useState({ targetId: '', linkType: 'RELATES_TO' });
@@ -365,6 +369,9 @@ export default function App() {
     api.raw(`/work-items/${id}/activity`, { headers: h }).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(() => {});
     api.raw(`/work-items/${id}/links`, { headers: h }).then(r => r.json()).then(d => setLinks(Array.isArray(d) ? d : [])).catch(() => {});
     api.raw(`/work-items/${id}/attachments`, { headers: h }).then(r => r.json()).then(d => setAttachments(Array.isArray(d) ? d : [])).catch(() => {});
+    // SLA clocks + audit timeline for this item (iteration 8, Cap M).
+    api.raw(`/sla/work-items/${id}`, { headers: h }).then(r => r.json()).then(d => setSlaInstances(Array.isArray(d) ? d : [])).catch(() => setSlaInstances([]));
+    api.raw(`/sla/work-items/${id}/audit`, { headers: h }).then(r => r.json()).then(d => setSlaAudit(Array.isArray(d) ? d : [])).catch(() => setSlaAudit([]));
     setDetailTab('details');
     if (fieldDefs.length > 0) fetchFieldValues(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -5188,6 +5195,12 @@ export default function App() {
                 className="text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 p-1 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">✕</button>
             </div>
           </div>
+          {/* SLA countdown badges (iteration 8, Cap M — timer on the work-item header) */}
+          {slaInstances.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 px-5 py-2 border-b border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800">
+              {slaInstances.map(s => <SlaBadge key={s.id} instance={s} />)}
+            </div>
+          )}
           {/* Detail panel tabs */}
           <div className="flex border-b border-neutral-200 dark:border-neutral-700 px-5">
             {[
@@ -5634,6 +5647,24 @@ export default function App() {
             {/* ACTIVITY TAB */}
             {detailTab === 'activity' && (
               <div>
+                {/* SLA timeline (iteration 8, Cap M — start / pause / resume / breach, from the event store) */}
+                {slaAudit.length > 0 && (
+                  <div className="mb-4 rounded-lg border border-neutral-200 dark:border-neutral-700 p-3">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">SLA timeline</h4>
+                    <div className="space-y-2">
+                      {slaAudit.map((e, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                            e.event_type === 'SLA_BREACHED' ? 'bg-semantic-danger'
+                              : e.event_type === 'SLA_MET' ? 'bg-semantic-success'
+                                : e.event_type === 'SLA_PAUSED' ? 'bg-semantic-warning' : 'bg-brand-navy'}`} />
+                          <span className="font-medium text-neutral-700 dark:text-neutral-200">{e.event_type.replace('SLA_', '').replace('_', ' ').toLowerCase()}</span>
+                          <span className="text-neutral-400 ml-auto">{absoluteDateTime(e.occurred_at)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {/* Event type filter */}
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
                   {['', 'WORK_ITEM_CREATED', 'WORK_ITEM_UPDATED', 'STATUS_CHANGED', 'ASSIGNED', 'COMMENT_ADDED', 'LINKED', 'ATTACHED'].map(et => (

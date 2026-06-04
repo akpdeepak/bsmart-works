@@ -177,9 +177,16 @@ export default function App() {
   const [showSaveFilter, setShowSaveFilter] = useState(false);
   const [scopeChanges, setScopeChanges] = useState([]);
 
-  // Workspace switcher dropdown
+  // Workspace switcher dropdown + multi-workspace tenant context (I01-S02).
+  // The active workspace is client-held and server-validated on every request (membership is the
+  // isolation guarantee — JWT stays identity-only). Persisted so a reload keeps the same tenant.
   const [wsOpen, setWsOpen]             = useState(false);
   const wsRef                           = useRef(null);
+  const [workspaces, setWorkspaces]     = useState([]);
+  const [wsLoading, setWsLoading]       = useState(false);
+  const [wsError, setWsError]           = useState(false);
+  const [activeWorkspaceId, setActiveWorkspaceId] =
+    useState(() => localStorage.getItem('bSmartActiveWorkspace') || 'WS-001');
 
   // Iteration 3 — Workflows, Custom Fields, Permissions, BQL
   const [workflows, setWorkflows]           = useState([]);
@@ -315,7 +322,9 @@ export default function App() {
   const [brandingColor, setBrandingColor] = useState('#E94E1B');
   const [brandingDesc, setBrandingDesc]  = useState('');
 
-  const workspace = { id: 'WS-001', name: 'BCITS Master Workspace' };
+  // Derived from the membership list + the active selection (see fetchMyWorkspaces).
+  const workspace = workspaces.find(w => w.id === activeWorkspaceId)
+    || { id: activeWorkspaceId, name: 'Workspace' };
 
   const headers = (extra = {}) => ({
     'Content-Type': 'application/json',
@@ -328,6 +337,7 @@ export default function App() {
 
   useEffect(() => {
     if (currentUser) {
+      fetchMyWorkspaces();
       fetchAll();
       fetchDashboard('developer');
       fetchReleases();
@@ -387,6 +397,35 @@ export default function App() {
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  // Multi-workspace context (I01-S02). Loads the workspaces the user belongs to and reconciles the
+  // active selection: keep the persisted choice if still a member, else fall back to the first.
+  function fetchMyWorkspaces() {
+    setWsLoading(true); setWsError(false);
+    api.raw(`/workspaces/mine`)
+      .then(r => r.json())
+      .then(list => {
+        const wss = Array.isArray(list) ? list : [];
+        setWorkspaces(wss);
+        setWsLoading(false);
+        if (wss.length > 0 && !wss.some(w => w.id === activeWorkspaceId)) {
+          const fallback = wss[0].id;
+          setActiveWorkspaceId(fallback);
+          localStorage.setItem('bSmartActiveWorkspace', fallback);
+        }
+      })
+      .catch(() => { setWsLoading(false); setWsError(true); });
+  }
+
+  // Switching tenant persists the choice and reloads so every workspace-scoped query refetches
+  // cleanly under the new workspace — no stale cross-tenant data in this large single-file app.
+  const switchWorkspace = (id) => {
+    if (id === activeWorkspaceId) { setWsOpen(false); return; }
+    localStorage.setItem('bSmartActiveWorkspace', id);
+    setActiveWorkspaceId(id);
+    setWsOpen(false);
+    window.location.reload();
   };
 
   function fetchUserRole() {
@@ -542,6 +581,7 @@ export default function App() {
   const handleLogout = () => {
     setCurrentUser(null); setToken(null);
     localStorage.removeItem('bSmartSession');
+    localStorage.removeItem('bSmartActiveWorkspace');
   };
 
   // WORK ITEMS
@@ -690,19 +730,19 @@ export default function App() {
 
   // WORKSPACE
   const fetchMembers = () => {
-    api.raw(`/workspaces/WS-001/members`)
+    api.raw(`/workspaces/${activeWorkspaceId}/members`)
       .then(r => r.json()).then(d => setWorkspaceMembers(Array.isArray(d) ? d : [])).catch(() => {});
   };
 
   const handleInvite = () => {
-    api.send(`/workspaces/WS-001/members`, {
+    api.send(`/workspaces/${activeWorkspaceId}/members`, {
       method: 'POST', body: JSON.stringify({ email: inviteEmail, role: 'MEMBER' })
     }).then(d => { setInviteMsg(d.message || 'Added!'); setInviteEmail(''); fetchMembers(); })
       .catch(err => setInviteMsg(err.message || 'Error — user may not exist.'));
   };
 
   const handleRemoveMember = (userId) => {
-    api.raw(`/workspaces/WS-001/members/${userId}`, { method: 'DELETE', headers: headers() })
+    api.raw(`/workspaces/${activeWorkspaceId}/members/${userId}`, { method: 'DELETE', headers: headers() })
       .then(() => fetchMembers());
   };
 
@@ -771,7 +811,7 @@ export default function App() {
 
   // Teams power the TEAM scope selector on dashboards.
   function fetchTeams() {
-    api.raw(`/teams?workspaceId=WS-001`)
+    api.raw(`/teams?workspaceId=${activeWorkspaceId}`)
       .then(r => r.json()).then(d => setTeams(Array.isArray(d) ? d : [])).catch(() => {});
   }
 
@@ -781,7 +821,7 @@ export default function App() {
     if (scope === 'PROJECT') { setDashboardAggregate(null); return; }
     const qs = scope === 'TEAM'
       ? `scope=TEAM&teamId=${encodeURIComponent(teamId || '')}`
-      : `scope=ORG&workspaceId=WS-001`;
+      : `scope=ORG&workspaceId=${activeWorkspaceId}`;
     api.raw(`/insights/work-items?${qs}`)
       .then(r => r.json()).then(d => setDashboardAggregate(d))
       .catch(() => { setDashboardAggregate(null); showToast('Could not load scoped data', 'error'); });
@@ -802,7 +842,7 @@ export default function App() {
   function createDashboard() {
     const name = prompt('Dashboard name'); // simple capture; inline form is a later refinement
     if (!name || !name.trim()) return;
-    api.send(`/dashboards`, { method: 'POST', body: JSON.stringify({ name: name.trim(), scope: 'PERSONAL', workspaceId: 'WS-001' }) })
+    api.send(`/dashboards`, { method: 'POST', body: JSON.stringify({ name: name.trim(), scope: 'PERSONAL', workspaceId: activeWorkspaceId }) })
       .then(d => { showToast('Dashboard created'); fetchCustomDashboards(); openDashboard(d.id); setDashboardEditMode(true); })
       .catch(() => showToast('Failed to create dashboard', 'error'));
   }
@@ -830,12 +870,12 @@ export default function App() {
   function createBlankReport() {
     const name = prompt('Report name'); // simple capture; inline form is a later refinement
     if (!name || !name.trim()) return;
-    api.send(`/reports`, { method: 'POST', body: JSON.stringify({ name: name.trim(), sections: '[]', workspaceId: 'WS-001' }) })
+    api.send(`/reports`, { method: 'POST', body: JSON.stringify({ name: name.trim(), sections: '[]', workspaceId: activeWorkspaceId }) })
       .then(d => { showToast('Report created'); fetchReports(); openReport(d.id); setReportEditMode(true); })
       .catch(() => showToast('Failed to create report', 'error'));
   }
   function createReportFromTemplate(tpl) {
-    api.send(`/reports`, { method: 'POST', body: JSON.stringify({ name: tpl.name, description: tpl.description, sections: tpl.sections, workspaceId: 'WS-001' }) })
+    api.send(`/reports`, { method: 'POST', body: JSON.stringify({ name: tpl.name, description: tpl.description, sections: tpl.sections, workspaceId: activeWorkspaceId }) })
       .then(d => { showToast('Report created from template'); fetchReports(); openReport(d.id); setReportEditMode(true); })
       .catch(() => showToast('Failed to create report', 'error'));
   }
@@ -927,7 +967,7 @@ export default function App() {
   }
 
   function fetchBranding() {
-    api.raw(`/workspaces/WS-001/branding`)
+    api.raw(`/workspaces/${activeWorkspaceId}/branding`)
       .then(r => r.json()).then(d => {
         setBranding(d);
         setBrandingColor(d.primaryColor || '#E94E1B');
@@ -938,7 +978,7 @@ export default function App() {
   }
 
   function saveBranding() {
-    api.raw(`/workspaces/WS-001/branding`, {
+    api.raw(`/workspaces/${activeWorkspaceId}/branding`, {
       method: 'PUT',
       body: JSON.stringify({ primaryColor: brandingColor, description: brandingDesc })
     }).then(r => r.json()).then(d => { setBranding(d); showToast('Branding saved'); }).catch(() => {});
@@ -964,7 +1004,7 @@ export default function App() {
       .then(r => r.json()).then(d => setWorkItemTypes(d || { builtIn: [], custom: [] })).catch(() => {});
   }
   function fetchPermMatrix() {
-    api.raw(`/permission-schemes/matrix?workspaceId=WS-001`)
+    api.raw(`/permission-schemes/matrix?workspaceId=${activeWorkspaceId}`)
       .then(r => r.json()).then(d => setPermMatrix(d)).catch(() => {});
   }
   function loadWorkflowDetail(wfId) {
@@ -997,18 +1037,18 @@ export default function App() {
   }
   function createFieldDef() {
     if (!newFieldForm.name.trim()) return;
-    api.raw(`/field-defs`, { method: 'POST', body: JSON.stringify({ ...newFieldForm, fieldKey: newFieldForm.name.toLowerCase().replace(/\s+/g,'_'), workspaceId: 'WS-001' }) })
+    api.raw(`/field-defs`, { method: 'POST', body: JSON.stringify({ ...newFieldForm, fieldKey: newFieldForm.name.toLowerCase().replace(/\s+/g,'_'), workspaceId: activeWorkspaceId }) })
       .then(r => r.json()).then(() => { fetchFieldDefs(); setShowFieldForm(false); setNewFieldForm({ name: '', fieldType: 'TEXT', required: false, description: '' }); }).catch(() => {});
   }
   function createWorkItemType() {
     if (!newTypeForm.label.trim()) return;
     const typeKey = newTypeForm.typeKey || newTypeForm.label.toUpperCase().replace(/\s+/g,'_');
-    api.raw(`/work-item-types`, { method: 'POST', body: JSON.stringify({ ...newTypeForm, typeKey, color: '#6b7280', workspaceId: 'WS-001' }) })
+    api.raw(`/work-item-types`, { method: 'POST', body: JSON.stringify({ ...newTypeForm, typeKey, color: '#6b7280', workspaceId: activeWorkspaceId }) })
       .then(r => r.json()).then(() => { fetchWorkItemTypes(); setShowTypeForm(false); setNewTypeForm({ label: '', typeKey: '', icon: '📦' }); }).catch(() => {});
   }
   function createRole() {
     if (!newRoleForm.name.trim()) return;
-    api.raw(`/permission-schemes/roles`, { method: 'POST', body: JSON.stringify({ ...newRoleForm, workspaceId: 'WS-001' }) })
+    api.raw(`/permission-schemes/roles`, { method: 'POST', body: JSON.stringify({ ...newRoleForm, workspaceId: activeWorkspaceId }) })
       .then(r => r.json()).then(() => { fetchRoles(); fetchPermMatrix(); setShowRoleForm(false); setNewRoleForm({ name: '', tier: 2 }); }).catch(() => {});
   }
   function runBql() {
@@ -1053,7 +1093,7 @@ export default function App() {
     };
     const ep = endpoints[type];
     if (!ep) return;
-    api.raw(`/${ep}`, { method: 'POST', body: JSON.stringify({ ...payload, projectId: pmProjectId, workspaceId: 'WS-001' }) })
+    api.raw(`/${ep}`, { method: 'POST', body: JSON.stringify({ ...payload, projectId: pmProjectId, workspaceId: activeWorkspaceId }) })
       .then(r => r.json()).then(() => {
         setPmFormOpen(null); setPmForm({});
         if (type === 'risk')        { fetchRisks(pmProjectId); fetchRaidDashboard(pmProjectId); }
@@ -1139,7 +1179,7 @@ export default function App() {
   function createCrossProjectDep() {
     if (!crossProjForm.title) { showToast('Title is required', 'error'); return; }
     api.send(`/cross-project-dependencies`, {
-      method: 'POST', body: JSON.stringify({ ...crossProjForm, workspaceId: 'WS-001' })
+      method: 'POST', body: JSON.stringify({ ...crossProjForm, workspaceId: activeWorkspaceId })
     }).then(() => {
       showToast('Cross-project dependency created');
       setIsCrossProjOpen(false);
@@ -1166,7 +1206,7 @@ export default function App() {
 
   function createKnowledgeSpace() {
     if (!spaceForm.name) { showToast('Space name is required', 'error'); return; }
-    api.send(`/knowledge-spaces`, { method: 'POST', body: JSON.stringify({ ...spaceForm, workspaceId: 'WS-001' }) })
+    api.send(`/knowledge-spaces`, { method: 'POST', body: JSON.stringify({ ...spaceForm, workspaceId: activeWorkspaceId }) })
       .then(() => { showToast('Space created'); setIsSpaceFormOpen(false); setSpaceForm({ name: '', description: '', visibility: 'TEAM' }); fetchKnowledgeSpaces(); })
       .catch(() => showToast('Failed to create space', 'error'));
   }
@@ -1179,7 +1219,7 @@ export default function App() {
 
   function createArticle() {
     if (!articleForm.title) { showToast('Title is required', 'error'); return; }
-    api.send(`/articles`, { method: 'POST', body: JSON.stringify({ ...articleForm, spaceId: selectedSpace?.id, workspaceId: 'WS-001' }) })
+    api.send(`/articles`, { method: 'POST', body: JSON.stringify({ ...articleForm, spaceId: selectedSpace?.id, workspaceId: activeWorkspaceId }) })
       .then(() => { showToast('Article created'); setIsArticleFormOpen(false); setArticleForm({ title: '', content: '', templateType: 'KB', status: 'DRAFT' }); fetchKnowledgeArticles(selectedSpace?.id); })
       .catch(() => showToast('Failed to create article', 'error'));
   }
@@ -1258,7 +1298,7 @@ export default function App() {
 
   function fetchDashboard(role) {
     setDashLoading(true);
-    const wsId = 'WS-001';
+    const wsId = activeWorkspaceId;
     const uid = currentUser?.id;
     let url;
     if (role === 'developer') url = `/dashboards/developer?userId=${uid}`;
@@ -1289,7 +1329,7 @@ export default function App() {
 
   function createRelease() {
     if (!newRelease.name || !newRelease.version) { showToast('Name and version are required', 'error'); return; }
-    api.send(`/releases`, { method: 'POST', body: JSON.stringify({ ...newRelease, workspaceId: 'WS-001' }) })
+    api.send(`/releases`, { method: 'POST', body: JSON.stringify({ ...newRelease, workspaceId: activeWorkspaceId }) })
       .then(() => { showToast('Release created'); setIsReleaseOpen(false); setNewRelease({ name: '', version: '', description: '', releaseDate: '', projectId: '', status: 'PLANNED' }); fetchReleases(); })
       .catch(() => showToast('Failed to create release', 'error'));
   }
@@ -1359,13 +1399,13 @@ export default function App() {
 
   function fetchProjectMembers(projectId) {
     setSelectedProjectId(projectId);
-    api.raw(`/workspaces/WS-001/projects/${projectId}/members`)
+    api.raw(`/workspaces/${activeWorkspaceId}/projects/${projectId}/members`)
       .then(r => r.json()).then(d => setProjectMembers(Array.isArray(d) ? d : [])).catch(() => {});
   }
 
   function addProjectMember(projectId) {
     if (!projectMemberEmail.trim()) return;
-    api.send(`/workspaces/WS-001/projects/${projectId}/members`, {
+    api.send(`/workspaces/${activeWorkspaceId}/projects/${projectId}/members`, {
       method: 'POST', body: JSON.stringify({ email: projectMemberEmail, role: 'MEMBER' })
     }).then(d => {
       setProjectMemberMsg(d.message || 'Added!');
@@ -1723,13 +1763,37 @@ export default function App() {
               <div className="px-3 py-2 border-b border-neutral-100 dark:border-neutral-700">
                 <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Workspaces</p>
               </div>
-              <button className="w-full flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-left">
-                <div className="w-5 h-5 rounded bg-brand-navy flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">BC</span>
+              {wsLoading ? (
+                <div className="px-3 py-2 space-y-2">
+                  <div className="h-7 rounded-md animate-pulse bg-neutral-100 dark:bg-neutral-700" />
+                  <div className="h-7 rounded-md animate-pulse bg-neutral-100 dark:bg-neutral-700" />
                 </div>
-                <span className="text-sm font-medium text-neutral-900">{workspace.name}</span>
-                <span className="ml-auto text-brand-orange text-xs">✓</span>
-              </button>
+              ) : wsError ? (
+                <div className="px-3 py-3">
+                  <p className="text-xs text-semantic-danger mb-2">Couldn’t load your workspaces.</p>
+                  <button onClick={fetchMyWorkspaces}
+                    className="text-xs font-medium text-brand-navy hover:text-brand-navy-tint">Try again</button>
+                </div>
+              ) : workspaces.length === 0 ? (
+                <div className="px-3 py-3">
+                  <p className="text-xs text-neutral-400">You don’t belong to any workspace yet.</p>
+                </div>
+              ) : (
+                workspaces.map(w => {
+                  const isActive = w.id === activeWorkspaceId;
+                  return (
+                    <button key={w.id} onClick={() => switchWorkspace(w.id)}
+                      aria-current={isActive ? 'true' : undefined}
+                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-left focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-1 outline-none">
+                      <div className="w-5 h-5 rounded bg-brand-navy flex items-center justify-center flex-shrink-0">
+                        <span className="text-white text-xs font-bold">{(w.name || '?').slice(0, 2).toUpperCase()}</span>
+                      </div>
+                      <span className="text-sm font-medium text-neutral-900 truncate flex-1">{w.name}</span>
+                      {isActive && <span className="ml-auto text-brand-orange text-xs flex-shrink-0">✓</span>}
+                    </button>
+                  );
+                })
+              )}
               <div className="border-t border-neutral-100 dark:border-neutral-700 mt-1 pt-1">
                 <button onClick={() => { setView('workspace'); fetchMembers(); setWsOpen(false); }}
                   className="w-full px-3 py-2 text-xs text-neutral-400 hover:text-brand-navy hover:bg-neutral-50 dark:hover:bg-neutral-700 text-left">
@@ -3247,14 +3311,14 @@ export default function App() {
                     <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Workflow Definitions</h2>
                     <Button variant="action" onClick={() => {
                       const name = 'New Workflow ' + (workflows.length + 1);
-                      api.raw(`/workflows`, { method: 'POST', body: JSON.stringify({ name, workspaceId: 'WS-001', isDefault: false }) })
+                      api.raw(`/workflows`, { method: 'POST', body: JSON.stringify({ name, workspaceId: activeWorkspaceId, isDefault: false }) })
                         .then(r => r.json()).then(() => fetchWorkflows());
                     }}>+ New Workflow</Button>
                   </div>
                   {workflows.length === 0
                     ? <EmptyState icon="⚙" title="No workflows yet" subtitle="Create a workflow to define statuses and transitions for your work items."
                         action={<Button variant="action" onClick={() => {
-                          api.raw(`/workflows`, { method: 'POST', body: JSON.stringify({ name: 'Default Workflow', workspaceId: 'WS-001', isDefault: true }) })
+                          api.raw(`/workflows`, { method: 'POST', body: JSON.stringify({ name: 'Default Workflow', workspaceId: activeWorkspaceId, isDefault: true }) })
                             .then(r => r.json()).then(() => fetchWorkflows());
                         }}>Create default workflow</Button>} />
                     : <div className="space-y-3">
@@ -3490,7 +3554,7 @@ export default function App() {
                               </div>
                               <Button variant="secondary" onClick={() => {
                                 const layout = fieldDefs.map(fd => ({ fieldDefId: fd.id, visible: true }));
-                                api.send(`/field-layouts`, { method: 'PUT', body: JSON.stringify({ itemType, layout, workspaceId: 'WS-001' }) })
+                                api.send(`/field-layouts`, { method: 'PUT', body: JSON.stringify({ itemType, layout, workspaceId: activeWorkspaceId }) })
                                   .then(() => { showToast('Layout saved'); fetchFieldLayouts(); }).catch(() => showToast('Failed', 'error'));
                               }}>Save Layout</Button>
                             </div>

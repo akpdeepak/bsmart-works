@@ -42,7 +42,7 @@
 | ID | Cap | Spec | Status | Branch | PR | Date | Notes |
 |---|---|---|---|---|---|---|---|
 | I01-S01 | A | Authentication & identity | Done | refactor/iter-01/s01-authentication-identity | [#73](https://github.com/akpdeepak/bsmart-works/pull/73) | 2026-06-04 | Partial→completed: token-based password reset, real email, MFA JWT-principal fix, rate limiting, tests. No schema change. |
-| I01-S02 | A | Workspaces | Pending | — | — | — | — |
+| I01-S02 | A | Workspaces | In-Progress | claude/spec-refactor-i01-s02-pdVrC | — | — | Partial→refactor: tenant-isolation reads, RBAC→service, multi-workspace context. GATED on plan sign-off. |
 | I01-S03 | A | App shell — topbar, sidenav, workspace switcher | Pending | — | — | — | — |
 | I01-S04 | A | Event store foundation | Pending | — | — | — | — |
 | I01-S05 | B | Projects | Pending | — | — | — | — |

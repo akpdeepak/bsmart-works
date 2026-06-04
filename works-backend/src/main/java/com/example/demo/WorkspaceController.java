@@ -1,134 +1,88 @@
 package com.example.demo;
 
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
+/**
+ * HTTP surface for workspaces — parse the request, delegate to {@link WorkspaceService}, return the
+ * response. No business logic, authorization, or data access lives here (RB-10 §2; CLAUDE.md §4).
+ */
 @RestController
 @RequestMapping("/api/v1/workspaces")
 public class WorkspaceController {
 
-    private final WorkspaceRepository workspaceRepository;
-    private final UserRepository userRepository;
-    private final JdbcTemplate jdbc;
+    private final WorkspaceService workspaceService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
 
-    public WorkspaceController(WorkspaceRepository workspaceRepository,
-                               UserRepository userRepository, JdbcTemplate jdbc,
-                               AuthenticatedUser authenticatedUser, RbacService rbac) {
-        this.workspaceRepository = workspaceRepository;
-        this.userRepository = userRepository;
-        this.jdbc = jdbc;
+    public WorkspaceController(WorkspaceService workspaceService, AuthenticatedUser authenticatedUser) {
+        this.workspaceService = workspaceService;
         this.authenticatedUser = authenticatedUser;
-        this.rbac = rbac;
+    }
+
+    /** Workspaces the signed-in user belongs to — powers the workspace switcher. */
+    @GetMapping("/mine")
+    public List<Map<String, Object>> myWorkspaces() {
+        return workspaceService.myWorkspaces(authenticatedUser.id());
     }
 
     @GetMapping("/{id}")
     public Workspace getWorkspace(@PathVariable String id) {
-        return workspaceRepository.findById(id).orElseThrow();
-    }
-
-    @GetMapping("/{id}/members")
-    public List<Map<String, String>> getMembers(@PathVariable String id) {
-        return jdbc.query(
-            "SELECT u.id, u.full_name, u.email, wm.system_role FROM workspace_members wm " +
-            "JOIN users u ON u.id = wm.user_id WHERE wm.workspace_id = ?",
-            (rs, row) -> Map.of(
-                "id", rs.getString("id"),
-                "fullName", rs.getString("full_name"),
-                "email", rs.getString("email"),
-                "role", rs.getString("system_role")
-            ), id);
-    }
-
-    @PostMapping("/{id}/members")
-    public Map<String, String> addMember(@PathVariable String id,
-                                          @Valid @RequestBody Map<String, String> payload) {
-        String callerId = authenticatedUser.id();
-        rbac.require(callerId, id, "invite_members");
-        String email = payload.get("email");
-        String role = payload.getOrDefault("role", "MEMBER");
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> ApiException.notFound("User", email));
-        jdbc.update("INSERT INTO workspace_members (workspace_id, user_id, system_role) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
-                id, user.getId(), role);
-        return Map.of("message", "Member added", "userId", user.getId());
-    }
-
-    @DeleteMapping("/{id}/members/{memberId}")
-    public Map<String, String> removeMember(@PathVariable String id, @PathVariable String memberId) {
-        String callerId = authenticatedUser.id();
-        rbac.require(callerId, id, "remove_members");
-        jdbc.update("DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?", id, memberId);
-        return Map.of("message", "Member removed");
+        return workspaceService.getWorkspace(authenticatedUser.id(), id);
     }
 
     @PutMapping("/{id}")
     public Workspace updateWorkspace(@PathVariable String id, @Valid @RequestBody Workspace updated) {
-        String callerId = authenticatedUser.id();
-        rbac.require(callerId, id, "manage_workspace");
-        return workspaceRepository.findById(id).map(w -> {
-            w.setName(updated.getName());
-            return workspaceRepository.save(w);
-        }).orElseThrow(() -> ApiException.notFound("Workspace", id));
+        return workspaceService.updateWorkspace(authenticatedUser.id(), id, updated.getName());
     }
 
-    // Workspace branding
+    @GetMapping("/{id}/members")
+    public List<Map<String, String>> getMembers(@PathVariable String id) {
+        return workspaceService.getMembers(authenticatedUser.id(), id);
+    }
+
+    @PostMapping("/{id}/members")
+    public Map<String, String> addMember(@PathVariable String id,
+                                         @Valid @RequestBody Map<String, String> payload) {
+        return workspaceService.addMember(authenticatedUser.id(), id,
+                payload.get("email"), payload.get("role"));
+    }
+
+    @DeleteMapping("/{id}/members/{memberId}")
+    public Map<String, String> removeMember(@PathVariable String id, @PathVariable String memberId) {
+        return workspaceService.removeMember(authenticatedUser.id(), id, memberId);
+    }
+
     @GetMapping("/{id}/branding")
     public Map<String, Object> getBranding(@PathVariable String id) {
-        var rows = jdbc.queryForList("SELECT primary_color, logo_url, description FROM workspaces WHERE id = ?", id);
-        if (rows.isEmpty()) return Map.of("primaryColor", "#E94E1B");
-        var row = rows.get(0);
-        return Map.of(
-            "primaryColor", row.getOrDefault("primary_color", "#E94E1B") != null ? row.get("primary_color") : "#E94E1B",
-            "logoUrl", row.getOrDefault("logo_url", "") != null ? row.get("logo_url") : "",
-            "description", row.getOrDefault("description", "") != null ? row.get("description") : ""
-        );
+        return workspaceService.getBranding(authenticatedUser.id(), id);
     }
 
     @PutMapping("/{id}/branding")
-    public Map<String, Object> updateBranding(@PathVariable String id, @Valid @RequestBody Map<String, String> payload) {
-        rbac.require(authenticatedUser.id(), id, "manage_workspace");
-        String color = payload.getOrDefault("primaryColor", "#E94E1B");
-        String logoUrl = payload.getOrDefault("logoUrl", "");
-        String description = payload.getOrDefault("description", "");
-        jdbc.update("UPDATE workspaces SET primary_color = ?, logo_url = ?, description = ? WHERE id = ?",
-            color, logoUrl.isEmpty() ? null : logoUrl, description, id);
-        return Map.of("primaryColor", color, "logoUrl", logoUrl, "description", description);
+    public Map<String, Object> updateBranding(@PathVariable String id,
+                                              @Valid @RequestBody Map<String, String> payload) {
+        return workspaceService.updateBranding(authenticatedUser.id(), id,
+                payload.get("primaryColor"), payload.get("logoUrl"), payload.get("description"));
     }
 
-    // Project members
     @GetMapping("/{wsId}/projects/{projectId}/members")
-    public List<Map<String, Object>> getProjectMembers(@PathVariable String wsId, @PathVariable String projectId) {
-        return jdbc.queryForList(
-            "SELECT u.id, u.full_name, u.email, pm.role FROM project_members pm " +
-            "JOIN users u ON u.id = pm.user_id WHERE pm.project_id = ?", projectId);
+    public List<Map<String, Object>> getProjectMembers(@PathVariable String wsId,
+                                                       @PathVariable String projectId) {
+        return workspaceService.getProjectMembers(authenticatedUser.id(), wsId, projectId);
     }
 
     @PostMapping("/{wsId}/projects/{projectId}/members")
     public Map<String, String> addProjectMember(@PathVariable String wsId, @PathVariable String projectId,
-                                                  @Valid @RequestBody Map<String, String> payload) {
-        rbac.require(authenticatedUser.id(), wsId, "manage_projects");
-        String email = payload.get("email");
-        String role = payload.getOrDefault("role", "MEMBER");
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> ApiException.notFound("User", email));
-        jdbc.update("INSERT INTO project_members (project_id, user_id, role) VALUES (?,?,?) ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role",
-            projectId, user.getId(), role);
-        return Map.of("message", "Member added", "userId", user.getId());
+                                                @Valid @RequestBody Map<String, String> payload) {
+        return workspaceService.addProjectMember(authenticatedUser.id(), wsId, projectId,
+                payload.get("email"), payload.get("role"));
     }
 
     @DeleteMapping("/{wsId}/projects/{projectId}/members/{memberId}")
     public Map<String, String> removeProjectMember(@PathVariable String wsId, @PathVariable String projectId,
-                                                     @PathVariable String memberId) {
-        rbac.require(authenticatedUser.id(), wsId, "manage_projects");
-        jdbc.update("DELETE FROM project_members WHERE project_id = ? AND user_id = ?", projectId, memberId);
-        return Map.of("message", "Member removed");
+                                                   @PathVariable String memberId) {
+        return workspaceService.removeProjectMember(authenticatedUser.id(), wsId, projectId, memberId);
     }
 }
-

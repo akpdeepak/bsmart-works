@@ -9,7 +9,7 @@
 > *what* to do, *why*, *when*, and *how* — and binds each action to the check that enforces it.
 > It does not restate the rules; it **routes** to the rule book that owns them.
 >
-> Version 1.0 · last verified YYYY-MM-DD · owner: Deepak Pandey
+> Version 1.0 · last verified 2026-06-01 · owner: Deepak Pandey
 
 ---
 

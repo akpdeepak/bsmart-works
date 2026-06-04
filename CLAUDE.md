@@ -13,7 +13,7 @@
 > *what* to do, *why*, *when*, and *how* — and binds each action to the check that enforces it.
 > It does not restate the rules; it **routes** to the rule book that owns them.
 >
-> Version 1.0 · last verified YYYY-MM-DD · owner: Deepak Pandey
+> Version 1.0 · last verified 2026-06-01 · owner: Deepak Pandey
 
 ---
 
@@ -185,7 +185,7 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
 > source wins, for every kind of content. It exists so that Claude Code, Codex, Copilot,
 > Cursor, and Windsurf all resolve conflicts the *same* way, every time.
 >
-> Version 1.0 · last verified YYYY-MM-DD · owner: Deepak Pandey
+> Version 1.0 · last verified 2026-06-01 · owner: Deepak Pandey
 
 ---
 

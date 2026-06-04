@@ -23,12 +23,13 @@ public class WorkItemController {
     private final NotificationBatchService batchService;
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
+    private final SlaEngineService slaEngine;
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
                               JdbcTemplate jdbc, NotificationRepository notificationRepository,
                               UserRepository userRepository, EmailService emailService,
                               NotificationBatchService batchService, AuthenticatedUser authenticatedUser,
-                              RbacService rbac) {
+                              RbacService rbac, SlaEngineService slaEngine) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
@@ -38,6 +39,7 @@ public class WorkItemController {
         this.batchService = batchService;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
+        this.slaEngine = slaEngine;
     }
 
     @GetMapping
@@ -183,6 +185,9 @@ public class WorkItemController {
         eventService.record(saved.getId(), "WORK_ITEM_CREATED", userId,
                 "{\"title\":\"" + saved.getTitle() + "\",\"type\":\"" + saved.getType() + "\"}");
 
+        // Attach any active SLA policies whose scope this new item falls into (iteration 8).
+        slaEngine.onWorkItemCreated(saved.getId(), saved.getProjectId(), userId);
+
         // Notify assignee (in-app + email)
         if (saved.getAssigneeId() != null && !saved.getAssigneeId().equals(userId)) {
             createNotification(saved.getAssigneeId(), "ASSIGNED",
@@ -240,6 +245,8 @@ public class WorkItemController {
             // Record field-level diffs
             if (!java.util.Objects.equals(oldStatus, saved.getStatus())) {
                 eventService.recordDiff(id, "STATUS_CHANGED", userId, "status", oldStatus, saved.getStatus());
+                // Drive SLA clocks: start / pause / resume / fulfil on the new status (iteration 8).
+                slaEngine.onStatusChange(id, saved.getProjectId(), oldStatus, saved.getStatus(), userId);
             }
             if (!java.util.Objects.equals(oldAssignee, saved.getAssigneeId())) {
                 String oldName = oldAssignee != null ? userRepository.findById(oldAssignee).map(u -> u.getFullName()).orElse(oldAssignee) : "unassigned";

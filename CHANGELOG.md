@@ -8,6 +8,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 ## [Unreleased]
 
 ### Added
+- SLA Engine (iteration 8, Cap M): one unified, business-hours-aware SLA engine for internal delivery commitments (ready to power external customer SLAs in iteration 9) — V36 migration
+  - SLA policy definition: scope by project + BQL, a referenced business-hours calendar, pause statuses, and one-or-more targets; policies start inactive (test-before-activate); 2 seeded starter templates (P0 incident, code-review turnaround)
+  - Business-hours calendars: per-policy timezone + weekly working windows + holidays; a DST-safe `BusinessHoursCalculator` so SLAs pause outside business hours, on weekends and on holidays; a default Mon–Fri 09:00–18:00 IST calendar seeded per workspace
+  - Multiple targets per policy: first-response, resolution and custom targets, each with start/stop statuses
+  - Pause/resume triggers: clocks auto-pause on configured statuses (e.g. "Waiting on customer") and resume on exit, with consumed business-time frozen across the pause — fully audited
+  - Visible countdown timers: a per-(item, target) clock with a recomputed deadline; a green/amber/red-pulsing `SlaBadge` and a live `GET /sla/work-items/{id}` countdown
+  - SLA escalation: threshold-based NOTIFY / REASSIGN steps fired by a once-a-minute evaluator that also marks breaches
+  - SLA reporting: met / breached / in-flight counts and compliance % per policy
+  - SLA audit log: every start, pause, resume, met, breach and escalation recorded immutably in the event store
+  - Bulk SLA application: preview the matching items (project + BQL scope), then apply the policy's clocks in one commit
 - Knowledge: inline article comments (threaded, resolvable) on knowledge articles
 - Knowledge: Author → Review → Publish workflow (submit / publish / request-changes / archive / restore) with reviewer + submission tracking
 - Knowledge: article analytics panel — views, helpful votes, work-item citations, open comments, versions, and stale-article detection

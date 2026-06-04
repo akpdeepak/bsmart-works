@@ -158,8 +158,8 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
 
 - **Iterations:** 20 total · 26 capabilities · ~346 sub-features.
 - **Active iteration:** **6 (in progress)**; iteration 5 complete.
-- **Flyway high-water mark on `main`:** **V33** (note: V16 was skipped, V23 does not exist).
-- **Next migration:** **`V34__<description>.sql`**. *(Supersedes every stale lower-numbered reference, e.g. "V27"/"V28"/"V30".)*
+- **Flyway high-water mark:** **V36** (note: V16 was skipped, V23 does not exist; V34 compliance rules, V35 second-workspace seed, V36 SLA engine).
+- **Next migration:** **`V37__<description>.sql`**. *(Supersedes every stale lower-numbered reference, e.g. "V27"/"V28"/"V30".)*
 
 ---
 

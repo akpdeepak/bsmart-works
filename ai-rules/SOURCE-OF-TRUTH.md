@@ -84,7 +84,7 @@ them; that is a documentation gap to close, not a reason to skip them.
 | **WIQL** — the one query language across filters, automations, compliance, KPIs, dashboards | `06 §3 Layer 3` | Absent — add |
 | **Field-level security** (per-field, per-role, server-enforced) | `06 §5.5`, `06 §3 Layer 2` | Absent (RBAC ≠ field-level) |
 | **NFR / performance budgets** (P50/P95/P99 table) | `06 §5.3` | Absent — add |
-| **Data governance**: GDPR/DPDP, right-to-be-forgotten, data residency, AI data-boundary; reconcile vs append-only audit | `06 §5.5` + `06 §5.1` | Absent — add + resolve tension |
+| **Data governance**: GDPR/DPDP, right-to-be-forgotten, data residency, AI data-boundary; reconcile vs append-only audit | `06 §5.5` + `06 §5.1` | Tension **resolved** in RB-40 §3 (crypto-shredding / PII-vault); detailed design at iter 7–9 |
 | **Security depth**: TLS 1.3 min, AES-256 at rest, BYOK/KMS, WebAuthn/passkeys, conditional access, SOC 2 Type 2 + ISO 27001 (iteration 19) | `06 §5.4`, `07 §4.6` | Absent — add |
 | **Target infra**: AWS (ECS/EKS, RDS Multi-AZ, ElastiCache/Redis, S3, CloudFront, Secrets Manager, ECR), Terraform IaC, OpenTelemetry → CloudWatch/Grafana/Prometheus | `07 §2.4`, `07 §4.7` | Roadmap-only mention |
 | **Five architectural commitments** (compliance-first, SLA one-engine/two-contexts, config-without-code, privacy-by-design, event-sourced) | `06 §2` | Partial / implicit |

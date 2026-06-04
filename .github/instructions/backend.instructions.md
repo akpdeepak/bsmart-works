@@ -64,7 +64,8 @@ Kafka, a search cluster, or a new language until scale demands it.
   (§5).
 - **Event-sourced from day one.** Every state change emits to the **append-only `events`** table
   (mapped by `AppEvent`, written by `EventService`). Events are never updated or deleted. The dead
-  `event_log` was dropped in V20. *(Reconcile against right-to-be-forgotten — RB-40 §3.)*
+  `event_log` was dropped in V20. *(PII never lives in events — it is tokenized into a PII vault and
+  crypto-shredded on erasure, so the log stays immutable; see RB-40 §3.)*
 - **N+1 prevention:** fetch joins / entity graphs for known traversals; never lazy-load in a loop.
 - **Indexing:** index every foreign key and every column used in a `WHERE`/`ORDER BY` on a hot path;
   add the index in the same migration as the query.

@@ -265,7 +265,7 @@ them; that is a documentation gap to close, not a reason to skip them.
 | **WIQL** — the one query language across filters, automations, compliance, KPIs, dashboards | `06 §3 Layer 3` | Absent — add |
 | **Field-level security** (per-field, per-role, server-enforced) | `06 §5.5`, `06 §3 Layer 2` | Absent (RBAC ≠ field-level) |
 | **NFR / performance budgets** (P50/P95/P99 table) | `06 §5.3` | Absent — add |
-| **Data governance**: GDPR/DPDP, right-to-be-forgotten, data residency, AI data-boundary; reconcile vs append-only audit | `06 §5.5` + `06 §5.1` | Absent — add + resolve tension |
+| **Data governance**: GDPR/DPDP, right-to-be-forgotten, data residency, AI data-boundary; reconcile vs append-only audit | `06 §5.5` + `06 §5.1` | Tension **resolved** in RB-40 §3 (crypto-shredding / PII-vault); detailed design at iter 7–9 |
 | **Security depth**: TLS 1.3 min, AES-256 at rest, BYOK/KMS, WebAuthn/passkeys, conditional access, SOC 2 Type 2 + ISO 27001 (iteration 19) | `06 §5.4`, `07 §4.6` | Absent — add |
 | **Target infra**: AWS (ECS/EKS, RDS Multi-AZ, ElastiCache/Redis, S3, CloudFront, Secrets Manager, ECR), Terraform IaC, OpenTelemetry → CloudWatch/Grafana/Prometheus | `07 §2.4`, `07 §4.7` | Roadmap-only mention |
 | **Five architectural commitments** (compliance-first, SLA one-engine/two-contexts, config-without-code, privacy-by-design, event-sourced) | `06 §2` | Partial / implicit |
@@ -508,7 +508,8 @@ Kafka, a search cluster, or a new language until scale demands it.
   (§5).
 - **Event-sourced from day one.** Every state change emits to the **append-only `events`** table
   (mapped by `AppEvent`, written by `EventService`). Events are never updated or deleted. The dead
-  `event_log` was dropped in V20. *(Reconcile against right-to-be-forgotten — RB-40 §3.)*
+  `event_log` was dropped in V20. *(PII never lives in events — it is tokenized into a PII vault and
+  crypto-shredded on erasure, so the log stays immutable; see RB-40 §3.)*
 - **N+1 prevention:** fetch joins / entity graphs for known traversals; never lazy-load in a loop.
 - **Indexing:** index every foreign key and every column used in a `WHERE`/`ORDER BY` on a hot path;
   add the index in the same migration as the query.
@@ -808,16 +809,37 @@ capability calls a model on its own terms.
 
 Required: data export, **right-to-be-forgotten**, access audit, data residency (GDPR / India DPDP).
 
-> **[DECISION REQUIRED — Deepak]** There is a head-on conflict no document has resolved: the
-> architecture commits to an **append-only event log that is never deleted** (RB-10 §3,
-> ENGINEERING-PRINCIPLES §1.6 & §3.2), yet DPDP/GDPR require **erasure** of personal data. These
-> cannot both be literally true.
+**The conflict:** the architecture commits to an **append-only event log that is never deleted**
+(RB-10 §3, ENGINEERING-PRINCIPLES §1.6 & §3.2), yet DPDP/GDPR require **erasure** of personal data.
+Both cannot be literally true if personal data lives inside the immutable log.
+
+> **DECISION (2026-06-04 — Deepak): crypto-shredding + PII-vault tokenization.** The event log stays
+> append-only and immutable; **raw personal data is never stored inside an event** (or projection,
+> index, or log line). Instead:
 >
-> **Recommended resolution: crypto-shredding / PII-vault tokenization.** Keep the event log
-> append-only and immutable, but store personal fields indirected through a per-subject key (or a
-> separate PII vault keyed by token). "Forget" then means destroying the key / vault record: the
-> event history stays intact and auditable, while the personal data becomes unrecoverable. This
-> preserves both invariants. Confirm this approach before the compliance iterations (7–9) begin.
+> - **PII lives in a separate, mutable PII vault**, keyed by an opaque per-subject token. Events and
+>   read-models reference the **token**, never the raw personal field.
+> - Each subject's vault record is encrypted under a **per-subject data key**, envelope-encrypted via
+>   the KMS in §4 (BYOK where a tenant requires it).
+> - **"Forget" = destroy the per-subject key and purge the vault record.** The event history and its
+>   causal structure stay intact and auditable; the personal data becomes cryptographically
+>   unrecoverable. This satisfies erasure **and** preserves the immutable audit trail.
+>
+> **Binding rules (detailed design lands with the compliance iterations, 7–9):**
+> 1. **No raw PII outside the vault** — not in event payloads, projections, search indexes, logs, or
+>    metrics; only tokens/ciphertext. (A `guardrails.sh` "no-PII-in-events" check is added once the
+>    PII field inventory exists.)
+> 2. **Backups must honour erasure** — a backup that can resurrect a destroyed key or pre-shred PII
+>    defeats the right. Key retention ≤ backup retention, and key destruction propagates to
+>    replicas/caches.
+> 3. **Projections re-derivable from tokenized events alone** — a read-model rebuild after erasure
+>    must never need the purged PII.
+> 4. **Maintain a PII field inventory + data-residency map** (which vault, which region) — the single
+>    artifact the access-audit and residency requirements both read from.
+>
+> *Scope:* this fixes the **architecture**. The PII field inventory, key-management/rotation design,
+> retention windows, and backup-expiry mechanics are detailed designs to produce — and validate with
+> legal/DPO — at the **start of iterations 7–9**, before any of this is built.
 
 ## 4. Security depth *(spec `06 §5.4`, `07 §4.6`)*
 

@@ -10,6 +10,8 @@ public class AppEvent {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String aggregateId;
+    @Column(name = "workspace_id")
+    private String workspaceId;
     private String eventType;
     private String actorId;
     @Column(columnDefinition = "TEXT")
@@ -24,6 +26,8 @@ public class AppEvent {
     public Long getId() { return id; }
     public String getAggregateId() { return aggregateId; }
     public void setAggregateId(String aggregateId) { this.aggregateId = aggregateId; }
+    public String getWorkspaceId() { return workspaceId; }
+    public void setWorkspaceId(String workspaceId) { this.workspaceId = workspaceId; }
     public String getEventType() { return eventType; }
     public void setEventType(String eventType) { this.eventType = eventType; }
     public String getActorId() { return actorId; }

@@ -36,8 +36,12 @@ class ProjectControllerAccessTest {
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
 
-    private final ProjectController controller = new ProjectController(
-            projectRepository, eventService, jdbc, userRepository, authenticatedUser, rbac);
+    // The controller is thin (I01-S05): it delegates to ProjectService where RBAC is enforced.
+    // Wiring a real service through mocked deps keeps this an end-to-end controller access test.
+    private final ProjectService projectService = new ProjectService(
+            projectRepository, userRepository, eventService, rbac, jdbc);
+
+    private final ProjectController controller = new ProjectController(projectService, authenticatedUser);
 
     ProjectControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

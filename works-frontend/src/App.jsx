@@ -1,8 +1,9 @@
 ﻿/* eslint-disable */ // legacy monolith — a11y and hooks violations are known baseline debt; new components must pass clean
 import React, { useState, useEffect, useRef } from 'react';
 import DOMPurify from 'dompurify';
-import { Mail, ShieldCheck, PanelLeft } from 'lucide-react';
+import { Mail, ShieldCheck, PanelLeft, Bell } from 'lucide-react';
 import { Button } from '@/components/works/button';
+import { UserMenu } from '@/components/works/organisms/user-menu';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
@@ -2005,7 +2006,7 @@ export default function App() {
               <Avatar name={currentUser.fullName} size={7} />
             </div>
           ) : (
-            <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer">
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded-md">
               <Avatar name={currentUser.fullName} size={7} />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-neutral-900 truncate">{currentUser.fullName}</p>
@@ -2013,7 +2014,6 @@ export default function App() {
                   <RoleBadge role={userRole.role} tier={userRole.tier} small />
                 </div>
               </div>
-              <button onClick={handleLogout} title="Sign out" className="text-neutral-400 hover:text-brand-orange text-sm">↩</button>
             </div>
           )}
         </div>
@@ -2025,7 +2025,7 @@ export default function App() {
         {/* TOPBAR */}
         <header className="h-14 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between px-6 flex-shrink-0 relative">
           <div className="relative" ref={searchRef}>
-            <input type="text" placeholder="Search work items..."
+            <input type="text" placeholder="Search work items..." aria-label="Search work items"
               value={searchQuery}
               onFocus={() => setSearchOpen(true)}
               onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
@@ -2072,15 +2072,29 @@ export default function App() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setDarkMode(d => !d)} title="Toggle dark/light mode"
-              className="w-8 h-8 rounded-md flex items-center justify-center text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-base">
-              {darkMode ? '☀️' : '🌙'}
-            </button>
             {can('create_items') && (
               <Button variant="action" onClick={() => { setView('board'); setIsCreateOpen(true); }}>
                 + Create
               </Button>
             )}
+            <button onClick={() => { setView('notifications'); fetchNotifications(); }}
+              aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+              className="relative w-9 h-9 rounded-md flex items-center justify-center text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-[120ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
+              <Bell aria-hidden="true" className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-brand-orange text-white text-[10px] font-bold flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+            <UserMenu
+              user={currentUser}
+              role={userRole.role}
+              darkMode={darkMode}
+              onToggleTheme={() => setDarkMode(d => !d)}
+              onOpenSettings={() => { setView('workspace'); fetchMembers(); fetchNotifPrefs(); fetchBranding(); }}
+              onLogout={handleLogout}
+            />
           </div>
         </header>
 

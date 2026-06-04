@@ -43,7 +43,7 @@
 |---|---|---|---|---|---|---|---|
 | I01-S01 | A | Authentication & identity | Done | refactor/iter-01/s01-authentication-identity | [#73](https://github.com/akpdeepak/bsmart-works/pull/73) | 2026-06-04 | Partial→completed: token-based password reset, real email, MFA JWT-principal fix, rate limiting, tests. No schema change. |
 | I01-S02 | A | Workspaces | Done | claude/spec-refactor-i01-s02-pdVrC | [#77](https://github.com/akpdeepak/bsmart-works/pull/77) | 2026-06-04 | Partial→refactored: WorkspaceService (RBAC + data access out of controller), membership-enforced reads (404 cross-tenant, RB-40 §1), branding on entity, workspace events, /workspaces/mine, real multi-workspace switcher, V35 seed. No schema change beyond seed. |
-| I01-S03 | A | App shell — topbar, sidenav, workspace switcher | Pending | — | — | — | — |
+| I01-S03 | A | App shell — topbar, sidenav, workspace switcher | In-Progress | claude/spec-refactor-i01-s03-app-shell | — | — | Topbar notifications bell + user menu (new tested UserMenu organism); a11y polish. |
 | I01-S04 | A | Event store foundation | Pending | — | — | — | — |
 | I01-S05 | B | Projects | Pending | — | — | — | — |
 | I01-S06 | B | Default WorkItem types | Pending | — | — | — | — |

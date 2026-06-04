@@ -12,7 +12,7 @@
 
 | Iteration | Release | Theme | Specs | Done |
 |---|---|---|---:|---:|
-| 1 | 1.0 | Foundation — The Works MVP | 12 | 5 |
+| 1 | 1.0 | Foundation — The Works MVP | 12 | 6 |
 | 2 | 2.0 | Sprints — Scrum + Reports | 8 | 0 |
 | 3 | 3.0 | Workflows, Permissions & Custom Fields | 8 | 0 |
 | 4 | 4.0 | PM Artifacts — RAID, Decisions, Meetings | 10 | 0 |
@@ -32,7 +32,7 @@
 | 18 | 18.0 | Mobile + Real-time + Performance | 12 | 0 |
 | 19 | 19.0 | Enterprise Security + Compliance Certifications | 12 | 0 |
 | 20 | 20.0 | Polish, Advanced AI, Marketplace Foundation | 12 | 0 |
-| **Total** | | | **224** | **22** |
+| **Total** | | | **224** | **23** |
 
 ## Specs
 
@@ -46,8 +46,8 @@
 | I01-S03 | A | App shell — topbar, sidenav, workspace switcher | Done | claude/spec-refactor-i01-s03-app-shell | [#80](https://github.com/akpdeepak/bsmart-works/pull/80) | 2026-06-04 | Topbar notifications bell + tested UserMenu organism; a11y polish. Also repaired main (concurrent #75/#78 skew). |
 | I01-S04 | A | Event store foundation | Done | claude/spec-refactor-i01-s04-event-store | [#85](https://github.com/akpdeepak/bsmart-works/pull/85) | 2026-06-04 | workspace_id on events (RB-40 §1) + append-only immutability trigger (V39); recordInWorkspace. |
 | I01-S05 | B | Projects | Done | claude/spec-refactor-i01-s05-projects | [#86](https://github.com/akpdeepak/bsmart-works/pull/86) | 2026-06-04 | ProjectService (RBAC→service), tenant-isolated reads (no findAll leak), workspace-scoped events. |
-| I01-S06 | B | Default WorkItem types | In-Progress | claude/spec-refactor-i01-s06-workitem-types | — | — | 7 defaults → on-brand single source of truth (DefaultWorkItemTypes) + test. |
-| I01-S07 | B | WorkItem CRUD with rich text | Pending | — | — | — | — |
+| I01-S06 | B | Default WorkItem types | Done | claude/spec-refactor-i01-s06-workitem-types | [#87](https://github.com/akpdeepak/bsmart-works/pull/87) | 2026-06-04 | 7 defaults → on-brand single source of truth (DefaultWorkItemTypes) + test. |
+| I01-S07 | B | WorkItem CRUD with rich text | In-Progress | claude/spec-refactor-i01-s07-workitem-crud | — | — | Tenant-scope list/search/backlog/trash reads (RB-40 §1); guard restore/reorder writes. |
 | I01-S08 | F | Kanban board (basic) | Pending | — | — | — | — |
 | I01-S09 | G | Comments with @mentions | Pending | — | — | — | — |
 | I01-S10 | G | Notifications — in-app + email | Pending | — | — | — | — |

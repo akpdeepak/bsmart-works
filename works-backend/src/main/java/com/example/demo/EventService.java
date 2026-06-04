@@ -26,6 +26,17 @@ public class EventService {
         eventRepository.save(baseEvent(aggregateId, eventType, actorId, toJson(payload)));
     }
 
+    // Workspace-scoped recording (RB-40 §1 — every event carries its tenant). Use this from any
+    // producer that knows the workspace; aggregateId may differ from workspaceId (e.g. a project
+    // event has aggregateId = projectId, workspaceId = the owning workspace). Producers adopt this
+    // as each domain is refactored; the rest leave workspace_id null (backfilled in V38).
+    public void recordInWorkspace(String workspaceId, String aggregateId, String eventType,
+                                  String actorId, Map<String, ?> payload) {
+        AppEvent event = baseEvent(aggregateId, eventType, actorId, toJson(payload));
+        event.setWorkspaceId(workspaceId);
+        eventRepository.save(event);
+    }
+
     public void recordDiff(String aggregateId, String eventType, String actorId,
                            String fieldName, String oldValue, String newValue) {
         Map<String, Object> payload = new LinkedHashMap<>();

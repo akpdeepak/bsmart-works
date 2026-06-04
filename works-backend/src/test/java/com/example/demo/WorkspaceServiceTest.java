@@ -115,7 +115,7 @@ class WorkspaceServiceTest {
         verify(rbac).require("USR-ADMIN", "WS-001", "invite_members");
         // role defaults to MEMBER when not supplied
         verify(jdbc).update(contains("INSERT INTO workspace_members"), eq("WS-001"), eq("USR-NEW"), eq("MEMBER"));
-        verify(eventService).record(eq("WS-001"), eq("MEMBER_ADDED"), eq("USR-ADMIN"), any(java.util.Map.class));
+        verify(eventService).recordInWorkspace(eq("WS-001"), eq("WS-001"), eq("MEMBER_ADDED"), eq("USR-ADMIN"), any(java.util.Map.class));
     }
 
     @Test
@@ -124,7 +124,7 @@ class WorkspaceServiceTest {
 
         verify(rbac).require("USR-ADMIN", "WS-001", "remove_members");
         verify(jdbc).update(contains("DELETE FROM workspace_members"), eq("WS-001"), eq("USR-GONE"));
-        verify(eventService).record(eq("WS-001"), eq("MEMBER_REMOVED"), eq("USR-ADMIN"), any(java.util.Map.class));
+        verify(eventService).recordInWorkspace(eq("WS-001"), eq("WS-001"), eq("MEMBER_REMOVED"), eq("USR-ADMIN"), any(java.util.Map.class));
     }
 
     @Test
@@ -153,7 +153,7 @@ class WorkspaceServiceTest {
         assertThat(branding.get("logoUrl")).isEqualTo("");             // blank → null → ""
         assertThat(branding.get("description")).isEqualTo("Support team");
         verify(rbac).require("USR-ADMIN", "WS-001", "manage_workspace");
-        verify(eventService).record(eq("WS-001"), eq("WORKSPACE_BRANDING_UPDATED"), eq("USR-ADMIN"), any(java.util.Map.class));
+        verify(eventService).recordInWorkspace(eq("WS-001"), eq("WS-001"), eq("WORKSPACE_BRANDING_UPDATED"), eq("USR-ADMIN"), any(java.util.Map.class));
     }
 
     // ── Workspace context ─────────────────────────────────────────────────────

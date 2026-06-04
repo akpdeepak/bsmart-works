@@ -4,7 +4,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.*;
-import java.util.regex.*;
 import jakarta.validation.Valid;
 
 /**
@@ -13,20 +12,30 @@ import jakarta.validation.Valid;
  * Examples:
  *   priority = Highest AND assignee = currentUser()
  *   status != Done AND type = Bug
- *   dueDate < today() AND priority IN (High, Highest)
+ *   dueDate &lt; today() AND priority IN (High, Highest)
+ *
+ * Parsing/compilation lives in {@link BqlCompiler}, which emits parameterized SQL; this
+ * controller stays thin — it runs the compiled query and manages saved filters.
  */
 @RestController
 @RequestMapping("/api/v1/bql")
 public class BqlController {
 
+    private static final String BASE_SELECT =
+        "SELECT id, title, status, type, priority, assignee_id, project_id, due_date, created_at "
+        + "FROM work_items WHERE deleted_at IS NULL";
+
     private final JdbcTemplate jdbc;
+    private final BqlCompiler compiler;
     private final BqlFilterRepository filterRepo;
     private final AuthenticatedUser authenticatedUser;
 
     public BqlController(JdbcTemplate jdbc,
-                          BqlFilterRepository filterRepo,
-                          AuthenticatedUser authenticatedUser) {
+                         BqlCompiler compiler,
+                         BqlFilterRepository filterRepo,
+                         AuthenticatedUser authenticatedUser) {
         this.jdbc = jdbc;
+        this.compiler = compiler;
         this.filterRepo = filterRepo;
         this.authenticatedUser = authenticatedUser;
     }
@@ -36,14 +45,15 @@ public class BqlController {
         String query = body.getOrDefault("query", "").trim();
         String userId = authenticatedUser.id();
         if (query.isEmpty()) {
-            return jdbc.queryForList(
-                "SELECT id, title, status, type, priority, assignee_id, project_id, due_date, created_at " +
-                "FROM work_items WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100");
+            return jdbc.queryForList(BASE_SELECT + " ORDER BY created_at DESC LIMIT 100");
         }
         try {
-            String sql = buildSql(query, userId);
-            return jdbc.queryForList(sql);
-        } catch (Exception e) {
+            BqlCompiler.Compiled c = compiler.compile(query, userId);
+            String sql = BASE_SELECT
+                + (c.sql().isEmpty() ? "" : " AND (" + c.sql() + ")")
+                + " ORDER BY created_at DESC LIMIT 500";
+            return jdbc.queryForList(sql, c.params().toArray());
+        } catch (BqlException e) {
             throw new IllegalArgumentException("BQL parse error: " + e.getMessage());
         }
     }
@@ -53,9 +63,9 @@ public class BqlController {
         String query = body.getOrDefault("query", "").trim();
         Map<String, Object> result = new LinkedHashMap<>();
         try {
-            buildSql(query, "validate");
+            compiler.compile(query, "validate");
             result.put("valid", true);
-        } catch (Exception e) {
+        } catch (BqlException e) {
             result.put("valid", false);
             result.put("error", e.getMessage());
         }
@@ -90,117 +100,6 @@ public class BqlController {
     public Map<String, String> deleteFilter(@PathVariable String id) {
         filterRepo.deleteById(id);
         return Map.of("message", "Filter deleted");
-    }
-
-    // ---------------------------------------------------------------
-    // BQL → SQL translator
-    // ---------------------------------------------------------------
-
-    private String buildSql(String query, String currentUserId) {
-        StringBuilder sb = new StringBuilder(
-            "SELECT id, title, status, type, priority, assignee_id, project_id, due_date, created_at " +
-            "FROM work_items WHERE deleted_at IS NULL");
-
-        String where = translateBql(query.trim(), currentUserId);
-        if (!where.isEmpty()) sb.append(" AND (").append(where).append(")");
-        sb.append(" ORDER BY created_at DESC LIMIT 500");
-        return sb.toString();
-    }
-
-    private String translateBql(String query, String currentUserId) {
-        // Tokenize: split on AND/OR (case-insensitive) while keeping delimiters
-        // Each token is a single condition like: priority = Highest
-        List<String> parts = new ArrayList<>();
-        List<String> connectors = new ArrayList<>();
-
-        Pattern andOr = Pattern.compile("\\s+(AND|OR)\\s+", Pattern.CASE_INSENSITIVE);
-        Matcher m = andOr.matcher(query);
-        int last = 0;
-        while (m.find()) {
-            parts.add(query.substring(last, m.start()).trim());
-            connectors.add(m.group(1).toUpperCase());
-            last = m.end();
-        }
-        parts.add(query.substring(last).trim());
-
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < parts.size(); i++) {
-            if (i > 0) result.append(" ").append(connectors.get(i - 1)).append(" ");
-            result.append(translateCondition(parts.get(i).trim(), currentUserId));
-        }
-        return result.toString();
-    }
-
-    private String translateCondition(String cond, String currentUserId) {
-        // Handle IN: field IN (v1, v2, ...)
-        Pattern inPat = Pattern.compile("^(\\w+)\\s+IN\\s+\\((.+)\\)$", Pattern.CASE_INSENSITIVE);
-        Matcher inM = inPat.matcher(cond);
-        if (inM.matches()) {
-            String field = mapField(inM.group(1));
-            String[] vals = inM.group(2).split(",");
-            StringBuilder sb = new StringBuilder(field).append(" IN (");
-            for (int i = 0; i < vals.length; i++) {
-                if (i > 0) sb.append(",");
-                sb.append("'").append(escape(vals[i].trim())).append("'");
-            }
-            sb.append(")");
-            return sb.toString();
-        }
-
-        // Handle: field op value
-        Pattern condPat = Pattern.compile("^(\\w+)\\s*(=|!=|<>|>=|<=|>|<|CONTAINS|STARTSWITH)\\s*(.+)$", Pattern.CASE_INSENSITIVE);
-        Matcher condM = condPat.matcher(cond);
-        if (condM.matches()) {
-            String field = mapField(condM.group(1));
-            String op = condM.group(2).toUpperCase();
-            String value = resolveValue(condM.group(3).trim(), currentUserId);
-
-            return switch (op) {
-                case "!=" , "<>" -> field + " != " + value;
-                case ">=" -> field + " >= " + value;
-                case "<=" -> field + " <= " + value;
-                case ">" -> field + " > " + value;
-                case "<" -> field + " < " + value;
-                case "CONTAINS" -> field + " ILIKE '%" + escape(condM.group(3).trim()) + "%'";
-                case "STARTSWITH" -> field + " ILIKE '" + escape(condM.group(3).trim()) + "%'";
-                default -> field + " = " + value;
-            };
-        }
-        throw new IllegalArgumentException("Cannot parse condition: " + cond);
-    }
-
-    private String mapField(String field) {
-        return switch (field.toLowerCase()) {
-            case "priority"  -> "priority";
-            case "status"    -> "status";
-            case "type"      -> "type";
-            case "assignee"  -> "assignee_id";
-            case "reporter"  -> "created_by";
-            case "project"   -> "project_id";
-            case "duedate", "due_date" -> "due_date";
-            case "createdat", "created_at" -> "created_at";
-            case "sprint"    -> "sprint_id";
-            case "storypoints", "points" -> "story_points";
-            default -> field.toLowerCase();
-        };
-    }
-
-    private String resolveValue(String value, String currentUserId) {
-        if ("currentUser()".equalsIgnoreCase(value)) return "'" + escape(currentUserId) + "'";
-        if ("today()".equalsIgnoreCase(value)) return "CURRENT_DATE";
-        if ("now()".equalsIgnoreCase(value)) return "NOW()";
-        // Strip quotes if present
-        if ((value.startsWith("\"") && value.endsWith("\"")) ||
-            (value.startsWith("'") && value.endsWith("'"))) {
-            return "'" + escape(value.substring(1, value.length() - 1)) + "'";
-        }
-        // Numbers stay as-is
-        if (value.matches("-?\\d+(\\.\\d+)?")) return value;
-        return "'" + escape(value) + "'";
-    }
-
-    private String escape(String s) {
-        return s.replace("'", "''");
     }
 
     private String getWorkspaceForUser(String userId) {

@@ -1,5 +1,7 @@
 -- ============================================================
--- V35: Seed a second workspace (I01-S02 Workspaces)
+-- V37: Seed a second workspace (I01-S02 Workspaces)
+-- (Renumbered from V35 to resolve a Flyway version collision with V35__compliance_engine.sql,
+--  which merged concurrently from a separate PR. Forward-only fix; seed content unchanged.)
 -- Makes multi-workspace tenant context real and demonstrable: the canonical dogfood users
 -- belong to two workspaces, so the switcher shows two and switching exercises real isolation.
 -- Seed data only — no schema change. Forward-only.

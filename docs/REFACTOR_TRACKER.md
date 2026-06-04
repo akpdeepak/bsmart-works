@@ -12,7 +12,7 @@
 
 | Iteration | Release | Theme | Specs | Done |
 |---|---|---|---:|---:|
-| 1 | 1.0 | Foundation — The Works MVP | 12 | 0 |
+| 1 | 1.0 | Foundation — The Works MVP | 12 | 1 |
 | 2 | 2.0 | Sprints — Scrum + Reports | 8 | 0 |
 | 3 | 3.0 | Workflows, Permissions & Custom Fields | 8 | 0 |
 | 4 | 4.0 | PM Artifacts — RAID, Decisions, Meetings | 10 | 0 |
@@ -32,7 +32,7 @@
 | 18 | 18.0 | Mobile + Real-time + Performance | 12 | 0 |
 | 19 | 19.0 | Enterprise Security + Compliance Certifications | 12 | 0 |
 | 20 | 20.0 | Polish, Advanced AI, Marketplace Foundation | 12 | 0 |
-| **Total** | | | **224** | **0** |
+| **Total** | | | **224** | **1** |
 
 ## Specs
 
@@ -41,7 +41,7 @@
 
 | ID | Cap | Spec | Status | Branch | PR | Date | Notes |
 |---|---|---|---|---|---|---|---|
-| I01-S01 | A | Authentication & identity | In-Progress | refactor/iter-01/s01-authentication-identity | — | 2026-06-04 | — |
+| I01-S01 | A | Authentication & identity | Done | refactor/iter-01/s01-authentication-identity | [#73](https://github.com/akpdeepak/bsmart-works/pull/73) | 2026-06-04 | Partial→completed: token-based password reset, real email, MFA JWT-principal fix, rate limiting, tests. No schema change. |
 | I01-S02 | A | Workspaces | Pending | — | — | — | — |
 | I01-S03 | A | App shell — topbar, sidenav, workspace switcher | Pending | — | — | — | — |
 | I01-S04 | A | Event store foundation | Pending | — | — | — | — |

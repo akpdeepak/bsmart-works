@@ -5,8 +5,8 @@
 1. Read [`CLAUDE.md`](CLAUDE.md) — the canonical rules (every AI tool reads it too).
 2. Read [`docs/ENGINEERING-PRINCIPLES.md`](docs/ENGINEERING-PRINCIPLES.md) — the *why*.
 3. Confirm the **active iteration** with Deepak. Do not build iteration N+1 while N is in scope.
-4. For any backend change: identify the next Flyway migration number (currently `V27+`) and the
-   API contract before touching code.
+4. For any backend change: identify the next Flyway migration number (the next sequential `V{n}` —
+   see [`CLAUDE.md §3`](CLAUDE.md), the canonical high-water mark) and the API contract before touching code.
 
 ---
 
@@ -74,7 +74,7 @@ npm run dev
 The pre-commit hook runs automatically. To run the same checks manually:
 
 ```bash
-# Single command — runs ALL Definition of Done gates (CLAUDE.md §21.9):
+# Single command — runs ALL Definition of Done gates (CLAUDE.md §24.9):
 bash scripts/verify.sh
 
 # Faster variants:

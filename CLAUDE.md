@@ -4,7 +4,7 @@
 > Read it fully before writing code or answering questions about this project.
 > **Every fact below is verified against the actual codebase, not just the spec docs.**
 > Where the spec and the code disagree, the code wins and the gap is flagged with ⚠️.
-> **§24 is mandatory reading before starting any task — it defines the ten-step execution protocol.**
+> **§24 is mandatory reading before starting any task — it defines the execution protocol (Step 0 orchestration, then Steps 1–10).**
 
 ---
 
@@ -102,7 +102,7 @@ package-by-feature migration is formally scheduled.
 
 ### Database (Flyway — current high-water mark: **V29** on `main`; note V16 was skipped, V23 does not exist)
 - **All schema changes via Flyway migrations only.** Never alter the DB manually.
-- Next migration is **`V30__<description>.sql`**. Naming: `V{n}__{snake_case_description}.sql`.
+- Next migration is **`V30__<description>.sql`**. Naming: `V{n}__{snake_case_description}.sql`. **§3 is the single canonical place this number lives — update it here each iteration (§5); every other section defers to §3 and must never hard-code a migration number.**
   (Existing on `main`: …V17 mfa_totp, V18 project_slugs, V19 data_quality_cleanup,
   V20 drop_dead_event_log, V21 iteration3_workflows_fields_permissions, V22 iteration4_pm_artifacts,
   V24 knowledge_repository, V25 releases_and_worklogs, V26 cross_project_dependencies,
@@ -197,6 +197,12 @@ semantic.info    #1E4D8C  (surface: info-surface    #E5EDF7)
 - Borders and dividers: always `border-neutral-200`. Never `border-black`, `border-gray-*`,
   or raw color. No decorative borders — every border communicates structure.
 - Don't use `neutral-*` Tailwind defaults (gray-*) — use the token aliases from `tailwind.config.js`.
+
+**Dark mode (verified — `darkMode: 'class'` in `tailwind.config.js`):** the app supports dark mode.
+Every component pairs its light token classes with `dark:` variants — match the built atoms, e.g.
+`bg-white dark:bg-neutral-800`, `text-neutral-900 dark:text-neutral-100`,
+`border-neutral-200 dark:border-neutral-600`. New UI must include `dark:` variants — this is the
+spec behind the dark-mode checks in §24.5 and §24.9.
 
 ---
 
@@ -310,9 +316,9 @@ Every clickable/focusable element must have all of:
 |-------|-----------|
 | Default | base style |
 | Hover | `bg-neutral-100` (on light) or `bg-white/5` (on navy) or `bg-brand-navy-tint` (on navy primary) |
-| Active / pressed | slightly darker, `scale-[0.98]` for buttons |
-| Disabled | `opacity-40 cursor-not-allowed pointer-events-none` |
-| Focus | `outline-none ring-2 ring-brand-navy ring-offset-2` — always visible for keyboard users |
+| Active / pressed | slightly darker; buttons nudge down with `active:translate-y-px` |
+| Disabled | `opacity-50 cursor-not-allowed pointer-events-none` |
+| Focus | `outline-none ring-2 ring-brand-navy-tint/40 ring-offset-2` — always visible for keyboard users |
 
 **Never style an element without defining all five states.**
 
@@ -771,7 +777,7 @@ Every unit of work follows this path. Skipping steps creates invisible scope and
 - Acceptance criteria are specific and testable (the feature spec template `.github/ISSUE_TEMPLATE/feature-spec.md` enforces this)
 - Iteration confirmed; capability map reference noted
 - API contract agreed if backend is involved; UI behaviour or Figma ref provided if frontend
-- Flyway migration identified (next: V27+); RBAC/privacy implications noted; AI fallback documented
+- Flyway migration identified (use the next sequential number — §3 is the canonical high-water mark); RBAC/privacy implications noted; AI fallback documented
 
 **During development:** every commit must follow the **Conventional Commits** format (`type(scope): description`),
 enforced by `.husky/commit-msg` and the `commit-lint` CI job. The iteration number appears in the PR metadata.
@@ -791,7 +797,7 @@ This keeps CLAUDE.md accurate for all AI tools (no stale advice).
 **Architecture / Backend**
 - Don't add features, abstractions, or generalization beyond the task.
 - Don't create capability-specific auth, data models, or UI patterns. One of each, unified.
-- Don't change DB schema without a Flyway migration (next is `V27`).
+- Don't change DB schema without a Flyway migration (use the next sequential number — see §3, the canonical high-water mark).
 - Don't use singular table names — the convention is plural (`work_items`, `users`).
 - Don't create `com.bcits.works.*` packages yet — match existing `com.example.demo`.
 - Don't put RBAC logic in controllers.
@@ -841,7 +847,7 @@ This keeps CLAUDE.md accurate for all AI tools (no stale advice).
 
 **Backend**
 - [ ] New endpoints have `@Valid` DTO validation, under `/api/v1/`, plural kebab path
-- [ ] New tables/columns have a Flyway migration (`V27+`), plural table names
+- [ ] New tables/columns have a Flyway migration (next sequential `V{n}` per §3), plural table names
 - [ ] RBAC check in service layer (not controller)
 - [ ] Errors use the standard `{ code, message, field? }` shape
 - [ ] New code added to `com.example.demo` (no new top-level packages without a rename plan)
@@ -893,7 +899,7 @@ This keeps CLAUDE.md accurate for all AI tools (no stale advice).
 > All CI jobs block: **lint** (App.jsx baseline suppressed with file-level disable — new files must pass
 > clean), **build**, **guardrails**, and **coverage** (JaCoCo 60% LINE minimum on unit tests).
 
-<!-- dod-version: 2026-06-01-r4 -->
+<!-- dod-version: 2026-06-04-r1 -->
 
 ---
 
@@ -1811,7 +1817,7 @@ Browser (React SPA)
 - Schema: Flyway-only (never manual). Sequential integers, no gaps on a branch.
 - Tables: plural snake_case (`work_items`, `project_members`).
 - Events: append-only (`events`). Never UPDATE or DELETE from this table.
-- Current high-water mark on `main`: **V29**. Next new migration: **V30__.sql**.
+- Migration high-water mark and the next number are stated once in §3 (the canonical source). Use that number — never hard-code a migration number here or anywhere else.
 
 ---
 
@@ -1830,41 +1836,45 @@ professionals who spend 8+ hours in the tool; visual noise and empty whitespace 
 
 ### 22.2 Layout Shell
 
-Every screen uses the same shell — never create a one-off layout:
+**The canonical layout shell is defined once in §4.6 (the three-zone system) — use that, never a
+one-off layout.** Concrete widths are `tailwind.config.js` tokens: `w-sidebar` (240px) /
+`w-sidebar-collapsed` (48px) for the left nav, `w-panel` (360px) for the right contextual panel.
+The sketch below is illustrative only — §4.6 governs:
 
 ```
 ┌──────────────────────────────────────────────────────┐
 │  Top Bar (h-14, bg-white, border-b neutral-200)       │
 ├──────┬───────────────────────────────────────────────┤
 │ Nav  │                                               │
-│ w-56 │   Main Content Area                           │
+│ open │   Main Content Area                           │
 │ or   │   (scrollable, p-6, neutral-50 bg)            │
-│ w-12 │                                               │
+│ icon │                                               │
 │ col- │                                               │
 │lapse │                                               │
 └──────┴───────────────────────────────────────────────┘
 ```
 
-- **Left nav**: `w-56` expanded, `w-12` icon-only collapsed. State in React Context.
-- **Top bar**: workspace switcher, search, notifications, user avatar.
-- **Main area**: `bg-neutral-50 min-h-screen`. Content in cards (`bg-white rounded-lg shadow-sm`).
+- **Left nav**: collapses to an icon rail — `w-sidebar` → `w-sidebar-collapsed` (240px → 48px, §4.6). State in React Context.
+- **Top bar**: workspace switcher, global search (⌘K — §4.16), notifications bell, user avatar. Page-level actions, breadcrumb, and page title live in the §4.6 in-content sticky header, not here.
+- **Main area**: `bg-neutral-50`, scrollable, `p-6`. Content in cards (§4.9 surface system).
 - Never create page-specific nav, toolbars, or wrapper layouts outside this shell.
 
 ### 22.3 Expand / Shrink Patterns
 
-All animated transitions use the brand motion tokens (from `tailwind.config.js`):
+**Motion durations and easings are defined once in §4.5 (backed by the `tailwind.config.js` tokens)
+— use those; don't restate different numbers here.** Pattern → mechanics:
 
-| Pattern | CSS approach | Duration | Easing |
-|---------|-------------|----------|--------|
-| Sidebar collapse/expand | `w-56` ↔ `w-12` | `duration-fast` (150ms) | `ease-out-quint` |
-| Detail panel (slide-in) | `translate-x-full` → `translate-x-0` | `duration-fast` (150ms) | `ease-out-quint` |
-| Section accordion | `max-h-0 overflow-hidden` → `max-h-screen` | `duration-slow` (320ms) | `ease-out-quint` |
-| Page transitions | opacity + slight translate-y | `duration-base` (220ms) | `ease-out-quint` |
-| Dropdown / popover | scale + opacity | `duration-[120ms]` | `ease-out-quint` |
-| Drag & sort | none (direct) | `duration-instant` | — |
+| Pattern | CSS approach | Timing (see §4.5) |
+|---------|-------------|-------------------|
+| Sidebar collapse/expand | `w-sidebar` ↔ `w-sidebar-collapsed` | panel-slide duration, `ease-out` |
+| Detail panel (slide-in) | `translate-x-full` → `translate-x-0` | panel-slide duration, `ease-out` |
+| Section accordion | `max-h-0 overflow-hidden` → expanded height | expand/collapse duration (§4.7) |
+| Page transition | opacity + slight `translate-y` | page-level duration |
+| Dropdown / popover | scale + opacity | micro-interaction `duration-[120ms]` |
+| Drag & sort | none (direct) | `duration-instant` |
 
-**Never** use `spring` easing for UI chrome — it's reserved for microinteractions (badges, counters).
-**Never** use bounce, sparkle, or decorative motion.
+**Never** use `spring` / `ease-spring` on functional UI chrome — it's reserved for brand/marketing
+surfaces (§4.5). **Never** use bounce, sparkle, or decorative motion.
 
 ### 22.4 Component Rules
 
@@ -1872,33 +1882,33 @@ Every component in `works-frontend/src/components/works/` follows `button.jsx`:
 - Written with `cva` variants + `cn()` composition.
 - Token classes only — no raw hex, px, or font names.
 - Hover: one shade deeper (navy → navy-tint; neutral-100 → neutral-200).
-- Focus: `ring-2 ring-brand-navy-tint/40 ring-offset-2`.
-- Active: `active:translate-y-px` (1px down — already in Button).
-- Disabled: `opacity-50 pointer-events-none`.
+- Focus: `ring-2 ring-brand-navy-tint/40 ring-offset-2` (matches §4.8).
+- Active: `active:translate-y-px` (1px down — already in Button; matches §4.8).
+- Disabled: `opacity-50 pointer-events-none` (matches §4.8).
 - Transition: `duration-[120ms]` on all interactive elements.
 
-#### Loading & Async States
+#### Loading & Async States (canonical rules: §4.11 / §4.5)
 - Button loading: `Loader2` spinning icon (already in Button, reuse this pattern).
-- Data loading: skeleton shimmer using `bg-neutral-200 animate-pulse rounded`.
-- Page loading: spinner centered in content area, not full-screen overlay.
+- Data / page loading: **skeleton screens** using `animate-pulse bg-neutral-100 rounded` —
+  **never a spinner inside a content area** (§4.11). A spinner is only acceptable inside a button
+  during a mutation.
 
-#### Empty States
-Every empty state must have three elements:
-1. A lucide icon (neutral-300, size `h-10 w-10`).
-2. A title explaining WHY it's empty (`text-neutral-700 font-semibold`).
-3. A next-step prompt or action button.
-Never show a blank area or just "No items found."
+#### Empty States (canonical formula: §4.11 / §4.20)
+Every empty state has: a lucide icon (`text-neutral-400`, `h-8 w-8`), a title explaining WHY it's
+empty (`text-sm font-semibold text-neutral-700`), and a next-step CTA button. Never show a blank
+area or just "No items found."
 
 #### Error States
-- Inline field errors: `text-semantic-danger text-xs` below the field.
-- Toast/banner errors: `semantic-danger-surface bg` with danger border.
-- Always state: what went wrong + what the user can do.
+- Inline field errors: `text-semantic-danger text-xs` below the field (never a toast — §4.11).
+- Toast/banner errors: `semantic-danger-surface` bg with danger border.
+- Always state: what went wrong + what the user can do (§4.20).
 - API errors are mapped from `{ code, message, field? }` in `apiClient`.
 
 ### 22.5 Density & Spacing
 
 - Base unit: 4px (Tailwind default scale).
-- Standard row height: `h-9` (36px) for list items, table rows, inputs.
+- Control height (buttons, inputs): `h-9` (36px) — the `button.jsx` `md` size.
+- **List / table row heights follow §4.10** (`h-10` compact · `h-12` standard · `h-14` with sub-info) — not `h-9`.
 - Card padding: `p-4` (small cards) or `p-6` (feature cards).
 - Section spacing: `space-y-4` between cards; `space-y-6` between page sections.
 - Max content width: `max-w-7xl mx-auto` for full-width pages.
@@ -1906,14 +1916,10 @@ Never show a blank area or just "No items found."
 
 ### 22.6 Typography Hierarchy
 
-| Role | Classes |
-|------|---------|
-| Page title | `text-xl font-bold text-neutral-900` |
-| Section header | `text-base font-semibold text-neutral-700` |
-| Card label | `text-xs font-semibold text-neutral-600 uppercase tracking-wide` |
-| Body text | `text-sm text-neutral-700` |
-| Secondary / meta | `text-xs text-neutral-400` |
-| Monospace / code | `font-mono text-sm text-neutral-700` |
+**Typography is defined once in §4.3 — use that table, not a second one here.** The points callers
+most often get wrong: the page title is `font-semibold` (not bold), body text is `text-neutral-900`,
+and secondary/meta text is `text-neutral-600` — **never `text-neutral-400`, which fails WCAG 2.1 AA
+contrast (§4.17, §6).**
 
 ### 22.7 Interaction Principles
 
@@ -1965,7 +1971,7 @@ Commit the regenerated files alongside the CLAUDE.md change. CI fails if they're
 > identified by an AI agent, or discovered during implementation. No task starts without
 > completing steps 1–4. No task closes without completing steps 8–10.**
 
-Every task follows the same ten-step loop. The loop is fast for small changes (a bug fix may
+Every task follows the same loop — Step 0 (orchestrate), then Steps 1–10. The loop is fast for small changes (a bug fix may
 spend 30 seconds on steps 1–4) and thorough for large features (a new capability may spend
 30 minutes). The depth scales; the sequence never changes.
 
@@ -2010,7 +2016,7 @@ Read every triggered section before touching code. Reading a section you don't n
 |--------|-----------------|
 | Any backend Java change | §3 (layer responsibilities — Controller HTTP-only, Service owns logic + RBAC, Repository data-only), §0.2 |
 | New API endpoint | §3 (API contract: plural kebab path `/api/v1/`, `@Valid` on every DTO, error shape `{code, message, field?}`), §15 (pagination — no bare `findAll()`) |
-| DB schema / Flyway migration | §3 (DB rules: next migration **V28**, plural tables, sequential numbering), §18 (indexes, N+1 prevention, pool config) |
+| DB schema / Flyway migration | §3 (DB rules: next migration = §3's high-water mark + 1, plural tables, sequential numbering), §18 (indexes, N+1 prevention, pool config) |
 | Auth · JWT · CORS · security | **§17 (entire section)**, §8.4 (secrets — never commit, `BSMART_*` env vars) |
 | RBAC / permission check | §3 → RBAC: `RbacService` is the only entry point — **never in controller, never in UI** |
 | New npm or Maven dependency | §12.1 (approval checklist: license, bundle size, maintenance, classify runtime vs dev) |
@@ -2086,7 +2092,7 @@ Read every triggered section before touching code. Reading a section you don't n
 □ Every triggered domain's sections have been READ — no deferred or skipped sections
 □ Iteration confirmed (§5) — no N+1 scope
 □ If security-touching: §17 read in full, PR will receive the security-review label
-□ If DB-touching: next migration number confirmed (V28+), plural table names, indexes planned
+□ If DB-touching: next migration number confirmed against §3 (high-water mark + 1), plural table names, indexes planned
 □ If UI-touching: §4 and §22 read end-to-end, §4.8 (5 states) and §4.17 (a11y) noted
 □ If new dependency: §12.1 checklist answered (license · bundle · maintenance)
 □ Conflict between signals? → §0.3 is the tiebreaker; unresolvable conflicts go to the user
@@ -2263,7 +2269,7 @@ While building, apply these rules without exception:
 - Search before creating. If a helper, component, or pattern already exists — use it.
 - Use the layer's established pattern exactly: `cva + cn()` for components, `RbacService` for permissions, `apiClient` for HTTP, `EventService` for audit events.
 - Token classes only in frontend — no raw hex, px, font names (§4.2).
-- Comments only for non-obvious WHY — never for WHAT (§2.6).
+- Comments only for non-obvious WHY — never for WHAT (§6).
 
 **Data safety**
 - All schema changes via Flyway (`V{next}__description.sql`) — never manual DB edits.
@@ -2375,6 +2381,12 @@ Unanswered questions at this stage become bugs or re-work later.
 > **This section governs every interaction with GitHub in this project — branch creation,
 > PR lifecycle, CI monitoring, issue management, and repository settings. AI agents must
 > follow these rules exactly; they are not optional defaults.**
+>
+> **Environment note:** the tool names below (`mcp__github__*`) are for the **remote / cloud-agent**
+> environment, which reaches GitHub through the GitHub MCP server. In a **local CLI session** (e.g.
+> Claude Code in a terminal) those MCP tools are not present — use the equivalent `gh` CLI commands
+> (`gh pr create`, `gh pr checks`, `gh run view --log-failed`, `gh pr merge --squash`). The branch,
+> commit, PR, and review **rules** are identical in both environments; only the tooling differs.
 
 ---
 

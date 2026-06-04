@@ -1,5 +1,6 @@
 ﻿/* eslint-disable */ // legacy monolith — a11y and hooks violations are known baseline debt; new components must pass clean
 import React, { useState, useEffect, useRef } from 'react';
+import DOMPurify from 'dompurify';
 import { Mail, ShieldCheck, PanelLeft } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { StatusBadge } from '@/components/works/status-badge';
@@ -5856,12 +5857,19 @@ function Field({ label, children }) {
 
 function renderMd(text) {
   if (!text) return '';
-  return text
+  // Article / comment / reply bodies are user-supplied, so the generated HTML is sanitised
+  // (tight tag + attr allowlist) before any call site hands it to dangerouslySetInnerHTML.
+  // RB-10 §8 / CLAUDE.md §17.3 — never inject unsanitised user content (closes stored XSS).
+  const html = text
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/`(.+?)`/g, '<code class="prose-md-code">$1</code>')
     .replace(/^- (.+)$/gm, '• $1')
     .replace(/\n/g, '<br/>');
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['strong', 'em', 'code', 'br'],
+    ALLOWED_ATTR: ['class'],
+  });
 }
 
 function getTimeOfDay() {

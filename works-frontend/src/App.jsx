@@ -2656,14 +2656,8 @@ export default function App() {
                   ))}
                 </div>
               </div>
-              {loading
-                ? <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="w-8 h-8 border-2 border-brand-navy border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                      <p className="text-sm text-neutral-400">Loading board...</p>
-                    </div>
-                  </div>
-                : loading ? (
+              {loading ? (
+                  /* Skeleton, never a spinner (Constitution Part 4). */
                   <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
                     {columns.map(col => (
                       <div key={col.name} className="flex-1 min-w-56 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3">

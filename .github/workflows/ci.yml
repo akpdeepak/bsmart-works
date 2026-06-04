@@ -4,7 +4,7 @@ name: CI
 # wrote the code, a PR cannot merge unless these checks pass.
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
 
 permissions:

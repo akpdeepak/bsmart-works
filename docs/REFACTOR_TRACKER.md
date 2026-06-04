@@ -17,7 +17,7 @@
 | 3 | 3.0 | Workflows, Permissions & Custom Fields | 8 | 0 |
 | 4 | 4.0 | PM Artifacts — RAID, Decisions, Meetings | 10 | 0 |
 | 5 | 5.0 | Knowledge Repository + Versions | 10 | 0 |
-| 6 | 6.0 | Reports, Dashboards & Insights | 8 | 0 |
+| 6 | 6.0 | Reports, Dashboards & Insights | 8 | 8 |
 | 7 | 7.0 | Compliance Rules Engine | 9 | 9 |
 | 8 | 8.0 | SLA Engine — Internal & Generalized | 9 | 0 |
 | 9 | 9.0 | Service Management — Customer Portal | 10 | 0 |
@@ -32,7 +32,7 @@
 | 18 | 18.0 | Mobile + Real-time + Performance | 12 | 0 |
 | 19 | 19.0 | Enterprise Security + Compliance Certifications | 12 | 0 |
 | 20 | 20.0 | Polish, Advanced AI, Marketplace Foundation | 12 | 0 |
-| **Total** | | | **224** | **12** |
+| **Total** | | | **224** | **20** |
 
 ## Specs
 
@@ -44,7 +44,7 @@
 | I01-S01 | A | Authentication & identity | Done | refactor/iter-01/s01-authentication-identity | [#73](https://github.com/akpdeepak/bsmart-works/pull/73) | 2026-06-04 | Partial→completed: token-based password reset, real email, MFA JWT-principal fix, rate limiting, tests. No schema change. |
 | I01-S02 | A | Workspaces | Done | claude/spec-refactor-i01-s02-pdVrC | [#77](https://github.com/akpdeepak/bsmart-works/pull/77) | 2026-06-04 | Partial→refactored: WorkspaceService (RBAC + data access out of controller), membership-enforced reads (404 cross-tenant, RB-40 §1), branding on entity, workspace events, /workspaces/mine, real multi-workspace switcher, V35 seed. No schema change beyond seed. |
 | I01-S03 | A | App shell — topbar, sidenav, workspace switcher | Done | claude/spec-refactor-i01-s03-app-shell | [#80](https://github.com/akpdeepak/bsmart-works/pull/80) | 2026-06-04 | Topbar notifications bell + tested UserMenu organism; a11y polish. Also repaired main (concurrent #75/#78 skew). |
-| I01-S04 | A | Event store foundation | In-Progress | claude/spec-refactor-i01-s04-event-store | — | — | workspace_id on events (RB-40 §1) + append-only immutability trigger (V38); recordInWorkspace. |
+| I01-S04 | A | Event store foundation | In-Progress | claude/spec-refactor-i01-s04-event-store | — | — | workspace_id on events (RB-40 §1) + append-only immutability trigger (V39); recordInWorkspace. |
 | I01-S05 | B | Projects | Pending | — | — | — | — |
 | I01-S06 | B | Default WorkItem types | Pending | — | — | — | — |
 | I01-S07 | B | WorkItem CRUD with rich text | Pending | — | — | — | — |
@@ -114,14 +114,14 @@
 
 | ID | Cap | Spec | Status | Branch | PR | Date | Notes |
 |---|---|---|---|---|---|---|---|
-| I06-S01 | J | Dashboard designer | Pending | — | — | — | — |
-| I06-S02 | J | Widget library (20+ widgets) | Pending | — | — | — | — |
-| I06-S03 | J | Custom report builder | Pending | — | — | — | — |
-| I06-S04 | J | Scheduled report delivery | Pending | — | — | — | — |
-| I06-S05 | J | Report templates | Pending | — | — | — | — |
-| I06-S06 | J | Drill-down navigation | Pending | — | — | — | — |
-| I06-S07 | J | Export PDF / Excel / PNG | Pending | — | — | — | — |
-| I06-S08 | J | Embeddable read-only dashboards | Pending | — | — | — | — |
+| I06-S01 | J | Dashboard designer | Done | (pre-existing on main) | — | 2026-06-04 | Drag-drop grid + personal/team/project/org scopes (CustomDashboardController, V29) |
+| I06-S02 | J | Widget library (20+ widgets) | Done | claude/iteration-6-remaining-work | [#84](https://github.com/akpdeepak/bsmart-works/pull/84) | 2026-06-04 | Palette expanded 11→21 presets over 10 render types; +unassigned/dueSoon filters |
+| I06-S03 | J | Custom report builder | Done | (pre-existing on main) | — | 2026-06-04 | Section-based builder (kpi/chart/table/narrative), ReportController, V30 |
+| I06-S04 | J | Scheduled report delivery | Done | claude/iteration-6-remaining-work | [#84](https://github.com/akpdeepak/bsmart-works/pull/84) | 2026-06-04 | UI added over existing backend: cadence/channel/recipients, pause/resume/remove |
+| I06-S05 | J | Report templates | Done | claude/iteration-6-remaining-work | [#84](https://github.com/akpdeepak/bsmart-works/pull/84) | 2026-06-04 | V38 adds Release / Monthly-exec / Customer templates (6 total) |
+| I06-S06 | J | Drill-down navigation | Done | (pre-existing on main) | — | 2026-06-04 | DashboardDrillModal; widget elements open underlying items |
+| I06-S07 | J | Export PDF / Excel / PNG | Done | (pre-existing on main) | — | 2026-06-04 | PDF+PNG+CSV; XLSX intentionally CSV (SheetJS advisory, export.js) |
+| I06-S08 | J | Embeddable read-only dashboards | Done | (pre-existing on main) | — | 2026-06-04 | Share tokens + PublicDashboardController + embed (V33) |
 
 ### Iteration 7 — Release 7.0 · Compliance Rules Engine
 

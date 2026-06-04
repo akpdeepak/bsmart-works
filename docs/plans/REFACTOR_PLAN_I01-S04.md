@@ -8,8 +8,8 @@
 - Gaps vs the foundation promise: **immutability is not enforced** (only conventional), and **`workspace_id` is absent** from the store (RB-40 §1 wants it on every event; tenant-scoped audit/KPI need it).
 
 ## Phase 2 — scope (in)
-1. **Workspace dimension on events (RB-40 §1).** `V38` adds nullable `workspace_id` (expand), backfills it from derivable sources (workspace-aggregate events; work-item→project→workspace; project→workspace), and indexes it. `AppEvent.workspaceId` mapped. **Resolves the I01-S02 parked item.**
-2. **Append-only immutability (RB-10 §3 / Constitution Part 2).** `V38` installs a DB trigger that raises on any `UPDATE`/`DELETE` of `events` — the audit trail cannot be silently rewritten. Right-to-be-forgotten stays satisfied by PII-vault crypto-shredding (RB-40 §3), never by mutating events. (Backfill runs before the trigger; a future event-column backfill must drop/recreate it — documented in the migration.)
+1. **Workspace dimension on events (RB-40 §1).** `V39` adds nullable `workspace_id` (expand), backfills it from derivable sources (workspace-aggregate events; work-item→project→workspace; project→workspace), and indexes it. `AppEvent.workspaceId` mapped. **Resolves the I01-S02 parked item.**
+2. **Append-only immutability (RB-10 §3 / Constitution Part 2).** `V39` installs a DB trigger that raises on any `UPDATE`/`DELETE` of `events` — the audit trail cannot be silently rewritten. Right-to-be-forgotten stays satisfied by PII-vault crypto-shredding (RB-40 §3), never by mutating events. (Backfill runs before the trigger; a future event-column backfill must drop/recreate it — documented in the migration.)
 3. **`EventService.recordInWorkspace(workspaceId, aggregateId, type, actor, payload)`** — workspace-scoped recording where `aggregateId` may differ from `workspaceId` (e.g. project events). `WorkspaceService` adopts it for its member/branding/project-member events. Existing `record(...)` signatures kept so the other 15 producers migrate incrementally (their rows are backfilled; new rows stay null until each domain spec adopts the call).
 
 ## Out of scope (parked)
@@ -19,7 +19,7 @@
 
 ## Tests / validation
 - `EventServiceTest` (now `@Tag("unit")` so CI actually runs it) gains a `recordInWorkspace` case asserting the tenant stamp + aggregate/payload. `WorkspaceServiceTest` updated to the new call. **195 backend unit tests green.**
-- The V38 trigger/backfill is plain, standard PL/pgSQL+DML; it cannot be exercised in CI because **the pipeline has no DB/Flyway stage** (parked as a process gap) — SQL reviewed for correctness and ordering (backfill before trigger).
+- The V39 trigger/backfill is plain, standard PL/pgSQL+DML; it cannot be exercised in CI because **the pipeline has no DB/Flyway stage** (parked as a process gap) — SQL reviewed for correctness and ordering (backfill before trigger).
 
 ## Risk
 - Medium (touches the shared event store). Mitigations: column is nullable (no producer breaks), trigger blocks only DML mutation (nothing legitimate does that), migration is forward-only and ordered correctly. Revert = a new forward migration dropping the trigger/column.

@@ -307,6 +307,10 @@ export default function App() {
   const [selectedReport, setSelectedReport] = useState(null);
   const [reportSections, setReportSections] = useState([]);
   const [reportEditMode, setReportEditMode] = useState(false);
+  // Iteration 6 — scheduled report delivery (Cap J, S04)
+  const [scheduleManagerOpen, setScheduleManagerOpen] = useState(false);
+  const [reportSchedules, setReportSchedules] = useState([]);
+  const [scheduleForm, setScheduleForm] = useState({ cadence: 'WEEKLY', channel: 'IN_APP', recipients: '' });
   // Iteration 7 — Compliance Rules Engine (Cap K) + status duration (Cap B)
   const [complianceTab, setComplianceTab] = useState('dashboard'); // dashboard | rules | violations | audit
   const [complianceRules, setComplianceRules] = useState([]);
@@ -903,6 +907,35 @@ export default function App() {
     api.send(`/reports/${id}`, { method: 'DELETE' })
       .then(() => { showToast('Report deleted'); setSelectedReport(null); fetchReports(); })
       .catch(() => showToast('Failed to delete report', 'error'));
+  }
+
+  // ── Iteration 6 — scheduled report delivery (Cap J, S04) ─────────────────────
+  function openScheduleManager(reportId) {
+    setScheduleForm({ cadence: 'WEEKLY', channel: 'IN_APP', recipients: '' });
+    setScheduleManagerOpen(true);
+    fetchReportSchedules(reportId);
+  }
+  function fetchReportSchedules(reportId) {
+    api.raw(`/report-schedules?reportId=${reportId}`).then(r => r.json())
+      .then(d => setReportSchedules(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function createReportSchedule() {
+    if (!selectedReport) return;
+    const payload = { reportId: selectedReport.id, cadence: scheduleForm.cadence,
+      channel: scheduleForm.channel, recipients: scheduleForm.recipients.trim() };
+    api.send(`/report-schedules`, { method: 'POST', body: JSON.stringify(payload) })
+      .then(() => { showToast('Schedule created'); setScheduleForm({ cadence: 'WEEKLY', channel: 'IN_APP', recipients: '' }); fetchReportSchedules(selectedReport.id); })
+      .catch(e => showToast(e.message || 'Failed to create schedule', 'error'));
+  }
+  function toggleReportSchedule(s) {
+    api.send(`/report-schedules/${s.id}`, { method: 'PUT', body: JSON.stringify({ ...s, active: !s.active }) })
+      .then(() => fetchReportSchedules(selectedReport.id))
+      .catch(e => showToast(e.message || 'Failed to update schedule', 'error'));
+  }
+  function deleteReportSchedule(id) {
+    api.send(`/report-schedules/${id}`, { method: 'DELETE' })
+      .then(() => { showToast('Schedule removed'); fetchReportSchedules(selectedReport.id); })
+      .catch(e => showToast(e.message || 'Failed to remove schedule', 'error'));
   }
 
   // ── Iteration 7 — Compliance Rules Engine (Cap K) ────────────────────────────
@@ -4864,6 +4897,7 @@ export default function App() {
                       {!reportEditMode && <ExportButtons targetId="report-export-area"
                         rows={workItems.map(i => ({ ID: i.id, Title: i.title, Type: i.type, Status: i.status, Priority: i.priority, Assignee: i.assigneeId }))}
                         filename={selectedReport.name || 'report'} onError={() => showToast('Export failed — try again', 'error')} />}
+                      {!reportEditMode && <Button variant="secondary" onClick={() => openScheduleManager(selectedReport.id)}>Schedule</Button>}
                       {reportEditMode && <Button variant="action" onClick={() => { saveReport(); setReportEditMode(false); }}>Save</Button>}
                       <Button variant={reportEditMode ? 'secondary' : 'action'} onClick={() => { if (reportEditMode) { openReport(selectedReport.id); } else { setReportEditMode(true); } }}>{reportEditMode ? 'Cancel' : 'Edit'}</Button>
                       <button onClick={() => deleteReport(selectedReport.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
@@ -4897,6 +4931,67 @@ export default function App() {
                   )}
                 </>
               )}
+            </div>
+          )}
+
+          {/* Iteration 6 — scheduled report delivery (Cap J, S04) */}
+          {scheduleManagerOpen && selectedReport && (
+            <div className="fixed inset-0 bg-neutral-900/50 dark:bg-black/70 flex items-center justify-center z-50 p-4"
+              onClick={e => { if (e.target === e.currentTarget) setScheduleManagerOpen(false); }}
+              role="dialog" aria-modal="true" aria-label="Report delivery schedules">
+              <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+                <div className="flex items-center justify-between mb-1">
+                  <h2 className="text-lg font-bold text-brand-navy dark:text-white">Scheduled delivery</h2>
+                  <button onClick={() => setScheduleManagerOpen(false)} aria-label="Close"
+                    className="text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">✕</button>
+                </div>
+                <p className="text-xs text-neutral-500 mb-4 truncate">“{selectedReport.name}” — delivered on a cadence to recipients (in-app / email).</p>
+
+                <div className="space-y-2 mb-5">
+                  {reportSchedules.length === 0
+                    ? <p className="text-sm text-neutral-400 text-center py-3">No schedules yet.</p>
+                    : reportSchedules.map(s => (
+                      <div key={s.id} className="flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-neutral-900 dark:text-neutral-100">{s.cadence?.toLowerCase()} · {s.channel?.replace('_', '-').toLowerCase()}</p>
+                          <p className="text-xs text-neutral-400 truncate">{s.recipients ? `to ${s.recipients}` : 'owner only'}{s.nextRunAt ? ` · next ${new Date(s.nextRunAt).toLocaleDateString()}` : ''}</p>
+                        </div>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${s.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500'}`}>{s.active ? 'ACTIVE' : 'PAUSED'}</span>
+                        <button onClick={() => toggleReportSchedule(s)} className="text-xs text-brand-navy hover:underline">{s.active ? 'Pause' : 'Resume'}</button>
+                        <button onClick={() => deleteReportSchedule(s.id)} className="text-xs text-semantic-danger hover:underline">Remove</button>
+                      </div>
+                    ))}
+                </div>
+
+                <div className="border-t border-neutral-200 dark:border-neutral-700 pt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">Add a schedule</p>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <label className="block text-xs text-neutral-500 mb-1">Cadence</label>
+                      <select className="input w-full" value={scheduleForm.cadence} onChange={e => setScheduleForm({ ...scheduleForm, cadence: e.target.value })}>
+                        <option value="DAILY">Daily</option>
+                        <option value="WEEKLY">Weekly</option>
+                        <option value="MONTHLY">Monthly</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-neutral-500 mb-1">Channel</label>
+                      <select className="input w-full" value={scheduleForm.channel} onChange={e => setScheduleForm({ ...scheduleForm, channel: e.target.value })}>
+                        <option value="IN_APP">In-app</option>
+                        <option value="EMAIL">Email</option>
+                        <option value="BOTH">Both</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <label className="block text-xs text-neutral-500 mb-1">Recipients (comma-separated user ids — optional; owner always included)</label>
+                    <input className="input w-full" value={scheduleForm.recipients} onChange={e => setScheduleForm({ ...scheduleForm, recipients: e.target.value })} placeholder="USR-123, USR-456" />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button variant="action" onClick={createReportSchedule}>Add schedule</Button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

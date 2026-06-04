@@ -1,5 +1,5 @@
 -- ============================================================
--- V38: Event store foundation — workspace dimension + append-only immutability (I01-S04)
+-- V39: Event store foundation — workspace dimension + append-only immutability (I01-S04)
 --   RB-40 §1: every event is workspace-scoped (workspace_id on every event).
 --   RB-10 §3 / Constitution Part 2: the event log is append-only and immutable — never
 --   updated or deleted. Right-to-be-forgotten is satisfied by PII-vault crypto-shredding

@@ -247,6 +247,14 @@
 								<exclude>**/WorkflowTransition.class</exclude>
 								<exclude>**/Workspace.class</exclude>
 								<exclude>**/WorkItemTypeConfig.class</exclude>
+								<!-- Iteration 14 (developer workspace) entities -->
+								<exclude>**/PullRequest.class</exclude>
+								<exclude>**/PullRequestReviewer.class</exclude>
+								<exclude>**/CodeLink.class</exclude>
+								<exclude>**/FocusBlock.class</exclude>
+								<exclude>**/DodChecklist.class</exclude>
+								<exclude>**/DodChecklistItem.class</exclude>
+								<exclude>**/DodChecklistState.class</exclude>
 								<!-- Iteration 9 (service management) entities -->
 								<exclude>**/CustomerAccount.class</exclude>
 								<exclude>**/CustomerUser.class</exclude>

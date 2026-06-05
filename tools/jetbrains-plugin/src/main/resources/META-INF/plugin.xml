@@ -1,0 +1,28 @@
+<idea-plugin>
+    <id>in.bcits.works</id>
+    <name>bSmart Works</name>
+    <vendor email="dev@bcits.in" url="https://bcits.in">BCITS</vendor>
+    <description><![CDATA[
+        Work item context, status updates, standup drafting and inline commit linking inside
+        IntelliJ / PyCharm / WebStorm (iteration 14, Cap U). Thin client over the bSmart Works
+        REST API; the backend owns RBAC, tenant isolation and the AI Control Plane.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>Git4Idea</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="bSmart Works" anchor="right" factoryClass="in.bcits.works.WorksToolWindowFactory"/>
+        <applicationConfigurable instance="in.bcits.works.WorksSettingsConfigurable" displayName="bSmart Works"/>
+    </extensions>
+
+    <actions>
+        <action id="works.linkCommit" class="in.bcits.works.LinkCommitAction" text="Works: Link Commit to Work Item">
+            <add-to-group group-id="Git.Menu" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="control alt L"/>
+        </action>
+        <action id="works.standup" class="in.bcits.works.StandupAction" text="Works: Draft Standup">
+            <keyboard-shortcut keymap="$default" first-keystroke="control alt S"/>
+        </action>
+    </actions>
+</idea-plugin>

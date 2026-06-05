@@ -1,0 +1,13 @@
+{
+  "name": "@bsmart/works-cli",
+  "version": "0.1.0",
+  "description": "bSmart Works terminal interface (iteration 14, Cap U) — transitions, comments, search, standup and inline commit linking from the shell.",
+  "type": "module",
+  "bin": { "works": "./works.js" },
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

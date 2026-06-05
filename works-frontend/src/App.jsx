@@ -6,22 +6,24 @@ import {
   Home, User, Bell, LayoutGrid, ListTodo, Zap, Rocket, FolderKanban,
   BarChart2, LayoutDashboard, FileText, TrendingUp, Headset, Timer, ShieldCheck,
   Gauge, Map as MapIcon, ClipboardList, Workflow, Plug, Search, BookOpen,
-  SlidersHorizontal, Settings, Trash2,
+  SlidersHorizontal, Settings, Trash2, Code,
   CheckCircle2, AlertCircle, Heart, AlertTriangle, Puzzle, Link, Lock,
   File as FileIcon, Folder, Lightbulb, Users, Shield, Ban, Construction,
   MessageCircle, Archive, RefreshCw, Repeat, Send, Megaphone, ScrollText,
-  Pin, Calendar, Eye, Building2, Target, Globe, Star, Scale, Clock, Reply, AtSign,
+  Pin, Calendar, Eye, EyeOff, Building2, Target, Globe, Star, Scale, Clock, Reply, AtSign,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
 import { SidebarNav } from '@/components/works/organisms/sidebar-nav';
 import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
+import { DeveloperWorkspace } from '@/components/works/organisms/developer-workspace';
 import { SlaView } from '@/components/works/organisms/sla-view';
 import { PerformancePanel } from '@/components/works/organisms/performance-panel';
 import { AutomationsPanel } from '@/components/works/organisms/automations-panel';
 import { IntegrationsPanel } from '@/components/works/organisms/integrations-panel';
 import { Modal } from '@/components/works/molecules/modal';
 import { Toast } from '@/components/works/atoms/toast';
+import { Skeleton } from '@/components/works/atoms/skeleton';
 import { CommandPalette } from '@/components/works/organisms/command-palette';
 import { viewToPath, pathToView } from '@/lib/routes';
 import { StatusBadge } from '@/components/works/status-badge';
@@ -47,6 +49,7 @@ const NAV_GROUPS = [
   { label: 'My Work', items: [
     { id: 'myworks',       label: 'My Works',      Icon: User, badge: 'myItems' },
     { id: 'notifications', label: 'Notifications', Icon: Bell, badge: 'unread' },
+    { id: 'developer',     label: 'Developer',     Icon: Code },
   ] },
   { label: 'Plan & Track', items: [
     { id: 'board',    label: 'Board',         Icon: LayoutGrid },
@@ -2291,9 +2294,12 @@ export default function App() {
                   onChange={e => setAuthForm({ ...authForm, password: e.target.value })}
                   className="input pr-10" placeholder={authMode === 'signup' ? 'Min. 8 characters' : ''} />
                 <button type="button" onClick={() => setShowPassword(v => !v)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 transition-colors text-sm select-none"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
                   tabIndex={-1}>
-                  {showPassword ? '🙈' : '👁'}
+                  {showPassword
+                    ? <EyeOff aria-hidden="true" className="h-4 w-4" />
+                    : <Eye aria-hidden="true" className="h-4 w-4" />}
                 </button>
               </div>
             </Field>
@@ -2468,7 +2474,7 @@ export default function App() {
           <div className="flex items-center gap-2">
             <button onClick={() => setPaletteOpen(true)}
               aria-label="Open command palette"
-              className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-md border border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:text-neutral-900 hover:border-neutral-400 dark:hover:text-neutral-100 transition-colors duration-[120ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
+              className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-md border border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:text-neutral-900 hover:border-neutral-400 dark:hover:text-neutral-100 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
               <Search aria-hidden="true" className="h-4 w-4" />
               <span className="text-xs">Quick find</span>
               <kbd className="text-xs font-mono bg-neutral-100 dark:bg-neutral-800 rounded px-1 border border-neutral-200 dark:border-neutral-700">⌘K</kbd>
@@ -2485,10 +2491,10 @@ export default function App() {
             )}
             <button onClick={() => { setView('notifications'); fetchNotifications(); }}
               aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
-              className="relative w-9 h-9 rounded-md flex items-center justify-center text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-[120ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
+              className="relative w-9 h-9 rounded-md flex items-center justify-center text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
               <Bell aria-hidden="true" className="h-5 w-5" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-brand-orange text-white text-[10px] font-bold flex items-center justify-center">
+                <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-brand-orange text-white text-xs font-bold flex items-center justify-center">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -2525,11 +2531,11 @@ export default function App() {
               {/* Role tabs */}
               <div className="flex gap-1 mb-6 border-b border-neutral-200 dark:border-neutral-700 overflow-x-auto">
                 {[
-                  { key: 'developer',     label: '💻 Developer',     minTier: 1 },
-                  { key: 'scrum-master',  label: '🏃 Scrum Master',  minTier: 2 },
-                  { key: 'product-owner', label: '📋 Product Owner', minTier: 2 },
-                  { key: 'executive',     label: '📈 Executive',     minTier: 3 },
-                  { key: 'admin',         label: '⚙ Admin',          minTier: 4 },
+                  { key: 'developer',     label: 'Developer',     minTier: 1 },
+                  { key: 'scrum-master',  label: 'Scrum Master',  minTier: 2 },
+                  { key: 'product-owner', label: 'Product Owner', minTier: 2 },
+                  { key: 'executive',     label: 'Executive',     minTier: 3 },
+                  { key: 'admin',         label: 'Admin',          minTier: 4 },
                 ].filter(t => userRole.tier >= t.minTier).map(t => (
                   <button key={t.key} onClick={() => { setDashboardRole(t.key); fetchDashboard(t.key); }}
                     className={`text-xs font-medium px-4 py-2 border-b-2 whitespace-nowrap transition-colors ${dashboardRole === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
@@ -2551,19 +2557,19 @@ export default function App() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">📌 My Open Items</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">My Open Items</h3>
                       {(developerDash?.myOpenItems ?? workItems.filter(i => i.assigneeId === currentUser?.id && i.status !== 'Done')).slice(0, 7).map(item => (
-                        <div key={item.id} onClick={() => setSelectedItem(item)} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 -mx-2 px-2 rounded transition-colors">
+                        <div key={item.id} onClick={() => setSelectedItem(item)} role="button" tabIndex={0} onKeyDown={onPressKey} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 -mx-2 px-2 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                           <TypeBadge type={item.type} compact />
                           <span className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate">{item.title}</span>
                           <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
-                          {item.due_date && new Date(item.due_date) < new Date() && <span className="text-[10px] text-semantic-danger font-bold">OVERDUE</span>}
+                          {item.due_date && new Date(item.due_date) < new Date() && <span className="text-xs text-semantic-danger font-bold">OVERDUE</span>}
                         </div>
                       ))}
                       {(developerDash?.myOpenItemCount ?? 0) === 0 && (developerDash?.myOpenItems?.length ?? workItems.filter(i => i.assigneeId === currentUser?.id && i.status !== 'Done').length) === 0 && <p className="text-sm text-neutral-400 text-center py-4">All caught up! 🎉</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">⚡ Active Sprint</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Active Sprint</h3>
                       {developerDash?.activeSprint ? (
                         <div>
                           <p className="text-sm font-semibold text-brand-navy dark:text-blue-300 mb-1">{developerDash.activeSprint.name}</p>
@@ -2577,7 +2583,7 @@ export default function App() {
                               <div className="h-full bg-semantic-success rounded-full" style={{ width: `${Math.round(developerDash.activeSprint.done_items * 100 / developerDash.activeSprint.total_items)}%` }} />
                             </div>
                           )}
-                          <p className="text-[10px] text-neutral-400 mb-3">{developerDash.activeSprint.total_items > 0 ? Math.round(developerDash.activeSprint.done_items * 100 / developerDash.activeSprint.total_items) : 0}% complete</p>
+                          <p className="text-xs text-neutral-400 mb-3">{developerDash.activeSprint.total_items > 0 ? Math.round(developerDash.activeSprint.done_items * 100 / developerDash.activeSprint.total_items) : 0}% complete</p>
                           <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">My Sprint Items</h4>
                           {(developerDash.mySprintItems || []).map(i => (
                             <div key={i.id} className="flex items-center gap-2 py-1.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
@@ -2591,7 +2597,7 @@ export default function App() {
                       ) : <p className="text-sm text-neutral-400 text-center py-4">No active sprint right now.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">🚫 Blockers</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Blockers</h3>
                       {(developerDash?.blockers || []).length === 0
                         ? <p className="text-sm text-neutral-400 text-center py-4">No blockers — you're clear! ✓</p>
                         : (developerDash.blockers || []).map(b => (
@@ -2603,14 +2609,14 @@ export default function App() {
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">⏱ My Time Logs</h3>
+                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">My Time Logs</h3>
                         <button onClick={() => selectedItem ? setIsWorklogOpen(true) : showToast('Open a work item first', 'error')} className="text-xs text-brand-navy hover:underline">+ Log Time</button>
                       </div>
                       {(developerDash?.recentWorklogs || []).slice(0, 5).map(wl => (
                         <div key={wl.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <span className="text-xs font-bold text-brand-navy w-10">{Math.round((wl.time_spent_minutes || 0) / 60 * 10) / 10}h</span>
                           <span className="flex-1 text-xs text-neutral-900 dark:text-neutral-100 truncate">{wl.work_item_title || wl.work_item_id}</span>
-                          <span className="text-[10px] text-neutral-400">{wl.work_date}</span>
+                          <span className="text-xs text-neutral-400">{wl.work_date}</span>
                         </div>
                       ))}
                       {(developerDash?.recentWorklogs || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No time logged this week.</p>}
@@ -2630,7 +2636,7 @@ export default function App() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-4">📈 Velocity Trend</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-4">Velocity Trend</h3>
                       {[...(smDash?.velocityTrend || [])].reverse().map(s => (
                         <div key={s.id} className="mb-3">
                           <div className="flex justify-between text-xs mb-1">
@@ -2642,10 +2648,10 @@ export default function App() {
                           </div>
                         </div>
                       ))}
-                      {(smDash?.velocityTrend || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No sprint data yet.</p>}
+                      {(smDash?.velocityTrend || []).length === 0 && <p className="text-sm text-neutral-600 text-center py-4">No sprint data yet.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">👥 Team Capacity (14 days)</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Team Capacity (14 days)</h3>
                       {(smDash?.teamCapacity || []).slice(0, 8).map(m => (
                         <div key={m.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <Avatar name={m.full_name} size={6} />
@@ -2661,28 +2667,28 @@ export default function App() {
                       {(smDash?.teamCapacity || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No time logs found.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">⚠ High Risk Items</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">High Risk Items</h3>
                       {(smDash?.highRiskItems || []).slice(0, 5).map(i => (
-                        <div key={i.id} onClick={() => setSelectedItem(i)} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 -mx-2 px-2 rounded">
+                        <div key={i.id} onClick={() => setSelectedItem(i)} role="button" tabIndex={0} onKeyDown={onPressKey} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 -mx-2 px-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                           <TypeBadge type={i.type} compact />
                           <span className="flex-1 text-xs text-neutral-900 dark:text-neutral-100 truncate">{i.title}</span>
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${i.priority === 'CRITICAL' ? 'bg-semantic-danger text-white' : 'bg-semantic-warning-surface text-semantic-warning'}`}>{i.priority}</span>
+                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${i.priority === 'CRITICAL' ? 'bg-semantic-danger text-white' : 'bg-semantic-warning-surface text-semantic-warning'}`}>{i.priority}</span>
                         </div>
                       ))}
-                      {(smDash?.highRiskItems || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No high-risk items — great!</p>}
+                      {(smDash?.highRiskItems || []).length === 0 && <p className="text-sm text-neutral-600 text-center py-4">No high-risk items — great!</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">🔄 Scope Changes</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Scope Changes</h3>
                       {(smDash?.scopeChanges || []).slice(0, 5).map(c => (
                         <div key={c.id} className="flex items-start gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <span className="text-xs font-bold flex-shrink-0 mt-0.5 text-semantic-success">+</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-neutral-900 dark:text-neutral-100 truncate">{c.title}</p>
-                            <p className="text-[10px] text-neutral-400">{c.actor_name} · {c.occurred_at ? new Date(c.occurred_at).toLocaleDateString() : ''}</p>
+                            <p className="text-xs text-neutral-400">{c.actor_name} · {c.occurred_at ? new Date(c.occurred_at).toLocaleDateString() : ''}</p>
                           </div>
                         </div>
                       ))}
-                      {(smDash?.scopeChanges || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No scope changes recorded.</p>}
+                      {(smDash?.scopeChanges || []).length === 0 && <p className="text-sm text-neutral-600 text-center py-4">No scope changes recorded.</p>}
                     </div>
                   </div>
                 </div>
@@ -2700,14 +2706,14 @@ export default function App() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">🚀 Releases</h3>
+                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Releases</h3>
                         <button onClick={() => setView('releases')} className="text-xs text-brand-navy hover:underline">View all →</button>
                       </div>
                       {(poDash?.releases || []).slice(0, 5).map(r => (
                         <div key={r.id} className="py-3 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${r.status === 'RELEASED' ? 'bg-semantic-success text-white' : r.status === 'IN_PROGRESS' ? 'bg-brand-navy text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{r.status}</span>
+                              <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${r.status === 'RELEASED' ? 'bg-semantic-success text-white' : r.status === 'IN_PROGRESS' ? 'bg-brand-navy text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{r.status}</span>
                               <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{r.name}</span>
                               <span className="text-xs font-mono text-neutral-400">v{r.version}</span>
                             </div>
@@ -2718,15 +2724,15 @@ export default function App() {
                               <div className="h-1.5 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden mt-1">
                                 <div className="h-full bg-semantic-success rounded-full" style={{ width: `${Math.round((r.done_items || 0) * 100 / r.total_items)}%` }} />
                               </div>
-                              <p className="text-[10px] text-neutral-400 mt-0.5">{r.done_items}/{r.total_items} items · {r.done_points}/{r.total_points}pt</p>
+                              <p className="text-xs text-neutral-400 mt-0.5">{r.done_items}/{r.total_items} items · {r.done_points}/{r.total_points}pt</p>
                             </div>
                           )}
                         </div>
                       ))}
-                      {(poDash?.releases || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No releases defined yet.</p>}
+                      {(poDash?.releases || []).length === 0 && <p className="text-sm text-neutral-600 text-center py-4">No releases defined yet.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">📊 Backlog Breakdown</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Backlog Breakdown</h3>
                       {(poDash?.backlogByType || []).map(b => (
                         <div key={b.type} className="flex items-center gap-3 py-2">
                           <TypeBadge type={b.type} compact />
@@ -2736,7 +2742,7 @@ export default function App() {
                           <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200 w-8 text-right">{b.count}</span>
                         </div>
                       ))}
-                      {(poDash?.backlogByType || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">Backlog is empty.</p>}
+                      {(poDash?.backlogByType || []).length === 0 && <p className="text-sm text-neutral-600 text-center py-4">Backlog is empty.</p>}
                       <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-700">
                         <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">Priority</h4>
                         {(poDash?.priorityDistribution || []).map(p => (
@@ -2749,15 +2755,15 @@ export default function App() {
                     </div>
                     <div className="md:col-span-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">📝 Ungroomed Backlog</h3>
+                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Ungroomed Backlog</h3>
                         <button onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); }} className="text-xs text-brand-navy hover:underline">Open backlog →</button>
                       </div>
                       {(poDash?.ungroomedItems || []).map(i => (
                         <div key={i.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <TypeBadge type={i.type} compact />
                           <span className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate">{i.title}</span>
-                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${i.priority === 'CRITICAL' ? 'bg-semantic-danger text-white' : i.priority === 'HIGH' ? 'bg-semantic-warning-surface text-semantic-warning' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{i.priority}</span>
-                          {i.story_points > 0 && <span className="text-[10px] text-neutral-400">{i.story_points}pt</span>}
+                          <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${i.priority === 'CRITICAL' ? 'bg-semantic-danger text-white' : i.priority === 'HIGH' ? 'bg-semantic-warning-surface text-semantic-warning' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{i.priority}</span>
+                          {i.story_points > 0 && <span className="text-xs text-neutral-400">{i.story_points}pt</span>}
                         </div>
                       ))}
                       {(poDash?.ungroomedItems || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">All items are in sprints.</p>}
@@ -2777,7 +2783,7 @@ export default function App() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-4">📁 Project Portfolio</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-4">Project Portfolio</h3>
                       {(execDash?.projectPortfolio || []).map(p => {
                         const pct = p.total_items > 0 ? Math.round(p.done_items * 100 / p.total_items) : 0;
                         return (
@@ -2785,38 +2791,38 @@ export default function App() {
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{p.name}</span>
                               <div className="flex items-center gap-2">
-                                {p.high_priority_open > 0 && <span className="text-[10px] text-semantic-danger font-bold">{p.high_priority_open} at risk</span>}
+                                {p.high_priority_open > 0 && <span className="text-xs text-semantic-danger font-bold">{p.high_priority_open} at risk</span>}
                                 <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200">{pct}%</span>
                               </div>
                             </div>
                             <div className="h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
                               <div className={`h-full rounded-full ${pct >= 70 ? 'bg-semantic-success' : pct >= 40 ? 'bg-brand-amber' : 'bg-semantic-danger'}`} style={{ width: `${pct}%` }} />
                             </div>
-                            <p className="text-[10px] text-neutral-400 mt-0.5">{p.done_items}/{p.total_items} items</p>
+                            <p className="text-xs text-neutral-400 mt-0.5">{p.done_items}/{p.total_items} items</p>
                           </div>
                         );
                       })}
                       {(execDash?.projectPortfolio || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No projects found.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">🚀 Release Schedule</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Release Schedule</h3>
                       {(execDash?.releaseSchedule || []).map(r => (
                         <div key={r.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <span className={`w-2 h-2 rounded-full flex-shrink-0 ${r.status === 'RELEASED' ? 'bg-semantic-success' : r.status === 'IN_PROGRESS' ? 'bg-brand-navy' : 'bg-neutral-300'}`} />
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 truncate">{r.name} <span className="font-mono font-normal text-neutral-400">v{r.version}</span></p>
-                            <p className="text-[10px] text-neutral-400">{r.project_name}</p>
+                            <p className="text-xs text-neutral-400">{r.project_name}</p>
                           </div>
                           <div className="text-right flex-shrink-0">
-                            <p className={`text-[10px] font-bold ${r.status === 'RELEASED' ? 'text-semantic-success' : r.status === 'IN_PROGRESS' ? 'text-brand-navy' : 'text-neutral-400'}`}>{r.status}</p>
-                            {r.release_date && <p className="text-[10px] text-neutral-400">{new Date(r.release_date).toLocaleDateString()}</p>}
+                            <p className={`text-xs font-bold ${r.status === 'RELEASED' ? 'text-semantic-success' : r.status === 'IN_PROGRESS' ? 'text-brand-navy' : 'text-neutral-400'}`}>{r.status}</p>
+                            {r.release_date && <p className="text-xs text-neutral-400">{new Date(r.release_date).toLocaleDateString()}</p>}
                           </div>
                         </div>
                       ))}
                       {(execDash?.releaseSchedule || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No releases defined.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">🎯 RAID Summary</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">RAID Summary</h3>
                       {(execDash?.raidSummary || []).map(r => (
                         <div key={r.type} className="flex items-center justify-between py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <span className="text-sm text-neutral-700 dark:text-neutral-200 capitalize">{r.type}</span>
@@ -2828,7 +2834,7 @@ export default function App() {
                       ))}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">👥 Team Utilization (30 days)</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Team Utilization (30 days)</h3>
                       {(execDash?.teamUtilization || []).slice(0, 6).map(m => (
                         <div key={m.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <Avatar name={m.full_name} size={6} />
@@ -2854,7 +2860,7 @@ export default function App() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">👥 Members</h3>
+                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Members</h3>
                         <button onClick={() => { setView('workspace'); fetchMembers(); }} className="text-xs text-brand-navy hover:underline">Manage →</button>
                       </div>
                       {(adminDash?.members || []).slice(0, 8).map(m => (
@@ -2862,14 +2868,14 @@ export default function App() {
                           <Avatar name={m.full_name} size={7} />
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium text-neutral-900 dark:text-neutral-100 truncate">{m.full_name}</p>
-                            <p className="text-[10px] text-neutral-400 truncate">{m.email}</p>
+                            <p className="text-xs text-neutral-400 truncate">{m.email}</p>
                           </div>
-                          <span className="text-[10px] bg-neutral-100 dark:bg-neutral-700 text-neutral-500 px-2 py-0.5 rounded-full">{m.role}</span>
+                          <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-500 px-2 py-0.5 rounded-full">{m.role}</span>
                         </div>
                       ))}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">🔐 Role Distribution</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Role Distribution</h3>
                       {(adminDash?.roleDistribution || []).map(r => (
                         <div key={r.role} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 w-20">{r.role}</span>
@@ -2888,9 +2894,9 @@ export default function App() {
                       ))}
                     </div>
                     <div className="md:col-span-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">📋 Permission Audit Log</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Permission Audit Log</h3>
                       {(adminDash?.recentAuditLog || []).length === 0
-                        ? <p className="text-sm text-neutral-400 text-center py-4">No permission changes recorded yet.</p>
+                        ? <p className="text-sm text-neutral-600 text-center py-4">No permission changes recorded yet.</p>
                         : <div className="overflow-x-auto">
                             <table className="w-full text-xs">
                               <thead>
@@ -2947,8 +2953,8 @@ export default function App() {
                     action={<Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(true)}>Create a work item</Button>} />
                 : <div className="space-y-2">
                     {myItems.map(item => (
-                      <div key={item.id} onClick={() => setSelectedItem(item)}
-                        className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 flex items-center gap-4 hover:shadow-sm cursor-pointer transition-shadow">
+                      <div key={item.id} onClick={() => setSelectedItem(item)} role="button" tabIndex={0} onKeyDown={onPressKey}
+                        className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 flex items-center gap-4 hover:shadow-sm cursor-pointer transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                         <TypeBadge type={item.type} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-neutral-900 truncate">{item.title}</p>
@@ -2966,8 +2972,8 @@ export default function App() {
                   ? <EmptyState icon={Star} title="No starred items" subtitle="Star work items to keep them handy. Click ★ on any card or in the detail panel." />
                   : <div className="space-y-2">
                       {starredItems.map(item => (
-                        <div key={item.id} onClick={() => setSelectedItem(item)}
-                          className="bg-white dark:bg-neutral-800 border border-brand-orange/30 rounded-lg p-4 flex items-center gap-4 hover:shadow-sm cursor-pointer transition-shadow">
+                        <div key={item.id} onClick={() => setSelectedItem(item)} role="button" tabIndex={0} onKeyDown={onPressKey}
+                          className="bg-white dark:bg-neutral-800 border border-brand-orange/30 rounded-lg p-4 flex items-center gap-4 hover:shadow-sm cursor-pointer transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                           <span className="text-brand-orange text-sm">★</span>
                           <TypeBadge type={item.type} />
                           <div className="flex-1 min-w-0">
@@ -2996,8 +3002,8 @@ export default function App() {
               {myWorksTab === 'activity' && (
                 <div className="space-y-2">
                   {workItems.filter(i => i.createdBy === currentUser.id || i.assigneeId === currentUser.id).slice(0, 20).map(i => (
-                    <div key={i.id} onClick={() => setSelectedItem(i)}
-                      className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3 flex items-center gap-3 hover:shadow-sm cursor-pointer">
+                    <div key={i.id} onClick={() => setSelectedItem(i)} role="button" tabIndex={0} onKeyDown={onPressKey}
+                      className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3 flex items-center gap-3 hover:shadow-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                       <TypeBadge type={i.type} compact />
                       <span className="text-xs font-mono text-neutral-400">{i.id}</span>
                       <span className="flex-1 text-sm text-neutral-900 truncate">{i.title}</span>
@@ -3186,6 +3192,19 @@ export default function App() {
           )}
 
           {/* NOTIFICATIONS */}
+          {view === 'developer' && (
+            <div className="p-8">
+              <DeveloperWorkspace
+                workspaceId={activeWorkspaceId}
+                onToast={showToast}
+                onOpenItem={(id) => api.raw(`/work-items/${id}`)
+                  .then((r) => (r.ok ? r.json() : null))
+                  .then((it) => { if (it) setSelectedItem(it); })
+                  .catch(() => {})}
+              />
+            </div>
+          )}
+
           {view === 'notifications' && (
             <div className="p-8 max-w-2xl">
               <div className="flex justify-between items-center mb-6">
@@ -3295,7 +3314,7 @@ export default function App() {
                       <span className="text-neutral-300 cursor-grab text-xs mr-1">⠿</span>
                       <TypeBadge type={item.type} compact />
                       <span className="font-mono text-xs text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
-                      <span className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate" onClick={() => setSelectedItem(item)}>{item.title}</span>
+                      <span role="button" tabIndex={0} onKeyDown={onPressKey} className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => setSelectedItem(item)}>{item.title}</span>
                       {/* Refinement mode — inline edit */}
                       {refinementMode ? (
                         <div className="flex items-center gap-2">
@@ -3598,7 +3617,7 @@ export default function App() {
                             <span className="text-xs text-neutral-400">Items added/removed mid-sprint</span>
                           </div>
                           {scopeChanges.length === 0 ? (
-                            <p className="text-xs text-neutral-400 text-center py-6">No scope changes — sprint stayed on plan ✓</p>
+                            <p className="text-xs text-neutral-600 text-center py-6">No scope changes — sprint stayed on plan ✓</p>
                           ) : (
                             <div className="divide-y divide-neutral-50 dark:divide-neutral-700">
                               {scopeChanges.map((c, i) => (
@@ -3823,7 +3842,7 @@ export default function App() {
                           <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full">{m.role}</span>
                         </div>
                       ))}
-                      {projectMembers.length === 0 && <p className="text-sm text-neutral-400 py-2 text-center">No project-specific members yet.</p>}
+                      {projectMembers.length === 0 && <p className="text-sm text-neutral-600 py-2 text-center">No project-specific members yet.</p>}
                     </div>
                     <div className="flex gap-2">
                       <input type="email" placeholder="Email address"
@@ -4132,12 +4151,12 @@ export default function App() {
                                     <span className="text-neutral-300 cursor-grab text-sm">⠿</span>
                                     <div className="flex-1">
                                       <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{fd.name}</span>
-                                      <span className="ml-2 text-[10px] font-mono text-neutral-400">{fd.fieldType}</span>
+                                      <span className="ml-2 text-xs font-mono text-neutral-400">{fd.fieldType}</span>
                                     </div>
                                     <input type="checkbox" checked={visible} className="w-4 h-4 accent-brand-navy"
                                       onChange={() => showToast('Toggle field visibility in Field Visibility tab')}
                                       title="Toggle visibility" />
-                                    <span className="text-[10px] text-neutral-400">#{idx + 1}</span>
+                                    <span className="text-xs text-neutral-400">#{idx + 1}</span>
                                   </div>
                                 );
                               })}
@@ -4392,7 +4411,7 @@ export default function App() {
                       </div>
                     )}
                     {(workItemTypes.custom || []).length === 0 && !showTypeForm && (
-                      <p className="text-sm text-neutral-400 italic">No custom types yet. Create utility-domain types like Meter Rollout, Tariff Change, or Substation Commission.</p>
+                      <p className="text-sm text-neutral-600 italic">No custom types yet. Create utility-domain types like Meter Rollout, Tariff Change, or Substation Commission.</p>
                     )}
                   </div>
                 </div>
@@ -4585,7 +4604,7 @@ export default function App() {
                               {a.dueDate && <span className="text-xs text-neutral-400">{a.dueDate}</span>}
                             </div>
                           ))}
-                          {(raidDashboard.actionItems || []).filter(a => a.status !== 'DONE').length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No open action items 🎉</p>}
+                          {(raidDashboard.actionItems || []).filter(a => a.status !== 'DONE').length === 0 && <p className="text-sm text-neutral-600 text-center py-4">No open action items 🎉</p>}
                         </div>
                       </div>
                     </div>
@@ -4762,15 +4781,15 @@ export default function App() {
                               });
                               return (
                                 <div key={q.key} className={`p-4 rounded-xl border ${q.color} min-h-[100px]`}>
-                                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-1">{q.desc}</p>
+                                  <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">{q.desc}</p>
                                   <p className="text-xs text-neutral-400 mb-2">{q.label}</p>
                                   <div className="space-y-1">
-                                    {quadrantStakeholders.length === 0 && <p className="text-[10px] text-neutral-300 italic">None</p>}
+                                    {quadrantStakeholders.length === 0 && <p className="text-xs text-neutral-300 italic">None</p>}
                                     {quadrantStakeholders.map(s => (
                                       <div key={s.id} className="flex items-center gap-1.5">
                                         <Avatar name={s.name} size={5} />
                                         <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100">{s.name}</span>
-                                        <span className="text-[10px] text-neutral-400">{s.role}</span>
+                                        <span className="text-xs text-neutral-400">{s.role}</span>
                                       </div>
                                     ))}
                                   </div>
@@ -4778,7 +4797,7 @@ export default function App() {
                               );
                             })}
                           </div>
-                          <p className="text-[10px] text-neutral-400 mt-3">Based on Influence (HIGH/MEDIUM/LOW) and Interest (HIGH/MEDIUM/LOW) fields. HIGH means above MEDIUM.</p>
+                          <p className="text-xs text-neutral-400 mt-3">Based on Influence (HIGH/MEDIUM/LOW) and Interest (HIGH/MEDIUM/LOW) fields. HIGH means above MEDIUM.</p>
                         </div>
                       )}
                     </div>
@@ -5088,11 +5107,11 @@ export default function App() {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {customDashboards.map(d => (
-                        <div key={d.id} onClick={() => openDashboard(d.id)}
-                          className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all">
+                        <div key={d.id} onClick={() => openDashboard(d.id)} role="button" tabIndex={0} onKeyDown={onPressKey}
+                          className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                           <div className="flex items-start justify-between">
                             <span className="text-2xl">📐</span>
-                            <span className="text-[10px] font-semibold text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-700 rounded-full px-2 py-0.5">{d.scope || 'PERSONAL'}</span>
+                            <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-700 rounded-full px-2 py-0.5">{d.scope || 'PERSONAL'}</span>
                           </div>
                           <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mt-2 truncate">{d.name}</p>
                           <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
@@ -5138,7 +5157,7 @@ export default function App() {
                   )}
 
                   <div className="flex flex-wrap items-center gap-2 mb-4">
-                    <span className="text-[10px] uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Scope</span>
+                    <span className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Scope</span>
                     {['PROJECT', 'TEAM', 'ORG'].map(s => (
                       <button key={s} type="button"
                         onClick={() => { setDashboardScope(s); fetchDashboardAggregate(s, dashboardTeamId); }}
@@ -5155,7 +5174,7 @@ export default function App() {
                       </select>
                     )}
                     {dashboardScope !== 'PROJECT' && (
-                      <span className="text-[10px] text-neutral-600 dark:text-neutral-400">Aggregated across {dashboardScope === 'TEAM' ? "the team's projects" : 'the workspace'}</span>
+                      <span className="text-xs text-neutral-600 dark:text-neutral-400">Aggregated across {dashboardScope === 'TEAM' ? "the team's projects" : 'the workspace'}</span>
                     )}
                   </div>
 
@@ -5167,7 +5186,7 @@ export default function App() {
                       </div>
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider w-20 flex-shrink-0">Basics</span>
+                          <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider w-20 flex-shrink-0">Basics</span>
                           <button onClick={() => addDashboardWidget('SCORECARD', { filter: { open: true } }, 'Open items')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Scorecard</button>
                           <button onClick={() => addDashboardWidget('STATUS_BAR', {}, 'By status')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Status breakdown</button>
                           <button onClick={() => addDashboardWidget('ITEM_LIST', { filter: { open: true }, limit: 6 }, 'Open work items')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Item list</button>
@@ -5176,7 +5195,7 @@ export default function App() {
                         </div>
                         {EXTRA_WIDGET_CATEGORIES.map(cat => (
                           <div key={cat} className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider w-20 flex-shrink-0">{cat}</span>
+                            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider w-20 flex-shrink-0">{cat}</span>
                             {EXTRA_WIDGET_PRESETS.filter(p => p.category === cat).map(p => (
                               <button key={p.title} onClick={() => addDashboardWidget(p.type, p.config, p.title, p.w)}
                                 className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">
@@ -5252,8 +5271,8 @@ export default function App() {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {reports.map(r => (
-                        <div key={r.id} onClick={() => openReport(r.id)}
-                          className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all">
+                        <div key={r.id} onClick={() => openReport(r.id)} role="button" tabIndex={0} onKeyDown={onPressKey}
+                          className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                           <span className="text-2xl">📄</span>
                           <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mt-2 truncate">{r.name}</p>
                           <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{r.updatedAt ? `Updated ${new Date(r.updatedAt).toLocaleDateString()}` : '—'}</p>
@@ -5331,14 +5350,14 @@ export default function App() {
 
                 <div className="space-y-2 mb-5">
                   {reportSchedules.length === 0
-                    ? <p className="text-sm text-neutral-400 text-center py-3">No schedules yet.</p>
+                    ? <p className="text-sm text-neutral-600 text-center py-3">No schedules yet.</p>
                     : reportSchedules.map(s => (
                       <div key={s.id} className="flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-neutral-900 dark:text-neutral-100">{s.cadence?.toLowerCase()} · {s.channel?.replace('_', '-').toLowerCase()}</p>
                           <p className="text-xs text-neutral-400 truncate">{s.recipients ? `to ${s.recipients}` : 'owner only'}{s.nextRunAt ? ` · next ${new Date(s.nextRunAt).toLocaleDateString()}` : ''}</p>
                         </div>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${s.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500'}`}>{s.active ? 'ACTIVE' : 'PAUSED'}</span>
+                        <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${s.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500'}`}>{s.active ? 'ACTIVE' : 'PAUSED'}</span>
                         <button onClick={() => toggleReportSchedule(s)} className="text-xs text-brand-navy hover:underline">{s.active ? 'Pause' : 'Resume'}</button>
                         <button onClick={() => deleteReportSchedule(s.id)} className="text-xs text-semantic-danger hover:underline">Remove</button>
                       </div>
@@ -5408,7 +5427,7 @@ export default function App() {
                 {/* Space list */}
                 <div className="flex-1 overflow-y-auto px-2 pb-2">
                   {knowledgeSpaces.length === 0 && (
-                    <p className="text-xs text-neutral-400 text-center py-6">No spaces yet. Create one to get started.</p>
+                    <p className="text-xs text-neutral-600 text-center py-6">No spaces yet. Create one to get started.</p>
                   )}
                   {knowledgeSpaces.map(space => (
                     <div key={space.id}>
@@ -5418,7 +5437,7 @@ export default function App() {
                           <span>{space.icon || '📁'}</span>
                           <span className="truncate">{space.name}</span>
                         </span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${space.visibility === 'PUBLIC' ? 'bg-semantic-success-surface text-semantic-success' : space.visibility === 'PRIVATE' ? 'bg-semantic-danger-surface text-semantic-danger' : 'bg-brand-navy/10 text-brand-navy'}`}>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${space.visibility === 'PUBLIC' ? 'bg-semantic-success-surface text-semantic-success' : space.visibility === 'PRIVATE' ? 'bg-semantic-danger-surface text-semantic-danger' : 'bg-brand-navy/10 text-brand-navy'}`}>
                           {space.visibility || 'TEAM'}
                         </span>
                       </button>
@@ -5444,16 +5463,16 @@ export default function App() {
                         ) : (
                           <div className="space-y-2">
                             {knowledgeSearchResults.map(art => (
-                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); }}
-                                className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all">
+                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); }} role="button" tabIndex={0} onKeyDown={onPressKey}
+                                className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
                                     <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{art.title}</p>
                                     <p className="text-xs text-neutral-400 mt-0.5 line-clamp-2">{(art.content || '').substring(0, 120)}{(art.content || '').length > 120 ? '...' : ''}</p>
                                   </div>
                                   <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${art.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : art.status === 'DRAFT' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500' : 'bg-semantic-warning-surface text-semantic-warning'}`}>{art.status || 'DRAFT'}</span>
-                                    <span className="text-[10px] text-neutral-400 font-mono">{art.templateType || 'KB'}</span>
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${art.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : art.status === 'DRAFT' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500' : 'bg-semantic-warning-surface text-semantic-warning'}`}>{art.status || 'DRAFT'}</span>
+                                    <span className="text-xs text-neutral-400 font-mono">{art.templateType || 'KB'}</span>
                                   </div>
                                 </div>
                               </div>
@@ -5484,8 +5503,8 @@ export default function App() {
                         ) : (
                           <div className="space-y-2">
                             {knowledgeArticles.map(art => (
-                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); }}
-                                className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all">
+                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); }} role="button" tabIndex={0} onKeyDown={onPressKey}
+                                className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
@@ -5493,13 +5512,13 @@ export default function App() {
                                     </div>
                                     <p className="text-xs text-neutral-400 line-clamp-2">{(art.content || '').substring(0, 120)}{(art.content || '').length > 120 ? '...' : ''}</p>
                                     <div className="flex items-center gap-3 mt-2">
-                                      <span className="text-[10px] text-neutral-400">v{art.versionNumber || 1} · {art.authorName || 'Unknown'}</span>
-                                      {art.updatedAt && <span className="text-[10px] text-neutral-400">{new Date(art.updatedAt).toLocaleDateString()}</span>}
+                                      <span className="text-xs text-neutral-400">v{art.versionNumber || 1} · {art.authorName || 'Unknown'}</span>
+                                      {art.updatedAt && <span className="text-xs text-neutral-400">{new Date(art.updatedAt).toLocaleDateString()}</span>}
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${art.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : art.status === 'DRAFT' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500' : art.status === 'ARCHIVED' ? 'bg-neutral-200 dark:bg-neutral-600 text-neutral-500' : 'bg-semantic-warning-surface text-semantic-warning'}`}>{art.status || 'DRAFT'}</span>
-                                    <span className="text-[10px] bg-brand-navy/10 text-brand-navy px-1.5 py-0.5 rounded font-mono">{art.templateType || 'KB'}</span>
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${art.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : art.status === 'DRAFT' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500' : art.status === 'ARCHIVED' ? 'bg-neutral-200 dark:bg-neutral-600 text-neutral-500' : 'bg-semantic-warning-surface text-semantic-warning'}`}>{art.status || 'DRAFT'}</span>
+                                    <span className="text-xs bg-brand-navy/10 text-brand-navy px-1.5 py-0.5 rounded font-mono">{art.templateType || 'KB'}</span>
                                   </div>
                                 </div>
                               </div>
@@ -5523,10 +5542,10 @@ export default function App() {
                         <div className="min-w-0">
                           <h1 className="font-bold text-lg text-neutral-900 dark:text-white truncate">{selectedArticle.title}</h1>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${selectedArticle.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : selectedArticle.status === 'DRAFT' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500' : 'bg-neutral-200 dark:bg-neutral-600 text-neutral-500'}`}>{selectedArticle.status || 'DRAFT'}</span>
-                            <span className="text-[10px] font-mono text-neutral-400">{selectedArticle.templateType || 'KB'}</span>
-                            <span className="text-[10px] text-neutral-400">v{selectedArticle.versionNumber || 1}</span>
-                            {selectedArticle.updatedAt && <span className="text-[10px] text-neutral-400">Updated {new Date(selectedArticle.updatedAt).toLocaleDateString()}</span>}
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded ${selectedArticle.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : selectedArticle.status === 'DRAFT' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500' : 'bg-neutral-200 dark:bg-neutral-600 text-neutral-500'}`}>{selectedArticle.status || 'DRAFT'}</span>
+                            <span className="text-xs font-mono text-neutral-400">{selectedArticle.templateType || 'KB'}</span>
+                            <span className="text-xs text-neutral-400">v{selectedArticle.versionNumber || 1}</span>
+                            {selectedArticle.updatedAt && <span className="text-xs text-neutral-400">Updated {new Date(selectedArticle.updatedAt).toLocaleDateString()}</span>}
                           </div>
                         </div>
                       </div>
@@ -5611,16 +5630,16 @@ export default function App() {
                         <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
                           <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Version history</h3>
                           {articleVersions.length === 0 ? (
-                            <p className="text-xs text-neutral-400">No versions saved yet.</p>
+                            <p className="text-xs text-neutral-600">No versions saved yet.</p>
                           ) : (
                             <div className="space-y-2">
                               {articleVersions.map(v => (
                                 <div key={v.id} className="bg-white dark:bg-neutral-800 rounded-lg p-3 border border-neutral-200 dark:border-neutral-700">
                                   <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">Version {v.versionNumber}</p>
-                                  <p className="text-[10px] text-neutral-400 mt-0.5">{v.savedBy || 'Unknown'}</p>
-                                  <p className="text-[10px] text-neutral-400">{v.savedAt ? new Date(v.savedAt).toLocaleString() : '—'}</p>
+                                  <p className="text-xs text-neutral-400 mt-0.5">{v.savedBy || 'Unknown'}</p>
+                                  <p className="text-xs text-neutral-400">{v.savedAt ? new Date(v.savedAt).toLocaleString() : '—'}</p>
                                   <button onClick={() => setSelectedArticle(a => ({ ...a, content: v.content }))}
-                                    className="text-[10px] text-brand-navy hover:underline mt-1">Restore</button>
+                                    className="text-xs text-brand-navy hover:underline mt-1">Restore</button>
                                 </div>
                               ))}
                             </div>
@@ -5633,20 +5652,20 @@ export default function App() {
                           <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Comments ({articleComments.length})</h3>
                           <div className="flex-1 space-y-2">
                             {articleComments.length === 0 && (
-                              <p className="text-xs text-neutral-400">No comments yet. Start the discussion below.</p>
+                              <p className="text-xs text-neutral-600">No comments yet. Start the discussion below.</p>
                             )}
                             {articleComments.map(c => (
                               <div key={c.id} className={`rounded-lg p-3 border ${c.resolved ? 'bg-semantic-success-surface border-semantic-success/30' : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700'}`}>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-[10px] font-semibold text-neutral-700 dark:text-neutral-300">{c.authorName || 'Unknown'}</span>
-                                  <span className="text-[10px] text-neutral-400">{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : ''}</span>
+                                  <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{c.authorName || 'Unknown'}</span>
+                                  <span className="text-xs text-neutral-400">{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : ''}</span>
                                 </div>
                                 <p className="text-xs text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">{c.body}</p>
                                 <div className="flex items-center gap-3 mt-1.5">
                                   <button onClick={() => toggleArticleComment(selectedArticle.id, c.id, !c.resolved)}
-                                    className="text-[10px] text-brand-navy hover:underline">{c.resolved ? 'Reopen' : 'Resolve'}</button>
+                                    className="text-xs text-brand-navy hover:underline">{c.resolved ? 'Reopen' : 'Resolve'}</button>
                                   <button onClick={() => deleteArticleComment(selectedArticle.id, c.id)}
-                                    className="text-[10px] text-semantic-danger hover:underline">Delete</button>
+                                    className="text-xs text-semantic-danger hover:underline">Delete</button>
                                 </div>
                               </div>
                             ))}
@@ -5721,13 +5740,13 @@ export default function App() {
                       className={`w-full text-left px-3 py-3 rounded-xl mb-1 transition-colors border ${selectedRelease?.id === r.id ? 'bg-brand-navy/10 border-brand-navy/30' : 'hover:bg-neutral-100 dark:hover:bg-neutral-700 border-transparent'}`}>
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{r.name}</span>
-                        <span className="text-[10px] font-mono text-neutral-400 ml-1">v{r.version}</span>
+                        <span className="text-xs font-mono text-neutral-400 ml-1">v{r.version}</span>
                       </div>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${r.status === 'RELEASED' ? 'bg-semantic-success text-white' : r.status === 'IN_PROGRESS' ? 'bg-brand-navy text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{r.status}</span>
-                      {r.releaseDate && <span className="text-[10px] text-neutral-400 ml-2">{new Date(r.releaseDate).toLocaleDateString()}</span>}
+                      <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${r.status === 'RELEASED' ? 'bg-semantic-success text-white' : r.status === 'IN_PROGRESS' ? 'bg-brand-navy text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{r.status}</span>
+                      {r.releaseDate && <span className="text-xs text-neutral-400 ml-2">{new Date(r.releaseDate).toLocaleDateString()}</span>}
                     </button>
                   ))}
-                  {releases.length === 0 && <p className="text-xs text-neutral-400 text-center py-6">No releases yet. Create one to get started.</p>}
+                  {releases.length === 0 && <p className="text-xs text-neutral-600 text-center py-6">No releases yet. Create one to get started.</p>}
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-6">
@@ -5764,14 +5783,14 @@ export default function App() {
                     )}
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 mb-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Work Items ({releaseItems.length})</h3>
-                      {releaseItems.length === 0 ? <p className="text-sm text-neutral-400 text-center py-4">No work items linked yet.</p>
+                      {releaseItems.length === 0 ? <p className="text-sm text-neutral-600 text-center py-4">No work items linked yet.</p>
                         : releaseItems.map(item => (
                           <div key={item.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                             <TypeBadge type={item.type} compact />
-                            <span className="font-mono text-[10px] text-neutral-400">{item.id}</span>
-                            <span className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate cursor-pointer hover:text-brand-navy" onClick={() => setSelectedItem(item)}>{item.title}</span>
+                            <span className="font-mono text-xs text-neutral-400">{item.id}</span>
+                            <span role="button" tabIndex={0} onKeyDown={onPressKey} className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate cursor-pointer hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => setSelectedItem(item)}>{item.title}</span>
                             <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
-                            <button onClick={() => removeItemFromRelease(selectedRelease.id, item.id)} className="text-[10px] text-semantic-danger hover:underline">Remove</button>
+                            <button onClick={() => removeItemFromRelease(selectedRelease.id, item.id)} className="text-xs text-semantic-danger hover:underline">Remove</button>
                           </div>
                         ))
                       }
@@ -5844,7 +5863,7 @@ export default function App() {
                               <p className="text-[11px] text-neutral-400">{imp.category || 'Uncategorized'} · raised {imp.raisedAt ? new Date(imp.raisedAt).toLocaleDateString() : '—'}</p>
                             </div>
                             <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${imp.status === 'RESOLVED' ? 'bg-semantic-success text-white' : imp.status === 'ESCALATED' ? 'bg-semantic-danger text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{imp.status}</span>
+                              <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${imp.status === 'RESOLVED' ? 'bg-semantic-success text-white' : imp.status === 'ESCALATED' ? 'bg-semantic-danger text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{imp.status}</span>
                               {imp.status !== 'RESOLVED' && (
                                 <div className="flex gap-2">
                                   {imp.status !== 'ESCALATED' && <button onClick={() => updateImpediment(imp, { status: 'ESCALATED', escalated: true })} className="text-[11px] text-semantic-danger hover:underline">Escalate</button>}
@@ -5886,7 +5905,7 @@ export default function App() {
                         : <div className="space-y-2">{standups.map(s => (
                             <button key={s.id} onClick={() => openStandup(s.id)} className="w-full text-left bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 hover:border-brand-navy/40">
                               <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{s.sessionDate ? new Date(s.sessionDate).toLocaleDateString() : s.id}</span>
-                              <span className={`ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded ${s.status === 'COMPLETED' ? 'bg-semantic-success text-white' : 'bg-brand-navy text-white'}`}>{s.status}</span>
+                              <span className={`ml-2 text-xs font-bold px-1.5 py-0.5 rounded ${s.status === 'COMPLETED' ? 'bg-semantic-success text-white' : 'bg-brand-navy text-white'}`}>{s.status}</span>
                             </button>))}</div>}
                     </div>
                   ) : (
@@ -5909,7 +5928,7 @@ export default function App() {
                             <div key={e.id} className={`rounded-xl p-3 border ${isCurrent ? 'border-brand-navy bg-brand-navy/5' : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800'}`}>
                               <div className="flex items-center justify-between">
                                 <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{name}</span>
-                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${e.status === 'RECORDED' ? 'bg-semantic-success text-white' : e.status === 'MISSING' ? 'bg-semantic-danger text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{e.status}</span>
+                                <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${e.status === 'RECORDED' ? 'bg-semantic-success text-white' : e.status === 'MISSING' ? 'bg-semantic-danger text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{e.status}</span>
                               </div>
                               {e.status === 'RECORDED' && (
                                 <div className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 space-y-0.5">
@@ -5991,7 +6010,7 @@ export default function App() {
                               <span className="text-xs font-mono text-brand-navy">{i.story_points} pts</span>
                             </div>
                           ))}
-                          {(planningResult.suggestedItems || []).length === 0 && <p className="text-xs text-neutral-400">No ready items fit the capacity.</p>}
+                          {(planningResult.suggestedItems || []).length === 0 && <p className="text-xs text-neutral-600">No ready items fit the capacity.</p>}
                         </div>
                       </div>
                     )}
@@ -6008,8 +6027,8 @@ export default function App() {
                           : retros.map(r => (
                             <button key={r.id} onClick={() => openRetro(r.id)} className="w-full text-left bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 hover:border-brand-navy/40">
                               <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{r.title}</span>
-                              <span className="ml-2 text-[10px] text-neutral-400">{r.template}</span>
-                              <span className={`ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded ${r.status === 'COMPLETED' ? 'bg-semantic-success text-white' : 'bg-brand-navy text-white'}`}>{r.status}</span>
+                              <span className="ml-2 text-xs text-neutral-400">{r.template}</span>
+                              <span className={`ml-2 text-xs font-bold px-1.5 py-0.5 rounded ${r.status === 'COMPLETED' ? 'bg-semantic-success text-white' : 'bg-brand-navy text-white'}`}>{r.status}</span>
                             </button>))}
                       </div>
                       <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 h-fit">
@@ -6048,7 +6067,7 @@ export default function App() {
                                   <div className="flex items-center gap-3 mt-1">
                                     <button onClick={() => voteRetroNote(n.id)} className="text-[11px] text-brand-navy hover:underline">▲ {n.votes}</button>
                                     {!n.convertedActionItemId && <button onClick={() => convertRetroNote(n.id)} className="text-[11px] text-semantic-success hover:underline">→ Action</button>}
-                                    {n.convertedActionItemId && <span className="text-[10px] text-neutral-400">✓ action</span>}
+                                    {n.convertedActionItemId && <span className="text-xs text-neutral-400">✓ action</span>}
                                   </div>
                                 </div>
                               ))}
@@ -6192,14 +6211,14 @@ export default function App() {
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-brand-navy/10 text-brand-navy">{i.area}</span>
+                                <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-brand-navy/10 text-brand-navy">{i.area}</span>
                                 <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{i.title}</span>
                               </div>
                               {i.description && <p className="text-xs text-neutral-500 mt-1">{i.description}</p>}
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
                               <button onClick={() => voteIdea(i.id)} className="text-xs text-brand-navy hover:underline">▲ {i.votes}</button>
-                              {i.status === 'PROMOTED' ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-semantic-success text-white">PROMOTED</span>
+                              {i.status === 'PROMOTED' ? <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-semantic-success text-white">PROMOTED</span>
                                 : <button onClick={() => promoteIdea(i.id)} className="text-xs text-semantic-success hover:underline">Promote</button>}
                             </div>
                           </div>
@@ -6231,7 +6250,7 @@ export default function App() {
                           {(feedbackClusters.clusters || []).map((c, idx) => (
                             <div key={idx} className="bg-white dark:bg-neutral-800 rounded-md p-2 border border-neutral-200 dark:border-neutral-700">
                               <div className="flex items-center justify-between"><span className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">{c.theme}</span><span className="text-xs text-brand-navy font-bold">{c.count}</span></div>
-                              <p className="text-[10px] text-neutral-400">+{c.positive} / ~{c.neutral} / −{c.negative}</p>
+                              <p className="text-xs text-neutral-400">+{c.positive} / ~{c.neutral} / −{c.negative}</p>
                             </div>
                           ))}
                         </div>
@@ -6242,10 +6261,10 @@ export default function App() {
                       : feedbackItems.map(f => (
                         <div key={f.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[10px] text-neutral-400">{f.source}</span>
-                            {f.customer && <span className="text-[10px] text-neutral-500">· {f.customer}</span>}
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${f.sentiment === 'POSITIVE' ? 'bg-semantic-success text-white' : f.sentiment === 'NEGATIVE' ? 'bg-semantic-danger text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{f.sentiment}</span>
-                            {f.theme && <span className="text-[10px] text-brand-navy">#{f.theme}</span>}
+                            <span className="text-xs text-neutral-400">{f.source}</span>
+                            {f.customer && <span className="text-xs text-neutral-500">· {f.customer}</span>}
+                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${f.sentiment === 'POSITIVE' ? 'bg-semantic-success text-white' : f.sentiment === 'NEGATIVE' ? 'bg-semantic-danger text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{f.sentiment}</span>
+                            {f.theme && <span className="text-xs text-brand-navy">#{f.theme}</span>}
                           </div>
                           <p className="text-sm text-neutral-700 dark:text-neutral-200">{f.content}</p>
                         </div>
@@ -6274,7 +6293,7 @@ export default function App() {
                     {objectives.map(o => (
                       <button key={o.id} onClick={() => openObjective(o.id)} className={`w-full text-left rounded-xl p-3 border ${activeObjective?.objective?.id === o.id ? 'border-brand-navy bg-brand-navy/5' : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800'}`}>
                         <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{o.title}</span>
-                        <span className="ml-1 text-[10px] text-neutral-400">{o.level} {o.quarter}</span>
+                        <span className="ml-1 text-xs text-neutral-400">{o.level} {o.quarter}</span>
                       </button>
                     ))}
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 mt-2">
@@ -6396,7 +6415,7 @@ export default function App() {
                             ? <p className="text-sm text-neutral-400 py-4 text-center">No active violations. Clean posture.</p>
                             : (complianceDashboard.severityBreakdown || []).map(s => (
                               <div key={s.severity} className="flex items-center gap-3 py-1.5">
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[s.severity] || severityClass.MEDIUM}`}>{s.severity}</span>
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[s.severity] || severityClass.MEDIUM}`}>{s.severity}</span>
                                 <div className="flex-1 h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
                                   <div className="h-full bg-brand-navy rounded-full" style={{ width: `${Math.min(100, Number(s.count) * 12)}%` }} />
                                 </div>
@@ -6469,12 +6488,12 @@ export default function App() {
                         ? <EmptyState icon={ClipboardList} title="No rules yet" subtitle="Create a rule or start from a seeded template below." action={can('manage_compliance') ? <Button variant="action" onClick={newRuleBuilder}>New Rule</Button> : null} />
                         : complianceRules.map(r => (
                           <div key={r.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[r.severity] || severityClass.MEDIUM}`}>{r.severity}</span>
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[r.severity] || severityClass.MEDIUM}`}>{r.severity}</span>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{r.name}</p>
                               <p className="text-xs text-neutral-400 truncate font-mono">{r.scopeBql ? `${r.scopeBql} ⟶ ` : ''}{r.assertionBql}</p>
                             </div>
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${r.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500'}`}>{r.active ? 'ACTIVE' : 'INACTIVE'}</span>
+                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${r.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500'}`}>{r.active ? 'ACTIVE' : 'INACTIVE'}</span>
                             {can('manage_compliance') && <>
                               <button onClick={() => testRule(r.id)} className="text-xs text-brand-navy hover:underline">Test</button>
                               {r.active
@@ -6497,7 +6516,7 @@ export default function App() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         {complianceTemplates.map(t => (
                           <div key={t.id} className="flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${severityClass[t.severity] || severityClass.MEDIUM}`}>{t.severity}</span>
+                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${severityClass[t.severity] || severityClass.MEDIUM}`}>{t.severity}</span>
                             <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-200 truncate" title={t.description}>{t.name}</span>
                             {can('manage_compliance') && <button onClick={() => cloneTemplate(t.id)} className="text-xs text-brand-navy hover:underline">+ Add</button>}
                           </div>
@@ -6532,12 +6551,12 @@ export default function App() {
                           {can('manage_compliance') && (v.status === 'OPEN' || v.status === 'ACKNOWLEDGED') && (
                             <input type="checkbox" checked={selectedViolations.includes(v.id)} onChange={() => toggleViolationSelect(v.id)} />
                           )}
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[v.severity] || severityClass.MEDIUM}`}>{v.severity}</span>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[v.severity] || severityClass.MEDIUM}`}>{v.severity}</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-neutral-900 dark:text-neutral-100 truncate">{v.workItemTitle || v.workItemId}</p>
                             <p className="text-xs text-neutral-400 font-mono">{v.workItemId}</p>
                           </div>
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${vStatusClass[v.status] || ''}`}>{v.status}{v.escalated ? ' ↑' : ''}</span>
+                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${vStatusClass[v.status] || ''}`}>{v.status}{v.escalated ? ' ↑' : ''}</span>
                           {can('manage_compliance') && (v.status === 'OPEN' || v.status === 'ACKNOWLEDGED') && <>
                             {v.status === 'OPEN' && <button onClick={() => actOnViolation(v.id, 'acknowledge')} className="text-xs text-brand-navy hover:underline">Ack</button>}
                             <button onClick={() => actOnViolation(v.id, 'resolve')} className="text-xs text-semantic-success hover:underline">Resolve</button>
@@ -6673,13 +6692,13 @@ export default function App() {
                         ? <EmptyState icon={Headset} title="Queue is clear" subtitle="No requests match this queue right now." />
                         : serviceRequests.map(({ request: r, sla }) => (
                           <div key={r.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded w-16 text-center bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200">{r.priority}</span>
+                            <span className="text-xs font-bold px-2 py-0.5 rounded w-16 text-center bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200">{r.priority}</span>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{r.subject}</p>
                               <p className="text-xs text-neutral-400 truncate">{r.typeKey} · {r.id}{r.assigneeId ? ` · ${r.assigneeId}` : ' · unassigned'}</p>
                             </div>
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${sla.breached ? 'bg-semantic-danger text-white' : sla.state === 'AT_RISK' ? 'bg-semantic-warning text-white' : sla.state === 'NONE' ? 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200' : 'bg-semantic-success text-white'}`}>{sla.state === 'NONE' ? 'No SLA' : sla.state}</span>
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200">{(r.status || '').replace('_', ' ')}</span>
+                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${sla.breached ? 'bg-semantic-danger text-white' : sla.state === 'AT_RISK' ? 'bg-semantic-warning text-white' : sla.state === 'NONE' ? 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200' : 'bg-semantic-success text-white'}`}>{sla.state === 'NONE' ? 'No SLA' : sla.state}</span>
+                            <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200">{(r.status || '').replace('_', ' ')}</span>
                             {can('work_service') && (
                               <>
                                 {!r.assigneeId && <button onClick={() => assignServiceRequest(r.id)} className="text-xs text-brand-navy hover:underline">Pick up</button>}
@@ -6708,8 +6727,8 @@ export default function App() {
                               <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{c.name}</p>
                               <p className="text-xs text-neutral-400 truncate">{c.subdomain ? `${c.subdomain} · ` : ''}{c.id}</p>
                             </div>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-brand-navy text-white">{c.tier}</span>
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${c.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 text-neutral-600'}`}>{c.active ? 'ACTIVE' : 'INACTIVE'}</span>
+                            <span className="text-xs font-bold px-2 py-0.5 rounded bg-brand-navy text-white">{c.tier}</span>
+                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${c.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 text-neutral-600'}`}>{c.active ? 'ACTIVE' : 'INACTIVE'}</span>
                           </div>
                         ))}
                     </div>
@@ -6726,8 +6745,8 @@ export default function App() {
                             <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{t.name}</p>
                             <p className="text-xs text-neutral-400 truncate">{t.typeKey} · default {t.defaultPriority}</p>
                           </div>
-                          {t.isSystem && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200">SYSTEM</span>}
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 text-neutral-600'}`}>{t.active ? 'ACTIVE' : 'INACTIVE'}</span>
+                          {t.isSystem && <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200">SYSTEM</span>}
+                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${t.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 text-neutral-600'}`}>{t.active ? 'ACTIVE' : 'INACTIVE'}</span>
                         </div>
                       ))}
                   </div>
@@ -6739,7 +6758,7 @@ export default function App() {
                       ? <EmptyState icon={Timer} title="No SLA tiers" subtitle="Define response and resolution targets per customer tier." />
                       : serviceTiers.map(t => (
                         <div key={t.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded w-20 text-center bg-brand-navy text-white">{t.tier}</span>
+                          <span className="text-xs font-bold px-2 py-0.5 rounded w-20 text-center bg-brand-navy text-white">{t.tier}</span>
                           <div className="flex-1 text-sm text-neutral-700 dark:text-neutral-200">
                             Respond in {t.responseMinutes}m · Resolve in {t.resolutionMinutes}m
                           </div>
@@ -6941,8 +6960,8 @@ export default function App() {
                 <label className="block text-xs text-neutral-400 mb-1 font-medium">Sub-items ({itemChildren.length})</label>
                 <div className="space-y-1">
                   {itemChildren.map(child => (
-                    <div key={child.id} onClick={() => setSelectedItem(child)}
-                      className="flex items-center gap-2 p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700 cursor-pointer hover:border-brand-navy/30 transition-colors">
+                    <div key={child.id} onClick={() => setSelectedItem(child)} role="button" tabIndex={0} onKeyDown={onPressKey}
+                      className="flex items-center gap-2 p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700 cursor-pointer hover:border-brand-navy/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                       <span className="text-neutral-300 text-xs">↳</span>
                       <TypeBadge type={child.type} compact />
                       <span className="font-mono text-xs text-neutral-400">{child.id}</span>
@@ -7070,7 +7089,7 @@ export default function App() {
             {detailTab === 'comments' && (
               <div>
                 {comments.length === 0 && (
-                  <p className="text-xs text-neutral-400 text-center py-6">No comments yet. Be the first to comment.</p>
+                  <p className="text-xs text-neutral-600 text-center py-6">No comments yet. Be the first to comment.</p>
                 )}
                 <div className="space-y-3 mb-4">
                   {comments.map(c => (
@@ -7206,7 +7225,7 @@ export default function App() {
                   </div>
                 )}
 
-                {links.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No links yet.</p>}
+                {links.length === 0 && <p className="text-xs text-neutral-600 text-center py-4">No links yet.</p>}
                 <div className="space-y-2 mb-4">
                   {links.map(l => (
                     <div key={l.id} className="flex items-center gap-3 p-2.5 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700">
@@ -7247,7 +7266,7 @@ export default function App() {
                     </span>
                   </div>
                 </div>
-                {attachments.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No files attached yet.</p>}
+                {attachments.length === 0 && <p className="text-xs text-neutral-600 text-center py-4">No files attached yet.</p>}
                 <div className="space-y-2">
                   {attachments.map(a => {
                     const mime = a.mime_type || a.mimeType || '';
@@ -7314,7 +7333,7 @@ export default function App() {
                     </button>
                   ))}
                 </div>
-                {activity.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No activity recorded yet.</p>}
+                {activity.length === 0 && <p className="text-xs text-neutral-600 text-center py-4">No activity recorded yet.</p>}
                 <div className="space-y-3">
                   {activity.map(a => (
                     <div key={a.id} className="flex gap-2.5">
@@ -7583,7 +7602,7 @@ function NavItem({ active, onClick, Icon, label, badge, dot }) {
   return (
     <button onClick={onClick} title={collapsed ? label : undefined}
       aria-current={active ? 'page' : undefined}
-      className={`relative w-full flex items-center ${collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-md text-sm transition-colors duration-[120ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-1 ${active ? 'bg-neutral-100 dark:bg-neutral-800 text-brand-navy dark:text-white font-semibold' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100'}`}>
+      className={`relative w-full flex items-center ${collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-md text-sm transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-1 ${active ? 'bg-neutral-100 dark:bg-neutral-800 text-brand-navy dark:text-white font-semibold' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100'}`}>
       {active && <span aria-hidden="true" className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-brand-orange" />}
       <Icon aria-hidden="true" className="h-5 w-5 flex-shrink-0" />
       {!collapsed && <span className="flex-1 text-left truncate">{label}</span>}
@@ -7651,9 +7670,20 @@ function RoleBadge({ role, tier, small = false }) {
   );
 }
 
+// Make a non-button clickable element keyboard-operable (Enter/Space) — pair with
+// role="button" + tabIndex={0} + a focus ring. Fires the element's own onClick via a click().
+const onPressKey = (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); }
+};
+
 function StatCard({ label, value, sub, color, icon: Icon, onClick }) {
+  const clickable = typeof onClick === 'function';
   return (
-    <div onClick={onClick} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 cursor-pointer hover:shadow-md transition-shadow group">
+    <div
+      onClick={onClick}
+      {...(clickable ? { role: 'button', tabIndex: 0, onKeyDown: onPressKey } : {})}
+      className={`bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 hover:shadow-md transition-shadow group ${clickable ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40' : ''}`}
+    >
       <div className="flex items-start justify-between mb-3">
         {typeof Icon === 'function' ? <Icon aria-hidden="true" className="h-6 w-6 text-neutral-400" /> : <span className="text-2xl">{Icon}</span>}
         <span className="text-xs text-neutral-400 group-hover:text-brand-navy transition-colors">View →</span>
@@ -7670,10 +7700,10 @@ function StatCard({ label, value, sub, color, icon: Icon, onClick }) {
 // lazy-loaded inside the export helpers (CLAUDE.md §4.18).
 function ExportButtons({ targetId, rows, filename, onError }) {
   const run = async (fn) => { try { await fn(); } catch { if (onError) onError(); } };
-  const cls = 'text-[10px] px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors';
+  const cls = 'text-xs px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors';
   return (
     <div className="flex items-center gap-1">
-      <span className="text-[10px] uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mr-0.5">Export</span>
+      <span className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mr-0.5">Export</span>
       <button type="button" className={cls} onClick={() => run(() => exportElementToPdf(document.getElementById(targetId), filename))}>PDF</button>
       <button type="button" className={cls} onClick={() => run(() => exportRowsToCsv(rows, filename))}>CSV</button>
       <button type="button" className={cls} onClick={() => run(() => exportElementToPng(document.getElementById(targetId), filename))}>PNG</button>
@@ -7791,7 +7821,7 @@ function ReportSectionCard({ section, index, total, workItems, editMode, onChang
 
       {section.type === 'table' && (
         <div className="divide-y divide-neutral-100 dark:divide-neutral-700/50">
-          {items.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-400">No matching items.</p>}
+          {items.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-600">No matching items.</p>}
           {items.slice(0, config.limit || 20).map(i => (
             <div key={i.id} className="flex items-center justify-between gap-2 py-1.5">
               <span className="min-w-0 flex-1 truncate text-sm text-neutral-800 dark:text-neutral-200">{i.title}</span>
@@ -7834,8 +7864,23 @@ function PublicDashboardEmbed({ token }) {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center font-sans">
-        <div className="h-8 w-8 rounded-full border-2 border-neutral-200 border-t-brand-navy animate-spin" aria-label="Loading dashboard" />
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 font-sans" aria-busy="true" aria-label="Loading dashboard">
+        <header className="bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-7 w-7 rounded-md" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+          <Skeleton className="h-5 w-20 rounded-full" />
+        </header>
+        <main className="p-6">
+          <div className="grid grid-cols-12 gap-4 max-w-7xl mx-auto">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="col-span-12 sm:col-span-6 lg:col-span-4">
+                <Skeleton className="h-40 w-full rounded-xl" />
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
     );
   }
@@ -7857,7 +7902,7 @@ function PublicDashboardEmbed({ token }) {
           <Logo />
           <span className="text-sm font-semibold text-neutral-900 dark:text-white truncate">{data.name}</span>
         </div>
-        <span className="text-[10px] uppercase tracking-wide text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-700 rounded-full px-2 py-0.5 flex-shrink-0">Read-only</span>
+        <span className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-700 rounded-full px-2 py-0.5 flex-shrink-0">Read-only</span>
       </header>
       <main className="p-6">
         {widgets.length === 0 ? (
@@ -7913,18 +7958,18 @@ function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove,
           <div className="flex items-center gap-1 flex-shrink-0">
             {[4, 6, 12].map(w => (
               <button key={w} onClick={() => onResize(w)} aria-label={`Set width ${w}`}
-                className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${span === w ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy'}`}>
+                className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${span === w ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy'}`}>
                 {w === 12 ? 'Full' : `${w}`}
               </button>
             ))}
-            <button onClick={onRemove} aria-label="Remove widget" className="text-[10px] text-semantic-danger hover:underline ml-1">Remove</button>
+            <button onClick={onRemove} aria-label="Remove widget" className="text-xs text-semantic-danger hover:underline ml-1">Remove</button>
           </div>
         )}
       </div>
 
       {editMode && isChart && (
         <div className="flex items-center gap-2 mb-2">
-          <label htmlFor={`dim-${widget.id}`} className="text-[10px] uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Group by</label>
+          <label htmlFor={`dim-${widget.id}`} className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Group by</label>
           <select id={`dim-${widget.id}`} value={dimension}
             onChange={e => onConfigChange && onConfigChange({ ...config, dimension: e.target.value })}
             className="text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
@@ -7951,7 +7996,7 @@ function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove,
           {(() => {
             const entries = statusSeries;
             const max = Math.max(1, ...entries.map(e => e.value));
-            if (entries.length === 0) return <p className="text-xs text-neutral-600 dark:text-neutral-400">No matching items.</p>;
+            if (entries.length === 0) return <p className="text-xs text-neutral-600 dark:text-neutral-600">No matching items.</p>;
             return entries.map(({ label: status, value: count }) => {
               const row = (
                 <>
@@ -7978,11 +8023,11 @@ function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove,
 
       {widget.widgetType === 'ITEM_LIST' && (
         <div className="space-y-1 mt-1">
-          {listItems.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-400">No matching items.</p>}
+          {listItems.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-600">No matching items.</p>}
           {listItems.slice(0, config.limit || 6).map(i => (
             <div key={i.id} className="flex items-center justify-between gap-2 py-1 border-b border-neutral-100 dark:border-neutral-700/50 last:border-0">
               <span className="text-xs text-neutral-700 dark:text-neutral-300 truncate">{i.title}</span>
-              <span className="text-[10px] font-medium text-neutral-600 dark:text-neutral-400 flex-shrink-0">{i.status}</span>
+              <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400 flex-shrink-0">{i.status}</span>
             </div>
           ))}
         </div>
@@ -8010,14 +8055,14 @@ function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove,
             <div className="w-full h-2 rounded-full bg-neutral-100 dark:bg-neutral-700 overflow-hidden">
               <div className="h-full bg-semantic-success rounded-full" style={{ width: `${p.max ? Math.min((p.value / p.max) * 100, 100) : 0}%` }} />
             </div>
-            <p className="text-[10px] text-neutral-500 mt-1 truncate">{p.sprint?.name || 'No active sprint'}</p>
+            <p className="text-xs text-neutral-500 mt-1 truncate">{p.sprint?.name || 'No active sprint'}</p>
           </div>
         );
       })()}
 
       {widget.widgetType === 'VELOCITY_LINE' && (() => {
         const points = velocityPoints(velocity);
-        if (points.length === 0) return <p className="text-xs text-neutral-400">No sprint history yet.</p>;
+        if (points.length === 0) return <p className="text-xs text-neutral-600">No sprint history yet.</p>;
         const max = Math.max(1, ...points.map(p => p.value));
         const n = points.length;
         const path = points.map((p, i) => `${n <= 1 ? 0 : (i / (n - 1)) * 100},${30 - (p.value / max) * 28}`).join(' ');
@@ -8026,7 +8071,7 @@ function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove,
             <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="w-full h-14" aria-hidden="true">
               <polyline points={path} fill="none" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
             </svg>
-            <div className="flex justify-between text-[10px] text-neutral-500 mt-1">
+            <div className="flex justify-between text-xs text-neutral-500 mt-1">
               <span>{points[0]?.label}</span><span>{points[points.length - 1]?.label}</span>
             </div>
           </div>
@@ -8036,7 +8081,7 @@ function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove,
       {widget.widgetType === 'CUMULATIVE_FLOW' && (() => {
         const series = statusBreakdown(items);
         const total = series.reduce((a, b) => a + b.value, 0) || 1;
-        if (series.length === 0) return <p className="text-xs text-neutral-400">No matching items.</p>;
+        if (series.length === 0) return <p className="text-xs text-neutral-600">No matching items.</p>;
         return (
           <div className="mt-1">
             <div className="flex w-full h-3 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-700">
@@ -8046,7 +8091,7 @@ function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove,
             </div>
             <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
               {series.map((s, idx) => (
-                <span key={s.label} className="flex items-center gap-1 text-[10px] text-neutral-600 dark:text-neutral-400">
+                <span key={s.label} className="flex items-center gap-1 text-xs text-neutral-600 dark:text-neutral-400">
                   <span className={`w-2 h-2 rounded-full ${SERIES_BG[idx % SERIES_BG.length]}`} />
                   {s.label} <span className="font-semibold text-neutral-700 dark:text-neutral-300">{s.value}</span>
                 </span>
@@ -8060,7 +8105,7 @@ function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove,
         const m = statusPriorityMatrix(items);
         return (
           <div className="mt-1 overflow-x-auto">
-            <table className="w-full text-[10px]">
+            <table className="w-full text-xs">
               <thead>
                 <tr className="text-neutral-500">
                   <th className="text-left font-semibold py-1 pr-2">Status</th>
@@ -8107,7 +8152,7 @@ function DashboardDrillModal({ drill, onClose, onOpenItem }) {
         </div>
         <div className="overflow-y-auto p-2">
           {items.length === 0 ? (
-            <p className="text-xs text-neutral-600 dark:text-neutral-400 p-4 text-center">No matching items.</p>
+            <p className="text-xs text-neutral-600 dark:text-neutral-600 p-4 text-center">No matching items.</p>
           ) : items.map(i => (
             <button key={i.id} type="button" onClick={() => onOpenItem(i)}
               className="flex w-full items-center justify-between gap-2 px-3 py-2 rounded-md text-left hover:bg-neutral-50 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors">
@@ -8201,14 +8246,14 @@ function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
       .then(r => r.json()).then(d => setItems(Array.isArray(d) ? d : [])).catch(() => {});
   }, [sprintId]);
 
-  if (items.length === 0) return <div className="px-5 py-4 text-sm text-neutral-400 text-center">No items in this sprint yet.</div>;
+  if (items.length === 0) return <div className="px-5 py-4 text-sm text-neutral-600 text-center">No items in this sprint yet.</div>;
   return (
     <div className="divide-y divide-neutral-50 dark:divide-neutral-700">
       {items.map(item => (
         <div key={item.id} className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-700 group">
           <TypeBadge type={item.type} compact />
           <span className="font-mono text-xs text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
-          <span className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate" onClick={() => onSelect(item)}>{item.title}</span>
+          <span role="button" tabIndex={0} onKeyDown={onPressKey} className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => onSelect(item)}>{item.title}</span>
           <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
           {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
           {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}

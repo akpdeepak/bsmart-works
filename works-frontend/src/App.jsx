@@ -302,6 +302,7 @@ export default function App() {
 
   // Sidebar collapse (w-56 expanded ↔ w-12 icon-only)
   const [navCollapsed, setNavCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false); // off-canvas drawer under md (G1)
 
   // Dark mode
   const [darkMode, setDarkMode]         = useState(() => localStorage.getItem('bSmartTheme') === 'dark');
@@ -2390,6 +2391,7 @@ export default function App() {
   // (the data each view needs) while the markup stays data-driven (NAV_GROUPS).
   const navigate = (id) => {
     setView(id);
+    setMobileNavOpen(false); // close the mobile drawer on any navigation (G1)
     // Per-view load side-effects only — setView is hoisted above; views with no extra fetch
     // (board, sla, performance, automations, integrations, projects) fall through to default.
     switch (id) {
@@ -2432,9 +2434,23 @@ export default function App() {
   return (
     <div className="flex h-screen bg-neutral-50 dark:bg-neutral-900 font-sans text-neutral-900 dark:text-neutral-100">
 
-      {/* SIDEBAR */}
-      {/* SIDEBAR — design-system navy nav (organisms/sidebar-nav.jsx) */}
-      <aside className={`${navCollapsed ? 'w-sidebar-collapsed' : 'w-sidebar'} shrink-0 transition-[width] duration-[150ms] ease-out-quint`}>
+      {/* SIDEBAR — design-system navy nav (organisms/sidebar-nav.jsx).
+          Desktop (md+): static, in-flow, width driven by collapse.
+          Mobile (<md): off-canvas drawer toggled from the header, with a backdrop (G1). */}
+      {mobileNavOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          onClick={() => setMobileNavOpen(false)}
+          className="fixed inset-0 z-modal bg-black/40 md:hidden"
+        />
+      )}
+      <aside
+        className={`${navCollapsed ? 'w-sidebar-collapsed' : 'w-sidebar'} shrink-0
+          fixed inset-y-0 left-0 z-modal transition-transform duration-base
+          md:static md:z-auto md:translate-x-0 md:transition-[width] md:duration-fast
+          ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      >
         <SidebarNav
           activeView={view}
           onNavigate={navigate}
@@ -2460,14 +2476,23 @@ export default function App() {
       {/* MAIN */}
       <main className="flex-1 flex flex-col min-w-0 dark:bg-neutral-900">
         {/* TOPBAR */}
-        <header className="h-14 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between px-6 flex-shrink-0 relative">
+        <header className="h-14 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between px-3 md:px-6 flex-shrink-0 relative">
+          <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            aria-label="Open navigation"
+            aria-expanded={mobileNavOpen}
+            onClick={() => setMobileNavOpen(true)}
+            className="md:hidden -ml-1 p-1.5 rounded-md text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
+            <PanelLeft aria-hidden="true" className="h-5 w-5" />
+          </button>
           <div className="relative" ref={searchRef}>
             <input type="text" placeholder="Search work items..." aria-label="Search work items"
               value={searchQuery}
               onFocus={() => setSearchOpen(true)}
               onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
               onChange={e => setSearchQuery(e.target.value)}
-              className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-100 rounded-md px-3 py-1.5 w-72 text-sm focus:outline-none focus:ring-1 focus:ring-brand-navy" />
+              className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-100 rounded-md px-3 py-1.5 w-40 sm:w-56 md:w-72 text-sm focus:outline-none focus:ring-1 focus:ring-brand-navy" />
             {searchOpen && searchResults.length > 0 && (
               <div className="absolute top-full mt-1 w-80 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 z-50 max-h-64 overflow-y-auto">
                 {searchResults.map(item => (
@@ -2507,6 +2532,7 @@ export default function App() {
                 })}
               </div>
             )}
+          </div>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => setPaletteOpen(true)}

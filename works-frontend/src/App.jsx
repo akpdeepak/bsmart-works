@@ -52,8 +52,6 @@ function reportError(e) {
   if (_emitToast) _emitToast('Something went wrong. Please try again.', 'error');
 }
 
-const NavCollapsedCtx = React.createContext(false);
-
 // Sidebar information architecture — data-driven, grouped by workflow so the ~25 destinations
 // scan as a handful of intents instead of one flat list (RB-30 §7 navigation; brand §5.2). Lucide
 // icons only, never emoji (RB-30 §8). Each item's click side-effects live in the `navigate`
@@ -2417,13 +2415,6 @@ export default function App() {
       default: break;
     }
   };
-  const navBadge = (key) => {
-    if (key === 'myItems') return myItems.length > 0 ? { value: myItems.length, tone: 'neutral' } : null;
-    if (key === 'unread') return unreadCount > 0 ? { value: unreadCount, tone: 'orange' } : null;
-    if (key === 'projects') return projects.length > 0 ? { value: projects.length, tone: 'neutral' } : null;
-    return null;
-  };
-  const navDot = (key) => key === 'activeSprint' && Boolean(sprints.find(s => s.status === 'ACTIVE'));
   navigateRef.current = navigate; // keep the global shortcut handler pointed at the latest navigate
 
   // Commands for the Cmd-K palette: every destination + a couple of quick actions.
@@ -7651,26 +7642,6 @@ export default function App() {
         </Modal>
       )}
     </div>
-  );
-}
-
-function NavItem({ active, onClick, Icon, label, badge, dot }) {
-  const collapsed = React.useContext(NavCollapsedCtx);
-  return (
-    <button onClick={onClick} title={collapsed ? label : undefined}
-      aria-current={active ? 'page' : undefined}
-      className={`relative w-full flex items-center ${collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-md text-sm transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-1 ${active ? 'bg-neutral-100 dark:bg-neutral-800 text-brand-navy dark:text-white font-semibold' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100'}`}>
-      {active && <span aria-hidden="true" className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-brand-orange" />}
-      <Icon aria-hidden="true" className="h-5 w-5 flex-shrink-0" />
-      {!collapsed && <span className="flex-1 text-left truncate">{label}</span>}
-      {!collapsed && badge && (
-        <span className={`ml-auto text-xs rounded-full px-1.5 py-0.5 flex-shrink-0 ${badge.tone === 'orange' ? 'bg-brand-orange text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300'}`}>{badge.value}</span>
-      )}
-      {!collapsed && dot && <span aria-hidden="true" className="ml-auto w-2 h-2 rounded-full bg-semantic-success flex-shrink-0" />}
-      {collapsed && badge && badge.tone === 'orange' && (
-        <span aria-hidden="true" className="absolute right-1 top-1 w-1.5 h-1.5 rounded-full bg-brand-orange" />
-      )}
-    </button>
   );
 }
 

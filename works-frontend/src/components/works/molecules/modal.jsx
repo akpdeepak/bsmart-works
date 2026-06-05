@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Backdrop } from '@/components/works/atoms/backdrop';
 
 // Molecule — the single canonical modal dialog (CLAUDE.md §4.8, §6 accessibility).
 // Replaces the legacy inline Modal() that lived in App.jsx. Same public API
@@ -70,14 +71,7 @@ export function Modal({ title, onClose, children, size = 'md', className }) {
 
   return (
     <div className="fixed inset-0 z-modal flex items-center justify-center p-4">
-      {/* Backdrop click-catcher — a button so it stays AT/keyboard-safe (Escape also closes). */}
-      <button
-        type="button"
-        aria-label="Close dialog"
-        tabIndex={-1}
-        onClick={onClose}
-        className="absolute inset-0 cursor-default bg-neutral-900/50 dark:bg-black/70"
-      />
+      <Backdrop onClick={onClose} label="Close dialog" />
 
       <div
         ref={dialogRef}

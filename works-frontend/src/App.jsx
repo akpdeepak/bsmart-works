@@ -9,6 +9,8 @@ import { SlaView } from '@/components/works/organisms/sla-view';
 import { PerformancePanel } from '@/components/works/organisms/performance-panel';
 import { AutomationsPanel } from '@/components/works/organisms/automations-panel';
 import { IntegrationsPanel } from '@/components/works/organisms/integrations-panel';
+import { Modal } from '@/components/works/molecules/modal';
+import { Toast } from '@/components/works/atoms/toast';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
@@ -7387,19 +7389,8 @@ export default function App() {
         </Modal>
       )}
 
-      {/* TOAST NOTIFICATION */}
-      {toast && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-xl shadow-xl text-sm font-medium flex items-center gap-3 transition-all ${toast.type === 'error' ? 'bg-semantic-danger text-white' : 'bg-neutral-900 text-white'}`}>
-          <span>{toast.type === 'error' ? '✕' : toast.type === 'undo' ? '🗑' : '✓'}</span>
-          <span>{toast.message}</span>
-          {toast.type === 'undo' && deleteUndoItem && (
-            <button onClick={handleUndoDelete}
-              className="ml-1 text-brand-orange font-bold hover:text-orange-300 transition-colors text-xs border border-brand-orange/40 rounded px-2 py-0.5">
-              Undo
-            </button>
-          )}
-        </div>
-      )}
+      {/* TOAST NOTIFICATION — accessible live region (components/works/atoms/toast.jsx) */}
+      <Toast toast={toast} canUndo={Boolean(deleteUndoItem)} onUndo={handleUndoDelete} />
 
       {/* CREATE SPRINT MODAL */}
       {isSprintOpen && (
@@ -7529,19 +7520,8 @@ function NavItem({ active, onClick, icon, children }) {
   );
 }
 
-function Modal({ title, onClose, children }) {
-  return (
-    <div className="fixed inset-0 bg-neutral-900/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl w-full max-w-md">
-        <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-700 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-brand-navy">{title}</h2>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-900 text-xl leading-none">✕</button>
-        </div>
-        <div className="p-6">{children}</div>
-      </div>
-    </div>
-  );
-}
+// Modal now lives in components/works/molecules/modal.jsx — accessible (role=dialog, aria-modal,
+// focus trap, Escape, backdrop close, scroll lock, focus restoration). Imported at the top.
 
 function Field({ label, children }) {
   return (

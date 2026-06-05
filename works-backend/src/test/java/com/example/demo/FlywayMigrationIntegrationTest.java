@@ -58,7 +58,7 @@ class FlywayMigrationIntegrationTest {
 
     @Test
     void eventsAreAppendOnlyAndCarryWorkspaceId() {
-        // workspace_id column + append-only trigger came from V39 (I01-S04).
+        // workspace_id column + append-only trigger came from V40 (I01-S04).
         jdbc.update("INSERT INTO events (aggregate_id, workspace_id, event_type, actor_id, payload, occurred_at) "
                 + "VALUES ('WS-IT', 'WS-IT', 'IT_EVENT', 'USR-IT', '{}', NOW())");
         Long id = jdbc.queryForObject("SELECT id FROM events WHERE aggregate_id = 'WS-IT'", Long.class);

@@ -56,6 +56,25 @@ class WorkItemTenantScopeTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void getWorkItem_unknownOrCrossTenant_is404_andQueryIsTenantScoped() {
+        when(authenticatedUser.id()).thenReturn("USR-1");
+        // Empty result: the id is either unknown or in a workspace the caller is not a member of —
+        // both must 404 so a foreign item's existence is never confirmed (RB-40 §1).
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object.class), any(Object.class)))
+                .thenReturn(List.of());
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> controller.getWorkItem("WRK-999"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(e -> assertThat(((ApiException) e).getStatus())
+                        .isEqualTo(org.springframework.http.HttpStatus.NOT_FOUND));
+
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        verify(jdbc).query(sql.capture(), any(RowMapper.class), any(Object.class), any(Object.class));
+        assertThat(sql.getValue()).contains("workspace_members").contains("wm.user_id = ?");
+    }
+
+    @Test
     void search_blankQuery_returnsEmptyWithoutTouchingTheDatabase() {
         when(authenticatedUser.id()).thenReturn("USR-1");
         assertThat(controller.search("   ")).isEmpty();

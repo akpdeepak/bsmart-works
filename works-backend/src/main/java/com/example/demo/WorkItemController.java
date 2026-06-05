@@ -65,7 +65,20 @@ public class WorkItemController {
         return items;
     }
 
-    @GetMapping("/trash")
+    // Single work item by id (added iteration 14 — the IDE extensions, the `works` CLI and the
+    // Developer Workspace "open item" all fetch one item by id). Tenant-scoped via MEMBER_PROJECTS
+    // (RB-40 §1): an item outside the caller's workspaces is indistinguishable from a missing one.
+    @GetMapping("/{id}")
+    public WorkItem getWorkItem(@PathVariable String id) {
+        String userId = authenticatedUser.id();
+        List<WorkItem> items = jdbc.query(
+            "SELECT * FROM work_items WHERE id = ? AND deleted_at IS NULL AND " + MEMBER_PROJECTS,
+            this::mapRow, id, userId);
+        if (items.isEmpty()) throw ApiException.notFound("Work item", id);
+        attachTagsBatch(items);
+        attachStarred(items, userId);
+        return items.get(0);
+    }
     public List<WorkItem> getTrash() {
         String userId = authenticatedUser.id();
         List<WorkItem> items = jdbc.query(

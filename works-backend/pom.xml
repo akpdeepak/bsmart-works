@@ -254,6 +254,11 @@
 								<exclude>**/ServiceRequest.class</exclude>
 								<exclude>**/CsatResponse.class</exclude>
 								<exclude>**/CustomerSlaTier.class</exclude>
+								<exclude>**/SlaCalendar.class</exclude>
+								<exclude>**/SlaPolicy.class</exclude>
+								<exclude>**/SlaTarget.class</exclude>
+								<exclude>**/SlaInstance.class</exclude>
+								<exclude>**/SlaEscalation.class</exclude>
 								<!-- Iteration 12 (KPI framework) entities -->
 								<exclude>**/MetricDefinition.class</exclude>
 								<exclude>**/MetricSnapshot.class</exclude>

@@ -5,6 +5,7 @@ import { Mail, ShieldCheck, PanelLeft, Bell } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
 import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
+import { SlaView } from '@/components/works/organisms/sla-view';
 import { PerformancePanel } from '@/components/works/organisms/performance-panel';
 import { AutomationsPanel } from '@/components/works/organisms/automations-panel';
 import { IntegrationsPanel } from '@/components/works/organisms/integrations-panel';
@@ -2307,6 +2308,7 @@ export default function App() {
           <NavItem active={view === 'bql'} onClick={() => { setView('bql'); fetchBqlFilters(); }} icon="🔍">BQL Query</NavItem>
           <NavItem active={view === 'knowledge'} onClick={() => { setView('knowledge'); fetchKnowledgeSpaces(); setKnowledgeTab('spaces'); setSelectedSpace(null); setSelectedArticle(null); }} icon="📚">Knowledge</NavItem>
           <NavItem active={view === 'compliance'} onClick={() => { setView('compliance'); setComplianceTab('dashboard'); setRuleBuilder(null); fetchComplianceDashboard(); fetchComplianceRules(); fetchComplianceViolations(); }} icon="🛡">Compliance</NavItem>
+          <NavItem active={view === 'sla'} onClick={() => setView('sla')} icon="⏱">SLA</NavItem>
           <NavItem active={view === 'service'} onClick={() => { setView('service'); setServiceTab('queues'); setServiceQueue('open'); fetchServiceRequests('open'); }} icon="🎧">Service Desk</NavItem>
           <NavItem active={view === 'performance'} onClick={() => setView('performance')} icon="📈">Performance</NavItem>
           <NavItem active={view === 'automations'} onClick={() => setView('automations')} icon="⚡">Automations</NavItem>
@@ -5722,6 +5724,10 @@ export default function App() {
                 )}
               </div>
             </div>
+          )}
+
+          {view === 'sla' && (
+            <SlaView workspaceId="WS-001" canManage={can('manage_sla')} onToast={showToast} />
           )}
 
           {view === 'smcockpit' && (

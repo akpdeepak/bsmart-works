@@ -1,7 +1,13 @@
 ﻿/* eslint-disable */ // legacy monolith — a11y and hooks violations are known baseline debt; new components must pass clean
 import React, { useState, useEffect, useRef } from 'react';
 import DOMPurify from 'dompurify';
-import { Mail, ShieldCheck, PanelLeft, Bell } from 'lucide-react';
+import {
+  Mail, PanelLeft, ChevronDown, Check,
+  Home, User, Bell, LayoutGrid, ListTodo, Zap, Rocket, FolderKanban,
+  BarChart2, LayoutDashboard, FileText, TrendingUp, Headset, Timer, ShieldCheck,
+  Gauge, Map as MapIcon, ClipboardList, Workflow, Plug, Search, BookOpen,
+  SlidersHorizontal, Settings, Trash2,
+} from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
 import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
@@ -9,6 +15,9 @@ import { SlaView } from '@/components/works/organisms/sla-view';
 import { PerformancePanel } from '@/components/works/organisms/performance-panel';
 import { AutomationsPanel } from '@/components/works/organisms/automations-panel';
 import { IntegrationsPanel } from '@/components/works/organisms/integrations-panel';
+import { Modal } from '@/components/works/molecules/modal';
+import { Toast } from '@/components/works/atoms/toast';
+import { CommandPalette } from '@/components/works/organisms/command-palette';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
@@ -22,6 +31,54 @@ import {
 } from '@/lib/dashboard-metrics';
 
 const NavCollapsedCtx = React.createContext(false);
+
+// Sidebar information architecture — data-driven, grouped by workflow so the ~25 destinations
+// scan as a handful of intents instead of one flat list (RB-30 §7 navigation; brand §5.2). Lucide
+// icons only, never emoji (RB-30 §8). Each item's click side-effects live in the `navigate`
+// dispatcher inside App(); badge/dot keys are resolved per-render from live state.
+const NAV_GROUPS = [
+  { label: null, items: [{ id: 'dashboard', label: 'Home', Icon: Home }] },
+  { label: 'My Work', items: [
+    { id: 'myworks',       label: 'My Works',      Icon: User, badge: 'myItems' },
+    { id: 'notifications', label: 'Notifications', Icon: Bell, badge: 'unread' },
+  ] },
+  { label: 'Plan & Track', items: [
+    { id: 'board',    label: 'Board',         Icon: LayoutGrid },
+    { id: 'backlog',  label: 'Backlog',       Icon: ListTodo },
+    { id: 'sprint',   label: 'Active Sprint', Icon: Zap, dot: 'activeSprint' },
+    { id: 'releases', label: 'Releases',      Icon: Rocket },
+    { id: 'projects', label: 'Projects',      Icon: FolderKanban, badge: 'projects' },
+  ] },
+  { label: 'Insights', items: [
+    { id: 'reports',       label: 'Reports',        Icon: BarChart2 },
+    { id: 'dashboards',    label: 'Dashboards',     Icon: LayoutDashboard },
+    { id: 'reportbuilder', label: 'Report builder', Icon: FileText },
+    { id: 'performance',   label: 'Performance',    Icon: TrendingUp },
+  ] },
+  { label: 'Service & Compliance', items: [
+    { id: 'service',    label: 'Service Desk', Icon: Headset },
+    { id: 'sla',        label: 'SLA',          Icon: Timer },
+    { id: 'compliance', label: 'Compliance',   Icon: ShieldCheck },
+  ] },
+  { label: 'Cockpits', items: [
+    { id: 'smcockpit',   label: 'SM Cockpit',   Icon: Gauge },
+    { id: 'poworkspace', label: 'PO Workspace', Icon: MapIcon },
+    { id: 'pm',          label: 'PM Artifacts', Icon: ClipboardList },
+  ] },
+  { label: 'Automate & Connect', items: [
+    { id: 'automations',  label: 'Automations',  Icon: Workflow },
+    { id: 'integrations', label: 'Integrations', Icon: Plug },
+    { id: 'bql',          label: 'BQL Query',    Icon: Search },
+  ] },
+  { label: 'Knowledge', items: [
+    { id: 'knowledge', label: 'Knowledge', Icon: BookOpen },
+  ] },
+  { label: 'Configure', items: [
+    { id: 'settings3', label: 'Workflows & Fields', Icon: SlidersHorizontal },
+    { id: 'workspace', label: 'Settings',           Icon: Settings },
+    { id: 'trash',     label: 'Trash',              Icon: Trash2 },
+  ] },
+];
 
 const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
@@ -176,6 +233,10 @@ export default function App() {
   const [searchResults, setSearchResults] = useState([]);
   const [searchOpen, setSearchOpen]     = useState(false);
   const searchRef                       = useRef(null);
+
+  const [paletteOpen, setPaletteOpen]   = useState(false);
+  const goToRef                         = useRef(false); // 'g' then a key — quick go-to (brand §5.2)
+  const navigateRef                     = useRef(null);  // latest navigate(), for global shortcuts
 
   const [workspaceMembers, setWorkspaceMembers] = useState([]);
   const [inviteEmail, setInviteEmail]   = useState('');
@@ -466,6 +527,38 @@ export default function App() {
     function handler(e) { if (wsRef.current && !wsRef.current.contains(e.target)) setWsOpen(false); }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Global keyboard shortcuts (brand §5.2): Cmd/Ctrl-K command palette, '/' search, 'c' create,
+  // 'g' then a letter to jump. Only active once the app shell is mounted (navigateRef set = signed
+  // in); never hijacks typing in a field (except Cmd/Ctrl-K, which is always available).
+  useEffect(() => {
+    function onKey(e) {
+      const meta = e.metaKey || e.ctrlKey;
+      if (meta && (e.key === 'k' || e.key === 'K')) {
+        if (!navigateRef.current) return;
+        e.preventDefault();
+        setPaletteOpen(o => !o);
+        return;
+      }
+      if (!navigateRef.current) return; // not in the app shell yet
+      const t = e.target;
+      const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+      if (typing || meta || e.altKey) return;
+
+      if (goToRef.current) {
+        goToRef.current = false;
+        const dest = { h: 'dashboard', b: 'board', l: 'backlog', s: 'sprint', m: 'myworks',
+          n: 'notifications', p: 'projects', r: 'reports', k: 'knowledge' }[e.key.toLowerCase()];
+        if (dest) { e.preventDefault(); navigateRef.current(dest); }
+        return;
+      }
+      if (e.key === 'g') { goToRef.current = true; setTimeout(() => { goToRef.current = false; }, 1200); return; }
+      if (e.key === '/') { e.preventDefault(); searchRef.current?.querySelector('input')?.focus(); return; }
+      if (e.key === 'c') { e.preventDefault(); setView('board'); setIsCreateOpen(true); return; }
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
   }, []);
 
   // Track recently viewed items
@@ -2202,6 +2295,60 @@ export default function App() {
   // ==========================================
   // MAIN APP
   // ==========================================
+
+  // One dispatcher for sidebar navigation — preserves each destination's exact load side-effects
+  // (the data each view needs) while the markup stays data-driven (NAV_GROUPS).
+  const navigate = (id) => {
+    switch (id) {
+      case 'dashboard': setView('dashboard'); fetchDashboard(dashboardRole); break;
+      case 'myworks': setView('myworks'); fetchNotifications(); break;
+      case 'notifications': setView('notifications'); fetchNotifications(); break;
+      case 'board': setView('board'); break;
+      case 'backlog': setView('backlog'); fetchBacklog(); fetchSprints(); fetchSavedFilters(); break;
+      case 'sprint': setView('sprint'); fetchSprints(); fetchSavedFilters(); break;
+      case 'reports': setView('reports'); fetchSprints(); fetchVelocityData(); break;
+      case 'dashboards': setView('dashboards'); setSelectedDashboard(null); fetchCustomDashboards(); fetchTeams(); break;
+      case 'reportbuilder': setView('reportbuilder'); setSelectedReport(null); fetchReports(); fetchReportTemplates(); break;
+      case 'releases': setView('releases'); fetchReleases(); break;
+      case 'settings3': setView('settings3'); fetchWorkflows(); fetchFieldDefs(); fetchRoles(); fetchWorkItemTypes(); break;
+      case 'bql': setView('bql'); fetchBqlFilters(); break;
+      case 'knowledge': setView('knowledge'); fetchKnowledgeSpaces(); setKnowledgeTab('spaces'); setSelectedSpace(null); setSelectedArticle(null); break;
+      case 'compliance': setView('compliance'); setComplianceTab('dashboard'); setRuleBuilder(null); fetchComplianceDashboard(); fetchComplianceRules(); fetchComplianceViolations(); break;
+      case 'sla': setView('sla'); break;
+      case 'service': setView('service'); setServiceTab('queues'); setServiceQueue('open'); fetchServiceRequests('open'); break;
+      case 'performance': setView('performance'); break;
+      case 'automations': setView('automations'); break;
+      case 'integrations': setView('integrations'); break;
+      case 'pm': setView('pm'); if (projects.length) { const pid = projects[0].id; setPmProjectId(pid); fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); } break;
+      case 'smcockpit': openCockpit(); break;
+      case 'poworkspace': openPoWorkspace(); break;
+      case 'projects': setView('projects'); break;
+      case 'workspace': setView('workspace'); fetchMembers(); fetchNotifPrefs(); fetchBranding(); break;
+      case 'trash': setView('trash'); fetchTrash(); break;
+      default: setView(id);
+    }
+  };
+  const navBadge = (key) => {
+    if (key === 'myItems') return myItems.length > 0 ? { value: myItems.length, tone: 'neutral' } : null;
+    if (key === 'unread') return unreadCount > 0 ? { value: unreadCount, tone: 'orange' } : null;
+    if (key === 'projects') return projects.length > 0 ? { value: projects.length, tone: 'neutral' } : null;
+    return null;
+  };
+  const navDot = (key) => key === 'activeSprint' && Boolean(sprints.find(s => s.status === 'ACTIVE'));
+  navigateRef.current = navigate; // keep the global shortcut handler pointed at the latest navigate
+
+  // Commands for the Cmd-K palette: every destination + a couple of quick actions.
+  const paletteCommands = [
+    ...NAV_GROUPS.flatMap(g => g.items.map(item => ({
+      id: `go-${item.id}`, label: item.label, group: g.label || 'Go to', Icon: item.Icon,
+      run: () => navigate(item.id),
+    }))),
+    { id: 'act-create', label: 'Create work item', group: 'Action', Icon: ListTodo, keywords: ['new', 'add'],
+      run: () => { setView('board'); setIsCreateOpen(true); } },
+    { id: 'act-search', label: 'Search work items', group: 'Action', Icon: Search, keywords: ['find'],
+      run: () => searchRef.current?.querySelector('input')?.focus() },
+  ];
+
   return (
     <div className="flex h-screen bg-neutral-50 dark:bg-neutral-900 font-sans text-neutral-900 dark:text-neutral-100">
 
@@ -2224,8 +2371,8 @@ export default function App() {
                 <div className="w-6 h-6 rounded bg-brand-navy flex items-center justify-center flex-shrink-0">
                   <span className="text-white text-xs font-bold">BC</span>
                 </div>
-                <span className="text-sm font-semibold text-neutral-900 truncate flex-1">{workspace.name}</span>
-                <span className="text-neutral-400 text-xs">⌄</span>
+                <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 truncate flex-1">{workspace.name}</span>
+                <ChevronDown aria-hidden="true" className="h-4 w-4 text-neutral-400 flex-shrink-0" />
               </button>
               <button onClick={() => setNavCollapsed(true)} title="Collapse sidebar"
                 className="mr-2 p-1 text-neutral-300 hover:text-neutral-600 transition-colors duration-[120ms] rounded flex-shrink-0">
@@ -2264,72 +2411,44 @@ export default function App() {
                         <span className="text-white text-xs font-bold">{(w.name || '?').slice(0, 2).toUpperCase()}</span>
                       </div>
                       <span className="text-sm font-medium text-neutral-900 truncate flex-1">{w.name}</span>
-                      {isActive && <span className="ml-auto text-brand-orange text-xs flex-shrink-0">✓</span>}
+                      {isActive && <Check aria-hidden="true" className="ml-auto h-4 w-4 text-brand-orange flex-shrink-0" />}
                     </button>
                   );
                 })
               )}
               <div className="border-t border-neutral-100 dark:border-neutral-700 mt-1 pt-1">
                 <button onClick={() => { setView('workspace'); fetchMembers(); setWsOpen(false); }}
-                  className="w-full px-3 py-2 text-xs text-neutral-400 hover:text-brand-navy hover:bg-neutral-50 dark:hover:bg-neutral-700 text-left">
-                  ⚙ Workspace Settings
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-neutral-500 hover:text-brand-navy hover:bg-neutral-50 dark:hover:bg-neutral-700 text-left">
+                  <Settings aria-hidden="true" className="h-3.5 w-3.5 flex-shrink-0" />
+                  Workspace Settings
                 </button>
               </div>
             </div>
           )}
         </div>
 
-        <nav className="flex-1 p-2 space-y-0.5 text-sm overflow-y-auto">
-          <NavItem active={view === 'dashboard'} onClick={() => { setView('dashboard'); fetchDashboard(dashboardRole); }} icon="🏠">Home</NavItem>
-          {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">My Work</p>}
-          <NavItem active={view === 'myworks'} onClick={() => { setView('myworks'); fetchNotifications(); }} icon="👤">
-            My Works
-            {myItems.length > 0 && <span className="ml-auto text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-full px-1.5 py-0.5">{myItems.length}</span>}
-          </NavItem>
-          <NavItem active={view === 'notifications'} onClick={() => { setView('notifications'); fetchNotifications(); }} icon="🔔">
-            Notifications
-            {unreadCount > 0 && <span className="ml-auto text-xs bg-brand-orange text-white rounded-full px-1.5 py-0.5">{unreadCount}</span>}
-          </NavItem>
-
-          {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">Projects</p>}
-          <NavItem active={view === 'board'} onClick={() => setView('board')} icon="📋">Board</NavItem>
-          <NavItem active={view === 'backlog'} onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); fetchSavedFilters(); }} icon="📝">Backlog</NavItem>
-          <NavItem active={view === 'sprint'} onClick={() => { setView('sprint'); fetchSprints(); fetchSavedFilters(); }} icon="⚡">
-            Active Sprint
-            {sprints.find(s => s.status === 'ACTIVE') && <span className="ml-auto w-2 h-2 rounded-full bg-semantic-success flex-shrink-0"></span>}
-          </NavItem>
-          <NavItem active={view === 'reports'} onClick={() => { setView('reports'); fetchSprints(); fetchVelocityData(); }} icon="📊">Reports</NavItem>
-          <NavItem active={view === 'dashboards'} onClick={() => { setView('dashboards'); setSelectedDashboard(null); fetchCustomDashboards(); fetchTeams(); }} icon="📐">Dashboards</NavItem>
-          <NavItem active={view === 'reportbuilder'} onClick={() => { setView('reportbuilder'); setSelectedReport(null); fetchReports(); fetchReportTemplates(); }} icon="📄">Report builder</NavItem>
-          <NavItem active={view === 'releases'} onClick={() => { setView('releases'); fetchReleases(); }} icon="🚀">Releases</NavItem>
-
-          {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">Configuration</p>}
-          <NavItem active={view === 'settings3'} onClick={() => { setView('settings3'); fetchWorkflows(); fetchFieldDefs(); fetchRoles(); fetchWorkItemTypes(); }} icon="⚙">Workflows & Fields</NavItem>
-          <NavItem active={view === 'bql'} onClick={() => { setView('bql'); fetchBqlFilters(); }} icon="🔍">BQL Query</NavItem>
-          <NavItem active={view === 'knowledge'} onClick={() => { setView('knowledge'); fetchKnowledgeSpaces(); setKnowledgeTab('spaces'); setSelectedSpace(null); setSelectedArticle(null); }} icon="📚">Knowledge</NavItem>
-          <NavItem active={view === 'compliance'} onClick={() => { setView('compliance'); setComplianceTab('dashboard'); setRuleBuilder(null); fetchComplianceDashboard(); fetchComplianceRules(); fetchComplianceViolations(); }} icon="🛡">Compliance</NavItem>
-          <NavItem active={view === 'sla'} onClick={() => setView('sla')} icon="⏱">SLA</NavItem>
-          <NavItem active={view === 'service'} onClick={() => { setView('service'); setServiceTab('queues'); setServiceQueue('open'); fetchServiceRequests('open'); }} icon="🎧">Service Desk</NavItem>
-          <NavItem active={view === 'performance'} onClick={() => setView('performance')} icon="📈">Performance</NavItem>
-          <NavItem active={view === 'automations'} onClick={() => setView('automations')} icon="⚡">Automations</NavItem>
-          <NavItem active={view === 'integrations'} onClick={() => setView('integrations')} icon="🔌">Integrations</NavItem>
-
-          {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">Project Management</p>}
-          <NavItem active={view === 'pm'} onClick={() => { setView('pm'); if (projects.length) { const pid = projects[0].id; setPmProjectId(pid); fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); } }} icon="📋">PM Artifacts</NavItem>
-
-          <NavItem active={view === 'smcockpit'} onClick={openCockpit} icon="🏃">SM Cockpit</NavItem>
-          <NavItem active={view === 'poworkspace'} onClick={openPoWorkspace} icon="🗺">PO Workspace</NavItem>
-
-          <NavItem active={view === 'projects'} onClick={() => setView('projects')} icon="📁">
-            Projects
-            {projects.length > 0 && <span className="ml-auto text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-full px-1.5 py-0.5">{projects.length}</span>}
-          </NavItem>
-
-          {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">Workspace</p>}
-          <NavItem active={view === 'workspace'} onClick={() => { setView('workspace'); fetchMembers(); fetchNotifPrefs(); fetchBranding(); }} icon="⚙️">Settings</NavItem>
-          <NavItem active={view === 'trash'} onClick={() => { setView('trash'); fetchTrash(); }} icon="🗑">
-            Trash
-          </NavItem>
+        <nav aria-label="Main navigation" className="flex-1 p-2 text-sm overflow-y-auto">
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={group.label ?? `g${gi}`} className={gi > 0 ? 'mt-1 space-y-0.5' : 'space-y-0.5'}>
+              {group.label && !navCollapsed && (
+                <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-500 uppercase tracking-wider px-3 pt-3 pb-1">{group.label}</p>
+              )}
+              {group.label && navCollapsed && gi > 0 && (
+                <hr className="my-2 border-neutral-200 dark:border-neutral-700" aria-hidden="true" />
+              )}
+              {group.items.map(item => (
+                <NavItem
+                  key={item.id}
+                  active={view === item.id}
+                  onClick={() => navigate(item.id)}
+                  Icon={item.Icon}
+                  label={item.label}
+                  badge={item.badge ? navBadge(item.badge) : null}
+                  dot={item.dot ? navDot(item.dot) : false}
+                />
+              ))}
+            </div>
+          ))}
         </nav>
 
         <div className="p-2 border-t border-neutral-200 dark:border-neutral-700">
@@ -2404,6 +2523,13 @@ export default function App() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={() => setPaletteOpen(true)}
+              aria-label="Open command palette"
+              className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-md border border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:text-neutral-900 hover:border-neutral-400 dark:hover:text-neutral-100 transition-colors duration-[120ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
+              <Search aria-hidden="true" className="h-4 w-4" />
+              <span className="text-xs">Quick find</span>
+              <kbd className="text-xs font-mono bg-neutral-100 dark:bg-neutral-800 rounded px-1 border border-neutral-200 dark:border-neutral-700">⌘K</kbd>
+            </button>
             <AiCommandBar
               workspaceId={activeWorkspaceId}
               onToast={showToast}
@@ -7387,19 +7513,11 @@ export default function App() {
         </Modal>
       )}
 
-      {/* TOAST NOTIFICATION */}
-      {toast && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-xl shadow-xl text-sm font-medium flex items-center gap-3 transition-all ${toast.type === 'error' ? 'bg-semantic-danger text-white' : 'bg-neutral-900 text-white'}`}>
-          <span>{toast.type === 'error' ? '✕' : toast.type === 'undo' ? '🗑' : '✓'}</span>
-          <span>{toast.message}</span>
-          {toast.type === 'undo' && deleteUndoItem && (
-            <button onClick={handleUndoDelete}
-              className="ml-1 text-brand-orange font-bold hover:text-orange-300 transition-colors text-xs border border-brand-orange/40 rounded px-2 py-0.5">
-              Undo
-            </button>
-          )}
-        </div>
-      )}
+      {/* COMMAND PALETTE (Cmd/Ctrl-K) */}
+      {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} commands={paletteCommands} />}
+
+      {/* TOAST NOTIFICATION — accessible live region (components/works/atoms/toast.jsx) */}
+      <Toast toast={toast} canUndo={Boolean(deleteUndoItem)} onUndo={handleUndoDelete} />
 
       {/* CREATE SPRINT MODAL */}
       {isSprintOpen && (
@@ -7517,31 +7635,28 @@ export default function App() {
   );
 }
 
-function NavItem({ active, onClick, icon, children }) {
+function NavItem({ active, onClick, Icon, label, badge, dot }) {
   const collapsed = React.useContext(NavCollapsedCtx);
-  const label = typeof children === 'string' ? children : undefined;
   return (
     <button onClick={onClick} title={collapsed ? label : undefined}
-      className={`w-full flex items-center ${collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-md text-sm transition-colors duration-[120ms] ${active ? 'bg-neutral-100 dark:bg-neutral-800 text-brand-navy font-semibold' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100'}`}>
-      <span className="text-base leading-none flex-shrink-0">{icon}</span>
-      {!collapsed && <span className="flex-1 text-left flex items-center">{children}</span>}
+      aria-current={active ? 'page' : undefined}
+      className={`relative w-full flex items-center ${collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-md text-sm transition-colors duration-[120ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-1 ${active ? 'bg-neutral-100 dark:bg-neutral-800 text-brand-navy dark:text-white font-semibold' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100'}`}>
+      {active && <span aria-hidden="true" className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-brand-orange" />}
+      <Icon aria-hidden="true" className="h-5 w-5 flex-shrink-0" />
+      {!collapsed && <span className="flex-1 text-left truncate">{label}</span>}
+      {!collapsed && badge && (
+        <span className={`ml-auto text-xs rounded-full px-1.5 py-0.5 flex-shrink-0 ${badge.tone === 'orange' ? 'bg-brand-orange text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300'}`}>{badge.value}</span>
+      )}
+      {!collapsed && dot && <span aria-hidden="true" className="ml-auto w-2 h-2 rounded-full bg-semantic-success flex-shrink-0" />}
+      {collapsed && badge && badge.tone === 'orange' && (
+        <span aria-hidden="true" className="absolute right-1 top-1 w-1.5 h-1.5 rounded-full bg-brand-orange" />
+      )}
     </button>
   );
 }
 
-function Modal({ title, onClose, children }) {
-  return (
-    <div className="fixed inset-0 bg-neutral-900/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl w-full max-w-md">
-        <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-700 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-brand-navy">{title}</h2>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-900 text-xl leading-none">✕</button>
-        </div>
-        <div className="p-6">{children}</div>
-      </div>
-    </div>
-  );
-}
+// Modal now lives in components/works/molecules/modal.jsx — accessible (role=dialog, aria-modal,
+// focus trap, Escape, backdrop close, scroll lock, focus restoration). Imported at the top.
 
 function Field({ label, children }) {
   return (

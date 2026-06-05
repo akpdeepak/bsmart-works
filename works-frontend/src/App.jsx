@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
+import { SidebarNav } from '@/components/works/organisms/sidebar-nav';
 import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
 import { DeveloperWorkspace } from '@/components/works/organisms/developer-workspace';
 import { SlaView } from '@/components/works/organisms/sla-view';
@@ -2395,123 +2396,29 @@ export default function App() {
     <div className="flex h-screen bg-neutral-50 dark:bg-neutral-900 font-sans text-neutral-900 dark:text-neutral-100">
 
       {/* SIDEBAR */}
-      <NavCollapsedCtx.Provider value={navCollapsed}>
-      <aside className={`${navCollapsed ? 'w-12' : 'w-56'} bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-700 flex flex-col z-10 flex-shrink-0 transition-[width] duration-fast ease-out-quint overflow-hidden`}>
-        {/* Workspace switcher + collapse toggle */}
-        <div className="h-14 flex items-center border-b border-neutral-200 dark:border-neutral-700 relative flex-shrink-0" ref={wsRef}>
-          {navCollapsed ? (
-            <button onClick={() => setNavCollapsed(false)} title="Expand sidebar"
-              className="w-full flex items-center justify-center h-full text-neutral-400 hover:text-brand-navy transition-colors duration-fast">
-              <div className="w-6 h-6 rounded bg-brand-navy flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-xs font-bold">BC</span>
-              </div>
-            </button>
-          ) : (
-            <>
-              <button onClick={() => setWsOpen(o => !o)}
-                className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-neutral-100 transition-colors text-left">
-                <div className="w-6 h-6 rounded bg-brand-navy flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-xs font-bold">BC</span>
-                </div>
-                <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 truncate flex-1">{workspace.name}</span>
-                <ChevronDown aria-hidden="true" className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-              </button>
-              <button onClick={() => setNavCollapsed(true)} title="Collapse sidebar"
-                className="mr-2 p-1 text-neutral-300 hover:text-neutral-600 transition-colors duration-fast rounded flex-shrink-0">
-                <PanelLeft className="h-4 w-4" />
-              </button>
-            </>
-          )}
-          {wsOpen && !navCollapsed && (
-            <div className="absolute top-full left-3 right-3 mt-1 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 z-50 py-1">
-              <div className="px-3 py-2 border-b border-neutral-100 dark:border-neutral-700">
-                <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Workspaces</p>
-              </div>
-              {wsLoading ? (
-                <div className="px-3 py-2 space-y-2">
-                  <div className="h-7 rounded-md animate-pulse bg-neutral-100 dark:bg-neutral-700" />
-                  <div className="h-7 rounded-md animate-pulse bg-neutral-100 dark:bg-neutral-700" />
-                </div>
-              ) : wsError ? (
-                <div className="px-3 py-3">
-                  <p className="text-xs text-semantic-danger mb-2">Couldn’t load your workspaces.</p>
-                  <button onClick={fetchMyWorkspaces}
-                    className="text-xs font-medium text-brand-navy hover:text-brand-navy-tint">Try again</button>
-                </div>
-              ) : workspaces.length === 0 ? (
-                <div className="px-3 py-3">
-                  <p className="text-xs text-neutral-400">You don’t belong to any workspace yet.</p>
-                </div>
-              ) : (
-                workspaces.map(w => {
-                  const isActive = w.id === activeWorkspaceId;
-                  return (
-                    <button key={w.id} onClick={() => switchWorkspace(w.id)}
-                      aria-current={isActive ? 'true' : undefined}
-                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-left focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-1 outline-none">
-                      <div className="w-5 h-5 rounded bg-brand-navy flex items-center justify-center flex-shrink-0">
-                        <span className="text-white text-xs font-bold">{(w.name || '?').slice(0, 2).toUpperCase()}</span>
-                      </div>
-                      <span className="text-sm font-medium text-neutral-900 truncate flex-1">{w.name}</span>
-                      {isActive && <Check aria-hidden="true" className="ml-auto h-4 w-4 text-brand-orange flex-shrink-0" />}
-                    </button>
-                  );
-                })
-              )}
-              <div className="border-t border-neutral-100 dark:border-neutral-700 mt-1 pt-1">
-                <button onClick={() => { setView('workspace'); fetchMembers(); setWsOpen(false); }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-neutral-500 hover:text-brand-navy hover:bg-neutral-50 dark:hover:bg-neutral-700 text-left">
-                  <Settings aria-hidden="true" className="h-3.5 w-3.5 flex-shrink-0" />
-                  Workspace Settings
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <nav aria-label="Main navigation" className="flex-1 p-2 text-sm overflow-y-auto">
-          {NAV_GROUPS.map((group, gi) => (
-            <div key={group.label ?? `g${gi}`} className={gi > 0 ? 'mt-1 space-y-0.5' : 'space-y-0.5'}>
-              {group.label && !navCollapsed && (
-                <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-500 uppercase tracking-wider px-3 pt-3 pb-1">{group.label}</p>
-              )}
-              {group.label && navCollapsed && gi > 0 && (
-                <hr className="my-2 border-neutral-200 dark:border-neutral-700" aria-hidden="true" />
-              )}
-              {group.items.map(item => (
-                <NavItem
-                  key={item.id}
-                  active={view === item.id}
-                  onClick={() => navigate(item.id)}
-                  Icon={item.Icon}
-                  label={item.label}
-                  badge={item.badge ? navBadge(item.badge) : null}
-                  dot={item.dot ? navDot(item.dot) : false}
-                />
-              ))}
-            </div>
-          ))}
-        </nav>
-
-        <div className="p-2 border-t border-neutral-200 dark:border-neutral-700">
-          {navCollapsed ? (
-            <div className="flex justify-center py-1">
-              <Avatar name={currentUser.fullName} size={7} />
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 px-2 py-1.5 rounded-md">
-              <Avatar name={currentUser.fullName} size={7} />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-neutral-900 truncate">{currentUser.fullName}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <RoleBadge role={userRole.role} tier={userRole.tier} small />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+      {/* SIDEBAR — design-system navy nav (organisms/sidebar-nav.jsx) */}
+      <aside className={`${navCollapsed ? 'w-sidebar-collapsed' : 'w-sidebar'} shrink-0 transition-[width] duration-[150ms] ease-out-quint`}>
+        <SidebarNav
+          activeView={view}
+          onNavigate={navigate}
+          workspace={workspace}
+          currentUser={currentUser}
+          userRole={userRole.role}
+          myItemCount={myItems.length}
+          unreadCount={unreadCount}
+          projectCount={projects.length}
+          hasActiveSprint={Boolean(sprints.find(s => s.status === 'ACTIVE'))}
+          collapsed={navCollapsed}
+          onToggleCollapse={() => setNavCollapsed(c => !c)}
+          workspaces={workspaces}
+          activeWorkspaceId={activeWorkspaceId}
+          workspacesLoading={wsLoading}
+          workspacesError={wsError}
+          onSwitchWorkspace={switchWorkspace}
+          onRetryWorkspaces={fetchMyWorkspaces}
+          onOpenWorkspaceSettings={() => { setView('workspace'); fetchMembers(); }}
+        />
       </aside>
-      </NavCollapsedCtx.Provider>
 
       {/* MAIN */}
       <main className="flex-1 flex flex-col min-w-0 dark:bg-neutral-900">

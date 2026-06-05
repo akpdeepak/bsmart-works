@@ -38,6 +38,18 @@ describe('SidebarNav', () => {
     expect(screen.getByText('5')).toBeInTheDocument();
   });
 
+  it('renders the full destination set (Service Desk, Automations, SM Cockpit, Performance)', () => {
+    render(<SidebarNav {...defaultProps} />);
+    for (const label of ['Service Desk', 'Automations', 'SM Cockpit', 'Performance', 'Compliance', 'Dashboards']) {
+      expect(screen.getByRole('button', { name: new RegExp(label, 'i') })).toBeInTheDocument();
+    }
+  });
+
+  it('uses the brand-orange tone for the unread notifications badge', () => {
+    render(<SidebarNav {...defaultProps} unreadCount={3} />);
+    expect(screen.getByText('3').className).toMatch(/bg-brand-orange/);
+  });
+
   it('collapsed: hides nav labels, shows title attribute for tooltip', () => {
     render(<SidebarNav {...defaultProps} collapsed />);
     expect(screen.queryByText('Backlog')).not.toBeInTheDocument();
@@ -63,5 +75,45 @@ describe('SidebarNav', () => {
   it('has a main navigation landmark', () => {
     render(<SidebarNav {...defaultProps} />);
     expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument();
+  });
+
+  it('without switcher props, shows a static workspace name (no switch button)', () => {
+    render(<SidebarNav {...defaultProps} />);
+    expect(screen.queryByRole('button', { name: /Switch workspace/i })).not.toBeInTheDocument();
+    expect(screen.getByText('BCITS Works')).toBeInTheDocument();
+  });
+
+  it('opens the workspace switcher and switches workspace', async () => {
+    const onSwitchWorkspace = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <SidebarNav
+        {...defaultProps}
+        workspaces={[{ id: 'w1', name: 'BCITS Works' }, { id: 'w2', name: 'Acme DISCOM' }]}
+        activeWorkspaceId="w1"
+        onSwitchWorkspace={onSwitchWorkspace}
+        onOpenWorkspaceSettings={vi.fn()}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: /Switch workspace/i }));
+    await user.click(screen.getByRole('button', { name: /Acme DISCOM/i }));
+    expect(onSwitchWorkspace).toHaveBeenCalledWith('w2');
+  });
+
+  it('opens workspace settings from the switcher', async () => {
+    const onOpenWorkspaceSettings = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <SidebarNav
+        {...defaultProps}
+        workspaces={[{ id: 'w1', name: 'BCITS Works' }]}
+        activeWorkspaceId="w1"
+        onSwitchWorkspace={vi.fn()}
+        onOpenWorkspaceSettings={onOpenWorkspaceSettings}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: /Switch workspace/i }));
+    await user.click(screen.getByRole('button', { name: /Workspace settings/i }));
+    expect(onOpenWorkspaceSettings).toHaveBeenCalledOnce();
   });
 });

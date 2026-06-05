@@ -4,6 +4,7 @@ import DOMPurify from 'dompurify';
 import { Mail, ShieldCheck, PanelLeft, Bell } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
+import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
@@ -2105,6 +2106,11 @@ export default function App() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <AiCommandBar
+              workspaceId={activeWorkspaceId}
+              onToast={showToast}
+              onExecuted={() => { fetchAll(); fetchNotifications(); }}
+            />
             {can('create_items') && (
               <Button variant="action" onClick={() => { setView('board'); setIsCreateOpen(true); }}>
                 + Create

@@ -223,6 +223,12 @@
 								<exclude>**/RequestType.class</exclude>
 								<exclude>**/CustomerRequest.class</exclude>
 								<exclude>**/PortalKbArticle.class</exclude>
+								<exclude>**/AiWorkspacePolicy.class</exclude>
+								<exclude>**/AiCapabilityToggle.class</exclude>
+								<exclude>**/AiUserPreference.class</exclude>
+								<exclude>**/AiBudget.class</exclude>
+								<exclude>**/AiDataBoundary.class</exclude>
+								<exclude>**/AiInvocation.class</exclude>
 							</excludes>
 							<rules>
 								<rule>

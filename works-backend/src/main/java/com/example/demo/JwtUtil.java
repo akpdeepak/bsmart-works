@@ -31,6 +31,25 @@ public class JwtUtil {
         return Jwts.builder()
                 .subject(userId)
                 .claim("email", email)
+                .claim("scope", "internal")
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + EXPIRY_MS))
+                .signWith(key())
+                .compact();
+    }
+
+    /**
+     * Mint a token for an external customer-portal user (iteration 9). It carries {@code scope=customer}
+     * plus the account and workspace so portal endpoints can scope reads without a DB round-trip — and
+     * so a customer token can never be mistaken for an internal one.
+     */
+    public String generateCustomer(String customerUserId, String email, String accountId, String workspaceId) {
+        return Jwts.builder()
+                .subject(customerUserId)
+                .claim("email", email)
+                .claim("scope", "customer")
+                .claim("accountId", accountId)
+                .claim("workspaceId", workspaceId)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + EXPIRY_MS))
                 .signWith(key())
@@ -43,5 +62,19 @@ public class JwtUtil {
 
     public String extractUserId(String token) {
         return validate(token).getSubject();
+    }
+
+    public String extractScope(String token) {
+        Object scope = validate(token).get("scope");
+        return scope == null ? "internal" : scope.toString();
+    }
+
+    public boolean isCustomerToken(String token) {
+        return "customer".equals(extractScope(token));
+    }
+
+    public String extractClaim(String token, String name) {
+        Object value = validate(token).get(name);
+        return value == null ? null : value.toString();
     }
 }

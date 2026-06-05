@@ -247,6 +247,13 @@
 								<exclude>**/WorkflowTransition.class</exclude>
 								<exclude>**/Workspace.class</exclude>
 								<exclude>**/WorkItemTypeConfig.class</exclude>
+								<!-- Iteration 9 (service management) entities -->
+								<exclude>**/CustomerAccount.class</exclude>
+								<exclude>**/CustomerUser.class</exclude>
+								<exclude>**/RequestType.class</exclude>
+								<exclude>**/ServiceRequest.class</exclude>
+								<exclude>**/CsatResponse.class</exclude>
+								<exclude>**/CustomerSlaTier.class</exclude>
 								<!-- Iteration 12 (KPI framework) entities -->
 								<exclude>**/MetricDefinition.class</exclude>
 								<exclude>**/MetricSnapshot.class</exclude>

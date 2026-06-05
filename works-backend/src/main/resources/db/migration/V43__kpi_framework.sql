@@ -1,4 +1,4 @@
--- V41: Iteration 12 — KPI Framework with Privacy Guardrails (Cap L, RB-20 §4, RB-40 §1 privacy).
+-- V43: Iteration 12 — KPI Framework with Privacy Guardrails (Cap L, RB-20 §4, RB-40 §1 privacy).
 -- Layered metrics where individual data is private by default, team/project/org data is aggregated,
 -- and the manager view CANNOT drill into individuals — enforced at the API (KpiService), not the UI
 -- (commitment 4: privacy by design). Snapshots are immutable so historical metrics never change

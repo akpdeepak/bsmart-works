@@ -34,7 +34,7 @@ calendar + SSO/SCIM). Everything is workspace-scoped (RB-40 §1) and auditable (
   `/api/v1/webhooks`. The automation POST_WEBHOOK action feeds this.
 - **Public-API tokens** (`api_tokens`): the bearer/OAuth foundation — tokens are shown once, only a
   prefix + SHA-256 hash are stored, scoped and revocable. API `/api/v1/api-tokens`.
-- **Migration `V42__automation_and_integrations.sql`** — all six tables plus `manage_automations`,
+- **Migration `V44__automation_and_integrations.sql`** — all six tables plus `manage_automations`,
   `manage_integrations`, `manage_api_tokens` (ADMIN) permissions. Plural, workspace-scoped, indexed.
 
 ## 3. UI

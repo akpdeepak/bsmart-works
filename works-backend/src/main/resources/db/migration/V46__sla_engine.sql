@@ -1,4 +1,4 @@
--- V44: Iteration 8 — SLA Engine (Cap M), the unified internal SLA engine.
+-- V46: Iteration 8 — SLA Engine (Cap M), the unified internal SLA engine.
 -- "One SLA engine, two contexts" (architectural commitment 2): the same engine that tracks
 -- internal delivery commitments here is reused for customer-facing SLAs in iteration 9.
 --

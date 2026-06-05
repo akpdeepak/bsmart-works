@@ -1,0 +1,190 @@
+import { useEffect, useState } from 'react';
+import { Plug, Webhook, KeyRound } from 'lucide-react';
+import { integrationsClient } from '@/lib/integrations';
+import { Badge } from '@/components/works/atoms/badge';
+
+// Organism — the iteration-13 Integrations surface (Cap Q / Cap A). Three tabs: connectors
+// (Slack/GitHub/GitLab/email/calendar + SSO/SCIM), outbound webhooks, and public-API tokens.
+// Tokens only, five interactive states, WCAG-AA. All HTTP via the integrations client (apiClient).
+
+const TABS = [
+  { id: 'connectors', label: 'Connectors', icon: Plug },
+  { id: 'webhooks', label: 'Webhooks', icon: Webhook },
+  { id: 'tokens', label: 'API tokens', icon: KeyRound },
+];
+
+export function IntegrationsPanel({ workspaceId, can = () => true, onToast = () => {} }) {
+  const [tab, setTab] = useState('connectors');
+  const [providers, setProviders] = useState([]);
+  const [connections, setConnections] = useState([]);
+  const [webhooks, setWebhooks] = useState([]);
+  const [tokens, setTokens] = useState([]);
+  const [error, setError] = useState(null);
+  const [tick, setTick] = useState(0);
+  const manage = can('manage_integrations');
+  const manageTokens = can('manage_api_tokens');
+  const reload = () => setTick((t) => t + 1);
+
+  // Fetch inlined with setState only in the .then continuation (never synchronously in the effect
+  // body); handlers refresh via the tick dep — satisfies react-hooks/set-state-in-effect.
+  useEffect(() => {
+    if (!workspaceId) return undefined;
+    let active = true;
+    Promise.all([
+      integrationsClient.providers(workspaceId),
+      integrationsClient.list(workspaceId),
+      integrationsClient.webhooks(workspaceId),
+      manageTokens ? integrationsClient.tokens(workspaceId) : Promise.resolve([]),
+    ])
+      .then(([prov, conns, hooks, tok]) => {
+        if (!active) return;
+        setProviders(prov);
+        setConnections(conns);
+        setWebhooks(hooks);
+        setTokens(tok);
+        setError(null);
+      })
+      .catch((e) => { if (active) setError(e.message || 'Could not load integrations.'); });
+    return () => { active = false; };
+  }, [workspaceId, manageTokens, tick]);
+
+  function connectionFor(providerId) {
+    return connections.find((c) => c.provider === providerId && c.status === 'CONNECTED');
+  }
+
+  async function connect(provider) {
+    const fields = provider.requiredFields || [];
+    const config = {};
+    for (const f of fields) {
+      const v = typeof window !== 'undefined' ? window.prompt(`${provider.label} — ${f}`) : '';
+      if (!v) return;
+      config[f] = v;
+    }
+    try {
+      await integrationsClient.connect(workspaceId, provider.id, provider.label, JSON.stringify(config));
+      onToast(`${provider.label} connected.`, 'success');
+      reload();
+    } catch (e) {
+      onToast(e.message || 'Connect failed.', 'error');
+    }
+  }
+
+  async function issueToken() {
+    const name = typeof window !== 'undefined' ? window.prompt('Token name') : '';
+    if (!name) return;
+    try {
+      const res = await integrationsClient.issueToken(workspaceId, name, ['read']);
+      onToast(`Token issued: ${res.plaintext} (copy now — shown once)`, 'success');
+      reload();
+    } catch (e) {
+      onToast(e.message || 'Could not issue token.', 'error');
+    }
+  }
+
+  return (
+    <div className="p-8 max-w-7xl">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-brand-navy">Integrations</h1>
+        <p className="mt-0.5 text-sm text-neutral-600">Connect Works to the tools your teams already use.</p>
+      </div>
+
+      <div role="tablist" aria-label="Integration area" className="mb-4 inline-flex rounded-lg border border-neutral-200 p-1 dark:border-neutral-700">
+        {TABS.map((t) => {
+          const Icon = t.icon;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              onClick={() => setTab(t.id)}
+              className={[
+                'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-[120ms]',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-1 active:translate-y-px',
+                tab === t.id ? 'bg-brand-navy text-white' : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
+              ].join(' ')}
+            >
+              <Icon aria-hidden="true" className="h-4 w-4" />
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {error && <div className="mb-4 rounded-lg bg-semantic-danger-surface p-4 text-sm text-semantic-danger">{error}</div>}
+
+      {tab === 'connectors' && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {providers.map((p) => {
+            const conn = connectionFor(p.id);
+            return (
+              <div key={p.id} className="flex items-center justify-between rounded-lg border border-neutral-200 p-4 dark:border-neutral-700">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{p.label}</p>
+                  <p className="text-xs capitalize text-neutral-600">{p.category}</p>
+                </div>
+                {conn ? (
+                  <Badge tone="success">Connected</Badge>
+                ) : manage ? (
+                  <button type="button" onClick={() => connect(p)}
+                    className="rounded-md border border-neutral-200 px-3 py-1.5 text-xs font-semibold text-brand-navy hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 active:translate-y-px dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800">
+                    Connect
+                  </button>
+                ) : (
+                  <Badge tone="neutral">Not connected</Badge>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {tab === 'webhooks' && (
+        <div>
+          {webhooks.length === 0 ? (
+            <p className="text-sm text-neutral-600">No webhook subscriptions yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {webhooks.map((w) => (
+                <li key={w.id} className="flex items-center justify-between rounded-lg border border-neutral-200 p-3 dark:border-neutral-700">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{w.targetUrl}</p>
+                    <p className="text-xs text-neutral-600">event: {w.eventType}</p>
+                  </div>
+                  <Badge tone={w.active ? 'success' : 'neutral'}>{w.active ? 'Active' : 'Inactive'}</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {tab === 'tokens' && (
+        <div>
+          {manageTokens && (
+            <button type="button" onClick={issueToken}
+              className="mb-4 inline-flex items-center gap-1.5 rounded-md bg-brand-orange px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2 active:translate-y-px">
+              <KeyRound aria-hidden="true" className="h-4 w-4" />
+              Issue token
+            </button>
+          )}
+          {tokens.length === 0 ? (
+            <p className="text-sm text-neutral-600">No API tokens yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {tokens.map((t) => (
+                <li key={t.id} className="flex items-center justify-between rounded-lg border border-neutral-200 p-3 dark:border-neutral-700">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{t.name}</p>
+                    <p className="font-mono text-xs text-neutral-600">{t.tokenPrefix}…</p>
+                  </div>
+                  <Badge tone={t.revoked ? 'danger' : 'success'}>{t.revoked ? 'Revoked' : 'Active'}</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

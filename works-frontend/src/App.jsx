@@ -145,7 +145,7 @@ function EmptyState({ icon: Icon, title, subtitle, action }) {
         {typeof Icon === 'function' ? <Icon aria-hidden="true" className="h-5 w-5" /> : Icon}
       </div>
       <h3 className="text-base font-semibold text-neutral-700 mb-1">{title}</h3>
-      <p className="text-sm text-neutral-400 mb-5 max-w-xs">{subtitle}</p>
+      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5 max-w-xs">{subtitle}</p>
       {action}
     </div>
   );
@@ -2205,16 +2205,16 @@ export default function App() {
           {/* DEV/UAT only — show token so testers can verify without email */}
           {verifyPending.devToken && (
             <div className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3 mb-4">
-              <p className="text-xs text-neutral-400 uppercase tracking-wider mb-1">UAT — One-click verify</p>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-1">UAT — One-click verify</p>
               <button onClick={() => handleVerifyEmail(verifyPending.devToken)}
                 className="w-full py-2 bg-brand-navy text-white rounded-lg text-sm font-semibold hover:bg-brand-navy/90 transition-colors">
                 <Check className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Verify my email (UAT shortcut)
               </button>
-              <p className="text-xs text-neutral-400 mt-2 text-center">In production this arrives by email</p>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-2 text-center">In production this arrives by email</p>
             </div>
           )}
           <button onClick={() => { setVerifyPending(null); setAuthMode('login'); }}
-            className="w-full text-center text-sm text-neutral-400 hover:text-brand-navy transition-colors">
+            className="w-full text-center text-sm text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors">
             <ArrowLeft className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Back to sign in
           </button>
         </div>
@@ -2237,7 +2237,7 @@ export default function App() {
           <Button variant="action" fullWidth onClick={handleMfaVerify}
             disabled={mfaCode.length !== 6}>Verify Code</Button>
           <button onClick={() => { setMfaChallenge(null); setMfaCode(''); }}
-            className="w-full mt-3 text-center text-sm text-neutral-400 hover:text-brand-navy transition-colors">
+            className="w-full mt-3 text-center text-sm text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors">
             <ArrowLeft className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Back to sign in
           </button>
         </div>
@@ -2298,7 +2298,7 @@ export default function App() {
                   className="input pr-10" placeholder={authMode === 'signup' ? 'Min. 8 characters' : ''} />
                 <button type="button" onClick={() => setShowPassword(v => !v)}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
                   tabIndex={-1}>
                   {showPassword
                     ? <EyeOff aria-hidden="true" className="h-4 w-4" />
@@ -2326,7 +2326,7 @@ export default function App() {
           </form>
           {authMode === 'login' && (
             <div className="mt-3 text-center">
-              <button onClick={() => setForgotMode(true)} className="text-neutral-400 text-sm hover:underline">Forgot password?</button>
+              <button onClick={() => setForgotMode(true)} className="text-neutral-600 dark:text-neutral-400 text-sm hover:underline">Forgot password?</button>
             </div>
           )}
           <div className="mt-4 text-center text-sm text-neutral-600">
@@ -2441,7 +2441,7 @@ export default function App() {
                     className="w-full text-left px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-700 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                     <div className="flex items-center gap-2">
                       <TypeBadge type={item.type} compact />
-                      <span className="font-mono text-xs text-neutral-400">{item.id}</span>
+                      <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.id}</span>
                     </div>
                     <div className="text-sm text-neutral-900 font-medium mt-0.5">{item.title}</div>
                   </button>
@@ -2450,13 +2450,13 @@ export default function App() {
             )}
             {searchOpen && searchQuery.trim() && searchResults.length === 0 && (
               <div className="absolute top-full mt-1 w-80 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 z-50 px-4 py-6 text-center">
-                <p className="text-sm text-neutral-400">No results for "<span className="text-neutral-700">{searchQuery}</span>"</p>
+                <p className="text-sm text-neutral-600 dark:text-neutral-400">No results for "<span className="text-neutral-700">{searchQuery}</span>"</p>
               </div>
             )}
             {searchOpen && !searchQuery.trim() && recentlyViewed.length > 0 && (
               <div className="absolute top-full mt-1 w-80 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 z-50 max-h-64 overflow-y-auto">
                 <div className="px-4 py-2 border-b border-neutral-100 dark:border-neutral-700">
-                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Recently Viewed</p>
+                  <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">Recently Viewed</p>
                 </div>
                 {recentlyViewed.map(item => {
                   const full = workItems.find(i => i.id === item.id);
@@ -2465,7 +2465,7 @@ export default function App() {
                       className="w-full text-left px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-700 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                       <div className="flex items-center gap-2">
                         <TypeBadge type={item.type} compact />
-                        <span className="font-mono text-xs text-neutral-400">{item.id}</span>
+                        <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.id}</span>
                       </div>
                       <div className="text-sm text-neutral-900 font-medium mt-0.5 truncate">{item.title}</div>
                     </button>
@@ -2494,7 +2494,7 @@ export default function App() {
             )}
             <button onClick={() => { setView('notifications'); fetchNotifications(); }}
               aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
-              className="relative w-9 h-9 rounded-md flex items-center justify-center text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
+              className="relative w-9 h-9 rounded-md flex items-center justify-center text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
               <Bell aria-hidden="true" className="h-5 w-5" />
               {unreadCount > 0 && (
                 <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-brand-orange text-white text-xs font-bold flex items-center justify-center">
@@ -2526,7 +2526,7 @@ export default function App() {
                   <h1 className="text-2xl font-bold text-brand-navy dark:text-white">
                     Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {currentUser?.fullName?.split(' ')[0]}
                   </h1>
-                  <p className="text-sm text-neutral-400 mt-0.5">Here's your workspace at a glance</p>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-0.5">Here's your workspace at a glance</p>
                 </div>
                 <Button variant="action" onClick={() => setIsCreateOpen(true)}>+ New Item</Button>
               </div>
@@ -2541,13 +2541,13 @@ export default function App() {
                   { key: 'admin',         label: 'Admin',          minTier: 4 },
                 ].filter(t => userRole.tier >= t.minTier).map(t => (
                   <button key={t.key} onClick={() => { setDashboardRole(t.key); fetchDashboard(t.key); }}
-                    className={`text-xs font-medium px-4 py-2 border-b-2 whitespace-nowrap transition-colors ${dashboardRole === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
+                    className={`text-xs font-medium px-4 py-2 border-b-2 whitespace-nowrap transition-colors ${dashboardRole === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                     {t.label}
                   </button>
                 ))}
               </div>
 
-              {dashLoading && <div className="text-center py-16 text-neutral-400">Loading dashboard...</div>}
+              {dashLoading && <div className="text-center py-16 text-neutral-600 dark:text-neutral-400">Loading dashboard...</div>}
 
               {/* ── DEVELOPER ── */}
               {!dashLoading && dashboardRole === 'developer' && (
@@ -2556,7 +2556,7 @@ export default function App() {
                     <StatCard label="My Open Items" value={developerDash?.myOpenItemCount ?? workItems.filter(i => i.assigneeId === currentUser?.id && i.status !== 'Done').length} sub="Assigned to me" color="text-brand-navy" icon={Pin} onClick={() => setView('myworks')} />
                     <StatCard label="In Active Sprint" value={developerDash?.mySprintItems?.length ?? '—'} sub={developerDash?.activeSprint?.name || 'No active sprint'} color="text-semantic-success" icon={Zap} onClick={() => setView('sprint')} />
                     <StatCard label="Hours This Week" value={developerDash?.weeklyMinutes ? `${Math.round(developerDash.weeklyMinutes / 60 * 10) / 10}h` : '0h'} sub="Time logged (7 days)" color="text-brand-amber" icon={Timer} />
-                    <StatCard label="Blockers" value={developerDash?.blockers?.length ?? 0} sub="Items blocked on me" color={developerDash?.blockers?.length > 0 ? 'text-semantic-danger' : 'text-neutral-400'} icon={Ban} />
+                    <StatCard label="Blockers" value={developerDash?.blockers?.length ?? 0} sub="Items blocked on me" color={developerDash?.blockers?.length > 0 ? 'text-semantic-danger' : 'text-neutral-600 dark:text-neutral-400'} icon={Ban} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
@@ -2569,14 +2569,14 @@ export default function App() {
                           {item.due_date && new Date(item.due_date) < new Date() && <span className="text-xs text-semantic-danger font-bold">OVERDUE</span>}
                         </div>
                       ))}
-                      {(developerDash?.myOpenItemCount ?? 0) === 0 && (developerDash?.myOpenItems?.length ?? workItems.filter(i => i.assigneeId === currentUser?.id && i.status !== 'Done').length) === 0 && <p className="text-sm text-neutral-400 text-center py-4">All caught up!</p>}
+                      {(developerDash?.myOpenItemCount ?? 0) === 0 && (developerDash?.myOpenItems?.length ?? workItems.filter(i => i.assigneeId === currentUser?.id && i.status !== 'Done').length) === 0 && <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-4">All caught up!</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Active Sprint</h3>
                       {developerDash?.activeSprint ? (
                         <div>
                           <p className="text-sm font-semibold text-brand-navy dark:text-blue-300 mb-1">{developerDash.activeSprint.name}</p>
-                          {developerDash.activeSprint.goal && <p className="text-xs text-neutral-400 mb-3 italic">"{developerDash.activeSprint.goal}"</p>}
+                          {developerDash.activeSprint.goal && <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3 italic">"{developerDash.activeSprint.goal}"</p>}
                           <div className="flex gap-4 mb-2 text-xs text-neutral-600 dark:text-neutral-300">
                             <span><strong>{developerDash.activeSprint.done_items}</strong>/{developerDash.activeSprint.total_items} items</span>
                             <span><strong>{developerDash.activeSprint.done_points}</strong>/{developerDash.activeSprint.total_points}pt</span>
@@ -2586,7 +2586,7 @@ export default function App() {
                               <div className="h-full bg-semantic-success rounded-full" style={{ width: `${Math.round(developerDash.activeSprint.done_items * 100 / developerDash.activeSprint.total_items)}%` }} />
                             </div>
                           )}
-                          <p className="text-xs text-neutral-400 mb-3">{developerDash.activeSprint.total_items > 0 ? Math.round(developerDash.activeSprint.done_items * 100 / developerDash.activeSprint.total_items) : 0}% complete</p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3">{developerDash.activeSprint.total_items > 0 ? Math.round(developerDash.activeSprint.done_items * 100 / developerDash.activeSprint.total_items) : 0}% complete</p>
                           <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">My Sprint Items</h4>
                           {(developerDash.mySprintItems || []).map(i => (
                             <div key={i.id} className="flex items-center gap-2 py-1.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
@@ -2595,14 +2595,14 @@ export default function App() {
                               <StatusBadge category={statusToCategory(i.status)}>{i.status}</StatusBadge>
                             </div>
                           ))}
-                          {(developerDash.mySprintItems || []).length === 0 && <p className="text-xs text-neutral-400">No items assigned in this sprint.</p>}
+                          {(developerDash.mySprintItems || []).length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-400">No items assigned in this sprint.</p>}
                         </div>
-                      ) : <p className="text-sm text-neutral-400 text-center py-4">No active sprint right now.</p>}
+                      ) : <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-4">No active sprint right now.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Blockers</h3>
                       {(developerDash?.blockers || []).length === 0
-                        ? <p className="text-sm text-neutral-400 text-center py-4">No blockers — you're clear!</p>
+                        ? <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-4">No blockers — you're clear!</p>
                         : (developerDash.blockers || []).map(b => (
                             <div key={b.id} className="py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                               <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{b.title}</p>
@@ -2619,10 +2619,10 @@ export default function App() {
                         <div key={wl.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <span className="text-xs font-bold text-brand-navy w-10">{Math.round((wl.time_spent_minutes || 0) / 60 * 10) / 10}h</span>
                           <span className="flex-1 text-xs text-neutral-900 dark:text-neutral-100 truncate">{wl.work_item_title || wl.work_item_id}</span>
-                          <span className="text-xs text-neutral-400">{wl.work_date}</span>
+                          <span className="text-xs text-neutral-600 dark:text-neutral-400">{wl.work_date}</span>
                         </div>
                       ))}
-                      {(developerDash?.recentWorklogs || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No time logged this week.</p>}
+                      {(developerDash?.recentWorklogs || []).length === 0 && <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-4">No time logged this week.</p>}
                     </div>
                   </div>
                 </div>
@@ -2635,7 +2635,7 @@ export default function App() {
                     <StatCard label="Sprint Health" value={`${smDash?.sprintHealth ?? 0}%`} sub={smDash?.activeSprints?.[0]?.name || 'No active sprint'} color={smDash?.sprintHealth >= 70 ? 'text-semantic-success' : smDash?.sprintHealth >= 40 ? 'text-semantic-warning' : 'text-semantic-danger'} icon={Heart} />
                     <StatCard label="Velocity" value={smDash?.activeSprints?.[0] ? `${smDash.activeSprints[0].done_points}pt` : '—'} sub="Points delivered" color="text-brand-navy" icon={Zap} />
                     <StatCard label="Capacity" value={smDash?.activeSprints?.[0]?.capacity ? `${smDash.activeSprints[0].capacity}pt` : '—'} sub="Sprint capacity" color="text-brand-amber" icon={BarChart2} />
-                    <StatCard label="High Risk" value={smDash?.highRiskItems?.length ?? 0} sub="Critical or High priority" color={smDash?.highRiskItems?.length > 0 ? 'text-semantic-danger' : 'text-neutral-400'} icon={AlertTriangle} />
+                    <StatCard label="High Risk" value={smDash?.highRiskItems?.length ?? 0} sub="Critical or High priority" color={smDash?.highRiskItems?.length > 0 ? 'text-semantic-danger' : 'text-neutral-600 dark:text-neutral-400'} icon={AlertTriangle} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
@@ -2667,7 +2667,7 @@ export default function App() {
                           <span className="text-xs text-neutral-500">{Math.round((m.logged_minutes || 0) / 60 * 10) / 10}h</span>
                         </div>
                       ))}
-                      {(smDash?.teamCapacity || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No time logs found.</p>}
+                      {(smDash?.teamCapacity || []).length === 0 && <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-4">No time logs found.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">High Risk Items</h3>
@@ -2687,7 +2687,7 @@ export default function App() {
                           <span className="text-xs font-bold flex-shrink-0 mt-0.5 text-semantic-success">+</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-neutral-900 dark:text-neutral-100 truncate">{c.title}</p>
-                            <p className="text-xs text-neutral-400">{c.actor_name} · {c.occurred_at ? new Date(c.occurred_at).toLocaleDateString() : ''}</p>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400">{c.actor_name} · {c.occurred_at ? new Date(c.occurred_at).toLocaleDateString() : ''}</p>
                           </div>
                         </div>
                       ))}
@@ -2718,16 +2718,16 @@ export default function App() {
                             <div className="flex items-center gap-2">
                               <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${r.status === 'RELEASED' ? 'bg-semantic-success text-white' : r.status === 'IN_PROGRESS' ? 'bg-brand-navy text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{r.status}</span>
                               <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{r.name}</span>
-                              <span className="text-xs font-mono text-neutral-400">v{r.version}</span>
+                              <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400">v{r.version}</span>
                             </div>
-                            {r.release_date && <span className="text-xs text-neutral-400">{new Date(r.release_date).toLocaleDateString()}</span>}
+                            {r.release_date && <span className="text-xs text-neutral-600 dark:text-neutral-400">{new Date(r.release_date).toLocaleDateString()}</span>}
                           </div>
                           {r.total_items > 0 && (
                             <div>
                               <div className="h-1.5 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden mt-1">
                                 <div className="h-full bg-semantic-success rounded-full" style={{ width: `${Math.round((r.done_items || 0) * 100 / r.total_items)}%` }} />
                               </div>
-                              <p className="text-xs text-neutral-400 mt-0.5">{r.done_items}/{r.total_items} items · {r.done_points}/{r.total_points}pt</p>
+                              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{r.done_items}/{r.total_items} items · {r.done_points}/{r.total_points}pt</p>
                             </div>
                           )}
                         </div>
@@ -2766,10 +2766,10 @@ export default function App() {
                           <TypeBadge type={i.type} compact />
                           <span className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate">{i.title}</span>
                           <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${i.priority === 'CRITICAL' ? 'bg-semantic-danger text-white' : i.priority === 'HIGH' ? 'bg-semantic-warning-surface text-semantic-warning' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{i.priority}</span>
-                          {i.story_points > 0 && <span className="text-xs text-neutral-400">{i.story_points}pt</span>}
+                          {i.story_points > 0 && <span className="text-xs text-neutral-600 dark:text-neutral-400">{i.story_points}pt</span>}
                         </div>
                       ))}
-                      {(poDash?.ungroomedItems || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">All items are in sprints.</p>}
+                      {(poDash?.ungroomedItems || []).length === 0 && <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-4">All items are in sprints.</p>}
                     </div>
                   </div>
                 </div>
@@ -2782,7 +2782,7 @@ export default function App() {
                     <StatCard label="Portfolio Health" value={`${execDash?.overallHealth ?? 0}%`} sub="Items completed" color={execDash?.overallHealth >= 70 ? 'text-semantic-success' : execDash?.overallHealth >= 40 ? 'text-semantic-warning' : 'text-semantic-danger'} icon={Heart} />
                     <StatCard label="Active Projects" value={execDash?.projectPortfolio?.length ?? 0} sub="Non-archived" color="text-brand-navy" icon={Folder} onClick={() => setView('projects')} />
                     <StatCard label="Upcoming Releases" value={(execDash?.releaseSchedule || []).filter(r => r.status !== 'RELEASED').length} sub="Planned or in progress" color="text-brand-amber" icon={Rocket} onClick={() => setView('releases')} />
-                    <StatCard label="Overdue Actions" value={execDash?.overdueActions?.length ?? 0} sub="Past due date" color={execDash?.overdueActions?.length > 0 ? 'text-semantic-danger' : 'text-neutral-400'} icon={Zap} onClick={() => setView('pm')} />
+                    <StatCard label="Overdue Actions" value={execDash?.overdueActions?.length ?? 0} sub="Past due date" color={execDash?.overdueActions?.length > 0 ? 'text-semantic-danger' : 'text-neutral-600 dark:text-neutral-400'} icon={Zap} onClick={() => setView('pm')} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
@@ -2801,11 +2801,11 @@ export default function App() {
                             <div className="h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
                               <div className={`h-full rounded-full ${pct >= 70 ? 'bg-semantic-success' : pct >= 40 ? 'bg-brand-amber' : 'bg-semantic-danger'}`} style={{ width: `${pct}%` }} />
                             </div>
-                            <p className="text-xs text-neutral-400 mt-0.5">{p.done_items}/{p.total_items} items</p>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{p.done_items}/{p.total_items} items</p>
                           </div>
                         );
                       })}
-                      {(execDash?.projectPortfolio || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No projects found.</p>}
+                      {(execDash?.projectPortfolio || []).length === 0 && <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-4">No projects found.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Release Schedule</h3>
@@ -2813,16 +2813,16 @@ export default function App() {
                         <div key={r.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <span className={`w-2 h-2 rounded-full flex-shrink-0 ${r.status === 'RELEASED' ? 'bg-semantic-success' : r.status === 'IN_PROGRESS' ? 'bg-brand-navy' : 'bg-neutral-300'}`} />
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 truncate">{r.name} <span className="font-mono font-normal text-neutral-400">v{r.version}</span></p>
-                            <p className="text-xs text-neutral-400">{r.project_name}</p>
+                            <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 truncate">{r.name} <span className="font-mono font-normal text-neutral-600 dark:text-neutral-400">v{r.version}</span></p>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400">{r.project_name}</p>
                           </div>
                           <div className="text-right flex-shrink-0">
-                            <p className={`text-xs font-bold ${r.status === 'RELEASED' ? 'text-semantic-success' : r.status === 'IN_PROGRESS' ? 'text-brand-navy' : 'text-neutral-400'}`}>{r.status}</p>
-                            {r.release_date && <p className="text-xs text-neutral-400">{new Date(r.release_date).toLocaleDateString()}</p>}
+                            <p className={`text-xs font-bold ${r.status === 'RELEASED' ? 'text-semantic-success' : r.status === 'IN_PROGRESS' ? 'text-brand-navy' : 'text-neutral-600 dark:text-neutral-400'}`}>{r.status}</p>
+                            {r.release_date && <p className="text-xs text-neutral-600 dark:text-neutral-400">{new Date(r.release_date).toLocaleDateString()}</p>}
                           </div>
                         </div>
                       ))}
-                      {(execDash?.releaseSchedule || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No releases defined.</p>}
+                      {(execDash?.releaseSchedule || []).length === 0 && <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-4">No releases defined.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">RAID Summary</h3>
@@ -2831,7 +2831,7 @@ export default function App() {
                           <span className="text-sm text-neutral-700 dark:text-neutral-200 capitalize">{r.type}</span>
                           <div className="flex gap-3 text-xs">
                             <span className="text-neutral-500">{r.total} total</span>
-                            <span className={`font-bold ${r.open > 0 ? 'text-semantic-danger' : 'text-neutral-400'}`}>{r.open} open</span>
+                            <span className={`font-bold ${r.open > 0 ? 'text-semantic-danger' : 'text-neutral-600 dark:text-neutral-400'}`}>{r.open} open</span>
                           </div>
                         </div>
                       ))}
@@ -2845,7 +2845,7 @@ export default function App() {
                           <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200">{Math.round((m.logged_minutes || 0) / 60 * 10) / 10}h</span>
                         </div>
                       ))}
-                      {(execDash?.teamUtilization || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No time logs found.</p>}
+                      {(execDash?.teamUtilization || []).length === 0 && <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-4">No time logs found.</p>}
                     </div>
                   </div>
                 </div>
@@ -2871,7 +2871,7 @@ export default function App() {
                           <Avatar name={m.full_name} size={7} />
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium text-neutral-900 dark:text-neutral-100 truncate">{m.full_name}</p>
-                            <p className="text-xs text-neutral-400 truncate">{m.email}</p>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{m.email}</p>
                           </div>
                           <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-500 px-2 py-0.5 rounded-full">{m.role}</span>
                         </div>
@@ -2912,12 +2912,12 @@ export default function App() {
                               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
                                 {(adminDash.recentAuditLog).map(log => (
                                   <tr key={log.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
-                                    <td className="py-2 px-2 text-neutral-400">{log.changed_at ? new Date(log.changed_at).toLocaleDateString() : '—'}</td>
+                                    <td className="py-2 px-2 text-neutral-600 dark:text-neutral-400">{log.changed_at ? new Date(log.changed_at).toLocaleDateString() : '—'}</td>
                                     <td className="py-2 px-2 font-medium text-neutral-900 dark:text-neutral-100">{log.actor_name || '—'}</td>
                                     <td className="py-2 px-2 text-neutral-600 dark:text-neutral-300">{log.target_name || '—'}</td>
-                                    <td className="py-2 px-2 text-neutral-400">{log.old_role || '—'}</td>
+                                    <td className="py-2 px-2 text-neutral-600 dark:text-neutral-400">{log.old_role || '—'}</td>
                                     <td className="py-2 px-2 text-semantic-success font-semibold">{log.new_role || '—'}</td>
-                                    <td className="py-2 px-2 text-neutral-400">{log.action_type || 'CHANGED'}</td>
+                                    <td className="py-2 px-2 text-neutral-600 dark:text-neutral-400">{log.action_type || 'CHANGED'}</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -2935,7 +2935,7 @@ export default function App() {
           {view === 'myworks' && (
             <div className="p-8 max-w-4xl">
               <h1 className="text-2xl font-bold text-brand-navy mb-1">My Works</h1>
-              <p className="text-sm text-neutral-400 mb-4">Your personal workspace</p>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">Your personal workspace</p>
               {/* Sub-tabs */}
               <div className="flex gap-1 mb-5 border-b border-neutral-200 dark:border-neutral-700">
                 {[
@@ -2945,7 +2945,7 @@ export default function App() {
                   { key: 'activity', label: 'Recent Activity' },
                 ].map(t => (
                   <button key={t.key} onClick={() => setMyWorksTab(t.key)}
-                    className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${myWorksTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-600 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
+                    className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${myWorksTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                     {t.label}
                   </button>
                 ))}
@@ -2961,7 +2961,7 @@ export default function App() {
                         <TypeBadge type={item.type} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-neutral-900 truncate">{item.title}</p>
-                          <p className="text-xs text-neutral-400 dark:text-neutral-600 font-mono">{item.id}</p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{item.id}</p>
                         </div>
                         <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
                         {item.dueDate && <span className="text-xs text-semantic-warning font-medium whitespace-nowrap">Due {item.dueDate}</span>}
@@ -2981,7 +2981,7 @@ export default function App() {
                           <TypeBadge type={item.type} />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-neutral-900 truncate">{item.title}</p>
-                            <p className="text-xs text-neutral-400 dark:text-neutral-600 font-mono">{item.id}</p>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{item.id}</p>
                           </div>
                           <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
                         </div>
@@ -2997,7 +2997,7 @@ export default function App() {
                       {mentions.map(n => (
                         <div key={n.id} className={`bg-white dark:bg-neutral-800 border rounded-lg p-4 ${!n.read ? 'border-brand-navy-tint/30' : 'border-neutral-200 dark:border-neutral-700'}`}>
                           <p className="text-sm text-neutral-900">{n.message}</p>
-                          <p className="text-xs text-neutral-400 mt-1">{n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}</p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">{n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}</p>
                         </div>
                       ))}
                     </div>;
@@ -3008,7 +3008,7 @@ export default function App() {
                     <div key={i.id} onClick={() => setSelectedItem(i)} role="button" tabIndex={0} onKeyDown={onPressKey}
                       className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3 flex items-center gap-3 hover:shadow-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                       <TypeBadge type={i.type} compact />
-                      <span className="text-xs font-mono text-neutral-400">{i.id}</span>
+                      <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400">{i.id}</span>
                       <span className="flex-1 text-sm text-neutral-900 truncate">{i.title}</span>
                       <StatusBadge category={statusToCategory(i.status)}>{i.status}</StatusBadge>
                     </div>
@@ -3026,13 +3026,13 @@ export default function App() {
               <div className="flex justify-between items-center mb-5">
                 <div>
                   <h1 className="text-xl font-bold text-brand-navy">Board</h1>
-                  <p className="text-xs text-neutral-400 mt-0.5">{workItems.length} items total</p>
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{workItems.length} items total</p>
                 </div>
                 {/* Density toggle */}
                 <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1">
                   {['compact', 'comfortable', 'spacious'].map(d => (
                     <button key={d} onClick={() => setDensity(d)}
-                      className={`px-3 py-1 rounded-md text-xs font-medium transition-colors capitalize ${density === d ? 'bg-white dark:bg-neutral-700 shadow-sm text-brand-navy' : 'text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
+                      className={`px-3 py-1 rounded-md text-xs font-medium transition-colors capitalize ${density === d ? 'bg-white dark:bg-neutral-700 shadow-sm text-brand-navy' : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                       {d}
                     </button>
                   ))}
@@ -3080,7 +3080,7 @@ export default function App() {
                           <div className="space-y-2 flex-1">
                             {colItems.length === 0 && (
                               <div className="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed border-neutral-200 rounded-lg">
-                                <p className="text-xs text-neutral-400">Drop items here</p>
+                                <p className="text-xs text-neutral-600 dark:text-neutral-400">Drop items here</p>
                               </div>
                             )}
                             {colItems.map(item => (
@@ -3088,18 +3088,18 @@ export default function App() {
                                 onDragStart={(e) => handleDragStart(e, item.id)}
                                 className={`bg-white dark:bg-neutral-700 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-600 cursor-grab hover:shadow-md transition-shadow group ${densityPad[density]} ${item.starred ? 'border-brand-orange/40' : ''}`}>
                                 <div className="flex items-start justify-between mb-1.5">
-                                  <span className="font-mono text-xs text-neutral-400">{item.id}</span>
+                                  <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.id}</span>
                                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button onClick={() => toggleStar(item)} title={item.starred ? 'Unstar' : 'Star'}
                                       className={`text-xs p-0.5 transition-colors ${item.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}`}><Star className={`h-3.5 w-3.5 ${item.starred ? 'fill-current' : ''}`} aria-hidden="true" /></button>
-                                    <button onClick={() => setSelectedItem(item)} className="text-neutral-400 hover:text-brand-navy text-xs p-0.5" aria-label="Edit work item"><SquarePen className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                                    <button onClick={() => handleDelete(item.id)} className="text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label="Delete work item"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                                    <button onClick={() => setSelectedItem(item)} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-xs p-0.5" aria-label="Edit work item"><SquarePen className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                                    <button onClick={() => handleDelete(item.id)} className="text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label="Delete work item"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                                   </div>
                                 </div>
                                 <p className="text-sm font-medium text-neutral-900 leading-snug mb-2 cursor-pointer"
                                   onClick={() => setSelectedItem(item)}>{item.title}</p>
                                 {density !== 'compact' && item.description && (
-                                  <p className="text-xs text-neutral-400 mb-2 line-clamp-2">{item.description}</p>
+                                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2 line-clamp-2">{item.description}</p>
                                 )}
                                 <div className="flex items-center justify-between">
                                   <TypeBadge type={item.type} compact={density === 'compact'} />
@@ -3120,7 +3120,7 @@ export default function App() {
                           </div>
                           {/* Add item shortcut */}
                           <button onClick={() => { setNewItem(p => ({ ...p, status: col.name })); setIsCreateOpen(true); }}
-                            className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-700 rounded-lg transition-colors">
+                            className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-700 rounded-lg transition-colors">
                             <span>+</span> Add item
                           </button>
                         </div>
@@ -3138,7 +3138,7 @@ export default function App() {
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h1 className="text-2xl font-bold text-brand-navy">Projects</h1>
-                  <p className="text-sm text-neutral-400 mt-0.5">{projects.length} project{projects.length !== 1 ? 's' : ''} in this workspace</p>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-0.5">{projects.length} project{projects.length !== 1 ? 's' : ''} in this workspace</p>
                 </div>
                 <Button variant="action" onClick={() => setIsProjectOpen(true)}>+ New Project</Button>
               </div>
@@ -3165,12 +3165,12 @@ export default function App() {
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-neutral-400 mt-0.5">{p.description || 'No description'}</p>
+                              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{p.description || 'No description'}</p>
                             </div>
                             <div className="text-right flex-shrink-0">
                               <p className="text-sm font-semibold text-neutral-900">{count} items</p>
                               {count > 0 && <p className="text-xs text-semantic-success">{done} done</p>}
-                              {p.leadUserId && <p className="text-xs text-neutral-400 mt-0.5">Lead: {userName(p.leadUserId)}</p>}
+                              {p.leadUserId && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">Lead: {userName(p.leadUserId)}</p>}
                               <button onClick={() => handleArchiveProject(p.id)}
                                 className="text-xs text-neutral-300 hover:text-neutral-600 mt-1 transition-colors">
                                 {p.archived ? 'Unarchive' : 'Archive'}
@@ -3182,7 +3182,7 @@ export default function App() {
                               <div className="h-1.5 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
                                 <div className="h-full bg-semantic-success rounded-full transition-all" style={{ width: `${Math.round((done / count) * 100)}%` }}></div>
                               </div>
-                              <p className="text-xs text-neutral-400 mt-1">{Math.round((done / count) * 100)}% complete</p>
+                              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">{Math.round((done / count) * 100)}% complete</p>
                             </div>
                           )}
                         </div>
@@ -3230,13 +3230,13 @@ export default function App() {
                         <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${!n.read ? 'bg-brand-orange' : 'bg-transparent'}`}></div>
                         <div className="flex-1">
                           <p className="text-sm text-neutral-900">{n.message}</p>
-                          <p className="text-xs text-neutral-400 mt-1">{n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}</p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">{n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}</p>
                         </div>
                         {!n.read && (
                           <button onClick={() => {
                             api.raw(`/notifications/${n.id}/read`, { method: 'PUT' })
                               .then(() => { fetchNotifications(); fetchUnreadCount(); });
-                          }} className="text-xs text-neutral-400 hover:text-brand-navy mt-0.5" aria-label="Mark as read"><Check className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                          }} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy mt-0.5" aria-label="Mark as read"><Check className="h-3.5 w-3.5" aria-hidden="true" /></button>
                         )}
                       </div>
                     ))}
@@ -3252,7 +3252,7 @@ export default function App() {
               <div className="flex justify-between items-center mb-5">
                 <div>
                   <h1 className="text-xl font-bold text-brand-navy">Backlog</h1>
-                  <p className="text-xs text-neutral-400 mt-0.5">{backlogItems.length} items not in any sprint</p>
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{backlogItems.length} items not in any sprint</p>
                 </div>
                 <div className="flex gap-2 items-center">
                   <label className="flex items-center gap-1.5 cursor-pointer mr-2">
@@ -3275,7 +3275,7 @@ export default function App() {
                       <div className="flex items-center gap-3">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${sprint.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : sprint.status === 'COMPLETED' ? 'bg-neutral-200 text-neutral-600' : 'bg-brand-navy-tint/10 text-brand-navy-tint'}`}>{sprint.status}</span>
                         <h3 className="font-semibold text-neutral-900">{sprint.name}</h3>
-                        {sprint.goal && <span className="text-xs text-neutral-400 italic hidden md:inline">"{sprint.goal}"</span>}
+                        {sprint.goal && <span className="text-xs text-neutral-600 dark:text-neutral-400 italic hidden md:inline">"{sprint.goal}"</span>}
                       </div>
                       <div className="flex items-center gap-3">
                         {/* Capacity bar — shows actual committed pts vs capacity */}
@@ -3284,12 +3284,12 @@ export default function App() {
                             <div className="w-24 h-1.5 bg-neutral-200 rounded-full overflow-hidden" title={`${usedPts}/${sprint.capacity} story points`}>
                               <div className={`h-full rounded-full transition-all ${capColor}`} style={{ width: `${capPct}%` }}></div>
                             </div>
-                            <span className={`text-xs font-medium ${capPct >= 100 ? 'text-semantic-danger' : capPct >= 80 ? 'text-semantic-warning' : 'text-neutral-400'}`}>
+                            <span className={`text-xs font-medium ${capPct >= 100 ? 'text-semantic-danger' : capPct >= 80 ? 'text-semantic-warning' : 'text-neutral-600 dark:text-neutral-400'}`}>
                               {usedPts}/{sprint.capacity}pt
                             </span>
                           </div>
                         )}
-                        {sprint.startDate && <span className="text-xs text-neutral-400 hidden md:inline">{sprint.startDate} → {sprint.endDate}</span>}
+                        {sprint.startDate && <span className="text-xs text-neutral-600 dark:text-neutral-400 hidden md:inline">{sprint.startDate} → {sprint.endDate}</span>}
                         {sprint.status === 'PLANNING' && <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'ACTIVE')}>Start Sprint</Button>}
                         {sprint.status === 'ACTIVE' && <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'COMPLETED')}>Complete</Button>}
                       </div>
@@ -3303,7 +3303,7 @@ export default function App() {
               <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900">
                   <h3 className="font-semibold text-neutral-900">Backlog</h3>
-                  <span className="text-xs text-neutral-400">{backlogItems.length} items</span>
+                  <span className="text-xs text-neutral-600 dark:text-neutral-400">{backlogItems.length} items</span>
                 </div>
                 {backlogItems.length === 0
                   ? <EmptyState icon={FileText} title="Backlog is empty" subtitle="Create work items to add them to the backlog." action={<Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>Add to backlog</Button>} />
@@ -3316,7 +3316,7 @@ export default function App() {
                       className={`flex items-center gap-3 px-5 py-3 border-b border-neutral-50 dark:border-neutral-700 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-700 group transition-colors ${dragOverId === item.id ? 'border-t-2 border-t-brand-navy bg-brand-navy/5' : ''}`}>
                       <span className="text-neutral-300 cursor-grab text-xs mr-1">⠿</span>
                       <TypeBadge type={item.type} compact />
-                      <span className="font-mono text-xs text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
+                      <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
                       <span role="button" tabIndex={0} onKeyDown={onPressKey} className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => setSelectedItem(item)}>{item.title}</span>
                       {/* Refinement mode — inline edit */}
                       {refinementMode ? (
@@ -3362,8 +3362,8 @@ export default function App() {
                         <h1 className="text-xl font-bold text-brand-navy">{activeSprint.name}</h1>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${activeSprint.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : 'bg-neutral-200 text-neutral-600'}`}>{activeSprint.status}</span>
                       </div>
-                      {activeSprint.goal && <p className="text-sm text-neutral-400 italic">"{activeSprint.goal}"</p>}
-                      {activeSprint.startDate && <p className="text-xs text-neutral-400 mt-0.5">{activeSprint.startDate} → {activeSprint.endDate}</p>}
+                      {activeSprint.goal && <p className="text-sm text-neutral-600 dark:text-neutral-400 italic">"{activeSprint.goal}"</p>}
+                      {activeSprint.startDate && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{activeSprint.startDate} → {activeSprint.endDate}</p>}
                     </div>
                     <div className="flex items-center gap-2 flex-wrap justify-end">
                       <select value={activeSprint.id}
@@ -3377,7 +3377,7 @@ export default function App() {
                   {/* Capacity bar */}
                   {activeSprint.capacity > 0 && (
                     <div className="mb-3 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-4 py-2.5 flex items-center gap-4">
-                      <span className="text-xs text-neutral-400 font-medium w-20">Capacity</span>
+                      <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium w-20">Capacity</span>
                       <div className="flex-1 h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
                         <div className="h-full bg-brand-navy-tint rounded-full transition-all"
                           style={{ width: `${Math.min(100, (sprintItems.reduce((a, i) => a + (i.storyPoints || 0), 0) / activeSprint.capacity) * 100)}%` }}></div>
@@ -3415,7 +3415,7 @@ export default function App() {
                               .catch(() => {});
                           }}
                             title={f.shared ? 'Make private' : 'Share with team'}
-                            className={`text-xs px-1.5 py-1.5 rounded-r-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/20 text-semantic-success hover:bg-semantic-success/30' : 'bg-neutral-100 text-neutral-400 hover:bg-neutral-200'}`}>
+                            className={`text-xs px-1.5 py-1.5 rounded-r-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/20 text-semantic-success hover:bg-semantic-success/30' : 'bg-neutral-100 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200'}`}>
                             {f.shared ? <Unlock className="h-3.5 w-3.5" aria-hidden="true" /> : <Lock className="h-3.5 w-3.5" aria-hidden="true" />}
                           </button>
                         )}
@@ -3424,12 +3424,12 @@ export default function App() {
                     {activeFilter && (
                       <div className="flex items-center gap-1 ml-auto">
                         {!showSaveFilter
-                          ? <button onClick={() => setShowSaveFilter(true)} className="text-xs text-neutral-400 hover:text-brand-navy">Save filter</button>
+                          ? <button onClick={() => setShowSaveFilter(true)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy">Save filter</button>
                           : <div className="flex gap-1">
                               <input type="text" value={saveFilterName} onChange={e => setSaveFilterName(e.target.value)}
                                 placeholder="Filter name" className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 rounded px-2 py-1 focus:outline-none" />
                               <Button size="sm" variant="secondary" onClick={handleSaveFilter}>Save</Button>
-                              <button onClick={() => setShowSaveFilter(false)} className="text-xs text-neutral-400 px-1" aria-label="Cancel"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                              <button onClick={() => setShowSaveFilter(false)} className="text-xs text-neutral-600 dark:text-neutral-400 px-1" aria-label="Cancel"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                             </div>
                         }
                       </div>
@@ -3470,13 +3470,13 @@ export default function App() {
           {view === 'reports' && (
             <div className="p-8 max-w-5xl">
               <h1 className="text-2xl font-bold text-brand-navy mb-1">Sprint Reports</h1>
-              <p className="text-sm text-neutral-400 mb-5">Velocity, delivery, and scope tracking</p>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">Velocity, delivery, and scope tracking</p>
 
               {/* VELOCITY CHART — multi-sprint comparison */}
               {velocityData.length > 0 && (
                 <div className="bg-white border border-neutral-200 rounded-xl p-5 mb-6">
                   <h3 className="font-semibold text-neutral-900 mb-1">Velocity — All Sprints</h3>
-                  <p className="text-xs text-neutral-400 mb-4">Committed capacity vs. delivered story points</p>
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-4">Committed capacity vs. delivered story points</p>
                   <div className="flex items-end gap-3 overflow-x-auto pb-2">
                     {velocityData.map((s) => {
                       const maxVal = Math.max(...velocityData.map(x => Math.max(x.capacity || 0, x.totalPoints, 1)));
@@ -3499,13 +3499,13 @@ export default function App() {
                               <div className="w-5 rounded-t bg-semantic-success" style={{ height: `${doneH}px` }} title={`Delivered: ${s.donePoints}pt`}></div>
                             </div>
                           </div>
-                          <p className="text-xs text-neutral-400 text-center leading-tight max-w-20 truncate">{s.sprintName.replace('Sprint ', 'S').replace(' — ', ' ')}</p>
-                          <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${s.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : s.status === 'COMPLETED' ? 'bg-neutral-100 text-neutral-600' : 'bg-neutral-50 text-neutral-400'}`}>{s.status}</span>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center leading-tight max-w-20 truncate">{s.sprintName.replace('Sprint ', 'S').replace(' — ', ' ')}</p>
+                          <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${s.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : s.status === 'COMPLETED' ? 'bg-neutral-100 text-neutral-600' : 'bg-neutral-50 text-neutral-600 dark:text-neutral-400'}`}>{s.status}</span>
                         </div>
                       );
                     })}
                   </div>
-                  <div className="flex items-center gap-4 mt-3 text-xs text-neutral-400">
+                  <div className="flex items-center gap-4 mt-3 text-xs text-neutral-600 dark:text-neutral-400">
                     <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-neutral-200 inline-block"></span>Capacity</span>
                     <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-brand-navy-tint inline-block"></span>Committed</span>
                     <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-semantic-success inline-block"></span>Delivered</span>
@@ -3535,7 +3535,7 @@ export default function App() {
                             { label: 'Velocity', value: `${sprintReport.donePoints}/${sprintReport.totalPoints}pt`, color: 'text-brand-orange' },
                           ].map(card => (
                             <div key={card.label} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                              <p className="text-xs text-neutral-400 mb-1">{card.label}</p>
+                              <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-1">{card.label}</p>
                               <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
                             </div>
                           ))}
@@ -3544,7 +3544,7 @@ export default function App() {
                         {/* Burndown chart (visual) */}
                         <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                           <h3 className="font-semibold text-neutral-900 mb-4">Burndown — Commitment vs Delivery</h3>
-                          <div className="flex gap-3 mb-3 text-xs text-neutral-400">
+                          <div className="flex gap-3 mb-3 text-xs text-neutral-600 dark:text-neutral-400">
                             <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-semantic-success inline-block"></span>Done ({sprintReport.doneItems})</span>
                             <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-brand-navy-tint inline-block"></span>In Progress ({sprintReport.inProgressItems})</span>
                             <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-neutral-200 inline-block"></span>Todo ({sprintReport.todoItems})</span>
@@ -3563,14 +3563,14 @@ export default function App() {
                               </div>
                             </>}
                           </div>
-                          <p className="text-xs text-neutral-400">{sprintReport.completionRate}% complete · {sprintReport.velocityRate}% of story points delivered</p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400">{sprintReport.completionRate}% complete · {sprintReport.velocityRate}% of story points delivered</p>
                         </div>
 
                         {/* Commitment vs Delivery — story points comparison */}
                         {sprintReport.totalPoints > 0 && (
                           <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                             <h3 className="font-semibold text-neutral-900 mb-1">Commitment vs Delivery</h3>
-                            <p className="text-xs text-neutral-400 mb-4">Story points: what was committed vs what was delivered</p>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-4">Story points: what was committed vs what was delivered</p>
                             <div className="space-y-3">
                               {[
                                 { label: 'Capacity', value: sprintReport.sprint?.capacity || 0, max: Math.max(sprintReport.sprint?.capacity || 0, sprintReport.totalPoints), color: 'bg-neutral-200' },
@@ -3604,9 +3604,9 @@ export default function App() {
                             {(sprintReport.items || []).map(item => (
                               <div key={item.id} className="flex items-center gap-3 px-5 py-3">
                                 <TypeBadge type={item.type} compact />
-                                <span className="font-mono text-xs text-neutral-400 w-20">{item.id}</span>
+                                <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400 w-20">{item.id}</span>
                                 <span className="flex-1 text-sm text-neutral-900">{item.title}</span>
-                                {item.story_points > 0 && <span className="text-xs text-neutral-400">{item.story_points}pt</span>}
+                                {item.story_points > 0 && <span className="text-xs text-neutral-600 dark:text-neutral-400">{item.story_points}pt</span>}
                                 <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
                               </div>
                             ))}
@@ -3617,7 +3617,7 @@ export default function App() {
                         <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
                           <div className="px-5 py-3 border-b border-neutral-100 dark:border-neutral-700 flex items-center justify-between">
                             <h3 className="font-semibold text-neutral-900">Scope-Change Timeline</h3>
-                            <span className="text-xs text-neutral-400">Items added/removed mid-sprint</span>
+                            <span className="text-xs text-neutral-600 dark:text-neutral-400">Items added/removed mid-sprint</span>
                           </div>
                           {scopeChanges.length === 0 ? (
                             <p className="text-xs text-neutral-600 text-center py-6">No scope changes — sprint stayed on plan</p>
@@ -3630,7 +3630,7 @@ export default function App() {
                                   </span>
                                   {c.type && <TypeBadge type={c.type} compact />}
                                   <span className="flex-1 text-sm text-neutral-900">{c.title || c.work_item_id}</span>
-                                  <span className="text-xs text-neutral-400">{c.actor_name || 'System'}</span>
+                                  <span className="text-xs text-neutral-600 dark:text-neutral-400">{c.actor_name || 'System'}</span>
                                   <span className="text-xs text-neutral-300">{c.occurred_at ? new Date(c.occurred_at).toLocaleDateString() : ''}</span>
                                 </div>
                               ))}
@@ -3639,7 +3639,7 @@ export default function App() {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-neutral-400 text-center py-10">Select a sprint above to view its report.</p>
+                      <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-10">Select a sprint above to view its report.</p>
                     )}
                   </>
               }
@@ -3650,24 +3650,24 @@ export default function App() {
           {view === 'workspace' && (
             <div className="p-8 max-w-3xl">
               <h1 className="text-2xl font-bold text-brand-navy mb-1">Workspace Settings</h1>
-              <p className="text-sm text-neutral-400 mb-6">BCITS Master Workspace</p>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-6">BCITS Master Workspace</p>
               <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 mb-6">
                 <h2 className="font-semibold text-neutral-900 mb-1">Members</h2>
-                <p className="text-sm text-neutral-400 mb-4">People who have access to this workspace</p>
+                <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">People who have access to this workspace</p>
                 <div className="space-y-1 mb-5">
                   {workspaceMembers.length === 0
-                    ? <p className="text-sm text-neutral-400 py-4 text-center">Loading members...</p>
+                    ? <p className="text-sm text-neutral-600 dark:text-neutral-400 py-4 text-center">Loading members...</p>
                     : workspaceMembers.map(m => (
                       <div key={m.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                         <Avatar name={m.fullName} size={8} />
                         <div className="flex-1">
                           <p className="text-sm font-medium text-neutral-900">{m.fullName}</p>
-                          <p className="text-xs text-neutral-400">{m.email}</p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400">{m.email}</p>
                         </div>
                         <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full">{m.role}</span>
                         {m.id !== currentUser.id && (
                           <button onClick={() => handleRemoveMember(m.id)}
-                            className="text-xs text-neutral-400 hover:text-semantic-danger transition-colors">Remove</button>
+                            className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger transition-colors">Remove</button>
                         )}
                       </div>
                     ))
@@ -3689,7 +3689,7 @@ export default function App() {
               {/* Notification Preferences */}
               <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6">
                 <h2 className="font-semibold text-neutral-900 mb-1">Notification Preferences</h2>
-                <p className="text-sm text-neutral-400 mb-4">Control what notifies you</p>
+                <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">Control what notifies you</p>
                 {[
                   { key: 'notifyAssign',  label: 'Assigned to a work item' },
                   { key: 'notifyComment', label: 'New comment on my items' },
@@ -3708,7 +3708,7 @@ export default function App() {
               {/* MFA / Two-Factor Authentication */}
               <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 mt-6">
                 <h2 className="font-semibold text-neutral-900 mb-1">Two-Factor Authentication (TOTP)</h2>
-                <p className="text-sm text-neutral-400 mb-4">Secure your account with an authenticator app (Google Authenticator, Authy, etc.)</p>
+                <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">Secure your account with an authenticator app (Google Authenticator, Authy, etc.)</p>
                 {!mfaSetup ? (
                   <Button variant="secondary" onClick={handleMfaEnroll}>
                     <KeyRound className="inline-block h-4 w-4 mr-1.5 align-text-bottom" aria-hidden="true" />Set up authenticator app
@@ -3747,7 +3747,7 @@ export default function App() {
               {can('manage_roles') && (
                 <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6">
                   <h2 className="font-semibold text-neutral-900 mb-1">Role Management</h2>
-                  <p className="text-sm text-neutral-400 mb-4">Control what each member can do</p>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">Control what each member can do</p>
                   <div className="mb-4 p-3 bg-neutral-50 dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700">
                     <p className="text-xs font-semibold text-neutral-600 mb-2">Tier Hierarchy</p>
                     {[
@@ -3769,7 +3769,7 @@ export default function App() {
                         <Avatar name={m.fullName} size={7} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-neutral-900 truncate">{m.fullName}</p>
-                          <p className="text-xs text-neutral-400 truncate">{m.email}</p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{m.email}</p>
                         </div>
                         {m.id === currentUser.id
                           ? <RoleBadge role={m.role || userRole.role} tier={userRole.tier} />
@@ -3795,7 +3795,7 @@ export default function App() {
               {can('manage_projects') && (
                 <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 mt-6">
                   <h2 className="font-semibold text-neutral-900 mb-1">Workspace Branding</h2>
-                  <p className="text-sm text-neutral-400 mb-4">Customize your workspace appearance</p>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">Customize your workspace appearance</p>
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-2">Primary Accent Color</label>
@@ -3807,7 +3807,7 @@ export default function App() {
                           onChange={e => setBrandingColor(e.target.value)}
                           className="input w-32 font-mono text-sm" placeholder="#E94E1B" />
                         <div className="w-8 h-8 rounded-lg flex-shrink-0" style={{ backgroundColor: brandingColor }}></div>
-                        <span className="text-xs text-neutral-400">Used for action buttons and accents</span>
+                        <span className="text-xs text-neutral-600 dark:text-neutral-400">Used for action buttons and accents</span>
                       </div>
                     </div>
                     <div>
@@ -3823,7 +3823,7 @@ export default function App() {
               {/* Project Members */}
               <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 mt-6">
                 <h2 className="font-semibold text-neutral-900 mb-1">Project Members</h2>
-                <p className="text-sm text-neutral-400 mb-4">Manage per-project team membership</p>
+                <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">Manage per-project team membership</p>
                 <div className="flex gap-2 mb-4 flex-wrap">
                   {projects.filter(p => !p.archived).map(p => (
                     <button key={p.id} onClick={() => fetchProjectMembers(p.id)}
@@ -3840,7 +3840,7 @@ export default function App() {
                           <Avatar name={m.full_name || m.fullName} size={7} />
                           <div className="flex-1">
                             <p className="text-sm font-medium text-neutral-900">{m.full_name || m.fullName}</p>
-                            <p className="text-xs text-neutral-400">{m.email}</p>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400">{m.email}</p>
                           </div>
                           <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full">{m.role}</span>
                         </div>
@@ -3867,7 +3867,7 @@ export default function App() {
           {view === 'settings3' && (
             <div className="p-8 max-w-5xl">
               <h1 className="text-2xl font-bold text-brand-navy dark:text-white mb-1">Workflows & Fields</h1>
-              <p className="text-sm text-neutral-400 mb-5">Configure workflows, custom fields, permissions, and work item types</p>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">Configure workflows, custom fields, permissions, and work item types</p>
 
               {/* Sub-tabs */}
               <div className="flex gap-1 mb-6 border-b border-neutral-200 dark:border-neutral-700">
@@ -3885,7 +3885,7 @@ export default function App() {
                     if (t.key === 'layout') { fetchFieldDefs(); fetchFieldLayouts(); }
                     if (t.key === 'visibility') { fetchFieldDefs(); fetchRoles(); fetchFieldVisibility(); }
                   }}
-                    className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${settings3Tab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-600 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
+                    className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${settings3Tab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                     {t.label}
                   </button>
                 ))}
@@ -3921,7 +3921,7 @@ export default function App() {
                               {/* Workflow header */}
                               <div className="flex items-center justify-between p-5 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700" onClick={() => expandWorkflow(wf.id)}>
                                 <div className="flex items-center gap-3">
-                                  <span className={`transition-transform ${isExpanded ? 'rotate-90' : ''} text-neutral-400`}><ChevronRight className="h-4 w-4" aria-hidden="true" /></span>
+                                  <span className={`transition-transform ${isExpanded ? 'rotate-90' : ''} text-neutral-600 dark:text-neutral-400`}><ChevronRight className="h-4 w-4" aria-hidden="true" /></span>
                                   <span className="font-semibold text-neutral-900 dark:text-neutral-100">{wf.name}</span>
                                   {wf.isDefault && <span className="text-xs bg-brand-navy text-white px-2 py-0.5 rounded-full font-semibold">DEFAULT</span>}
                                   {wf.itemType && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded">{wf.itemType}</span>}
@@ -3936,7 +3936,7 @@ export default function App() {
                               {/* Expanded detail */}
                               {isExpanded && (
                                 <div className="border-t border-neutral-100 dark:border-neutral-700 p-5 bg-neutral-50 dark:bg-neutral-900 space-y-6">
-                                  {!detail ? <p className="text-sm text-neutral-400 text-center py-4">Loading...</p> : (
+                                  {!detail ? <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-4">Loading...</p> : (
                                     <>
                                       {/* Statuses */}
                                       <div>
@@ -3955,19 +3955,19 @@ export default function App() {
                                         {/* Add status inline form */}
                                         <div className="flex gap-2 items-end flex-wrap">
                                           <div>
-                                            <label className="text-xs font-semibold text-neutral-400 uppercase block mb-1">Status Name</label>
+                                            <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Status Name</label>
                                             <input className="input text-sm w-36" placeholder="e.g. In Review" value={newStatusForm.name}
                                               onChange={e => setNewStatusForm(f => ({ ...f, name: e.target.value }))} />
                                           </div>
                                           <div>
-                                            <label className="text-xs font-semibold text-neutral-400 uppercase block mb-1">Category</label>
+                                            <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Category</label>
                                             <select className="input text-sm" value={newStatusForm.category}
                                               onChange={e => setNewStatusForm(f => ({ ...f, category: e.target.value }))}>
                                               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                             </select>
                                           </div>
                                           <div>
-                                            <label className="text-xs font-semibold text-neutral-400 uppercase block mb-1">Color</label>
+                                            <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Color</label>
                                             <input type="color" className="h-9 w-12 rounded border border-neutral-200 cursor-pointer" value={newStatusForm.color}
                                               onChange={e => setNewStatusForm(f => ({ ...f, color: e.target.value }))} />
                                           </div>
@@ -3986,9 +3986,9 @@ export default function App() {
                                               return (
                                                 <div key={t.id} className="flex items-center gap-2 text-sm">
                                                   <span className="font-medium text-neutral-700 dark:text-neutral-200 w-32 truncate">{t.name}</span>
-                                                  <span className="text-neutral-400 text-xs">{fromS?.name || t.fromStatus}</span>
+                                                  <span className="text-neutral-600 dark:text-neutral-400 text-xs">{fromS?.name || t.fromStatus}</span>
                                                   <span className="text-neutral-300"><ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /></span>
-                                                  <span className="text-neutral-400 text-xs">{toS?.name || t.toStatus}</span>
+                                                  <span className="text-neutral-600 dark:text-neutral-400 text-xs">{toS?.name || t.toStatus}</span>
                                                   <button onClick={() => deleteTransition(wf.id, t.id)} className="text-neutral-300 hover:text-semantic-danger ml-auto text-xs" aria-label="Delete transition"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                                                 </div>
                                               );
@@ -3998,12 +3998,12 @@ export default function App() {
                                         {statuses.length >= 2 && (
                                           <div className="flex gap-2 items-end flex-wrap">
                                             <div>
-                                              <label className="text-xs font-semibold text-neutral-400 uppercase block mb-1">Transition Name</label>
+                                              <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Transition Name</label>
                                               <input className="input text-sm w-32" placeholder="e.g. Start Review" value={newTransitionForm.name}
                                                 onChange={e => setNewTransitionForm(f => ({ ...f, name: e.target.value }))} />
                                             </div>
                                             <div>
-                                              <label className="text-xs font-semibold text-neutral-400 uppercase block mb-1">From</label>
+                                              <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">From</label>
                                               <select className="input text-sm" value={newTransitionForm.fromStatus}
                                                 onChange={e => setNewTransitionForm(f => ({ ...f, fromStatus: e.target.value }))}>
                                                 <option value="">— From —</option>
@@ -4011,7 +4011,7 @@ export default function App() {
                                               </select>
                                             </div>
                                             <div>
-                                              <label className="text-xs font-semibold text-neutral-400 uppercase block mb-1">To</label>
+                                              <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">To</label>
                                               <select className="input text-sm" value={newTransitionForm.toStatus}
                                                 onChange={e => setNewTransitionForm(f => ({ ...f, toStatus: e.target.value }))}>
                                                 <option value="">— To —</option>
@@ -4021,7 +4021,7 @@ export default function App() {
                                             <Button variant="secondary" onClick={() => addTransition(wf.id)}>+ Add Transition</Button>
                                           </div>
                                         )}
-                                        {statuses.length < 2 && <p className="text-xs text-neutral-400 italic">Add at least 2 statuses to define transitions.</p>}
+                                        {statuses.length < 2 && <p className="text-xs text-neutral-600 dark:text-neutral-400 italic">Add at least 2 statuses to define transitions.</p>}
                                       </div>
                                     </>
                                   )}
@@ -4098,10 +4098,10 @@ export default function App() {
                               <tr key={fd.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
                                 <td className="px-4 py-3 font-medium text-neutral-900 dark:text-neutral-100">
                                   {fd.name}
-                                  {fd.description && <p className="text-xs text-neutral-400 mt-0.5">{fd.description}</p>}
+                                  {fd.description && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{fd.description}</p>}
                                 </td>
                                 <td className="px-4 py-3"><span className="text-xs bg-brand-navy/10 dark:bg-brand-navy/20 text-brand-navy dark:text-blue-300 px-2 py-0.5 rounded font-mono">{fd.fieldType}</span></td>
-                                <td className="px-4 py-3 font-mono text-xs text-neutral-400">{fd.fieldKey}</td>
+                                <td className="px-4 py-3 font-mono text-xs text-neutral-600 dark:text-neutral-400">{fd.fieldKey}</td>
                                 <td className="px-4 py-3"><span className={`text-xs font-semibold ${fd.required ? 'text-semantic-danger' : 'text-neutral-300'}`}>{fd.required ? <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" aria-hidden="true" />Required</span> : 'Optional'}</span></td>
                                 <td className="px-4 py-3">
                                   <button onClick={() => api.raw(`/field-defs/${fd.id}`, { method: 'DELETE' }).then(() => fetchFieldDefs())}
@@ -4122,7 +4122,7 @@ export default function App() {
                   <div className="flex justify-between items-center mb-4">
                     <div>
                       <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Field Layout</h2>
-                      <p className="text-xs text-neutral-400 mt-0.5">Control which custom fields appear on each work item type and in what order.</p>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">Control which custom fields appear on each work item type and in what order.</p>
                     </div>
                   </div>
                   {fieldDefs.length === 0 ? (
@@ -4154,12 +4154,12 @@ export default function App() {
                                     <span className="text-neutral-300 cursor-grab text-sm">⠿</span>
                                     <div className="flex-1">
                                       <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{fd.name}</span>
-                                      <span className="ml-2 text-xs font-mono text-neutral-400">{fd.fieldType}</span>
+                                      <span className="ml-2 text-xs font-mono text-neutral-600 dark:text-neutral-400">{fd.fieldType}</span>
                                     </div>
                                     <input type="checkbox" checked={visible} className="w-4 h-4 accent-brand-navy"
                                       onChange={() => showToast('Toggle field visibility in Field Visibility tab')}
                                       title="Toggle visibility" />
-                                    <span className="text-xs text-neutral-400">#{idx + 1}</span>
+                                    <span className="text-xs text-neutral-600 dark:text-neutral-400">#{idx + 1}</span>
                                   </div>
                                 );
                               })}
@@ -4178,7 +4178,7 @@ export default function App() {
                   <div className="flex justify-between items-center mb-4">
                     <div>
                       <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Field Visibility by Role</h2>
-                      <p className="text-xs text-neutral-400 mt-0.5">Control who can see or edit each custom field. Default is EDITABLE for all roles.</p>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">Control who can see or edit each custom field. Default is EDITABLE for all roles.</p>
                     </div>
                   </div>
 
@@ -4288,7 +4288,7 @@ export default function App() {
                   )}
 
                   {!permMatrix
-                    ? <div className="text-center py-12 text-neutral-400">Loading permissions matrix...</div>
+                    ? <div className="text-center py-12 text-neutral-600 dark:text-neutral-400">Loading permissions matrix...</div>
                     : (
                       <>
                         {/* System roles legend */}
@@ -4298,11 +4298,11 @@ export default function App() {
                             {[{id:'VIEWER',tier:1},{id:'MEMBER',tier:2},{id:'LEAD',tier:3},{id:'ADMIN',tier:4},{id:'OWNER',tier:5}].map(r => (
                               <div key={r.id} className="flex items-center gap-2 text-xs">
                                 <span className="font-semibold text-neutral-700 dark:text-neutral-200">{r.id}</span>
-                                <span className="text-neutral-400">Tier {r.tier}</span>
+                                <span className="text-neutral-600 dark:text-neutral-400">Tier {r.tier}</span>
                               </div>
                             ))}
                           </div>
-                          <p className="text-xs text-neutral-400 mt-2">System roles are tier-based. A role can do anything its tier permits. A check = permitted, — = not permitted.</p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-2">System roles are tier-based. A role can do anything its tier permits. A check = permitted, — = not permitted.</p>
                         </div>
                         {permMatrix.matrix.length === 0
                           ? <EmptyState icon={Lock} title="No custom roles" subtitle="Create roles to define fine-grained access control for your team." />
@@ -4314,7 +4314,7 @@ export default function App() {
                                     {permMatrix.roles.map(r => (
                                       <th key={r.id} className="px-3 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 text-center min-w-24">
                                         <div>{r.name}</div>
-                                        <div className="font-normal text-neutral-400">Tier {r.tier}</div>
+                                        <div className="font-normal text-neutral-600 dark:text-neutral-400">Tier {r.tier}</div>
                                       </th>
                                     ))}
                                   </tr>
@@ -4326,7 +4326,7 @@ export default function App() {
                                       {permMatrix.matrix.map(row => (
                                         <td key={row.role.id} className="px-3 py-2 text-center">
                                           <button onClick={() => togglePermission(row.role.id, perm, row.permissions[perm])}
-                                            className={`w-7 h-7 rounded transition-colors text-sm font-bold ${row.permissions[perm] ? 'bg-semantic-success text-white hover:opacity-80' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-400 hover:bg-brand-navy/10'}`}
+                                            className={`w-7 h-7 rounded transition-colors text-sm font-bold ${row.permissions[perm] ? 'bg-semantic-success text-white hover:opacity-80' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-brand-navy/10'}`}
                                             title={row.permissions[perm] ? 'Click to revoke' : 'Click to grant'}>
                                             {row.permissions[perm] ? <Check className="inline-block h-4 w-4 text-semantic-success" aria-label="Permitted" /> : <span aria-label="Not permitted">—</span>}
                                           </button>
@@ -4382,14 +4382,14 @@ export default function App() {
 
                   <div className="space-y-4">
                     <div>
-                      <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">Built-in Types</p>
+                      <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-3">Built-in Types</p>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {(workItemTypes.builtIn || []).map(t => (
                           <div key={t.typeKey} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 flex items-center gap-3">
                             <span className="text-2xl">{t.icon}</span>
                             <div>
                               <p className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">{t.label}</p>
-                              <p className="text-xs text-neutral-400 font-mono">{t.typeKey}</p>
+                              <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{t.typeKey}</p>
                             </div>
                           </div>
                         ))}
@@ -4397,14 +4397,14 @@ export default function App() {
                     </div>
                     {(workItemTypes.custom || []).length > 0 && (
                       <div>
-                        <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">Custom Types</p>
+                        <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-3">Custom Types</p>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                           {(workItemTypes.custom || []).map(t => (
                             <div key={t.id} className="bg-white dark:bg-neutral-800 border border-brand-navy/20 dark:border-brand-navy/30 rounded-xl p-4 flex items-center gap-3 relative group">
                               <span className="text-2xl">{t.icon}</span>
                               <div className="flex-1 min-w-0">
                                 <p className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">{t.label}</p>
-                                <p className="text-xs text-neutral-400 font-mono truncate">{t.typeKey}</p>
+                                <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono truncate">{t.typeKey}</p>
                               </div>
                               <button onClick={() => api.raw(`/work-item-types/${t.id}`, { method: 'DELETE' }).then(() => fetchWorkItemTypes())}
                                 className="opacity-0 group-hover:opacity-100 text-semantic-danger text-xs transition-opacity absolute top-2 right-2" aria-label="Remove"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
@@ -4428,7 +4428,7 @@ export default function App() {
           {view === 'bql' && (
             <div className="p-8 max-w-5xl">
               <h1 className="text-2xl font-bold text-brand-navy mb-1">BQL — bSmart Query Language</h1>
-              <p className="text-sm text-neutral-400 mb-5">Write composable queries to filter work items. Use AND/OR, comparison operators, and functions like currentUser() and today().</p>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">Write composable queries to filter work items. Use AND/OR, comparison operators, and functions like currentUser() and today().</p>
 
               <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 mb-4">
                 <div className="mb-3">
@@ -4452,7 +4452,7 @@ export default function App() {
                     <Button variant="secondary" onClick={saveBqlFilter}>Save Filter</Button>
                   </div>
                 </div>
-                <div className="mt-3 text-xs text-neutral-400">
+                <div className="mt-3 text-xs text-neutral-600 dark:text-neutral-400">
                   <span className="font-semibold text-neutral-600">Fields:</span> priority, status, type, assignee, dueDate, sprint, storyPoints &nbsp;·&nbsp;
                   <span className="font-semibold text-neutral-600">Ops:</span> = != {'<'} {'>'} {'<='} {'>='} IN CONTAINS STARTSWITH &nbsp;·&nbsp;
                   <span className="font-semibold text-neutral-600">Functions:</span> currentUser() today() now()
@@ -4462,13 +4462,13 @@ export default function App() {
               {/* Saved filters */}
               {bqlFilters.length > 0 && (
                 <div className="mb-4">
-                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Saved Filters</p>
+                  <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-2">Saved Filters</p>
                   <div className="flex flex-wrap gap-2">
                     {bqlFilters.map(f => (
                       <button key={f.id} onClick={() => { setBqlQuery(f.query); runBql(); }}
                         className="flex items-center gap-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5 text-sm hover:border-brand-navy transition-colors group">
                         <span className="font-medium text-neutral-900">{f.name}</span>
-                        {f.isShared && <span className="text-xs text-neutral-400">shared</span>}
+                        {f.isShared && <span className="text-xs text-neutral-600 dark:text-neutral-400">shared</span>}
                         <button onClick={e => { e.stopPropagation(); api.raw(`/bql/filters/${f.id}`, { method: 'DELETE' }).then(() => fetchBqlFilters()); }}
                           className="text-neutral-300 hover:text-semantic-danger opacity-0 group-hover:opacity-100 transition-opacity ml-1" aria-label="Remove"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                       </button>
@@ -4487,7 +4487,7 @@ export default function App() {
                     {bqlResults.map((item, i) => (
                       <div key={item.id || i} className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 cursor-pointer"
                         onClick={() => { const full = workItems.find(w => w.id === item.id); if (full) setSelectedItem(full); }}>
-                        <span className="font-mono text-xs text-neutral-400 w-24 flex-shrink-0">{item.id}</span>
+                        <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400 w-24 flex-shrink-0">{item.id}</span>
                         <span className="flex-1 text-sm font-medium text-neutral-900 truncate">{item.title}</span>
                         {item.status && <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>}
                         {item.priority && <PriorityBadge priority={item.priority} />}
@@ -4497,7 +4497,7 @@ export default function App() {
                 </div>
               )}
               {bqlResults.length === 0 && bqlQuery && !bqlError && (
-                <div className="text-center py-12 text-neutral-400">
+                <div className="text-center py-12 text-neutral-600 dark:text-neutral-400">
                   <p className="text-sm">No results. Run the query to see results.</p>
                 </div>
               )}
@@ -4512,7 +4512,7 @@ export default function App() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h1 className="text-2xl font-bold text-brand-navy">Project Management</h1>
-                  <p className="text-sm text-neutral-400 mt-0.5">RAID logs, decisions, meetings, action items</p>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-0.5">RAID logs, decisions, meetings, action items</p>
                 </div>
                 {/* Project selector */}
                 <select className="input text-sm w-48" value={pmProjectId} onChange={e => {
@@ -4545,7 +4545,7 @@ export default function App() {
                       { key: 'cross-deps',   label: `🌐 Cross-Project (${crossProjectDeps.length})` },
                     ].map(t => (
                       <button key={t.key} onClick={() => { setPmTab(t.key); if (t.key === 'cross-deps') fetchCrossProjectDeps(); }}
-                        className={`text-xs font-medium px-3 py-2 border-b-2 whitespace-nowrap transition-colors ${pmTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-600 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
+                        className={`text-xs font-medium px-3 py-2 border-b-2 whitespace-nowrap transition-colors ${pmTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                         {t.label}
                       </button>
                     ))}
@@ -4574,11 +4574,11 @@ export default function App() {
                               <div>
                                 <div className="flex gap-1 mb-1">
                                   <div className="w-16 flex-shrink-0"></div>
-                                  {impacts.map(i => <div key={i} className="flex-1 text-xs text-neutral-400 text-center uppercase">{i}</div>)}
+                                  {impacts.map(i => <div key={i} className="flex-1 text-xs text-neutral-600 dark:text-neutral-400 text-center uppercase">{i}</div>)}
                                 </div>
                                 {probs.map(p => (
                                   <div key={p} className="flex gap-1 mb-1">
-                                    <div className="w-16 text-xs text-neutral-400 flex items-center flex-shrink-0">{p}</div>
+                                    <div className="w-16 text-xs text-neutral-600 dark:text-neutral-400 flex items-center flex-shrink-0">{p}</div>
                                     {impacts.map(imp => {
                                       const count = (raidDashboard.risks || []).filter(r => r.probability === p && r.impact === imp && r.status === 'OPEN').length;
                                       const heat = (probs.indexOf(p) + impacts.indexOf(imp));
@@ -4591,7 +4591,7 @@ export default function App() {
                                     })}
                                   </div>
                                 ))}
-                                <p className="text-xs text-neutral-400 mt-2">Rows = Probability, Columns = Impact. Color = severity.</p>
+                                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-2">Rows = Probability, Columns = Impact. Color = severity.</p>
                               </div>
                             );
                           })()}
@@ -4604,7 +4604,7 @@ export default function App() {
                             <div key={a.id} className="flex items-center gap-3 py-2 border-b border-neutral-50 last:border-0">
                               <span className={`w-2 h-2 rounded-full flex-shrink-0 ${a.dueDate && new Date(a.dueDate) < new Date() ? 'bg-semantic-danger' : 'bg-semantic-warning'}`}></span>
                               <span className="flex-1 text-sm text-neutral-900 truncate">{a.title}</span>
-                              {a.dueDate && <span className="text-xs text-neutral-400">{a.dueDate}</span>}
+                              {a.dueDate && <span className="text-xs text-neutral-600 dark:text-neutral-400">{a.dueDate}</span>}
                             </div>
                           ))}
                           {(raidDashboard.actionItems || []).filter(a => a.status !== 'DONE').length === 0 && <p className="text-sm text-neutral-600 text-center py-4">No open action items</p>}
@@ -4612,7 +4612,7 @@ export default function App() {
                       </div>
                     </div>
                   )}
-                  {pmTab === 'raid' && !raidDashboard && <div className="text-center py-12 text-neutral-400">Loading RAID dashboard...</div>}
+                  {pmTab === 'raid' && !raidDashboard && <div className="text-center py-12 text-neutral-600 dark:text-neutral-400">Loading RAID dashboard...</div>}
 
                   {/* RISKS */}
                   {pmTab === 'risks' && (
@@ -4691,11 +4691,11 @@ export default function App() {
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
                                       <span className="text-xs bg-brand-navy/10 text-brand-navy px-2 py-0.5 rounded font-medium">{m.meetingType}</span>
-                                      <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${m.status === 'COMPLETED' ? 'bg-semantic-success/10 text-semantic-success' : m.status === 'CANCELLED' ? 'bg-neutral-100 text-neutral-400' : 'bg-semantic-warning/10 text-semantic-warning'}`}>{m.status}</span>
+                                      <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${m.status === 'COMPLETED' ? 'bg-semantic-success/10 text-semantic-success' : m.status === 'CANCELLED' ? 'bg-neutral-100 text-neutral-600 dark:text-neutral-400' : 'bg-semantic-warning/10 text-semantic-warning'}`}>{m.status}</span>
                                     </div>
                                     <p className="font-semibold text-neutral-900">{m.title}</p>
-                                    {m.scheduledAt && <p className="text-xs text-neutral-400 mt-1"><Calendar className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{new Date(m.scheduledAt).toLocaleString()}{m.durationMins ? ` · ${m.durationMins}min` : ''}</p>}
-                                    {m.location && <p className="text-xs text-neutral-400"><MapPin className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{m.location}</p>}
+                                    {m.scheduledAt && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1"><Calendar className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{new Date(m.scheduledAt).toLocaleString()}{m.durationMins ? ` · ${m.durationMins}min` : ''}</p>}
+                                    {m.location && <p className="text-xs text-neutral-600 dark:text-neutral-400"><MapPin className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{m.location}</p>}
                                   </div>
                                   <button onClick={e => { e.stopPropagation(); pmDelete('meeting', m.id); }} className="text-neutral-300 hover:text-semantic-danger text-xs ml-3" aria-label="Delete meeting"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                                 </div>
@@ -4710,7 +4710,7 @@ export default function App() {
                   {pmTab === 'meeting-detail' && selectedMeeting && (
                     <div>
                       <div className="flex items-center gap-3 mb-5">
-                        <button onClick={() => { setPmTab('meetings'); setSelectedMeeting(null); }} className="text-neutral-400 hover:text-brand-navy text-sm" aria-label="Back"><ArrowLeft className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Back</button>
+                        <button onClick={() => { setPmTab('meetings'); setSelectedMeeting(null); }} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-sm" aria-label="Back"><ArrowLeft className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Back</button>
                         <h2 className="font-bold text-brand-navy text-lg">{selectedMeeting.title}</h2>
                         <span className="text-xs bg-brand-navy/10 text-brand-navy px-2 py-0.5 rounded">{selectedMeeting.meetingType}</span>
                       </div>
@@ -4747,7 +4747,7 @@ export default function App() {
                       renderRow={a => [a.title, users.find(u => u.id === a.ownerId)?.fullName || '—', a.dueDate || '—', a.status, a.priority]}
                       onDelete={id => pmDelete('action', id)}
                       onAdd={() => { setPmFormOpen('action'); setPmForm({ status: 'OPEN', priority: 'MEDIUM' }); }}
-                      statusColors={{ OPEN: 'text-semantic-warning', IN_PROGRESS: 'text-brand-navy', DONE: 'text-semantic-success', CANCELLED: 'text-neutral-400' }}
+                      statusColors={{ OPEN: 'text-semantic-warning', IN_PROGRESS: 'text-brand-navy', DONE: 'text-semantic-success', CANCELLED: 'text-neutral-600 dark:text-neutral-400' }}
                     />
                   )}
 
@@ -4785,14 +4785,14 @@ export default function App() {
                               return (
                                 <div key={q.key} className={`p-4 rounded-xl border ${q.color} min-h-[100px]`}>
                                   <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">{q.desc}</p>
-                                  <p className="text-xs text-neutral-400 mb-2">{q.label}</p>
+                                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2">{q.label}</p>
                                   <div className="space-y-1">
                                     {quadrantStakeholders.length === 0 && <p className="text-xs text-neutral-300 italic">None</p>}
                                     {quadrantStakeholders.map(s => (
                                       <div key={s.id} className="flex items-center gap-1.5">
                                         <Avatar name={s.name} size={5} />
                                         <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100">{s.name}</span>
-                                        <span className="text-xs text-neutral-400">{s.role}</span>
+                                        <span className="text-xs text-neutral-600 dark:text-neutral-400">{s.role}</span>
                                       </div>
                                     ))}
                                   </div>
@@ -4800,7 +4800,7 @@ export default function App() {
                               );
                             })}
                           </div>
-                          <p className="text-xs text-neutral-400 mt-3">Based on Influence (HIGH/MEDIUM/LOW) and Interest (HIGH/MEDIUM/LOW) fields. HIGH means above MEDIUM.</p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-3">Based on Influence (HIGH/MEDIUM/LOW) and Interest (HIGH/MEDIUM/LOW) fields. HIGH means above MEDIUM.</p>
                         </div>
                       )}
                     </div>
@@ -4841,7 +4841,7 @@ export default function App() {
                                 <tr key={dep.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
                                   <td className="px-4 py-3 font-medium text-neutral-900 dark:text-neutral-100">
                                     {dep.title}
-                                    {dep.description && <p className="text-xs text-neutral-400 mt-0.5">{dep.description}</p>}
+                                    {dep.description && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{dep.description}</p>}
                                   </td>
                                   <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">
                                     {projects.find(p => p.id === dep.targetProjectId)?.name || dep.targetProjectId || '—'}
@@ -4853,7 +4853,7 @@ export default function App() {
                                     {dep.isBlocker ? (
                                       <span className="text-xs font-bold text-semantic-danger bg-semantic-danger-surface px-2 py-0.5 rounded">BLOCKER</span>
                                     ) : (
-                                      <span className="text-xs text-neutral-400">—</span>
+                                      <span className="text-xs text-neutral-600 dark:text-neutral-400">—</span>
                                     )}
                                   </td>
                                   <td className="px-4 py-3">
@@ -5060,7 +5060,7 @@ export default function App() {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h1 className="text-2xl font-bold text-brand-navy">Trash</h1>
-                  <p className="text-sm text-neutral-400 mt-0.5">Deleted items are kept for 30 days</p>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-0.5">Deleted items are kept for 30 days</p>
                 </div>
               </div>
               {trashItems.length === 0
@@ -5072,7 +5072,7 @@ export default function App() {
                         <TypeBadge type={item.type} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-neutral-900 truncate">{item.title}</p>
-                          <p className="text-xs text-neutral-400 dark:text-neutral-600 font-mono">{item.id} · Deleted {item.deletedAt ? new Date(item.deletedAt).toLocaleDateString() : ''}</p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{item.id} · Deleted {item.deletedAt ? new Date(item.deletedAt).toLocaleDateString() : ''}</p>
                         </div>
                         <div className="flex gap-2 flex-shrink-0">
                           <Button variant="secondary" size="sm" onClick={() => restoreFromTrash(item.id)}>Restore</Button>
@@ -5113,7 +5113,7 @@ export default function App() {
                         <div key={d.id} onClick={() => openDashboard(d.id)} role="button" tabIndex={0} onKeyDown={onPressKey}
                           className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                           <div className="flex items-start justify-between">
-                            <LayoutDashboard className="h-6 w-6 text-neutral-400" aria-hidden="true" />
+                            <LayoutDashboard className="h-6 w-6 text-neutral-600 dark:text-neutral-400" aria-hidden="true" />
                             <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-700 rounded-full px-2 py-0.5">{d.scope || 'PERSONAL'}</span>
                           </div>
                           <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mt-2 truncate">{d.name}</p>
@@ -5276,7 +5276,7 @@ export default function App() {
                       {reports.map(r => (
                         <div key={r.id} onClick={() => openReport(r.id)} role="button" tabIndex={0} onKeyDown={onPressKey}
                           className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
-                          <FileText className="h-6 w-6 text-neutral-400" aria-hidden="true" />
+                          <FileText className="h-6 w-6 text-neutral-600 dark:text-neutral-400" aria-hidden="true" />
                           <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mt-2 truncate">{r.name}</p>
                           <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{r.updatedAt ? `Updated ${new Date(r.updatedAt).toLocaleDateString()}` : '—'}</p>
                         </div>
@@ -5358,7 +5358,7 @@ export default function App() {
                       <div key={s.id} className="flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-neutral-900 dark:text-neutral-100">{s.cadence?.toLowerCase()} · {s.channel?.replace('_', '-').toLowerCase()}</p>
-                          <p className="text-xs text-neutral-400 truncate">{s.recipients ? `to ${s.recipients}` : 'owner only'}{s.nextRunAt ? ` · next ${new Date(s.nextRunAt).toLocaleDateString()}` : ''}</p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{s.recipients ? `to ${s.recipients}` : 'owner only'}{s.nextRunAt ? ` · next ${new Date(s.nextRunAt).toLocaleDateString()}` : ''}</p>
                         </div>
                         <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${s.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500'}`}>{s.active ? 'ACTIVE' : 'PAUSED'}</span>
                         <button onClick={() => toggleReportSchedule(s)} className="text-xs text-brand-navy hover:underline">{s.active ? 'Pause' : 'Resume'}</button>
@@ -5417,7 +5417,7 @@ export default function App() {
                       onChange={e => setKnowledgeSearch(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter') { searchKnowledge(); setKnowledgeTab('search'); } }}
                       className="input text-xs pl-6 py-1.5 w-full" />
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400"><Search className="h-3.5 w-3.5" aria-hidden="true" /></span>
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-600 dark:text-neutral-400"><Search className="h-3.5 w-3.5" aria-hidden="true" /></span>
                   </div>
                 </div>
                 {/* All articles shortcut */}
@@ -5458,8 +5458,8 @@ export default function App() {
                       <div>
                         <div className="flex items-center gap-3 mb-4">
                           <h1 className="text-xl font-bold text-brand-navy dark:text-white">Search Results</h1>
-                          <span className="text-sm text-neutral-400">{knowledgeSearchResults.length} results for "{knowledgeSearch}"</span>
-                          <button onClick={() => { setKnowledgeTab('spaces'); setKnowledgeSearch(''); setKnowledgeSearchResults([]); }} className="text-xs text-neutral-400 hover:text-neutral-700 ml-auto">Clear</button>
+                          <span className="text-sm text-neutral-600 dark:text-neutral-400">{knowledgeSearchResults.length} results for "{knowledgeSearch}"</span>
+                          <button onClick={() => { setKnowledgeTab('spaces'); setKnowledgeSearch(''); setKnowledgeSearchResults([]); }} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 ml-auto">Clear</button>
                         </div>
                         {knowledgeSearchResults.length === 0 ? (
                           <EmptyState icon={Search} title="No results found" subtitle={`No articles match "${knowledgeSearch}". Try different keywords.`} />
@@ -5471,11 +5471,11 @@ export default function App() {
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
                                     <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{art.title}</p>
-                                    <p className="text-xs text-neutral-400 mt-0.5 line-clamp-2">{(art.content || '').substring(0, 120)}{(art.content || '').length > 120 ? '...' : ''}</p>
+                                    <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5 line-clamp-2">{(art.content || '').substring(0, 120)}{(art.content || '').length > 120 ? '...' : ''}</p>
                                   </div>
                                   <div className="flex items-center gap-2 ml-3 flex-shrink-0">
                                     <span className={`text-xs font-semibold px-2 py-0.5 rounded ${art.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : art.status === 'DRAFT' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500' : 'bg-semantic-warning-surface text-semantic-warning'}`}>{art.status || 'DRAFT'}</span>
-                                    <span className="text-xs text-neutral-400 font-mono">{art.templateType || 'KB'}</span>
+                                    <span className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{art.templateType || 'KB'}</span>
                                   </div>
                                 </div>
                               </div>
@@ -5487,9 +5487,9 @@ export default function App() {
                       <div>
                         <div className="flex items-center justify-between mb-5">
                           <div className="flex items-center gap-3">
-                            {selectedSpace && <button onClick={() => { setSelectedSpace(null); setKnowledgeTab('spaces'); }} className="text-xs text-neutral-400 hover:text-brand-navy transition-colors"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Spaces</button>}
+                            {selectedSpace && <button onClick={() => { setSelectedSpace(null); setKnowledgeTab('spaces'); }} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Spaces</button>}
                             <h1 className="text-xl font-bold text-brand-navy dark:text-white">{selectedSpace ? selectedSpace.name : 'All Articles'}</h1>
-                            {selectedSpace?.description && <p className="text-xs text-neutral-400">{selectedSpace.description}</p>}
+                            {selectedSpace?.description && <p className="text-xs text-neutral-600 dark:text-neutral-400">{selectedSpace.description}</p>}
                           </div>
                           <div className="flex items-center gap-2">
                             {selectedSpace && can('manage_projects') && (
@@ -5513,10 +5513,10 @@ export default function App() {
                                     <div className="flex items-center gap-2 mb-1">
                                       <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{art.title}</p>
                                     </div>
-                                    <p className="text-xs text-neutral-400 line-clamp-2">{(art.content || '').substring(0, 120)}{(art.content || '').length > 120 ? '...' : ''}</p>
+                                    <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-2">{(art.content || '').substring(0, 120)}{(art.content || '').length > 120 ? '...' : ''}</p>
                                     <div className="flex items-center gap-3 mt-2">
-                                      <span className="text-xs text-neutral-400">v{art.versionNumber || 1} · {art.authorName || 'Unknown'}</span>
-                                      {art.updatedAt && <span className="text-xs text-neutral-400">{new Date(art.updatedAt).toLocaleDateString()}</span>}
+                                      <span className="text-xs text-neutral-600 dark:text-neutral-400">v{art.versionNumber || 1} · {art.authorName || 'Unknown'}</span>
+                                      {art.updatedAt && <span className="text-xs text-neutral-600 dark:text-neutral-400">{new Date(art.updatedAt).toLocaleDateString()}</span>}
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2 ml-3 flex-shrink-0">
@@ -5541,14 +5541,14 @@ export default function App() {
                     {/* Article header */}
                     <div className="border-b border-neutral-200 dark:border-neutral-700 px-6 py-4 flex items-center justify-between bg-white dark:bg-neutral-800 flex-shrink-0">
                       <div className="flex items-center gap-3 min-w-0">
-                        <button onClick={() => { setSelectedArticle(null); setEditingArticle(false); setArticlePanel(null); }} className="text-xs text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0" aria-label="Back"><ArrowLeft className="h-4 w-4" aria-hidden="true" /></button>
+                        <button onClick={() => { setSelectedArticle(null); setEditingArticle(false); setArticlePanel(null); }} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0" aria-label="Back"><ArrowLeft className="h-4 w-4" aria-hidden="true" /></button>
                         <div className="min-w-0">
                           <h1 className="font-bold text-lg text-neutral-900 dark:text-white truncate">{selectedArticle.title}</h1>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className={`text-xs font-semibold px-2 py-0.5 rounded ${selectedArticle.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : selectedArticle.status === 'DRAFT' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500' : 'bg-neutral-200 dark:bg-neutral-600 text-neutral-500'}`}>{selectedArticle.status || 'DRAFT'}</span>
-                            <span className="text-xs font-mono text-neutral-400">{selectedArticle.templateType || 'KB'}</span>
-                            <span className="text-xs text-neutral-400">v{selectedArticle.versionNumber || 1}</span>
-                            {selectedArticle.updatedAt && <span className="text-xs text-neutral-400">Updated {new Date(selectedArticle.updatedAt).toLocaleDateString()}</span>}
+                            <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400">{selectedArticle.templateType || 'KB'}</span>
+                            <span className="text-xs text-neutral-600 dark:text-neutral-400">v{selectedArticle.versionNumber || 1}</span>
+                            {selectedArticle.updatedAt && <span className="text-xs text-neutral-600 dark:text-neutral-400">Updated {new Date(selectedArticle.updatedAt).toLocaleDateString()}</span>}
                           </div>
                         </div>
                       </div>
@@ -5639,8 +5639,8 @@ export default function App() {
                               {articleVersions.map(v => (
                                 <div key={v.id} className="bg-white dark:bg-neutral-800 rounded-lg p-3 border border-neutral-200 dark:border-neutral-700">
                                   <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">Version {v.versionNumber}</p>
-                                  <p className="text-xs text-neutral-400 mt-0.5">{v.savedBy || 'Unknown'}</p>
-                                  <p className="text-xs text-neutral-400">{v.savedAt ? new Date(v.savedAt).toLocaleString() : '—'}</p>
+                                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{v.savedBy || 'Unknown'}</p>
+                                  <p className="text-xs text-neutral-600 dark:text-neutral-400">{v.savedAt ? new Date(v.savedAt).toLocaleString() : '—'}</p>
                                   <button onClick={() => setSelectedArticle(a => ({ ...a, content: v.content }))}
                                     className="text-xs text-brand-navy hover:underline mt-1">Restore</button>
                                 </div>
@@ -5661,7 +5661,7 @@ export default function App() {
                               <div key={c.id} className={`rounded-lg p-3 border ${c.resolved ? 'bg-semantic-success-surface border-semantic-success/30' : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700'}`}>
                                 <div className="flex items-center justify-between mb-1">
                                   <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{c.authorName || 'Unknown'}</span>
-                                  <span className="text-xs text-neutral-400">{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : ''}</span>
+                                  <span className="text-xs text-neutral-600 dark:text-neutral-400">{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : ''}</span>
                                 </div>
                                 <p className="text-xs text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">{c.body}</p>
                                 <div className="flex items-center gap-3 mt-1.5">
@@ -5685,7 +5685,7 @@ export default function App() {
                         <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
                           <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Analytics</h3>
                           {!articleAnalytics ? (
-                            <p className="text-xs text-neutral-400">Loading…</p>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400">Loading…</p>
                           ) : (
                             <div className="space-y-2">
                               {[
@@ -5743,10 +5743,10 @@ export default function App() {
                       className={`w-full text-left px-3 py-3 rounded-xl mb-1 transition-colors border ${selectedRelease?.id === r.id ? 'bg-brand-navy/10 border-brand-navy/30' : 'hover:bg-neutral-100 dark:hover:bg-neutral-700 border-transparent'}`}>
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{r.name}</span>
-                        <span className="text-xs font-mono text-neutral-400 ml-1">v{r.version}</span>
+                        <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400 ml-1">v{r.version}</span>
                       </div>
                       <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${r.status === 'RELEASED' ? 'bg-semantic-success text-white' : r.status === 'IN_PROGRESS' ? 'bg-brand-navy text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{r.status}</span>
-                      {r.releaseDate && <span className="text-xs text-neutral-400 ml-2">{new Date(r.releaseDate).toLocaleDateString()}</span>}
+                      {r.releaseDate && <span className="text-xs text-neutral-600 dark:text-neutral-400 ml-2">{new Date(r.releaseDate).toLocaleDateString()}</span>}
                     </button>
                   ))}
                   {releases.length === 0 && <p className="text-xs text-neutral-600 text-center py-6">No releases yet. Create one to get started.</p>}
@@ -5761,11 +5761,11 @@ export default function App() {
                       <div>
                         <div className="flex items-center gap-3 mb-1">
                           <h1 className="text-2xl font-bold text-brand-navy dark:text-white">{selectedRelease.name}</h1>
-                          <span className="font-mono text-neutral-400">v{selectedRelease.version}</span>
+                          <span className="font-mono text-neutral-600 dark:text-neutral-400">v{selectedRelease.version}</span>
                           <span className={`text-xs font-bold px-2 py-0.5 rounded ${selectedRelease.status === 'RELEASED' ? 'bg-semantic-success text-white' : selectedRelease.status === 'IN_PROGRESS' ? 'bg-brand-navy text-white' : 'bg-neutral-100 text-neutral-500'}`}>{selectedRelease.status}</span>
                         </div>
                         {selectedRelease.description && <p className="text-sm text-neutral-500">{selectedRelease.description}</p>}
-                        {selectedRelease.releaseDate && <p className="text-xs text-neutral-400 mt-1">Target: {new Date(selectedRelease.releaseDate).toLocaleDateString()}</p>}
+                        {selectedRelease.releaseDate && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Target: {new Date(selectedRelease.releaseDate).toLocaleDateString()}</p>}
                       </div>
                       <div className="flex gap-2 items-center">
                         {selectedRelease.status !== 'RELEASED' && <Button variant="action" onClick={() => updateRelease(selectedRelease.id, { ...selectedRelease, status: 'RELEASED' })}>Mark Released</Button>}
@@ -5790,7 +5790,7 @@ export default function App() {
                         : releaseItems.map(item => (
                           <div key={item.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                             <TypeBadge type={item.type} compact />
-                            <span className="font-mono text-xs text-neutral-400">{item.id}</span>
+                            <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.id}</span>
                             <span role="button" tabIndex={0} onKeyDown={onPressKey} className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate cursor-pointer hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => setSelectedItem(item)}>{item.title}</span>
                             <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
                             <button onClick={() => removeItemFromRelease(selectedRelease.id, item.id)} className="text-xs text-semantic-danger hover:underline">Remove</button>
@@ -5863,7 +5863,7 @@ export default function App() {
                                 <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{imp.title}</span>
                               </div>
                               {imp.description && <p className="text-xs text-neutral-500 mb-1">{imp.description}</p>}
-                              <p className="text-[11px] text-neutral-400">{imp.category || 'Uncategorized'} · raised {imp.raisedAt ? new Date(imp.raisedAt).toLocaleDateString() : '—'}</p>
+                              <p className="text-[11px] text-neutral-600 dark:text-neutral-400">{imp.category || 'Uncategorized'} · raised {imp.raisedAt ? new Date(imp.raisedAt).toLocaleDateString() : '—'}</p>
                             </div>
                             <div className="flex flex-col items-end gap-1 flex-shrink-0">
                               <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${imp.status === 'RESOLVED' ? 'bg-semantic-success text-white' : imp.status === 'ESCALATED' ? 'bg-semantic-danger text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{imp.status}</span>
@@ -5979,7 +5979,7 @@ export default function App() {
                             </div>
                             <div className="space-y-1 max-h-40 overflow-y-auto">
                               {(rows || []).map((r, idx) => <p key={idx} className="text-xs text-neutral-600 dark:text-neutral-300 truncate">{r.title || r.work_item_id || r.id}</p>)}
-                              {(rows || []).length === 0 && <p className="text-xs text-neutral-400">None — clear.</p>}
+                              {(rows || []).length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-400">None — clear.</p>}
                             </div>
                           </div>
                         ))}
@@ -6009,7 +6009,7 @@ export default function App() {
                           {(planningResult.suggestedItems || []).map(i => (
                             <div key={i.id} className="flex items-center gap-2 py-1.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                               <span className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate">{i.title}</span>
-                              <span className="text-xs text-neutral-400">{i.priority}</span>
+                              <span className="text-xs text-neutral-600 dark:text-neutral-400">{i.priority}</span>
                               <span className="text-xs font-mono text-brand-navy">{i.story_points} pts</span>
                             </div>
                           ))}
@@ -6030,7 +6030,7 @@ export default function App() {
                           : retros.map(r => (
                             <button key={r.id} onClick={() => openRetro(r.id)} className="w-full text-left bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 hover:border-brand-navy/40">
                               <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{r.title}</span>
-                              <span className="ml-2 text-xs text-neutral-400">{r.template}</span>
+                              <span className="ml-2 text-xs text-neutral-600 dark:text-neutral-400">{r.template}</span>
                               <span className={`ml-2 text-xs font-bold px-1.5 py-0.5 rounded ${r.status === 'COMPLETED' ? 'bg-semantic-success text-white' : 'bg-brand-navy text-white'}`}>{r.status}</span>
                             </button>))}
                       </div>
@@ -6070,7 +6070,7 @@ export default function App() {
                                   <div className="flex items-center gap-3 mt-1">
                                     <button onClick={() => voteRetroNote(n.id)} className="text-[11px] text-brand-navy hover:underline" aria-label="Upvote"><ChevronUp className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /> {n.votes}</button>
                                     {!n.convertedActionItemId && <button onClick={() => convertRetroNote(n.id)} className="text-[11px] text-semantic-success hover:underline" aria-label="Convert to action item"><ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" />Action</button>}
-                                    {n.convertedActionItemId && <span className="text-xs text-neutral-400"><Check className="inline-block h-3 w-3 align-text-bottom" aria-hidden="true" /> action</span>}
+                                    {n.convertedActionItemId && <span className="text-xs text-neutral-600 dark:text-neutral-400"><Check className="inline-block h-3 w-3 align-text-bottom" aria-hidden="true" /> action</span>}
                                   </div>
                                 </div>
                               ))}
@@ -6112,7 +6112,7 @@ export default function App() {
                         <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
                           <h4 className="font-semibold text-sm mb-2 text-neutral-900 dark:text-neutral-100">Demo list</h4>
                           {(reviewResult.demoList || []).map(i => <p key={i.id} className="text-sm text-neutral-700 dark:text-neutral-200 py-0.5">• {i.title}</p>)}
-                          {(reviewResult.demoList || []).length === 0 && <p className="text-xs text-neutral-400">Nothing shipped yet.</p>}
+                          {(reviewResult.demoList || []).length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-400">Nothing shipped yet.</p>}
                         </div>
                       </div>
                     )}
@@ -6130,17 +6130,17 @@ export default function App() {
                           <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
                             <h4 className="font-semibold text-sm mb-2 text-neutral-900 dark:text-neutral-100">Recurring impediments</h4>
                             {(patternsResult.recurringImpediments || []).map((r, i) => <p key={i} className="text-xs text-neutral-700 dark:text-neutral-200 py-0.5">{r.category} · {r.count}×</p>)}
-                            {(patternsResult.recurringImpediments || []).length === 0 && <p className="text-xs text-neutral-400">None.</p>}
+                            {(patternsResult.recurringImpediments || []).length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-400">None.</p>}
                           </div>
                           <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
                             <h4 className="font-semibold text-sm mb-2 text-neutral-900 dark:text-neutral-100">Estimation misses</h4>
                             {(patternsResult.estimationMisses || []).map((r, i) => <p key={i} className="text-xs text-neutral-700 dark:text-neutral-200 py-0.5">{r.sprintName}: −{r.missedBy} pts</p>)}
-                            {(patternsResult.estimationMisses || []).length === 0 && <p className="text-xs text-neutral-400">None.</p>}
+                            {(patternsResult.estimationMisses || []).length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-400">None.</p>}
                           </div>
                           <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
                             <h4 className="font-semibold text-sm mb-2 text-neutral-900 dark:text-neutral-100">Scope-creep sources</h4>
                             {(patternsResult.scopeCreepSources || []).map((r, i) => <p key={i} className="text-xs text-neutral-700 dark:text-neutral-200 py-0.5">{r.actor || 'Unknown'} · {r.additions}×</p>)}
-                            {(patternsResult.scopeCreepSources || []).length === 0 && <p className="text-xs text-neutral-400">None.</p>}
+                            {(patternsResult.scopeCreepSources || []).length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-400">None.</p>}
                           </div>
                         </div>
                       </div>
@@ -6182,7 +6182,7 @@ export default function App() {
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
                               <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{t.name}</span>
-                              {t.quarter && <span className="ml-2 text-xs text-neutral-400">{t.quarter}</span>}
+                              {t.quarter && <span className="ml-2 text-xs text-neutral-600 dark:text-neutral-400">{t.quarter}</span>}
                               {t.description && <p className="text-xs text-neutral-500 mt-1">{t.description}</p>}
                             </div>
                             <select className="input text-xs py-1" value={t.status} onChange={e => updateThemeStatus(t, e.target.value)}>
@@ -6253,7 +6253,7 @@ export default function App() {
                           {(feedbackClusters.clusters || []).map((c, idx) => (
                             <div key={idx} className="bg-white dark:bg-neutral-800 rounded-md p-2 border border-neutral-200 dark:border-neutral-700">
                               <div className="flex items-center justify-between"><span className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">{c.theme}</span><span className="text-xs text-brand-navy font-bold">{c.count}</span></div>
-                              <p className="text-xs text-neutral-400">+{c.positive} / ~{c.neutral} / −{c.negative}</p>
+                              <p className="text-xs text-neutral-600 dark:text-neutral-400">+{c.positive} / ~{c.neutral} / −{c.negative}</p>
                             </div>
                           ))}
                         </div>
@@ -6264,7 +6264,7 @@ export default function App() {
                       : feedbackItems.map(f => (
                         <div key={f.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs text-neutral-400">{f.source}</span>
+                            <span className="text-xs text-neutral-600 dark:text-neutral-400">{f.source}</span>
                             {f.customer && <span className="text-xs text-neutral-500">· {f.customer}</span>}
                             <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${f.sentiment === 'POSITIVE' ? 'bg-semantic-success text-white' : f.sentiment === 'NEGATIVE' ? 'bg-semantic-danger text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{f.sentiment}</span>
                             {f.theme && <span className="text-xs text-brand-navy">#{f.theme}</span>}
@@ -6296,7 +6296,7 @@ export default function App() {
                     {objectives.map(o => (
                       <button key={o.id} onClick={() => openObjective(o.id)} className={`w-full text-left rounded-xl p-3 border ${activeObjective?.objective?.id === o.id ? 'border-brand-navy bg-brand-navy/5' : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800'}`}>
                         <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{o.title}</span>
-                        <span className="ml-1 text-xs text-neutral-400">{o.level} {o.quarter}</span>
+                        <span className="ml-1 text-xs text-neutral-600 dark:text-neutral-400">{o.level} {o.quarter}</span>
                       </button>
                     ))}
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 mt-2">
@@ -6384,7 +6384,7 @@ export default function App() {
                     { key: 'audit',      label: 'Audit log',  load: () => fetchComplianceAudit() },
                   ].map(t => (
                     <button key={t.key} onClick={() => { setComplianceTab(t.key); t.load(); }}
-                      className={`text-sm font-medium px-3 py-2 border-b-2 transition-colors ${complianceTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
+                      className={`text-sm font-medium px-3 py-2 border-b-2 transition-colors ${complianceTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                       {t.label}
                     </button>
                   ))}
@@ -6405,7 +6405,7 @@ export default function App() {
                           { label: 'Resolved',      value: complianceDashboard.totals?.resolvedViolations ?? 0,    tone: 'text-semantic-success' },
                         ].map(c => (
                           <div key={c.label} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
-                            <p className="text-xs uppercase tracking-wide text-neutral-400 font-semibold">{c.label}</p>
+                            <p className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 font-semibold">{c.label}</p>
                             <p className={`text-3xl font-bold mt-1 ${c.tone}`}>{c.value}</p>
                           </div>
                         ))}
@@ -6415,7 +6415,7 @@ export default function App() {
                         <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                           <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Open by severity</h3>
                           {(complianceDashboard.severityBreakdown || []).length === 0
-                            ? <p className="text-sm text-neutral-400 py-4 text-center">No active violations. Clean posture.</p>
+                            ? <p className="text-sm text-neutral-600 dark:text-neutral-400 py-4 text-center">No active violations. Clean posture.</p>
                             : (complianceDashboard.severityBreakdown || []).map(s => (
                               <div key={s.severity} className="flex items-center gap-3 py-1.5">
                                 <span className={`text-xs font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[s.severity] || severityClass.MEDIUM}`}>{s.severity}</span>
@@ -6430,7 +6430,7 @@ export default function App() {
                         <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                           <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Top rules by open violations</h3>
                           {(complianceDashboard.topRules || []).length === 0
-                            ? <p className="text-sm text-neutral-400 py-4 text-center">Nothing flagged.</p>
+                            ? <p className="text-sm text-neutral-600 dark:text-neutral-400 py-4 text-center">Nothing flagged.</p>
                             : (complianceDashboard.topRules || []).map(r => (
                               <div key={r.rule_id} className="flex items-center justify-between py-1.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                                 <span className="text-sm text-neutral-700 dark:text-neutral-200 truncate">{r.rule_name}</span>
@@ -6443,7 +6443,7 @@ export default function App() {
                       <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                         <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">30-day detection trend</h3>
                         {(complianceDashboard.trend || []).length === 0
-                          ? <p className="text-sm text-neutral-400 py-4 text-center">No violations detected in the last 30 days.</p>
+                          ? <p className="text-sm text-neutral-600 dark:text-neutral-400 py-4 text-center">No violations detected in the last 30 days.</p>
                           : (
                             <div className="flex items-end gap-1 h-28 mt-3">
                               {(complianceDashboard.trend || []).map(d => {
@@ -6461,16 +6461,16 @@ export default function App() {
                       <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                         <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Rules × projects heatmap</h3>
                         {(complianceDashboard.heatmap || []).length === 0
-                          ? <p className="text-sm text-neutral-400 py-4 text-center">No open violations to map.</p>
+                          ? <p className="text-sm text-neutral-600 dark:text-neutral-400 py-4 text-center">No open violations to map.</p>
                           : (
                             <table className="w-full text-sm">
-                              <thead><tr className="text-left text-xs uppercase tracking-wide text-neutral-400">
+                              <thead><tr className="text-left text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">
                                 <th className="py-1">Rule</th><th className="py-1">Project</th><th className="py-1 text-right">Open</th></tr></thead>
                               <tbody>
                                 {(complianceDashboard.heatmap || []).map((h, i) => (
                                   <tr key={i} className="border-t border-neutral-100 dark:border-neutral-700">
                                     <td className="py-1.5 text-neutral-700 dark:text-neutral-200">{h.rule_name}</td>
-                                    <td className="py-1.5 font-mono text-xs text-neutral-400">{h.project_id || '—'}</td>
+                                    <td className="py-1.5 font-mono text-xs text-neutral-600 dark:text-neutral-400">{h.project_id || '—'}</td>
                                     <td className="py-1.5 text-right font-semibold text-semantic-danger">{h.count}</td>
                                   </tr>
                                 ))}
@@ -6494,7 +6494,7 @@ export default function App() {
                             <span className={`text-xs font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[r.severity] || severityClass.MEDIUM}`}>{r.severity}</span>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{r.name}</p>
-                              <p className="text-xs text-neutral-400 truncate font-mono">{r.scopeBql ? `${r.scopeBql} ⟶ ` : ''}{r.assertionBql}</p>
+                              <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate font-mono">{r.scopeBql ? `${r.scopeBql} ⟶ ` : ''}{r.assertionBql}</p>
                             </div>
                             <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${r.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500'}`}>{r.active ? 'ACTIVE' : 'INACTIVE'}</span>
                             {can('manage_compliance') && <>
@@ -6515,7 +6515,7 @@ export default function App() {
 
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">Seeded template library</h3>
-                      <p className="text-xs text-neutral-400 mb-3">Opinionated defaults — clone one, test it, then activate.</p>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3">Opinionated defaults — clone one, test it, then activate.</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         {complianceTemplates.map(t => (
                           <div key={t.id} className="flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
@@ -6541,7 +6541,7 @@ export default function App() {
                           <option value="RESOLVED">Resolved</option>
                           <option value="WONT_FIX">Won't fix</option>
                         </select>
-                        <span className="text-xs text-neutral-400">{complianceViolations.length} violation(s)</span>
+                        <span className="text-xs text-neutral-600 dark:text-neutral-400">{complianceViolations.length} violation(s)</span>
                       </div>
                       {can('manage_compliance') && selectedViolations.length > 0 && (
                         <Button variant="secondary" onClick={bulkAcknowledge}>Acknowledge {selectedViolations.length}</Button>
@@ -6557,7 +6557,7 @@ export default function App() {
                           <span className={`text-xs font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[v.severity] || severityClass.MEDIUM}`}>{v.severity}</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-neutral-900 dark:text-neutral-100 truncate">{v.workItemTitle || v.workItemId}</p>
-                            <p className="text-xs text-neutral-400 font-mono">{v.workItemId}</p>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{v.workItemId}</p>
                           </div>
                           <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${vStatusClass[v.status] || ''}`}>{v.status}{v.escalated ? <ArrowUp className="inline-block h-3 w-3 align-text-bottom" aria-label="Escalated" /> : ''}</span>
                           {can('manage_compliance') && (v.status === 'OPEN' || v.status === 'ACKNOWLEDGED') && <>
@@ -6581,14 +6581,14 @@ export default function App() {
                       ? <EmptyState icon={ScrollText} title="No audit entries yet" subtitle="Rule changes, violations, acknowledgements and resolutions are recorded here." />
                       : (
                         <table className="w-full text-sm">
-                          <thead><tr className="text-left text-xs uppercase tracking-wide text-neutral-400">
+                          <thead><tr className="text-left text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">
                             <th className="py-1">When</th><th className="py-1">Event</th><th className="py-1">Subject</th><th className="py-1">Actor</th></tr></thead>
                           <tbody>
                             {complianceAudit.map((e, i) => (
                               <tr key={i} className="border-t border-neutral-100 dark:border-neutral-700">
-                                <td className="py-1.5 text-neutral-400 whitespace-nowrap">{e.occurred_at ? new Date(e.occurred_at).toLocaleString() : '—'}</td>
+                                <td className="py-1.5 text-neutral-600 dark:text-neutral-400 whitespace-nowrap">{e.occurred_at ? new Date(e.occurred_at).toLocaleString() : '—'}</td>
                                 <td className="py-1.5 text-neutral-700 dark:text-neutral-200">{(e.event_type || '').replace(/^COMPLIANCE_/, '').replaceAll('_', ' ').toLowerCase()}</td>
-                                <td className="py-1.5 font-mono text-xs text-neutral-400">{e.aggregate_id}</td>
+                                <td className="py-1.5 font-mono text-xs text-neutral-600 dark:text-neutral-400">{e.aggregate_id}</td>
                                 <td className="py-1.5 text-neutral-500">{e.actor_id}</td>
                               </tr>
                             ))}
@@ -6652,7 +6652,7 @@ export default function App() {
                       <Button variant="secondary" onClick={() => setRuleBuilder(null)}>Cancel</Button>
                       <Button variant="action" onClick={saveRule}>{ruleBuilder.id ? 'Save rule' : 'Create rule (inactive)'}</Button>
                     </div>
-                    <p className="text-xs text-neutral-400 mt-3">New rules are created inactive — test them, then activate from the rules list.</p>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-3">New rules are created inactive — test them, then activate from the rules list.</p>
                   </div>
                 </div>
               )}
@@ -6675,7 +6675,7 @@ export default function App() {
                     { key: 'csat', label: 'CSAT', load: () => fetchServiceCsat() },
                   ].map(t => (
                     <button key={t.key} onClick={() => { setServiceTab(t.key); t.load(); }}
-                      className={`text-sm font-medium px-3 py-2 border-b-2 transition-colors ${serviceTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700'}`}>{t.label}</button>
+                      className={`text-sm font-medium px-3 py-2 border-b-2 transition-colors ${serviceTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700'}`}>{t.label}</button>
                   ))}
                 </div>
               </div>
@@ -6698,7 +6698,7 @@ export default function App() {
                             <span className="text-xs font-bold px-2 py-0.5 rounded w-16 text-center bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200">{r.priority}</span>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{r.subject}</p>
-                              <p className="text-xs text-neutral-400 truncate">{r.typeKey} · {r.id}{r.assigneeId ? ` · ${r.assigneeId}` : ' · unassigned'}</p>
+                              <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{r.typeKey} · {r.id}{r.assigneeId ? ` · ${r.assigneeId}` : ' · unassigned'}</p>
                             </div>
                             <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${sla.breached ? 'bg-semantic-danger text-white' : sla.state === 'AT_RISK' ? 'bg-semantic-warning text-white' : sla.state === 'NONE' ? 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200' : 'bg-semantic-success text-white'}`}>{sla.state === 'NONE' ? 'No SLA' : sla.state}</span>
                             <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200">{(r.status || '').replace('_', ' ')}</span>
@@ -6728,7 +6728,7 @@ export default function App() {
                           <div key={c.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{c.name}</p>
-                              <p className="text-xs text-neutral-400 truncate">{c.subdomain ? `${c.subdomain} · ` : ''}{c.id}</p>
+                              <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{c.subdomain ? `${c.subdomain} · ` : ''}{c.id}</p>
                             </div>
                             <span className="text-xs font-bold px-2 py-0.5 rounded bg-brand-navy text-white">{c.tier}</span>
                             <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${c.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 text-neutral-600'}`}>{c.active ? 'ACTIVE' : 'INACTIVE'}</span>
@@ -6746,7 +6746,7 @@ export default function App() {
                         <div key={t.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{t.name}</p>
-                            <p className="text-xs text-neutral-400 truncate">{t.typeKey} · default {t.defaultPriority}</p>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{t.typeKey} · default {t.defaultPriority}</p>
                           </div>
                           {t.isSystem && <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200">SYSTEM</span>}
                           <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${t.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 text-neutral-600'}`}>{t.active ? 'ACTIVE' : 'INACTIVE'}</span>
@@ -6782,7 +6782,7 @@ export default function App() {
                               { label: '% Satisfied', value: `${serviceCsat.summary?.percentSatisfied ?? 0}%` },
                             ].map(c => (
                               <div key={c.label} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
-                                <p className="text-xs uppercase tracking-wide text-neutral-400 font-semibold">{c.label}</p>
+                                <p className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 font-semibold">{c.label}</p>
                                 <p className="text-3xl font-bold mt-1 text-brand-navy">{c.value}</p>
                               </div>
                             ))}
@@ -6845,7 +6845,7 @@ export default function App() {
           <div className="h-14 flex items-center justify-between px-5 border-b border-neutral-200 dark:border-neutral-700">
             <div className="flex items-center gap-2">
               <TypeBadge type={selectedItem.type} compact />
-              <span className="font-mono text-xs text-neutral-400">{selectedItem.id}</span>
+              <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{selectedItem.id}</span>
             </div>
             <div className="flex gap-1">
               <button onClick={() => toggleStar(selectedItem)}
@@ -6853,13 +6853,13 @@ export default function App() {
                 className={`text-sm px-2 py-1 rounded transition-colors ${selectedItem.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}`}>
                 <Star className={`h-4 w-4 ${selectedItem.starred ? 'fill-current text-brand-orange' : ''}`} aria-hidden="true" />
               </button>
-              <button onClick={() => setIsWorklogOpen(true)} className="text-xs text-neutral-400 hover:text-brand-navy transition-colors px-2 py-1 rounded border border-neutral-200 dark:border-neutral-600">⏱ Log Work</button>
+              <button onClick={() => setIsWorklogOpen(true)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors px-2 py-1 rounded border border-neutral-200 dark:border-neutral-600">⏱ Log Work</button>
               {can('delete_items') && (
                 <button onClick={() => handleDelete(selectedItem.id)}
-                  className="text-xs text-neutral-400 hover:text-semantic-danger px-2 py-1 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">Delete</button>
+                  className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger px-2 py-1 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">Delete</button>
               )}
               <button onClick={() => setSelectedItem(null)}
-                className="text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 p-1 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors" aria-label="Close detail panel"><X className="h-4 w-4" aria-hidden="true" /></button>
+                className="text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 p-1 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors" aria-label="Close detail panel"><X className="h-4 w-4" aria-hidden="true" /></button>
             </div>
           </div>
           {/* Detail panel tabs */}
@@ -6873,7 +6873,7 @@ export default function App() {
               { key: 'activity',     label: 'Activity' },
             ].map(t => (
               <button key={t.key} onClick={() => setDetailTab(t.key)}
-                className={`text-xs font-medium px-3 py-2.5 border-b-2 transition-colors whitespace-nowrap ${detailTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 dark:text-neutral-600 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
+                className={`text-xs font-medium px-3 py-2.5 border-b-2 transition-colors whitespace-nowrap ${detailTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                 {t.label}
               </button>
             ))}
@@ -6889,7 +6889,7 @@ export default function App() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-neutral-400 mb-1 font-medium">Status</label>
+                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Status</label>
                 <select value={selectedItem.status}
                   onChange={e => { const u = { ...selectedItem, status: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }}
                   className="input">
@@ -6897,7 +6897,7 @@ export default function App() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-neutral-400 mb-1 font-medium">Type</label>
+                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Type</label>
                 <select value={selectedItem.type}
                   onChange={e => { const u = { ...selectedItem, type: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }}
                   className="input">
@@ -6905,7 +6905,7 @@ export default function App() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-neutral-400 mb-1 font-medium">Priority</label>
+                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Priority</label>
                 <select value={selectedItem.priority || 'MEDIUM'}
                   onChange={e => { const u = { ...selectedItem, priority: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }}
                   className="input">
@@ -6913,7 +6913,7 @@ export default function App() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-neutral-400 mb-1 font-medium">Assignee</label>
+                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Assignee</label>
                 <select value={selectedItem.assigneeId || ''}
                   onChange={e => { const u = { ...selectedItem, assigneeId: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
                   className="input">
@@ -6922,13 +6922,13 @@ export default function App() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-neutral-400 mb-1 font-medium">Due Date</label>
+                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Due Date</label>
                 <input type="date" value={selectedItem.dueDate || ''}
                   onChange={e => { const u = { ...selectedItem, dueDate: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
                   className="input" />
               </div>
               <div>
-                <label className="block text-xs text-neutral-400 mb-1 font-medium">Story Points</label>
+                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Story Points</label>
                 <input type="number" min={0} max={100} value={selectedItem.storyPoints || 0}
                   onChange={e => { const u = { ...selectedItem, storyPoints: parseInt(e.target.value) || 0 }; setSelectedItem(u); handleUpdateItem(u); }}
                   className="input" />
@@ -6937,7 +6937,7 @@ export default function App() {
 
             {/* Parent item selector */}
             <div>
-              <label className="block text-xs text-neutral-400 mb-1 font-medium">Parent Item</label>
+              <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Parent Item</label>
               <select value={selectedItem.parentId || ''}
                 onChange={e => { const u = { ...selectedItem, parentId: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
                 className="input">
@@ -6960,14 +6960,14 @@ export default function App() {
             {/* Children items */}
             {itemChildren.length > 0 && (
               <div>
-                <label className="block text-xs text-neutral-400 mb-1 font-medium">Sub-items ({itemChildren.length})</label>
+                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Sub-items ({itemChildren.length})</label>
                 <div className="space-y-1">
                   {itemChildren.map(child => (
                     <div key={child.id} onClick={() => setSelectedItem(child)} role="button" tabIndex={0} onKeyDown={onPressKey}
                       className="flex items-center gap-2 p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700 cursor-pointer hover:border-brand-navy/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                       <span className="text-neutral-300"><CornerDownRight className="h-3.5 w-3.5" aria-hidden="true" /></span>
                       <TypeBadge type={child.type} compact />
-                      <span className="font-mono text-xs text-neutral-400">{child.id}</span>
+                      <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{child.id}</span>
                       <span className="flex-1 text-xs text-neutral-900 truncate">{child.title}</span>
                       <StatusBadge category={statusToCategory(child.status)}>{child.status}</StatusBadge>
                     </div>
@@ -6977,7 +6977,7 @@ export default function App() {
             )}
 
             <div>
-              <label className="block text-xs text-neutral-400 mb-1 font-medium">Tags</label>
+              <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Tags</label>
               <input type="text" value={tagInput}
                 onChange={e => setTagInput(e.target.value)}
                 onBlur={() => {
@@ -6991,7 +6991,7 @@ export default function App() {
             </div>
 
             <div>
-              <label className="block text-xs text-neutral-400 mb-1 font-medium">Description</label>
+              <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Description</label>
               <RichTextEditor
                 value={selectedItem.description || ''}
                 onChange={val => setSelectedItem({ ...selectedItem, description: val })}
@@ -7009,7 +7009,7 @@ export default function App() {
                   <EmptyState icon={ClipboardList} title="No custom fields defined" subtitle="Go to Workflows & Fields settings to define custom fields for your work items." />
                 ) : (
                   <div className="space-y-3">
-                    <label className="block text-xs text-neutral-400 mb-2 font-medium uppercase tracking-wider">Custom Fields</label>
+                    <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-2 font-medium uppercase tracking-wider">Custom Fields</label>
                     {fieldDefs.map(fd => (
                       <div key={fd.id} className="flex items-center gap-2">
                         <label className="text-xs text-neutral-500 w-32 flex-shrink-0">{fd.name}{fd.required && <span className="text-semantic-danger ml-0.5">*</span>}</label>
@@ -7066,7 +7066,7 @@ export default function App() {
                           <div className="flex gap-1">
                             {[1,2,3,4,5].map(n => (
                               <button key={n} onClick={() => { setFieldValues(v => ({ ...v, [fd.id]: String(n) })); saveFieldValue(selectedItem.id, fd.id, String(n)); }}
-                                className={`w-6 h-6 rounded text-xs font-bold transition-colors ${Number(fieldValues[fd.id]) >= n ? 'bg-brand-amber text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-400'}`}>
+                                className={`w-6 h-6 rounded text-xs font-bold transition-colors ${Number(fieldValues[fd.id]) >= n ? 'bg-brand-amber text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'}`}>
                                 {n}
                               </button>
                             ))}
@@ -7104,11 +7104,11 @@ export default function App() {
                           <div className="flex items-center gap-2 mb-0.5">
                             <p className="text-xs font-semibold text-neutral-900">{c.authorName}</p>
                             {c.isInternal && <span className="text-xs bg-semantic-warning text-white px-1.5 py-0.5 rounded">Internal</span>}
-                            <span className="text-xs text-neutral-400 ml-auto">{c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</span>
+                            <span className="text-xs text-neutral-600 dark:text-neutral-400 ml-auto">{c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</span>
                           </div>
                           <p className="text-sm text-neutral-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMd(c.body) }} />
                           <button onClick={() => setReplyingTo(replyingTo === c.id ? null : c.id)}
-                            className="text-xs text-neutral-400 hover:text-brand-navy mt-1.5 transition-colors">
+                            className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy mt-1.5 transition-colors">
                             <Reply className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Reply {c.replies?.length > 0 && `(${c.replies.length})`}
                           </button>
                         </div>
@@ -7122,7 +7122,7 @@ export default function App() {
                               <div className="flex-1 bg-white dark:bg-neutral-800 rounded-lg px-3 py-2 border border-neutral-100 dark:border-neutral-700">
                                 <div className="flex items-center gap-2 mb-0.5">
                                   <p className="text-xs font-semibold text-neutral-900">{r.authorName}</p>
-                                  <span className="text-xs text-neutral-400 ml-auto">{r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}</span>
+                                  <span className="text-xs text-neutral-600 dark:text-neutral-400 ml-auto">{r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}</span>
                                 </div>
                                 <p className="text-xs text-neutral-700" dangerouslySetInnerHTML={{ __html: renderMd(r.body) }} />
                               </div>
@@ -7141,7 +7141,7 @@ export default function App() {
                               className="w-full border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-brand-navy resize-none" />
                             <div className="flex gap-2 mt-1">
                               <Button size="sm" onClick={() => addReply(selectedItem.id, c.id)}>Reply</Button>
-                              <button onClick={() => { setReplyingTo(null); setReplyBody(''); }} className="text-xs text-neutral-400 hover:text-neutral-700">Cancel</button>
+                              <button onClick={() => { setReplyingTo(null); setReplyBody(''); }} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-700">Cancel</button>
                             </div>
                           </div>
                         </div>
@@ -7162,7 +7162,7 @@ export default function App() {
                         <label className="flex items-center gap-1.5 cursor-pointer">
                           <input type="checkbox" checked={commentInternal} onChange={e => setCommentInternal(e.target.checked)}
                             className="w-3 h-3 rounded accent-semantic-warning" />
-                          <span className="text-xs text-neutral-400">Internal only</span>
+                          <span className="text-xs text-neutral-600 dark:text-neutral-400">Internal only</span>
                         </label>
                         <Button size="sm" onClick={handleAddComment}>Send</Button>
                       </div>
@@ -7190,7 +7190,7 @@ export default function App() {
                 {/* Visual Link Graph */}
                 {links.length > 0 && (
                   <div className="mb-4 bg-neutral-50 dark:bg-neutral-800 rounded-xl p-4 border border-neutral-100 dark:border-neutral-700">
-                    <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">Link Graph</p>
+                    <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-3">Link Graph</p>
                     <div className="flex flex-col items-center gap-2">
                       {/* Current item — center node */}
                       <div className="bg-brand-navy text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm max-w-full truncate">
@@ -7234,7 +7234,7 @@ export default function App() {
                     <div key={l.id} className="flex items-center gap-3 p-2.5 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700">
                       <span className="text-xs font-semibold bg-neutral-200 text-neutral-600 px-1.5 py-0.5 rounded uppercase">{l.linkType?.replace('_', ' ')}</span>
                       <span className="flex-1 text-sm text-neutral-900 font-mono">{l.targetId}</span>
-                      {l.targetTitle && <span className="text-xs text-neutral-400 truncate max-w-24">{l.targetTitle}</span>}
+                      {l.targetTitle && <span className="text-xs text-neutral-600 dark:text-neutral-400 truncate max-w-24">{l.targetTitle}</span>}
                       <button onClick={() => handleDeleteLink(l.id)} className="text-neutral-300 hover:text-semantic-danger text-xs" aria-label="Remove link"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                     </div>
                   ))}
@@ -7263,7 +7263,7 @@ export default function App() {
                     <Upload className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Upload file
                   </Button>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-neutral-400">Max {MAX_UPLOAD_MB} MB per file</span>
+                    <span className="text-xs text-neutral-600 dark:text-neutral-400">Max {MAX_UPLOAD_MB} MB per file</span>
                     <span className="text-xs bg-semantic-success-surface text-semantic-success px-1.5 py-0.5 rounded flex items-center gap-1">
                       <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />Virus scan active
                     </span>
@@ -7292,7 +7292,7 @@ export default function App() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-neutral-900 truncate">{fileName}</p>
-                            <p className="text-xs text-neutral-400">{a.uploaded_by_name || a.uploadedByName || 'You'} · {a.file_size ? `${Math.round(a.file_size / 1024)}KB` : ''}</p>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400">{a.uploaded_by_name || a.uploadedByName || 'You'} · {a.file_size ? `${Math.round(a.file_size / 1024)}KB` : ''}</p>
                           </div>
                           <a href={previewUrl} target="_blank" rel="noreferrer"
                             className="text-xs text-brand-navy hover:underline flex-shrink-0 mr-2">View</a>
@@ -7311,13 +7311,13 @@ export default function App() {
                 {/* Iteration 7 (Cap B) — auto time-in-status, projected from the event log */}
                 {statusDurations.length > 0 && (
                   <div className="mb-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3">
-                    <p className="text-xs uppercase tracking-wide text-neutral-400 font-semibold mb-2">Time in status</p>
+                    <p className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 font-semibold mb-2">Time in status</p>
                     {statusDurations.map(d => (
                       <div key={d.status} className="flex items-center justify-between py-1 text-sm">
                         <span className="text-neutral-700 dark:text-neutral-200">{d.status}</span>
                         <span className="text-neutral-500">
                           {humanDuration(d.totalSeconds)}
-                          {d.timesEntered > 1 && <span className="text-neutral-400"> · {d.timesEntered}×</span>}
+                          {d.timesEntered > 1 && <span className="text-neutral-600 dark:text-neutral-400"> · {d.timesEntered}×</span>}
                         </span>
                       </div>
                     ))}
@@ -7354,13 +7354,13 @@ export default function App() {
                         {/* Field diff display */}
                         {a.field_name && a.old_value !== null && a.new_value !== null && (
                           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                            <span className="text-xs text-neutral-400 font-medium capitalize">{String(a.field_name).replace(/_/g,' ')}:</span>
+                            <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium capitalize">{String(a.field_name).replace(/_/g,' ')}:</span>
                             {a.old_value && <span className="text-xs bg-semantic-danger-surface text-semantic-danger px-1.5 py-0.5 rounded line-through">{a.old_value}</span>}
-                            <span className="text-xs text-neutral-400"><ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /></span>
+                            <span className="text-xs text-neutral-600 dark:text-neutral-400"><ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /></span>
                             {a.new_value && <span className="text-xs bg-semantic-success-surface text-semantic-success px-1.5 py-0.5 rounded">{a.new_value}</span>}
                           </div>
                         )}
-                        <p className="text-xs text-neutral-400 mt-0.5">{a.occurred_at ? new Date(a.occurred_at).toLocaleString() : ''}</p>
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{a.occurred_at ? new Date(a.occurred_at).toLocaleString() : ''}</p>
                       </div>
                     </div>
                   ))}
@@ -7458,11 +7458,11 @@ export default function App() {
       {/* LOG WORK MODAL */}
       {isWorklogOpen && selectedItem && (
         <Modal title="Log Work" onClose={() => setIsWorklogOpen(false)}>
-          <p className="text-xs text-neutral-400 mb-3">{selectedItem.title}</p>
+          <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3">{selectedItem.title}</p>
           <div className="space-y-3">
             <Field label="Time Spent (minutes) *">
               <input type="number" className="input" min={1} value={worklogForm.timeSpentMinutes} onChange={e => setWorklogForm(f => ({ ...f, timeSpentMinutes: parseInt(e.target.value) || 0 }))} autoFocus />
-              <p className="text-xs text-neutral-400 mt-0.5">{Math.round(worklogForm.timeSpentMinutes / 60 * 10) / 10} hours</p>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{Math.round(worklogForm.timeSpentMinutes / 60 * 10) / 10} hours</p>
             </Field>
             <Field label="Date">
               <input type="date" className="input" value={worklogForm.workDate} onChange={e => setWorklogForm(f => ({ ...f, workDate: e.target.value }))} />
@@ -7583,7 +7583,7 @@ export default function App() {
               <input type="text" maxLength={5} value={newProject.keyPrefix}
                 onChange={e => setNewProject({ ...newProject, keyPrefix: e.target.value.toUpperCase() })}
                 className="input" placeholder="e.g. WEB" />
-              <p className="text-xs text-neutral-400 mt-1">3–5 uppercase letters used as item prefix (e.g. WEB-1234)</p>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">3–5 uppercase letters used as item prefix (e.g. WEB-1234)</p>
             </Field>
             <Field label="Description">
               <textarea rows={2} value={newProject.description} onChange={e => setNewProject({ ...newProject, description: e.target.value })}
@@ -7661,7 +7661,7 @@ const ROLE_CONFIG = {
   ADMIN:  { label: 'Admin',  bg: 'bg-brand-navy/10', text: 'text-brand-navy', tier: 4 },
   LEAD:   { label: 'Lead',   bg: 'bg-semantic-success/10', text: 'text-semantic-success', tier: 3 },
   MEMBER: { label: 'Member', bg: 'bg-neutral-100',   text: 'text-neutral-600', tier: 2 },
-  VIEWER: { label: 'Viewer', bg: 'bg-neutral-50',    text: 'text-neutral-400', tier: 1 },
+  VIEWER: { label: 'Viewer', bg: 'bg-neutral-50',    text: 'text-neutral-600 dark:text-neutral-400', tier: 1 },
 };
 
 function RoleBadge({ role, tier, small = false }) {
@@ -7688,12 +7688,12 @@ function StatCard({ label, value, sub, color, icon: Icon, onClick }) {
       className={`bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 hover:shadow-md transition-shadow group ${clickable ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40' : ''}`}
     >
       <div className="flex items-start justify-between mb-3">
-        {typeof Icon === 'function' ? <Icon aria-hidden="true" className="h-6 w-6 text-neutral-400" /> : <span className="text-2xl">{Icon}</span>}
-        <span className="text-xs text-neutral-400 group-hover:text-brand-navy transition-colors">View <ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /></span>
+        {typeof Icon === 'function' ? <Icon aria-hidden="true" className="h-6 w-6 text-neutral-600 dark:text-neutral-400" /> : <span className="text-2xl">{Icon}</span>}
+        <span className="text-xs text-neutral-600 dark:text-neutral-400 group-hover:text-brand-navy transition-colors">View <ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /></span>
       </div>
       <p className={`text-3xl font-bold ${color} mb-1`}>{value}</p>
       <p className="text-sm font-medium text-neutral-700">{label}</p>
-      <p className="text-xs text-neutral-400 mt-0.5">{sub}</p>
+      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{sub}</p>
     </div>
   );
 }
@@ -8120,7 +8120,7 @@ function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove,
                   <tr key={row.label} className="border-t border-neutral-100 dark:border-neutral-700/50">
                     <td className="py-1 pr-2 text-neutral-700 dark:text-neutral-300 truncate">{row.label}</td>
                     {row.cells.map((c, idx) => (
-                      <td key={idx} className={`text-right py-1 px-1 ${c > 0 ? 'text-neutral-900 dark:text-neutral-100 font-semibold' : 'text-neutral-400'}`}>{c || '—'}</td>
+                      <td key={idx} className={`text-right py-1 px-1 ${c > 0 ? 'text-neutral-900 dark:text-neutral-100 font-semibold' : 'text-neutral-600 dark:text-neutral-400'}`}>{c || '—'}</td>
                     ))}
                   </tr>
                 ))}
@@ -8190,7 +8190,7 @@ const PRIORITY_CONFIG = {
   CRITICAL: { color: 'text-semantic-danger',  bg: 'bg-semantic-danger-surface',  label: 'Critical' },
   HIGH:     { color: 'text-semantic-warning',  bg: 'bg-semantic-warning-surface', label: 'High' },
   MEDIUM:   { color: 'text-neutral-600',       bg: 'bg-neutral-100',              label: 'Medium' },
-  LOW:      { color: 'text-neutral-400',       bg: 'bg-neutral-50',               label: 'Low' },
+  LOW:      { color: 'text-neutral-600 dark:text-neutral-400',       bg: 'bg-neutral-50',               label: 'Low' },
 };
 function PriorityBadge({ priority }) {
   const p = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.MEDIUM;
@@ -8202,7 +8202,7 @@ function PmArtifactList({ title, icon: Icon, items, columns, renderRow, onDelete
     <div>
       <div className="flex justify-between items-center mb-4">
         <h2 className="font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-          {typeof Icon === 'function' ? <Icon aria-hidden="true" className="h-4 w-4 text-neutral-400" /> : <span>{Icon}</span>} {title}
+          {typeof Icon === 'function' ? <Icon aria-hidden="true" className="h-4 w-4 text-neutral-600 dark:text-neutral-400" /> : <span>{Icon}</span>} {title}
         </h2>
         <Button variant="action" onClick={onAdd}>+ New</Button>
       </div>
@@ -8255,13 +8255,13 @@ function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
       {items.map(item => (
         <div key={item.id} className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-700 group">
           <TypeBadge type={item.type} compact />
-          <span className="font-mono text-xs text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
+          <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
           <span role="button" tabIndex={0} onKeyDown={onPressKey} className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => onSelect(item)}>{item.title}</span>
           <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
           {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
           {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}
           <button onClick={() => { onMoveToBacklog(item.id); setItems(prev => prev.filter(i => i.id !== item.id)); }}
-            className="opacity-0 group-hover:opacity-100 text-xs text-neutral-400 hover:text-brand-navy transition-opacity" aria-label="Move to backlog"><ArrowDown className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Backlog</button>
+            className="opacity-0 group-hover:opacity-100 text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-opacity" aria-label="Move to backlog"><ArrowDown className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Backlog</button>
         </div>
       ))}
     </div>
@@ -8433,7 +8433,7 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
           {lane.label && (
             <div className="flex items-center gap-2 mb-2 mt-4 px-1">
               <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700"></div>
-              <span className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-2">{lane.label}</span>
+              <span className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider px-2">{lane.label}</span>
               <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700"></div>
             </div>
           )}
@@ -8458,17 +8458,17 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
                       <div key={item.id} draggable onDragStart={(e) => onDragStart(e, item.id)}
                         className={`bg-white dark:bg-neutral-700 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-600 cursor-grab hover:shadow-md transition-shadow group ${pad[density]}`}>
                         <div className="flex items-start justify-between mb-1.5">
-                          <span className="font-mono text-xs text-neutral-400">{item.id}</span>
+                          <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.id}</span>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => onSelect(item)} className="text-neutral-400 hover:text-brand-navy text-xs p-0.5" aria-label="Edit"><SquarePen className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                            <button onClick={() => onDelete(item.id)} className="text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label="Delete"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                            <button onClick={() => onSelect(item)} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-xs p-0.5" aria-label="Edit"><SquarePen className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                            <button onClick={() => onDelete(item.id)} className="text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label="Delete"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                           </div>
                         </div>
                         <p className="text-sm font-medium text-neutral-900 leading-snug mb-2 cursor-pointer" onClick={() => onSelect(item)}>{item.title}</p>
                         <div className="flex items-center justify-between">
                           <TypeBadge type={item.type} compact={density === 'compact'} />
                           <div className="flex items-center gap-1.5">
-                            {(item.storyPoints > 0) && <span className="text-xs text-neutral-400 font-medium">{item.storyPoints}pt</span>}
+                            {(item.storyPoints > 0) && <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">{item.storyPoints}pt</span>}
                             {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={5} />}
                           </div>
                         </div>

@@ -11,6 +11,9 @@ import {
   File as FileIcon, Folder, Lightbulb, Users, Shield, Ban, Construction,
   MessageCircle, Archive, RefreshCw, Repeat, Send, Megaphone, ScrollText,
   Pin, Calendar, Eye, EyeOff, Building2, Target, Globe, Star, Scale, Clock, Reply, AtSign,
+  X, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronRight, ChevronUp,
+  SquarePen, Upload, IndentIncrease, IndentDecrease, MapPin, KeyRound,
+  Unlock, CornerDownRight, Image as ImageIcon,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
@@ -779,7 +782,7 @@ export default function App() {
       method: 'POST',
       body: JSON.stringify({ totp: mfaSetupCode })
     }).then(r => r.json()).then(d => {
-      if (d.message) { setMfaSetup(null); setMfaSetupMsg(''); showToast('MFA enabled! ✓'); }
+      if (d.message) { setMfaSetup(null); setMfaSetupMsg(''); showToast('MFA enabled!'); }
       else setMfaSetupMsg(d.message || d.error || 'Failed');
     }).catch(() => setMfaSetupMsg('Confirmation failed'));
   };
@@ -2205,14 +2208,14 @@ export default function App() {
               <p className="text-xs text-neutral-400 uppercase tracking-wider mb-1">UAT — One-click verify</p>
               <button onClick={() => handleVerifyEmail(verifyPending.devToken)}
                 className="w-full py-2 bg-brand-navy text-white rounded-lg text-sm font-semibold hover:bg-brand-navy/90 transition-colors">
-                ✓ Verify my email (UAT shortcut)
+                <Check className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Verify my email (UAT shortcut)
               </button>
               <p className="text-xs text-neutral-400 mt-2 text-center">In production this arrives by email</p>
             </div>
           )}
           <button onClick={() => { setVerifyPending(null); setAuthMode('login'); }}
             className="w-full text-center text-sm text-neutral-400 hover:text-brand-navy transition-colors">
-            ← Back to sign in
+            <ArrowLeft className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Back to sign in
           </button>
         </div>
       </div>
@@ -2235,7 +2238,7 @@ export default function App() {
             disabled={mfaCode.length !== 6}>Verify Code</Button>
           <button onClick={() => { setMfaChallenge(null); setMfaCode(''); }}
             className="w-full mt-3 text-center text-sm text-neutral-400 hover:text-brand-navy transition-colors">
-            ← Back to sign in
+            <ArrowLeft className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Back to sign in
           </button>
         </div>
       </div>
@@ -2256,7 +2259,7 @@ export default function App() {
           }
           <div className="mt-4 text-center">
             <button onClick={() => { setForgotMode(false); setForgotMsg(''); }}
-              className="text-brand-orange text-sm font-bold hover:underline">← Back to Sign In</button>
+              className="text-brand-orange text-sm font-bold hover:underline"><ArrowLeft className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Back to Sign In</button>
           </div>
         </div>
       </div>
@@ -2311,7 +2314,7 @@ export default function App() {
                     className="input pr-10" placeholder="Re-enter your password" />
                   {confirmPassword && (
                     <span className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-sm ${confirmPassword === authForm.password ? 'text-semantic-success' : 'text-semantic-danger'}`}>
-                      {confirmPassword === authForm.password ? '✓' : '✕'}
+                      {confirmPassword === authForm.password ? <Check className="h-4 w-4" aria-label="Passwords match" /> : <X className="h-4 w-4" aria-label="Passwords do not match" />}
                     </span>
                   )}
                 </div>
@@ -2566,7 +2569,7 @@ export default function App() {
                           {item.due_date && new Date(item.due_date) < new Date() && <span className="text-xs text-semantic-danger font-bold">OVERDUE</span>}
                         </div>
                       ))}
-                      {(developerDash?.myOpenItemCount ?? 0) === 0 && (developerDash?.myOpenItems?.length ?? workItems.filter(i => i.assigneeId === currentUser?.id && i.status !== 'Done').length) === 0 && <p className="text-sm text-neutral-400 text-center py-4">All caught up! 🎉</p>}
+                      {(developerDash?.myOpenItemCount ?? 0) === 0 && (developerDash?.myOpenItems?.length ?? workItems.filter(i => i.assigneeId === currentUser?.id && i.status !== 'Done').length) === 0 && <p className="text-sm text-neutral-400 text-center py-4">All caught up!</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Active Sprint</h3>
@@ -2599,7 +2602,7 @@ export default function App() {
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Blockers</h3>
                       {(developerDash?.blockers || []).length === 0
-                        ? <p className="text-sm text-neutral-400 text-center py-4">No blockers — you're clear! ✓</p>
+                        ? <p className="text-sm text-neutral-400 text-center py-4">No blockers — you're clear!</p>
                         : (developerDash.blockers || []).map(b => (
                             <div key={b.id} className="py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                               <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{b.title}</p>
@@ -2707,7 +2710,7 @@ export default function App() {
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Releases</h3>
-                        <button onClick={() => setView('releases')} className="text-xs text-brand-navy hover:underline">View all →</button>
+                        <button onClick={() => setView('releases')} className="text-xs text-brand-navy hover:underline">View all <ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /></button>
                       </div>
                       {(poDash?.releases || []).slice(0, 5).map(r => (
                         <div key={r.id} className="py-3 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
@@ -2756,7 +2759,7 @@ export default function App() {
                     <div className="md:col-span-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Ungroomed Backlog</h3>
-                        <button onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); }} className="text-xs text-brand-navy hover:underline">Open backlog →</button>
+                        <button onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); }} className="text-xs text-brand-navy hover:underline">Open backlog <ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /></button>
                       </div>
                       {(poDash?.ungroomedItems || []).map(i => (
                         <div key={i.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
@@ -2861,7 +2864,7 @@ export default function App() {
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Members</h3>
-                        <button onClick={() => { setView('workspace'); fetchMembers(); }} className="text-xs text-brand-navy hover:underline">Manage →</button>
+                        <button onClick={() => { setView('workspace'); fetchMembers(); }} className="text-xs text-brand-navy hover:underline">Manage <ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /></button>
                       </div>
                       {(adminDash?.members || []).slice(0, 8).map(m => (
                         <div key={m.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
@@ -2969,12 +2972,12 @@ export default function App() {
               {myWorksTab === 'starred' && (() => {
                 const starredItems = workItems.filter(i => i.starred);
                 return starredItems.length === 0
-                  ? <EmptyState icon={Star} title="No starred items" subtitle="Star work items to keep them handy. Click ★ on any card or in the detail panel." />
+                  ? <EmptyState icon={Star} title="No starred items" subtitle="Star work items to keep them handy. Click the star on any card or in the detail panel." />
                   : <div className="space-y-2">
                       {starredItems.map(item => (
                         <div key={item.id} onClick={() => setSelectedItem(item)} role="button" tabIndex={0} onKeyDown={onPressKey}
                           className="bg-white dark:bg-neutral-800 border border-brand-orange/30 rounded-lg p-4 flex items-center gap-4 hover:shadow-sm cursor-pointer transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
-                          <span className="text-brand-orange text-sm">★</span>
+                          <Star className="h-3.5 w-3.5 text-brand-orange fill-current" aria-hidden="true" />
                           <TypeBadge type={item.type} />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-neutral-900 truncate">{item.title}</p>
@@ -3088,9 +3091,9 @@ export default function App() {
                                   <span className="font-mono text-xs text-neutral-400">{item.id}</span>
                                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button onClick={() => toggleStar(item)} title={item.starred ? 'Unstar' : 'Star'}
-                                      className={`text-xs p-0.5 transition-colors ${item.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}`}>★</button>
-                                    <button onClick={() => setSelectedItem(item)} className="text-neutral-400 hover:text-brand-navy text-xs p-0.5">✏</button>
-                                    <button onClick={() => handleDelete(item.id)} className="text-neutral-400 hover:text-semantic-danger text-xs p-0.5">✕</button>
+                                      className={`text-xs p-0.5 transition-colors ${item.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}`}><Star className={`h-3.5 w-3.5 ${item.starred ? 'fill-current' : ''}`} aria-hidden="true" /></button>
+                                    <button onClick={() => setSelectedItem(item)} className="text-neutral-400 hover:text-brand-navy text-xs p-0.5" aria-label="Edit work item"><SquarePen className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                                    <button onClick={() => handleDelete(item.id)} className="text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label="Delete work item"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                                   </div>
                                 </div>
                                 <p className="text-sm font-medium text-neutral-900 leading-snug mb-2 cursor-pointer"
@@ -3233,7 +3236,7 @@ export default function App() {
                           <button onClick={() => {
                             api.raw(`/notifications/${n.id}/read`, { method: 'PUT' })
                               .then(() => { fetchNotifications(); fetchUnreadCount(); });
-                          }} className="text-xs text-neutral-400 hover:text-brand-navy mt-0.5">✓</button>
+                          }} className="text-xs text-neutral-400 hover:text-brand-navy mt-0.5" aria-label="Mark as read"><Check className="h-3.5 w-3.5" aria-hidden="true" /></button>
                         )}
                       </div>
                     ))}
@@ -3403,7 +3406,7 @@ export default function App() {
                       <div key={f.id} className="flex items-center gap-0.5">
                         <button onClick={() => setActiveFilter(JSON.parse(f.filterJson))}
                           className={`text-xs px-2.5 py-1.5 rounded-l-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/10 text-semantic-success' : 'bg-brand-navy/10 text-brand-navy'} hover:opacity-80`}>
-                          {f.shared ? '🌐' : '★'} {f.name}
+                          {f.shared ? <Globe className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /> : <Star className="inline-block h-3.5 w-3.5 align-text-bottom fill-current" aria-hidden="true" />}{f.name}
                         </button>
                         {f.createdBy === currentUser?.id && (
                           <button onClick={() => {
@@ -3413,7 +3416,7 @@ export default function App() {
                           }}
                             title={f.shared ? 'Make private' : 'Share with team'}
                             className={`text-xs px-1.5 py-1.5 rounded-r-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/20 text-semantic-success hover:bg-semantic-success/30' : 'bg-neutral-100 text-neutral-400 hover:bg-neutral-200'}`}>
-                            {f.shared ? '🔓' : '🔒'}
+                            {f.shared ? <Unlock className="h-3.5 w-3.5" aria-hidden="true" /> : <Lock className="h-3.5 w-3.5" aria-hidden="true" />}
                           </button>
                         )}
                       </div>
@@ -3426,7 +3429,7 @@ export default function App() {
                               <input type="text" value={saveFilterName} onChange={e => setSaveFilterName(e.target.value)}
                                 placeholder="Filter name" className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 rounded px-2 py-1 focus:outline-none" />
                               <Button size="sm" variant="secondary" onClick={handleSaveFilter}>Save</Button>
-                              <button onClick={() => setShowSaveFilter(false)} className="text-xs text-neutral-400 px-1">✕</button>
+                              <button onClick={() => setShowSaveFilter(false)} className="text-xs text-neutral-400 px-1" aria-label="Cancel"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                             </div>
                         }
                       </div>
@@ -3587,7 +3590,7 @@ export default function App() {
                               ))}
                             </div>
                             {sprintReport.totalPoints > (sprintReport.sprint?.capacity || Infinity) && (
-                              <p className="text-xs text-semantic-warning mt-3">⚠ Over-committed: {sprintReport.totalPoints}pt committed exceeds {sprintReport.sprint?.capacity}pt capacity</p>
+                              <p className="text-xs text-semantic-warning mt-3"><AlertTriangle className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Over-committed: {sprintReport.totalPoints}pt committed exceeds {sprintReport.sprint?.capacity}pt capacity</p>
                             )}
                           </div>
                         )}
@@ -3617,7 +3620,7 @@ export default function App() {
                             <span className="text-xs text-neutral-400">Items added/removed mid-sprint</span>
                           </div>
                           {scopeChanges.length === 0 ? (
-                            <p className="text-xs text-neutral-600 text-center py-6">No scope changes — sprint stayed on plan ✓</p>
+                            <p className="text-xs text-neutral-600 text-center py-6">No scope changes — sprint stayed on plan</p>
                           ) : (
                             <div className="divide-y divide-neutral-50 dark:divide-neutral-700">
                               {scopeChanges.map((c, i) => (
@@ -3708,7 +3711,7 @@ export default function App() {
                 <p className="text-sm text-neutral-400 mb-4">Secure your account with an authenticator app (Google Authenticator, Authy, etc.)</p>
                 {!mfaSetup ? (
                   <Button variant="secondary" onClick={handleMfaEnroll}>
-                    🔐 Set up authenticator app
+                    <KeyRound className="inline-block h-4 w-4 mr-1.5 align-text-bottom" aria-hidden="true" />Set up authenticator app
                   </Button>
                 ) : (
                   <div className="space-y-4">
@@ -3918,7 +3921,7 @@ export default function App() {
                               {/* Workflow header */}
                               <div className="flex items-center justify-between p-5 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700" onClick={() => expandWorkflow(wf.id)}>
                                 <div className="flex items-center gap-3">
-                                  <span className={`transition-transform ${isExpanded ? 'rotate-90' : ''} text-neutral-400 text-sm`}>▶</span>
+                                  <span className={`transition-transform ${isExpanded ? 'rotate-90' : ''} text-neutral-400`}><ChevronRight className="h-4 w-4" aria-hidden="true" /></span>
                                   <span className="font-semibold text-neutral-900 dark:text-neutral-100">{wf.name}</span>
                                   {wf.isDefault && <span className="text-xs bg-brand-navy text-white px-2 py-0.5 rounded-full font-semibold">DEFAULT</span>}
                                   {wf.itemType && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded">{wf.itemType}</span>}
@@ -3945,7 +3948,7 @@ export default function App() {
                                               <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{s.name}</span>
                                               <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${catColor[s.category] || 'bg-neutral-100 text-neutral-600'}`}>{s.category}</span>
                                               {s.isInitial && <span className="text-xs text-brand-amber font-bold">INITIAL</span>}
-                                              <button onClick={() => deleteStatus(wf.id, s.id)} className="text-neutral-300 hover:text-semantic-danger ml-1 text-xs">✕</button>
+                                              <button onClick={() => deleteStatus(wf.id, s.id)} className="text-neutral-300 hover:text-semantic-danger ml-1 text-xs" aria-label="Delete status"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                                             </div>
                                           ))}
                                         </div>
@@ -3984,9 +3987,9 @@ export default function App() {
                                                 <div key={t.id} className="flex items-center gap-2 text-sm">
                                                   <span className="font-medium text-neutral-700 dark:text-neutral-200 w-32 truncate">{t.name}</span>
                                                   <span className="text-neutral-400 text-xs">{fromS?.name || t.fromStatus}</span>
-                                                  <span className="text-neutral-300">→</span>
+                                                  <span className="text-neutral-300"><ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /></span>
                                                   <span className="text-neutral-400 text-xs">{toS?.name || t.toStatus}</span>
-                                                  <button onClick={() => deleteTransition(wf.id, t.id)} className="text-neutral-300 hover:text-semantic-danger ml-auto text-xs">✕</button>
+                                                  <button onClick={() => deleteTransition(wf.id, t.id)} className="text-neutral-300 hover:text-semantic-danger ml-auto text-xs" aria-label="Delete transition"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                                                 </div>
                                               );
                                             })}
@@ -4099,7 +4102,7 @@ export default function App() {
                                 </td>
                                 <td className="px-4 py-3"><span className="text-xs bg-brand-navy/10 dark:bg-brand-navy/20 text-brand-navy dark:text-blue-300 px-2 py-0.5 rounded font-mono">{fd.fieldType}</span></td>
                                 <td className="px-4 py-3 font-mono text-xs text-neutral-400">{fd.fieldKey}</td>
-                                <td className="px-4 py-3"><span className={`text-xs font-semibold ${fd.required ? 'text-semantic-danger' : 'text-neutral-300'}`}>{fd.required ? '✓ Required' : 'Optional'}</span></td>
+                                <td className="px-4 py-3"><span className={`text-xs font-semibold ${fd.required ? 'text-semantic-danger' : 'text-neutral-300'}`}>{fd.required ? <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" aria-hidden="true" />Required</span> : 'Optional'}</span></td>
                                 <td className="px-4 py-3">
                                   <button onClick={() => api.raw(`/field-defs/${fd.id}`, { method: 'DELETE' }).then(() => fetchFieldDefs())}
                                     className="text-xs text-semantic-danger hover:underline">Delete</button>
@@ -4299,7 +4302,7 @@ export default function App() {
                               </div>
                             ))}
                           </div>
-                          <p className="text-xs text-neutral-400 mt-2">System roles are tier-based. A role can do anything its tier permits. ✓ = permitted, — = not permitted.</p>
+                          <p className="text-xs text-neutral-400 mt-2">System roles are tier-based. A role can do anything its tier permits. A check = permitted, — = not permitted.</p>
                         </div>
                         {permMatrix.matrix.length === 0
                           ? <EmptyState icon={Lock} title="No custom roles" subtitle="Create roles to define fine-grained access control for your team." />
@@ -4325,7 +4328,7 @@ export default function App() {
                                           <button onClick={() => togglePermission(row.role.id, perm, row.permissions[perm])}
                                             className={`w-7 h-7 rounded transition-colors text-sm font-bold ${row.permissions[perm] ? 'bg-semantic-success text-white hover:opacity-80' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-400 hover:bg-brand-navy/10'}`}
                                             title={row.permissions[perm] ? 'Click to revoke' : 'Click to grant'}>
-                                            {row.permissions[perm] ? '✓' : '—'}
+                                            {row.permissions[perm] ? <Check className="inline-block h-4 w-4 text-semantic-success" aria-label="Permitted" /> : <span aria-label="Not permitted">—</span>}
                                           </button>
                                         </td>
                                       ))}
@@ -4404,7 +4407,7 @@ export default function App() {
                                 <p className="text-xs text-neutral-400 font-mono truncate">{t.typeKey}</p>
                               </div>
                               <button onClick={() => api.raw(`/work-item-types/${t.id}`, { method: 'DELETE' }).then(() => fetchWorkItemTypes())}
-                                className="opacity-0 group-hover:opacity-100 text-semantic-danger text-xs transition-opacity absolute top-2 right-2">✕</button>
+                                className="opacity-0 group-hover:opacity-100 text-semantic-danger text-xs transition-opacity absolute top-2 right-2" aria-label="Remove"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                             </div>
                           ))}
                         </div>
@@ -4467,7 +4470,7 @@ export default function App() {
                         <span className="font-medium text-neutral-900">{f.name}</span>
                         {f.isShared && <span className="text-xs text-neutral-400">shared</span>}
                         <button onClick={e => { e.stopPropagation(); api.raw(`/bql/filters/${f.id}`, { method: 'DELETE' }).then(() => fetchBqlFilters()); }}
-                          className="text-neutral-300 hover:text-semantic-danger opacity-0 group-hover:opacity-100 transition-opacity ml-1">✕</button>
+                          className="text-neutral-300 hover:text-semantic-danger opacity-0 group-hover:opacity-100 transition-opacity ml-1" aria-label="Remove"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                       </button>
                     ))}
                   </div>
@@ -4604,7 +4607,7 @@ export default function App() {
                               {a.dueDate && <span className="text-xs text-neutral-400">{a.dueDate}</span>}
                             </div>
                           ))}
-                          {(raidDashboard.actionItems || []).filter(a => a.status !== 'DONE').length === 0 && <p className="text-sm text-neutral-600 text-center py-4">No open action items 🎉</p>}
+                          {(raidDashboard.actionItems || []).filter(a => a.status !== 'DONE').length === 0 && <p className="text-sm text-neutral-600 text-center py-4">No open action items</p>}
                         </div>
                       </div>
                     </div>
@@ -4675,7 +4678,7 @@ export default function App() {
                   {pmTab === 'meetings' && (
                     <div>
                       <div className="flex justify-between items-center mb-4">
-                        <h2 className="font-semibold text-neutral-900 flex items-center gap-2"><span>📅</span> Meeting Notes</h2>
+                        <h2 className="font-semibold text-neutral-900 flex items-center gap-2"><Calendar className="h-5 w-5 text-neutral-500" aria-hidden="true" /> Meeting Notes</h2>
                         <Button variant="action" onClick={() => { setPmFormOpen('meeting'); setPmForm({ meetingType: 'GENERAL', status: 'SCHEDULED' }); }}>+ New Meeting</Button>
                       </div>
                       {meetings.length === 0
@@ -4691,10 +4694,10 @@ export default function App() {
                                       <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${m.status === 'COMPLETED' ? 'bg-semantic-success/10 text-semantic-success' : m.status === 'CANCELLED' ? 'bg-neutral-100 text-neutral-400' : 'bg-semantic-warning/10 text-semantic-warning'}`}>{m.status}</span>
                                     </div>
                                     <p className="font-semibold text-neutral-900">{m.title}</p>
-                                    {m.scheduledAt && <p className="text-xs text-neutral-400 mt-1">📅 {new Date(m.scheduledAt).toLocaleString()}{m.durationMins ? ` · ${m.durationMins}min` : ''}</p>}
-                                    {m.location && <p className="text-xs text-neutral-400">📍 {m.location}</p>}
+                                    {m.scheduledAt && <p className="text-xs text-neutral-400 mt-1"><Calendar className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{new Date(m.scheduledAt).toLocaleString()}{m.durationMins ? ` · ${m.durationMins}min` : ''}</p>}
+                                    {m.location && <p className="text-xs text-neutral-400"><MapPin className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{m.location}</p>}
                                   </div>
-                                  <button onClick={e => { e.stopPropagation(); pmDelete('meeting', m.id); }} className="text-neutral-300 hover:text-semantic-danger text-xs ml-3">✕</button>
+                                  <button onClick={e => { e.stopPropagation(); pmDelete('meeting', m.id); }} className="text-neutral-300 hover:text-semantic-danger text-xs ml-3" aria-label="Delete meeting"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                                 </div>
                               </div>
                             ))}
@@ -4707,7 +4710,7 @@ export default function App() {
                   {pmTab === 'meeting-detail' && selectedMeeting && (
                     <div>
                       <div className="flex items-center gap-3 mb-5">
-                        <button onClick={() => { setPmTab('meetings'); setSelectedMeeting(null); }} className="text-neutral-400 hover:text-brand-navy text-sm">← Back</button>
+                        <button onClick={() => { setPmTab('meetings'); setSelectedMeeting(null); }} className="text-neutral-400 hover:text-brand-navy text-sm" aria-label="Back"><ArrowLeft className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Back</button>
                         <h2 className="font-bold text-brand-navy text-lg">{selectedMeeting.title}</h2>
                         <span className="text-xs bg-brand-navy/10 text-brand-navy px-2 py-0.5 rounded">{selectedMeeting.meetingType}</span>
                       </div>
@@ -5110,7 +5113,7 @@ export default function App() {
                         <div key={d.id} onClick={() => openDashboard(d.id)} role="button" tabIndex={0} onKeyDown={onPressKey}
                           className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                           <div className="flex items-start justify-between">
-                            <span className="text-2xl">📐</span>
+                            <LayoutDashboard className="h-6 w-6 text-neutral-400" aria-hidden="true" />
                             <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-700 rounded-full px-2 py-0.5">{d.scope || 'PERSONAL'}</span>
                           </div>
                           <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mt-2 truncate">{d.name}</p>
@@ -5126,7 +5129,7 @@ export default function App() {
                 <>
                   <div className="flex items-center justify-between mb-5">
                     <div className="flex items-center gap-3 min-w-0">
-                      <button onClick={() => setSelectedDashboard(null)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0">← Dashboards</button>
+                      <button onClick={() => setSelectedDashboard(null)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Dashboards</button>
                       <h1 className="text-xl font-semibold text-neutral-900 dark:text-white truncate">{selectedDashboard.name}</h1>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -5273,7 +5276,7 @@ export default function App() {
                       {reports.map(r => (
                         <div key={r.id} onClick={() => openReport(r.id)} role="button" tabIndex={0} onKeyDown={onPressKey}
                           className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
-                          <span className="text-2xl">📄</span>
+                          <FileText className="h-6 w-6 text-neutral-400" aria-hidden="true" />
                           <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mt-2 truncate">{r.name}</p>
                           <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{r.updatedAt ? `Updated ${new Date(r.updatedAt).toLocaleDateString()}` : '—'}</p>
                         </div>
@@ -5285,7 +5288,7 @@ export default function App() {
                 <>
                   <div className="flex items-center justify-between mb-5">
                     <div className="flex items-center gap-3 min-w-0">
-                      <button onClick={() => setSelectedReport(null)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0">← Reports</button>
+                      <button onClick={() => setSelectedReport(null)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Reports</button>
                       {reportEditMode ? (
                         <input value={selectedReport.name || ''} onChange={e => setSelectedReport(r => ({ ...r, name: e.target.value }))}
                           aria-label="Report name"
@@ -5344,7 +5347,7 @@ export default function App() {
                 <div className="flex items-center justify-between mb-1">
                   <h2 className="text-lg font-bold text-brand-navy dark:text-white">Scheduled delivery</h2>
                   <button onClick={() => setScheduleManagerOpen(false)} aria-label="Close"
-                    className="text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">✕</button>
+                    className="text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40" aria-label="Close"><X className="h-4 w-4" aria-hidden="true" /></button>
                 </div>
                 <p className="text-xs text-neutral-500 mb-4 truncate">“{selectedReport.name}” — delivered on a cadence to recipients (in-app / email).</p>
 
@@ -5414,14 +5417,14 @@ export default function App() {
                       onChange={e => setKnowledgeSearch(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter') { searchKnowledge(); setKnowledgeTab('search'); } }}
                       className="input text-xs pl-6 py-1.5 w-full" />
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400 text-xs">🔍</span>
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400"><Search className="h-3.5 w-3.5" aria-hidden="true" /></span>
                   </div>
                 </div>
                 {/* All articles shortcut */}
                 <div className="px-2 py-1">
                   <button onClick={() => { setSelectedSpace(null); setSelectedArticle(null); setKnowledgeTab('all'); fetchKnowledgeArticles(null); }}
                     className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${knowledgeTab === 'all' && !selectedSpace ? 'bg-brand-navy/10 text-brand-navy' : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700'}`}>
-                    📄 All Articles
+                    <FileText className="inline-block h-3.5 w-3.5 mr-1.5 align-text-bottom" aria-hidden="true" />All Articles
                   </button>
                 </div>
                 {/* Space list */}
@@ -5434,7 +5437,7 @@ export default function App() {
                       <button onClick={() => { setSelectedSpace(space); setSelectedArticle(null); setEditingArticle(false); setKnowledgeTab('space'); fetchKnowledgeArticles(space.id); }}
                         className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors group flex items-center justify-between ${selectedSpace?.id === space.id ? 'bg-brand-navy/10 text-brand-navy' : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700'}`}>
                         <span className="flex items-center gap-1.5">
-                          <span>{space.icon || '📁'}</span>
+                          {space.icon ? <span>{space.icon}</span> : <Folder className="h-3.5 w-3.5" aria-hidden="true" />}
                           <span className="truncate">{space.name}</span>
                         </span>
                         <span className={`text-xs px-1.5 py-0.5 rounded ${space.visibility === 'PUBLIC' ? 'bg-semantic-success-surface text-semantic-success' : space.visibility === 'PRIVATE' ? 'bg-semantic-danger-surface text-semantic-danger' : 'bg-brand-navy/10 text-brand-navy'}`}>
@@ -5484,7 +5487,7 @@ export default function App() {
                       <div>
                         <div className="flex items-center justify-between mb-5">
                           <div className="flex items-center gap-3">
-                            {selectedSpace && <button onClick={() => { setSelectedSpace(null); setKnowledgeTab('spaces'); }} className="text-xs text-neutral-400 hover:text-brand-navy transition-colors">← Spaces</button>}
+                            {selectedSpace && <button onClick={() => { setSelectedSpace(null); setKnowledgeTab('spaces'); }} className="text-xs text-neutral-400 hover:text-brand-navy transition-colors"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Spaces</button>}
                             <h1 className="text-xl font-bold text-brand-navy dark:text-white">{selectedSpace ? selectedSpace.name : 'All Articles'}</h1>
                             {selectedSpace?.description && <p className="text-xs text-neutral-400">{selectedSpace.description}</p>}
                           </div>
@@ -5538,7 +5541,7 @@ export default function App() {
                     {/* Article header */}
                     <div className="border-b border-neutral-200 dark:border-neutral-700 px-6 py-4 flex items-center justify-between bg-white dark:bg-neutral-800 flex-shrink-0">
                       <div className="flex items-center gap-3 min-w-0">
-                        <button onClick={() => { setSelectedArticle(null); setEditingArticle(false); setArticlePanel(null); }} className="text-xs text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0">←</button>
+                        <button onClick={() => { setSelectedArticle(null); setEditingArticle(false); setArticlePanel(null); }} className="text-xs text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0" aria-label="Back"><ArrowLeft className="h-4 w-4" aria-hidden="true" /></button>
                         <div className="min-w-0">
                           <h1 className="font-bold text-lg text-neutral-900 dark:text-white truncate">{selectedArticle.title}</h1>
                           <div className="flex items-center gap-2 mt-0.5">
@@ -5700,7 +5703,7 @@ export default function App() {
                               ))}
                               {articleAnalytics.stale && (
                                 <div className="bg-semantic-warning-surface border border-semantic-warning/30 rounded-lg p-3 flex items-center gap-2">
-                                  <span className="text-semantic-warning text-sm">⚠</span>
+                                  <AlertTriangle className="h-4 w-4 text-semantic-warning flex-shrink-0" aria-hidden="true" />
                                   <span className="text-xs text-semantic-warning font-medium">Stale — published over {90} days ago without an update.</span>
                                 </div>
                               )}
@@ -5910,7 +5913,7 @@ export default function App() {
                     </div>
                   ) : (
                     <div className="max-w-[880px]">
-                      <button onClick={() => setActiveStandup(null)} className="text-xs text-brand-navy hover:underline mb-3">← All standups</button>
+                      <button onClick={() => setActiveStandup(null)} className="text-xs text-brand-navy hover:underline mb-3"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />All standups</button>
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Standup — {activeStandup.session.status}</h3>
                         {activeStandup.session.status !== 'COMPLETED' && (
@@ -6051,7 +6054,7 @@ export default function App() {
                     </div>
                   ) : (
                     <div>
-                      <button onClick={() => setActiveRetro(null)} className="text-xs text-brand-navy hover:underline mb-3">← All retros</button>
+                      <button onClick={() => setActiveRetro(null)} className="text-xs text-brand-navy hover:underline mb-3"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />All retros</button>
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">{activeRetro.session.title}</h3>
                         {activeRetro.session.status !== 'COMPLETED' && <Button variant="secondary" onClick={() => { api.send(`/retros/${activeRetro.session.id}/complete`, { method: 'POST' }).then(() => openRetro(activeRetro.session.id)); }}>Complete</Button>}
@@ -6065,9 +6068,9 @@ export default function App() {
                                 <div key={n.id} className="bg-neutral-50 dark:bg-neutral-700 rounded-md p-2">
                                   <p className="text-xs text-neutral-800 dark:text-neutral-100">{n.content}</p>
                                   <div className="flex items-center gap-3 mt-1">
-                                    <button onClick={() => voteRetroNote(n.id)} className="text-[11px] text-brand-navy hover:underline">▲ {n.votes}</button>
-                                    {!n.convertedActionItemId && <button onClick={() => convertRetroNote(n.id)} className="text-[11px] text-semantic-success hover:underline">→ Action</button>}
-                                    {n.convertedActionItemId && <span className="text-xs text-neutral-400">✓ action</span>}
+                                    <button onClick={() => voteRetroNote(n.id)} className="text-[11px] text-brand-navy hover:underline" aria-label="Upvote"><ChevronUp className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /> {n.votes}</button>
+                                    {!n.convertedActionItemId && <button onClick={() => convertRetroNote(n.id)} className="text-[11px] text-semantic-success hover:underline" aria-label="Convert to action item"><ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" />Action</button>}
+                                    {n.convertedActionItemId && <span className="text-xs text-neutral-400"><Check className="inline-block h-3 w-3 align-text-bottom" aria-hidden="true" /> action</span>}
                                   </div>
                                 </div>
                               ))}
@@ -6217,7 +6220,7 @@ export default function App() {
                               {i.description && <p className="text-xs text-neutral-500 mt-1">{i.description}</p>}
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
-                              <button onClick={() => voteIdea(i.id)} className="text-xs text-brand-navy hover:underline">▲ {i.votes}</button>
+                              <button onClick={() => voteIdea(i.id)} className="text-xs text-brand-navy hover:underline" aria-label="Upvote"><ChevronUp className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /> {i.votes}</button>
                               {i.status === 'PROMOTED' ? <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-semantic-success text-white">PROMOTED</span>
                                 : <button onClick={() => promoteIdea(i.id)} className="text-xs text-semantic-success hover:underline">Promote</button>}
                             </div>
@@ -6556,7 +6559,7 @@ export default function App() {
                             <p className="text-sm text-neutral-900 dark:text-neutral-100 truncate">{v.workItemTitle || v.workItemId}</p>
                             <p className="text-xs text-neutral-400 font-mono">{v.workItemId}</p>
                           </div>
-                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${vStatusClass[v.status] || ''}`}>{v.status}{v.escalated ? ' ↑' : ''}</span>
+                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${vStatusClass[v.status] || ''}`}>{v.status}{v.escalated ? <ArrowUp className="inline-block h-3 w-3 align-text-bottom" aria-label="Escalated" /> : ''}</span>
                           {can('manage_compliance') && (v.status === 'OPEN' || v.status === 'ACKNOWLEDGED') && <>
                             {v.status === 'OPEN' && <button onClick={() => actOnViolation(v.id, 'acknowledge')} className="text-xs text-brand-navy hover:underline">Ack</button>}
                             <button onClick={() => actOnViolation(v.id, 'resolve')} className="text-xs text-semantic-success hover:underline">Resolve</button>
@@ -6790,7 +6793,7 @@ export default function App() {
                               ? <p className="text-sm text-neutral-500">No comments yet.</p>
                               : serviceCsat.responses.slice(0, 10).map(r => (
                                 <div key={r.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                                  <span className="text-brand-orange text-sm">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                                  <span className="text-brand-orange text-sm inline-flex items-center" aria-label={`Rated ${r.rating} of 5`}>{Array.from({ length: 5 }).map((_, si) => <Star key={si} className={`h-3.5 w-3.5 ${si < r.rating ? 'fill-current' : ''}`} aria-hidden="true" />)}</span>
                                   <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-200 truncate">{r.comment || '—'}</span>
                                 </div>
                               ))}
@@ -6848,7 +6851,7 @@ export default function App() {
               <button onClick={() => toggleStar(selectedItem)}
                 title={selectedItem.starred ? 'Unstar' : 'Star this item'}
                 className={`text-sm px-2 py-1 rounded transition-colors ${selectedItem.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}`}>
-                {selectedItem.starred ? '★' : '☆'}
+                <Star className={`h-4 w-4 ${selectedItem.starred ? 'fill-current text-brand-orange' : ''}`} aria-hidden="true" />
               </button>
               <button onClick={() => setIsWorklogOpen(true)} className="text-xs text-neutral-400 hover:text-brand-navy transition-colors px-2 py-1 rounded border border-neutral-200 dark:border-neutral-600">⏱ Log Work</button>
               {can('delete_items') && (
@@ -6856,7 +6859,7 @@ export default function App() {
                   className="text-xs text-neutral-400 hover:text-semantic-danger px-2 py-1 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">Delete</button>
               )}
               <button onClick={() => setSelectedItem(null)}
-                className="text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 p-1 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">✕</button>
+                className="text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 p-1 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors" aria-label="Close detail panel"><X className="h-4 w-4" aria-hidden="true" /></button>
             </div>
           </div>
           {/* Detail panel tabs */}
@@ -6948,7 +6951,7 @@ export default function App() {
                 return parent ? (
                   <div className="mt-1.5 flex items-center gap-2 text-xs text-brand-navy cursor-pointer hover:underline"
                     onClick={() => setSelectedItem(parent)}>
-                    <span>↑</span><TypeBadge type={parent.type} compact /><span>{parent.title}</span>
+                    <span aria-hidden="true"><ArrowUp className="inline-block h-3.5 w-3.5 align-text-bottom" /></span><TypeBadge type={parent.type} compact /><span>{parent.title}</span>
                   </div>
                 ) : null;
               })()}
@@ -6962,7 +6965,7 @@ export default function App() {
                   {itemChildren.map(child => (
                     <div key={child.id} onClick={() => setSelectedItem(child)} role="button" tabIndex={0} onKeyDown={onPressKey}
                       className="flex items-center gap-2 p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700 cursor-pointer hover:border-brand-navy/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
-                      <span className="text-neutral-300 text-xs">↳</span>
+                      <span className="text-neutral-300"><CornerDownRight className="h-3.5 w-3.5" aria-hidden="true" /></span>
                       <TypeBadge type={child.type} compact />
                       <span className="font-mono text-xs text-neutral-400">{child.id}</span>
                       <span className="flex-1 text-xs text-neutral-900 truncate">{child.title}</span>
@@ -7106,7 +7109,7 @@ export default function App() {
                           <p className="text-sm text-neutral-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMd(c.body) }} />
                           <button onClick={() => setReplyingTo(replyingTo === c.id ? null : c.id)}
                             className="text-xs text-neutral-400 hover:text-brand-navy mt-1.5 transition-colors">
-                            ↩ Reply {c.replies?.length > 0 && `(${c.replies.length})`}
+                            <Reply className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Reply {c.replies?.length > 0 && `(${c.replies.length})`}
                           </button>
                         </div>
                       </div>
@@ -7232,7 +7235,7 @@ export default function App() {
                       <span className="text-xs font-semibold bg-neutral-200 text-neutral-600 px-1.5 py-0.5 rounded uppercase">{l.linkType?.replace('_', ' ')}</span>
                       <span className="flex-1 text-sm text-neutral-900 font-mono">{l.targetId}</span>
                       {l.targetTitle && <span className="text-xs text-neutral-400 truncate max-w-24">{l.targetTitle}</span>}
-                      <button onClick={() => handleDeleteLink(l.id)} className="text-neutral-300 hover:text-semantic-danger text-xs">✕</button>
+                      <button onClick={() => handleDeleteLink(l.id)} className="text-neutral-300 hover:text-semantic-danger text-xs" aria-label="Remove link"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                     </div>
                   ))}
                 </div>
@@ -7257,12 +7260,12 @@ export default function App() {
                 <input type="file" ref={fileInputRef} className="hidden" onChange={handleUploadFile} />
                 <div className="flex items-center gap-3 mb-4">
                   <Button variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()}>
-                    ↑ Upload file
+                    <Upload className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Upload file
                   </Button>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-neutral-400">Max {MAX_UPLOAD_MB} MB per file</span>
                     <span className="text-xs bg-semantic-success-surface text-semantic-success px-1.5 py-0.5 rounded flex items-center gap-1">
-                      🛡 Virus scan active
+                      <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />Virus scan active
                     </span>
                   </div>
                 </div>
@@ -7285,7 +7288,7 @@ export default function App() {
                         )}
                         <div className="flex items-center gap-3 p-3">
                           <div className={`w-8 h-8 rounded flex items-center justify-center text-xs font-bold flex-shrink-0 ${isImage ? 'bg-brand-navy/10 text-brand-navy' : 'bg-neutral-200 text-neutral-600'}`}>
-                            {isImage ? '🖼' : ext}
+                            {isImage ? <ImageIcon className="h-4 w-4" aria-hidden="true" /> : ext}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-neutral-900 truncate">{fileName}</p>
@@ -7293,7 +7296,7 @@ export default function App() {
                           </div>
                           <a href={previewUrl} target="_blank" rel="noreferrer"
                             className="text-xs text-brand-navy hover:underline flex-shrink-0 mr-2">View</a>
-                          <button onClick={() => handleDeleteAttachment(a.id)} className="text-neutral-300 hover:text-semantic-danger text-xs flex-shrink-0">✕</button>
+                          <button onClick={() => handleDeleteAttachment(a.id)} className="text-neutral-300 hover:text-semantic-danger text-xs flex-shrink-0" aria-label="Remove attachment"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                         </div>
                       </div>
                     );
@@ -7353,7 +7356,7 @@ export default function App() {
                           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                             <span className="text-xs text-neutral-400 font-medium capitalize">{String(a.field_name).replace(/_/g,' ')}:</span>
                             {a.old_value && <span className="text-xs bg-semantic-danger-surface text-semantic-danger px-1.5 py-0.5 rounded line-through">{a.old_value}</span>}
-                            <span className="text-xs text-neutral-400">→</span>
+                            <span className="text-xs text-neutral-400"><ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /></span>
                             {a.new_value && <span className="text-xs bg-semantic-success-surface text-semantic-success px-1.5 py-0.5 rounded">{a.new_value}</span>}
                           </div>
                         )}
@@ -7686,7 +7689,7 @@ function StatCard({ label, value, sub, color, icon: Icon, onClick }) {
     >
       <div className="flex items-start justify-between mb-3">
         {typeof Icon === 'function' ? <Icon aria-hidden="true" className="h-6 w-6 text-neutral-400" /> : <span className="text-2xl">{Icon}</span>}
-        <span className="text-xs text-neutral-400 group-hover:text-brand-navy transition-colors">View →</span>
+        <span className="text-xs text-neutral-400 group-hover:text-brand-navy transition-colors">View <ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /></span>
       </div>
       <p className={`text-3xl font-bold ${color} mb-1`}>{value}</p>
       <p className="text-sm font-medium text-neutral-700">{label}</p>
@@ -7799,9 +7802,9 @@ function ReportSectionCard({ section, index, total, workItems, editMode, onChang
         {editMode && (
           <div className="flex items-center gap-1 flex-shrink-0">
             <button onClick={() => onMove(-1)} disabled={index === 0} aria-label="Move section up"
-              className="text-xs px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy disabled:opacity-40 disabled:pointer-events-none">↑</button>
+              className="text-xs px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy disabled:opacity-40 disabled:pointer-events-none"><ArrowUp className="h-3.5 w-3.5" aria-hidden="true" /></button>
             <button onClick={() => onMove(1)} disabled={index === total - 1} aria-label="Move section down"
-              className="text-xs px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy disabled:opacity-40 disabled:pointer-events-none">↓</button>
+              className="text-xs px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy disabled:opacity-40 disabled:pointer-events-none"><ArrowDown className="h-3.5 w-3.5" aria-hidden="true" /></button>
             <button onClick={onRemove} aria-label="Remove section" className="text-xs text-semantic-danger hover:underline ml-1">Remove</button>
           </div>
         )}
@@ -8147,7 +8150,7 @@ function DashboardDrillModal({ drill, onClose, onOpenItem }) {
           </div>
           <button onClick={onClose} aria-label="Close" autoFocus
             className="flex-shrink-0 ml-2 text-lg leading-none text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
-            <span aria-hidden="true">×</span>
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
         <div className="overflow-y-auto p-2">
@@ -8258,7 +8261,7 @@ function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
           {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
           {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}
           <button onClick={() => { onMoveToBacklog(item.id); setItems(prev => prev.filter(i => i.id !== item.id)); }}
-            className="opacity-0 group-hover:opacity-100 text-xs text-neutral-400 hover:text-brand-navy transition-opacity">↓ Backlog</button>
+            className="opacity-0 group-hover:opacity-100 text-xs text-neutral-400 hover:text-brand-navy transition-opacity" aria-label="Move to backlog"><ArrowDown className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Backlog</button>
         </div>
       ))}
     </div>
@@ -8334,10 +8337,10 @@ function RichTextEditor({ value, onChange, onBlur, placeholder }) {
         <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1"/>
         <ToolBtn cmd="insertUnorderedList" title="Bullet list"><span className="text-[11px]">• —</span></ToolBtn>
         <ToolBtn cmd="insertOrderedList"   title="Numbered list"><span className="text-[11px]">1.</span></ToolBtn>
-        <ToolBtn cmd="indent"              title="Indent"><span className="text-[11px]">→</span></ToolBtn>
-        <ToolBtn cmd="outdent"             title="Outdent"><span className="text-[11px]">←</span></ToolBtn>
+        <ToolBtn cmd="indent"              title="Indent"><IndentIncrease className="h-4 w-4" aria-hidden="true" /></ToolBtn>
+        <ToolBtn cmd="outdent"             title="Outdent"><IndentDecrease className="h-4 w-4" aria-hidden="true" /></ToolBtn>
         <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1"/>
-        <ToolBtn cmd="removeFormat" title="Clear formatting"><span className="text-xs">✕</span></ToolBtn>
+        <ToolBtn cmd="removeFormat" title="Clear formatting"><X className="h-4 w-4" aria-hidden="true" /></ToolBtn>
         <span className="ml-auto text-xs text-neutral-300 pr-1">WYSIWYG</span>
       </div>
 
@@ -8457,8 +8460,8 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
                         <div className="flex items-start justify-between mb-1.5">
                           <span className="font-mono text-xs text-neutral-400">{item.id}</span>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => onSelect(item)} className="text-neutral-400 hover:text-brand-navy text-xs p-0.5">✏</button>
-                            <button onClick={() => onDelete(item.id)} className="text-neutral-400 hover:text-semantic-danger text-xs p-0.5">✕</button>
+                            <button onClick={() => onSelect(item)} className="text-neutral-400 hover:text-brand-navy text-xs p-0.5" aria-label="Edit"><SquarePen className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                            <button onClick={() => onDelete(item.id)} className="text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label="Delete"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                           </div>
                         </div>
                         <p className="text-sm font-medium text-neutral-900 leading-snug mb-2 cursor-pointer" onClick={() => onSelect(item)}>{item.title}</p>

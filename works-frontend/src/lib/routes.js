@@ -7,6 +7,7 @@ export const VIEW_PATHS = {
   dashboard: '/',
   myworks: '/my-work',
   notifications: '/notifications',
+  developer: '/developer',
   board: '/board',
   backlog: '/backlog',
   sprint: '/sprint',

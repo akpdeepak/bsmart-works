@@ -8,6 +8,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 ## [Unreleased]
 
 ### Added
+- Service Management / Customer Portal (iteration 9, Cap N + M): external customer accounts with a separate portal auth flow (BCrypt + portal JWT, org-bound), per-customer branded portals (logo/colour/subdomain/tier), request types with dynamic per-type forms + server-side validation, agent queues (All open / Mine / Unassigned / High priority) with triage, customer-facing SLA countdowns (reusing the iteration-8 engine), a published customer knowledge base with search, CSAT rating + trends, a customer dashboard strictly scoped to the customer's own organization, and multi-tier customer SLAs (V39). The external, sellable face of Works.
 - SLA Engine (iteration 8, Cap M): unified internal SLA engine — policies scoped by BQL with multiple targets (first response, resolution, custom), business-hours calendars (per-weekday windows, holidays, timezone), pause/resume on configured statuses, visible countdown timers (OK/WARN/BREACH), threshold + on-breach escalation (notify/reassign), met/breached reporting, and an append-only SLA audit log with CSV export; bulk-apply with preview (V38). One engine, ready for customer-facing SLAs in iteration 9.
 - SLA frontend: `SlaCountdownBadge` ("Resolve in 2h 14m", colour-shifting, accessible) and a four-tab SLA management surface (policies, live clocks, report, audit).
 - Knowledge: inline article comments (threaded, resolvable) on knowledge articles

@@ -20,7 +20,7 @@
 | 6 | 6.0 | Reports, Dashboards & Insights | 8 | 0 |
 | 7 | 7.0 | Compliance Rules Engine | 9 | 9 |
 | 8 | 8.0 | SLA Engine — Internal & Generalized | 9 | 9 |
-| 9 | 9.0 | Service Management — Customer Portal | 10 | 0 |
+| 9 | 9.0 | Service Management — Customer Portal | 10 | 10 |
 | 10 | 10.0 | AI Orchestration Foundation + AI Control Plane | 13 | 0 |
 | 11 | 11.0 | AI Expansion + Conversational Command Bar | 15 | 0 |
 | 12 | 12.0 | KPI Framework with Privacy Guardrails | 12 | 0 |
@@ -32,7 +32,7 @@
 | 18 | 18.0 | Mobile + Real-time + Performance | 12 | 0 |
 | 19 | 19.0 | Enterprise Security + Compliance Certifications | 12 | 0 |
 | 20 | 20.0 | Polish, Advanced AI, Marketplace Foundation | 12 | 0 |
-| **Total** | | | **224** | **11** |
+| **Total** | | | **224** | **21** |
 
 ## Specs
 
@@ -155,16 +155,16 @@
 
 | ID | Cap | Spec | Status | Branch | PR | Date | Notes |
 |---|---|---|---|---|---|---|---|
-| I09-S01 | N | Customer accounts | Pending | — | — | — | — |
-| I09-S02 | N | Branded customer portal | Pending | — | — | — | — |
-| I09-S03 | N | Request types | Pending | — | — | — | — |
-| I09-S04 | N | Portal forms per request type | Pending | — | — | — | — |
-| I09-S05 | N | Agent queues | Pending | — | — | — | — |
-| I09-S06 | M | Customer-facing SLA | Pending | — | — | — | — |
-| I09-S07 | N | Customer-facing knowledge base | Pending | — | — | — | — |
-| I09-S08 | N | Customer satisfaction (CSAT) | Pending | — | — | — | — |
-| I09-S09 | N | Customer dashboard | Pending | — | — | — | — |
-| I09-S10 | N | Multi-tier customer SLAs | Pending | — | — | — | — |
+| I09-S01 | N | Customer accounts | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | V39; external identity separate from internal users; portal BCrypt auth + portal JWT (account/workspace/org claims) |
+| I09-S02 | N | Branded customer portal | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | Per-org logo/colour/subdomain; one public GET /portal/branding |
+| I09-S03 | N | Request types | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | INCIDENT/CHANGE_REQUEST/SERVICE_REQUEST/CUSTOM + JSON form_schema; workspace-scoped CRUD |
+| I09-S04 | N | Portal forms per request type | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | Dynamic form from schema + server-side required-field validation; visual designer parked |
+| I09-S05 | N | Agent queues | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | All open / Mine / Unassigned / High priority; triage assign/status/link |
+| I09-S06 | M | Customer-facing SLA | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | Reuses iteration-8 clocks on the linked work item; same countdown for agent + customer |
+| I09-S07 | N | Customer-facing knowledge base | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | Publish/unpublish internal articles to portal; list + search |
+| I09-S08 | N | Customer satisfaction (CSAT) | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | Rating + comment on resolved requests; trend aggregation |
+| I09-S09 | N | Customer dashboard | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | Customer sees only their org's requests + SLA (cross-org isolation enforced server-side) |
+| I09-S10 | N | Multi-tier customer SLAs | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | Org tier (PLATINUM/GOLD/SILVER) surfaced; tier-matching SLA policy customerTier exposed |
 
 ### Iteration 10 — Release 10.0 · AI Orchestration Foundation + AI Control Plane
 

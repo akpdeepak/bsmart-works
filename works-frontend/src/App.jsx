@@ -13,7 +13,7 @@ import {
   Pin, Calendar, Eye, EyeOff, Building2, Target, Globe, Star, Scale, Clock, Reply, AtSign,
   X, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronRight, ChevronUp,
   SquarePen, Upload, IndentIncrease, IndentDecrease, MapPin, KeyRound,
-  Unlock, CornerDownRight, Image as ImageIcon,
+  Unlock, CornerDownRight, Image as ImageIcon, Flame, Bug,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
@@ -3393,13 +3393,13 @@ export default function App() {
                     {[
                       { label: 'All', filter: null },
                       { label: 'Mine', filter: { type: 'mine' } },
-                      { label: '🔥 Blockers', filter: { type: 'blockers' } },
-                      { label: '⬆ High Priority', filter: { type: 'priority', value: 'HIGH' } },
-                      { label: '🐛 Bugs', filter: { type: 'itemType', value: 'Bug' } },
+                      { label: 'Blockers', Icon: Flame, filter: { type: 'blockers' } },
+                      { label: 'High Priority', Icon: ArrowUp, filter: { type: 'priority', value: 'HIGH' } },
+                      { label: 'Bugs', Icon: Bug, filter: { type: 'itemType', value: 'Bug' } },
                     ].map(f => (
                       <button key={f.label} onClick={() => setActiveFilter(f.filter)}
                         className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${JSON.stringify(activeFilter) === JSON.stringify(f.filter) ? 'bg-brand-navy text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'}`}>
-                        {f.label}
+                        {f.Icon && <f.Icon className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />}{f.label}
                       </button>
                     ))}
                     {savedFilters.map(f => (
@@ -4532,21 +4532,21 @@ export default function App() {
                   {/* Sub-tabs */}
                   <div className="flex gap-1 mb-5 border-b border-neutral-200 dark:border-neutral-700 overflow-x-auto">
                     {[
-                      { key: 'raid',         label: '🎯 RAID Dashboard' },
-                      { key: 'risks',        label: `⚠ Risks (${risks.length})` },
-                      { key: 'assumptions',  label: `💡 Assumptions (${assumptions.length})` },
-                      { key: 'issues',       label: `🔴 Issues (${pmIssues.length})` },
-                      { key: 'deps',         label: `🔗 Dependencies (${dependencies.length})` },
-                      { key: 'decisions',    label: `⚖ Decisions (${decisions.length})` },
-                      { key: 'meetings',     label: `📅 Meetings (${meetings.length})` },
-                      { key: 'actions',      label: `✅ Actions (${actionItems.length})` },
-                      { key: 'stakeholders', label: `👥 Stakeholders (${stakeholders.length})` },
-                      { key: 'lessons',      label: `📚 Lessons (${lessonsLearned.length})` },
-                      { key: 'cross-deps',   label: `🌐 Cross-Project (${crossProjectDeps.length})` },
+                      { key: 'raid',         Icon: Target,       label: 'RAID Dashboard' },
+                      { key: 'risks',        Icon: AlertTriangle, label: `Risks (${risks.length})` },
+                      { key: 'assumptions',  Icon: Lightbulb,    label: `Assumptions (${assumptions.length})` },
+                      { key: 'issues',       Icon: AlertCircle,  label: `Issues (${pmIssues.length})` },
+                      { key: 'deps',         Icon: Link,         label: `Dependencies (${dependencies.length})` },
+                      { key: 'decisions',    Icon: Scale,        label: `Decisions (${decisions.length})` },
+                      { key: 'meetings',     Icon: Calendar,     label: `Meetings (${meetings.length})` },
+                      { key: 'actions',      Icon: CheckCircle2, label: `Actions (${actionItems.length})` },
+                      { key: 'stakeholders', Icon: Users,        label: `Stakeholders (${stakeholders.length})` },
+                      { key: 'lessons',      Icon: BookOpen,     label: `Lessons (${lessonsLearned.length})` },
+                      { key: 'cross-deps',   Icon: Globe,        label: `Cross-Project (${crossProjectDeps.length})` },
                     ].map(t => (
                       <button key={t.key} onClick={() => { setPmTab(t.key); if (t.key === 'cross-deps') fetchCrossProjectDeps(); }}
                         className={`text-xs font-medium px-3 py-2 border-b-2 whitespace-nowrap transition-colors ${pmTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
-                        {t.label}
+                        {t.Icon && <t.Icon className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />}{t.label}
                       </button>
                     ))}
                   </div>
@@ -4656,7 +4656,7 @@ export default function App() {
                       title="Dependencies Tracker" icon={Link}
                       items={dependencies}
                       columns={['Title', 'From', 'To', 'Status', 'Deadline', 'Blocker']}
-                      renderRow={d => [d.title, d.dependentTeam || '—', d.providingTeam || '—', d.status, d.deadline || '—', d.isBlocker ? '🚫 YES' : 'No']}
+                      renderRow={d => [d.title, d.dependentTeam || '—', d.providingTeam || '—', d.status, d.deadline || '—', d.isBlocker ? <span className="inline-flex items-center gap-1 text-semantic-danger font-semibold"><Ban className="h-3.5 w-3.5" aria-hidden="true" />Yes</span> : 'No']}
                       onDelete={id => pmDelete('dependency', id)}
                       onAdd={() => { setPmFormOpen('dependency'); setPmForm({ status: 'PENDING', isBlocker: false }); }}
                     />
@@ -8393,7 +8393,7 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
         const epic = allItems.find(i => i.id === epicId && i.type === 'Epic');
         return {
           key: epicId,
-          label: epic ? `⚡ ${epic.title}` : epicId === 'no-epic' ? 'No Epic' : epicId,
+          label: epic ? epic.title : epicId === 'no-epic' ? 'No Epic' : epicId,
           items: epicItems
         };
       }).sort((a, b) => {
@@ -8416,10 +8416,10 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
       });
       return Object.entries(tagMap)
         .filter(([, tagItems]) => tagItems.length > 0)
-        .map(([tag, tagItems]) => ({ key: tag, label: `🏷 ${tag}`, items: tagItems }))
+        .map(([tag, tagItems]) => ({ key: tag, label: tag, items: tagItems }))
         .sort((a, b) => {
-          if (a.label === '🏷 No Tags') return 1;
-          if (b.label === '🏷 No Tags') return -1;
+          if (a.label === 'No Tags') return 1;
+          if (b.label === 'No Tags') return -1;
           return a.label.localeCompare(b.label);
         });
     }

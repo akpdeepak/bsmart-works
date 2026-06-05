@@ -23,6 +23,8 @@ public final class AiCapabilities {
     public static final String KB_RAG             = "kb_rag";             // Cap I — RAG over the knowledge base
     public static final String KB_SUGGEST         = "kb_suggest";         // Cap N — article suggestion at intake
     public static final String ROUTING            = "routing";            // Cap N — smart customer-request routing
+    public static final String KPI_NARRATIVE      = "kpi_narrative";      // Cap L — AI team-health narrative (iteration 12)
+    public static final String AUTOMATION_SUGGEST = "automation_suggest"; // Cap C — AI-suggested automation rules (iteration 13)
 
     /** Description of each capability and its deterministic fallback, surfaced to the UI panel. */
     public record Descriptor(String id, String label, AiModelTier defaultTier, String fallback) { }
@@ -45,7 +47,11 @@ public final class AiCapabilities {
         new Descriptor(KB_SUGGEST, "Article suggestion at intake", AiModelTier.HAIKU,
             "Falls back to keyword article search; suggestions simply do not appear if none match."),
         new Descriptor(ROUTING, "Smart request routing", AiModelTier.HAIKU,
-            "Falls back to the project's default team / round-robin assignment.")
+            "Falls back to the project's default team / round-robin assignment."),
+        new Descriptor(KPI_NARRATIVE, "AI team-health narrative", AiModelTier.SONNET,
+            "Falls back to a deterministic summary of the metric deltas — the numbers, without a narrative."),
+        new Descriptor(AUTOMATION_SUGGEST, "AI-suggested automation rules", AiModelTier.SONNET,
+            "Falls back to the one-click automation template library in the visual builder.")
     );
 
     private static final Map<String, Descriptor> BY_ID =

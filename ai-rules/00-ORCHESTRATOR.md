@@ -153,11 +153,17 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
 > should be extended to verify the migration number against `db/migration/`.
 
 - **Iterations:** 20 total · 26 capabilities · ~346 sub-features.
-- **Active iteration:** **11 (in progress)** — broad AI expansion; built on the **AI Control Plane**
-  (the iteration-10 orchestration foundation: one policy hierarchy, one budget, one audit trail, one
-  fallback contract — RB-40 §2), which landed with it. Iteration 7 (Compliance Rules Engine) complete.
-- **Flyway high-water mark:** **V39** (`V39__ai_control_plane.sql`; note: V16 was skipped, V23 does not exist).
-- **Next migration:** **`V40__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+- **Active iteration:** **13 (complete)** — Automation Engine + Integrations (Cap C/Q/A): visual
+  When/If/Then rules with test-mode and a run audit log, signed outbound webhooks with retry +
+  dead-letter, the public-API token foundation, and the connector registry (Slack / GitHub / GitLab /
+  email / calendar + SSO/SCIM). Built on iteration **12** (KPI Framework with privacy guardrails —
+  Cap L: layered metrics, manager view API-blocked from individual drill-down, immutable snapshots)
+  and iteration **11** (broad AI expansion on the **AI Control Plane** — one policy hierarchy, one
+  budget, one audit trail, one fallback contract, RB-40 §2). Iteration 7 (Compliance Rules Engine)
+  complete.
+- **Flyway high-water mark:** **V42** (`V42__automation_and_integrations.sql`; note: V16 was skipped,
+  V23 does not exist).
+- **Next migration:** **`V43__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

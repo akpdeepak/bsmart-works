@@ -3979,7 +3979,9 @@ export default function App() {
                           return (
                             <div key={wf.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
                               {/* Workflow header */}
-                              <div className="flex items-center justify-between p-5 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700" onClick={() => expandWorkflow(wf.id)}>
+                              <div role="button" tabIndex={0} onKeyDown={onPressKey} aria-expanded={isExpanded}
+                                className="flex items-center justify-between p-5 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40"
+                                onClick={() => expandWorkflow(wf.id)}>
                                 <div className="flex items-center gap-3">
                                   <span className={`transition-transform ${isExpanded ? 'rotate-90' : ''} text-neutral-600 dark:text-neutral-400`}><ChevronRight className="h-4 w-4" aria-hidden="true" /></span>
                                   <span className="font-semibold text-neutral-900 dark:text-neutral-100">{wf.name}</span>

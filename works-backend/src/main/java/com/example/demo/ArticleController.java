@@ -229,6 +229,29 @@ public class ArticleController {
         return saved;
     }
 
+    /** Publish an already-PUBLISHED article to the customer portal KB (iteration 9, Cap N). */
+    @PutMapping("/{id}/portal-publish")
+    public Article portalPublish(@PathVariable String id) { return setPortalPublished(id, true); }
+
+    /** Withdraw an article from the customer portal KB without un-publishing it internally. */
+    @PutMapping("/{id}/portal-unpublish")
+    public Article portalUnpublish(@PathVariable String id) { return setPortalPublished(id, false); }
+
+    private Article setPortalPublished(String id, boolean published) {
+        String userId = authenticatedUser.id();
+        Article a = articleRepository.findById(id).orElseThrow(() -> ApiException.notFound("Article", id));
+        if (published && !ArticleWorkflowService.PUBLISHED.equals(a.getStatus())) {
+            throw ApiException.badRequest("NOT_PUBLISHED",
+                    "Only a published article can be surfaced on the customer portal.");
+        }
+        a.setPortalPublished(published);
+        a.setUpdatedAt(OffsetDateTime.now());
+        Article saved = articleRepository.save(a);
+        eventService.record(id, published ? "ARTICLE_PORTAL_PUBLISHED" : "ARTICLE_PORTAL_UNPUBLISHED",
+                userId, Map.of("title", a.getTitle() == null ? "" : a.getTitle()));
+        return saved;
+    }
+
     @PostMapping("/{id}/vote")
     public Article voteHelpful(@PathVariable String id) {
         jdbc.update("UPDATE articles SET helpful_votes = helpful_votes + 1 WHERE id = ?", id);

@@ -59,4 +59,23 @@ class JwtUtilTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("32 bytes");
     }
+
+    // ── customer-portal tokens (iteration 9) ────────────────────────────────────────
+    @Test
+    void internalToken_hasInternalScopeAndIsNotCustomer() {
+        String token = jwtUtil.generate("user-1", "u@example.com");
+        assertThat(jwtUtil.extractScope(token)).isEqualTo("internal");
+        assertThat(jwtUtil.isCustomerToken(token)).isFalse();
+    }
+
+    @Test
+    void customerToken_carriesScopeAccountAndWorkspace() {
+        String token = jwtUtil.generateCustomer("CU-1", "asha@amr.example", "CA-1", "WS-002");
+        assertThat(jwtUtil.isCustomerToken(token)).isTrue();
+        assertThat(jwtUtil.extractScope(token)).isEqualTo("customer");
+        assertThat(jwtUtil.extractUserId(token)).isEqualTo("CU-1");
+        assertThat(jwtUtil.extractClaim(token, "accountId")).isEqualTo("CA-1");
+        assertThat(jwtUtil.extractClaim(token, "workspaceId")).isEqualTo("WS-002");
+        assertThat(jwtUtil.extractClaim(token, "missing")).isNull();
+    }
 }

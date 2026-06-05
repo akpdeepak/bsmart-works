@@ -7,6 +7,10 @@ import {
   BarChart2, LayoutDashboard, FileText, TrendingUp, Headset, Timer, ShieldCheck,
   Gauge, Map as MapIcon, ClipboardList, Workflow, Plug, Search, BookOpen,
   SlidersHorizontal, Settings, Trash2,
+  CheckCircle2, AlertCircle, Heart, AlertTriangle, Puzzle, Link, Lock,
+  File as FileIcon, Folder, Lightbulb, Users, Shield, Ban, Construction,
+  MessageCircle, Archive, RefreshCw, Repeat, Send, Megaphone, ScrollText,
+  Pin, Calendar, Eye, Building2, Target, Globe, Star, Scale, Clock, Reply, AtSign,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
@@ -127,10 +131,12 @@ function TypeBadge({ type, compact = false }) {
 }
 
 // Empty state helper — icon should be a lucide element (h-10 w-10 text-neutral-300) or emoji
-function EmptyState({ icon, title, subtitle, action }) {
+function EmptyState({ icon: Icon, title, subtitle, action }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="h-10 w-10 rounded-xl bg-neutral-100 flex items-center justify-center text-neutral-300 mb-4">{icon}</div>
+      <div className="h-10 w-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-300 mb-4">
+        {typeof Icon === 'function' ? <Icon aria-hidden="true" className="h-5 w-5" /> : Icon}
+      </div>
       <h3 className="text-base font-semibold text-neutral-700 mb-1">{title}</h3>
       <p className="text-sm text-neutral-400 mb-5 max-w-xs">{subtitle}</p>
       {action}
@@ -2634,10 +2640,10 @@ export default function App() {
               {!dashLoading && dashboardRole === 'developer' && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <StatCard label="My Open Items" value={developerDash?.myOpenItemCount ?? workItems.filter(i => i.assigneeId === currentUser?.id && i.status !== 'Done').length} sub="Assigned to me" color="text-brand-navy" icon="📌" onClick={() => setView('myworks')} />
-                    <StatCard label="In Active Sprint" value={developerDash?.mySprintItems?.length ?? '—'} sub={developerDash?.activeSprint?.name || 'No active sprint'} color="text-semantic-success" icon="⚡" onClick={() => setView('sprint')} />
-                    <StatCard label="Hours This Week" value={developerDash?.weeklyMinutes ? `${Math.round(developerDash.weeklyMinutes / 60 * 10) / 10}h` : '0h'} sub="Time logged (7 days)" color="text-brand-amber" icon="⏱" />
-                    <StatCard label="Blockers" value={developerDash?.blockers?.length ?? 0} sub="Items blocked on me" color={developerDash?.blockers?.length > 0 ? 'text-semantic-danger' : 'text-neutral-400'} icon="🚫" />
+                    <StatCard label="My Open Items" value={developerDash?.myOpenItemCount ?? workItems.filter(i => i.assigneeId === currentUser?.id && i.status !== 'Done').length} sub="Assigned to me" color="text-brand-navy" icon={Pin} onClick={() => setView('myworks')} />
+                    <StatCard label="In Active Sprint" value={developerDash?.mySprintItems?.length ?? '—'} sub={developerDash?.activeSprint?.name || 'No active sprint'} color="text-semantic-success" icon={Zap} onClick={() => setView('sprint')} />
+                    <StatCard label="Hours This Week" value={developerDash?.weeklyMinutes ? `${Math.round(developerDash.weeklyMinutes / 60 * 10) / 10}h` : '0h'} sub="Time logged (7 days)" color="text-brand-amber" icon={Timer} />
+                    <StatCard label="Blockers" value={developerDash?.blockers?.length ?? 0} sub="Items blocked on me" color={developerDash?.blockers?.length > 0 ? 'text-semantic-danger' : 'text-neutral-400'} icon={Ban} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
@@ -2713,10 +2719,10 @@ export default function App() {
               {!dashLoading && dashboardRole === 'scrum-master' && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <StatCard label="Sprint Health" value={`${smDash?.sprintHealth ?? 0}%`} sub={smDash?.activeSprints?.[0]?.name || 'No active sprint'} color={smDash?.sprintHealth >= 70 ? 'text-semantic-success' : smDash?.sprintHealth >= 40 ? 'text-semantic-warning' : 'text-semantic-danger'} icon="❤" />
-                    <StatCard label="Velocity" value={smDash?.activeSprints?.[0] ? `${smDash.activeSprints[0].done_points}pt` : '—'} sub="Points delivered" color="text-brand-navy" icon="⚡" />
-                    <StatCard label="Capacity" value={smDash?.activeSprints?.[0]?.capacity ? `${smDash.activeSprints[0].capacity}pt` : '—'} sub="Sprint capacity" color="text-brand-amber" icon="📊" />
-                    <StatCard label="High Risk" value={smDash?.highRiskItems?.length ?? 0} sub="Critical or High priority" color={smDash?.highRiskItems?.length > 0 ? 'text-semantic-danger' : 'text-neutral-400'} icon="⚠" />
+                    <StatCard label="Sprint Health" value={`${smDash?.sprintHealth ?? 0}%`} sub={smDash?.activeSprints?.[0]?.name || 'No active sprint'} color={smDash?.sprintHealth >= 70 ? 'text-semantic-success' : smDash?.sprintHealth >= 40 ? 'text-semantic-warning' : 'text-semantic-danger'} icon={Heart} />
+                    <StatCard label="Velocity" value={smDash?.activeSprints?.[0] ? `${smDash.activeSprints[0].done_points}pt` : '—'} sub="Points delivered" color="text-brand-navy" icon={Zap} />
+                    <StatCard label="Capacity" value={smDash?.activeSprints?.[0]?.capacity ? `${smDash.activeSprints[0].capacity}pt` : '—'} sub="Sprint capacity" color="text-brand-amber" icon={BarChart2} />
+                    <StatCard label="High Risk" value={smDash?.highRiskItems?.length ?? 0} sub="Critical or High priority" color={smDash?.highRiskItems?.length > 0 ? 'text-semantic-danger' : 'text-neutral-400'} icon={AlertTriangle} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
@@ -2782,10 +2788,10 @@ export default function App() {
               {!dashLoading && dashboardRole === 'product-owner' && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <StatCard label="Upcoming Releases" value={poDash?.upcomingReleases?.length ?? 0} sub="Planned or in progress" color="text-brand-navy" icon="🚀" onClick={() => setView('releases')} />
-                    <StatCard label="Ungroomed Items" value={poDash?.ungroomedCount ?? 0} sub="Not in any sprint" color="text-semantic-warning" icon="📝" onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); }} />
-                    <StatCard label="Features Done" value={poDash?.featureStats ? `${poDash.featureStats.total > 0 ? Math.round(poDash.featureStats.done * 100 / poDash.featureStats.total) : 0}%` : '—'} sub="Stories complete" color="text-semantic-success" icon="✓" />
-                    <StatCard label="Critical Priority" value={(poDash?.priorityDistribution || []).find(p => p.priority === 'CRITICAL')?.count ?? 0} sub="Needs immediate attention" color="text-semantic-danger" icon="🔴" />
+                    <StatCard label="Upcoming Releases" value={poDash?.upcomingReleases?.length ?? 0} sub="Planned or in progress" color="text-brand-navy" icon={Rocket} onClick={() => setView('releases')} />
+                    <StatCard label="Ungroomed Items" value={poDash?.ungroomedCount ?? 0} sub="Not in any sprint" color="text-semantic-warning" icon={FileText} onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); }} />
+                    <StatCard label="Features Done" value={poDash?.featureStats ? `${poDash.featureStats.total > 0 ? Math.round(poDash.featureStats.done * 100 / poDash.featureStats.total) : 0}%` : '—'} sub="Stories complete" color="text-semantic-success" icon={Check} />
+                    <StatCard label="Critical Priority" value={(poDash?.priorityDistribution || []).find(p => p.priority === 'CRITICAL')?.count ?? 0} sub="Needs immediate attention" color="text-semantic-danger" icon={AlertCircle} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
@@ -2860,10 +2866,10 @@ export default function App() {
               {!dashLoading && dashboardRole === 'executive' && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <StatCard label="Portfolio Health" value={`${execDash?.overallHealth ?? 0}%`} sub="Items completed" color={execDash?.overallHealth >= 70 ? 'text-semantic-success' : execDash?.overallHealth >= 40 ? 'text-semantic-warning' : 'text-semantic-danger'} icon="❤" />
-                    <StatCard label="Active Projects" value={execDash?.projectPortfolio?.length ?? 0} sub="Non-archived" color="text-brand-navy" icon="📁" onClick={() => setView('projects')} />
-                    <StatCard label="Upcoming Releases" value={(execDash?.releaseSchedule || []).filter(r => r.status !== 'RELEASED').length} sub="Planned or in progress" color="text-brand-amber" icon="🚀" onClick={() => setView('releases')} />
-                    <StatCard label="Overdue Actions" value={execDash?.overdueActions?.length ?? 0} sub="Past due date" color={execDash?.overdueActions?.length > 0 ? 'text-semantic-danger' : 'text-neutral-400'} icon="⚡" onClick={() => setView('pm')} />
+                    <StatCard label="Portfolio Health" value={`${execDash?.overallHealth ?? 0}%`} sub="Items completed" color={execDash?.overallHealth >= 70 ? 'text-semantic-success' : execDash?.overallHealth >= 40 ? 'text-semantic-warning' : 'text-semantic-danger'} icon={Heart} />
+                    <StatCard label="Active Projects" value={execDash?.projectPortfolio?.length ?? 0} sub="Non-archived" color="text-brand-navy" icon={Folder} onClick={() => setView('projects')} />
+                    <StatCard label="Upcoming Releases" value={(execDash?.releaseSchedule || []).filter(r => r.status !== 'RELEASED').length} sub="Planned or in progress" color="text-brand-amber" icon={Rocket} onClick={() => setView('releases')} />
+                    <StatCard label="Overdue Actions" value={execDash?.overdueActions?.length ?? 0} sub="Past due date" color={execDash?.overdueActions?.length > 0 ? 'text-semantic-danger' : 'text-neutral-400'} icon={Zap} onClick={() => setView('pm')} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
@@ -2936,10 +2942,10 @@ export default function App() {
               {!dashLoading && dashboardRole === 'admin' && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <StatCard label="Members" value={adminDash?.memberCount ?? 0} sub="Workspace members" color="text-brand-navy" icon="👥" />
-                    <StatCard label="Events This Week" value={adminDash?.totalEventsWeek ?? 0} sub="All activity (7 days)" color="text-brand-amber" icon="📊" />
-                    <StatCard label="MFA Enabled" value={adminDash?.mfaStats ? `${Math.round((adminDash.mfaStats.mfa_enabled || 0) * 100 / Math.max(1, adminDash.mfaStats.total))}%` : '—'} sub="of active users" color="text-semantic-success" icon="🔐" />
-                    <StatCard label="Audit Changes" value={adminDash?.recentAuditLog?.length ?? 0} sub="Permission changes" color="text-neutral-600" icon="📋" />
+                    <StatCard label="Members" value={adminDash?.memberCount ?? 0} sub="Workspace members" color="text-brand-navy" icon={Users} />
+                    <StatCard label="Events This Week" value={adminDash?.totalEventsWeek ?? 0} sub="All activity (7 days)" color="text-brand-amber" icon={BarChart2} />
+                    <StatCard label="MFA Enabled" value={adminDash?.mfaStats ? `${Math.round((adminDash.mfaStats.mfa_enabled || 0) * 100 / Math.max(1, adminDash.mfaStats.total))}%` : '—'} sub="of active users" color="text-semantic-success" icon={Lock} />
+                    <StatCard label="Audit Changes" value={adminDash?.recentAuditLog?.length ?? 0} sub="Permission changes" color="text-neutral-600" icon={ClipboardList} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
@@ -3032,7 +3038,7 @@ export default function App() {
                 ))}
               </div>
               {myWorksTab === 'assigned' && (myItems.length === 0
-                ? <EmptyState icon="👤" title="Nothing assigned to you"
+                ? <EmptyState icon={User} title="Nothing assigned to you"
                     subtitle="Work items assigned to you will appear here."
                     action={<Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(true)}>Create a work item</Button>} />
                 : <div className="space-y-2">
@@ -3053,7 +3059,7 @@ export default function App() {
               {myWorksTab === 'starred' && (() => {
                 const starredItems = workItems.filter(i => i.starred);
                 return starredItems.length === 0
-                  ? <EmptyState icon="★" title="No starred items" subtitle="Star work items to keep them handy. Click ★ on any card or in the detail panel." />
+                  ? <EmptyState icon={Star} title="No starred items" subtitle="Star work items to keep them handy. Click ★ on any card or in the detail panel." />
                   : <div className="space-y-2">
                       {starredItems.map(item => (
                         <div key={item.id} onClick={() => setSelectedItem(item)}
@@ -3073,7 +3079,7 @@ export default function App() {
               {myWorksTab === 'mentions' && (() => {
                 const mentions = notifications.filter(n => n.type === 'MENTION');
                 return mentions.length === 0
-                  ? <EmptyState icon="@" title="No mentions yet" subtitle="When someone @mentions you in a comment, it will appear here." />
+                  ? <EmptyState icon={AtSign} title="No mentions yet" subtitle="When someone @mentions you in a comment, it will appear here." />
                   : <div className="space-y-2">
                       {mentions.map(n => (
                         <div key={n.id} className={`bg-white dark:bg-neutral-800 border rounded-lg p-4 ${!n.read ? 'border-brand-navy-tint/30' : 'border-neutral-200 dark:border-neutral-700'}`}>
@@ -3095,7 +3101,7 @@ export default function App() {
                     </div>
                   ))}
                   {workItems.filter(i => i.createdBy === currentUser.id || i.assigneeId === currentUser.id).length === 0 &&
-                    <EmptyState icon="📋" title="No recent activity" subtitle="Items you create or are assigned to will show here." />}
+                    <EmptyState icon={ClipboardList} title="No recent activity" subtitle="Items you create or are assigned to will show here." />}
                 </div>
               )}
             </div>
@@ -3224,7 +3230,7 @@ export default function App() {
                 <Button variant="action" onClick={() => setIsProjectOpen(true)}>+ New Project</Button>
               </div>
               {projects.length === 0
-                ? <EmptyState icon="📁" title="No projects yet"
+                ? <EmptyState icon={Folder} title="No projects yet"
                     subtitle="Projects help you organise work items into focused areas. Create your first project to get started."
                     action={<Button variant="action" onClick={() => setIsProjectOpen(true)}>Create first project</Button>} />
                 : (
@@ -3288,7 +3294,7 @@ export default function App() {
                 )}
               </div>
               {notifications.length === 0
-                ? <EmptyState icon="🔔" title="You're all caught up"
+                ? <EmptyState icon={Bell} title="You're all caught up"
                     subtitle="Notifications about assignments, comments, and mentions will appear here." />
                 : (
                   <div className="space-y-2">
@@ -3374,7 +3380,7 @@ export default function App() {
                   <span className="text-xs text-neutral-400">{backlogItems.length} items</span>
                 </div>
                 {backlogItems.length === 0
-                  ? <EmptyState icon="📝" title="Backlog is empty" subtitle="Create work items to add them to the backlog." action={<Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>Add to backlog</Button>} />
+                  ? <EmptyState icon={FileText} title="Backlog is empty" subtitle="Create work items to add them to the backlog." action={<Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>Add to backlog</Button>} />
                   : backlogItems.map((item) => (
                     <div key={item.id}
                       draggable onDragStart={(e) => handleBacklogDragStart(e, item.id)}
@@ -3528,7 +3534,7 @@ export default function App() {
                     onSelect={setSelectedItem} onDelete={handleDelete} density={density} />
                 </>
               ) : (
-                <EmptyState icon="⚡" title="No sprints yet" subtitle="Create a sprint in the Backlog view to get started."
+                <EmptyState icon={Zap} title="No sprints yet" subtitle="Create a sprint in the Backlog view to get started."
                   action={<Button variant="action" onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); }}>Go to Backlog</Button>} />
               )}
             </div>
@@ -3582,7 +3588,7 @@ export default function App() {
               )}
 
               {sprints.length === 0
-                ? <EmptyState icon="📊" title="No sprints to report on" subtitle="Complete a sprint to see reports here." />
+                ? <EmptyState icon={BarChart2} title="No sprints to report on" subtitle="Complete a sprint to see reports here." />
                 : <>
                     <div className="flex gap-2 mb-5 flex-wrap">
                       {sprints.map(s => (
@@ -3971,7 +3977,7 @@ export default function App() {
                     }}>+ New Workflow</Button>
                   </div>
                   {workflows.length === 0
-                    ? <EmptyState icon="⚙" title="No workflows yet" subtitle="Create a workflow to define statuses and transitions for your work items."
+                    ? <EmptyState icon={Settings} title="No workflows yet" subtitle="Create a workflow to define statuses and transitions for your work items."
                         action={<Button variant="action" onClick={() => {
                           api.raw(`/workflows`, { method: 'POST', body: JSON.stringify({ name: 'Default Workflow', workspaceId: activeWorkspaceId, isDefault: true }) })
                             .then(r => r.json()).then(() => fetchWorkflows());
@@ -4151,7 +4157,7 @@ export default function App() {
                   )}
 
                   {fieldDefs.length === 0
-                    ? <EmptyState icon="📝" title="No custom fields" subtitle="Create custom fields to capture domain-specific data on work items." />
+                    ? <EmptyState icon={FileText} title="No custom fields" subtitle="Create custom fields to capture domain-specific data on work items." />
                     : <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
                         <table className="w-full text-sm">
                           <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
@@ -4194,7 +4200,7 @@ export default function App() {
                     </div>
                   </div>
                   {fieldDefs.length === 0 ? (
-                    <EmptyState icon="📐" title="No custom fields defined" subtitle="Go to Custom Fields tab and create fields first, then configure layout here." />
+                    <EmptyState icon={LayoutDashboard} title="No custom fields defined" subtitle="Go to Custom Fields tab and create fields first, then configure layout here." />
                   ) : (
                     <div className="space-y-4">
                       {Object.keys(TYPES).map(itemType => {
@@ -4286,7 +4292,7 @@ export default function App() {
                   </div>
 
                   {fieldVisibility.length === 0 ? (
-                    <EmptyState icon="👁" title="No visibility rules defined" subtitle="All fields are visible and editable by all roles by default. Add rules to restrict access." />
+                    <EmptyState icon={Eye} title="No visibility rules defined" subtitle="All fields are visible and editable by all roles by default. Add rules to restrict access." />
                   ) : (
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
                       <table className="w-full text-sm">
@@ -4373,7 +4379,7 @@ export default function App() {
                           <p className="text-xs text-neutral-400 mt-2">System roles are tier-based. A role can do anything its tier permits. ✓ = permitted, — = not permitted.</p>
                         </div>
                         {permMatrix.matrix.length === 0
-                          ? <EmptyState icon="🔐" title="No custom roles" subtitle="Create roles to define fine-grained access control for your team." />
+                          ? <EmptyState icon={Lock} title="No custom roles" subtitle="Create roles to define fine-grained access control for your team." />
                           : <div className="overflow-x-auto">
                               <table className="w-full text-xs border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden dark:text-neutral-300">
                                 <thead className="bg-neutral-50 dark:bg-neutral-900">
@@ -4594,7 +4600,7 @@ export default function App() {
               </div>
 
               {!pmProjectId ? (
-                <EmptyState icon="📋" title="Select a project" subtitle="Choose a project above to view its PM artifacts." />
+                <EmptyState icon={ClipboardList} title="Select a project" subtitle="Choose a project above to view its PM artifacts." />
               ) : (
                 <>
                   {/* Sub-tabs */}
@@ -4624,11 +4630,11 @@ export default function App() {
                     <div>
                       {/* Health score */}
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                        <StatCard label="Health Score" value={`${raidDashboard.healthScore}%`} sub="Overall project health" color={raidDashboard.healthScore > 70 ? 'text-semantic-success' : raidDashboard.healthScore > 40 ? 'text-semantic-warning' : 'text-semantic-danger'} icon="❤" />
-                        <StatCard label="Open Risks" value={raidDashboard.riskSummary?.open || 0} sub={`${raidDashboard.riskSummary?.total || 0} total`} color="text-semantic-warning" icon="⚠" onClick={() => setPmTab('risks')} />
-                        <StatCard label="Open Issues" value={raidDashboard.issueSummary?.open || 0} sub={`${raidDashboard.issueSummary?.total || 0} total`} color="text-semantic-danger" icon="🔴" onClick={() => setPmTab('issues')} />
-                        <StatCard label="Blockers" value={raidDashboard.dependencySummary?.blockers || 0} sub={`${raidDashboard.dependencySummary?.total || 0} deps`} color="text-brand-orange" icon="🔗" onClick={() => setPmTab('deps')} />
-                        <StatCard label="Overdue Actions" value={raidDashboard.actionSummary?.overdue || 0} sub={`${raidDashboard.actionSummary?.open || 0} open`} color="text-semantic-danger" icon="⏰" onClick={() => setPmTab('actions')} />
+                        <StatCard label="Health Score" value={`${raidDashboard.healthScore}%`} sub="Overall project health" color={raidDashboard.healthScore > 70 ? 'text-semantic-success' : raidDashboard.healthScore > 40 ? 'text-semantic-warning' : 'text-semantic-danger'} icon={Heart} />
+                        <StatCard label="Open Risks" value={raidDashboard.riskSummary?.open || 0} sub={`${raidDashboard.riskSummary?.total || 0} total`} color="text-semantic-warning" icon={AlertTriangle} onClick={() => setPmTab('risks')} />
+                        <StatCard label="Open Issues" value={raidDashboard.issueSummary?.open || 0} sub={`${raidDashboard.issueSummary?.total || 0} total`} color="text-semantic-danger" icon={AlertCircle} onClick={() => setPmTab('issues')} />
+                        <StatCard label="Blockers" value={raidDashboard.dependencySummary?.blockers || 0} sub={`${raidDashboard.dependencySummary?.total || 0} deps`} color="text-brand-orange" icon={Link} onClick={() => setPmTab('deps')} />
+                        <StatCard label="Overdue Actions" value={raidDashboard.actionSummary?.overdue || 0} sub={`${raidDashboard.actionSummary?.open || 0} open`} color="text-semantic-danger" icon={Clock} onClick={() => setPmTab('actions')} />
                       </div>
 
                       {/* Risk heatmap */}
@@ -4685,7 +4691,7 @@ export default function App() {
                   {/* RISKS */}
                   {pmTab === 'risks' && (
                     <PmArtifactList
-                      title="Risks Register" icon="⚠"
+                      title="Risks Register" icon={AlertTriangle}
                       items={risks}
                       columns={['Title', 'Category', 'Probability', 'Impact', 'Status', 'Owner']}
                       renderRow={r => [r.title, r.category || '—', r.probability, r.impact, r.status, users.find(u => u.id === r.ownerId)?.fullName || '—']}
@@ -4697,7 +4703,7 @@ export default function App() {
                   {/* ASSUMPTIONS */}
                   {pmTab === 'assumptions' && (
                     <PmArtifactList
-                      title="Assumptions Log" icon="💡"
+                      title="Assumptions Log" icon={Lightbulb}
                       items={assumptions}
                       columns={['Title', 'Validation', 'Owner', 'Expiry']}
                       renderRow={a => [a.title, a.validationStatus, users.find(u => u.id === a.ownerId)?.fullName || '—', a.expiryDate || '—']}
@@ -4709,7 +4715,7 @@ export default function App() {
                   {/* PM ISSUES */}
                   {pmTab === 'issues' && (
                     <PmArtifactList
-                      title="Issues Log" icon="🔴"
+                      title="Issues Log" icon={AlertCircle}
                       items={pmIssues}
                       columns={['Title', 'Priority', 'Status', 'Owner']}
                       renderRow={i => [i.title, i.priority, i.status, users.find(u => u.id === i.ownerId)?.fullName || '—']}
@@ -4721,7 +4727,7 @@ export default function App() {
                   {/* DEPENDENCIES */}
                   {pmTab === 'deps' && (
                     <PmArtifactList
-                      title="Dependencies Tracker" icon="🔗"
+                      title="Dependencies Tracker" icon={Link}
                       items={dependencies}
                       columns={['Title', 'From', 'To', 'Status', 'Deadline', 'Blocker']}
                       renderRow={d => [d.title, d.dependentTeam || '—', d.providingTeam || '—', d.status, d.deadline || '—', d.isBlocker ? '🚫 YES' : 'No']}
@@ -4733,7 +4739,7 @@ export default function App() {
                   {/* DECISIONS */}
                   {pmTab === 'decisions' && (
                     <PmArtifactList
-                      title="Decisions Register" icon="⚖"
+                      title="Decisions Register" icon={Scale}
                       items={decisions}
                       columns={['Title', 'Status', 'Decision Date', 'Owner']}
                       renderRow={d => [d.title, d.status, d.decisionDate || '—', users.find(u => u.id === d.ownerId)?.fullName || '—']}
@@ -4750,7 +4756,7 @@ export default function App() {
                         <Button variant="action" onClick={() => { setPmFormOpen('meeting'); setPmForm({ meetingType: 'GENERAL', status: 'SCHEDULED' }); }}>+ New Meeting</Button>
                       </div>
                       {meetings.length === 0
-                        ? <EmptyState icon="📅" title="No meetings yet" subtitle="Log meeting notes with structured agenda, notes, decisions, and action items." />
+                        ? <EmptyState icon={Calendar} title="No meetings yet" subtitle="Log meeting notes with structured agenda, notes, decisions, and action items." />
                         : <div className="space-y-3">
                             {meetings.map(m => (
                               <div key={m.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 cursor-pointer hover:shadow-sm transition-shadow"
@@ -4809,7 +4815,7 @@ export default function App() {
                   {/* ACTION ITEMS */}
                   {pmTab === 'actions' && (
                     <PmArtifactList
-                      title="Action Items" icon="✅"
+                      title="Action Items" icon={CheckCircle2}
                       items={actionItems}
                       columns={['Title', 'Owner', 'Due Date', 'Status', 'Priority']}
                       renderRow={a => [a.title, users.find(u => u.id === a.ownerId)?.fullName || '—', a.dueDate || '—', a.status, a.priority]}
@@ -4823,7 +4829,7 @@ export default function App() {
                   {pmTab === 'stakeholders' && (
                     <div>
                       <PmArtifactList
-                        title="Stakeholder Register" icon="👥"
+                        title="Stakeholder Register" icon={Users}
                         items={stakeholders}
                         columns={['Name', 'Role', 'Org', 'Influence', 'Interest', 'Strategy']}
                         renderRow={s => [s.name, s.role || '—', s.organization || '—', s.influence || '—', s.interest || '—', s.engagementStrategy || '—']}
@@ -4877,7 +4883,7 @@ export default function App() {
                   {/* LESSONS LEARNED */}
                   {pmTab === 'lessons' && (
                     <PmArtifactList
-                      title="Lessons Learned" icon="📚"
+                      title="Lessons Learned" icon={BookOpen}
                       items={lessonsLearned}
                       columns={['Title', 'Category', 'Created']}
                       renderRow={ll => [ll.title, ll.category || '—', ll.createdAt ? new Date(ll.createdAt).toLocaleDateString() : '—']}
@@ -4893,7 +4899,7 @@ export default function App() {
                         <Button variant="action" onClick={() => setIsCrossProjOpen(true)}>+ Add Dependency</Button>
                       </div>
                       {crossProjectDeps.length === 0 ? (
-                        <EmptyState icon="🌐" title="No cross-project dependencies" subtitle="Track dependencies between this project and other projects or teams." />
+                        <EmptyState icon={Globe} title="No cross-project dependencies" subtitle="Track dependencies between this project and other projects or teams." />
                       ) : (
                         <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
                           <table className="w-full text-sm">
@@ -5132,7 +5138,7 @@ export default function App() {
                 </div>
               </div>
               {trashItems.length === 0
-                ? <EmptyState icon="🗑" title="Trash is empty" subtitle="Deleted work items will appear here for 30 days before permanent removal." />
+                ? <EmptyState icon={Trash2} title="Trash is empty" subtitle="Deleted work items will appear here for 30 days before permanent removal." />
                 : (
                   <div className="space-y-2">
                     {trashItems.map(item => (
@@ -5172,7 +5178,7 @@ export default function App() {
                     <Button variant="action" onClick={createDashboard}>New dashboard</Button>
                   </div>
                   {customDashboards.length === 0 ? (
-                    <EmptyState icon="📐" title="No dashboards yet"
+                    <EmptyState icon={LayoutDashboard} title="No dashboards yet"
                       subtitle="Create a dashboard and drop in widgets to track what matters to you."
                       action={<Button variant="action" onClick={createDashboard}>New dashboard</Button>} />
                   ) : (
@@ -5280,7 +5286,7 @@ export default function App() {
                   )}
 
                   {(selectedDashboard.widgets || []).length === 0 ? (
-                    <EmptyState icon="🧩" title="Empty dashboard"
+                    <EmptyState icon={Puzzle} title="Empty dashboard"
                       subtitle="Turn on Edit and add your first widget to start tracking."
                       action={<Button variant="action" onClick={() => setDashboardEditMode(true)}>Edit dashboard</Button>} />
                   ) : (
@@ -5336,7 +5342,7 @@ export default function App() {
 
                   <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mb-3">Your reports</h2>
                   {reports.length === 0 ? (
-                    <EmptyState icon="📄" title="No reports yet"
+                    <EmptyState icon={FileIcon} title="No reports yet"
                       subtitle="Create a report from scratch or start from a template above."
                       action={<Button variant="action" onClick={createBlankReport}>New report</Button>} />
                   ) : (
@@ -5387,7 +5393,7 @@ export default function App() {
                   )}
 
                   {reportSections.length === 0 ? (
-                    <EmptyState icon="🧩" title="Empty report"
+                    <EmptyState icon={Puzzle} title="Empty report"
                       subtitle="Turn on Edit and add sections — KPIs, charts, tables, narrative."
                       action={<Button variant="action" onClick={() => setReportEditMode(true)}>Edit report</Button>} />
                   ) : (
@@ -5530,7 +5536,7 @@ export default function App() {
                           <button onClick={() => { setKnowledgeTab('spaces'); setKnowledgeSearch(''); setKnowledgeSearchResults([]); }} className="text-xs text-neutral-400 hover:text-neutral-700 ml-auto">Clear</button>
                         </div>
                         {knowledgeSearchResults.length === 0 ? (
-                          <EmptyState icon="🔍" title="No results found" subtitle={`No articles match "${knowledgeSearch}". Try different keywords.`} />
+                          <EmptyState icon={Search} title="No results found" subtitle={`No articles match "${knowledgeSearch}". Try different keywords.`} />
                         ) : (
                           <div className="space-y-2">
                             {knowledgeSearchResults.map(art => (
@@ -5569,7 +5575,7 @@ export default function App() {
                           </div>
                         </div>
                         {knowledgeArticles.length === 0 ? (
-                          <EmptyState icon="📄" title={selectedSpace ? `No articles in ${selectedSpace.name}` : 'No articles'} subtitle="Create your first article to capture knowledge for the team."
+                          <EmptyState icon={FileIcon} title={selectedSpace ? `No articles in ${selectedSpace.name}` : 'No articles'} subtitle="Create your first article to capture knowledge for the team."
                             action={selectedSpace && <Button variant="action" onClick={() => setIsArticleFormOpen(true)}>Write Article</Button>} />
                         ) : (
                           <div className="space-y-2">
@@ -5598,7 +5604,7 @@ export default function App() {
                         )}
                       </div>
                     ) : (
-                      <EmptyState icon="📚" title="Select a space" subtitle="Choose a knowledge space from the left sidebar to browse articles, or search for specific content." />
+                      <EmptyState icon={BookOpen} title="Select a space" subtitle="Choose a knowledge space from the left sidebar to browse articles, or search for specific content." />
                     )}
                   </div>
                 )}
@@ -5690,7 +5696,7 @@ export default function App() {
                               <div className="text-neutral-800 dark:text-neutral-200 leading-relaxed whitespace-pre-wrap text-sm"
                                 dangerouslySetInnerHTML={{ __html: renderMd(selectedArticle.content) }} />
                             ) : (
-                              <EmptyState icon="📝" title="No content yet" subtitle="Click Edit to start writing." action={<Button variant="action" onClick={() => setEditingArticle(true)}>Start Writing</Button>} />
+                              <EmptyState icon={FileText} title="No content yet" subtitle="Click Edit to start writing." action={<Button variant="action" onClick={() => setEditingArticle(true)}>Start Writing</Button>} />
                             )}
                           </div>
                         )}
@@ -5822,7 +5828,7 @@ export default function App() {
               </div>
               <div className="flex-1 overflow-y-auto p-6">
                 {!selectedRelease ? (
-                  <EmptyState icon="🚀" title="Select a release" subtitle="Choose a release from the left to view its details and linked work items." action={<Button variant="action" onClick={() => setIsReleaseOpen(true)}>New Release</Button>} />
+                  <EmptyState icon={Rocket} title="Select a release" subtitle="Choose a release from the left to view its details and linked work items." action={<Button variant="action" onClick={() => setIsReleaseOpen(true)}>New Release</Button>} />
                 ) : (
                   <div>
                     <div className="flex items-start justify-between mb-5">
@@ -5921,7 +5927,7 @@ export default function App() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                   <div className="lg:col-span-2 space-y-2">
                     {impediments.length === 0
-                      ? <EmptyState icon="🚧" title="No impediments" subtitle="Blockers raised here are tracked with owner, severity and age — not buried in chat." />
+                      ? <EmptyState icon={Construction} title="No impediments" subtitle="Blockers raised here are tracked with owner, severity and age — not buried in chat." />
                       : impediments.map(imp => (
                         <div key={imp.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
                           <div className="flex items-start justify-between gap-2">
@@ -5972,7 +5978,7 @@ export default function App() {
                         <Button variant="action" onClick={startStandup}>Start standup</Button>
                       </div>
                       {standups.length === 0
-                        ? <EmptyState icon="🗣" title="No standups yet" subtitle="Start a sequential, time-boxed standup — each member's turn is recorded." />
+                        ? <EmptyState icon={MessageCircle} title="No standups yet" subtitle="Start a sequential, time-boxed standup — each member's turn is recorded." />
                         : <div className="space-y-2">{standups.map(s => (
                             <button key={s.id} onClick={() => openStandup(s.id)} className="w-full text-left bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 hover:border-brand-navy/40">
                               <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{s.sessionDate ? new Date(s.sessionDate).toLocaleDateString() : s.id}</span>
@@ -6036,7 +6042,7 @@ export default function App() {
                     </Field>
                     <Button variant="action" onClick={runRiskPanel}>Analyze</Button>
                   </div>
-                  {!riskPanel ? <EmptyState icon="⚠️" title="Mid-sprint risk panel" subtitle="Live view of scope creep, stale items, unassigned work and breach predictions." />
+                  {!riskPanel ? <EmptyState icon={AlertTriangle} title="Mid-sprint risk panel" subtitle="Live view of scope creep, stale items, unassigned work and breach predictions." />
                     : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {[['Scope creep', riskPanel.scopeCreep, 'work_item_id'], ['Stale items', riskPanel.staleItems, 'id'], ['Unassigned', riskPanel.unassignedItems, 'id'], ['Breach risk', riskPanel.breachPredictions, 'id']].map(([label, rows]) => (
@@ -6062,14 +6068,14 @@ export default function App() {
                     <Field label="Time off (points)"><input type="number" className="input text-sm w-28" value={planningTimeOff} onChange={e => setPlanningTimeOff(e.target.value)} /></Field>
                     <Button variant="action" onClick={runSprintPlanning}>Suggest commit</Button>
                   </div>
-                  {!planningResult ? <EmptyState icon="📐" title="Sprint planning helper" subtitle="Capacity from rolling velocity, an AI-suggested commit, and the refined-item list." />
+                  {!planningResult ? <EmptyState icon={LayoutDashboard} title="Sprint planning helper" subtitle="Capacity from rolling velocity, an AI-suggested commit, and the refined-item list." />
                     : (
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          <StatCard label="Avg velocity" value={planningResult.averageVelocity} sub="last 3 sprints" color="text-brand-navy" icon="📈" />
-                          <StatCard label="Capacity" value={planningResult.capacity} sub="velocity − time off" color="text-semantic-success" icon="⚡" />
-                          <StatCard label="Suggested" value={planningResult.suggestedPoints} sub="points committed" color="text-brand-navy" icon="✅" />
-                          <StatCard label="Ready" value={planningResult.readyCount} sub="refined items" color="text-neutral-600" icon="📋" />
+                          <StatCard label="Avg velocity" value={planningResult.averageVelocity} sub="last 3 sprints" color="text-brand-navy" icon={TrendingUp} />
+                          <StatCard label="Capacity" value={planningResult.capacity} sub="velocity − time off" color="text-semantic-success" icon={Zap} />
+                          <StatCard label="Suggested" value={planningResult.suggestedPoints} sub="points committed" color="text-brand-navy" icon={CheckCircle2} />
+                          <StatCard label="Ready" value={planningResult.readyCount} sub="refined items" color="text-neutral-600" icon={ClipboardList} />
                         </div>
                         <AiMetaBadge meta={planningResult.meta} narrative={planningResult.narrative} />
                         <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
@@ -6094,7 +6100,7 @@ export default function App() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                       <div className="lg:col-span-2 space-y-2">
                         {retros.length === 0
-                          ? <EmptyState icon="🔄" title="No retros yet" subtitle="Pick a template, gather the team, and turn outcomes into tracked action items." />
+                          ? <EmptyState icon={RefreshCw} title="No retros yet" subtitle="Pick a template, gather the team, and turn outcomes into tracked action items." />
                           : retros.map(r => (
                             <button key={r.id} onClick={() => openRetro(r.id)} className="w-full text-left bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 hover:border-brand-navy/40">
                               <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{r.title}</span>
@@ -6168,14 +6174,14 @@ export default function App() {
                     </Field>
                     <Button variant="action" onClick={runReviewPrep}>Draft review</Button>
                   </div>
-                  {!reviewResult ? <EmptyState icon="📣" title="Sprint review prep" subtitle="Auto-drafts the summary, demo list and metrics for stakeholders." />
+                  {!reviewResult ? <EmptyState icon={Megaphone} title="Sprint review prep" subtitle="Auto-drafts the summary, demo list and metrics for stakeholders." />
                     : (
                       <div className="space-y-4">
                         <AiMetaBadge meta={reviewResult.meta} narrative={reviewResult.narrative} />
                         <div className="grid grid-cols-3 gap-3">
-                          <StatCard label="Shipped" value={(reviewResult.shipped || []).length} sub={`${reviewResult.donePoints}/${reviewResult.totalPoints} pts`} color="text-semantic-success" icon="✅" />
-                          <StatCard label="Slipped" value={(reviewResult.slipped || []).length} sub="not done" color="text-semantic-warning" icon="↪" />
-                          <StatCard label="Completion" value={`${reviewResult.completionRate}%`} sub="of items" color="text-brand-navy" icon="📊" />
+                          <StatCard label="Shipped" value={(reviewResult.shipped || []).length} sub={`${reviewResult.donePoints}/${reviewResult.totalPoints} pts`} color="text-semantic-success" icon={CheckCircle2} />
+                          <StatCard label="Slipped" value={(reviewResult.slipped || []).length} sub="not done" color="text-semantic-warning" icon={Reply} />
+                          <StatCard label="Completion" value={`${reviewResult.completionRate}%`} sub="of items" color="text-brand-navy" icon={BarChart2} />
                         </div>
                         <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
                           <h4 className="font-semibold text-sm mb-2 text-neutral-900 dark:text-neutral-100">Demo list</h4>
@@ -6190,7 +6196,7 @@ export default function App() {
               {smTab === 'patterns' && (
                 <div>
                   <Button variant="action" onClick={runPatterns}>Detect patterns</Button>
-                  {!patternsResult ? <div className="mt-4"><EmptyState icon="🔁" title="Cross-sprint patterns" subtitle="Recurring impediments, repeated estimation misses, and common scope-creep sources." /></div>
+                  {!patternsResult ? <div className="mt-4"><EmptyState icon={Repeat} title="Cross-sprint patterns" subtitle="Recurring impediments, repeated estimation misses, and common scope-creep sources." /></div>
                     : (
                       <div className="mt-4 space-y-4">
                         <AiMetaBadge meta={patternsResult.meta} narrative={patternsResult.narrative} />
@@ -6244,7 +6250,7 @@ export default function App() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                   <div className="lg:col-span-2 space-y-2">
                     {roadmapThemes.length === 0
-                      ? <EmptyState icon="🗺" title="No themes yet" subtitle="Lay out strategic themes across quarters — status, scope and dates per theme." />
+                      ? <EmptyState icon={MapIcon} title="No themes yet" subtitle="Lay out strategic themes across quarters — status, scope and dates per theme." />
                       : roadmapThemes.map(t => (
                         <div key={t.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
                           <div className="flex items-start justify-between gap-2">
@@ -6276,7 +6282,7 @@ export default function App() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                   <div className="lg:col-span-2 space-y-2">
                     {ideas.length === 0
-                      ? <EmptyState icon="💡" title="Empty inbox" subtitle="Capture ideas fast — they're auto-classified by area and promotable to a story." />
+                      ? <EmptyState icon={Lightbulb} title="Empty inbox" subtitle="Capture ideas fast — they're auto-classified by area and promotable to a story." />
                       : ideas.map(i => (
                         <div key={i.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
                           <div className="flex items-start justify-between gap-2">
@@ -6328,7 +6334,7 @@ export default function App() {
                       </div>
                     )}
                     {feedbackItems.length === 0
-                      ? <EmptyState icon="📨" title="No feedback yet" subtitle="Aggregate customer voice from portal, email and interviews, then cluster into themes." />
+                      ? <EmptyState icon={Send} title="No feedback yet" subtitle="Aggregate customer voice from portal, email and interviews, then cluster into themes." />
                       : feedbackItems.map(f => (
                         <div key={f.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3">
                           <div className="flex items-center gap-2 mb-1">
@@ -6374,7 +6380,7 @@ export default function App() {
                     </div>
                   </div>
                   <div className="lg:col-span-2">
-                    {!activeObjective ? <EmptyState icon="🎯" title="Select an objective" subtitle="Add key results and link work items; progress rolls up from the key results." />
+                    {!activeObjective ? <EmptyState icon={Target} title="Select an objective" subtitle="Add key results and link work items; progress rolls up from the key results." />
                       : (
                         <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
                           <div className="flex items-center justify-between mb-3">
@@ -6410,7 +6416,7 @@ export default function App() {
                     <Field label="Release name"><input className="input text-sm" placeholder="Portal v4.2.0" value={releaseNotesName} onChange={e => setReleaseNotesName(e.target.value)} /></Field>
                     <Button variant="action" onClick={runReleaseNotes}>Draft notes</Button>
                   </div>
-                  {!releaseNotesResult ? <EmptyState icon="📝" title="Release notes auto-draft" subtitle="AI drafts user-facing release notes from completed items — you edit and publish." />
+                  {!releaseNotesResult ? <EmptyState icon={FileText} title="Release notes auto-draft" subtitle="AI drafts user-facing release notes from completed items — you edit and publish." />
                     : (
                       <div className="space-y-3">
                         <AiMetaBadge meta={releaseNotesResult.meta} narrative={releaseNotesResult.narrative} />
@@ -6425,7 +6431,7 @@ export default function App() {
               {poTab === 'stakeholders' && (
                 <div>
                   <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-3">Stakeholders are mapped by influence × interest in <button onClick={() => { setView('pm'); if (projects.length) { const pid = projects[0].id; setPmProjectId(pid); fetchStakeholders(pid); } }} className="text-brand-navy hover:underline">PM Artifacts → Stakeholders</button>. Targeted release communication uses that map rather than blast email.</p>
-                  <EmptyState icon="📢" title="Targeted communication" subtitle="Send release/status updates to the stakeholders who care — built on the stakeholder map (I15-S14)." />
+                  <EmptyState icon={Megaphone} title="Targeted communication" subtitle="Send release/status updates to the stakeholders who care — built on the stakeholder map (I15-S14)." />
                 </div>
               )}
             </div>
@@ -6462,7 +6468,7 @@ export default function App() {
               <div className="flex-1 overflow-y-auto p-6">
                 {/* ── DASHBOARD ── */}
                 {complianceTab === 'dashboard' && (
-                  !complianceDashboard ? <EmptyState icon="🛡" title="Loading compliance posture…" subtitle="Severity, trend and the rules × projects heatmap appear here." />
+                  !complianceDashboard ? <EmptyState icon={Shield} title="Loading compliance posture…" subtitle="Severity, trend and the rules × projects heatmap appear here." />
                   : (
                     <div className="space-y-6">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -6556,7 +6562,7 @@ export default function App() {
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Your rules ({complianceRules.length})</h3>
                       {complianceRules.length === 0
-                        ? <EmptyState icon="📋" title="No rules yet" subtitle="Create a rule or start from a seeded template below." action={can('manage_compliance') ? <Button variant="action" onClick={newRuleBuilder}>New Rule</Button> : null} />
+                        ? <EmptyState icon={ClipboardList} title="No rules yet" subtitle="Create a rule or start from a seeded template below." action={can('manage_compliance') ? <Button variant="action" onClick={newRuleBuilder}>New Rule</Button> : null} />
                         : complianceRules.map(r => (
                           <div key={r.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[r.severity] || severityClass.MEDIUM}`}>{r.severity}</span>
@@ -6616,7 +6622,7 @@ export default function App() {
                       )}
                     </div>
                     {complianceViolations.length === 0
-                      ? <EmptyState icon="✅" title="No violations" subtitle="Nothing is breaching the active rules for this filter." />
+                      ? <EmptyState icon={CheckCircle2} title="No violations" subtitle="Nothing is breaching the active rules for this filter." />
                       : complianceViolations.map(v => (
                         <div key={v.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           {can('manage_compliance') && (v.status === 'OPEN' || v.status === 'ACKNOWLEDGED') && (
@@ -6646,7 +6652,7 @@ export default function App() {
                       <Button variant="secondary" onClick={exportComplianceAudit}>Export CSV</Button>
                     </div>
                     {complianceAudit.length === 0
-                      ? <EmptyState icon="📜" title="No audit entries yet" subtitle="Rule changes, violations, acknowledgements and resolutions are recorded here." />
+                      ? <EmptyState icon={ScrollText} title="No audit entries yet" subtitle="Rule changes, violations, acknowledgements and resolutions are recorded here." />
                       : (
                         <table className="w-full text-sm">
                           <thead><tr className="text-left text-xs uppercase tracking-wide text-neutral-400">
@@ -6760,7 +6766,7 @@ export default function App() {
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       {serviceRequests.length === 0
-                        ? <EmptyState icon="🎧" title="Queue is clear" subtitle="No requests match this queue right now." />
+                        ? <EmptyState icon={Headset} title="Queue is clear" subtitle="No requests match this queue right now." />
                         : serviceRequests.map(({ request: r, sla }) => (
                           <div key={r.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded w-16 text-center bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200">{r.priority}</span>
@@ -6791,7 +6797,7 @@ export default function App() {
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       {serviceCustomers.length === 0
-                        ? <EmptyState icon="🏢" title="No customers yet" subtitle="Add a customer organization to start serving them through the portal." />
+                        ? <EmptyState icon={Building2} title="No customers yet" subtitle="Add a customer organization to start serving them through the portal." />
                         : serviceCustomers.map(c => (
                           <div key={c.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                             <div className="flex-1 min-w-0">
@@ -6809,7 +6815,7 @@ export default function App() {
                 {serviceTab === 'types' && (
                   <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                     {serviceTypes.length === 0
-                      ? <EmptyState icon="🗂" title="No request types" subtitle="Incident, Change and Service types power the portal forms." />
+                      ? <EmptyState icon={Archive} title="No request types" subtitle="Incident, Change and Service types power the portal forms." />
                       : serviceTypes.map(t => (
                         <div key={t.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <div className="flex-1 min-w-0">
@@ -6826,7 +6832,7 @@ export default function App() {
                 {serviceTab === 'slas' && (
                   <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                     {serviceTiers.length === 0
-                      ? <EmptyState icon="⏱" title="No SLA tiers" subtitle="Define response and resolution targets per customer tier." />
+                      ? <EmptyState icon={Timer} title="No SLA tiers" subtitle="Define response and resolution targets per customer tier." />
                       : serviceTiers.map(t => (
                         <div key={t.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded w-20 text-center bg-brand-navy text-white">{t.tier}</span>
@@ -6840,7 +6846,7 @@ export default function App() {
 
                 {serviceTab === 'csat' && (
                   <div className="space-y-4">
-                    {!serviceCsat ? <EmptyState icon="⭐" title="No CSAT yet" subtitle="Ratings appear here once customers rate resolved requests." />
+                    {!serviceCsat ? <EmptyState icon={Star} title="No CSAT yet" subtitle="Ratings appear here once customers rate resolved requests." />
                       : (
                         <>
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -7074,7 +7080,7 @@ export default function App() {
             {detailTab === 'custom-fields' && (
               <div>
                 {fieldDefs.length === 0 ? (
-                  <EmptyState icon="📋" title="No custom fields defined" subtitle="Go to Workflows & Fields settings to define custom fields for your work items." />
+                  <EmptyState icon={ClipboardList} title="No custom fields defined" subtitle="Go to Workflows & Fields settings to define custom fields for your work items." />
                 ) : (
                   <div className="space-y-3">
                     <label className="block text-xs text-neutral-400 mb-2 font-medium uppercase tracking-wider">Custom Fields</label>
@@ -7741,11 +7747,11 @@ function RoleBadge({ role, tier, small = false }) {
   );
 }
 
-function StatCard({ label, value, sub, color, icon, onClick }) {
+function StatCard({ label, value, sub, color, icon: Icon, onClick }) {
   return (
     <div onClick={onClick} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 cursor-pointer hover:shadow-md transition-shadow group">
       <div className="flex items-start justify-between mb-3">
-        <span className="text-2xl">{icon}</span>
+        {typeof Icon === 'function' ? <Icon aria-hidden="true" className="h-6 w-6 text-neutral-400" /> : <span className="text-2xl">{Icon}</span>}
         <span className="text-xs text-neutral-400 group-hover:text-brand-navy transition-colors">View →</span>
       </div>
       <p className={`text-3xl font-bold ${color} mb-1`}>{value}</p>
@@ -8239,15 +8245,17 @@ function PriorityBadge({ priority }) {
   return <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${p.bg} ${p.color}`}>{p.label}</span>;
 }
 
-function PmArtifactList({ title, icon, items, columns, renderRow, onDelete, onAdd, statusColors = {} }) {
+function PmArtifactList({ title, icon: Icon, items, columns, renderRow, onDelete, onAdd, statusColors = {} }) {
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="font-semibold text-neutral-900 flex items-center gap-2"><span>{icon}</span> {title}</h2>
+        <h2 className="font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+          {typeof Icon === 'function' ? <Icon aria-hidden="true" className="h-4 w-4 text-neutral-400" /> : <span>{Icon}</span>} {title}
+        </h2>
         <Button variant="action" onClick={onAdd}>+ New</Button>
       </div>
       {items.length === 0
-        ? <EmptyState icon={icon} title={`No ${title.toLowerCase()} yet`} subtitle="Click + New to add your first entry." action={<Button variant="action" onClick={onAdd}>+ New</Button>} />
+        ? <EmptyState icon={Icon} title={`No ${title.toLowerCase()} yet`} subtitle="Click + New to add your first entry." action={<Button variant="action" onClick={onAdd}>+ New</Button>} />
         : <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">

@@ -25,6 +25,12 @@ public final class AiCapabilities {
     public static final String ROUTING            = "routing";            // Cap N — smart customer-request routing
     public static final String KPI_NARRATIVE      = "kpi_narrative";      // Cap L — AI team-health narrative (iteration 12)
     public static final String AUTOMATION_SUGGEST = "automation_suggest"; // Cap C — AI-suggested automation rules (iteration 13)
+    public static final String SPRINT_PLAN        = "sprint_plan";        // Cap V — sprint planning commit suggestion (I15-S01)
+    public static final String SPRINT_REVIEW      = "sprint_review";      // Cap V — sprint review prep draft (I15-S06)
+    public static final String SPRINT_PATTERNS    = "sprint_patterns";    // Cap V — cross-sprint pattern detection (I15-S07)
+    public static final String BACKLOG_REFINE     = "backlog_refine";     // Cap W — backlog refinement ranking (I15-S09)
+    public static final String FEEDBACK_CLUSTER   = "feedback_cluster";   // Cap W — customer-feedback theme clustering (I15-S11)
+    public static final String RELEASE_NOTES      = "release_notes";      // Cap W — release-notes auto-draft (I15-S13)
 
     /** Description of each capability and its deterministic fallback, surfaced to the UI panel. */
     public record Descriptor(String id, String label, AiModelTier defaultTier, String fallback) { }
@@ -51,7 +57,22 @@ public final class AiCapabilities {
         new Descriptor(KPI_NARRATIVE, "AI team-health narrative", AiModelTier.SONNET,
             "Falls back to a deterministic summary of the metric deltas — the numbers, without a narrative."),
         new Descriptor(AUTOMATION_SUGGEST, "AI-suggested automation rules", AiModelTier.SONNET,
-            "Falls back to the one-click automation template library in the visual builder.")
+            "Falls back to the one-click automation template library in the visual builder."),
+        new Descriptor(SPRINT_PLAN, "Sprint planning commit suggestion", AiModelTier.SONNET,
+            "Falls back to the deterministic capacity calculation (velocity − time-off) and the "
+            + "refined-item list ranked by priority and points — the manual planning view."),
+        new Descriptor(SPRINT_REVIEW, "Sprint review prep", AiModelTier.SONNET,
+            "Falls back to the computed metrics plus the shipped / slipped item lists, without the narrative summary."),
+        new Descriptor(SPRINT_PATTERNS, "Cross-sprint pattern detection", AiModelTier.SONNET,
+            "Falls back to the frequency tables — recurring impediment categories and repeated "
+            + "estimation misses — shown without an interpretive narrative."),
+        new Descriptor(BACKLOG_REFINE, "Backlog refinement ranking", AiModelTier.SONNET,
+            "Falls back to the deterministic weighted score (value / effort / strategic-fit) and the "
+            + "needs-detail flags, presented in the manual backlog view."),
+        new Descriptor(FEEDBACK_CLUSTER, "Customer-feedback theme clustering", AiModelTier.SONNET,
+            "Falls back to keyword bucketing into themes with lexicon sentiment — the deterministic clusterer."),
+        new Descriptor(RELEASE_NOTES, "Release-notes auto-draft", AiModelTier.SONNET,
+            "Falls back to completed items grouped by type into a plain markdown changelog for manual editing.")
     );
 
     private static final Map<String, Descriptor> BY_ID =

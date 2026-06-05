@@ -2338,33 +2338,30 @@ export default function App() {
   // One dispatcher for sidebar navigation — preserves each destination's exact load side-effects
   // (the data each view needs) while the markup stays data-driven (NAV_GROUPS).
   const navigate = (id) => {
+    setView(id);
+    // Per-view load side-effects only — setView is hoisted above; views with no extra fetch
+    // (board, sla, performance, automations, integrations, projects) fall through to default.
     switch (id) {
-      case 'dashboard': setView('dashboard'); fetchDashboard(dashboardRole); break;
-      case 'myworks': setView('myworks'); fetchNotifications(); break;
-      case 'notifications': setView('notifications'); fetchNotifications(); break;
-      case 'board': setView('board'); break;
-      case 'backlog': setView('backlog'); fetchBacklog(); fetchSprints(); fetchSavedFilters(); break;
-      case 'sprint': setView('sprint'); fetchSprints(); fetchSavedFilters(); break;
-      case 'reports': setView('reports'); fetchSprints(); fetchVelocityData(); break;
-      case 'dashboards': setView('dashboards'); setSelectedDashboard(null); fetchCustomDashboards(); fetchTeams(); break;
-      case 'reportbuilder': setView('reportbuilder'); setSelectedReport(null); fetchReports(); fetchReportTemplates(); break;
-      case 'releases': setView('releases'); fetchReleases(); break;
-      case 'settings3': setView('settings3'); fetchWorkflows(); fetchFieldDefs(); fetchRoles(); fetchWorkItemTypes(); break;
-      case 'bql': setView('bql'); fetchBqlFilters(); break;
-      case 'knowledge': setView('knowledge'); fetchKnowledgeSpaces(); setKnowledgeTab('spaces'); setSelectedSpace(null); setSelectedArticle(null); break;
-      case 'compliance': setView('compliance'); setComplianceTab('dashboard'); setRuleBuilder(null); fetchComplianceDashboard(); fetchComplianceRules(); fetchComplianceViolations(); break;
-      case 'sla': setView('sla'); break;
-      case 'service': setView('service'); setServiceTab('queues'); setServiceQueue('open'); fetchServiceRequests('open'); break;
-      case 'performance': setView('performance'); break;
-      case 'automations': setView('automations'); break;
-      case 'integrations': setView('integrations'); break;
-      case 'pm': setView('pm'); if (projects.length) { const pid = projects[0].id; setPmProjectId(pid); fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); } break;
+      case 'dashboard': fetchDashboard(dashboardRole); break;
+      case 'myworks': fetchNotifications(); break;
+      case 'notifications': fetchNotifications(); break;
+      case 'backlog': fetchBacklog(); fetchSprints(); fetchSavedFilters(); break;
+      case 'sprint': fetchSprints(); fetchSavedFilters(); break;
+      case 'reports': fetchSprints(); fetchVelocityData(); break;
+      case 'dashboards': setSelectedDashboard(null); fetchCustomDashboards(); fetchTeams(); break;
+      case 'reportbuilder': setSelectedReport(null); fetchReports(); fetchReportTemplates(); break;
+      case 'releases': fetchReleases(); break;
+      case 'settings3': fetchWorkflows(); fetchFieldDefs(); fetchRoles(); fetchWorkItemTypes(); break;
+      case 'bql': fetchBqlFilters(); break;
+      case 'knowledge': fetchKnowledgeSpaces(); setKnowledgeTab('spaces'); setSelectedSpace(null); setSelectedArticle(null); break;
+      case 'compliance': setComplianceTab('dashboard'); setRuleBuilder(null); fetchComplianceDashboard(); fetchComplianceRules(); fetchComplianceViolations(); break;
+      case 'service': setServiceTab('queues'); setServiceQueue('open'); fetchServiceRequests('open'); break;
+      case 'pm': if (projects.length) { const pid = projects[0].id; setPmProjectId(pid); fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); } break;
       case 'smcockpit': openCockpit(); break;
       case 'poworkspace': openPoWorkspace(); break;
-      case 'projects': setView('projects'); break;
-      case 'workspace': setView('workspace'); fetchMembers(); fetchNotifPrefs(); fetchBranding(); break;
-      case 'trash': setView('trash'); fetchTrash(); break;
-      default: setView(id);
+      case 'workspace': fetchMembers(); fetchNotifPrefs(); fetchBranding(); break;
+      case 'trash': fetchTrash(); break;
+      default: break;
     }
   };
   const navBadge = (key) => {

@@ -17,6 +17,7 @@ import { AutomationsPanel } from '@/components/works/organisms/automations-panel
 import { IntegrationsPanel } from '@/components/works/organisms/integrations-panel';
 import { Modal } from '@/components/works/molecules/modal';
 import { Toast } from '@/components/works/atoms/toast';
+import { CommandPalette } from '@/components/works/organisms/command-palette';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
@@ -232,6 +233,10 @@ export default function App() {
   const [searchResults, setSearchResults] = useState([]);
   const [searchOpen, setSearchOpen]     = useState(false);
   const searchRef                       = useRef(null);
+
+  const [paletteOpen, setPaletteOpen]   = useState(false);
+  const goToRef                         = useRef(false); // 'g' then a key — quick go-to (brand §5.2)
+  const navigateRef                     = useRef(null);  // latest navigate(), for global shortcuts
 
   const [workspaceMembers, setWorkspaceMembers] = useState([]);
   const [inviteEmail, setInviteEmail]   = useState('');
@@ -522,6 +527,38 @@ export default function App() {
     function handler(e) { if (wsRef.current && !wsRef.current.contains(e.target)) setWsOpen(false); }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Global keyboard shortcuts (brand §5.2): Cmd/Ctrl-K command palette, '/' search, 'c' create,
+  // 'g' then a letter to jump. Only active once the app shell is mounted (navigateRef set = signed
+  // in); never hijacks typing in a field (except Cmd/Ctrl-K, which is always available).
+  useEffect(() => {
+    function onKey(e) {
+      const meta = e.metaKey || e.ctrlKey;
+      if (meta && (e.key === 'k' || e.key === 'K')) {
+        if (!navigateRef.current) return;
+        e.preventDefault();
+        setPaletteOpen(o => !o);
+        return;
+      }
+      if (!navigateRef.current) return; // not in the app shell yet
+      const t = e.target;
+      const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+      if (typing || meta || e.altKey) return;
+
+      if (goToRef.current) {
+        goToRef.current = false;
+        const dest = { h: 'dashboard', b: 'board', l: 'backlog', s: 'sprint', m: 'myworks',
+          n: 'notifications', p: 'projects', r: 'reports', k: 'knowledge' }[e.key.toLowerCase()];
+        if (dest) { e.preventDefault(); navigateRef.current(dest); }
+        return;
+      }
+      if (e.key === 'g') { goToRef.current = true; setTimeout(() => { goToRef.current = false; }, 1200); return; }
+      if (e.key === '/') { e.preventDefault(); searchRef.current?.querySelector('input')?.focus(); return; }
+      if (e.key === 'c') { e.preventDefault(); setView('board'); setIsCreateOpen(true); return; }
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
   }, []);
 
   // Track recently viewed items
@@ -2298,6 +2335,19 @@ export default function App() {
     return null;
   };
   const navDot = (key) => key === 'activeSprint' && Boolean(sprints.find(s => s.status === 'ACTIVE'));
+  navigateRef.current = navigate; // keep the global shortcut handler pointed at the latest navigate
+
+  // Commands for the Cmd-K palette: every destination + a couple of quick actions.
+  const paletteCommands = [
+    ...NAV_GROUPS.flatMap(g => g.items.map(item => ({
+      id: `go-${item.id}`, label: item.label, group: g.label || 'Go to', Icon: item.Icon,
+      run: () => navigate(item.id),
+    }))),
+    { id: 'act-create', label: 'Create work item', group: 'Action', Icon: ListTodo, keywords: ['new', 'add'],
+      run: () => { setView('board'); setIsCreateOpen(true); } },
+    { id: 'act-search', label: 'Search work items', group: 'Action', Icon: Search, keywords: ['find'],
+      run: () => searchRef.current?.querySelector('input')?.focus() },
+  ];
 
   return (
     <div className="flex h-screen bg-neutral-50 dark:bg-neutral-900 font-sans text-neutral-900 dark:text-neutral-100">
@@ -2473,6 +2523,13 @@ export default function App() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={() => setPaletteOpen(true)}
+              aria-label="Open command palette"
+              className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-md border border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:text-neutral-900 hover:border-neutral-400 dark:hover:text-neutral-100 transition-colors duration-[120ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
+              <Search aria-hidden="true" className="h-4 w-4" />
+              <span className="text-xs">Quick find</span>
+              <kbd className="text-xs font-mono bg-neutral-100 dark:bg-neutral-800 rounded px-1 border border-neutral-200 dark:border-neutral-700">⌘K</kbd>
+            </button>
             <AiCommandBar
               workspaceId={activeWorkspaceId}
               onToast={showToast}
@@ -7455,6 +7512,9 @@ export default function App() {
           </div>
         </Modal>
       )}
+
+      {/* COMMAND PALETTE (Cmd/Ctrl-K) */}
+      {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} commands={paletteCommands} />}
 
       {/* TOAST NOTIFICATION — accessible live region (components/works/atoms/toast.jsx) */}
       <Toast toast={toast} canUndo={Boolean(deleteUndoItem)} onUndo={handleUndoDelete} />

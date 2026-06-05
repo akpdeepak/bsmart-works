@@ -1,8 +1,9 @@
+import { useState, useRef, useEffect } from 'react';
 import {
   Home, User, Bell, LayoutGrid, ListTodo, Zap, Rocket, FolderKanban,
   BarChart2, LayoutDashboard, FileText, TrendingUp, Headset, Timer, ShieldCheck,
   Gauge, Map as MapIcon, ClipboardList, Workflow, Plug, Search, BookOpen,
-  SlidersHorizontal, Settings, Trash2, PanelLeftClose, LogOut,
+  SlidersHorizontal, Settings, Trash2, PanelLeftClose, LogOut, ChevronDown, Check,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/works/atoms/badge';
@@ -140,7 +141,28 @@ export function SidebarNav({
   collapsed = false,
   onToggleCollapse,
   onLogout,
+  // Workspace switcher (optional): when onSwitchWorkspace is provided, the header workspace name
+  // becomes a dropdown to change tenants — preserving the multi-tenant switch (RB-40 §1).
+  workspaces = [],
+  activeWorkspaceId,
+  workspacesLoading = false,
+  workspacesError = false,
+  onSwitchWorkspace,
+  onRetryWorkspaces,
+  onOpenWorkspaceSettings,
 }) {
+  const hasSwitcher = typeof onSwitchWorkspace === 'function';
+  const [wsOpen, setWsOpen] = useState(false);
+  const wsRef = useRef(null);
+  useEffect(() => {
+    if (!wsOpen) return undefined;
+    function onDocClick(e) {
+      if (wsRef.current && !wsRef.current.contains(e.target)) setWsOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [wsOpen]);
+
   function getInitials(name) {
     if (!name) return '??';
     const parts = name.trim().split(/\s+/);
@@ -162,8 +184,8 @@ export function SidebarNav({
 
   return (
     <div className="flex h-full flex-col bg-brand-navy text-white">
-      {/* ── Header: workspace + collapse toggle ─────────────────────── */}
-      <div className="flex h-14 shrink-0 items-center border-b border-white/10">
+      {/* ── Header: workspace switcher + collapse toggle ─────────────── */}
+      <div ref={wsRef} className="relative flex h-14 shrink-0 items-center border-b border-white/10">
         {collapsed ? (
           <button
             type="button"
@@ -176,11 +198,30 @@ export function SidebarNav({
             </div>
           </button>
         ) : (
-          <div className="flex flex-1 items-center gap-2 px-3">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-brand-orange text-xs font-bold text-white">
-              {getInitials(workspace.name)}
-            </div>
-            <span className="flex-1 truncate text-sm font-semibold">{workspace.name}</span>
+          <div className="flex flex-1 items-center gap-1 px-3">
+            {hasSwitcher ? (
+              <button
+                type="button"
+                onClick={() => setWsOpen((o) => !o)}
+                aria-haspopup="menu"
+                aria-expanded={wsOpen}
+                aria-label="Switch workspace"
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-left transition-colors duration-[120ms] hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              >
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-brand-orange text-xs font-bold text-white">
+                  {getInitials(workspace.name)}
+                </div>
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold">{workspace.name}</span>
+                <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 text-white/50" />
+              </button>
+            ) : (
+              <>
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-brand-orange text-xs font-bold text-white">
+                  {getInitials(workspace.name)}
+                </div>
+                <span className="flex-1 truncate text-sm font-semibold">{workspace.name}</span>
+              </>
+            )}
             <button
               type="button"
               aria-label="Collapse sidebar"
@@ -189,6 +230,60 @@ export function SidebarNav({
             >
               <PanelLeftClose aria-hidden="true" className="h-4 w-4" />
             </button>
+          </div>
+        )}
+
+        {hasSwitcher && wsOpen && !collapsed && (
+          <div className="absolute left-3 right-3 top-full z-dropdown mt-1 rounded-lg border border-neutral-200 bg-white py-1 text-neutral-900 shadow-xl dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
+            <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-400">Workspaces</p>
+            {workspacesLoading ? (
+              <div className="space-y-2 px-3 py-2">
+                <div className="h-7 animate-pulse rounded-md bg-neutral-100 dark:bg-neutral-700" />
+                <div className="h-7 animate-pulse rounded-md bg-neutral-100 dark:bg-neutral-700" />
+              </div>
+            ) : workspacesError ? (
+              <div className="px-3 py-3">
+                <p className="mb-2 text-xs text-semantic-danger">Couldn’t load your workspaces.</p>
+                {onRetryWorkspaces && (
+                  <button type="button" onClick={onRetryWorkspaces} className="text-xs font-medium text-brand-navy hover:text-brand-navy-tint">
+                    Try again
+                  </button>
+                )}
+              </div>
+            ) : workspaces.length === 0 ? (
+              <p className="px-3 py-3 text-xs text-neutral-400">You don’t belong to any workspace yet.</p>
+            ) : (
+              workspaces.map((w) => {
+                const isActive = w.id === activeWorkspaceId;
+                return (
+                  <button
+                    key={w.id}
+                    type="button"
+                    onClick={() => { setWsOpen(false); onSwitchWorkspace(w.id); }}
+                    aria-current={isActive ? 'true' : undefined}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left outline-none hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:hover:bg-neutral-700"
+                  >
+                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-brand-navy text-xs font-bold text-white">
+                      {getInitials(w.name)}
+                    </div>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{w.name}</span>
+                    {isActive && <Check aria-hidden="true" className="h-4 w-4 shrink-0 text-brand-orange" />}
+                  </button>
+                );
+              })
+            )}
+            {onOpenWorkspaceSettings && (
+              <div className="mt-1 border-t border-neutral-100 pt-1 dark:border-neutral-700">
+                <button
+                  type="button"
+                  onClick={() => { setWsOpen(false); onOpenWorkspaceSettings(); }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-neutral-500 hover:bg-neutral-50 hover:text-brand-navy dark:hover:bg-neutral-700"
+                >
+                  <Settings aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                  Workspace settings
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

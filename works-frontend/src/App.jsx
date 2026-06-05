@@ -5,6 +5,9 @@ import { Mail, ShieldCheck, PanelLeft, Bell } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
 import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
+import { PerformancePanel } from '@/components/works/organisms/performance-panel';
+import { AutomationsPanel } from '@/components/works/organisms/automations-panel';
+import { IntegrationsPanel } from '@/components/works/organisms/integrations-panel';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
@@ -2305,6 +2308,9 @@ export default function App() {
           <NavItem active={view === 'knowledge'} onClick={() => { setView('knowledge'); fetchKnowledgeSpaces(); setKnowledgeTab('spaces'); setSelectedSpace(null); setSelectedArticle(null); }} icon="📚">Knowledge</NavItem>
           <NavItem active={view === 'compliance'} onClick={() => { setView('compliance'); setComplianceTab('dashboard'); setRuleBuilder(null); fetchComplianceDashboard(); fetchComplianceRules(); fetchComplianceViolations(); }} icon="🛡">Compliance</NavItem>
           <NavItem active={view === 'service'} onClick={() => { setView('service'); setServiceTab('queues'); setServiceQueue('open'); fetchServiceRequests('open'); }} icon="🎧">Service Desk</NavItem>
+          <NavItem active={view === 'performance'} onClick={() => setView('performance')} icon="📈">Performance</NavItem>
+          <NavItem active={view === 'automations'} onClick={() => setView('automations')} icon="⚡">Automations</NavItem>
+          <NavItem active={view === 'integrations'} onClick={() => setView('integrations')} icon="🔌">Integrations</NavItem>
 
           {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">Project Management</p>}
           <NavItem active={view === 'pm'} onClick={() => { setView('pm'); if (projects.length) { const pid = projects[0].id; setPmProjectId(pid); fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); } }} icon="📋">PM Artifacts</NavItem>
@@ -4938,6 +4944,21 @@ export default function App() {
                 </div>
               )}
             </div>
+          )}
+
+          {/* ITERATION 12 — Performance (KPI framework with privacy guardrails) */}
+          {view === 'performance' && (
+            <PerformancePanel workspaceId={activeWorkspaceId} can={can} onToast={showToast} />
+          )}
+
+          {/* ITERATION 13 — Automation engine */}
+          {view === 'automations' && (
+            <AutomationsPanel workspaceId={activeWorkspaceId} can={can} onToast={showToast} />
+          )}
+
+          {/* ITERATION 13 — Integrations (connectors, webhooks, API tokens) */}
+          {view === 'integrations' && (
+            <IntegrationsPanel workspaceId={activeWorkspaceId} can={can} onToast={showToast} />
           )}
 
           {/* TRASH VIEW */}

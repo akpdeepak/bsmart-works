@@ -23,6 +23,8 @@ public final class AiCapabilities {
     public static final String KB_RAG             = "kb_rag";             // Cap I — RAG over the knowledge base
     public static final String KB_SUGGEST         = "kb_suggest";         // Cap N — article suggestion at intake
     public static final String ROUTING            = "routing";            // Cap N — smart customer-request routing
+    public static final String KPI_NARRATIVE      = "kpi_narrative";      // Cap L — AI team-health narrative (iteration 12)
+    public static final String AUTOMATION_SUGGEST = "automation_suggest"; // Cap C — AI-suggested automation rules (iteration 13)
     public static final String SPRINT_PLAN        = "sprint_plan";        // Cap V — sprint planning commit suggestion (I15-S01)
     public static final String SPRINT_REVIEW      = "sprint_review";      // Cap V — sprint review prep draft (I15-S06)
     public static final String SPRINT_PATTERNS    = "sprint_patterns";    // Cap V — cross-sprint pattern detection (I15-S07)
@@ -52,6 +54,10 @@ public final class AiCapabilities {
             "Falls back to keyword article search; suggestions simply do not appear if none match."),
         new Descriptor(ROUTING, "Smart request routing", AiModelTier.HAIKU,
             "Falls back to the project's default team / round-robin assignment."),
+        new Descriptor(KPI_NARRATIVE, "AI team-health narrative", AiModelTier.SONNET,
+            "Falls back to a deterministic summary of the metric deltas — the numbers, without a narrative."),
+        new Descriptor(AUTOMATION_SUGGEST, "AI-suggested automation rules", AiModelTier.SONNET,
+            "Falls back to the one-click automation template library in the visual builder."),
         new Descriptor(SPRINT_PLAN, "Sprint planning commit suggestion", AiModelTier.SONNET,
             "Falls back to the deterministic capacity calculation (velocity − time-off) and the "
             + "refined-item list ranked by priority and points — the manual planning view."),

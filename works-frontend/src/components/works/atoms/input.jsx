@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 // Pair with a <label htmlFor> and inline error text (CLAUDE.md §4.11); pass `invalid`
 // to wire the danger state + aria-invalid for screen readers (§4.17).
 const inputVariants = cva(
-  'w-full rounded-md border bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 transition-colors duration-[120ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none',
+  'w-full rounded-md border bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none',
   {
     variants: {
       state: {

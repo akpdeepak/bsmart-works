@@ -21,6 +21,7 @@ import { AutomationsPanel } from '@/components/works/organisms/automations-panel
 import { IntegrationsPanel } from '@/components/works/organisms/integrations-panel';
 import { Modal } from '@/components/works/molecules/modal';
 import { Toast } from '@/components/works/atoms/toast';
+import { Skeleton } from '@/components/works/atoms/skeleton';
 import { CommandPalette } from '@/components/works/organisms/command-palette';
 import { viewToPath, pathToView } from '@/lib/routes';
 import { StatusBadge } from '@/components/works/status-badge';
@@ -2393,12 +2394,12 @@ export default function App() {
 
       {/* SIDEBAR */}
       <NavCollapsedCtx.Provider value={navCollapsed}>
-      <aside className={`${navCollapsed ? 'w-12' : 'w-56'} bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-700 flex flex-col z-10 flex-shrink-0 transition-[width] duration-[150ms] ease-out-quint overflow-hidden`}>
+      <aside className={`${navCollapsed ? 'w-12' : 'w-56'} bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-700 flex flex-col z-10 flex-shrink-0 transition-[width] duration-fast ease-out-quint overflow-hidden`}>
         {/* Workspace switcher + collapse toggle */}
         <div className="h-14 flex items-center border-b border-neutral-200 dark:border-neutral-700 relative flex-shrink-0" ref={wsRef}>
           {navCollapsed ? (
             <button onClick={() => setNavCollapsed(false)} title="Expand sidebar"
-              className="w-full flex items-center justify-center h-full text-neutral-400 hover:text-brand-navy transition-colors duration-[120ms]">
+              className="w-full flex items-center justify-center h-full text-neutral-400 hover:text-brand-navy transition-colors duration-fast">
               <div className="w-6 h-6 rounded bg-brand-navy flex items-center justify-center flex-shrink-0">
                 <span className="text-white text-xs font-bold">BC</span>
               </div>
@@ -2414,7 +2415,7 @@ export default function App() {
                 <ChevronDown aria-hidden="true" className="h-4 w-4 text-neutral-400 flex-shrink-0" />
               </button>
               <button onClick={() => setNavCollapsed(true)} title="Collapse sidebar"
-                className="mr-2 p-1 text-neutral-300 hover:text-neutral-600 transition-colors duration-[120ms] rounded flex-shrink-0">
+                className="mr-2 p-1 text-neutral-300 hover:text-neutral-600 transition-colors duration-fast rounded flex-shrink-0">
                 <PanelLeft className="h-4 w-4" />
               </button>
             </>
@@ -2564,7 +2565,7 @@ export default function App() {
           <div className="flex items-center gap-2">
             <button onClick={() => setPaletteOpen(true)}
               aria-label="Open command palette"
-              className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-md border border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:text-neutral-900 hover:border-neutral-400 dark:hover:text-neutral-100 transition-colors duration-[120ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
+              className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-md border border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:text-neutral-900 hover:border-neutral-400 dark:hover:text-neutral-100 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
               <Search aria-hidden="true" className="h-4 w-4" />
               <span className="text-xs">Quick find</span>
               <kbd className="text-xs font-mono bg-neutral-100 dark:bg-neutral-800 rounded px-1 border border-neutral-200 dark:border-neutral-700">⌘K</kbd>
@@ -2581,7 +2582,7 @@ export default function App() {
             )}
             <button onClick={() => { setView('notifications'); fetchNotifications(); }}
               aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
-              className="relative w-9 h-9 rounded-md flex items-center justify-center text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-[120ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
+              className="relative w-9 h-9 rounded-md flex items-center justify-center text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
               <Bell aria-hidden="true" className="h-5 w-5" />
               {unreadCount > 0 && (
                 <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-brand-orange text-white text-xs font-bold flex items-center justify-center">
@@ -7679,7 +7680,7 @@ function NavItem({ active, onClick, Icon, label, badge, dot }) {
   return (
     <button onClick={onClick} title={collapsed ? label : undefined}
       aria-current={active ? 'page' : undefined}
-      className={`relative w-full flex items-center ${collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-md text-sm transition-colors duration-[120ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-1 ${active ? 'bg-neutral-100 dark:bg-neutral-800 text-brand-navy dark:text-white font-semibold' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100'}`}>
+      className={`relative w-full flex items-center ${collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-md text-sm transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-1 ${active ? 'bg-neutral-100 dark:bg-neutral-800 text-brand-navy dark:text-white font-semibold' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100'}`}>
       {active && <span aria-hidden="true" className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-brand-orange" />}
       <Icon aria-hidden="true" className="h-5 w-5 flex-shrink-0" />
       {!collapsed && <span className="flex-1 text-left truncate">{label}</span>}
@@ -7941,8 +7942,23 @@ function PublicDashboardEmbed({ token }) {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center font-sans">
-        <div className="h-8 w-8 rounded-full border-2 border-neutral-200 border-t-brand-navy animate-spin" aria-label="Loading dashboard" />
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 font-sans" aria-busy="true" aria-label="Loading dashboard">
+        <header className="bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-7 w-7 rounded-md" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+          <Skeleton className="h-5 w-20 rounded-full" />
+        </header>
+        <main className="p-6">
+          <div className="grid grid-cols-12 gap-4 max-w-7xl mx-auto">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="col-span-12 sm:col-span-6 lg:col-span-4">
+                <Skeleton className="h-40 w-full rounded-xl" />
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
     );
   }

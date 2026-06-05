@@ -99,7 +99,7 @@ export function IntegrationsPanel({ workspaceId, can = () => true, onToast = () 
               aria-selected={tab === t.id}
               onClick={() => setTab(t.id)}
               className={[
-                'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-[120ms]',
+                'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-fast',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-1 active:translate-y-px',
                 tab === t.id ? 'bg-brand-navy text-white' : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
               ].join(' ')}

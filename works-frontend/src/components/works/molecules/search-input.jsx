@@ -70,7 +70,7 @@ export function SearchInput({
         onChange={handleChange}
         className={cn(
           'w-full rounded-md border border-neutral-200 bg-white pl-9 pr-9 text-neutral-900 placeholder:text-neutral-400',
-          'transition-colors duration-[120ms]',
+          'transition-colors duration-fast',
           'hover:border-neutral-400',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2 focus-visible:border-brand-navy',
           'disabled:opacity-50 disabled:pointer-events-none',
@@ -88,7 +88,7 @@ export function SearchInput({
           className={cn(
             'absolute right-3 flex items-center justify-center rounded text-neutral-400',
             'hover:text-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40',
-            'transition-colors duration-[120ms]',
+            'transition-colors duration-fast',
             iconSize
           )}
         >

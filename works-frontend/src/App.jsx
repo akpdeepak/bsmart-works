@@ -14,6 +14,7 @@ import {
   X, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronRight, ChevronUp,
   SquarePen, Upload, IndentIncrease, IndentDecrease, MapPin, KeyRound,
   Unlock, CornerDownRight, Image as ImageIcon, Flame, Bug,
+  Package, Ticket, Wrench, Flag, SquareCheck,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
@@ -118,20 +119,51 @@ function readStoredSession() {
 }
 
 const TYPES = {
-  Task:            { color: 'bg-brand-navy-tint',      icon: '✓' },
-  Story:           { color: 'bg-semantic-success',           icon: '📖' },
-  Bug:             { color: 'bg-semantic-danger',       icon: '🐛' },
-  Epic:            { color: 'bg-neutral-700',            icon: '⚡' },
-  'Sub-task':      { color: 'bg-neutral-600',          icon: '↳' },
-  Incident:        { color: 'bg-semantic-warning',     icon: '🔥' },
-  'Service Request': { color: 'bg-brand-navy',         icon: '🎫' },
+  Task:            { color: 'bg-brand-navy-tint',     icon: 'check-square' },
+  Story:           { color: 'bg-semantic-success',    icon: 'book' },
+  Bug:             { color: 'bg-semantic-danger',      icon: 'bug' },
+  Epic:            { color: 'bg-neutral-700',          icon: 'zap' },
+  'Sub-task':      { color: 'bg-neutral-600',          icon: 'corner-down-right' },
+  Incident:        { color: 'bg-semantic-warning',     icon: 'flame' },
+  'Service Request': { color: 'bg-brand-navy',         icon: 'ticket' },
 };
+
+// Curated Lucide icon set for work-item types (RB-30 §8 — icons, never emoji). Values are
+// stable string keys persisted on custom types; built-in TYPES above reference the same keys.
+const TYPE_ICON_SET = {
+  'check-square': SquareCheck, book: BookOpen, bug: Bug, zap: Zap,
+  'corner-down-right': CornerDownRight, flame: Flame, ticket: Ticket, package: Package,
+  clipboard: ClipboardList, target: Target, wrench: Wrench, rocket: Rocket,
+  shield: Shield, flag: Flag, lightbulb: Lightbulb, star: Star, file: FileText, gauge: Gauge,
+};
+// Back-compat: pre-existing rows stored an emoji string — map the known ones to a curated key
+// so legacy data renders as a Lucide glyph; anything unmapped falls back to the raw value.
+const LEGACY_TYPE_ICON = {
+  '✓': 'check-square', '📖': 'book', '🐛': 'bug', '⚡': 'zap', '↳': 'corner-down-right',
+  '🔥': 'flame', '🎫': 'ticket', '📦': 'package', '📋': 'clipboard', '🎯': 'target',
+  '🔧': 'wrench', '🚀': 'rocket', '🛡': 'shield', '🚩': 'flag', '💡': 'lightbulb', '⭐': 'star',
+};
+const TYPE_ICON_KEYS = Object.keys(TYPE_ICON_SET);
+
+function resolveTypeIcon(value) {
+  if (!value) return Package;
+  if (TYPE_ICON_SET[value]) return TYPE_ICON_SET[value];
+  if (LEGACY_TYPE_ICON[value]) return TYPE_ICON_SET[LEGACY_TYPE_ICON[value]];
+  return null;
+}
+
+// Renders a work-item type icon from its stored key (or legacy emoji). Decorative by default.
+function TypeIcon({ value, className = 'h-3.5 w-3.5' }) {
+  const Ic = resolveTypeIcon(value);
+  if (Ic) return <Ic className={className} aria-hidden="true" />;
+  return <span className={className} aria-hidden="true">{value}</span>;
+}
 
 function TypeBadge({ type, compact = false }) {
   const t = TYPES[type] || TYPES.Task;
   return (
     <span className={`inline-flex items-center gap-1 text-xs uppercase tracking-wider font-bold text-white px-1.5 py-0.5 rounded-sm ${t.color}`}>
-      {!compact && <span>{t.icon}</span>}
+      {!compact && <TypeIcon value={t.icon} className="h-3 w-3" />}
       {type}
     </span>
   );
@@ -326,7 +358,7 @@ export default function App() {
   const [showFieldForm, setShowFieldForm]           = useState(false);
   const [newFieldForm, setNewFieldForm]             = useState({ name: '', fieldType: 'TEXT', required: false, description: '' });
   const [showTypeForm, setShowTypeForm]             = useState(false);
-  const [newTypeForm, setNewTypeForm]               = useState({ label: '', typeKey: '', icon: '📦' });
+  const [newTypeForm, setNewTypeForm]               = useState({ label: '', typeKey: '', icon: 'package' });
   const [showRoleForm, setShowRoleForm]             = useState(false);
   const [newRoleForm, setNewRoleForm]               = useState({ name: '', tier: 2 });
 
@@ -1485,7 +1517,7 @@ export default function App() {
     if (!newTypeForm.label.trim()) return;
     const typeKey = newTypeForm.typeKey || newTypeForm.label.toUpperCase().replace(/\s+/g,'_');
     api.raw(`/work-item-types`, { method: 'POST', body: JSON.stringify({ ...newTypeForm, typeKey, color: '#6b7280', workspaceId: activeWorkspaceId }) })
-      .then(r => r.json()).then(() => { fetchWorkItemTypes(); setShowTypeForm(false); setNewTypeForm({ label: '', typeKey: '', icon: '📦' }); }).catch(() => {});
+      .then(r => r.json()).then(() => { fetchWorkItemTypes(); setShowTypeForm(false); setNewTypeForm({ label: '', typeKey: '', icon: 'package' }); }).catch(() => {});
   }
   function createRole() {
     if (!newRoleForm.name.trim()) return;
@@ -4371,8 +4403,19 @@ export default function App() {
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Icon</label>
-                          <input className="input text-sm w-16 text-center text-lg" placeholder="📦" value={newTypeForm.icon}
-                            onChange={e => setNewTypeForm(f => ({ ...f, icon: e.target.value }))} />
+                          <div className="flex flex-wrap gap-1 max-w-[240px]">
+                            {TYPE_ICON_KEYS.map(key => {
+                              const Ic = TYPE_ICON_SET[key];
+                              const sel = newTypeForm.icon === key;
+                              return (
+                                <button key={key} type="button" onClick={() => setNewTypeForm(f => ({ ...f, icon: key }))}
+                                  aria-label={key} aria-pressed={sel}
+                                  className={`p-1.5 rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${sel ? 'border-brand-navy bg-brand-navy/10 text-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy/40'}`}>
+                                  <Ic className="h-4 w-4" aria-hidden="true" />
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
                         <Button variant="action" onClick={createWorkItemType}>Create Type</Button>
                         <Button variant="ghost" onClick={() => setShowTypeForm(false)}>Cancel</Button>
@@ -4386,7 +4429,7 @@ export default function App() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {(workItemTypes.builtIn || []).map(t => (
                           <div key={t.typeKey} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 flex items-center gap-3">
-                            <span className="text-2xl">{t.icon}</span>
+                            <TypeIcon value={t.icon} className="h-6 w-6 text-neutral-700 dark:text-neutral-300" />
                             <div>
                               <p className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">{t.label}</p>
                               <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{t.typeKey}</p>
@@ -4401,7 +4444,7 @@ export default function App() {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                           {(workItemTypes.custom || []).map(t => (
                             <div key={t.id} className="bg-white dark:bg-neutral-800 border border-brand-navy/20 dark:border-brand-navy/30 rounded-xl p-4 flex items-center gap-3 relative group">
-                              <span className="text-2xl">{t.icon}</span>
+                              <TypeIcon value={t.icon} className="h-6 w-6 text-neutral-700 dark:text-neutral-300" />
                               <div className="flex-1 min-w-0">
                                 <p className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">{t.label}</p>
                                 <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono truncate">{t.typeKey}</p>

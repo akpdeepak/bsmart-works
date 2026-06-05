@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Search, CornerDownLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Backdrop } from '@/components/works/atoms/backdrop';
 
 // Organism — the Cmd/Ctrl-K command palette: type-to-find navigation + quick actions, the
 // power-user accelerator the brand spec asks for (§5.2, predictability + speed). Accessible
@@ -71,13 +72,7 @@ export function CommandPalette({ onClose, commands = [], placeholder = 'Search a
 
   return (
     <div className="fixed inset-0 z-palette flex items-start justify-center p-4 pt-24">
-      <button
-        type="button"
-        aria-label="Close command palette"
-        tabIndex={-1}
-        onClick={onClose}
-        className="absolute inset-0 cursor-default bg-neutral-900/50 dark:bg-black/70"
-      />
+      <Backdrop onClick={onClose} label="Close command palette" />
 
       <div
         role="dialog"

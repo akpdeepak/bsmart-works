@@ -66,10 +66,12 @@ Scope BQL is compiled to **parameterised** SQL (`BqlCompiler`) and tested with a
 - **Frontend:** `npm run lint` (clean on new files), `npm test` (77 tests), `npm run build` all green.
 - **Guardrails:** all blocking rules pass (plural tables, Flyway naming, RBAC-in-service, tokens,
   one apiClient). AI-rules regenerated + in sync; DoD version in sync.
-- **Integration tests** (Testcontainers, real Postgres) were **not** run here — no Docker in this
-  environment. They run in CI (`backend-unit-test` runs unit only; the DB-backed suite needs a
-  runner with Docker). The runtime engine paths are covered by unit tests on the pure core; the
-  DB-bound services rely on CI / a Docker-enabled run for end-to-end coverage.
+- **Integration (real Postgres):** validated locally against Postgres 16 — Flyway applied all
+  migrations through **V36** cleanly, Hibernate `ddl-auto=validate` accepted all five SLA entity
+  mappings, the scheduler issued a real `sla_instances` query, and the full Spring context booted
+  (186 tests green on `./mvnw verify`). A new CI job **`backend-integration-test`** (Postgres 16
+  service) now runs this on every push/PR, so the migration + entity-mapping check is permanent —
+  it was previously covered by no CI job (the unit job runs `@Tag("unit")` only).
 
 ## 4. Notes / follow-ups (logged, not smuggled in)
 - AI SLA-breach prediction is explicitly **iteration 11**, not built here (per the guide).

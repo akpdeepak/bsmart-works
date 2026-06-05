@@ -11,9 +11,16 @@ public interface ComplianceRuleRepository extends JpaRepository<ComplianceRule, 
 
     List<ComplianceRule> findByWorkspaceId(String workspaceId);
 
+    List<ComplianceRule> findByWorkspaceIdOrderByUpdatedAtDesc(String workspaceId);
+
     List<ComplianceRule> findByWorkspaceIdAndProjectId(String workspaceId, String projectId);
 
     List<ComplianceRule> findByWorkspaceIdAndActiveTrue(String workspaceId);
 
+    /** Active rules of a given evaluation mode across all workspaces — the scheduler's working set. */
+    List<ComplianceRule> findByActiveTrueAndEvaluationMode(String evaluationMode);
+
     List<ComplianceRule> findByIsTemplateTrue();
+
+    List<ComplianceRule> findByIsTemplateTrueOrderByNameAsc();
 }

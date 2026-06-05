@@ -42,15 +42,23 @@ public class WorkItemController {
         this.slaEngine = slaEngine;
     }
 
+    // Tenant-isolation predicate (RB-40 §1): an item is visible only when its project lives in a
+    // workspace the caller is a member of. Binds one parameter — the caller's user id.
+    private static final String MEMBER_PROJECTS =
+        "project_id IN (SELECT p.id FROM projects p "
+        + "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id WHERE wm.user_id = ?)";
+
     @GetMapping
     public List<WorkItem> getAllWorkItems(@RequestParam(required = false) String parentId) {
         String userId = authenticatedUser.id();
         List<WorkItem> items;
         if (parentId != null) {
-            items = jdbc.query("SELECT * FROM work_items WHERE parent_id = ? AND deleted_at IS NULL ORDER BY created_at ASC",
-                this::mapRow, parentId);
+            items = jdbc.query("SELECT * FROM work_items WHERE parent_id = ? AND deleted_at IS NULL "
+                + "AND " + MEMBER_PROJECTS + " ORDER BY created_at ASC",
+                this::mapRow, parentId, userId);
         } else {
-            items = jdbc.query("SELECT * FROM work_items WHERE deleted_at IS NULL ORDER BY created_at ASC", this::mapRow);
+            items = jdbc.query("SELECT * FROM work_items WHERE deleted_at IS NULL "
+                + "AND " + MEMBER_PROJECTS + " ORDER BY created_at ASC", this::mapRow, userId);
         }
         attachTagsBatch(items);
         attachStarred(items, userId);
@@ -59,15 +67,21 @@ public class WorkItemController {
 
     @GetMapping("/trash")
     public List<WorkItem> getTrash() {
+        String userId = authenticatedUser.id();
         List<WorkItem> items = jdbc.query(
-            "SELECT * FROM work_items WHERE deleted_at IS NOT NULL AND deleted_at > NOW() - INTERVAL '30 days' ORDER BY deleted_at DESC",
-            this::mapRow);
+            "SELECT * FROM work_items WHERE deleted_at IS NOT NULL AND deleted_at > NOW() - INTERVAL '30 days' "
+            + "AND " + MEMBER_PROJECTS + " ORDER BY deleted_at DESC",
+            this::mapRow, userId);
         attachTagsBatch(items);
         return items;
     }
 
     @PutMapping("/{id}/restore")
     public WorkItem restoreFromTrash(@PathVariable String id) {
+        String userId = authenticatedUser.id();
+        String wsId = rbac.workspaceForWorkItem(id);
+        if (wsId == null) throw ApiException.notFound("Work item", id);
+        rbac.require(userId, wsId, "delete_items");   // same right that trashed it
         jdbc.update("UPDATE work_items SET deleted_at = NULL, deleted_by = NULL WHERE id = ?", id);
         var opt = repository.findById(id);
         if (opt.isEmpty()) throw ApiException.notFound("Work item", id);
@@ -104,39 +118,47 @@ public class WorkItemController {
     @GetMapping("/search")
     public List<WorkItem> search(@RequestParam String q) {
         String userId = authenticatedUser.id();
+        if (q == null || q.isBlank()) return List.of();
         // Starred items get priority in search results. Match spans title, description,
         // and any comment body (spec: full-text search covers comments too). EXISTS keeps
-        // one row per item — no duplicates from the comment join.
+        // one row per item — no duplicates from the comment join. ESCAPE makes a user-typed
+        // % or _ match literally instead of acting as a LIKE wildcard.
         String sql = "SELECT wi.*, (CASE WHEN si.work_item_id IS NOT NULL THEN 1 ELSE 0 END) AS is_starred " +
             "FROM work_items wi LEFT JOIN starred_items si ON si.work_item_id = wi.id AND si.user_id = ? " +
-            "WHERE wi.deleted_at IS NULL AND (wi.title ILIKE ? OR wi.description ILIKE ? " +
-            "OR EXISTS (SELECT 1 FROM comments c WHERE c.work_item_id = wi.id AND c.body ILIKE ?)) " +
+            "WHERE wi.deleted_at IS NULL AND wi." + MEMBER_PROJECTS + " AND (wi.title ILIKE ? ESCAPE '\\' " +
+            "OR wi.description ILIKE ? ESCAPE '\\' " +
+            "OR EXISTS (SELECT 1 FROM comments c WHERE c.work_item_id = wi.id AND c.body ILIKE ? ESCAPE '\\')) " +
             "ORDER BY is_starred DESC, wi.created_at DESC LIMIT 20";
-        String pattern = "%" + q + "%";
+        String escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+        String pattern = "%" + escaped + "%";
         List<WorkItem> items = jdbc.query(sql, (rs, row) -> {
             WorkItem w = mapRow(rs, row);
             try { w.setStarred(rs.getInt("is_starred") == 1); } catch (Exception ignored) {}
             return w;
-        }, userId, pattern, pattern, pattern);
+        }, userId, userId, pattern, pattern, pattern);
         attachTagsBatch(items);
         return items;
     }
 
     @GetMapping("/backlog")
     public List<WorkItem> getBacklog(@RequestParam(required = false) String projectId) {
-        String sql = "SELECT * FROM work_items WHERE sprint_id IS NULL" +
+        String userId = authenticatedUser.id();
+        String sql = "SELECT * FROM work_items WHERE sprint_id IS NULL AND " + MEMBER_PROJECTS +
                 (projectId != null ? " AND project_id = ?" : "") +
                 " ORDER BY backlog_order ASC, created_at ASC";
         return projectId != null
-                ? jdbc.query(sql, this::mapRow, projectId)
-                : jdbc.query(sql, this::mapRow);
+                ? jdbc.query(sql, this::mapRow, userId, projectId)
+                : jdbc.query(sql, this::mapRow, userId);
     }
 
     @PutMapping("/backlog/reorder")
     public void reorderBacklog(@Valid @RequestBody java.util.List<java.util.Map<String, Object>> items) {
+        String userId = authenticatedUser.id();
+        // Scope the update to the caller's workspaces so a stray id can't reorder another tenant's item.
         items.forEach(item -> {
             int order = ((Number) item.get("order")).intValue();
-            jdbc.update("UPDATE work_items SET backlog_order = ? WHERE id = ?", order, item.get("id"));
+            jdbc.update("UPDATE work_items SET backlog_order = ? WHERE id = ? AND " + MEMBER_PROJECTS,
+                order, item.get("id"), userId);
         });
     }
 
@@ -156,10 +178,11 @@ public class WorkItemController {
         return w;
     }
 
+    /** Personal home (I01-S12): the signed-in user's assigned items. Identity comes from the JWT —
+     *  a client cannot request another user's items (the old, ignored userId param is removed). */
     @GetMapping("/my")
-    public List<WorkItem> myWorkItems(@RequestParam(required = false) String userId) {
-        String requestedUserId = authenticatedUser.id();
-        List<WorkItem> items = repository.findByAssigneeId(requestedUserId);
+    public List<WorkItem> myWorkItems() {
+        List<WorkItem> items = repository.findByAssigneeId(authenticatedUser.id());
         attachTagsBatch(items);
         return items;
     }

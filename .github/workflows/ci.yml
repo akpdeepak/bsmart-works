@@ -171,30 +171,11 @@ jobs:
         run: ./mvnw -B -Dgroups=unit verify
 
   backend-integration-test:
-    name: Backend (integration — real Postgres)
+    name: Backend (integration — Flyway + Postgres)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: works-backend
-    # A real Postgres 16, matching docker-compose.yml + application.properties defaults,
-    # so Flyway actually applies every migration and Hibernate (ddl-auto=validate) checks
-    # every entity against the live schema. This is what catches a bad migration or a
-    # column-mapping drift before merge — the @SpringBootTest contextLoads needs a DB and
-    # is therefore NOT covered by the unit-only job above.
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: bcits_admin
-          POSTGRES_PASSWORD: works_secure_pass
-          POSTGRES_DB: works_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U bcits_admin -d works_db"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -202,13 +183,10 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      # Full verify against the live DB. Coverage is owned by the unit job above, so skip
-      # JaCoCo here; this job's contract is "migrations apply + entities validate + the app
-      # boots + all tests pass against real Postgres".
-      - name: Integration verify (Flyway migrate + entity validation + context load)
-        env:
-          BSMART_DB_URL: jdbc:postgresql://localhost:5432/works_db
-          BSMART_DB_USERNAME: bcits_admin
-          BSMART_DB_PASSWORD: works_secure_pass
-        run: ./mvnw -B verify -Djacoco.skip=true
-
+      # Boots the app against a real Postgres via Testcontainers (Docker is available on
+      # ubuntu-latest) and applies EVERY Flyway migration end-to-end. This is the stage that would
+      # have caught the V35 duplicate-version collision and bad migration SQL before merge.
+      # Invoke failsafe directly (not the surefire `test` phase) so DB-less @SpringBootTest classes
+      # like DemoApplicationTests are not run here, and skip JaCoCo (its gate is the unit job).
+      - name: Integration tests (Testcontainers + Flyway)
+        run: ./mvnw -B -Djacoco.skip=true test-compile failsafe:integration-test failsafe:verify

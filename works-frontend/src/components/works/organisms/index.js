@@ -18,3 +18,6 @@
  *   - File naming: kebab-case.jsx beside kebab-case.test.jsx.
  *   - Export each organism from this index once it exists.
  */
+
+export { SidebarNav } from './sidebar-nav';
+export { UserMenu } from './user-menu';

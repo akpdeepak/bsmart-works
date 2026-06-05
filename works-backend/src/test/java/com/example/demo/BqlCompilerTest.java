@@ -95,4 +95,41 @@ class BqlCompilerTest {
     void malformedCondition_throwsBqlException() {
         assertThrows(BqlException.class, () -> compiler.compile("this is not valid", "u"));
     }
+
+    @Test
+    void unknownField_passesThroughAsLowercasedColumn() {
+        // A field with no explicit alias falls through to the default branch: lowercased and used
+        // directly as a column (after the safe-identifier check), with the value still bound.
+        BqlCompiler.Compiled c = compiler.compile("Severity = High", "u");
+        assertEquals("severity = ?", c.sql());
+        assertEquals(List.of("High"), c.params());
+    }
+
+    @Test
+    void nowFunction_isLiteralNotParameter() {
+        BqlCompiler.Compiled c = compiler.compile("created_at >= now()", "u");
+        assertEquals("created_at >= NOW()", c.sql());
+        assertTrue(c.params().isEmpty());
+    }
+
+    @Test
+    void decimalValue_isBoundAsDouble() {
+        BqlCompiler.Compiled c = compiler.compile("points <= 2.5", "u");
+        assertEquals("story_points <= ?", c.sql());
+        assertEquals(List.of(2.5d), c.params());
+    }
+
+    @Test
+    void angleBracketInequality_isTreatedAsNotEquals() {
+        BqlCompiler.Compiled c = compiler.compile("status <> Done", "u");
+        assertEquals("status != ?", c.sql());
+        assertEquals(List.of("Done"), c.params());
+    }
+
+    @Test
+    void orConnector_isPreserved() {
+        BqlCompiler.Compiled c = compiler.compile("priority = High OR priority = Highest", "u");
+        assertEquals("priority = ? OR priority = ?", c.sql());
+        assertEquals(List.of("High", "Highest"), c.params());
+    }
 }

@@ -4,7 +4,8 @@
 **Spec source:** `docs/bsmart-works-iteration-guide.md` Part 7, Iteration 8.
 **Branch:** `claude/iteration-8-bFw95`
 **Classification:** **Missing** — no SLA tables, entities, services or UI existed; built to spec.
-**Migration:** `V36__sla_engine.sql` (next after V35; high-water bumped to V36 in orchestrator §6).
+**Migration:** `V44__sla_engine.sql` (renumbered from V36 after merging `main`, which advanced the
+Flyway chain to V43; high-water bumped to V44 in orchestrator §6).
 
 > Batched the full 9-spec iteration in one run: the specs share the same tables/services and
 > splitting would leave the build in a non-shippable in-between state (master-prompt batching
@@ -28,7 +29,7 @@ One engine, attached to the existing work-item lifecycle by two hooks in `WorkIt
 - **Schedule:** `SlaEvaluationScheduler` (every minute → breach detection + escalation firing).
 - **HTTP (parse + delegate only):** `SlaController` at `/api/v1/sla/**`.
 
-### Data model (`V36`)
+### Data model (`V44`)
 `business_calendars`, `sla_policies`, `sla_targets`, `sla_escalations`, `sla_instances` — all
 plural, workspace-scoped, indexed on FKs + hot columns. `manage_sla` permission seeded; a default
 IST calendar seeded per workspace; 2 global starter templates with targets.
@@ -66,12 +67,12 @@ Scope BQL is compiled to **parameterised** SQL (`BqlCompiler`) and tested with a
 - **Frontend:** `npm run lint` (clean on new files), `npm test` (77 tests), `npm run build` all green.
 - **Guardrails:** all blocking rules pass (plural tables, Flyway naming, RBAC-in-service, tokens,
   one apiClient). AI-rules regenerated + in sync; DoD version in sync.
-- **Integration (real Postgres):** validated locally against Postgres 16 — Flyway applied all
-  migrations through **V36** cleanly, Hibernate `ddl-auto=validate` accepted all five SLA entity
-  mappings, the scheduler issued a real `sla_instances` query, and the full Spring context booted
-  (186 tests green on `./mvnw verify`). A new CI job **`backend-integration-test`** (Postgres 16
-  service) now runs this on every push/PR, so the migration + entity-mapping check is permanent —
-  it was previously covered by no CI job (the unit job runs `@Tag("unit")` only).
+- **Integration (real Postgres):** validated locally against Postgres 16 after merging `main` —
+  Flyway applied the full chain (42 migrations, now at **V44**) cleanly, Hibernate
+  `ddl-auto=validate` accepted every entity (main's + the five SLA entities), the scheduler issued a
+  real `sla_instances` query, and the full Spring context booted. The repo's existing
+  **`backend-integration-test`** CI job (Testcontainers + Flyway, added on `main`) exercises this on
+  every push/PR, so the V44 migration + entity-mapping check runs automatically.
 
 ## 4. Notes / follow-ups (logged, not smuggled in)
 - AI SLA-breach prediction is explicitly **iteration 11**, not built here (per the guide).

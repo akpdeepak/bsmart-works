@@ -23,6 +23,7 @@ public class Article {
     private String createdBy;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
+    private Boolean portalPublished = false; // iteration 9: surfaced on the customer portal KB
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -58,4 +59,6 @@ public class Article {
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public Boolean getPortalPublished() { return portalPublished; }
+    public void setPortalPublished(Boolean portalPublished) { this.portalPublished = portalPublished; }
 }

@@ -12,15 +12,15 @@
 
 | Iteration | Release | Theme | Specs | Done |
 |---|---|---|---:|---:|
-| 1 | 1.0 | Foundation — The Works MVP | 12 | 2 |
+| 1 | 1.0 | Foundation — The Works MVP | 12 | 12 |
 | 2 | 2.0 | Sprints — Scrum + Reports | 8 | 0 |
 | 3 | 3.0 | Workflows, Permissions & Custom Fields | 8 | 0 |
 | 4 | 4.0 | PM Artifacts — RAID, Decisions, Meetings | 10 | 0 |
 | 5 | 5.0 | Knowledge Repository + Versions | 10 | 0 |
-| 6 | 6.0 | Reports, Dashboards & Insights | 8 | 0 |
-| 7 | 7.0 | Compliance Rules Engine | 9 | 0 |
+| 6 | 6.0 | Reports, Dashboards & Insights | 8 | 8 |
+| 7 | 7.0 | Compliance Rules Engine | 9 | 9 |
 | 8 | 8.0 | SLA Engine — Internal & Generalized | 9 | 9 |
-| 9 | 9.0 | Service Management — Customer Portal | 10 | 0 |
+| 9 | 9.0 | Service Management — Customer Portal | 10 | 10 |
 | 10 | 10.0 | AI Orchestration Foundation + AI Control Plane | 13 | 0 |
 | 11 | 11.0 | AI Expansion + Conversational Command Bar | 15 | 0 |
 | 12 | 12.0 | KPI Framework with Privacy Guardrails | 12 | 0 |
@@ -32,7 +32,7 @@
 | 18 | 18.0 | Mobile + Real-time + Performance | 12 | 0 |
 | 19 | 19.0 | Enterprise Security + Compliance Certifications | 12 | 0 |
 | 20 | 20.0 | Polish, Advanced AI, Marketplace Foundation | 12 | 0 |
-| **Total** | | | **224** | **11** |
+| **Total** | | | **224** | **48** |
 
 ## Specs
 
@@ -43,16 +43,16 @@
 |---|---|---|---|---|---|---|---|
 | I01-S01 | A | Authentication & identity | Done | refactor/iter-01/s01-authentication-identity | [#73](https://github.com/akpdeepak/bsmart-works/pull/73) | 2026-06-04 | Partial→completed: token-based password reset, real email, MFA JWT-principal fix, rate limiting, tests. No schema change. |
 | I01-S02 | A | Workspaces | Done | claude/spec-refactor-i01-s02-pdVrC | [#77](https://github.com/akpdeepak/bsmart-works/pull/77) | 2026-06-04 | Partial→refactored: WorkspaceService (RBAC + data access out of controller), membership-enforced reads (404 cross-tenant, RB-40 §1), branding on entity, workspace events, /workspaces/mine, real multi-workspace switcher, V35 seed. No schema change beyond seed. |
-| I01-S03 | A | App shell — topbar, sidenav, workspace switcher | Pending | — | — | — | — |
-| I01-S04 | A | Event store foundation | Pending | — | — | — | — |
-| I01-S05 | B | Projects | Pending | — | — | — | — |
-| I01-S06 | B | Default WorkItem types | Pending | — | — | — | — |
-| I01-S07 | B | WorkItem CRUD with rich text | Pending | — | — | — | — |
-| I01-S08 | F | Kanban board (basic) | Pending | — | — | — | — |
-| I01-S09 | G | Comments with @mentions | Pending | — | — | — | — |
-| I01-S10 | G | Notifications — in-app + email | Pending | — | — | — | — |
-| I01-S11 | E | Full-text search | Pending | — | — | — | — |
-| I01-S12 | J | Personal home (My Works) | Pending | — | — | — | — |
+| I01-S03 | A | App shell — topbar, sidenav, workspace switcher | Done | claude/spec-refactor-i01-s03-app-shell | [#80](https://github.com/akpdeepak/bsmart-works/pull/80) | 2026-06-04 | Topbar notifications bell + tested UserMenu organism; a11y polish. Also repaired main (concurrent #75/#78 skew). |
+| I01-S04 | A | Event store foundation | Done | claude/spec-refactor-i01-s04-event-store | [#85](https://github.com/akpdeepak/bsmart-works/pull/85) | 2026-06-04 | workspace_id on events (RB-40 §1) + append-only immutability trigger (V40); recordInWorkspace. |
+| I01-S05 | B | Projects | Done | claude/spec-refactor-i01-s05-projects | [#86](https://github.com/akpdeepak/bsmart-works/pull/86) | 2026-06-04 | ProjectService (RBAC→service), tenant-isolated reads (no findAll leak), workspace-scoped events. |
+| I01-S06 | B | Default WorkItem types | Done | claude/spec-refactor-i01-s06-workitem-types | [#87](https://github.com/akpdeepak/bsmart-works/pull/87) | 2026-06-04 | 7 defaults → on-brand single source of truth (DefaultWorkItemTypes) + test. |
+| I01-S07 | B | WorkItem CRUD with rich text | Done | claude/spec-refactor-i01-s07-workitem-crud | [#88](https://github.com/akpdeepak/bsmart-works/pull/88) | 2026-06-04 | Tenant-scope list/search/backlog/trash reads (RB-40 §1); guard restore/reorder writes. |
+| I01-S08 | F | Kanban board (basic) | Done | claude/spec-refactor-i01-s08-kanban | [#89](https://github.com/akpdeepak/bsmart-works/pull/89) | 2026-06-04 | Board loading uses the column skeleton, not a spinner (Part-4); drag-drop optimistic+revert + density already met spec. |
+| I01-S09 | G | Comments with @mentions | Done | claude/spec-refactor-i01-s09-comments | [#90](https://github.com/akpdeepak/bsmart-works/pull/90) | 2026-06-04 | Membership-gated comment read/add/delete (RB-40 §1); author-only delete; mentions confined to workspace. |
+| I01-S10 | G | Notifications — in-app + email | Done | claude/spec-refactor-i01-s10-notifications | [#91](https://github.com/akpdeepak/bsmart-works/pull/91) | 2026-06-04 | Fix markRead IDOR (own-notification only, 404 otherwise); prefs/batching/digest already met spec. |
+| I01-S11 | E | Full-text search | Done | claude/spec-refactor-i01-s11-search | [#92](https://github.com/akpdeepak/bsmart-works/pull/92) | 2026-06-04 | Escape LIKE wildcards + blank-query guard; title/desc/comments + starred/recent boosts + tenant scope (S07) already met spec. |
+| I01-S12 | J | Personal home (My Works) | Done | claude/spec-refactor-i01-s12-my-works | [#93](https://github.com/akpdeepak/bsmart-works/pull/93) | 2026-06-04 | Verified Implemented (assigned/starred/mentions/activity + empty states); removed dead userId param on /my. |
 
 ### Iteration 2 — Release 2.0 · Sprints — Scrum + Reports
 
@@ -114,28 +114,28 @@
 
 | ID | Cap | Spec | Status | Branch | PR | Date | Notes |
 |---|---|---|---|---|---|---|---|
-| I06-S01 | J | Dashboard designer | Pending | — | — | — | — |
-| I06-S02 | J | Widget library (20+ widgets) | Pending | — | — | — | — |
-| I06-S03 | J | Custom report builder | Pending | — | — | — | — |
-| I06-S04 | J | Scheduled report delivery | Pending | — | — | — | — |
-| I06-S05 | J | Report templates | Pending | — | — | — | — |
-| I06-S06 | J | Drill-down navigation | Pending | — | — | — | — |
-| I06-S07 | J | Export PDF / Excel / PNG | Pending | — | — | — | — |
-| I06-S08 | J | Embeddable read-only dashboards | Pending | — | — | — | — |
+| I06-S01 | J | Dashboard designer | Done | (pre-existing on main) | — | 2026-06-04 | Drag-drop grid + personal/team/project/org scopes (CustomDashboardController, V29) |
+| I06-S02 | J | Widget library (20+ widgets) | Done | claude/iteration-6-remaining-work | [#84](https://github.com/akpdeepak/bsmart-works/pull/84) | 2026-06-04 | Palette expanded 11→21 presets over 10 render types; +unassigned/dueSoon filters |
+| I06-S03 | J | Custom report builder | Done | (pre-existing on main) | — | 2026-06-04 | Section-based builder (kpi/chart/table/narrative), ReportController, V30 |
+| I06-S04 | J | Scheduled report delivery | Done | claude/iteration-6-remaining-work | [#84](https://github.com/akpdeepak/bsmart-works/pull/84) | 2026-06-04 | UI added over existing backend: cadence/channel/recipients, pause/resume/remove |
+| I06-S05 | J | Report templates | Done | claude/iteration-6-remaining-work | [#84](https://github.com/akpdeepak/bsmart-works/pull/84) | 2026-06-04 | V38 adds Release / Monthly-exec / Customer templates (6 total) |
+| I06-S06 | J | Drill-down navigation | Done | (pre-existing on main) | — | 2026-06-04 | DashboardDrillModal; widget elements open underlying items |
+| I06-S07 | J | Export PDF / Excel / PNG | Done | (pre-existing on main) | — | 2026-06-04 | PDF+PNG+CSV; XLSX intentionally CSV (SheetJS advisory, export.js) |
+| I06-S08 | J | Embeddable read-only dashboards | Done | (pre-existing on main) | — | 2026-06-04 | Share tokens + PublicDashboardController + embed (V33) |
 
 ### Iteration 7 — Release 7.0 · Compliance Rules Engine
 
 | ID | Cap | Spec | Status | Branch | PR | Date | Notes |
 |---|---|---|---|---|---|---|---|
-| I07-S01 | K | Rule definition (visual builder) | Pending | — | — | — | — |
-| I07-S02 | K | Seeded rule library (20+ templates) | Pending | — | — | — | — |
-| I07-S03 | K | Continuous rule evaluation | Pending | — | — | — | — |
-| I07-S04 | K | Violation lifecycle | Pending | — | — | — | — |
-| I07-S05 | K | Severity routing | Pending | — | — | — | — |
-| I07-S06 | K | Escalation policies | Pending | — | — | — | — |
-| I07-S07 | K | Compliance dashboard | Pending | — | — | — | — |
-| I07-S08 | K | Compliance audit log | Pending | — | — | — | — |
-| I07-S09 | B | Auto status duration tracking | Pending | — | — | — | — |
+| I07-S01 | K | Rule definition (visual builder) | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | V34 model (PR #65) + controller (CRUD/clone/test/activate) + builder UI; BQL validated before save |
+| I07-S02 | K | Seeded rule library (20+ templates) | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | V36 seeds 22 templates; one-click clone-to-workspace |
+| I07-S03 | K | Continuous rule evaluation | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | Workspace-scoped scope+assertion engine; continuous (2m) + scheduled (hourly) sweeps + on-demand |
+| I07-S04 | K | Violation lifecycle | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | OPEN→ACK→RESOLVED/WONT_FIX, auto-resolve, bulk ack; events recorded |
+| I07-S05 | K | Severity routing | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | ITEM_OWNER/PROJECT_ADMIN/USER/EMAIL/SLACK targets; Slack stubbed (no broker yet) |
+| I07-S06 | K | Escalation policies | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | Escalate-after-hours window; 15m runner; acknowledged stops the clock |
+| I07-S07 | K | Compliance dashboard | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | Severity/status totals, 30-day trend, rules×projects heatmap, top rules |
+| I07-S08 | K | Compliance audit log | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | Append-only events view + regulator-ready CSV export |
+| I07-S09 | B | Auto status duration tracking | Done | claude/iteration-7-remaining-work-LzUso | — | 2026-06-04 | Per-status time projected from the event log; shown on the work item |
 
 ### Iteration 8 — Release 8.0 · SLA Engine — Internal & Generalized
 
@@ -155,16 +155,16 @@
 
 | ID | Cap | Spec | Status | Branch | PR | Date | Notes |
 |---|---|---|---|---|---|---|---|
-| I09-S01 | N | Customer accounts | Pending | — | — | — | — |
-| I09-S02 | N | Branded customer portal | Pending | — | — | — | — |
-| I09-S03 | N | Request types | Pending | — | — | — | — |
-| I09-S04 | N | Portal forms per request type | Pending | — | — | — | — |
-| I09-S05 | N | Agent queues | Pending | — | — | — | — |
-| I09-S06 | M | Customer-facing SLA | Pending | — | — | — | — |
-| I09-S07 | N | Customer-facing knowledge base | Pending | — | — | — | — |
-| I09-S08 | N | Customer satisfaction (CSAT) | Pending | — | — | — | — |
-| I09-S09 | N | Customer dashboard | Pending | — | — | — | — |
-| I09-S10 | N | Multi-tier customer SLAs | Pending | — | — | — | — |
+| I09-S01 | N | Customer accounts | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | V38 customer_accounts + customer_users (separate identity); workspace-scoped CRUD + portal-user provisioning (manage_service); password hashes never returned |
+| I09-S02 | N | Branded customer portal | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | Separate /portal app (main.jsx path route), lighter identity, per-account branding (logo/colour/subdomain), separate customer session |
+| I09-S03 | N | Request types | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | Incident/Change/Service seeded as system types + admin-defined custom; workspace-scoped CRUD |
+| I09-S04 | N | Portal forms per request type | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | JSON form_schema per type with conditional showIf fields; validated as JSON on save; portal renders + validates |
+| I09-S05 | N | Agent queues | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | All open · Mine · Unassigned · High priority; pick-up, assign, status lifecycle (work_service) |
+| I09-S06 | M | Customer-facing SLA | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | Server-computed countdown (ON_TRACK/AT_RISK/BREACHED/MET) shown to both agent and customer — one engine, two contexts. Self-contained tier engine (iteration 8 not yet built) |
+| I09-S07 | N | Customer-facing knowledge base | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | articles.portal_published flag + agent publish/unpublish; workspace-scoped portal read/search |
+| I09-S08 | N | Customer satisfaction (CSAT) | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | 1–5 + comment, one per resolved request; workspace-scoped trends (count/avg/distribution/%satisfied) |
+| I09-S09 | N | Customer dashboard | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | Open/resolved/total + SLA-breached counts + recent resolutions, account-scoped |
+| I09-S10 | M | Multi-tier customer SLAs | Done | claude/iteration-9-complete-FPl1v | — | 2026-06-04 | Per-workspace tiers (Platinum/Gold/Silver); account tier selects response/resolution targets applied on submit |
 
 ### Iteration 10 — Release 10.0 · AI Orchestration Foundation + AI Control Plane
 
@@ -258,20 +258,20 @@
 
 | ID | Cap | Spec | Status | Branch | PR | Date | Notes |
 |---|---|---|---|---|---|---|---|
-| I15-S01 | V | Sprint planning helper | Pending | — | — | — | — |
-| I15-S02 | V | Standup facilitator | Pending | — | — | — | — |
-| I15-S03 | V | Impediment tracker | Pending | — | — | — | — |
-| I15-S04 | V | Mid-sprint risk panel | Pending | — | — | — | — |
-| I15-S05 | V | Retro toolkit | Pending | — | — | — | — |
-| I15-S06 | V | Sprint review prep | Pending | — | — | — | — |
-| I15-S07 | V | Cross-sprint pattern detection | Pending | — | — | — | — |
-| I15-S08 | W | Product roadmap | Pending | — | — | — | — |
-| I15-S09 | W | Backlog refinement helper | Pending | — | — | — | — |
-| I15-S10 | W | Idea capture inbox | Pending | — | — | — | — |
-| I15-S11 | W | Customer feedback aggregation | Pending | — | — | — | — |
-| I15-S12 | W | OKR linkage | Pending | — | — | — | — |
-| I15-S13 | W | Release notes auto-draft | Pending | — | — | — | — |
-| I15-S14 | W | Stakeholder map | Pending | — | — | — | — |
+| I15-S01 | V | Sprint planning helper | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S02 | V | Standup facilitator | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S03 | V | Impediment tracker | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S04 | V | Mid-sprint risk panel | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S05 | V | Retro toolkit | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S06 | V | Sprint review prep | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S07 | V | Cross-sprint pattern detection | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S08 | W | Product roadmap | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S09 | W | Backlog refinement helper | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S10 | W | Idea capture inbox | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S11 | W | Customer feedback aggregation | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S12 | W | OKR linkage | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S13 | W | Release notes auto-draft | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S14 | W | Stakeholder map | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
 
 ### Iteration 16 — Release 16.0 · Leadership Console + Admin Operations Center
 

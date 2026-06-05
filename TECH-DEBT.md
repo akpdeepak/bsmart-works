@@ -84,10 +84,10 @@ Format: What · Why accepted · Impact · Trigger to fix.
 - **Trigger:** Extract the first molecule (SearchInput or FormField) and organism (WorkItemRow) during the next UI iteration
 
 ### TD-013 — No integration test infrastructure (Testcontainers)
-- **What:** The integration test tier (§10.1) is documented but not set up; no `@Tag("integration")` tests exist
-- **Why accepted:** Integration tests require Docker; CI job for them is a future addition
-- **Impact:** Flyway migrations and service-to-repository wiring are only verified against a live local DB, not in CI
-- **Trigger:** When the team needs CI confidence on DB migrations; add `spring-boot-testcontainers` and the first `MigrationTest`
+- **What:** The integration test tier (§10.1) is documented but not set up; no `@Tag("integration")` tests exist. There is no failsafe/integration CI job — `ci.yml` runs `-Dgroups=unit` only.
+- **Why accepted:** Integration tests require Docker, which is not available in the current dev/CI environment; the CI job for them is a future addition.
+- **Impact:** Flyway migrations and service-to-repository wiring are only verified against a live local DB, not in CI. Most importantly, **row-level cross-tenant isolation** (does `findByWorkspaceId…` actually refuse another workspace's rows?) cannot be asserted with mocks — it needs a real Postgres (RB-40 §1). The cross-tenant/unauthorized *authorization wiring* at the controller boundary is now covered at the unit level (`WorkItemControllerAccessTest`, `RbacServiceTest`); the DB-level row-filtering proof is the remaining gap.
+- **Trigger:** When Docker is available in CI, add `spring-boot-testcontainers`, an `@Tag("integration")` group + a failsafe job, and write the **cross-tenant row-isolation test first** (seed two workspaces, assert each repository query returns only its own rows), then the first `MigrationTest`. This is a tenant-isolation change → confirm the approach with Deepak first (CLAUDE.md §5).
 
 ### TD-014 — Storybook not installed
 - **What:** §4.19 requires each component to have a co-located `.stories.jsx`; Storybook is not set up

@@ -1,8 +1,10 @@
 ﻿/* eslint-disable */ // legacy monolith — a11y and hooks violations are known baseline debt; new components must pass clean
 import React, { useState, useEffect, useRef } from 'react';
 import DOMPurify from 'dompurify';
-import { Mail, ShieldCheck, PanelLeft } from 'lucide-react';
+import { Mail, ShieldCheck, PanelLeft, Bell } from 'lucide-react';
 import { Button } from '@/components/works/button';
+import { UserMenu } from '@/components/works/organisms/user-menu';
+import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
@@ -73,6 +75,41 @@ function EmptyState({ icon, title, subtitle, action }) {
       <h3 className="text-base font-semibold text-neutral-700 mb-1">{title}</h3>
       <p className="text-sm text-neutral-400 mb-5 max-w-xs">{subtitle}</p>
       {action}
+    </div>
+  );
+}
+
+// Iteration 15 — retro board columns per template (Cap V · retro toolkit).
+const RETRO_COLUMNS = {
+  START_STOP_CONTINUE: [
+    { key: 'START', label: 'Start' },
+    { key: 'STOP', label: 'Stop' },
+    { key: 'CONTINUE', label: 'Continue' },
+  ],
+  FOUR_LS: [
+    { key: 'LIKED', label: 'Liked' },
+    { key: 'LEARNED', label: 'Learned' },
+    { key: 'LACKED', label: 'Lacked' },
+    { key: 'LONGED_FOR', label: 'Longed for' },
+  ],
+  MAD_SAD_GLAD: [
+    { key: 'MAD', label: 'Mad' },
+    { key: 'SAD', label: 'Sad' },
+    { key: 'GLAD', label: 'Glad' },
+  ],
+};
+
+// Iteration 15 — surfaces the AI Control Plane verdict (RB-40 §2) honestly: whether AI ran, fell
+// back to the deterministic result, was degraded to the cheap tier, or served a cached response.
+function AiMetaBadge({ meta, narrative }) {
+  if (!meta) return null;
+  const label = meta.fallback ? 'Deterministic fallback'
+    : meta.cacheHit ? `AI · cached (${meta.tier})`
+    : `AI · ${meta.tier}${meta.policyState === 'DEGRADED' ? ' (degraded)' : ''}`;
+  return (
+    <div className="flex items-start gap-2 text-xs">
+      <span className={`flex-shrink-0 font-bold px-1.5 py-0.5 rounded ${meta.fallback ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300' : 'bg-brand-navy/10 text-brand-navy'}`}>{label}</span>
+      {narrative && <span className="text-neutral-600 dark:text-neutral-300">{narrative}</span>}
     </div>
   );
 }
@@ -254,6 +291,40 @@ export default function App() {
   const [newRelease, setNewRelease]             = useState({ name: '', version: '', description: '', releaseDate: '', projectId: '', status: 'PLANNED' });
   const [releaseSearch, setReleaseSearch]       = useState('');
 
+  // Iteration 15 — Scrum Master Cockpit (Cap V) + Product Owner Workspace (Cap W)
+  const [i15ProjectId, setI15ProjectId]         = useState('');
+  const [smTab, setSmTab]                       = useState('impediments'); // impediments | standup | risk | planning | retro | review | patterns
+  const [poTab, setPoTab]                       = useState('roadmap');     // roadmap | ideas | feedback | okr | releasenotes | stakeholders
+  const [impediments, setImpediments]           = useState([]);
+  const [newImpediment, setNewImpediment]       = useState({ title: '', severity: 'MEDIUM', category: '', description: '' });
+  const [standups, setStandups]                 = useState([]);
+  const [activeStandup, setActiveStandup]       = useState(null); // { session, entries }
+  const [standupDraft, setStandupDraft]         = useState({ yesterday: '', today: '', blockers: '' });
+  const [retros, setRetros]                     = useState([]);
+  const [activeRetro, setActiveRetro]           = useState(null); // { session, notes }
+  const [newRetro, setNewRetro]                 = useState({ title: '', template: 'START_STOP_CONTINUE', anonymous: false });
+  const [retroNoteDraft, setRetroNoteDraft]     = useState({});   // columnKey -> text
+  const [riskPanel, setRiskPanel]               = useState(null);
+  const [planningResult, setPlanningResult]     = useState(null);
+  const [planningTimeOff, setPlanningTimeOff]   = useState(0);
+  const [reviewSprintId, setReviewSprintId]     = useState('');
+  const [reviewResult, setReviewResult]         = useState(null);
+  const [patternsResult, setPatternsResult]     = useState(null);
+  const [riskSprintId, setRiskSprintId]         = useState('');
+  const [roadmapThemes, setRoadmapThemes]       = useState([]);
+  const [newTheme, setNewTheme]                 = useState({ name: '', status: 'PLANNED', quarter: '', description: '' });
+  const [ideas, setIdeas]                       = useState([]);
+  const [newIdea, setNewIdea]                   = useState({ title: '', description: '' });
+  const [feedbackItems, setFeedbackItems]       = useState([]);
+  const [newFeedback, setNewFeedback]           = useState({ customer: '', source: 'PORTAL', content: '' });
+  const [feedbackClusters, setFeedbackClusters] = useState(null);
+  const [objectives, setObjectives]             = useState([]);
+  const [activeObjective, setActiveObjective]   = useState(null); // { objective, keyResults, progressPercent }
+  const [newObjective, setNewObjective]         = useState({ title: '', level: 'TEAM', quarter: '' });
+  const [newKr, setNewKr]                       = useState({ title: '', metricType: 'PERCENT', startValue: 0, targetValue: 100, currentValue: 0 });
+  const [releaseNotesResult, setReleaseNotesResult] = useState(null);
+  const [releaseNotesName, setReleaseNotesName] = useState('');
+
   // Iteration 6 — Worklogs
   const [myWorklogs, setMyWorklogs]             = useState([]);
   const [worklogForm, setWorklogForm]           = useState({ timeSpentMinutes: 30, description: '', workDate: '' });
@@ -311,6 +382,22 @@ export default function App() {
   const [selectedReport, setSelectedReport] = useState(null);
   const [reportSections, setReportSections] = useState([]);
   const [reportEditMode, setReportEditMode] = useState(false);
+  // Iteration 6 — scheduled report delivery (Cap J, S04)
+  const [scheduleManagerOpen, setScheduleManagerOpen] = useState(false);
+  const [reportSchedules, setReportSchedules] = useState([]);
+  const [scheduleForm, setScheduleForm] = useState({ cadence: 'WEEKLY', channel: 'IN_APP', recipients: '' });
+  // Iteration 7 — Compliance Rules Engine (Cap K) + status duration (Cap B)
+  const [complianceTab, setComplianceTab] = useState('dashboard'); // dashboard | rules | violations | audit
+  const [complianceRules, setComplianceRules] = useState([]);
+  const [complianceTemplates, setComplianceTemplates] = useState([]);
+  const [complianceViolations, setComplianceViolations] = useState([]);
+  const [complianceDashboard, setComplianceDashboard] = useState(null);
+  const [complianceAudit, setComplianceAudit] = useState([]);
+  const [violationFilter, setViolationFilter] = useState(''); // '' | OPEN | ACKNOWLEDGED | RESOLVED | WONT_FIX
+  const [selectedViolations, setSelectedViolations] = useState([]);
+  const [ruleBuilder, setRuleBuilder] = useState(null); // the rule being created/edited, or null
+  const [ruleTestResult, setRuleTestResult] = useState(null);
+  const [statusDurations, setStatusDurations] = useState([]);
   const [deleteUndoItem, setDeleteUndoItem] = useState(null);
   const deleteUndoTimer = useRef(null);
   const [itemChildren, setItemChildren] = useState([]);
@@ -372,6 +459,7 @@ export default function App() {
     // SLA clocks + audit timeline for this item (iteration 8, Cap M).
     api.raw(`/sla/work-items/${id}`, { headers: h }).then(r => r.json()).then(d => setSlaInstances(Array.isArray(d) ? d : [])).catch(() => setSlaInstances([]));
     api.raw(`/sla/work-items/${id}/audit`, { headers: h }).then(r => r.json()).then(d => setSlaAudit(Array.isArray(d) ? d : [])).catch(() => setSlaAudit([]));
+    fetchStatusDurations(id); // Iteration 7 (Cap B) — auto time-in-status, projected from the event log
     setDetailTab('details');
     if (fieldDefs.length > 0) fetchFieldValues(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -898,6 +986,216 @@ export default function App() {
       .then(() => { showToast('Report deleted'); setSelectedReport(null); fetchReports(); })
       .catch(() => showToast('Failed to delete report', 'error'));
   }
+
+  // ── Iteration 6 — scheduled report delivery (Cap J, S04) ─────────────────────
+  function openScheduleManager(reportId) {
+    setScheduleForm({ cadence: 'WEEKLY', channel: 'IN_APP', recipients: '' });
+    setScheduleManagerOpen(true);
+    fetchReportSchedules(reportId);
+  }
+  function fetchReportSchedules(reportId) {
+    api.raw(`/report-schedules?reportId=${reportId}`).then(r => r.json())
+      .then(d => setReportSchedules(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function createReportSchedule() {
+    if (!selectedReport) return;
+    const payload = { reportId: selectedReport.id, cadence: scheduleForm.cadence,
+      channel: scheduleForm.channel, recipients: scheduleForm.recipients.trim() };
+    api.send(`/report-schedules`, { method: 'POST', body: JSON.stringify(payload) })
+      .then(() => { showToast('Schedule created'); setScheduleForm({ cadence: 'WEEKLY', channel: 'IN_APP', recipients: '' }); fetchReportSchedules(selectedReport.id); })
+      .catch(e => showToast(e.message || 'Failed to create schedule', 'error'));
+  }
+  function toggleReportSchedule(s) {
+    api.send(`/report-schedules/${s.id}`, { method: 'PUT', body: JSON.stringify({ ...s, active: !s.active }) })
+      .then(() => fetchReportSchedules(selectedReport.id))
+      .catch(e => showToast(e.message || 'Failed to update schedule', 'error'));
+  }
+  function deleteReportSchedule(id) {
+    api.send(`/report-schedules/${id}`, { method: 'DELETE' })
+      .then(() => { showToast('Schedule removed'); fetchReportSchedules(selectedReport.id); })
+      .catch(e => showToast(e.message || 'Failed to remove schedule', 'error'));
+  }
+
+  // ── Iteration 7 — Compliance Rules Engine (Cap K) ────────────────────────────
+  const COMPLIANCE_WS = 'WS-001';
+  function fetchComplianceRules() {
+    api.raw(`/compliance/rules?workspaceId=${COMPLIANCE_WS}`).then(r => r.json())
+      .then(d => setComplianceRules(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchComplianceTemplates() {
+    api.raw(`/compliance/rules/templates`).then(r => r.json())
+      .then(d => setComplianceTemplates(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchComplianceViolations(status = violationFilter) {
+    const qs = status ? `&status=${status}` : '';
+    api.raw(`/compliance/violations?workspaceId=${COMPLIANCE_WS}${qs}`).then(r => r.json())
+      .then(d => { setComplianceViolations(Array.isArray(d) ? d : []); setSelectedViolations([]); }).catch(() => {});
+  }
+  function fetchComplianceDashboard() {
+    api.raw(`/compliance/dashboard?workspaceId=${COMPLIANCE_WS}`).then(r => r.json())
+      .then(d => setComplianceDashboard(d)).catch(() => {});
+  }
+  function fetchComplianceAudit() {
+    api.raw(`/compliance/audit?workspaceId=${COMPLIANCE_WS}`).then(r => r.json())
+      .then(d => setComplianceAudit(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function newRuleBuilder() {
+    setRuleTestResult(null);
+    setRuleBuilder({ name: '', description: '', scopeBql: '', assertionBql: '', severity: 'MEDIUM',
+      evaluationMode: 'CONTINUOUS', escalateAfterHours: '', notifyOwner: true, notifyAdmin: false });
+  }
+  function editRuleBuilder(rule) {
+    setRuleTestResult(null);
+    const notify = (() => { try { return JSON.parse(rule.notifyTo || '[]'); } catch { return []; } })();
+    const types = notify.map(t => (typeof t === 'string' ? t : t.type));
+    setRuleBuilder({ id: rule.id, name: rule.name || '', description: rule.description || '',
+      scopeBql: rule.scopeBql || '', assertionBql: rule.assertionBql || '', severity: rule.severity || 'MEDIUM',
+      evaluationMode: rule.evaluationMode || 'CONTINUOUS',
+      escalateAfterHours: rule.escalateAfterHours ?? '',
+      notifyOwner: types.includes('ITEM_OWNER'), notifyAdmin: types.includes('PROJECT_ADMIN') });
+  }
+  function buildNotifyTo(b) {
+    const targets = [];
+    if (b.notifyOwner) targets.push({ type: 'ITEM_OWNER' });
+    if (b.notifyAdmin) targets.push({ type: 'PROJECT_ADMIN' });
+    return JSON.stringify(targets);
+  }
+  function saveRule() {
+    const b = ruleBuilder;
+    if (!b.name.trim() || !b.assertionBql.trim()) { showToast('Name and assertion are required', 'error'); return; }
+    const payload = {
+      workspaceId: COMPLIANCE_WS, name: b.name.trim(), description: b.description,
+      scopeBql: b.scopeBql, assertionBql: b.assertionBql, severity: b.severity,
+      evaluationMode: b.evaluationMode, notifyTo: buildNotifyTo(b),
+      escalateAfterHours: b.escalateAfterHours === '' ? null : Number(b.escalateAfterHours),
+    };
+    const req = b.id
+      ? api.send(`/compliance/rules/${b.id}`, { method: 'PUT', body: JSON.stringify(payload) })
+      : api.send(`/compliance/rules`, { method: 'POST', body: JSON.stringify(payload) });
+    req.then(() => { showToast(b.id ? 'Rule updated' : 'Rule created'); setRuleBuilder(null); fetchComplianceRules(); })
+      .catch(e => showToast(e.message || 'Failed to save rule', 'error'));
+  }
+  function testRule(id) {
+    api.send(`/compliance/rules/${id}/test`, { method: 'POST' })
+      .then(d => { setRuleTestResult(d); showToast(d.valid ? `Would flag ${d.violations} item(s)` : 'Rule did not validate', d.valid ? 'success' : 'error'); })
+      .catch(e => showToast(e.message || 'Test failed', 'error'));
+  }
+  function setRuleActive(id, active) {
+    api.send(`/compliance/rules/${id}/${active ? 'activate' : 'deactivate'}`, { method: 'POST' })
+      .then(() => { showToast(active ? 'Rule activated' : 'Rule deactivated'); fetchComplianceRules(); })
+      .catch(e => showToast(e.message || 'Failed', 'error'));
+  }
+  function evaluateRule(id) {
+    api.send(`/compliance/rules/${id}/evaluate`, { method: 'POST' })
+      .then(d => { showToast(`Evaluated: ${d.opened} opened, ${d.resolved} resolved`); fetchComplianceViolations(); fetchComplianceDashboard(); })
+      .catch(e => showToast(e.message || 'Evaluation failed', 'error'));
+  }
+  function cloneTemplate(templateId) {
+    api.send(`/compliance/rules/from-template/${templateId}?workspaceId=${COMPLIANCE_WS}`, { method: 'POST' })
+      .then(() => { showToast('Rule added from template'); fetchComplianceRules(); })
+      .catch(e => showToast(e.message || 'Failed to clone template', 'error'));
+  }
+  function deleteRule(id) {
+    api.send(`/compliance/rules/${id}`, { method: 'DELETE' })
+      .then(() => { showToast('Rule deleted'); fetchComplianceRules(); })
+      .catch(e => showToast(e.message || 'Failed to delete', 'error'));
+  }
+  function actOnViolation(id, action, note) {
+    const body = note ? JSON.stringify({ note }) : undefined;
+    api.send(`/compliance/violations/${id}/${action}`, { method: 'POST', body })
+      .then(() => { showToast('Violation updated'); fetchComplianceViolations(); fetchComplianceDashboard(); })
+      .catch(e => showToast(e.message || 'Failed', 'error'));
+  }
+  function bulkAcknowledge() {
+    if (selectedViolations.length === 0) return;
+    api.send(`/compliance/violations/bulk-acknowledge`, { method: 'POST', body: JSON.stringify({ ids: selectedViolations }) })
+      .then(d => { showToast(`Acknowledged ${d.acknowledged} violation(s)`); fetchComplianceViolations(); fetchComplianceDashboard(); })
+      .catch(e => showToast(e.message || 'Bulk acknowledge failed', 'error'));
+  }
+  function toggleViolationSelect(id) {
+    setSelectedViolations(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+  function exportComplianceAudit() {
+    api.raw(`/compliance/audit/export?workspaceId=${COMPLIANCE_WS}`)
+      .then(r => r.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'compliance-audit.csv'; a.click();
+        URL.revokeObjectURL(url);
+      })
+      .catch(() => showToast('Export failed', 'error'));
+  }
+  // ── Service Desk (iteration 9, Cap N + Cap M) ────────────────────────────────────
+  const [serviceTab, setServiceTab] = useState('queues');
+  const [serviceQueue, setServiceQueue] = useState('open');
+  const [serviceRequests, setServiceRequests] = useState([]);
+  const [serviceCustomers, setServiceCustomers] = useState([]);
+  const [serviceTypes, setServiceTypes] = useState([]);
+  const [serviceTiers, setServiceTiers] = useState([]);
+  const [serviceCsat, setServiceCsat] = useState(null);
+  const [newCustomer, setNewCustomer] = useState(null);
+  function fetchServiceRequests(q = serviceQueue) {
+    api.raw(`/service/requests?workspaceId=${activeWorkspaceId}&queue=${q}`).then(r => r.json())
+      .then(d => setServiceRequests(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchServiceCustomers() {
+    api.raw(`/service/customers?workspaceId=${activeWorkspaceId}`).then(r => r.json())
+      .then(d => setServiceCustomers(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchServiceTypes() {
+    api.raw(`/service/request-types?workspaceId=${activeWorkspaceId}`).then(r => r.json())
+      .then(d => setServiceTypes(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchServiceTiers() {
+    api.raw(`/service/sla-tiers?workspaceId=${activeWorkspaceId}`).then(r => r.json())
+      .then(d => setServiceTiers(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  function fetchServiceCsat() {
+    api.raw(`/service/csat?workspaceId=${activeWorkspaceId}`).then(r => r.json())
+      .then(d => setServiceCsat(d)).catch(() => {});
+  }
+  function assignServiceRequest(id) {
+    api.send(`/service/requests/${id}/assign`, { method: 'POST', body: JSON.stringify({}) })
+      .then(() => { showToast('Assigned to you'); fetchServiceRequests(); })
+      .catch(e => showToast(e.message || 'Assign failed', 'error'));
+  }
+  function transitionServiceRequest(id, status) {
+    api.send(`/service/requests/${id}/transition`, { method: 'POST', body: JSON.stringify({ status }) })
+      .then(() => { showToast('Request updated'); fetchServiceRequests(); })
+      .catch(e => showToast(e.message || 'Update failed', 'error'));
+  }
+  function createServiceCustomer() {
+    api.send(`/service/customers`, { method: 'POST', body: JSON.stringify({ ...newCustomer, workspaceId: activeWorkspaceId }) })
+      .then(() => { showToast('Customer created'); setNewCustomer(null); fetchServiceCustomers(); })
+      .catch(e => showToast(e.message || 'Create failed', 'error'));
+  }
+  function fetchStatusDurations(itemId) {
+    setStatusDurations([]);
+    api.raw(`/work-items/${itemId}/status-durations`).then(r => r.json())
+      .then(d => setStatusDurations(Array.isArray(d) ? d : [])).catch(() => {});
+  }
+  const severityClass = {
+    CRITICAL: 'bg-semantic-danger text-white',
+    HIGH:     'bg-brand-orange text-white',
+    MEDIUM:   'bg-semantic-warning text-white',
+    LOW:      'bg-brand-navy-tint text-white',
+    INFO:     'bg-neutral-200 text-neutral-700',
+  };
+  const vStatusClass = {
+    OPEN:         'bg-semantic-danger text-white',
+    ACKNOWLEDGED: 'bg-semantic-warning text-white',
+    RESOLVED:     'bg-semantic-success text-white',
+    WONT_FIX:     'bg-neutral-300 text-neutral-700',
+  };
+  function humanDuration(seconds) {
+    if (seconds == null) return '—';
+    const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60);
+    if (h >= 24) { const d = Math.floor(h / 24); return `${d}d ${h % 24}h`; }
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m`;
+    return `${seconds}s`;
+  }
   function addReportSection(type) {
     const defaults = {
       kpi:       { title: 'Open items', config: { metric: 'count', filter: { open: true } } },
@@ -1364,6 +1662,179 @@ export default function App() {
     api.send(`/releases/${releaseId}/items/${workItemId}`, { method: 'DELETE' })
       .then(() => { showToast('Item removed'); fetchReleaseItems(releaseId); })
       .catch(() => showToast('Failed to remove item', 'error'));
+  }
+
+  // ── Iteration 15 — Scrum Master Cockpit (Cap V) ──────────────────────────────
+  function openCockpit() {
+    setView('smcockpit');
+    const pid = i15ProjectId || (projects[0] && projects[0].id) || '';
+    setI15ProjectId(pid);
+    if (pid) { fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
+  }
+  function fetchImpediments(pid) {
+    api.raw(`/impediments?projectId=${pid}`).then(r => r.json())
+      .then(d => setImpediments(Array.isArray(d) ? d : [])).catch(() => setImpediments([]));
+  }
+  function createImpediment() {
+    if (!newImpediment.title.trim()) { showToast('Title is required', 'error'); return; }
+    api.send(`/impediments`, { method: 'POST', body: JSON.stringify({ ...newImpediment, projectId: i15ProjectId }) })
+      .then(() => { showToast('Impediment raised'); setNewImpediment({ title: '', severity: 'MEDIUM', category: '', description: '' }); fetchImpediments(i15ProjectId); })
+      .catch(() => showToast('Failed to raise impediment', 'error'));
+  }
+  function updateImpediment(imp, patch) {
+    api.send(`/impediments/${imp.id}`, { method: 'PUT', body: JSON.stringify({ ...imp, ...patch }) })
+      .then(() => fetchImpediments(i15ProjectId)).catch(() => showToast('Failed to update', 'error'));
+  }
+  function fetchStandups(pid) {
+    api.raw(`/standups?projectId=${pid}`).then(r => r.json())
+      .then(d => setStandups(Array.isArray(d) ? d : [])).catch(() => setStandups([]));
+  }
+  function startStandup() {
+    const memberIds = (workspaceMembers.length ? workspaceMembers : users).map(m => m.id).filter(Boolean);
+    api.send(`/standups?`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId, memberIds }) })
+      .then(d => { setActiveStandup(d); fetchStandups(i15ProjectId); showToast('Standup started'); })
+      .catch(() => showToast('Failed to start standup', 'error'));
+  }
+  function openStandup(id) {
+    api.raw(`/standups/${id}`).then(r => r.json()).then(d => setActiveStandup(d)).catch(() => {});
+  }
+  function recordStandup(entryId) {
+    api.send(`/standups/${activeStandup.session.id}/entries/${entryId}/record`, { method: 'POST', body: JSON.stringify(standupDraft) })
+      .then(() => { setStandupDraft({ yesterday: '', today: '', blockers: '' }); openStandup(activeStandup.session.id); })
+      .catch(() => showToast('Failed to record', 'error'));
+  }
+  function advanceStandup() {
+    api.send(`/standups/${activeStandup.session.id}/advance`, { method: 'POST' })
+      .then(() => openStandup(activeStandup.session.id)).catch(() => {});
+  }
+  function completeStandup() {
+    api.send(`/standups/${activeStandup.session.id}/complete`, { method: 'POST' })
+      .then(d => { setActiveStandup(d); fetchStandups(i15ProjectId); showToast('Standup complete'); }).catch(() => {});
+  }
+  function fetchRetros(pid) {
+    api.raw(`/retros?projectId=${pid}`).then(r => r.json())
+      .then(d => setRetros(Array.isArray(d) ? d : [])).catch(() => setRetros([]));
+  }
+  function createRetro() {
+    if (!newRetro.title.trim()) { showToast('Title is required', 'error'); return; }
+    api.send(`/retros`, { method: 'POST', body: JSON.stringify({ ...newRetro, projectId: i15ProjectId }) })
+      .then(() => { showToast('Retro created'); setNewRetro({ title: '', template: 'START_STOP_CONTINUE', anonymous: false }); fetchRetros(i15ProjectId); })
+      .catch(() => showToast('Failed to create retro', 'error'));
+  }
+  function openRetro(id) {
+    api.raw(`/retros/${id}`).then(r => r.json()).then(d => setActiveRetro(d)).catch(() => {});
+  }
+  function addRetroNote(columnKey) {
+    const content = (retroNoteDraft[columnKey] || '').trim();
+    if (!content) return;
+    api.send(`/retros/${activeRetro.session.id}/notes`, { method: 'POST', body: JSON.stringify({ columnKey, content }) })
+      .then(() => { setRetroNoteDraft({ ...retroNoteDraft, [columnKey]: '' }); openRetro(activeRetro.session.id); })
+      .catch(() => showToast('Failed to add note', 'error'));
+  }
+  function voteRetroNote(noteId) {
+    api.send(`/retros/notes/${noteId}/vote`, { method: 'POST' }).then(() => openRetro(activeRetro.session.id)).catch(() => {});
+  }
+  function convertRetroNote(noteId) {
+    api.send(`/retros/notes/${noteId}/convert`, { method: 'POST', body: JSON.stringify({}) })
+      .then(() => { showToast('Action item created'); openRetro(activeRetro.session.id); }).catch(() => showToast('Failed', 'error'));
+  }
+  function runSprintPlanning() {
+    api.send(`/cockpit/sprint-planning?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId, timeOffPoints: Number(planningTimeOff) || 0 }) })
+      .then(d => setPlanningResult(d)).catch(() => showToast('Planning helper failed', 'error'));
+  }
+  function runRiskPanel() {
+    if (!riskSprintId) { showToast('Select a sprint', 'error'); return; }
+    api.raw(`/cockpit/risk-panel?workspaceId=${activeWorkspaceId}&sprintId=${riskSprintId}`).then(r => r.json())
+      .then(d => setRiskPanel(d)).catch(() => showToast('Risk panel failed', 'error'));
+  }
+  function runReviewPrep() {
+    if (!reviewSprintId) { showToast('Select a sprint', 'error'); return; }
+    api.send(`/cockpit/review-prep?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ sprintId: reviewSprintId }) })
+      .then(d => setReviewResult(d)).catch(() => showToast('Review prep failed', 'error'));
+  }
+  function runPatterns() {
+    api.send(`/cockpit/patterns?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId }) })
+      .then(d => setPatternsResult(d)).catch(() => showToast('Pattern detection failed', 'error'));
+  }
+
+  // ── Iteration 15 — Product Owner Workspace (Cap W) ───────────────────────────
+  function openPoWorkspace() {
+    setView('poworkspace');
+    const pid = i15ProjectId || (projects[0] && projects[0].id) || '';
+    setI15ProjectId(pid);
+    fetchRoadmapThemes(); fetchIdeas(); fetchFeedback(); fetchObjectives();
+  }
+  function fetchRoadmapThemes() {
+    api.raw(`/roadmap-themes?workspaceId=${activeWorkspaceId}`).then(r => r.json())
+      .then(d => setRoadmapThemes(Array.isArray(d) ? d : [])).catch(() => setRoadmapThemes([]));
+  }
+  function createTheme() {
+    if (!newTheme.name.trim()) { showToast('Name is required', 'error'); return; }
+    api.send(`/roadmap-themes`, { method: 'POST', body: JSON.stringify({ ...newTheme, workspaceId: activeWorkspaceId, projectId: i15ProjectId || null }) })
+      .then(() => { showToast('Theme added'); setNewTheme({ name: '', status: 'PLANNED', quarter: '', description: '' }); fetchRoadmapThemes(); })
+      .catch(() => showToast('Failed to add theme', 'error'));
+  }
+  function updateThemeStatus(theme, status) {
+    api.send(`/roadmap-themes/${theme.id}`, { method: 'PUT', body: JSON.stringify({ ...theme, status }) })
+      .then(() => fetchRoadmapThemes()).catch(() => showToast('Failed to update', 'error'));
+  }
+  function fetchIdeas() {
+    api.raw(`/ideas?workspaceId=${activeWorkspaceId}`).then(r => r.json())
+      .then(d => setIdeas(Array.isArray(d) ? d : [])).catch(() => setIdeas([]));
+  }
+  function createIdea() {
+    if (!newIdea.title.trim()) { showToast('Title is required', 'error'); return; }
+    api.send(`/ideas`, { method: 'POST', body: JSON.stringify({ ...newIdea, workspaceId: activeWorkspaceId, projectId: i15ProjectId || null }) })
+      .then(() => { showToast('Idea captured'); setNewIdea({ title: '', description: '' }); fetchIdeas(); })
+      .catch(() => showToast('Failed to capture idea', 'error'));
+  }
+  function voteIdea(id) {
+    api.send(`/ideas/${id}/vote`, { method: 'POST' }).then(() => fetchIdeas()).catch(() => {});
+  }
+  function promoteIdea(id) {
+    api.send(`/ideas/${id}/promote`, { method: 'POST', body: JSON.stringify({}) })
+      .then(() => { showToast('Promoted to story'); fetchIdeas(); }).catch(() => showToast('Failed', 'error'));
+  }
+  function fetchFeedback() {
+    api.raw(`/customer-feedback?workspaceId=${activeWorkspaceId}`).then(r => r.json())
+      .then(d => setFeedbackItems(Array.isArray(d) ? d : [])).catch(() => setFeedbackItems([]));
+  }
+  function createFeedback() {
+    if (!newFeedback.content.trim()) { showToast('Content is required', 'error'); return; }
+    api.send(`/customer-feedback`, { method: 'POST', body: JSON.stringify({ ...newFeedback, workspaceId: activeWorkspaceId }) })
+      .then(() => { showToast('Feedback logged'); setNewFeedback({ customer: '', source: 'PORTAL', content: '' }); fetchFeedback(); })
+      .catch(() => showToast('Failed to log feedback', 'error'));
+  }
+  function clusterFeedback() {
+    api.send(`/po/feedback-cluster?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({}) })
+      .then(d => setFeedbackClusters(d)).catch(() => showToast('Clustering failed', 'error'));
+  }
+  function fetchObjectives() {
+    api.raw(`/objectives?workspaceId=${activeWorkspaceId}`).then(r => r.json())
+      .then(d => setObjectives(Array.isArray(d) ? d : [])).catch(() => setObjectives([]));
+  }
+  function createObjective() {
+    if (!newObjective.title.trim()) { showToast('Title is required', 'error'); return; }
+    api.send(`/objectives`, { method: 'POST', body: JSON.stringify({ ...newObjective, workspaceId: activeWorkspaceId, projectId: i15ProjectId || null }) })
+      .then(() => { showToast('Objective created'); setNewObjective({ title: '', level: 'TEAM', quarter: '' }); fetchObjectives(); })
+      .catch(() => showToast('Failed to create objective', 'error'));
+  }
+  function openObjective(id) {
+    api.raw(`/objectives/${id}`).then(r => r.json()).then(d => setActiveObjective(d)).catch(() => {});
+  }
+  function addKeyResult() {
+    if (!newKr.title.trim() || !activeObjective) { showToast('Key result title required', 'error'); return; }
+    api.send(`/objectives/${activeObjective.objective.id}/key-results`, { method: 'POST', body: JSON.stringify(newKr) })
+      .then(() => { setNewKr({ title: '', metricType: 'PERCENT', startValue: 0, targetValue: 100, currentValue: 0 }); openObjective(activeObjective.objective.id); })
+      .catch(() => showToast('Failed to add key result', 'error'));
+  }
+  function updateKrProgress(kr, currentValue) {
+    api.send(`/objectives/key-results/${kr.id}`, { method: 'PUT', body: JSON.stringify({ ...kr, currentValue: Number(currentValue) }) })
+      .then(() => openObjective(activeObjective.objective.id)).catch(() => {});
+  }
+  function runReleaseNotes() {
+    api.send(`/po/release-notes?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId, releaseName: releaseNotesName || 'Release notes' }) })
+      .then(d => setReleaseNotesResult(d)).catch(() => showToast('Draft failed', 'error'));
   }
 
   function logWork() {
@@ -1841,9 +2312,14 @@ export default function App() {
           <NavItem active={view === 'bql'} onClick={() => { setView('bql'); fetchBqlFilters(); }} icon="🔍">BQL Query</NavItem>
           <NavItem active={view === 'knowledge'} onClick={() => { setView('knowledge'); fetchKnowledgeSpaces(); setKnowledgeTab('spaces'); setSelectedSpace(null); setSelectedArticle(null); }} icon="📚">Knowledge</NavItem>
           <NavItem active={view === 'sla'} onClick={() => setView('sla')} icon="⏱">SLA Engine</NavItem>
+          <NavItem active={view === 'compliance'} onClick={() => { setView('compliance'); setComplianceTab('dashboard'); setRuleBuilder(null); fetchComplianceDashboard(); fetchComplianceRules(); fetchComplianceViolations(); }} icon="🛡">Compliance</NavItem>
+          <NavItem active={view === 'service'} onClick={() => { setView('service'); setServiceTab('queues'); setServiceQueue('open'); fetchServiceRequests('open'); }} icon="🎧">Service Desk</NavItem>
 
           {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">Project Management</p>}
           <NavItem active={view === 'pm'} onClick={() => { setView('pm'); if (projects.length) { const pid = projects[0].id; setPmProjectId(pid); fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); } }} icon="📋">PM Artifacts</NavItem>
+
+          <NavItem active={view === 'smcockpit'} onClick={openCockpit} icon="🏃">SM Cockpit</NavItem>
+          <NavItem active={view === 'poworkspace'} onClick={openPoWorkspace} icon="🗺">PO Workspace</NavItem>
 
           <NavItem active={view === 'projects'} onClick={() => setView('projects')} icon="📁">
             Projects
@@ -1863,7 +2339,7 @@ export default function App() {
               <Avatar name={currentUser.fullName} size={7} />
             </div>
           ) : (
-            <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer">
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded-md">
               <Avatar name={currentUser.fullName} size={7} />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-neutral-900 truncate">{currentUser.fullName}</p>
@@ -1871,7 +2347,6 @@ export default function App() {
                   <RoleBadge role={userRole.role} tier={userRole.tier} small />
                 </div>
               </div>
-              <button onClick={handleLogout} title="Sign out" className="text-neutral-400 hover:text-brand-orange text-sm">↩</button>
             </div>
           )}
         </div>
@@ -1883,7 +2358,7 @@ export default function App() {
         {/* TOPBAR */}
         <header className="h-14 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between px-6 flex-shrink-0 relative">
           <div className="relative" ref={searchRef}>
-            <input type="text" placeholder="Search work items..."
+            <input type="text" placeholder="Search work items..." aria-label="Search work items"
               value={searchQuery}
               onFocus={() => setSearchOpen(true)}
               onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
@@ -1930,15 +2405,34 @@ export default function App() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setDarkMode(d => !d)} title="Toggle dark/light mode"
-              className="w-8 h-8 rounded-md flex items-center justify-center text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-base">
-              {darkMode ? '☀️' : '🌙'}
-            </button>
+            <AiCommandBar
+              workspaceId={activeWorkspaceId}
+              onToast={showToast}
+              onExecuted={() => { fetchAll(); fetchNotifications(); }}
+            />
             {can('create_items') && (
               <Button variant="action" onClick={() => { setView('board'); setIsCreateOpen(true); }}>
                 + Create
               </Button>
             )}
+            <button onClick={() => { setView('notifications'); fetchNotifications(); }}
+              aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+              className="relative w-9 h-9 rounded-md flex items-center justify-center text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-[120ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
+              <Bell aria-hidden="true" className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-brand-orange text-white text-[10px] font-bold flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+            <UserMenu
+              user={currentUser}
+              role={userRole.role}
+              darkMode={darkMode}
+              onToggleTheme={() => setDarkMode(d => !d)}
+              onOpenSettings={() => { setView('workspace'); fetchMembers(); fetchNotifPrefs(); fetchBranding(); }}
+              onLogout={handleLogout}
+            />
           </div>
         </header>
 
@@ -2467,14 +2961,8 @@ export default function App() {
                   ))}
                 </div>
               </div>
-              {loading
-                ? <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="w-8 h-8 border-2 border-brand-navy border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                      <p className="text-sm text-neutral-400">Loading board...</p>
-                    </div>
-                  </div>
-                : loading ? (
+              {loading ? (
+                  /* Skeleton, never a spinner (Constitution Part 4). */
                   <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
                     {columns.map(col => (
                       <div key={col.name} className="flex-1 min-w-56 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3">
@@ -4715,6 +5203,7 @@ export default function App() {
                       {!reportEditMode && <ExportButtons targetId="report-export-area"
                         rows={workItems.map(i => ({ ID: i.id, Title: i.title, Type: i.type, Status: i.status, Priority: i.priority, Assignee: i.assigneeId }))}
                         filename={selectedReport.name || 'report'} onError={() => showToast('Export failed — try again', 'error')} />}
+                      {!reportEditMode && <Button variant="secondary" onClick={() => openScheduleManager(selectedReport.id)}>Schedule</Button>}
                       {reportEditMode && <Button variant="action" onClick={() => { saveReport(); setReportEditMode(false); }}>Save</Button>}
                       <Button variant={reportEditMode ? 'secondary' : 'action'} onClick={() => { if (reportEditMode) { openReport(selectedReport.id); } else { setReportEditMode(true); } }}>{reportEditMode ? 'Cancel' : 'Edit'}</Button>
                       <button onClick={() => deleteReport(selectedReport.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
@@ -4748,6 +5237,67 @@ export default function App() {
                   )}
                 </>
               )}
+            </div>
+          )}
+
+          {/* Iteration 6 — scheduled report delivery (Cap J, S04) */}
+          {scheduleManagerOpen && selectedReport && (
+            <div className="fixed inset-0 bg-neutral-900/50 dark:bg-black/70 flex items-center justify-center z-50 p-4"
+              onClick={e => { if (e.target === e.currentTarget) setScheduleManagerOpen(false); }}
+              role="dialog" aria-modal="true" aria-label="Report delivery schedules">
+              <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+                <div className="flex items-center justify-between mb-1">
+                  <h2 className="text-lg font-bold text-brand-navy dark:text-white">Scheduled delivery</h2>
+                  <button onClick={() => setScheduleManagerOpen(false)} aria-label="Close"
+                    className="text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">✕</button>
+                </div>
+                <p className="text-xs text-neutral-500 mb-4 truncate">“{selectedReport.name}” — delivered on a cadence to recipients (in-app / email).</p>
+
+                <div className="space-y-2 mb-5">
+                  {reportSchedules.length === 0
+                    ? <p className="text-sm text-neutral-400 text-center py-3">No schedules yet.</p>
+                    : reportSchedules.map(s => (
+                      <div key={s.id} className="flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-neutral-900 dark:text-neutral-100">{s.cadence?.toLowerCase()} · {s.channel?.replace('_', '-').toLowerCase()}</p>
+                          <p className="text-xs text-neutral-400 truncate">{s.recipients ? `to ${s.recipients}` : 'owner only'}{s.nextRunAt ? ` · next ${new Date(s.nextRunAt).toLocaleDateString()}` : ''}</p>
+                        </div>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${s.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500'}`}>{s.active ? 'ACTIVE' : 'PAUSED'}</span>
+                        <button onClick={() => toggleReportSchedule(s)} className="text-xs text-brand-navy hover:underline">{s.active ? 'Pause' : 'Resume'}</button>
+                        <button onClick={() => deleteReportSchedule(s.id)} className="text-xs text-semantic-danger hover:underline">Remove</button>
+                      </div>
+                    ))}
+                </div>
+
+                <div className="border-t border-neutral-200 dark:border-neutral-700 pt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">Add a schedule</p>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <label className="block text-xs text-neutral-500 mb-1">Cadence</label>
+                      <select className="input w-full" value={scheduleForm.cadence} onChange={e => setScheduleForm({ ...scheduleForm, cadence: e.target.value })}>
+                        <option value="DAILY">Daily</option>
+                        <option value="WEEKLY">Weekly</option>
+                        <option value="MONTHLY">Monthly</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-neutral-500 mb-1">Channel</label>
+                      <select className="input w-full" value={scheduleForm.channel} onChange={e => setScheduleForm({ ...scheduleForm, channel: e.target.value })}>
+                        <option value="IN_APP">In-app</option>
+                        <option value="EMAIL">Email</option>
+                        <option value="BOTH">Both</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <label className="block text-xs text-neutral-500 mb-1">Recipients (comma-separated user ids — optional; owner always included)</label>
+                    <input className="input w-full" value={scheduleForm.recipients} onChange={e => setScheduleForm({ ...scheduleForm, recipients: e.target.value })} placeholder="USR-123, USR-456" />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button variant="action" onClick={createReportSchedule}>Add schedule</Button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -5166,6 +5716,1021 @@ export default function App() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {view === 'smcockpit' && (
+            <div className="flex flex-col h-full overflow-y-auto p-6 max-w-7xl mx-auto w-full">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Scrum Master Cockpit</h1>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400">Run the sprint — standup, impediments, risk, retro and review in one place.</p>
+                </div>
+                <select className="input text-sm py-1.5" value={i15ProjectId}
+                  onChange={e => { setI15ProjectId(e.target.value); fetchImpediments(e.target.value); fetchStandups(e.target.value); fetchRetros(e.target.value); fetchSprints(e.target.value); }}>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+
+              <div className="flex flex-wrap gap-2 mb-5">
+                <Button variant="action" onClick={() => setSmTab('planning')}>Plan sprint</Button>
+                <Button variant="secondary" onClick={() => setSmTab('standup')}>Start standup</Button>
+                <Button variant="secondary" onClick={() => setSmTab('retro')}>Run retro</Button>
+              </div>
+
+              <div className="flex flex-wrap gap-1 border-b border-neutral-200 dark:border-neutral-700 mb-5">
+                {[['impediments', 'Impediments'], ['standup', 'Standup'], ['risk', 'Risk panel'], ['planning', 'Planning'], ['retro', 'Retro'], ['review', 'Review prep'], ['patterns', 'Patterns']].map(([k, label]) => (
+                  <button key={k} onClick={() => setSmTab(k)}
+                    className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${smTab === k ? 'border-brand-navy text-brand-navy dark:text-white' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {smTab === 'impediments' && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                  <div className="lg:col-span-2 space-y-2">
+                    {impediments.length === 0
+                      ? <EmptyState icon="🚧" title="No impediments" subtitle="Blockers raised here are tracked with owner, severity and age — not buried in chat." />
+                      : impediments.map(imp => (
+                        <div key={imp.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${imp.severity === 'CRITICAL' ? 'bg-semantic-danger text-white' : imp.severity === 'HIGH' ? 'bg-brand-amber text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300'}`}>{imp.severity}</span>
+                                <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{imp.title}</span>
+                              </div>
+                              {imp.description && <p className="text-xs text-neutral-500 mb-1">{imp.description}</p>}
+                              <p className="text-[11px] text-neutral-400">{imp.category || 'Uncategorized'} · raised {imp.raisedAt ? new Date(imp.raisedAt).toLocaleDateString() : '—'}</p>
+                            </div>
+                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${imp.status === 'RESOLVED' ? 'bg-semantic-success text-white' : imp.status === 'ESCALATED' ? 'bg-semantic-danger text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{imp.status}</span>
+                              {imp.status !== 'RESOLVED' && (
+                                <div className="flex gap-2">
+                                  {imp.status !== 'ESCALATED' && <button onClick={() => updateImpediment(imp, { status: 'ESCALATED', escalated: true })} className="text-[11px] text-semantic-danger hover:underline">Escalate</button>}
+                                  <button onClick={() => updateImpediment(imp, { status: 'RESOLVED' })} className="text-[11px] text-brand-navy hover:underline">Resolve</button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 h-fit">
+                    <h3 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mb-3">Raise impediment</h3>
+                    <div className="space-y-3">
+                      <Field label="Title"><input className="input w-full text-sm" value={newImpediment.title} onChange={e => setNewImpediment({ ...newImpediment, title: e.target.value })} placeholder="What is blocked?" /></Field>
+                      <Field label="Severity">
+                        <select className="input w-full text-sm" value={newImpediment.severity} onChange={e => setNewImpediment({ ...newImpediment, severity: e.target.value })}>
+                          {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </Field>
+                      <Field label="Category"><input className="input w-full text-sm" value={newImpediment.category} onChange={e => setNewImpediment({ ...newImpediment, category: e.target.value })} placeholder="e.g. Environment, Dependency" /></Field>
+                      <Field label="Detail"><textarea className="input w-full text-sm" rows={2} value={newImpediment.description} onChange={e => setNewImpediment({ ...newImpediment, description: e.target.value })} /></Field>
+                      <Button variant="action" fullWidth onClick={createImpediment}>Raise impediment</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {smTab === 'standup' && (
+                <div>
+                  {!activeStandup ? (
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Standups</h3>
+                        <Button variant="action" onClick={startStandup}>Start standup</Button>
+                      </div>
+                      {standups.length === 0
+                        ? <EmptyState icon="🗣" title="No standups yet" subtitle="Start a sequential, time-boxed standup — each member's turn is recorded." />
+                        : <div className="space-y-2">{standups.map(s => (
+                            <button key={s.id} onClick={() => openStandup(s.id)} className="w-full text-left bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 hover:border-brand-navy/40">
+                              <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{s.sessionDate ? new Date(s.sessionDate).toLocaleDateString() : s.id}</span>
+                              <span className={`ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded ${s.status === 'COMPLETED' ? 'bg-semantic-success text-white' : 'bg-brand-navy text-white'}`}>{s.status}</span>
+                            </button>))}</div>}
+                    </div>
+                  ) : (
+                    <div className="max-w-[880px]">
+                      <button onClick={() => setActiveStandup(null)} className="text-xs text-brand-navy hover:underline mb-3">← All standups</button>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Standup — {activeStandup.session.status}</h3>
+                        {activeStandup.session.status !== 'COMPLETED' && (
+                          <div className="flex gap-2">
+                            <Button variant="secondary" onClick={advanceStandup}>Next member</Button>
+                            <Button variant="action" onClick={completeStandup}>Complete</Button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        {activeStandup.entries.map(e => {
+                          const isCurrent = e.memberId === activeStandup.session.currentMemberId;
+                          const name = (users.find(u => u.id === e.memberId) || {}).fullName || e.memberId;
+                          return (
+                            <div key={e.id} className={`rounded-xl p-3 border ${isCurrent ? 'border-brand-navy bg-brand-navy/5' : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800'}`}>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{name}</span>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${e.status === 'RECORDED' ? 'bg-semantic-success text-white' : e.status === 'MISSING' ? 'bg-semantic-danger text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{e.status}</span>
+                              </div>
+                              {e.status === 'RECORDED' && (
+                                <div className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 space-y-0.5">
+                                  <p><span className="font-semibold">Yesterday:</span> {e.yesterday || '—'}</p>
+                                  <p><span className="font-semibold">Today:</span> {e.today || '—'}</p>
+                                  {e.blockers && <p className="text-semantic-danger"><span className="font-semibold">Blockers:</span> {e.blockers}</p>}
+                                </div>
+                              )}
+                              {isCurrent && e.status !== 'RECORDED' && activeStandup.session.status !== 'COMPLETED' && (
+                                <div className="mt-2 space-y-2">
+                                  <input className="input w-full text-xs" placeholder="Yesterday" value={standupDraft.yesterday} onChange={ev => setStandupDraft({ ...standupDraft, yesterday: ev.target.value })} />
+                                  <input className="input w-full text-xs" placeholder="Today" value={standupDraft.today} onChange={ev => setStandupDraft({ ...standupDraft, today: ev.target.value })} />
+                                  <input className="input w-full text-xs" placeholder="Blockers (optional)" value={standupDraft.blockers} onChange={ev => setStandupDraft({ ...standupDraft, blockers: ev.target.value })} />
+                                  <Button variant="action" onClick={() => recordStandup(e.id)}>Record & next</Button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {smTab === 'risk' && (
+                <div>
+                  <div className="flex items-end gap-2 mb-4">
+                    <Field label="Sprint">
+                      <select className="input text-sm" value={riskSprintId} onChange={e => setRiskSprintId(e.target.value)}>
+                        <option value="">Select sprint…</option>
+                        {sprints.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                    </Field>
+                    <Button variant="action" onClick={runRiskPanel}>Analyze</Button>
+                  </div>
+                  {!riskPanel ? <EmptyState icon="⚠️" title="Mid-sprint risk panel" subtitle="Live view of scope creep, stale items, unassigned work and breach predictions." />
+                    : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {[['Scope creep', riskPanel.scopeCreep, 'work_item_id'], ['Stale items', riskPanel.staleItems, 'id'], ['Unassigned', riskPanel.unassignedItems, 'id'], ['Breach risk', riskPanel.breachPredictions, 'id']].map(([label, rows]) => (
+                          <div key={label} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{label}</h4>
+                              <span className="text-lg font-bold text-brand-navy dark:text-white">{(rows || []).length}</span>
+                            </div>
+                            <div className="space-y-1 max-h-40 overflow-y-auto">
+                              {(rows || []).map((r, idx) => <p key={idx} className="text-xs text-neutral-600 dark:text-neutral-300 truncate">{r.title || r.work_item_id || r.id}</p>)}
+                              {(rows || []).length === 0 && <p className="text-xs text-neutral-400">None — clear.</p>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                </div>
+              )}
+
+              {smTab === 'planning' && (
+                <div>
+                  <div className="flex items-end gap-2 mb-4">
+                    <Field label="Time off (points)"><input type="number" className="input text-sm w-28" value={planningTimeOff} onChange={e => setPlanningTimeOff(e.target.value)} /></Field>
+                    <Button variant="action" onClick={runSprintPlanning}>Suggest commit</Button>
+                  </div>
+                  {!planningResult ? <EmptyState icon="📐" title="Sprint planning helper" subtitle="Capacity from rolling velocity, an AI-suggested commit, and the refined-item list." />
+                    : (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <StatCard label="Avg velocity" value={planningResult.averageVelocity} sub="last 3 sprints" color="text-brand-navy" icon="📈" />
+                          <StatCard label="Capacity" value={planningResult.capacity} sub="velocity − time off" color="text-semantic-success" icon="⚡" />
+                          <StatCard label="Suggested" value={planningResult.suggestedPoints} sub="points committed" color="text-brand-navy" icon="✅" />
+                          <StatCard label="Ready" value={planningResult.readyCount} sub="refined items" color="text-neutral-600" icon="📋" />
+                        </div>
+                        <AiMetaBadge meta={planningResult.meta} narrative={planningResult.narrative} />
+                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                          <h4 className="font-semibold text-sm mb-2 text-neutral-900 dark:text-neutral-100">Suggested commit</h4>
+                          {(planningResult.suggestedItems || []).map(i => (
+                            <div key={i.id} className="flex items-center gap-2 py-1.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                              <span className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate">{i.title}</span>
+                              <span className="text-xs text-neutral-400">{i.priority}</span>
+                              <span className="text-xs font-mono text-brand-navy">{i.story_points} pts</span>
+                            </div>
+                          ))}
+                          {(planningResult.suggestedItems || []).length === 0 && <p className="text-xs text-neutral-400">No ready items fit the capacity.</p>}
+                        </div>
+                      </div>
+                    )}
+                </div>
+              )}
+
+              {smTab === 'retro' && (
+                <div>
+                  {!activeRetro ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                      <div className="lg:col-span-2 space-y-2">
+                        {retros.length === 0
+                          ? <EmptyState icon="🔄" title="No retros yet" subtitle="Pick a template, gather the team, and turn outcomes into tracked action items." />
+                          : retros.map(r => (
+                            <button key={r.id} onClick={() => openRetro(r.id)} className="w-full text-left bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 hover:border-brand-navy/40">
+                              <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{r.title}</span>
+                              <span className="ml-2 text-[10px] text-neutral-400">{r.template}</span>
+                              <span className={`ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded ${r.status === 'COMPLETED' ? 'bg-semantic-success text-white' : 'bg-brand-navy text-white'}`}>{r.status}</span>
+                            </button>))}
+                      </div>
+                      <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 h-fit">
+                        <h3 className="font-semibold text-sm mb-3 text-neutral-900 dark:text-neutral-100">New retro</h3>
+                        <div className="space-y-3">
+                          <Field label="Title"><input className="input w-full text-sm" value={newRetro.title} onChange={e => setNewRetro({ ...newRetro, title: e.target.value })} /></Field>
+                          <Field label="Template">
+                            <select className="input w-full text-sm" value={newRetro.template} onChange={e => setNewRetro({ ...newRetro, template: e.target.value })}>
+                              <option value="START_STOP_CONTINUE">Start / Stop / Continue</option>
+                              <option value="FOUR_LS">4 Ls (Liked/Learned/Lacked/Longed for)</option>
+                              <option value="MAD_SAD_GLAD">Mad / Sad / Glad</option>
+                            </select>
+                          </Field>
+                          <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
+                            <input type="checkbox" checked={newRetro.anonymous} onChange={e => setNewRetro({ ...newRetro, anonymous: e.target.checked })} /> Anonymous
+                          </label>
+                          <Button variant="action" fullWidth onClick={createRetro}>Create retro</Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <button onClick={() => setActiveRetro(null)} className="text-xs text-brand-navy hover:underline mb-3">← All retros</button>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">{activeRetro.session.title}</h3>
+                        {activeRetro.session.status !== 'COMPLETED' && <Button variant="secondary" onClick={() => { api.send(`/retros/${activeRetro.session.id}/complete`, { method: 'POST' }).then(() => openRetro(activeRetro.session.id)); }}>Complete</Button>}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {RETRO_COLUMNS[activeRetro.session.template].map(col => (
+                          <div key={col.key} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3">
+                            <h4 className="font-semibold text-sm mb-2 text-neutral-900 dark:text-neutral-100">{col.label}</h4>
+                            <div className="space-y-2 mb-2">
+                              {activeRetro.notes.filter(n => n.columnKey === col.key).map(n => (
+                                <div key={n.id} className="bg-neutral-50 dark:bg-neutral-700 rounded-md p-2">
+                                  <p className="text-xs text-neutral-800 dark:text-neutral-100">{n.content}</p>
+                                  <div className="flex items-center gap-3 mt-1">
+                                    <button onClick={() => voteRetroNote(n.id)} className="text-[11px] text-brand-navy hover:underline">▲ {n.votes}</button>
+                                    {!n.convertedActionItemId && <button onClick={() => convertRetroNote(n.id)} className="text-[11px] text-semantic-success hover:underline">→ Action</button>}
+                                    {n.convertedActionItemId && <span className="text-[10px] text-neutral-400">✓ action</span>}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            {activeRetro.session.status !== 'COMPLETED' && (
+                              <div className="flex gap-1">
+                                <input className="input flex-1 text-xs" placeholder="Add…" value={retroNoteDraft[col.key] || ''} onChange={e => setRetroNoteDraft({ ...retroNoteDraft, [col.key]: e.target.value })} onKeyDown={e => { if (e.key === 'Enter') addRetroNote(col.key); }} />
+                                <button onClick={() => addRetroNote(col.key)} className="px-2 rounded-md bg-brand-navy text-white text-sm">+</button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {smTab === 'review' && (
+                <div>
+                  <div className="flex items-end gap-2 mb-4">
+                    <Field label="Sprint">
+                      <select className="input text-sm" value={reviewSprintId} onChange={e => setReviewSprintId(e.target.value)}>
+                        <option value="">Select sprint…</option>
+                        {sprints.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                    </Field>
+                    <Button variant="action" onClick={runReviewPrep}>Draft review</Button>
+                  </div>
+                  {!reviewResult ? <EmptyState icon="📣" title="Sprint review prep" subtitle="Auto-drafts the summary, demo list and metrics for stakeholders." />
+                    : (
+                      <div className="space-y-4">
+                        <AiMetaBadge meta={reviewResult.meta} narrative={reviewResult.narrative} />
+                        <div className="grid grid-cols-3 gap-3">
+                          <StatCard label="Shipped" value={(reviewResult.shipped || []).length} sub={`${reviewResult.donePoints}/${reviewResult.totalPoints} pts`} color="text-semantic-success" icon="✅" />
+                          <StatCard label="Slipped" value={(reviewResult.slipped || []).length} sub="not done" color="text-semantic-warning" icon="↪" />
+                          <StatCard label="Completion" value={`${reviewResult.completionRate}%`} sub="of items" color="text-brand-navy" icon="📊" />
+                        </div>
+                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                          <h4 className="font-semibold text-sm mb-2 text-neutral-900 dark:text-neutral-100">Demo list</h4>
+                          {(reviewResult.demoList || []).map(i => <p key={i.id} className="text-sm text-neutral-700 dark:text-neutral-200 py-0.5">• {i.title}</p>)}
+                          {(reviewResult.demoList || []).length === 0 && <p className="text-xs text-neutral-400">Nothing shipped yet.</p>}
+                        </div>
+                      </div>
+                    )}
+                </div>
+              )}
+
+              {smTab === 'patterns' && (
+                <div>
+                  <Button variant="action" onClick={runPatterns}>Detect patterns</Button>
+                  {!patternsResult ? <div className="mt-4"><EmptyState icon="🔁" title="Cross-sprint patterns" subtitle="Recurring impediments, repeated estimation misses, and common scope-creep sources." /></div>
+                    : (
+                      <div className="mt-4 space-y-4">
+                        <AiMetaBadge meta={patternsResult.meta} narrative={patternsResult.narrative} />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                            <h4 className="font-semibold text-sm mb-2 text-neutral-900 dark:text-neutral-100">Recurring impediments</h4>
+                            {(patternsResult.recurringImpediments || []).map((r, i) => <p key={i} className="text-xs text-neutral-700 dark:text-neutral-200 py-0.5">{r.category} · {r.count}×</p>)}
+                            {(patternsResult.recurringImpediments || []).length === 0 && <p className="text-xs text-neutral-400">None.</p>}
+                          </div>
+                          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                            <h4 className="font-semibold text-sm mb-2 text-neutral-900 dark:text-neutral-100">Estimation misses</h4>
+                            {(patternsResult.estimationMisses || []).map((r, i) => <p key={i} className="text-xs text-neutral-700 dark:text-neutral-200 py-0.5">{r.sprintName}: −{r.missedBy} pts</p>)}
+                            {(patternsResult.estimationMisses || []).length === 0 && <p className="text-xs text-neutral-400">None.</p>}
+                          </div>
+                          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                            <h4 className="font-semibold text-sm mb-2 text-neutral-900 dark:text-neutral-100">Scope-creep sources</h4>
+                            {(patternsResult.scopeCreepSources || []).map((r, i) => <p key={i} className="text-xs text-neutral-700 dark:text-neutral-200 py-0.5">{r.actor || 'Unknown'} · {r.additions}×</p>)}
+                            {(patternsResult.scopeCreepSources || []).length === 0 && <p className="text-xs text-neutral-400">None.</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {view === 'poworkspace' && (
+            <div className="flex flex-col h-full overflow-y-auto p-6 max-w-7xl mx-auto w-full">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Product Owner Workspace</h1>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400">Roadmap, customer voice, OKRs and release planning in one strategic surface.</p>
+                </div>
+                <select className="input text-sm py-1.5" value={i15ProjectId} onChange={e => setI15ProjectId(e.target.value)}>
+                  <option value="">All projects</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+
+              <div className="flex flex-wrap gap-1 border-b border-neutral-200 dark:border-neutral-700 mb-5">
+                {[['roadmap', 'Roadmap'], ['ideas', 'Idea inbox'], ['feedback', 'Customer feedback'], ['okr', 'OKRs'], ['releasenotes', 'Release notes'], ['stakeholders', 'Stakeholders']].map(([k, label]) => (
+                  <button key={k} onClick={() => setPoTab(k)}
+                    className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${poTab === k ? 'border-brand-navy text-brand-navy dark:text-white' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {poTab === 'roadmap' && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                  <div className="lg:col-span-2 space-y-2">
+                    {roadmapThemes.length === 0
+                      ? <EmptyState icon="🗺" title="No themes yet" subtitle="Lay out strategic themes across quarters — status, scope and dates per theme." />
+                      : roadmapThemes.map(t => (
+                        <div key={t.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{t.name}</span>
+                              {t.quarter && <span className="ml-2 text-xs text-neutral-400">{t.quarter}</span>}
+                              {t.description && <p className="text-xs text-neutral-500 mt-1">{t.description}</p>}
+                            </div>
+                            <select className="input text-xs py-1" value={t.status} onChange={e => updateThemeStatus(t, e.target.value)}>
+                              {['PLANNED', 'IN_PROGRESS', 'SHIPPED', 'ON_HOLD'].map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 h-fit">
+                    <h3 className="font-semibold text-sm mb-3 text-neutral-900 dark:text-neutral-100">Add theme</h3>
+                    <div className="space-y-3">
+                      <Field label="Name"><input className="input w-full text-sm" value={newTheme.name} onChange={e => setNewTheme({ ...newTheme, name: e.target.value })} /></Field>
+                      <Field label="Quarter"><input className="input w-full text-sm" placeholder="2026-Q3" value={newTheme.quarter} onChange={e => setNewTheme({ ...newTheme, quarter: e.target.value })} /></Field>
+                      <Field label="Description"><textarea className="input w-full text-sm" rows={2} value={newTheme.description} onChange={e => setNewTheme({ ...newTheme, description: e.target.value })} /></Field>
+                      <Button variant="action" fullWidth onClick={createTheme}>Add to roadmap</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {poTab === 'ideas' && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                  <div className="lg:col-span-2 space-y-2">
+                    {ideas.length === 0
+                      ? <EmptyState icon="💡" title="Empty inbox" subtitle="Capture ideas fast — they're auto-classified by area and promotable to a story." />
+                      : ideas.map(i => (
+                        <div key={i.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-brand-navy/10 text-brand-navy">{i.area}</span>
+                                <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{i.title}</span>
+                              </div>
+                              {i.description && <p className="text-xs text-neutral-500 mt-1">{i.description}</p>}
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <button onClick={() => voteIdea(i.id)} className="text-xs text-brand-navy hover:underline">▲ {i.votes}</button>
+                              {i.status === 'PROMOTED' ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-semantic-success text-white">PROMOTED</span>
+                                : <button onClick={() => promoteIdea(i.id)} className="text-xs text-semantic-success hover:underline">Promote</button>}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 h-fit">
+                    <h3 className="font-semibold text-sm mb-3 text-neutral-900 dark:text-neutral-100">Capture idea</h3>
+                    <div className="space-y-3">
+                      <Field label="Title"><input className="input w-full text-sm" value={newIdea.title} onChange={e => setNewIdea({ ...newIdea, title: e.target.value })} /></Field>
+                      <Field label="Detail"><textarea className="input w-full text-sm" rows={3} value={newIdea.description} onChange={e => setNewIdea({ ...newIdea, description: e.target.value })} /></Field>
+                      <Button variant="action" fullWidth onClick={createIdea}>Add to inbox</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {poTab === 'feedback' && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                  <div className="lg:col-span-2 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">Feedback ({feedbackItems.length})</h3>
+                      <Button variant="secondary" onClick={clusterFeedback}>Cluster into themes</Button>
+                    </div>
+                    {feedbackClusters && (
+                      <div className="bg-brand-navy/5 border border-brand-navy/20 rounded-xl p-4">
+                        <AiMetaBadge meta={feedbackClusters.meta} narrative={feedbackClusters.narrative} />
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          {(feedbackClusters.clusters || []).map((c, idx) => (
+                            <div key={idx} className="bg-white dark:bg-neutral-800 rounded-md p-2 border border-neutral-200 dark:border-neutral-700">
+                              <div className="flex items-center justify-between"><span className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">{c.theme}</span><span className="text-xs text-brand-navy font-bold">{c.count}</span></div>
+                              <p className="text-[10px] text-neutral-400">+{c.positive} / ~{c.neutral} / −{c.negative}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {feedbackItems.length === 0
+                      ? <EmptyState icon="📨" title="No feedback yet" subtitle="Aggregate customer voice from portal, email and interviews, then cluster into themes." />
+                      : feedbackItems.map(f => (
+                        <div key={f.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] text-neutral-400">{f.source}</span>
+                            {f.customer && <span className="text-[10px] text-neutral-500">· {f.customer}</span>}
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${f.sentiment === 'POSITIVE' ? 'bg-semantic-success text-white' : f.sentiment === 'NEGATIVE' ? 'bg-semantic-danger text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{f.sentiment}</span>
+                            {f.theme && <span className="text-[10px] text-brand-navy">#{f.theme}</span>}
+                          </div>
+                          <p className="text-sm text-neutral-700 dark:text-neutral-200">{f.content}</p>
+                        </div>
+                      ))}
+                  </div>
+                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 h-fit">
+                    <h3 className="font-semibold text-sm mb-3 text-neutral-900 dark:text-neutral-100">Log feedback</h3>
+                    <div className="space-y-3">
+                      <Field label="Customer"><input className="input w-full text-sm" value={newFeedback.customer} onChange={e => setNewFeedback({ ...newFeedback, customer: e.target.value })} /></Field>
+                      <Field label="Source">
+                        <select className="input w-full text-sm" value={newFeedback.source} onChange={e => setNewFeedback({ ...newFeedback, source: e.target.value })}>
+                          {['PORTAL', 'EMAIL', 'COMMENT', 'INTERVIEW'].map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </Field>
+                      <Field label="Feedback"><textarea className="input w-full text-sm" rows={3} value={newFeedback.content} onChange={e => setNewFeedback({ ...newFeedback, content: e.target.value })} /></Field>
+                      <Button variant="action" fullWidth onClick={createFeedback}>Log feedback</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {poTab === 'okr' && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">Objectives</h3>
+                    {objectives.map(o => (
+                      <button key={o.id} onClick={() => openObjective(o.id)} className={`w-full text-left rounded-xl p-3 border ${activeObjective?.objective?.id === o.id ? 'border-brand-navy bg-brand-navy/5' : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800'}`}>
+                        <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{o.title}</span>
+                        <span className="ml-1 text-[10px] text-neutral-400">{o.level} {o.quarter}</span>
+                      </button>
+                    ))}
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 mt-2">
+                      <input className="input w-full text-sm mb-2" placeholder="New objective…" value={newObjective.title} onChange={e => setNewObjective({ ...newObjective, title: e.target.value })} />
+                      <input className="input w-full text-sm mb-2" placeholder="Quarter (2026-Q3)" value={newObjective.quarter} onChange={e => setNewObjective({ ...newObjective, quarter: e.target.value })} />
+                      <Button variant="action" fullWidth onClick={createObjective}>Add objective</Button>
+                    </div>
+                  </div>
+                  <div className="lg:col-span-2">
+                    {!activeObjective ? <EmptyState icon="🎯" title="Select an objective" subtitle="Add key results and link work items; progress rolls up from the key results." />
+                      : (
+                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">{activeObjective.objective.title}</h3>
+                            <span className="text-lg font-bold text-brand-navy dark:text-white">{activeObjective.progressPercent}%</span>
+                          </div>
+                          <div className="space-y-2 mb-4">
+                            {(activeObjective.keyResults || []).map(kr => (
+                              <div key={kr.id} className="border border-neutral-100 dark:border-neutral-700 rounded-md p-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-sm text-neutral-800 dark:text-neutral-100 truncate">{kr.title}</span>
+                                  <input type="number" className="input text-xs w-20" defaultValue={kr.currentValue} onBlur={e => updateKrProgress(kr, e.target.value)} />
+                                </div>
+                                <div className="h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full mt-1 overflow-hidden">
+                                  <div className="h-full bg-semantic-success rounded-full" style={{ width: `${kr.targetValue !== kr.startValue ? Math.max(0, Math.min(100, Math.round((kr.currentValue - kr.startValue) / (kr.targetValue - kr.startValue) * 100))) : 0}%` }} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex gap-1">
+                            <input className="input flex-1 text-sm" placeholder="New key result…" value={newKr.title} onChange={e => setNewKr({ ...newKr, title: e.target.value })} />
+                            <button onClick={addKeyResult} className="px-3 rounded-md bg-brand-navy text-white text-sm">Add</button>
+                          </div>
+                        </div>
+                      )}
+                  </div>
+                </div>
+              )}
+
+              {poTab === 'releasenotes' && (
+                <div>
+                  <div className="flex items-end gap-2 mb-4">
+                    <Field label="Release name"><input className="input text-sm" placeholder="Portal v4.2.0" value={releaseNotesName} onChange={e => setReleaseNotesName(e.target.value)} /></Field>
+                    <Button variant="action" onClick={runReleaseNotes}>Draft notes</Button>
+                  </div>
+                  {!releaseNotesResult ? <EmptyState icon="📝" title="Release notes auto-draft" subtitle="AI drafts user-facing release notes from completed items — you edit and publish." />
+                    : (
+                      <div className="space-y-3">
+                        <AiMetaBadge meta={releaseNotesResult.meta} narrative={releaseNotesResult.narrative} />
+                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                          <pre className="text-sm text-neutral-800 dark:text-neutral-100 whitespace-pre-wrap font-mono">{releaseNotesResult.markdown}</pre>
+                        </div>
+                      </div>
+                    )}
+                </div>
+              )}
+
+              {poTab === 'stakeholders' && (
+                <div>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-3">Stakeholders are mapped by influence × interest in <button onClick={() => { setView('pm'); if (projects.length) { const pid = projects[0].id; setPmProjectId(pid); fetchStakeholders(pid); } }} className="text-brand-navy hover:underline">PM Artifacts → Stakeholders</button>. Targeted release communication uses that map rather than blast email.</p>
+                  <EmptyState icon="📢" title="Targeted communication" subtitle="Send release/status updates to the stakeholders who care — built on the stakeholder map (I15-S14)." />
+                </div>
+              )}
+            </div>
+          )}
+
+          {view === 'compliance' && (
+            <div className="flex flex-col h-full overflow-hidden">
+              {/* Header + tabs */}
+              <div className="px-6 pt-5 border-b border-neutral-200 dark:border-neutral-700">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Compliance</h1>
+                    <p className="text-sm text-neutral-500">Native rules engine — define what compliance means, catch drift in hours not quarters.</p>
+                  </div>
+                  {complianceTab === 'rules' && can('manage_compliance') && (
+                    <Button variant="action" onClick={newRuleBuilder}>New Rule</Button>
+                  )}
+                </div>
+                <div className="flex gap-1">
+                  {[
+                    { key: 'dashboard',  label: 'Dashboard',  load: () => fetchComplianceDashboard() },
+                    { key: 'rules',      label: 'Rules',      load: () => { fetchComplianceRules(); fetchComplianceTemplates(); } },
+                    { key: 'violations', label: 'Violations', load: () => fetchComplianceViolations() },
+                    { key: 'audit',      label: 'Audit log',  load: () => fetchComplianceAudit() },
+                  ].map(t => (
+                    <button key={t.key} onClick={() => { setComplianceTab(t.key); t.load(); }}
+                      className={`text-sm font-medium px-3 py-2 border-b-2 transition-colors ${complianceTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6">
+                {/* ── DASHBOARD ── */}
+                {complianceTab === 'dashboard' && (
+                  !complianceDashboard ? <EmptyState icon="🛡" title="Loading compliance posture…" subtitle="Severity, trend and the rules × projects heatmap appear here." />
+                  : (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {[
+                          { label: 'Active rules',  value: complianceDashboard.totals?.activeRules ?? 0,           tone: 'text-brand-navy' },
+                          { label: 'Open',          value: complianceDashboard.totals?.openViolations ?? 0,        tone: 'text-semantic-danger' },
+                          { label: 'Acknowledged',  value: complianceDashboard.totals?.acknowledgedViolations ?? 0, tone: 'text-semantic-warning' },
+                          { label: 'Resolved',      value: complianceDashboard.totals?.resolvedViolations ?? 0,    tone: 'text-semantic-success' },
+                        ].map(c => (
+                          <div key={c.label} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                            <p className="text-xs uppercase tracking-wide text-neutral-400 font-semibold">{c.label}</p>
+                            <p className={`text-3xl font-bold mt-1 ${c.tone}`}>{c.value}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Open by severity</h3>
+                          {(complianceDashboard.severityBreakdown || []).length === 0
+                            ? <p className="text-sm text-neutral-400 py-4 text-center">No active violations. Clean posture.</p>
+                            : (complianceDashboard.severityBreakdown || []).map(s => (
+                              <div key={s.severity} className="flex items-center gap-3 py-1.5">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[s.severity] || severityClass.MEDIUM}`}>{s.severity}</span>
+                                <div className="flex-1 h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
+                                  <div className="h-full bg-brand-navy rounded-full" style={{ width: `${Math.min(100, Number(s.count) * 12)}%` }} />
+                                </div>
+                                <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 w-8 text-right">{s.count}</span>
+                              </div>
+                            ))}
+                        </div>
+
+                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Top rules by open violations</h3>
+                          {(complianceDashboard.topRules || []).length === 0
+                            ? <p className="text-sm text-neutral-400 py-4 text-center">Nothing flagged.</p>
+                            : (complianceDashboard.topRules || []).map(r => (
+                              <div key={r.rule_id} className="flex items-center justify-between py-1.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                                <span className="text-sm text-neutral-700 dark:text-neutral-200 truncate">{r.rule_name}</span>
+                                <span className="text-sm font-semibold text-semantic-danger ml-2">{r.count}</span>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+
+                      <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">30-day detection trend</h3>
+                        {(complianceDashboard.trend || []).length === 0
+                          ? <p className="text-sm text-neutral-400 py-4 text-center">No violations detected in the last 30 days.</p>
+                          : (
+                            <div className="flex items-end gap-1 h-28 mt-3">
+                              {(complianceDashboard.trend || []).map(d => {
+                                const max = Math.max(...complianceDashboard.trend.map(x => Number(x.count)), 1);
+                                return (
+                                  <div key={d.day} className="flex-1 flex flex-col items-center justify-end" title={`${d.day}: ${d.count}`}>
+                                    <div className="w-full bg-brand-navy-tint rounded-t" style={{ height: `${Math.max(4, Number(d.count) * 100 / max)}%` }} />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                      </div>
+
+                      <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Rules × projects heatmap</h3>
+                        {(complianceDashboard.heatmap || []).length === 0
+                          ? <p className="text-sm text-neutral-400 py-4 text-center">No open violations to map.</p>
+                          : (
+                            <table className="w-full text-sm">
+                              <thead><tr className="text-left text-xs uppercase tracking-wide text-neutral-400">
+                                <th className="py-1">Rule</th><th className="py-1">Project</th><th className="py-1 text-right">Open</th></tr></thead>
+                              <tbody>
+                                {(complianceDashboard.heatmap || []).map((h, i) => (
+                                  <tr key={i} className="border-t border-neutral-100 dark:border-neutral-700">
+                                    <td className="py-1.5 text-neutral-700 dark:text-neutral-200">{h.rule_name}</td>
+                                    <td className="py-1.5 font-mono text-xs text-neutral-400">{h.project_id || '—'}</td>
+                                    <td className="py-1.5 text-right font-semibold text-semantic-danger">{h.count}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                      </div>
+                    </div>
+                  )
+                )}
+
+                {/* ── RULES ── */}
+                {complianceTab === 'rules' && (
+                  <div className="space-y-6">
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Your rules ({complianceRules.length})</h3>
+                      {complianceRules.length === 0
+                        ? <EmptyState icon="📋" title="No rules yet" subtitle="Create a rule or start from a seeded template below." action={can('manage_compliance') ? <Button variant="action" onClick={newRuleBuilder}>New Rule</Button> : null} />
+                        : complianceRules.map(r => (
+                          <div key={r.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[r.severity] || severityClass.MEDIUM}`}>{r.severity}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{r.name}</p>
+                              <p className="text-xs text-neutral-400 truncate font-mono">{r.scopeBql ? `${r.scopeBql} ⟶ ` : ''}{r.assertionBql}</p>
+                            </div>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${r.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500'}`}>{r.active ? 'ACTIVE' : 'INACTIVE'}</span>
+                            {can('manage_compliance') && <>
+                              <button onClick={() => testRule(r.id)} className="text-xs text-brand-navy hover:underline">Test</button>
+                              {r.active
+                                ? <button onClick={() => evaluateRule(r.id)} className="text-xs text-brand-navy hover:underline">Run</button>
+                                : null}
+                              <button onClick={() => setRuleActive(r.id, !r.active)} className="text-xs text-brand-navy hover:underline">{r.active ? 'Deactivate' : 'Activate'}</button>
+                              <button onClick={() => editRuleBuilder(r)} className="text-xs text-neutral-500 hover:underline">Edit</button>
+                              <button onClick={() => deleteRule(r.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
+                            </>}
+                          </div>
+                        ))}
+                      {ruleTestResult && ruleTestResult.valid && (
+                        <p className="text-xs text-neutral-500 mt-3">Last test: would flag <b>{ruleTestResult.violations}</b> item(s){ruleTestResult.sample?.length ? ` — e.g. ${ruleTestResult.sample.slice(0, 3).map(s => s.id).join(', ')}` : ''}.</p>
+                      )}
+                    </div>
+
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">Seeded template library</h3>
+                      <p className="text-xs text-neutral-400 mb-3">Opinionated defaults — clone one, test it, then activate.</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {complianceTemplates.map(t => (
+                          <div key={t.id} className="flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${severityClass[t.severity] || severityClass.MEDIUM}`}>{t.severity}</span>
+                            <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-200 truncate" title={t.description}>{t.name}</span>
+                            {can('manage_compliance') && <button onClick={() => cloneTemplate(t.id)} className="text-xs text-brand-navy hover:underline">+ Add</button>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── VIOLATIONS ── */}
+                {complianceTab === 'violations' && (
+                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <select value={violationFilter} onChange={e => { setViolationFilter(e.target.value); fetchComplianceViolations(e.target.value); }} className="input text-xs py-1">
+                          <option value="">All statuses</option>
+                          <option value="OPEN">Open</option>
+                          <option value="ACKNOWLEDGED">Acknowledged</option>
+                          <option value="RESOLVED">Resolved</option>
+                          <option value="WONT_FIX">Won't fix</option>
+                        </select>
+                        <span className="text-xs text-neutral-400">{complianceViolations.length} violation(s)</span>
+                      </div>
+                      {can('manage_compliance') && selectedViolations.length > 0 && (
+                        <Button variant="secondary" onClick={bulkAcknowledge}>Acknowledge {selectedViolations.length}</Button>
+                      )}
+                    </div>
+                    {complianceViolations.length === 0
+                      ? <EmptyState icon="✅" title="No violations" subtitle="Nothing is breaching the active rules for this filter." />
+                      : complianceViolations.map(v => (
+                        <div key={v.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                          {can('manage_compliance') && (v.status === 'OPEN' || v.status === 'ACKNOWLEDGED') && (
+                            <input type="checkbox" checked={selectedViolations.includes(v.id)} onChange={() => toggleViolationSelect(v.id)} />
+                          )}
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[v.severity] || severityClass.MEDIUM}`}>{v.severity}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-neutral-900 dark:text-neutral-100 truncate">{v.workItemTitle || v.workItemId}</p>
+                            <p className="text-xs text-neutral-400 font-mono">{v.workItemId}</p>
+                          </div>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${vStatusClass[v.status] || ''}`}>{v.status}{v.escalated ? ' ↑' : ''}</span>
+                          {can('manage_compliance') && (v.status === 'OPEN' || v.status === 'ACKNOWLEDGED') && <>
+                            {v.status === 'OPEN' && <button onClick={() => actOnViolation(v.id, 'acknowledge')} className="text-xs text-brand-navy hover:underline">Ack</button>}
+                            <button onClick={() => actOnViolation(v.id, 'resolve')} className="text-xs text-semantic-success hover:underline">Resolve</button>
+                            <button onClick={() => actOnViolation(v.id, 'wont-fix')} className="text-xs text-neutral-500 hover:underline">Won't fix</button>
+                          </>}
+                        </div>
+                      ))}
+                  </div>
+                )}
+
+                {/* ── AUDIT LOG ── */}
+                {complianceTab === 'audit' && (
+                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Append-only audit log</h3>
+                      <Button variant="secondary" onClick={exportComplianceAudit}>Export CSV</Button>
+                    </div>
+                    {complianceAudit.length === 0
+                      ? <EmptyState icon="📜" title="No audit entries yet" subtitle="Rule changes, violations, acknowledgements and resolutions are recorded here." />
+                      : (
+                        <table className="w-full text-sm">
+                          <thead><tr className="text-left text-xs uppercase tracking-wide text-neutral-400">
+                            <th className="py-1">When</th><th className="py-1">Event</th><th className="py-1">Subject</th><th className="py-1">Actor</th></tr></thead>
+                          <tbody>
+                            {complianceAudit.map((e, i) => (
+                              <tr key={i} className="border-t border-neutral-100 dark:border-neutral-700">
+                                <td className="py-1.5 text-neutral-400 whitespace-nowrap">{e.occurred_at ? new Date(e.occurred_at).toLocaleString() : '—'}</td>
+                                <td className="py-1.5 text-neutral-700 dark:text-neutral-200">{(e.event_type || '').replace(/^COMPLIANCE_/, '').replaceAll('_', ' ').toLowerCase()}</td>
+                                <td className="py-1.5 font-mono text-xs text-neutral-400">{e.aggregate_id}</td>
+                                <td className="py-1.5 text-neutral-500">{e.actor_id}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                  </div>
+                )}
+              </div>
+
+              {/* Rule builder (test-before-activate) */}
+              {ruleBuilder && (
+                <div className="fixed inset-0 bg-neutral-900/50 dark:bg-black/70 flex items-center justify-center z-50 p-4" onClick={e => { if (e.target === e.currentTarget) setRuleBuilder(null); }}>
+                  <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+                    <h2 className="text-xl font-bold text-brand-navy dark:text-white mb-4">{ruleBuilder.id ? 'Edit rule' : 'New compliance rule'}</h2>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-500 mb-1">Name</label>
+                        <input className="input w-full" value={ruleBuilder.name} onChange={e => setRuleBuilder({ ...ruleBuilder, name: e.target.value })} placeholder="Stories need acceptance criteria before In Progress" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-500 mb-1">Description</label>
+                        <input className="input w-full" value={ruleBuilder.description} onChange={e => setRuleBuilder({ ...ruleBuilder, description: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-500 mb-1">Scope (BQL) — which items the rule applies to</label>
+                        <input className="input w-full font-mono text-sm" value={ruleBuilder.scopeBql} onChange={e => setRuleBuilder({ ...ruleBuilder, scopeBql: e.target.value })} placeholder="type = Story AND status = In Progress" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-500 mb-1">Assertion (BQL) — what scoped items must satisfy</label>
+                        <input className="input w-full font-mono text-sm" value={ruleBuilder.assertionBql} onChange={e => setRuleBuilder({ ...ruleBuilder, assertionBql: e.target.value })} placeholder="acceptance_criteria != ''" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-neutral-500 mb-1">Severity</label>
+                          <select className="input w-full" value={ruleBuilder.severity} onChange={e => setRuleBuilder({ ...ruleBuilder, severity: e.target.value })}>
+                            {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-neutral-500 mb-1">Evaluation</label>
+                          <select className="input w-full" value={ruleBuilder.evaluationMode} onChange={e => setRuleBuilder({ ...ruleBuilder, evaluationMode: e.target.value })}>
+                            <option value="CONTINUOUS">Continuous</option>
+                            <option value="SCHEDULED">Scheduled</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-500 mb-1">Notify</label>
+                        <div className="flex gap-4 text-sm text-neutral-700 dark:text-neutral-200">
+                          <label className="flex items-center gap-2"><input type="checkbox" checked={ruleBuilder.notifyOwner} onChange={e => setRuleBuilder({ ...ruleBuilder, notifyOwner: e.target.checked })} /> Item owner</label>
+                          <label className="flex items-center gap-2"><input type="checkbox" checked={ruleBuilder.notifyAdmin} onChange={e => setRuleBuilder({ ...ruleBuilder, notifyAdmin: e.target.checked })} /> Project admins</label>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-500 mb-1">Escalate if unacknowledged after (hours) — optional</label>
+                        <input type="number" min="0" className="input w-full" value={ruleBuilder.escalateAfterHours} onChange={e => setRuleBuilder({ ...ruleBuilder, escalateAfterHours: e.target.value })} placeholder="e.g. 24" />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 mt-5">
+                      <Button variant="secondary" onClick={() => setRuleBuilder(null)}>Cancel</Button>
+                      <Button variant="action" onClick={saveRule}>{ruleBuilder.id ? 'Save rule' : 'Create rule (inactive)'}</Button>
+                    </div>
+                    <p className="text-xs text-neutral-400 mt-3">New rules are created inactive — test them, then activate from the rules list.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {view === 'service' && (
+            <div className="flex flex-col h-full overflow-hidden">
+              <div className="px-6 pt-5 border-b border-neutral-200 dark:border-neutral-700">
+                <div className="mb-3">
+                  <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Service Desk</h1>
+                  <p className="text-sm text-neutral-500">Customer requests, agent queues, SLAs and satisfaction — the external face of Works.</p>
+                </div>
+                <div className="flex gap-1">
+                  {[
+                    { key: 'queues', label: 'Queues', load: () => fetchServiceRequests(serviceQueue) },
+                    { key: 'customers', label: 'Customers', load: () => fetchServiceCustomers() },
+                    { key: 'types', label: 'Request types', load: () => fetchServiceTypes() },
+                    { key: 'slas', label: 'SLA tiers', load: () => fetchServiceTiers() },
+                    { key: 'csat', label: 'CSAT', load: () => fetchServiceCsat() },
+                  ].map(t => (
+                    <button key={t.key} onClick={() => { setServiceTab(t.key); t.load(); }}
+                      className={`text-sm font-medium px-3 py-2 border-b-2 transition-colors ${serviceTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700'}`}>{t.label}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                {serviceTab === 'queues' && (
+                  <div className="space-y-4">
+                    <div className="flex gap-2">
+                      {['open', 'mine', 'unassigned', 'high'].map(q => (
+                        <button key={q} onClick={() => { setServiceQueue(q); fetchServiceRequests(q); }}
+                          className={`text-xs font-medium px-3 py-1.5 rounded-md border ${serviceQueue === q ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white dark:bg-neutral-800 text-neutral-600 border-neutral-200 dark:border-neutral-700'}`}>
+                          {q === 'open' ? 'All open' : q === 'mine' ? 'Mine' : q === 'unassigned' ? 'Unassigned' : 'High priority'}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      {serviceRequests.length === 0
+                        ? <EmptyState icon="🎧" title="Queue is clear" subtitle="No requests match this queue right now." />
+                        : serviceRequests.map(({ request: r, sla }) => (
+                          <div key={r.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded w-16 text-center bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200">{r.priority}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{r.subject}</p>
+                              <p className="text-xs text-neutral-400 truncate">{r.typeKey} · {r.id}{r.assigneeId ? ` · ${r.assigneeId}` : ' · unassigned'}</p>
+                            </div>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${sla.breached ? 'bg-semantic-danger text-white' : sla.state === 'AT_RISK' ? 'bg-semantic-warning text-white' : sla.state === 'NONE' ? 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200' : 'bg-semantic-success text-white'}`}>{sla.state === 'NONE' ? 'No SLA' : sla.state}</span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200">{(r.status || '').replace('_', ' ')}</span>
+                            {can('work_service') && (
+                              <>
+                                {!r.assigneeId && <button onClick={() => assignServiceRequest(r.id)} className="text-xs text-brand-navy hover:underline">Pick up</button>}
+                                {r.status !== 'RESOLVED' && r.status !== 'CLOSED' && <button onClick={() => transitionServiceRequest(r.id, 'RESOLVED')} className="text-xs text-semantic-success hover:underline">Resolve</button>}
+                                {r.status === 'RESOLVED' && <button onClick={() => transitionServiceRequest(r.id, 'CLOSED')} className="text-xs text-neutral-500 hover:underline">Close</button>}
+                              </>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {serviceTab === 'customers' && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Customer accounts ({serviceCustomers.length})</h3>
+                      {can('manage_service') && <Button variant="action" onClick={() => setNewCustomer({ name: '', tier: 'SILVER', primaryColor: '', subdomain: '' })}>New customer</Button>}
+                    </div>
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      {serviceCustomers.length === 0
+                        ? <EmptyState icon="🏢" title="No customers yet" subtitle="Add a customer organization to start serving them through the portal." />
+                        : serviceCustomers.map(c => (
+                          <div key={c.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{c.name}</p>
+                              <p className="text-xs text-neutral-400 truncate">{c.subdomain ? `${c.subdomain} · ` : ''}{c.id}</p>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-brand-navy text-white">{c.tier}</span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${c.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 text-neutral-600'}`}>{c.active ? 'ACTIVE' : 'INACTIVE'}</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {serviceTab === 'types' && (
+                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                    {serviceTypes.length === 0
+                      ? <EmptyState icon="🗂" title="No request types" subtitle="Incident, Change and Service types power the portal forms." />
+                      : serviceTypes.map(t => (
+                        <div key={t.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{t.name}</p>
+                            <p className="text-xs text-neutral-400 truncate">{t.typeKey} · default {t.defaultPriority}</p>
+                          </div>
+                          {t.isSystem && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200">SYSTEM</span>}
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 text-neutral-600'}`}>{t.active ? 'ACTIVE' : 'INACTIVE'}</span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+
+                {serviceTab === 'slas' && (
+                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                    {serviceTiers.length === 0
+                      ? <EmptyState icon="⏱" title="No SLA tiers" subtitle="Define response and resolution targets per customer tier." />
+                      : serviceTiers.map(t => (
+                        <div key={t.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded w-20 text-center bg-brand-navy text-white">{t.tier}</span>
+                          <div className="flex-1 text-sm text-neutral-700 dark:text-neutral-200">
+                            Respond in {t.responseMinutes}m · Resolve in {t.resolutionMinutes}m
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+
+                {serviceTab === 'csat' && (
+                  <div className="space-y-4">
+                    {!serviceCsat ? <EmptyState icon="⭐" title="No CSAT yet" subtitle="Ratings appear here once customers rate resolved requests." />
+                      : (
+                        <>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {[
+                              { label: 'Responses', value: serviceCsat.summary?.count ?? 0 },
+                              { label: 'Average', value: serviceCsat.summary?.average ?? 0 },
+                              { label: '% Satisfied', value: `${serviceCsat.summary?.percentSatisfied ?? 0}%` },
+                            ].map(c => (
+                              <div key={c.label} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                                <p className="text-xs uppercase tracking-wide text-neutral-400 font-semibold">{c.label}</p>
+                                <p className="text-3xl font-bold mt-1 text-brand-navy">{c.value}</p>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                            <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Recent feedback</h3>
+                            {(serviceCsat.responses || []).length === 0
+                              ? <p className="text-sm text-neutral-500">No comments yet.</p>
+                              : serviceCsat.responses.slice(0, 10).map(r => (
+                                <div key={r.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                                  <span className="text-brand-orange text-sm">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                                  <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-200 truncate">{r.comment || '—'}</span>
+                                </div>
+                              ))}
+                          </div>
+                        </>
+                      )}
+                  </div>
+                )}
+              </div>
+
+              {newCustomer && (
+                <div className="fixed inset-0 bg-neutral-900/50 flex items-center justify-center z-modal p-4">
+                  <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl w-full max-w-lg p-6">
+                    <h2 className="text-xl font-bold text-brand-navy dark:text-white mb-4">New customer</h2>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-500 mb-1">Name</label>
+                        <input className="input w-full" value={newCustomer.name} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-neutral-500 mb-1">Tier</label>
+                          <select className="input w-full" value={newCustomer.tier} onChange={e => setNewCustomer({ ...newCustomer, tier: e.target.value })}>
+                            {['PLATINUM', 'GOLD', 'SILVER'].map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-neutral-500 mb-1">Subdomain</label>
+                          <input className="input w-full" value={newCustomer.subdomain} onChange={e => setNewCustomer({ ...newCustomer, subdomain: e.target.value })} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 mt-5">
+                      <Button variant="secondary" onClick={() => setNewCustomer(null)}>Cancel</Button>
+                      <Button variant="action" onClick={createServiceCustomer}>Create customer</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -5663,6 +7228,21 @@ export default function App() {
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+                {/* Iteration 7 (Cap B) — auto time-in-status, projected from the event log */}
+                {statusDurations.length > 0 && (
+                  <div className="mb-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3">
+                    <p className="text-xs uppercase tracking-wide text-neutral-400 font-semibold mb-2">Time in status</p>
+                    {statusDurations.map(d => (
+                      <div key={d.status} className="flex items-center justify-between py-1 text-sm">
+                        <span className="text-neutral-700 dark:text-neutral-200">{d.status}</span>
+                        <span className="text-neutral-500">
+                          {humanDuration(d.totalSeconds)}
+                          {d.timesEntered > 1 && <span className="text-neutral-400"> · {d.timesEntered}×</span>}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
                 {/* Event type filter */}

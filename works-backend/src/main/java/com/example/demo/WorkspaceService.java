@@ -107,7 +107,7 @@ public class WorkspaceService {
                 .orElseThrow(() -> ApiException.notFound("User", email));
         jdbc.update("INSERT INTO workspace_members (workspace_id, user_id, system_role) "
                 + "VALUES (?, ?, ?) ON CONFLICT DO NOTHING", workspaceId, user.getId(), resolvedRole);
-        eventService.record(workspaceId, "MEMBER_ADDED", callerId,
+        eventService.recordInWorkspace(workspaceId, workspaceId, "MEMBER_ADDED", callerId,
                 Map.of("workspaceId", workspaceId, "userId", user.getId(), "role", resolvedRole));
         return Map.of("message", "Member added", "userId", user.getId());
     }
@@ -117,7 +117,7 @@ public class WorkspaceService {
         rbac.require(callerId, workspaceId, "remove_members");
         jdbc.update("DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?",
                 workspaceId, memberId);
-        eventService.record(workspaceId, "MEMBER_REMOVED", callerId,
+        eventService.recordInWorkspace(workspaceId, workspaceId, "MEMBER_REMOVED", callerId,
                 Map.of("workspaceId", workspaceId, "userId", memberId));
         return Map.of("message", "Member removed");
     }
@@ -141,7 +141,7 @@ public class WorkspaceService {
         w.setLogoUrl((logoUrl == null || logoUrl.isBlank()) ? null : logoUrl);
         w.setDescription(description);
         workspaceRepository.save(w);
-        eventService.record(workspaceId, "WORKSPACE_BRANDING_UPDATED", callerId,
+        eventService.recordInWorkspace(workspaceId, workspaceId, "WORKSPACE_BRANDING_UPDATED", callerId,
                 Map.of("workspaceId", workspaceId, "primaryColor", w.getPrimaryColor()));
         return brandingMap(w);
     }
@@ -175,7 +175,7 @@ public class WorkspaceService {
         jdbc.update("INSERT INTO project_members (project_id, user_id, role) VALUES (?,?,?) "
                 + "ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role",
                 projectId, user.getId(), resolvedRole);
-        eventService.record(projectId, "PROJECT_MEMBER_ADDED", callerId,
+        eventService.recordInWorkspace(workspaceId, projectId, "PROJECT_MEMBER_ADDED", callerId,
                 Map.of("workspaceId", workspaceId, "projectId", projectId,
                         "userId", user.getId(), "role", resolvedRole));
         return Map.of("message", "Member added", "userId", user.getId());
@@ -187,7 +187,7 @@ public class WorkspaceService {
         rbac.require(callerId, workspaceId, "manage_projects");
         requireProjectInWorkspace(projectId, workspaceId);
         jdbc.update("DELETE FROM project_members WHERE project_id = ? AND user_id = ?", projectId, memberId);
-        eventService.record(projectId, "PROJECT_MEMBER_REMOVED", callerId,
+        eventService.recordInWorkspace(workspaceId, projectId, "PROJECT_MEMBER_REMOVED", callerId,
                 Map.of("workspaceId", workspaceId, "projectId", projectId, "userId", memberId));
         return Map.of("message", "Member removed");
     }

@@ -32,10 +32,16 @@ public class NotificationController {
 
     @PutMapping("/{id}/read")
     public Notification markRead(@PathVariable Long id) {
-        return notificationRepository.findById(id).map(n -> {
-            n.setRead(true);
-            return notificationRepository.save(n);
-        }).orElseThrow();
+        String userId = authenticatedUser.id();
+        Notification n = notificationRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Notification", String.valueOf(id)));
+        // A user may only mark their own notifications read — 404 (not 403) so another user's
+        // notification id is never confirmed to exist.
+        if (!userId.equals(n.getUserId())) {
+            throw ApiException.notFound("Notification", String.valueOf(id));
+        }
+        n.setRead(true);
+        return notificationRepository.save(n);
     }
 
     @PutMapping("/mark-all-read")

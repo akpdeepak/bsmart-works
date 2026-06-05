@@ -157,9 +157,14 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
 > should be extended to verify the migration number against `db/migration/`.
 
 - **Iterations:** 20 total · 26 capabilities · ~346 sub-features.
-- **Active iteration:** **6 (in progress)**; iteration 5 complete.
-- **Flyway high-water mark:** **V36** (note: V16 was skipped, V23 does not exist; V34 compliance rules, V35 second-workspace seed, V36 SLA engine).
-- **Next migration:** **`V37__<description>.sql`**. *(Supersedes every stale lower-numbered reference, e.g. "V27"/"V28"/"V30".)*
+- **Active iteration:** **11 (in progress)** — broad AI expansion; built on the **AI Control Plane**
+  (the iteration-10 orchestration foundation: one policy hierarchy, one budget, one audit trail, one
+  fallback contract — RB-40 §2), which landed with it. Iteration 7 (Compliance Rules Engine) complete.
+  **Iterations 8 (SLA Engine, Cap M), 9 (Service Management, Cap N+M) and 15 (Scrum Master Cockpit
+  Cap V + Product Owner Workspace Cap W) delivered** on the AI-Control-Plane foundation, by explicit
+  owner directive.
+- **Flyway high-water mark:** **V44** (`V44__sla_engine.sql`; note: V16 was skipped, V23 does not exist).
+- **Next migration:** **`V45__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

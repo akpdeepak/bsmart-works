@@ -28,6 +28,14 @@ class ComplianceRuleServiceTest {
     }
 
     @Test
+    void normalizeEvaluationMode_knownPassesThroughUppercased_elseContinuous() {
+        assertEquals("CONTINUOUS", service.normalizeEvaluationMode("continuous"));
+        assertEquals("SCHEDULED", service.normalizeEvaluationMode("  Scheduled "));
+        assertEquals("CONTINUOUS", service.normalizeEvaluationMode("bogus"));
+        assertEquals("CONTINUOUS", service.normalizeEvaluationMode(null));
+    }
+
+    @Test
     void normalizeNotifyTo_blankBecomesEmptyArray() {
         assertEquals("[]", service.normalizeNotifyTo(null));
         assertEquals("[]", service.normalizeNotifyTo("   "));

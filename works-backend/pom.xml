@@ -29,7 +29,23 @@
 	<properties>
 		<java.version>21</java.version>
 		<jjwt.version>0.13.0</jjwt.version>
+		<testcontainers.version>1.20.4</testcontainers.version>
 	</properties>
+
+	<!-- The Spring Boot 4.0 parent does not manage the raw org.testcontainers:* artifact versions,
+	     so import the Testcontainers BOM to align postgresql + junit-jupiter (test-only). -->
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.testcontainers</groupId>
+				<artifactId>testcontainers-bom</artifactId>
+				<version>${testcontainers.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -123,6 +139,24 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<!-- Testcontainers: the DB/Flyway CI stage. Boots the app against a real Postgres so every
+		     migration is applied end-to-end (catches dup versions / bad SQL the unit jobs cannot).
+		     Versions are managed by the Spring Boot parent BOM. Used only by *IntegrationTest. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-testcontainers</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 
@@ -240,6 +274,28 @@
 						<exclude>**/*IntegrationTest.java</exclude>
 					</excludes>
 				</configuration>
+			</plugin>
+			<!-- Failsafe: runs *IntegrationTest classes (Testcontainers-backed). Invoked explicitly by
+			     the CI `backend-integration-test` job via
+			     `./mvnw test-compile failsafe:integration-test failsafe:verify` (Docker required, so it
+			     does NOT run in the unit/compile jobs). In the unit job's `verify`, the JUnit group
+			     filter (-Dgroups=unit) excludes the @Tag("integration") classes, so no container starts. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<configuration>
+					<includes>
+						<include>**/*IntegrationTest.java</include>
+					</includes>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 			<!-- Checkstyle: enforces Java style consistency across all contributors and AI tools.
 			     Runs at the `verify` phase (so CI catches it). Shipped in reporting mode

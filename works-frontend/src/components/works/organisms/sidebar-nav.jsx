@@ -1,21 +1,8 @@
 import {
-  Home,
-  User,
-  Bell,
-  LayoutGrid,
-  List,
-  Zap,
-  BarChart2,
-  Rocket,
-  Settings,
-  Search,
-  BookOpen,
-  ClipboardList,
-  FolderOpen,
-  Settings2,
-  Trash2,
-  PanelLeftClose,
-  LogOut,
+  Home, User, Bell, LayoutGrid, ListTodo, Zap, Rocket, FolderKanban,
+  BarChart2, LayoutDashboard, FileText, TrendingUp, Headset, Timer, ShieldCheck,
+  Gauge, Map as MapIcon, ClipboardList, Workflow, Plug, Search, BookOpen,
+  SlidersHorizontal, Settings, Trash2, PanelLeftClose, LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/works/atoms/badge';
@@ -35,59 +22,52 @@ import { Badge } from '@/components/works/atoms/badge';
 // ─── Nav item data ────────────────────────────────────────────────────────────
 
 const NAV_SECTIONS = [
-  {
-    id: null,
-    items: [{ id: 'dashboard', label: 'Home', icon: Home }],
-  },
-  {
-    id: 'my-work',
-    label: 'My Work',
-    items: [
-      { id: 'myworks',       label: 'My Work',       icon: User },
-      { id: 'notifications', label: 'Notifications', icon: Bell },
-    ],
-  },
-  {
-    id: 'projects',
-    label: 'Projects',
-    items: [
-      { id: 'board',    label: 'Board',         icon: LayoutGrid },
-      { id: 'backlog',  label: 'Backlog',        icon: List },
-      { id: 'sprint',   label: 'Active sprint',  icon: Zap },
-      { id: 'reports',  label: 'Reports',        icon: BarChart2 },
-      { id: 'releases', label: 'Releases',       icon: Rocket },
-    ],
-  },
-  {
-    id: 'config',
-    label: 'Configuration',
-    items: [
-      { id: 'settings3', label: 'Workflows & fields', icon: Settings },
-      { id: 'bql',      label: 'BQL query',         icon: Search },
-      { id: 'knowledge', label: 'Knowledge',           icon: BookOpen },
-    ],
-  },
-  {
-    id: 'pm',
-    label: 'Project management',
-    items: [
-      { id: 'pm',       label: 'PM artifacts', icon: ClipboardList },
-      { id: 'projects', label: 'Projects',     icon: FolderOpen },
-    ],
-  },
-  {
-    id: 'workspace',
-    label: 'Workspace',
-    items: [
-      { id: 'workspace', label: 'Settings', icon: Settings2 },
-      { id: 'trash',     label: 'Trash',    icon: Trash2 },
-    ],
-  },
+  { id: null, items: [{ id: 'dashboard', label: 'Home', icon: Home }] },
+  { id: 'my-work', label: 'My Work', items: [
+    { id: 'myworks',       label: 'My Works',      icon: User },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+  ] },
+  { id: 'plan', label: 'Plan & Track', items: [
+    { id: 'board',    label: 'Board',         icon: LayoutGrid },
+    { id: 'backlog',  label: 'Backlog',       icon: ListTodo },
+    { id: 'sprint',   label: 'Active Sprint', icon: Zap },
+    { id: 'releases', label: 'Releases',      icon: Rocket },
+    { id: 'projects', label: 'Projects',      icon: FolderKanban },
+  ] },
+  { id: 'insights', label: 'Insights', items: [
+    { id: 'reports',       label: 'Reports',        icon: BarChart2 },
+    { id: 'dashboards',    label: 'Dashboards',     icon: LayoutDashboard },
+    { id: 'reportbuilder', label: 'Report builder', icon: FileText },
+    { id: 'performance',   label: 'Performance',    icon: TrendingUp },
+  ] },
+  { id: 'service', label: 'Service & Compliance', items: [
+    { id: 'service',    label: 'Service Desk', icon: Headset },
+    { id: 'sla',        label: 'SLA',          icon: Timer },
+    { id: 'compliance', label: 'Compliance',   icon: ShieldCheck },
+  ] },
+  { id: 'cockpits', label: 'Cockpits', items: [
+    { id: 'smcockpit',   label: 'SM Cockpit',   icon: Gauge },
+    { id: 'poworkspace', label: 'PO Workspace', icon: MapIcon },
+    { id: 'pm',          label: 'PM Artifacts', icon: ClipboardList },
+  ] },
+  { id: 'automate', label: 'Automate & Connect', items: [
+    { id: 'automations',  label: 'Automations',  icon: Workflow },
+    { id: 'integrations', label: 'Integrations', icon: Plug },
+    { id: 'bql',          label: 'BQL Query',    icon: Search },
+  ] },
+  { id: 'knowledge', label: 'Knowledge', items: [
+    { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
+  ] },
+  { id: 'configure', label: 'Configure', items: [
+    { id: 'settings3', label: 'Workflows & Fields', icon: SlidersHorizontal },
+    { id: 'workspace', label: 'Settings',           icon: Settings },
+    { id: 'trash',     label: 'Trash',              icon: Trash2 },
+  ] },
 ];
 
 // ─── NavItem ──────────────────────────────────────────────────────────────────
 
-function NavItem({ item, active, collapsed, badge, dot, onClick }) {
+function NavItem({ item, active, collapsed, badge, badgeTone = 'neutral', dot, onClick }) {
   const Icon = item.icon;
 
   return (
@@ -118,7 +98,13 @@ function NavItem({ item, active, collapsed, badge, dot, onClick }) {
         <>
           <span className="flex-1 truncate text-left">{item.label}</span>
           {badge != null && (
-            <Badge tone="neutral" className="ml-auto shrink-0 bg-white/10 text-white/80">
+            <Badge
+              tone="neutral"
+              className={cn(
+                'ml-auto shrink-0',
+                badgeTone === 'orange' ? 'bg-brand-orange text-white' : 'bg-white/10 text-white/80'
+              )}
+            >
               {badge}
             </Badge>
           )}
@@ -230,6 +216,7 @@ export function SidebarNav({
                   active={activeView === item.id}
                   collapsed={collapsed}
                   badge={badgeFor(item.id)}
+                  badgeTone={item.id === 'notifications' ? 'orange' : 'neutral'}
                   dot={dotFor(item.id)}
                   onClick={() => onNavigate?.(item.id)}
                 />

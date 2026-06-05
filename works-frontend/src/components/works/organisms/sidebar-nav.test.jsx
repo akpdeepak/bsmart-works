@@ -38,6 +38,18 @@ describe('SidebarNav', () => {
     expect(screen.getByText('5')).toBeInTheDocument();
   });
 
+  it('renders the full destination set (Service Desk, Automations, SM Cockpit, Performance)', () => {
+    render(<SidebarNav {...defaultProps} />);
+    for (const label of ['Service Desk', 'Automations', 'SM Cockpit', 'Performance', 'Compliance', 'Dashboards']) {
+      expect(screen.getByRole('button', { name: new RegExp(label, 'i') })).toBeInTheDocument();
+    }
+  });
+
+  it('uses the brand-orange tone for the unread notifications badge', () => {
+    render(<SidebarNav {...defaultProps} unreadCount={3} />);
+    expect(screen.getByText('3').className).toMatch(/bg-brand-orange/);
+  });
+
   it('collapsed: hides nav labels, shows title attribute for tooltip', () => {
     render(<SidebarNav {...defaultProps} collapsed />);
     expect(screen.queryByText('Backlog')).not.toBeInTheDocument();

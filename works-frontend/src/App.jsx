@@ -2649,7 +2649,7 @@ export default function App() {
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">📌 My Open Items</h3>
                       {(developerDash?.myOpenItems ?? workItems.filter(i => i.assigneeId === currentUser?.id && i.status !== 'Done')).slice(0, 7).map(item => (
-                        <div key={item.id} onClick={() => setSelectedItem(item)} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 -mx-2 px-2 rounded transition-colors">
+                        <div key={item.id} onClick={() => setSelectedItem(item)} role="button" tabIndex={0} onKeyDown={onPressKey} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 -mx-2 px-2 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                           <TypeBadge type={item.type} compact />
                           <span className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate">{item.title}</span>
                           <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
@@ -2759,7 +2759,7 @@ export default function App() {
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">⚠ High Risk Items</h3>
                       {(smDash?.highRiskItems || []).slice(0, 5).map(i => (
-                        <div key={i.id} onClick={() => setSelectedItem(i)} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 -mx-2 px-2 rounded">
+                        <div key={i.id} onClick={() => setSelectedItem(i)} role="button" tabIndex={0} onKeyDown={onPressKey} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 -mx-2 px-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                           <TypeBadge type={i.type} compact />
                           <span className="flex-1 text-xs text-neutral-900 dark:text-neutral-100 truncate">{i.title}</span>
                           <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${i.priority === 'CRITICAL' ? 'bg-semantic-danger text-white' : 'bg-semantic-warning-surface text-semantic-warning'}`}>{i.priority}</span>
@@ -3043,8 +3043,8 @@ export default function App() {
                     action={<Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(true)}>Create a work item</Button>} />
                 : <div className="space-y-2">
                     {myItems.map(item => (
-                      <div key={item.id} onClick={() => setSelectedItem(item)}
-                        className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 flex items-center gap-4 hover:shadow-sm cursor-pointer transition-shadow">
+                      <div key={item.id} onClick={() => setSelectedItem(item)} role="button" tabIndex={0} onKeyDown={onPressKey}
+                        className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 flex items-center gap-4 hover:shadow-sm cursor-pointer transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                         <TypeBadge type={item.type} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-neutral-900 truncate">{item.title}</p>
@@ -3062,8 +3062,8 @@ export default function App() {
                   ? <EmptyState icon={Star} title="No starred items" subtitle="Star work items to keep them handy. Click ★ on any card or in the detail panel." />
                   : <div className="space-y-2">
                       {starredItems.map(item => (
-                        <div key={item.id} onClick={() => setSelectedItem(item)}
-                          className="bg-white dark:bg-neutral-800 border border-brand-orange/30 rounded-lg p-4 flex items-center gap-4 hover:shadow-sm cursor-pointer transition-shadow">
+                        <div key={item.id} onClick={() => setSelectedItem(item)} role="button" tabIndex={0} onKeyDown={onPressKey}
+                          className="bg-white dark:bg-neutral-800 border border-brand-orange/30 rounded-lg p-4 flex items-center gap-4 hover:shadow-sm cursor-pointer transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                           <span className="text-brand-orange text-sm">★</span>
                           <TypeBadge type={item.type} />
                           <div className="flex-1 min-w-0">
@@ -3092,8 +3092,8 @@ export default function App() {
               {myWorksTab === 'activity' && (
                 <div className="space-y-2">
                   {workItems.filter(i => i.createdBy === currentUser.id || i.assigneeId === currentUser.id).slice(0, 20).map(i => (
-                    <div key={i.id} onClick={() => setSelectedItem(i)}
-                      className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3 flex items-center gap-3 hover:shadow-sm cursor-pointer">
+                    <div key={i.id} onClick={() => setSelectedItem(i)} role="button" tabIndex={0} onKeyDown={onPressKey}
+                      className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3 flex items-center gap-3 hover:shadow-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                       <TypeBadge type={i.type} compact />
                       <span className="text-xs font-mono text-neutral-400">{i.id}</span>
                       <span className="flex-1 text-sm text-neutral-900 truncate">{i.title}</span>
@@ -3391,7 +3391,7 @@ export default function App() {
                       <span className="text-neutral-300 cursor-grab text-xs mr-1">⠿</span>
                       <TypeBadge type={item.type} compact />
                       <span className="font-mono text-xs text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
-                      <span className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate" onClick={() => setSelectedItem(item)}>{item.title}</span>
+                      <span role="button" tabIndex={0} onKeyDown={onPressKey} className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => setSelectedItem(item)}>{item.title}</span>
                       {/* Refinement mode — inline edit */}
                       {refinementMode ? (
                         <div className="flex items-center gap-2">
@@ -5184,8 +5184,8 @@ export default function App() {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {customDashboards.map(d => (
-                        <div key={d.id} onClick={() => openDashboard(d.id)}
-                          className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all">
+                        <div key={d.id} onClick={() => openDashboard(d.id)} role="button" tabIndex={0} onKeyDown={onPressKey}
+                          className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                           <div className="flex items-start justify-between">
                             <span className="text-2xl">📐</span>
                             <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-700 rounded-full px-2 py-0.5">{d.scope || 'PERSONAL'}</span>
@@ -5348,8 +5348,8 @@ export default function App() {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {reports.map(r => (
-                        <div key={r.id} onClick={() => openReport(r.id)}
-                          className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all">
+                        <div key={r.id} onClick={() => openReport(r.id)} role="button" tabIndex={0} onKeyDown={onPressKey}
+                          className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                           <span className="text-2xl">📄</span>
                           <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mt-2 truncate">{r.name}</p>
                           <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{r.updatedAt ? `Updated ${new Date(r.updatedAt).toLocaleDateString()}` : '—'}</p>
@@ -5540,8 +5540,8 @@ export default function App() {
                         ) : (
                           <div className="space-y-2">
                             {knowledgeSearchResults.map(art => (
-                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); }}
-                                className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all">
+                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); }} role="button" tabIndex={0} onKeyDown={onPressKey}
+                                className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
                                     <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{art.title}</p>
@@ -5580,8 +5580,8 @@ export default function App() {
                         ) : (
                           <div className="space-y-2">
                             {knowledgeArticles.map(art => (
-                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); }}
-                                className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all">
+                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); }} role="button" tabIndex={0} onKeyDown={onPressKey}
+                                className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
@@ -5865,7 +5865,7 @@ export default function App() {
                           <div key={item.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                             <TypeBadge type={item.type} compact />
                             <span className="font-mono text-xs text-neutral-400">{item.id}</span>
-                            <span className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate cursor-pointer hover:text-brand-navy" onClick={() => setSelectedItem(item)}>{item.title}</span>
+                            <span role="button" tabIndex={0} onKeyDown={onPressKey} className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate cursor-pointer hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => setSelectedItem(item)}>{item.title}</span>
                             <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
                             <button onClick={() => removeItemFromRelease(selectedRelease.id, item.id)} className="text-xs text-semantic-danger hover:underline">Remove</button>
                           </div>
@@ -7037,8 +7037,8 @@ export default function App() {
                 <label className="block text-xs text-neutral-400 mb-1 font-medium">Sub-items ({itemChildren.length})</label>
                 <div className="space-y-1">
                   {itemChildren.map(child => (
-                    <div key={child.id} onClick={() => setSelectedItem(child)}
-                      className="flex items-center gap-2 p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700 cursor-pointer hover:border-brand-navy/30 transition-colors">
+                    <div key={child.id} onClick={() => setSelectedItem(child)} role="button" tabIndex={0} onKeyDown={onPressKey}
+                      className="flex items-center gap-2 p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700 cursor-pointer hover:border-brand-navy/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                       <span className="text-neutral-300 text-xs">↳</span>
                       <TypeBadge type={child.type} compact />
                       <span className="font-mono text-xs text-neutral-400">{child.id}</span>
@@ -7747,9 +7747,20 @@ function RoleBadge({ role, tier, small = false }) {
   );
 }
 
+// Make a non-button clickable element keyboard-operable (Enter/Space) — pair with
+// role="button" + tabIndex={0} + a focus ring. Fires the element's own onClick via a click().
+const onPressKey = (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); }
+};
+
 function StatCard({ label, value, sub, color, icon: Icon, onClick }) {
+  const clickable = typeof onClick === 'function';
   return (
-    <div onClick={onClick} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 cursor-pointer hover:shadow-md transition-shadow group">
+    <div
+      onClick={onClick}
+      {...(clickable ? { role: 'button', tabIndex: 0, onKeyDown: onPressKey } : {})}
+      className={`bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 hover:shadow-md transition-shadow group ${clickable ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40' : ''}`}
+    >
       <div className="flex items-start justify-between mb-3">
         {typeof Icon === 'function' ? <Icon aria-hidden="true" className="h-6 w-6 text-neutral-400" /> : <span className="text-2xl">{Icon}</span>}
         <span className="text-xs text-neutral-400 group-hover:text-brand-navy transition-colors">View →</span>
@@ -8304,7 +8315,7 @@ function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
         <div key={item.id} className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-700 group">
           <TypeBadge type={item.type} compact />
           <span className="font-mono text-xs text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
-          <span className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate" onClick={() => onSelect(item)}>{item.title}</span>
+          <span role="button" tabIndex={0} onKeyDown={onPressKey} className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => onSelect(item)}>{item.title}</span>
           <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
           {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
           {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}

@@ -4945,10 +4945,7 @@ export default function App() {
 
                       {/* Create cross-project dep modal */}
                       {isCrossProjOpen && (
-                        <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-center justify-center z-50 p-4"
-                          onClick={e => { if (e.target === e.currentTarget) setIsCrossProjOpen(false); }}>
-                          <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl w-full max-w-lg p-6">
-                            <h2 className="font-bold text-xl text-brand-navy mb-4">New Cross-Project Dependency</h2>
+                        <Modal title="New Cross-Project Dependency" onClose={() => setIsCrossProjOpen(false)} size="lg">
                             <div className="space-y-3">
                               <Field label="Title *">
                                 <input className="input" placeholder="What does this project depend on?" value={crossProjForm.title}
@@ -4982,8 +4979,7 @@ export default function App() {
                               <Button variant="ghost" onClick={() => setIsCrossProjOpen(false)}>Cancel</Button>
                               <Button variant="action" onClick={createCrossProjectDep}>Create Dependency</Button>
                             </div>
-                          </div>
-                        </div>
+                        </Modal>
                       )}
                     </div>
                   )}
@@ -4992,9 +4988,7 @@ export default function App() {
 
               {/* PM CREATE MODAL */}
               {pmFormOpen && (
-                <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-center justify-center z-50 p-4" onClick={e => { if (e.target === e.currentTarget) { setPmFormOpen(null); setPmForm({}); } }}>
-                  <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl w-full max-w-lg p-6">
-                    <h2 className="font-bold text-xl text-brand-navy mb-4 capitalize">New {pmFormOpen.replace('issue','PM Issue').replace('lesson','Lesson Learned').replace('action','Action Item').replace('dependency','Dependency')}</h2>
+                <Modal title={<span className="capitalize">New {pmFormOpen.replace('issue','PM Issue').replace('lesson','Lesson Learned').replace('action','Action Item').replace('dependency','Dependency')}</span>} onClose={() => { setPmFormOpen(null); setPmForm({}); }} size="lg">
                     <div className="space-y-3">
                       <Field label="Title">
                         <input className="input" placeholder="Brief title" value={pmForm.title || ''} onChange={e => setPmForm(p => ({ ...p, title: e.target.value }))} autoFocus />
@@ -5104,8 +5098,7 @@ export default function App() {
                       <Button variant="action" onClick={() => pmCreate(pmFormOpen, pmForm)} disabled={!pmForm.title}>Create</Button>
                       <Button variant="secondary" onClick={() => { setPmFormOpen(null); setPmForm({}); }}>Cancel</Button>
                     </div>
-                  </div>
-                </div>
+                </Modal>
               )}
             </div>
           )}
@@ -5411,15 +5404,7 @@ export default function App() {
 
           {/* Iteration 6 — scheduled report delivery (Cap J, S04) */}
           {scheduleManagerOpen && selectedReport && (
-            <div className="fixed inset-0 bg-neutral-900/50 dark:bg-black/70 flex items-center justify-center z-50 p-4"
-              onClick={e => { if (e.target === e.currentTarget) setScheduleManagerOpen(false); }}
-              role="dialog" aria-modal="true" aria-label="Report delivery schedules">
-              <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
-                <div className="flex items-center justify-between mb-1">
-                  <h2 className="text-lg font-bold text-brand-navy dark:text-white">Scheduled delivery</h2>
-                  <button onClick={() => setScheduleManagerOpen(false)} aria-label="Close"
-                    className="text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40" aria-label="Close"><X className="h-4 w-4" aria-hidden="true" /></button>
-                </div>
+            <Modal title="Scheduled delivery" onClose={() => setScheduleManagerOpen(false)} size="lg" className="max-h-[90vh] overflow-y-auto">
                 <p className="text-xs text-neutral-500 mb-4 truncate">“{selectedReport.name}” — delivered on a cadence to recipients (in-app / email).</p>
 
                 <div className="space-y-2 mb-5">
@@ -5466,8 +5451,7 @@ export default function App() {
                     <Button variant="action" onClick={createReportSchedule}>Add schedule</Button>
                   </div>
                 </div>
-              </div>
-            </div>
+            </Modal>
           )}
 
           {/* ======================================================
@@ -6672,9 +6656,7 @@ export default function App() {
 
               {/* Rule builder (test-before-activate) */}
               {ruleBuilder && (
-                <div className="fixed inset-0 bg-neutral-900/50 dark:bg-black/70 flex items-center justify-center z-50 p-4" onClick={e => { if (e.target === e.currentTarget) setRuleBuilder(null); }}>
-                  <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
-                    <h2 className="text-xl font-bold text-brand-navy dark:text-white mb-4">{ruleBuilder.id ? 'Edit rule' : 'New compliance rule'}</h2>
+                <Modal title={ruleBuilder.id ? 'Edit rule' : 'New compliance rule'} onClose={() => setRuleBuilder(null)} size="xl" className="max-h-[90vh] overflow-y-auto">
                     <div className="space-y-3">
                       <div>
                         <label className="block text-xs font-medium text-neutral-500 mb-1">Name</label>
@@ -6724,8 +6706,7 @@ export default function App() {
                       <Button variant="action" onClick={saveRule}>{ruleBuilder.id ? 'Save rule' : 'Create rule (inactive)'}</Button>
                     </div>
                     <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-3">New rules are created inactive — test them, then activate from the rules list.</p>
-                  </div>
-                </div>
+                </Modal>
               )}
             </div>
           )}
@@ -6876,9 +6857,7 @@ export default function App() {
               </div>
 
               {newCustomer && (
-                <div className="fixed inset-0 bg-neutral-900/50 flex items-center justify-center z-modal p-4">
-                  <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl w-full max-w-lg p-6">
-                    <h2 className="text-xl font-bold text-brand-navy dark:text-white mb-4">New customer</h2>
+                <Modal title="New customer" onClose={() => setNewCustomer(null)} size="lg">
                     <div className="space-y-3">
                       <div>
                         <label className="block text-xs font-medium text-neutral-500 mb-1">Name</label>
@@ -6901,8 +6880,7 @@ export default function App() {
                       <Button variant="secondary" onClick={() => setNewCustomer(null)}>Cancel</Button>
                       <Button variant="action" onClick={createServiceCustomer}>Create customer</Button>
                     </div>
-                  </div>
-                </div>
+                </Modal>
               )}
             </div>
           )}

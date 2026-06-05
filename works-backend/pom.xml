@@ -218,6 +218,11 @@
 								<exclude>**/SlaTarget.class</exclude>
 								<exclude>**/SlaInstance.class</exclude>
 								<exclude>**/SlaEscalation.class</exclude>
+								<exclude>**/CustomerOrganization.class</exclude>
+								<exclude>**/CustomerAccount.class</exclude>
+								<exclude>**/RequestType.class</exclude>
+								<exclude>**/CustomerRequest.class</exclude>
+								<exclude>**/PortalKbArticle.class</exclude>
 							</excludes>
 							<rules>
 								<rule>

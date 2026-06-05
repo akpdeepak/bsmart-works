@@ -62,6 +62,11 @@ public class SecurityConfig {
                                  "/api/v1/auth/verify", "/api/v1/auth/forgot-password",
                                  // token-based reset (no session yet) + MFA challenge during login
                                  "/api/v1/auth/reset-password", "/api/v1/auth/mfa/verify").permitAll()
+                // Customer portal sign-up / sign-in: external customers have no internal session yet
+                // (iteration 9, Cap N). Portal data endpoints stay authenticated (portal JWT).
+                .requestMatchers("/api/v1/portal/auth/register", "/api/v1/portal/auth/login").permitAll()
+                // Public, read-only portal branding resolved by subdomain (iteration 9). GET only.
+                .requestMatchers(HttpMethod.GET, "/api/v1/portal/branding").permitAll()
                 // Public, read-only, token-scoped dashboard embeds (iteration 6). GET only.
                 .requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll()
                 .anyRequest().authenticated()

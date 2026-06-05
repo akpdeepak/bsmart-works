@@ -37,6 +37,26 @@ public class JwtUtil {
                 .compact();
     }
 
+    /**
+     * Portal token for an external customer account (iteration 9, Cap N). The subject is the
+     * customer account id; the {@code portal} claim marks it so portal endpoints never confuse it
+     * with an internal user, and {@code workspace}/{@code org} carry the tenant + organization the
+     * token is bound to — the basis for organization-scoped reads (RB-40 §1). Same signing key and
+     * stateless contract as the internal token.
+     */
+    public String generatePortal(String accountId, String email, String workspaceId, String organizationId) {
+        return Jwts.builder()
+                .subject(accountId)
+                .claim("email", email)
+                .claim("portal", true)
+                .claim("workspace", workspaceId)
+                .claim("org", organizationId)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + EXPIRY_MS))
+                .signWith(key())
+                .compact();
+    }
+
     public Claims validate(String token) {
         return Jwts.parser().verifyWith(key()).build().parseSignedClaims(token).getPayload();
     }

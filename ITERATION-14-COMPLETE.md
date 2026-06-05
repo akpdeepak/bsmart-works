@@ -4,12 +4,14 @@ Iteration 14 makes BCITS engineers' day-to-day **meaningfully better than Jira /
 one engineer-tuned home surface, the same surfaces in the IDE and the terminal, and the connective
 tissue between code and work items. It was explicitly user-directed (build iteration 14 end-to-end).
 
-> **Built ahead of the active iteration, by direction.** The orchestrator's active iteration is 11;
-> iterations 12 (KPI) and 13 (Automation + Integrations) are not yet in the codebase. So this
-> iteration ships a **self-contained code domain** (PRs + code links) rather than depending on an
-> integrations layer that does not exist. When the integrations iteration lands, a git provider
-> becomes a *writer* into these same tables — the read surfaces (review queue, code context,
-> standup) do not change. The orchestrator §6 active-iteration pointer is intentionally left at 11.
+> **User-directed build; self-contained code domain.** This ships a **self-contained code domain**
+> (PRs + code links) rather than depending on an integrations layer. Iterations 12 (KPI) and 13
+> (Automation + Integrations) merged to `main` while this was in flight — they were confirmed to
+> introduce a *different* domain (automation rules, webhooks, integration connectors, API tokens),
+> so there is **no table or capability-name overlap** with this iteration's git/PR/code-review
+> domain. When a git provider connector lands, it becomes a *writer* into these same tables — the
+> read surfaces (review queue, code context, standup) do not change. The migration was renumbered to
+> `V47` on merge, since `main` advanced to `V46`.
 >
 > **No live model in this build.** As in iteration 11, every AI surface routes through
 > `AiControlPlaneService` over the deterministic offline provider; AI-on and fallback differ in
@@ -33,12 +35,12 @@ tissue between code and work items. It was explicitly user-directed (build itera
 | **`works` CLI** | `tools/works-cli` — login, mine, review, standup, velocity, view, transition, link, focus |
 | **JetBrains plugin** | `tools/jetbrains-plugin` — buildable Gradle/Kotlin scaffold (tool window + actions + settings) for IntelliJ/PyCharm/WebStorm parity over the same API |
 
-## 2. Data model — `V41__iteration14_developer_workspace.sql`
+## 2. Data model — `V47__iteration14_developer_workspace.sql`
 
 `pull_requests`, `pull_request_reviewers`, `code_links`, `focus_blocks`, `dod_checklists`,
 `dod_checklist_items`, `dod_checklist_states`. All plural snake_case, every tenant-scoped table
 carries and is indexed on `workspace_id` (RB-40 §1), forward-only. Seeds a populated walking
-skeleton for WS-001. (Migration high-water mark was already V40 in the repo; §6 of the orchestrator
+skeleton for WS-001. (Renumbered to V47 on merge — main advanced to V46 via iterations 8/9/12–13/15; §6 of the orchestrator
 lags at V39 — not CI-enforced.)
 
 ## 3. Architecture & governance

@@ -64,6 +64,8 @@ public class SecurityConfig {
                                  "/api/v1/auth/reset-password", "/api/v1/auth/mfa/verify").permitAll()
                 // Public, read-only, token-scoped dashboard embeds (iteration 6). GET only.
                 .requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll()
+                // External customer-portal login (iteration 9) — separate identity, own login flow.
+                .requestMatchers("/api/v1/portal/auth/login").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);

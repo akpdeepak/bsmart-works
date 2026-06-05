@@ -247,6 +247,7 @@
 								<exclude>**/WorkflowTransition.class</exclude>
 								<exclude>**/Workspace.class</exclude>
 								<exclude>**/WorkItemTypeConfig.class</exclude>
+								<!-- Iteration 14 (developer workspace) entities -->
 								<exclude>**/PullRequest.class</exclude>
 								<exclude>**/PullRequestReviewer.class</exclude>
 								<exclude>**/CodeLink.class</exclude>
@@ -254,6 +255,29 @@
 								<exclude>**/DodChecklist.class</exclude>
 								<exclude>**/DodChecklistItem.class</exclude>
 								<exclude>**/DodChecklistState.class</exclude>
+								<!-- Iteration 9 (service management) entities -->
+								<exclude>**/CustomerAccount.class</exclude>
+								<exclude>**/CustomerUser.class</exclude>
+								<exclude>**/RequestType.class</exclude>
+								<exclude>**/ServiceRequest.class</exclude>
+								<exclude>**/CsatResponse.class</exclude>
+								<exclude>**/CustomerSlaTier.class</exclude>
+								<exclude>**/SlaCalendar.class</exclude>
+								<exclude>**/SlaPolicy.class</exclude>
+								<exclude>**/SlaTarget.class</exclude>
+								<exclude>**/SlaInstance.class</exclude>
+								<exclude>**/SlaEscalation.class</exclude>
+								<!-- Iteration 12 (KPI framework) entities -->
+								<exclude>**/MetricDefinition.class</exclude>
+								<exclude>**/MetricSnapshot.class</exclude>
+								<exclude>**/MetricShare.class</exclude>
+								<!-- Iteration 13 (automation + integrations) entities -->
+								<exclude>**/AutomationRule.class</exclude>
+								<exclude>**/AutomationRun.class</exclude>
+								<exclude>**/WebhookSubscription.class</exclude>
+								<exclude>**/WebhookDelivery.class</exclude>
+								<exclude>**/IntegrationConnection.class</exclude>
+								<exclude>**/ApiToken.class</exclude>
 							</excludes>
 							<rules>
 								<rule>

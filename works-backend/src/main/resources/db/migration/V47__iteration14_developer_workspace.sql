@@ -1,4 +1,4 @@
--- V41 · Iteration 14 — Developer Workspace + IDE / CLI surfaces
+-- V47 · Iteration 14 — Developer Workspace + IDE / CLI surfaces
 -- Cap U. Introduces the code domain (PRs + code links), focus mode / time-blocking,
 -- and Definition-of-Done checklists. Every tenant-scoped table carries workspace_id and is
 -- indexed on it (RB-40 §1). Plural snake_case tables (RB-10 §3). Forward-only.

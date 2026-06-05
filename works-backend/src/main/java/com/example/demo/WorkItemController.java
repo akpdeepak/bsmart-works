@@ -23,12 +23,13 @@ public class WorkItemController {
     private final NotificationBatchService batchService;
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
+    private final DodChecklistService dodChecklists;
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
                               JdbcTemplate jdbc, NotificationRepository notificationRepository,
                               UserRepository userRepository, EmailService emailService,
                               NotificationBatchService batchService, AuthenticatedUser authenticatedUser,
-                              RbacService rbac) {
+                              RbacService rbac, DodChecklistService dodChecklists) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
@@ -38,6 +39,7 @@ public class WorkItemController {
         this.batchService = batchService;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
+        this.dodChecklists = dodChecklists;
     }
 
     // Tenant-isolation predicate (RB-40 §1): an item is visible only when its project lives in a
@@ -232,6 +234,13 @@ public class WorkItemController {
             // Optimistic concurrency — reject a stale write (no-op if the client sent no version).
             ConcurrencyGuard.requireCurrentVersion(existing.getVersion(), updatedItem.getVersion());
             String oldStatus = existing.getStatus();
+            // Definition-of-Done gate (Cap U, iteration 14): moving an item into a done-category
+            // status requires every required DoD item to be checked first (409 otherwise).
+            if (!java.util.Objects.equals(oldStatus, updatedItem.getStatus())
+                    && DodChecklistService.isDoneStatus(updatedItem.getStatus())
+                    && !DodChecklistService.isDoneStatus(oldStatus)) {
+                dodChecklists.assertResolvable(id, userId);
+            }
             String oldAssignee = existing.getAssigneeId();
             String oldPriority = existing.getPriority();
             String oldTitle = existing.getTitle();

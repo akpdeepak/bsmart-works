@@ -5,6 +5,7 @@ import { Mail, ShieldCheck, PanelLeft, Bell } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
 import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
+import { DeveloperWorkspace } from '@/components/works/organisms/developer-workspace';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
@@ -2000,6 +2001,7 @@ export default function App() {
             Notifications
             {unreadCount > 0 && <span className="ml-auto text-xs bg-brand-orange text-white rounded-full px-1.5 py-0.5">{unreadCount}</span>}
           </NavItem>
+          <NavItem active={view === 'developer'} onClick={() => setView('developer')} icon="💻">Developer</NavItem>
 
           {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">Projects</p>}
           <NavItem active={view === 'board'} onClick={() => setView('board')} icon="📋">Board</NavItem>
@@ -2819,6 +2821,19 @@ export default function App() {
           )}
 
           {/* NOTIFICATIONS */}
+          {view === 'developer' && (
+            <div className="p-8">
+              <DeveloperWorkspace
+                workspaceId={activeWorkspaceId}
+                onToast={showToast}
+                onOpenItem={(id) => api.raw(`/work-items/${id}`)
+                  .then((r) => (r.ok ? r.json() : null))
+                  .then((it) => { if (it) setSelectedItem(it); })
+                  .catch(() => {})}
+              />
+            </div>
+          )}
+
           {view === 'notifications' && (
             <div className="p-8 max-w-2xl">
               <div className="flex justify-between items-center mb-6">

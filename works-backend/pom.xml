@@ -247,6 +247,13 @@
 								<exclude>**/WorkflowTransition.class</exclude>
 								<exclude>**/Workspace.class</exclude>
 								<exclude>**/WorkItemTypeConfig.class</exclude>
+								<exclude>**/PullRequest.class</exclude>
+								<exclude>**/PullRequestReviewer.class</exclude>
+								<exclude>**/CodeLink.class</exclude>
+								<exclude>**/FocusBlock.class</exclude>
+								<exclude>**/DodChecklist.class</exclude>
+								<exclude>**/DodChecklistItem.class</exclude>
+								<exclude>**/DodChecklistState.class</exclude>
 							</excludes>
 							<rules>
 								<rule>

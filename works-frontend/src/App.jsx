@@ -18,6 +18,7 @@ import { IntegrationsPanel } from '@/components/works/organisms/integrations-pan
 import { Modal } from '@/components/works/molecules/modal';
 import { Toast } from '@/components/works/atoms/toast';
 import { CommandPalette } from '@/components/works/organisms/command-palette';
+import { viewToPath, pathToView } from '@/lib/routes';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
@@ -199,7 +200,8 @@ export default function App() {
   const [mfaSetupCode, setMfaSetupCode] = useState('');
   const [mfaSetupMsg, setMfaSetupMsg]   = useState('');
 
-  const [view, setView]                 = useState('dashboard');
+  const [view, setView]                 = useState(() => pathToView(window.location.pathname) || 'dashboard');
+  const didInitRoute                    = useRef(false);
   const [toast, setToast]               = useState(null); // { message, type }
   const [workItems, setWorkItems]       = useState([]);
   const [projects, setProjects]         = useState([]);
@@ -499,6 +501,16 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
+  // Deep-link load: when signed in on a non-default URL, run that view's data fetch once (the
+  // same side-effects a nav click would trigger), so a refreshed/shared link arrives populated.
+  useEffect(() => {
+    if (!currentUser || didInitRoute.current) return;
+    didInitRoute.current = true;
+    const v = pathToView(window.location.pathname);
+    if (v && v !== 'dashboard' && navigateRef.current) navigateRef.current(v);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('bSmartTheme', darkMode ? 'dark' : 'light');
@@ -559,6 +571,27 @@ export default function App() {
     }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Reflect the active view in the URL so views are deep-linkable and refresh-stable. Unknown
+  // views (viewToPath === null) leave the URL alone. Skipped when already correct, so it does not
+  // fight the popstate handler below (no history loop).
+  useEffect(() => {
+    const path = viewToPath(view);
+    if (path && window.location.pathname !== path) {
+      window.history.pushState({ view }, '', path);
+    }
+  }, [view]);
+
+  // Back/forward: drive the view from the URL, routing through navigate so the target view's data
+  // loads (by now the workspace is ready, so its fetches are safe).
+  useEffect(() => {
+    function onPop() {
+      const v = pathToView(window.location.pathname) || 'dashboard';
+      if (navigateRef.current) navigateRef.current(v); else setView(v);
+    }
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
   }, []);
 
   // Track recently viewed items

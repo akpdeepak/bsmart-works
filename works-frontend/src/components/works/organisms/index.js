@@ -21,3 +21,4 @@
 
 export { SidebarNav } from './sidebar-nav';
 export { UserMenu } from './user-menu';
+export { DeveloperWorkspace } from './developer-workspace';

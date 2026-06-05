@@ -23,6 +23,10 @@ public final class AiCapabilities {
     public static final String KB_RAG             = "kb_rag";             // Cap I — RAG over the knowledge base
     public static final String KB_SUGGEST         = "kb_suggest";         // Cap N — article suggestion at intake
     public static final String ROUTING            = "routing";            // Cap N — smart customer-request routing
+    public static final String STANDUP            = "standup";            // Cap U — standup helper draft (iter 14)
+    public static final String REVIEW_RANK        = "review_rank";        // Cap U — code review queue ranking (iter 14)
+    public static final String CODE_EXPLAIN       = "code_explain";       // Cap U — explain unfamiliar linked code (iter 14)
+    public static final String COMMIT_SUMMARY     = "commit_summary";     // Cap U — propose item update from commit (iter 14)
     public static final String KPI_NARRATIVE      = "kpi_narrative";      // Cap L — AI team-health narrative (iteration 12)
     public static final String AUTOMATION_SUGGEST = "automation_suggest"; // Cap C — AI-suggested automation rules (iteration 13)
     public static final String SPRINT_PLAN        = "sprint_plan";        // Cap V — sprint planning commit suggestion (I15-S01)
@@ -54,6 +58,14 @@ public final class AiCapabilities {
             "Falls back to keyword article search; suggestions simply do not appear if none match."),
         new Descriptor(ROUTING, "Smart request routing", AiModelTier.HAIKU,
             "Falls back to the project's default team / round-robin assignment."),
+        new Descriptor(STANDUP, "Standup helper", AiModelTier.HAIKU,
+            "Falls back to the deterministic draft assembled from yesterday's resolved items, today's in-progress items, and blockers."),
+        new Descriptor(REVIEW_RANK, "Code review queue ranking", AiModelTier.HAIKU,
+            "Falls back to the deterministic urgency score (PR age, size, linked-item priority) — the queue still ranks, without a narrative reason."),
+        new Descriptor(CODE_EXPLAIN, "Explain linked code", AiModelTier.SONNET,
+            "Falls back to the raw list of linked commits, branches and touched files, without a narrative."),
+        new Descriptor(COMMIT_SUMMARY, "Propose item update from commit", AiModelTier.HAIKU,
+            "Falls back to the deterministic parse of the commit message (item ref + intent keyword → suggested status)."),
         new Descriptor(KPI_NARRATIVE, "AI team-health narrative", AiModelTier.SONNET,
             "Falls back to a deterministic summary of the metric deltas — the numbers, without a narrative."),
         new Descriptor(AUTOMATION_SUGGEST, "AI-suggested automation rules", AiModelTier.SONNET,

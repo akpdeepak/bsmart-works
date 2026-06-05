@@ -6,7 +6,7 @@ import {
   Home, User, Bell, LayoutGrid, ListTodo, Zap, Rocket, FolderKanban,
   BarChart2, LayoutDashboard, FileText, TrendingUp, Headset, Timer, ShieldCheck,
   Gauge, Map as MapIcon, ClipboardList, Workflow, Plug, Search, BookOpen,
-  SlidersHorizontal, Settings, Trash2,
+  SlidersHorizontal, Settings, Trash2, Code,
   CheckCircle2, AlertCircle, Heart, AlertTriangle, Puzzle, Link, Lock,
   File as FileIcon, Folder, Lightbulb, Users, Shield, Ban, Construction,
   MessageCircle, Archive, RefreshCw, Repeat, Send, Megaphone, ScrollText,
@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
 import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
+import { DeveloperWorkspace } from '@/components/works/organisms/developer-workspace';
 import { SlaView } from '@/components/works/organisms/sla-view';
 import { PerformancePanel } from '@/components/works/organisms/performance-panel';
 import { AutomationsPanel } from '@/components/works/organisms/automations-panel';
@@ -47,6 +48,7 @@ const NAV_GROUPS = [
   { label: 'My Work', items: [
     { id: 'myworks',       label: 'My Works',      Icon: User, badge: 'myItems' },
     { id: 'notifications', label: 'Notifications', Icon: Bell, badge: 'unread' },
+    { id: 'developer',     label: 'Developer',     Icon: Code },
   ] },
   { label: 'Plan & Track', items: [
     { id: 'board',    label: 'Board',         Icon: LayoutGrid },
@@ -3283,6 +3285,19 @@ export default function App() {
           )}
 
           {/* NOTIFICATIONS */}
+          {view === 'developer' && (
+            <div className="p-8">
+              <DeveloperWorkspace
+                workspaceId={activeWorkspaceId}
+                onToast={showToast}
+                onOpenItem={(id) => api.raw(`/work-items/${id}`)
+                  .then((r) => (r.ok ? r.json() : null))
+                  .then((it) => { if (it) setSelectedItem(it); })
+                  .catch(() => {})}
+              />
+            </div>
+          )}
+
           {view === 'notifications' && (
             <div className="p-8 max-w-2xl">
               <div className="flex justify-between items-center mb-6">

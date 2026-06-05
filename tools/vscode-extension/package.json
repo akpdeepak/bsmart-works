@@ -1,0 +1,62 @@
+{
+  "name": "bsmart-works",
+  "displayName": "bSmart Works",
+  "description": "Work item context, AC checklists, status updates, standup and inline commit linking — without leaving the editor (iteration 14, Cap U).",
+  "version": "0.1.0",
+  "publisher": "bcits",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["SCM Providers", "Other"],
+  "activationEvents": [],
+  "main": "./extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "bSmart Works",
+      "properties": {
+        "works.apiBase": {
+          "type": "string",
+          "default": "http://localhost:8080/api/v1",
+          "description": "Base URL of the bSmart Works API."
+        },
+        "works.token": {
+          "type": "string",
+          "default": "",
+          "description": "JWT bearer token for the bSmart Works API."
+        },
+        "works.workspaceId": {
+          "type": "string",
+          "default": "",
+          "description": "Active workspace id."
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        { "id": "works", "title": "bSmart Works", "icon": "$(checklist)" }
+      ]
+    },
+    "views": {
+      "works": [
+        { "id": "works.myWork", "name": "My Work" },
+        { "id": "works.reviewQueue", "name": "PRs to Review" }
+      ]
+    },
+    "commands": [
+      { "command": "works.refresh", "title": "Works: Refresh", "icon": "$(refresh)" },
+      { "command": "works.openItem", "title": "Works: Open Work Item" },
+      { "command": "works.transition", "title": "Works: Update Status" },
+      { "command": "works.linkCommit", "title": "Works: Link Commit to Work Item" },
+      { "command": "works.standup", "title": "Works: Draft Standup" }
+    ],
+    "menus": {
+      "view/title": [
+        { "command": "works.refresh", "when": "view == works.myWork", "group": "navigation" }
+      ]
+    },
+    "keybindings": [
+      { "command": "works.standup", "key": "ctrl+alt+s", "mac": "cmd+alt+s" },
+      { "command": "works.linkCommit", "key": "ctrl+alt+l", "mac": "cmd+alt+l" }
+    ]
+  }
+}

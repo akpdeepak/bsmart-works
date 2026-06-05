@@ -6,11 +6,11 @@ Cap M specs (I09-S01…S10) are delivered end to end, workspace-isolated, event-
 
 ## What was built
 
-### Data model (V40) + seed (V41)
+### Data model (V42) + seed (V43)
 `customer_accounts`, `customer_users` (a **separate identity** from internal `users`), `request_types`
 (with a JSON `form_schema`), `customer_sla_tiers`, `service_requests`, `csat_responses`, plus an
 `articles.portal_published` flag. New permissions `manage_service` (LEAD) and `work_service` (MEMBER).
-V41 seeds a demonstrable desk on **WS-002 (BCITS Support Desk)**: Platinum/Gold/Silver SLAs, the three
+V43 seeds a demonstrable desk on **WS-002 (BCITS Support Desk)**: Platinum/Gold/Silver SLAs, the three
 system request types with portal forms, and a demo customer (`admin@amrutilities.example` / `portal1234`).
 
 ### Backend (all workspace-scoped, RBAC at the service boundary, events on every mutation)
@@ -56,9 +56,9 @@ Frontend: `serviceSla.test.js`, `CustomerPortal.test.jsx`.
   internal work item (full auto-creation of a linked WorkItem is logged as a follow-up).
 
 ## Migration numbering
-Rebased onto `main` at Flyway high-water **V39** (main independently fixed the iteration-7 duplicate-V35
-defect by renumbering compliance to V36/V37). Service-management schema is therefore **V40**
-(`service_management`) and the seed is **V41** (`seed_service_management`) — forward-only and contiguous.
+Concurrent iteration 10/11 (AI Control Plane, #95) and an event-store migration landed on `main`
+alongside this work, taking the Flyway high-water to **V41**. Service-management schema is therefore
+**V42** (`service_management`) and the seed is **V43** (`seed_service_management`) — forward-only.
 
 ## Not in scope (logged follow-ups)
 Custom domains / true DNS white-labeling, a drag-and-drop visual form designer (forms are JSON-schema

@@ -258,20 +258,20 @@
 
 | ID | Cap | Spec | Status | Branch | PR | Date | Notes |
 |---|---|---|---|---|---|---|---|
-| I15-S01 | V | Sprint planning helper | Pending | — | — | — | — |
-| I15-S02 | V | Standup facilitator | Pending | — | — | — | — |
-| I15-S03 | V | Impediment tracker | Pending | — | — | — | — |
-| I15-S04 | V | Mid-sprint risk panel | Pending | — | — | — | — |
-| I15-S05 | V | Retro toolkit | Pending | — | — | — | — |
-| I15-S06 | V | Sprint review prep | Pending | — | — | — | — |
-| I15-S07 | V | Cross-sprint pattern detection | Pending | — | — | — | — |
-| I15-S08 | W | Product roadmap | Pending | — | — | — | — |
-| I15-S09 | W | Backlog refinement helper | Pending | — | — | — | — |
-| I15-S10 | W | Idea capture inbox | Pending | — | — | — | — |
-| I15-S11 | W | Customer feedback aggregation | Pending | — | — | — | — |
-| I15-S12 | W | OKR linkage | Pending | — | — | — | — |
-| I15-S13 | W | Release notes auto-draft | Pending | — | — | — | — |
-| I15-S14 | W | Stakeholder map | Pending | — | — | — | — |
+| I15-S01 | V | Sprint planning helper | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S02 | V | Standup facilitator | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S03 | V | Impediment tracker | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S04 | V | Mid-sprint risk panel | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S05 | V | Retro toolkit | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S06 | V | Sprint review prep | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S07 | V | Cross-sprint pattern detection | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S08 | W | Product roadmap | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S09 | W | Backlog refinement helper | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S10 | W | Idea capture inbox | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S11 | W | Customer feedback aggregation | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S12 | W | OKR linkage | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S13 | W | Release notes auto-draft | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
+| I15-S14 | W | Stakeholder map | Done | claude/iteration-15-complete-LlY2f | — | 2026-06-05 | — |
 
 ### Iteration 16 — Release 16.0 · Leadership Console + Admin Operations Center
 

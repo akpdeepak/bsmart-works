@@ -42,6 +42,16 @@ import {
   sprintProgress, velocityPoints, SERIES_BG, EXTRA_WIDGET_PRESETS, EXTRA_WIDGET_CATEGORIES,
 } from '@/lib/dashboard-metrics';
 
+// One error-presentation contract (findings F1/F2 in docs/UX-CODEBASE-ANALYSIS.md): failures are
+// never swallowed silently. `reportError` is registered with the live toast emitter from inside
+// App(); because there is a single toast slot, a burst of failures collapses to one message
+// rather than spamming. Transient/data errors surface here; form-field errors stay inline.
+let _emitToast = null;
+function reportError(e) {
+  if (e) { try { console.error('[bSmart]', e); } catch { /* noop */ } }
+  if (_emitToast) _emitToast('Something went wrong. Please try again.', 'error');
+}
+
 const NavCollapsedCtx = React.createContext(false);
 
 // Sidebar information architecture — data-driven, grouped by workflow so the ~25 destinations
@@ -569,10 +579,10 @@ export default function App() {
     setTagInput((selectedItem.tags || []).join(', '));
     setActivityEventFilter('');
     const h = headers();
-    api.raw(`/work-items/${id}/comments`, { headers: h }).then(r => r.json()).then(d => setComments(Array.isArray(d) ? d : [])).catch(() => {});
-    api.raw(`/work-items/${id}/activity`, { headers: h }).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(() => {});
-    api.raw(`/work-items/${id}/links`, { headers: h }).then(r => r.json()).then(d => setLinks(Array.isArray(d) ? d : [])).catch(() => {});
-    api.raw(`/work-items/${id}/attachments`, { headers: h }).then(r => r.json()).then(d => setAttachments(Array.isArray(d) ? d : [])).catch(() => {});
+    api.raw(`/work-items/${id}/comments`, { headers: h }).then(r => r.json()).then(d => setComments(Array.isArray(d) ? d : [])).catch(reportError);
+    api.raw(`/work-items/${id}/activity`, { headers: h }).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(reportError);
+    api.raw(`/work-items/${id}/links`, { headers: h }).then(r => r.json()).then(d => setLinks(Array.isArray(d) ? d : [])).catch(reportError);
+    api.raw(`/work-items/${id}/attachments`, { headers: h }).then(r => r.json()).then(d => setAttachments(Array.isArray(d) ? d : [])).catch(reportError);
     fetchStatusDurations(id); // Iteration 7 (Cap B) — auto time-in-status, projected from the event log
     setDetailTab('details');
     if (fieldDefs.length > 0) fetchFieldValues(id);
@@ -661,6 +671,7 @@ export default function App() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
+  _emitToast = showToast; // register the live emitter for module-level reportError (F1/F2)
 
   // Multi-workspace context (I01-S02). Loads the workspaces the user belongs to and reconciles the
   // active selection: keep the persisted choice if still a member, else fall back to the first.
@@ -697,7 +708,7 @@ export default function App() {
         role: d.role || 'MEMBER',
         tier: d.tier || 2,
         permissions: Array.isArray(d.permissions) ? d.permissions : []
-      })).catch(() => {});
+      })).catch(reportError);
   }
 
   function fetchAll() {
@@ -723,12 +734,12 @@ export default function App() {
   function fetchUnreadCount() {
     if (!currentUser) return;
     api.raw(`/notifications/unread-count?userId=${currentUser.id}`)
-      .then(r => r.json()).then(d => setUnreadCount(d.count || 0)).catch(() => {});
+      .then(r => r.json()).then(d => setUnreadCount(d.count || 0)).catch(reportError);
   }
 
   function fetchNotifications() {
     api.raw(`/notifications?userId=${currentUser.id}`)
-      .then(r => r.json()).then(d => setNotifications(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setNotifications(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   // AUTH
@@ -973,7 +984,7 @@ export default function App() {
     }
     const t = setTimeout(() => {
       api.raw(`/work-items/search?q=${encodeURIComponent(searchQuery)}`)
-        .then(r => r.json()).then(d => setSearchResults(Array.isArray(d) ? d : [])).catch(() => {});
+        .then(r => r.json()).then(d => setSearchResults(Array.isArray(d) ? d : [])).catch(reportError);
     }, 300);
     return () => clearTimeout(t);
   }, [searchQuery]);
@@ -994,7 +1005,7 @@ export default function App() {
   // WORKSPACE
   const fetchMembers = () => {
     api.raw(`/workspaces/${activeWorkspaceId}/members`)
-      .then(r => r.json()).then(d => setWorkspaceMembers(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setWorkspaceMembers(Array.isArray(d) ? d : [])).catch(reportError);
   };
 
   const handleInvite = () => {
@@ -1017,7 +1028,7 @@ export default function App() {
         notifyComment: d.notify_comment ?? true,
         notifyMention: d.notify_mention ?? true,
         emailDigest:   d.email_digest   ?? false,
-      })).catch(() => {});
+      })).catch(reportError);
   }
   function saveNotifPrefs(prefs) {
     api.raw(`/notification-preferences`, { method: 'PUT', body: JSON.stringify(prefs) })
@@ -1032,36 +1043,36 @@ export default function App() {
         setSprints(list);
         const active = list.find(s => s.status === 'ACTIVE') || list[0];
         if (active) { setActiveSprint(active); fetchSprintItems(active.id); }
-      }).catch(() => {});
+      }).catch(reportError);
   }
   function fetchSprintItems(sprintId) {
     api.raw(`/sprints/${sprintId}/items`)
-      .then(r => r.json()).then(d => setSprintItems(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setSprintItems(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchBacklog() {
     api.raw(`/work-items/backlog`)
-      .then(r => r.json()).then(d => setBacklogItems(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setBacklogItems(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchSprintReport(sprintId) {
     api.raw(`/sprints/${sprintId}/report`)
-      .then(r => r.json()).then(setSprintReport).catch(() => {});
+      .then(r => r.json()).then(setSprintReport).catch(reportError);
     api.raw(`/sprints/${sprintId}/scope-changes`)
-      .then(r => r.json()).then(d => setScopeChanges(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setScopeChanges(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchSavedFilters() {
     api.raw(`/saved-filters`)
-      .then(r => r.json()).then(d => setSavedFilters(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setSavedFilters(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function fetchVelocityData() {
     api.raw(`/sprints/velocity`)
-      .then(r => r.json()).then(d => setVelocityData(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setVelocityData(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   // ── Iteration 6 — custom dashboards ──────────────────────────────────────────
   function fetchCustomDashboards() {
     api.raw(`/dashboards`)
-      .then(r => r.json()).then(d => setCustomDashboards(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setCustomDashboards(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function openDashboard(id) {
@@ -1069,13 +1080,13 @@ export default function App() {
       .then(r => r.json()).then(d => {
         setSelectedDashboard(d); setDashboardEditMode(false); setShareInfo(null);
         setDashboardScope('PROJECT'); setDashboardTeamId(null); setDashboardAggregate(null);
-      }).catch(() => {});
+      }).catch(reportError);
   }
 
   // Teams power the TEAM scope selector on dashboards.
   function fetchTeams() {
     api.raw(`/teams?workspaceId=${activeWorkspaceId}`)
-      .then(r => r.json()).then(d => setTeams(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setTeams(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   // Fetch the server-side scope aggregate for a dashboard. PROJECT uses the client-loaded
@@ -1118,17 +1129,17 @@ export default function App() {
 
   // ── Iteration 6 — custom reports ─────────────────────────────────────────────
   function fetchReports() {
-    api.raw(`/reports`).then(r => r.json()).then(d => setReports(Array.isArray(d) ? d : [])).catch(() => {});
+    api.raw(`/reports`).then(r => r.json()).then(d => setReports(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchReportTemplates() {
-    api.raw(`/reports/templates`).then(r => r.json()).then(d => setReportTemplates(Array.isArray(d) ? d : [])).catch(() => {});
+    api.raw(`/reports/templates`).then(r => r.json()).then(d => setReportTemplates(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function openReport(id) {
     api.raw(`/reports/${id}`).then(r => r.json()).then(d => {
       setSelectedReport(d);
       try { setReportSections(JSON.parse(d.sections || '[]')); } catch { setReportSections([]); }
       setReportEditMode(false);
-    }).catch(() => {});
+    }).catch(reportError);
   }
   function createBlankReport() {
     const name = prompt('Report name'); // simple capture; inline form is a later refinement
@@ -1162,7 +1173,7 @@ export default function App() {
   }
   function fetchReportSchedules(reportId) {
     api.raw(`/report-schedules?reportId=${reportId}`).then(r => r.json())
-      .then(d => setReportSchedules(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(d => setReportSchedules(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function createReportSchedule() {
     if (!selectedReport) return;
@@ -1187,24 +1198,24 @@ export default function App() {
   const COMPLIANCE_WS = 'WS-001';
   function fetchComplianceRules() {
     api.raw(`/compliance/rules?workspaceId=${COMPLIANCE_WS}`).then(r => r.json())
-      .then(d => setComplianceRules(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(d => setComplianceRules(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchComplianceTemplates() {
     api.raw(`/compliance/rules/templates`).then(r => r.json())
-      .then(d => setComplianceTemplates(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(d => setComplianceTemplates(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchComplianceViolations(status = violationFilter) {
     const qs = status ? `&status=${status}` : '';
     api.raw(`/compliance/violations?workspaceId=${COMPLIANCE_WS}${qs}`).then(r => r.json())
-      .then(d => { setComplianceViolations(Array.isArray(d) ? d : []); setSelectedViolations([]); }).catch(() => {});
+      .then(d => { setComplianceViolations(Array.isArray(d) ? d : []); setSelectedViolations([]); }).catch(reportError);
   }
   function fetchComplianceDashboard() {
     api.raw(`/compliance/dashboard?workspaceId=${COMPLIANCE_WS}`).then(r => r.json())
-      .then(d => setComplianceDashboard(d)).catch(() => {});
+      .then(d => setComplianceDashboard(d)).catch(reportError);
   }
   function fetchComplianceAudit() {
     api.raw(`/compliance/audit?workspaceId=${COMPLIANCE_WS}`).then(r => r.json())
-      .then(d => setComplianceAudit(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(d => setComplianceAudit(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function newRuleBuilder() {
     setRuleTestResult(null);
@@ -1304,23 +1315,23 @@ export default function App() {
   const [newCustomer, setNewCustomer] = useState(null);
   function fetchServiceRequests(q = serviceQueue) {
     api.raw(`/service/requests?workspaceId=${activeWorkspaceId}&queue=${q}`).then(r => r.json())
-      .then(d => setServiceRequests(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(d => setServiceRequests(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchServiceCustomers() {
     api.raw(`/service/customers?workspaceId=${activeWorkspaceId}`).then(r => r.json())
-      .then(d => setServiceCustomers(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(d => setServiceCustomers(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchServiceTypes() {
     api.raw(`/service/request-types?workspaceId=${activeWorkspaceId}`).then(r => r.json())
-      .then(d => setServiceTypes(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(d => setServiceTypes(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchServiceTiers() {
     api.raw(`/service/sla-tiers?workspaceId=${activeWorkspaceId}`).then(r => r.json())
-      .then(d => setServiceTiers(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(d => setServiceTiers(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchServiceCsat() {
     api.raw(`/service/csat?workspaceId=${activeWorkspaceId}`).then(r => r.json())
-      .then(d => setServiceCsat(d)).catch(() => {});
+      .then(d => setServiceCsat(d)).catch(reportError);
   }
   function assignServiceRequest(id) {
     api.send(`/service/requests/${id}/assign`, { method: 'POST', body: JSON.stringify({}) })
@@ -1340,7 +1351,7 @@ export default function App() {
   function fetchStatusDurations(itemId) {
     setStatusDurations([]);
     api.raw(`/work-items/${itemId}/status-durations`).then(r => r.json())
-      .then(d => setStatusDurations(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(d => setStatusDurations(Array.isArray(d) ? d : [])).catch(reportError);
   }
   const severityClass = {
     CRITICAL: 'bg-semantic-danger text-white',
@@ -1447,42 +1458,42 @@ export default function App() {
         setBrandingDesc(d.description || '');
         // Apply brand color as CSS variable
         document.documentElement.style.setProperty('--brand-action', d.primaryColor || '#E94E1B');
-      }).catch(() => {});
+      }).catch(reportError);
   }
 
   function saveBranding() {
     api.raw(`/workspaces/${activeWorkspaceId}/branding`, {
       method: 'PUT',
       body: JSON.stringify({ primaryColor: brandingColor, description: brandingDesc })
-    }).then(r => r.json()).then(d => { setBranding(d); showToast('Branding saved'); }).catch(() => {});
+    }).then(r => r.json()).then(d => { setBranding(d); showToast('Branding saved'); }).catch(reportError);
   }
 
   // ---- Iteration 3 fetches ----
   function fetchWorkflows(projectId) {
     const q = projectId ? `?projectId=${projectId}` : '';
     api.raw(`/workflows${q}`)
-      .then(r => r.json()).then(d => setWorkflows(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setWorkflows(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchFieldDefs(projectId) {
     const q = projectId ? `?projectId=${projectId}` : '';
     api.raw(`/field-defs${q}`)
-      .then(r => r.json()).then(d => setFieldDefs(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setFieldDefs(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchRoles() {
     api.raw(`/permission-schemes/roles`)
-      .then(r => r.json()).then(d => setRoles(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setRoles(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchWorkItemTypes() {
     api.raw(`/work-item-types`)
-      .then(r => r.json()).then(d => setWorkItemTypes(d || { builtIn: [], custom: [] })).catch(() => {});
+      .then(r => r.json()).then(d => setWorkItemTypes(d || { builtIn: [], custom: [] })).catch(reportError);
   }
   function fetchPermMatrix() {
     api.raw(`/permission-schemes/matrix?workspaceId=${activeWorkspaceId}`)
-      .then(r => r.json()).then(d => setPermMatrix(d)).catch(() => {});
+      .then(r => r.json()).then(d => setPermMatrix(d)).catch(reportError);
   }
   function loadWorkflowDetail(wfId) {
     api.raw(`/workflows/${wfId}`)
-      .then(r => r.json()).then(d => setWorkflowDetail(d)).catch(() => {});
+      .then(r => r.json()).then(d => setWorkflowDetail(d)).catch(reportError);
   }
   function expandWorkflow(wfId) {
     if (expandedWorkflowId === wfId) { setExpandedWorkflowId(null); setWorkflowDetail(null); return; }
@@ -1493,36 +1504,36 @@ export default function App() {
   function addStatus(wfId) {
     if (!newStatusForm.name.trim()) return;
     api.raw(`/workflows/${wfId}/statuses`, { method: 'POST', body: JSON.stringify(newStatusForm) })
-      .then(r => r.json()).then(() => { loadWorkflowDetail(wfId); setNewStatusForm({ name: '', color: '#0B2F5C', category: 'IN_PROGRESS' }); }).catch(() => {});
+      .then(r => r.json()).then(() => { loadWorkflowDetail(wfId); setNewStatusForm({ name: '', color: '#0B2F5C', category: 'IN_PROGRESS' }); }).catch(reportError);
   }
   function deleteStatus(wfId, statusId) {
     api.raw(`/workflows/${wfId}/statuses/${statusId}`, { method: 'DELETE' })
-      .then(() => loadWorkflowDetail(wfId)).catch(() => {});
+      .then(() => loadWorkflowDetail(wfId)).catch(reportError);
   }
   function addTransition(wfId) {
     if (!newTransitionForm.name.trim() || !newTransitionForm.fromStatus || !newTransitionForm.toStatus) return;
     api.raw(`/workflows/${wfId}/transitions`, { method: 'POST', body: JSON.stringify(newTransitionForm) })
-      .then(r => r.json()).then(() => { loadWorkflowDetail(wfId); setNewTransitionForm({ name: '', fromStatus: '', toStatus: '' }); }).catch(() => {});
+      .then(r => r.json()).then(() => { loadWorkflowDetail(wfId); setNewTransitionForm({ name: '', fromStatus: '', toStatus: '' }); }).catch(reportError);
   }
   function deleteTransition(wfId, transId) {
     api.raw(`/workflows/${wfId}/transitions/${transId}`, { method: 'DELETE' })
-      .then(() => loadWorkflowDetail(wfId)).catch(() => {});
+      .then(() => loadWorkflowDetail(wfId)).catch(reportError);
   }
   function createFieldDef() {
     if (!newFieldForm.name.trim()) return;
     api.raw(`/field-defs`, { method: 'POST', body: JSON.stringify({ ...newFieldForm, fieldKey: newFieldForm.name.toLowerCase().replace(/\s+/g,'_'), workspaceId: activeWorkspaceId }) })
-      .then(r => r.json()).then(() => { fetchFieldDefs(); setShowFieldForm(false); setNewFieldForm({ name: '', fieldType: 'TEXT', required: false, description: '' }); }).catch(() => {});
+      .then(r => r.json()).then(() => { fetchFieldDefs(); setShowFieldForm(false); setNewFieldForm({ name: '', fieldType: 'TEXT', required: false, description: '' }); }).catch(reportError);
   }
   function createWorkItemType() {
     if (!newTypeForm.label.trim()) return;
     const typeKey = newTypeForm.typeKey || newTypeForm.label.toUpperCase().replace(/\s+/g,'_');
     api.raw(`/work-item-types`, { method: 'POST', body: JSON.stringify({ ...newTypeForm, typeKey, color: '#6b7280', workspaceId: activeWorkspaceId }) })
-      .then(r => r.json()).then(() => { fetchWorkItemTypes(); setShowTypeForm(false); setNewTypeForm({ label: '', typeKey: '', icon: 'package' }); }).catch(() => {});
+      .then(r => r.json()).then(() => { fetchWorkItemTypes(); setShowTypeForm(false); setNewTypeForm({ label: '', typeKey: '', icon: 'package' }); }).catch(reportError);
   }
   function createRole() {
     if (!newRoleForm.name.trim()) return;
     api.raw(`/permission-schemes/roles`, { method: 'POST', body: JSON.stringify({ ...newRoleForm, workspaceId: activeWorkspaceId }) })
-      .then(r => r.json()).then(() => { fetchRoles(); fetchPermMatrix(); setShowRoleForm(false); setNewRoleForm({ name: '', tier: 2 }); }).catch(() => {});
+      .then(r => r.json()).then(() => { fetchRoles(); fetchPermMatrix(); setShowRoleForm(false); setNewRoleForm({ name: '', tier: 2 }); }).catch(reportError);
   }
   function runBql() {
     setBqlError('');
@@ -1534,7 +1545,7 @@ export default function App() {
   }
   function fetchBqlFilters() {
     api.raw(`/bql/filters`)
-      .then(r => r.json()).then(d => setBqlFilters(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setBqlFilters(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function saveBqlFilter() {
     if (!bqlFilterName.trim() || !bqlQuery.trim()) return;
@@ -1547,17 +1558,17 @@ export default function App() {
   function fetchRaidDashboard(pid) {
     if (!pid) return;
     api.raw(`/raid-dashboard?projectId=${pid}`)
-      .then(r => r.json()).then(setRaidDashboard).catch(() => {});
+      .then(r => r.json()).then(setRaidDashboard).catch(reportError);
   }
-  function fetchRisks(pid)       { api.raw(`/risks?projectId=${pid}`).then(r => r.json()).then(d => setRisks(Array.isArray(d) ? d : [])).catch(() => {}); }
-  function fetchAssumptions(pid) { api.raw(`/assumptions?projectId=${pid}`).then(r => r.json()).then(d => setAssumptions(Array.isArray(d) ? d : [])).catch(() => {}); }
-  function fetchPmIssues(pid)    { api.raw(`/pm-issues?projectId=${pid}`).then(r => r.json()).then(d => setPmIssues(Array.isArray(d) ? d : [])).catch(() => {}); }
-  function fetchDependencies(pid){ api.raw(`/dependencies?projectId=${pid}`).then(r => r.json()).then(d => setDependencies(Array.isArray(d) ? d : [])).catch(() => {}); }
-  function fetchDecisions(pid)   { api.raw(`/decisions?projectId=${pid}`).then(r => r.json()).then(d => setDecisions(Array.isArray(d) ? d : [])).catch(() => {}); }
-  function fetchMeetings(pid)    { api.raw(`/meetings?projectId=${pid}`).then(r => r.json()).then(d => setMeetings(Array.isArray(d) ? d : [])).catch(() => {}); }
-  function fetchActionItems(pid) { api.raw(`/action-items?projectId=${pid}`).then(r => r.json()).then(d => setActionItems(Array.isArray(d) ? d : [])).catch(() => {}); }
-  function fetchStakeholders(pid){ api.raw(`/stakeholders?projectId=${pid}`).then(r => r.json()).then(d => setStakeholders(Array.isArray(d) ? d : [])).catch(() => {}); }
-  function fetchLessons(pid)     { api.raw(`/lessons-learned?projectId=${pid}`).then(r => r.json()).then(d => setLessonsLearned(Array.isArray(d) ? d : [])).catch(() => {}); }
+  function fetchRisks(pid)       { api.raw(`/risks?projectId=${pid}`).then(r => r.json()).then(d => setRisks(Array.isArray(d) ? d : [])).catch(reportError); }
+  function fetchAssumptions(pid) { api.raw(`/assumptions?projectId=${pid}`).then(r => r.json()).then(d => setAssumptions(Array.isArray(d) ? d : [])).catch(reportError); }
+  function fetchPmIssues(pid)    { api.raw(`/pm-issues?projectId=${pid}`).then(r => r.json()).then(d => setPmIssues(Array.isArray(d) ? d : [])).catch(reportError); }
+  function fetchDependencies(pid){ api.raw(`/dependencies?projectId=${pid}`).then(r => r.json()).then(d => setDependencies(Array.isArray(d) ? d : [])).catch(reportError); }
+  function fetchDecisions(pid)   { api.raw(`/decisions?projectId=${pid}`).then(r => r.json()).then(d => setDecisions(Array.isArray(d) ? d : [])).catch(reportError); }
+  function fetchMeetings(pid)    { api.raw(`/meetings?projectId=${pid}`).then(r => r.json()).then(d => setMeetings(Array.isArray(d) ? d : [])).catch(reportError); }
+  function fetchActionItems(pid) { api.raw(`/action-items?projectId=${pid}`).then(r => r.json()).then(d => setActionItems(Array.isArray(d) ? d : [])).catch(reportError); }
+  function fetchStakeholders(pid){ api.raw(`/stakeholders?projectId=${pid}`).then(r => r.json()).then(d => setStakeholders(Array.isArray(d) ? d : [])).catch(reportError); }
+  function fetchLessons(pid)     { api.raw(`/lessons-learned?projectId=${pid}`).then(r => r.json()).then(d => setLessonsLearned(Array.isArray(d) ? d : [])).catch(reportError); }
 
   function pmCreate(type, payload) {
     const endpoints = {
@@ -1611,21 +1622,21 @@ export default function App() {
         const map = {};
         (Array.isArray(d) ? d : []).forEach(fv => { map[fv.fieldDefId] = fv.value; });
         setFieldValues(map);
-      }).catch(() => {});
+      }).catch(reportError);
   }
 
   function saveFieldValue(workItemId, fieldDefId, value) {
     api.send(`/work-items/${workItemId}/field-values`, {
       method: 'POST', body: JSON.stringify({ fieldDefId, value })
-    }).catch(() => {});
+    }).catch(reportError);
   }
 
   function fetchFieldLayouts() {
-    api.raw(`/field-layouts`).then(r => r.json()).then(d => setFieldLayouts(Array.isArray(d) ? d : [])).catch(() => {});
+    api.raw(`/field-layouts`).then(r => r.json()).then(d => setFieldLayouts(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function fetchFieldVisibility() {
-    api.raw(`/field-visibility`).then(r => r.json()).then(d => setFieldVisibility(Array.isArray(d) ? d : [])).catch(() => {});
+    api.raw(`/field-visibility`).then(r => r.json()).then(d => setFieldVisibility(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function saveFieldVisibility() {
@@ -1646,7 +1657,7 @@ export default function App() {
 
   function fetchCrossProjectDeps() {
     api.raw(`/cross-project-dependencies`)
-      .then(r => r.json()).then(d => setCrossProjectDeps(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setCrossProjectDeps(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function createCrossProjectDep() {
@@ -1664,17 +1675,17 @@ export default function App() {
   // ── Iteration 5 — Knowledge Repository ──────────────────────────────────────
 
   function fetchKnowledgeSpaces() {
-    api.raw(`/knowledge-spaces`).then(r => r.json()).then(d => setKnowledgeSpaces(Array.isArray(d) ? d : [])).catch(() => {});
+    api.raw(`/knowledge-spaces`).then(r => r.json()).then(d => setKnowledgeSpaces(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function fetchKnowledgeArticles(spaceId) {
     const url = spaceId ? `/knowledge-spaces/${spaceId}/articles` : `/articles`;
-    api.raw(url).then(r => r.json()).then(d => setKnowledgeArticles(Array.isArray(d) ? d : [])).catch(() => {});
+    api.raw(url).then(r => r.json()).then(d => setKnowledgeArticles(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function fetchArticleVersions(articleId) {
     api.raw(`/articles/${articleId}/versions`)
-      .then(r => r.json()).then(d => setArticleVersions(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setArticleVersions(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function createKnowledgeSpace() {
@@ -1717,7 +1728,7 @@ export default function App() {
 
   function fetchArticleComments(articleId) {
     api.raw(`/articles/${articleId}/comments`)
-      .then(r => r.json()).then(d => setArticleComments(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setArticleComments(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function addArticleComment(articleId) {
@@ -1764,7 +1775,7 @@ export default function App() {
   function searchKnowledge() {
     if (!knowledgeSearch.trim()) return;
     api.raw(`/articles?search=${encodeURIComponent(knowledgeSearch.trim())}`)
-      .then(r => r.json()).then(d => setKnowledgeSearchResults(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setKnowledgeSearchResults(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   // ── Iteration 6 — Dashboards ─────────────────────────────────────────────────
@@ -1793,11 +1804,11 @@ export default function App() {
 
   function fetchReleases(projectId) {
     const url = projectId ? `/releases?projectId=${projectId}` : `/releases`;
-    api.raw(url).then(r => r.json()).then(d => setReleases(Array.isArray(d) ? d : [])).catch(() => {});
+    api.raw(url).then(r => r.json()).then(d => setReleases(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function fetchReleaseItems(releaseId) {
-    api.raw(`/releases/${releaseId}/items`).then(r => r.json()).then(d => setReleaseItems(Array.isArray(d) ? d : [])).catch(() => {});
+    api.raw(`/releases/${releaseId}/items`).then(r => r.json()).then(d => setReleaseItems(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function createRelease() {
@@ -1863,7 +1874,7 @@ export default function App() {
       .catch(() => showToast('Failed to start standup', 'error'));
   }
   function openStandup(id) {
-    api.raw(`/standups/${id}`).then(r => r.json()).then(d => setActiveStandup(d)).catch(() => {});
+    api.raw(`/standups/${id}`).then(r => r.json()).then(d => setActiveStandup(d)).catch(reportError);
   }
   function recordStandup(entryId) {
     api.send(`/standups/${activeStandup.session.id}/entries/${entryId}/record`, { method: 'POST', body: JSON.stringify(standupDraft) })
@@ -1872,11 +1883,11 @@ export default function App() {
   }
   function advanceStandup() {
     api.send(`/standups/${activeStandup.session.id}/advance`, { method: 'POST' })
-      .then(() => openStandup(activeStandup.session.id)).catch(() => {});
+      .then(() => openStandup(activeStandup.session.id)).catch(reportError);
   }
   function completeStandup() {
     api.send(`/standups/${activeStandup.session.id}/complete`, { method: 'POST' })
-      .then(d => { setActiveStandup(d); fetchStandups(i15ProjectId); showToast('Standup complete'); }).catch(() => {});
+      .then(d => { setActiveStandup(d); fetchStandups(i15ProjectId); showToast('Standup complete'); }).catch(reportError);
   }
   function fetchRetros(pid) {
     api.raw(`/retros?projectId=${pid}`).then(r => r.json())
@@ -1889,7 +1900,7 @@ export default function App() {
       .catch(() => showToast('Failed to create retro', 'error'));
   }
   function openRetro(id) {
-    api.raw(`/retros/${id}`).then(r => r.json()).then(d => setActiveRetro(d)).catch(() => {});
+    api.raw(`/retros/${id}`).then(r => r.json()).then(d => setActiveRetro(d)).catch(reportError);
   }
   function addRetroNote(columnKey) {
     const content = (retroNoteDraft[columnKey] || '').trim();
@@ -1899,7 +1910,7 @@ export default function App() {
       .catch(() => showToast('Failed to add note', 'error'));
   }
   function voteRetroNote(noteId) {
-    api.send(`/retros/notes/${noteId}/vote`, { method: 'POST' }).then(() => openRetro(activeRetro.session.id)).catch(() => {});
+    api.send(`/retros/notes/${noteId}/vote`, { method: 'POST' }).then(() => openRetro(activeRetro.session.id)).catch(reportError);
   }
   function convertRetroNote(noteId) {
     api.send(`/retros/notes/${noteId}/convert`, { method: 'POST', body: JSON.stringify({}) })
@@ -1956,7 +1967,7 @@ export default function App() {
       .catch(() => showToast('Failed to capture idea', 'error'));
   }
   function voteIdea(id) {
-    api.send(`/ideas/${id}/vote`, { method: 'POST' }).then(() => fetchIdeas()).catch(() => {});
+    api.send(`/ideas/${id}/vote`, { method: 'POST' }).then(() => fetchIdeas()).catch(reportError);
   }
   function promoteIdea(id) {
     api.send(`/ideas/${id}/promote`, { method: 'POST', body: JSON.stringify({}) })
@@ -1987,7 +1998,7 @@ export default function App() {
       .catch(() => showToast('Failed to create objective', 'error'));
   }
   function openObjective(id) {
-    api.raw(`/objectives/${id}`).then(r => r.json()).then(d => setActiveObjective(d)).catch(() => {});
+    api.raw(`/objectives/${id}`).then(r => r.json()).then(d => setActiveObjective(d)).catch(reportError);
   }
   function addKeyResult() {
     if (!newKr.title.trim() || !activeObjective) { showToast('Key result title required', 'error'); return; }
@@ -1997,7 +2008,7 @@ export default function App() {
   }
   function updateKrProgress(kr, currentValue) {
     api.send(`/objectives/key-results/${kr.id}`, { method: 'PUT', body: JSON.stringify({ ...kr, currentValue: Number(currentValue) }) })
-      .then(() => openObjective(activeObjective.objective.id)).catch(() => {});
+      .then(() => openObjective(activeObjective.objective.id)).catch(reportError);
   }
   function runReleaseNotes() {
     api.send(`/po/release-notes?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId, releaseName: releaseNotesName || 'Release notes' }) })
@@ -2014,7 +2025,7 @@ export default function App() {
 
   function fetchTrash() {
     api.raw(`/work-items/trash`)
-      .then(r => r.json()).then(d => setTrashItems(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setTrashItems(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function restoreFromTrash(id) {
@@ -2040,13 +2051,13 @@ export default function App() {
       .then(r => r.json()).then(() => {
         setWorkItems(prev => prev.map(i => i.id === item.id ? { ...i, starred: !isStarred } : i));
         if (selectedItem?.id === item.id) setSelectedItem(prev => ({ ...prev, starred: !isStarred }));
-      }).catch(() => {});
+      }).catch(reportError);
   }
 
   function fetchProjectMembers(projectId) {
     setSelectedProjectId(projectId);
     api.raw(`/workspaces/${activeWorkspaceId}/projects/${projectId}/members`)
-      .then(r => r.json()).then(d => setProjectMembers(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setProjectMembers(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function addProjectMember(projectId) {
@@ -2070,7 +2081,7 @@ export default function App() {
         cm.id === parentId ? { ...cm, replies: [...(cm.replies || []), { ...c, authorName: currentUser.fullName }] } : cm
       ));
       setReplyBody(''); setReplyingTo(null);
-    }).catch(() => {});
+    }).catch(reportError);
   }
 
   const handleCreateSprint = () => {
@@ -2117,7 +2128,7 @@ export default function App() {
     api.raw(`/work-items/backlog/reorder`, {
       method: 'PUT',
       body: JSON.stringify(reordered.map((i, idx) => ({ id: i.id, order: idx })))
-    }).catch(() => {});
+    }).catch(reportError);
   };
 
   // Inline refinement update (story points, priority)
@@ -2128,7 +2139,7 @@ export default function App() {
     setBacklogItems(prev => prev.map(i => i.id === itemId ? updated : i));
     api.raw(`/work-items/${itemId}`, { method: 'PUT', body: JSON.stringify(updated) })
       .then(r => { if (r.status === 409) { showToast('That item changed elsewhere — refreshing', 'error'); fetchBacklog(); } })
-      .catch(() => {});
+      .catch(reportError);
   };
 
   const handleSaveFilter = () => {
@@ -3235,7 +3246,7 @@ export default function App() {
                 onOpenItem={(id) => api.raw(`/work-items/${id}`)
                   .then((r) => (r.ok ? r.json() : null))
                   .then((it) => { if (it) setSelectedItem(it); })
-                  .catch(() => {})}
+                  .catch(reportError)}
               />
             </div>
           )}
@@ -3444,7 +3455,7 @@ export default function App() {
                           <button onClick={() => {
                             api.raw(`/saved-filters/${f.id}/share`, { method: 'PUT', headers: headers() })
                               .then(r => r.json()).then(() => fetchSavedFilters())
-                              .catch(() => {});
+                              .catch(reportError);
                           }}
                             title={f.shared ? 'Make private' : 'Share with team'}
                             className={`text-xs px-1.5 py-1.5 rounded-r-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/20 text-semantic-success hover:bg-semantic-success/30' : 'bg-neutral-100 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200'}`}>
@@ -3487,7 +3498,7 @@ export default function App() {
                       setSprintItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
                       api.raw(`/work-items/${itemId}`, { method: 'PUT', body: JSON.stringify({ ...item, status }) })
                         .then(r => { if (r.status === 409) { showToast('That item changed elsewhere — refreshing', 'error'); fetchSprints(); } })
-                        .catch(() => {});
+                        .catch(reportError);
                     }}
                     onSelect={setSelectedItem} onDelete={handleDelete} density={density} />
                 </>
@@ -4274,7 +4285,7 @@ export default function App() {
                                 </span>
                               </td>
                               <td className="px-4 py-3">
-                                <button onClick={() => api.send(`/field-visibility/${fv.id}`, { method: 'DELETE' }).then(() => { showToast('Rule deleted'); fetchFieldVisibility(); }).catch(() => {})}
+                                <button onClick={() => api.send(`/field-visibility/${fv.id}`, { method: 'DELETE' }).then(() => { showToast('Rule deleted'); fetchFieldVisibility(); }).catch(reportError)}
                                   className="text-xs text-semantic-danger hover:underline">Delete</button>
                               </td>
                             </tr>
@@ -4771,7 +4782,7 @@ export default function App() {
                                   api.raw(`/meetings/${selectedMeeting.id}/notes/${section}`, {
                                     method: 'PUT',
                                     body: JSON.stringify({ content: e.target.value })
-                                  }).catch(() => {});
+                                  }).catch(reportError);
                                 }}
                               />
                             </div>
@@ -4905,7 +4916,7 @@ export default function App() {
                                     </span>
                                   </td>
                                   <td className="px-4 py-3">
-                                    <button onClick={() => api.send(`/cross-project-dependencies/${dep.id}`, { method: 'DELETE' }).then(() => { showToast('Deleted'); fetchCrossProjectDeps(); }).catch(() => {})}
+                                    <button onClick={() => api.send(`/cross-project-dependencies/${dep.id}`, { method: 'DELETE' }).then(() => { showToast('Deleted'); fetchCrossProjectDeps(); }).catch(reportError)}
                                       className="text-xs text-semantic-danger hover:underline">Delete</button>
                                   </td>
                                 </tr>
@@ -7372,7 +7383,7 @@ export default function App() {
                     <button key={et} onClick={() => {
                       setActivityEventFilter(et);
                       const url = `/work-items/${selectedItem.id}/activity${et ? `?eventType=${et}` : ''}`;
-                      api.raw(url).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(() => {});
+                      api.raw(url).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(reportError);
                     }}
                       className={`text-xs px-2 py-1 rounded-full font-medium transition-colors ${activityEventFilter === et ? 'bg-brand-navy text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}>
                       {et ? et.replace(/_/g, ' ') : 'All'}
@@ -8289,7 +8300,7 @@ function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
   const [items, setItems] = React.useState([]);
   React.useEffect(() => {
     api.raw(`/sprints/${sprintId}/items`)
-      .then(r => r.json()).then(d => setItems(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setItems(Array.isArray(d) ? d : [])).catch(reportError);
   }, [sprintId]);
 
   if (items.length === 0) return <div className="px-5 py-4 text-sm text-neutral-600 text-center">No items in this sprint yet.</div>;

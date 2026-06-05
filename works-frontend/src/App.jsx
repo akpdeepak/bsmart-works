@@ -5,6 +5,7 @@ import { Mail, ShieldCheck, PanelLeft, Bell } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
 import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
+import { SlaView } from '@/components/works/organisms/sla-view';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
@@ -2062,6 +2063,7 @@ export default function App() {
           <NavItem active={view === 'bql'} onClick={() => { setView('bql'); fetchBqlFilters(); }} icon="🔍">BQL Query</NavItem>
           <NavItem active={view === 'knowledge'} onClick={() => { setView('knowledge'); fetchKnowledgeSpaces(); setKnowledgeTab('spaces'); setSelectedSpace(null); setSelectedArticle(null); }} icon="📚">Knowledge</NavItem>
           <NavItem active={view === 'compliance'} onClick={() => { setView('compliance'); setComplianceTab('dashboard'); setRuleBuilder(null); fetchComplianceDashboard(); fetchComplianceRules(); fetchComplianceViolations(); }} icon="🛡">Compliance</NavItem>
+          <NavItem active={view === 'sla'} onClick={() => setView('sla')} icon="⏱">SLA</NavItem>
           <NavItem active={view === 'service'} onClick={() => { setView('service'); setServiceTab('queues'); setServiceQueue('open'); fetchServiceRequests('open'); }} icon="🎧">Service Desk</NavItem>
 
           {!navCollapsed && <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 pt-3 pb-1">Project Management</p>}
@@ -5456,6 +5458,10 @@ export default function App() {
                 )}
               </div>
             </div>
+          )}
+
+          {view === 'sla' && (
+            <SlaView workspaceId="WS-001" canManage={can('manage_sla')} onToast={showToast} />
           )}
 
           {view === 'compliance' && (

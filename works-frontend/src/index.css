@@ -27,3 +27,16 @@
     @apply w-full border border-neutral-200 dark:border-neutral-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-brand-navy transition-colors bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100;
   }
 }
+
+/* Respect the OS "reduce motion" setting globally (WCAG 2.1 §2.3.3). Outside @layer so it
+   always wins. Motion that communicates state still completes, just near-instantly. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

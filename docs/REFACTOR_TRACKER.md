@@ -21,7 +21,7 @@
 | 7 | 7.0 | Compliance Rules Engine | 9 | 9 |
 | 8 | 8.0 | SLA Engine — Internal & Generalized | 9 | 9 |
 | 9 | 9.0 | Service Management — Customer Portal | 10 | 10 |
-| 10 | 10.0 | AI Orchestration Foundation + AI Control Plane | 13 | 0 |
+| 10 | 10.0 | AI Orchestration Foundation + AI Control Plane | 13 | 13 |
 | 11 | 11.0 | AI Expansion + Conversational Command Bar | 15 | 0 |
 | 12 | 12.0 | KPI Framework with Privacy Guardrails | 12 | 0 |
 | 13 | 13.0 | Automation Engine + Integrations | 12 | 0 |
@@ -32,7 +32,7 @@
 | 18 | 18.0 | Mobile + Real-time + Performance | 12 | 0 |
 | 19 | 19.0 | Enterprise Security + Compliance Certifications | 12 | 0 |
 | 20 | 20.0 | Polish, Advanced AI, Marketplace Foundation | 12 | 0 |
-| **Total** | | | **224** | **21** |
+| **Total** | | | **224** | **34** |
 
 ## Specs
 
@@ -170,19 +170,19 @@
 
 | ID | Cap | Spec | Status | Branch | PR | Date | Notes |
 |---|---|---|---|---|---|---|---|
-| I10-S01 | O | AI Orchestration service | Pending | — | — | — | — |
-| I10-S02 | O | Confirmation-first pattern | Pending | — | — | — | — |
-| I10-S03 | Z | Workspace AI policy | Pending | — | — | — | — |
-| I10-S04 | Z | Per-capability AI toggle | Pending | — | — | — | — |
-| I10-S05 | Z | Per-user AI preference | Pending | — | — | — | — |
-| I10-S06 | Z | AI budget caps | Pending | — | — | — | — |
-| I10-S07 | Z | AI usage dashboard | Pending | — | — | — | — |
-| I10-S08 | Z | AI audit log | Pending | — | — | — | — |
-| I10-S09 | Z | Fallback documentation | Pending | — | — | — | — |
-| I10-S10 | Z | Model tier selection | Pending | — | — | — | — |
-| I10-S11 | Z | Data boundary controls | Pending | — | — | — | — |
-| I10-S12 | O | Natural language → WIQL | Pending | — | — | — | — |
-| I10-S13 | O | Summarization | Pending | — | — | — | — |
+| I10-S01 | O | AI Orchestration service | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | V40; AiOrchestrationService — single entry point: scope→budget→redaction→tier→provider→audit |
+| I10-S02 | O | Confirmation-first pattern | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | NL→BQL returns a preview plan; never auto-mutates; client confirms then runs |
+| I10-S03 | Z | Workspace AI policy | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | ENABLED/DISABLED/OPT_IN; AiPolicyResolver most-restrictive-wins; ADMIN-gated |
+| I10-S04 | Z | Per-capability AI toggle | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | ai_capability_toggles; off-anywhere wins |
+| I10-S05 | Z | Per-user AI preference | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | User sets only own preference within admin bounds |
+| I10-S06 | Z | AI budget caps | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | AiBudgetService: 80% degrade→Haiku, 100% auto-disable; cost accrues from invocations |
+| I10-S07 | Z | AI usage dashboard | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | Tokens/cost/calls by user/capability/tier over ai_invocations |
+| I10-S08 | Z | AI audit log | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | Per-call ai_invocations rows + CSV export |
+| I10-S09 | Z | Fallback documentation | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | AiFallbackRegistry + docs/AI-FALLBACKS.md, tested |
+| I10-S10 | Z | Model tier selection | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | HAIKU/SONNET/OPUS default tier; budget degrade overrides |
+| I10-S11 | Z | Data boundary controls | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | DataBoundaryService redacts PII/financial server-side before egress |
+| I10-S12 | O | Natural language → WIQL | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | NlToBqlParser → BQL validated by BqlCompiler; low-confidence → manual builder |
+| I10-S13 | O | Summarization | Done | claude/iteration-10-complete-y6ls0 | — | 2026-06-04 | Extractive Summarizer; read-only; no model required |
 
 ### Iteration 11 — Release 11.0 · AI Expansion + Conversational Command Bar
 

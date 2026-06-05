@@ -96,7 +96,7 @@ function NavItem({ item, active, collapsed, badge, dot, onClick }) {
       title={collapsed ? item.label : undefined}
       onClick={onClick}
       className={cn(
-        'relative flex w-full items-center gap-3 rounded-md text-sm transition-colors duration-[120ms]',
+        'relative flex w-full items-center gap-3 rounded-md text-sm transition-colors duration-fast',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-1 focus-visible:ring-offset-brand-navy',
         collapsed ? 'h-9 justify-center px-0' : 'h-9 px-3',
         active
@@ -183,7 +183,7 @@ export function SidebarNav({
             type="button"
             aria-label="Expand sidebar"
             onClick={onToggleCollapse}
-            className="flex h-full w-full items-center justify-center text-white/60 transition-colors duration-[120ms] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            className="flex h-full w-full items-center justify-center text-white/60 transition-colors duration-fast hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           >
             <div className="flex h-7 w-7 items-center justify-center rounded bg-brand-orange text-xs font-bold text-white">
               {getInitials(workspace.name)}
@@ -199,7 +199,7 @@ export function SidebarNav({
               type="button"
               aria-label="Collapse sidebar"
               onClick={onToggleCollapse}
-              className="shrink-0 rounded p-1 text-white/50 transition-colors duration-[120ms] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              className="shrink-0 rounded p-1 text-white/50 transition-colors duration-fast hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
             >
               <PanelLeftClose aria-hidden="true" className="h-4 w-4" />
             </button>
@@ -263,7 +263,7 @@ export function SidebarNav({
                 type="button"
                 aria-label="Sign out"
                 onClick={onLogout}
-                className="shrink-0 rounded p-1 text-white/40 transition-colors duration-[120ms] hover:text-brand-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                className="shrink-0 rounded p-1 text-white/40 transition-colors duration-fast hover:text-brand-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
               >
                 <LogOut aria-hidden="true" className="h-4 w-4" />
               </button>

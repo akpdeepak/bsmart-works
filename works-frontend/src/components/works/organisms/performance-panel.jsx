@@ -97,7 +97,7 @@ export function PerformancePanel({ workspaceId }) {
             aria-selected={layer === l.id}
             onClick={() => { setLoading(true); setLayer(l.id); }}
             className={[
-              'rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-[120ms]',
+              'rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-fast',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-1',
               'active:translate-y-px disabled:opacity-50',
               layer === l.id

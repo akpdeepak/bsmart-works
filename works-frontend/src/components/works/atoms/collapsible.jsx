@@ -39,7 +39,7 @@ export function Collapsible({ id, title, count, defaultOpen = true, children, cl
         aria-expanded={open}
         aria-controls={regionId}
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-2 py-3 text-left transition-colors duration-[120ms] hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2 dark:hover:bg-neutral-800"
+        className="flex w-full items-center gap-2 py-3 text-left transition-colors duration-fast hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2 dark:hover:bg-neutral-800"
       >
         <span className="text-sm font-semibold uppercase tracking-wide text-neutral-700 dark:text-neutral-200">
           {title}

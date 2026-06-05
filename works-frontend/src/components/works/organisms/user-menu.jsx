@@ -44,7 +44,7 @@ export function UserMenu({
 
   const item =
     'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-neutral-700 ' +
-    'dark:text-neutral-200 transition-colors duration-[120ms] hover:bg-neutral-100 ' +
+    'dark:text-neutral-200 transition-colors duration-fast hover:bg-neutral-100 ' +
     'dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 ' +
     'focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-1';
 
@@ -57,7 +57,7 @@ export function UserMenu({
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          'flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors duration-[120ms]',
+          'flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors duration-fast',
           'hover:bg-neutral-100 dark:hover:bg-neutral-800',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2'
         )}

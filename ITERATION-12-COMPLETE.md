@@ -20,7 +20,7 @@ cannot drill into individuals — enforced at the API, not the UI.**
 
 ## 2. What shipped
 
-- **Migration `V43__kpi_framework.sql`** — `metric_definitions`, `metric_snapshots`, `metric_shares`,
+- **Migration `V44__kpi_framework.sql`** — `metric_definitions`, `metric_snapshots`, `metric_shares`,
   plus `view_team_metrics` (LEAD) and `manage_metrics` (ADMIN) permissions. Plural, workspace-scoped,
   indexed.
 - **Default catalog** (`MetricCatalog`): velocity, commitment accuracy, cycle time, lead time, rework,

@@ -1,4 +1,4 @@
--- V44: Iteration 13 — Automation Engine + Integrations (Cap C, Cap Q, Cap A).
+-- V45: Iteration 13 — Automation Engine + Integrations (Cap C, Cap Q, Cap A).
 -- A visual "When [trigger], if [condition], then [action]" automation engine with test-mode and an
 -- append-only run log; outbound signed webhooks with retry + dead-letter; a public-API token store
 -- (the OAuth/bearer foundation); and an integration-connection registry for Slack / GitHub / GitLab

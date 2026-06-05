@@ -1,4 +1,4 @@
--- V41: Iteration 9 — Service Management / Customer Portal (Cap N + Cap M).
+-- V38: Iteration 9 — Service Management / Customer Portal (Cap N + Cap M).
 -- The external face of Works: customer organizations, their external users (a SEPARATE
 -- identity from internal `users`), admin-defined request types with per-type portal forms,
 -- service requests worked by internal agents through pre-filtered queues, multi-tier

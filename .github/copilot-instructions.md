@@ -165,9 +165,9 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   and iteration **11** (broad AI expansion on the **AI Control Plane** — one policy hierarchy, one
   budget, one audit trail, one fallback contract, RB-40 §2). Iteration 7 (Compliance Rules Engine)
   complete.
-- **Flyway high-water mark:** **V44** (`V44__automation_and_integrations.sql`; note: V16 was skipped,
+- **Flyway high-water mark:** **V45** (`V45__automation_and_integrations.sql`; note: V16 was skipped,
   V23 does not exist).
-- **Next migration:** **`V45__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+- **Next migration:** **`V46__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

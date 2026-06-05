@@ -1,4 +1,4 @@
--- V42: Iteration 9 seed — a demonstrable customer portal on the BCITS Support Desk (WS-002).
+-- V39: Iteration 9 seed — a demonstrable customer portal on the BCITS Support Desk (WS-002).
 -- Seeds multi-tier SLAs, the three system request types with portal forms, a demo customer
 -- organization + admin user, and publishes a couple of KB articles to the portal. Idempotent.
 -- Demo customer login: admin@amrutilities.example / portal1234  (dev seed only). Forward-only.

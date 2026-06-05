@@ -169,3 +169,24 @@ jobs:
       # Report is written to target/site/jacoco/index.html for local inspection.
       - name: Unit tests + coverage gate
         run: ./mvnw -B -Dgroups=unit verify
+
+  backend-integration-test:
+    name: Backend (integration — Flyway + Postgres)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: works-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      # Boots the app against a real Postgres via Testcontainers (Docker is available on
+      # ubuntu-latest) and applies EVERY Flyway migration end-to-end. This is the stage that would
+      # have caught the V35 duplicate-version collision and bad migration SQL before merge.
+      # Invoke failsafe directly (not the surefire `test` phase) so DB-less @SpringBootTest classes
+      # like DemoApplicationTests are not run here, and skip JaCoCo (its gate is the unit job).
+      - name: Integration tests (Testcontainers + Flyway)
+        run: ./mvnw -B -Djacoco.skip=true test-compile failsafe:integration-test failsafe:verify

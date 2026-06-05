@@ -2739,7 +2739,7 @@ export default function App() {
                           </div>
                         </div>
                       ))}
-                      {(smDash?.velocityTrend || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No sprint data yet.</p>}
+                      {(smDash?.velocityTrend || []).length === 0 && <p className="text-sm text-neutral-600 text-center py-4">No sprint data yet.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Team Capacity (14 days)</h3>
@@ -2766,7 +2766,7 @@ export default function App() {
                           <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${i.priority === 'CRITICAL' ? 'bg-semantic-danger text-white' : 'bg-semantic-warning-surface text-semantic-warning'}`}>{i.priority}</span>
                         </div>
                       ))}
-                      {(smDash?.highRiskItems || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No high-risk items — great!</p>}
+                      {(smDash?.highRiskItems || []).length === 0 && <p className="text-sm text-neutral-600 text-center py-4">No high-risk items — great!</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Scope Changes</h3>
@@ -2779,7 +2779,7 @@ export default function App() {
                           </div>
                         </div>
                       ))}
-                      {(smDash?.scopeChanges || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No scope changes recorded.</p>}
+                      {(smDash?.scopeChanges || []).length === 0 && <p className="text-sm text-neutral-600 text-center py-4">No scope changes recorded.</p>}
                     </div>
                   </div>
                 </div>
@@ -2820,7 +2820,7 @@ export default function App() {
                           )}
                         </div>
                       ))}
-                      {(poDash?.releases || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No releases defined yet.</p>}
+                      {(poDash?.releases || []).length === 0 && <p className="text-sm text-neutral-600 text-center py-4">No releases defined yet.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Backlog Breakdown</h3>
@@ -2833,7 +2833,7 @@ export default function App() {
                           <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200 w-8 text-right">{b.count}</span>
                         </div>
                       ))}
-                      {(poDash?.backlogByType || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">Backlog is empty.</p>}
+                      {(poDash?.backlogByType || []).length === 0 && <p className="text-sm text-neutral-600 text-center py-4">Backlog is empty.</p>}
                       <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-700">
                         <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">Priority</h4>
                         {(poDash?.priorityDistribution || []).map(p => (
@@ -2987,7 +2987,7 @@ export default function App() {
                     <div className="md:col-span-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Permission Audit Log</h3>
                       {(adminDash?.recentAuditLog || []).length === 0
-                        ? <p className="text-sm text-neutral-400 text-center py-4">No permission changes recorded yet.</p>
+                        ? <p className="text-sm text-neutral-600 text-center py-4">No permission changes recorded yet.</p>
                         : <div className="overflow-x-auto">
                             <table className="w-full text-xs">
                               <thead>
@@ -3695,7 +3695,7 @@ export default function App() {
                             <span className="text-xs text-neutral-400">Items added/removed mid-sprint</span>
                           </div>
                           {scopeChanges.length === 0 ? (
-                            <p className="text-xs text-neutral-400 text-center py-6">No scope changes — sprint stayed on plan ✓</p>
+                            <p className="text-xs text-neutral-600 text-center py-6">No scope changes — sprint stayed on plan ✓</p>
                           ) : (
                             <div className="divide-y divide-neutral-50 dark:divide-neutral-700">
                               {scopeChanges.map((c, i) => (
@@ -3920,7 +3920,7 @@ export default function App() {
                           <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full">{m.role}</span>
                         </div>
                       ))}
-                      {projectMembers.length === 0 && <p className="text-sm text-neutral-400 py-2 text-center">No project-specific members yet.</p>}
+                      {projectMembers.length === 0 && <p className="text-sm text-neutral-600 py-2 text-center">No project-specific members yet.</p>}
                     </div>
                     <div className="flex gap-2">
                       <input type="email" placeholder="Email address"
@@ -4489,7 +4489,7 @@ export default function App() {
                       </div>
                     )}
                     {(workItemTypes.custom || []).length === 0 && !showTypeForm && (
-                      <p className="text-sm text-neutral-400 italic">No custom types yet. Create utility-domain types like Meter Rollout, Tariff Change, or Substation Commission.</p>
+                      <p className="text-sm text-neutral-600 italic">No custom types yet. Create utility-domain types like Meter Rollout, Tariff Change, or Substation Commission.</p>
                     )}
                   </div>
                 </div>
@@ -4682,7 +4682,7 @@ export default function App() {
                               {a.dueDate && <span className="text-xs text-neutral-400">{a.dueDate}</span>}
                             </div>
                           ))}
-                          {(raidDashboard.actionItems || []).filter(a => a.status !== 'DONE').length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No open action items 🎉</p>}
+                          {(raidDashboard.actionItems || []).filter(a => a.status !== 'DONE').length === 0 && <p className="text-sm text-neutral-600 text-center py-4">No open action items 🎉</p>}
                         </div>
                       </div>
                     </div>
@@ -5428,7 +5428,7 @@ export default function App() {
 
                 <div className="space-y-2 mb-5">
                   {reportSchedules.length === 0
-                    ? <p className="text-sm text-neutral-400 text-center py-3">No schedules yet.</p>
+                    ? <p className="text-sm text-neutral-600 text-center py-3">No schedules yet.</p>
                     : reportSchedules.map(s => (
                       <div key={s.id} className="flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
                         <div className="flex-1 min-w-0">
@@ -5505,7 +5505,7 @@ export default function App() {
                 {/* Space list */}
                 <div className="flex-1 overflow-y-auto px-2 pb-2">
                   {knowledgeSpaces.length === 0 && (
-                    <p className="text-xs text-neutral-400 text-center py-6">No spaces yet. Create one to get started.</p>
+                    <p className="text-xs text-neutral-600 text-center py-6">No spaces yet. Create one to get started.</p>
                   )}
                   {knowledgeSpaces.map(space => (
                     <div key={space.id}>
@@ -5708,7 +5708,7 @@ export default function App() {
                         <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
                           <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Version history</h3>
                           {articleVersions.length === 0 ? (
-                            <p className="text-xs text-neutral-400">No versions saved yet.</p>
+                            <p className="text-xs text-neutral-600">No versions saved yet.</p>
                           ) : (
                             <div className="space-y-2">
                               {articleVersions.map(v => (
@@ -5730,7 +5730,7 @@ export default function App() {
                           <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Comments ({articleComments.length})</h3>
                           <div className="flex-1 space-y-2">
                             {articleComments.length === 0 && (
-                              <p className="text-xs text-neutral-400">No comments yet. Start the discussion below.</p>
+                              <p className="text-xs text-neutral-600">No comments yet. Start the discussion below.</p>
                             )}
                             {articleComments.map(c => (
                               <div key={c.id} className={`rounded-lg p-3 border ${c.resolved ? 'bg-semantic-success-surface border-semantic-success/30' : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700'}`}>
@@ -5824,7 +5824,7 @@ export default function App() {
                       {r.releaseDate && <span className="text-xs text-neutral-400 ml-2">{new Date(r.releaseDate).toLocaleDateString()}</span>}
                     </button>
                   ))}
-                  {releases.length === 0 && <p className="text-xs text-neutral-400 text-center py-6">No releases yet. Create one to get started.</p>}
+                  {releases.length === 0 && <p className="text-xs text-neutral-600 text-center py-6">No releases yet. Create one to get started.</p>}
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-6">
@@ -5861,7 +5861,7 @@ export default function App() {
                     )}
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 mb-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Work Items ({releaseItems.length})</h3>
-                      {releaseItems.length === 0 ? <p className="text-sm text-neutral-400 text-center py-4">No work items linked yet.</p>
+                      {releaseItems.length === 0 ? <p className="text-sm text-neutral-600 text-center py-4">No work items linked yet.</p>
                         : releaseItems.map(item => (
                           <div key={item.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                             <TypeBadge type={item.type} compact />
@@ -6088,7 +6088,7 @@ export default function App() {
                               <span className="text-xs font-mono text-brand-navy">{i.story_points} pts</span>
                             </div>
                           ))}
-                          {(planningResult.suggestedItems || []).length === 0 && <p className="text-xs text-neutral-400">No ready items fit the capacity.</p>}
+                          {(planningResult.suggestedItems || []).length === 0 && <p className="text-xs text-neutral-600">No ready items fit the capacity.</p>}
                         </div>
                       </div>
                     )}
@@ -7167,7 +7167,7 @@ export default function App() {
             {detailTab === 'comments' && (
               <div>
                 {comments.length === 0 && (
-                  <p className="text-xs text-neutral-400 text-center py-6">No comments yet. Be the first to comment.</p>
+                  <p className="text-xs text-neutral-600 text-center py-6">No comments yet. Be the first to comment.</p>
                 )}
                 <div className="space-y-3 mb-4">
                   {comments.map(c => (
@@ -7303,7 +7303,7 @@ export default function App() {
                   </div>
                 )}
 
-                {links.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No links yet.</p>}
+                {links.length === 0 && <p className="text-xs text-neutral-600 text-center py-4">No links yet.</p>}
                 <div className="space-y-2 mb-4">
                   {links.map(l => (
                     <div key={l.id} className="flex items-center gap-3 p-2.5 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700">
@@ -7344,7 +7344,7 @@ export default function App() {
                     </span>
                   </div>
                 </div>
-                {attachments.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No files attached yet.</p>}
+                {attachments.length === 0 && <p className="text-xs text-neutral-600 text-center py-4">No files attached yet.</p>}
                 <div className="space-y-2">
                   {attachments.map(a => {
                     const mime = a.mime_type || a.mimeType || '';
@@ -7411,7 +7411,7 @@ export default function App() {
                     </button>
                   ))}
                 </div>
-                {activity.length === 0 && <p className="text-xs text-neutral-400 text-center py-4">No activity recorded yet.</p>}
+                {activity.length === 0 && <p className="text-xs text-neutral-600 text-center py-4">No activity recorded yet.</p>}
                 <div className="space-y-3">
                   {activity.map(a => (
                     <div key={a.id} className="flex gap-2.5">
@@ -7899,7 +7899,7 @@ function ReportSectionCard({ section, index, total, workItems, editMode, onChang
 
       {section.type === 'table' && (
         <div className="divide-y divide-neutral-100 dark:divide-neutral-700/50">
-          {items.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-400">No matching items.</p>}
+          {items.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-600">No matching items.</p>}
           {items.slice(0, config.limit || 20).map(i => (
             <div key={i.id} className="flex items-center justify-between gap-2 py-1.5">
               <span className="min-w-0 flex-1 truncate text-sm text-neutral-800 dark:text-neutral-200">{i.title}</span>
@@ -8074,7 +8074,7 @@ function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove,
           {(() => {
             const entries = statusSeries;
             const max = Math.max(1, ...entries.map(e => e.value));
-            if (entries.length === 0) return <p className="text-xs text-neutral-600 dark:text-neutral-400">No matching items.</p>;
+            if (entries.length === 0) return <p className="text-xs text-neutral-600 dark:text-neutral-600">No matching items.</p>;
             return entries.map(({ label: status, value: count }) => {
               const row = (
                 <>
@@ -8101,7 +8101,7 @@ function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove,
 
       {widget.widgetType === 'ITEM_LIST' && (
         <div className="space-y-1 mt-1">
-          {listItems.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-400">No matching items.</p>}
+          {listItems.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-600">No matching items.</p>}
           {listItems.slice(0, config.limit || 6).map(i => (
             <div key={i.id} className="flex items-center justify-between gap-2 py-1 border-b border-neutral-100 dark:border-neutral-700/50 last:border-0">
               <span className="text-xs text-neutral-700 dark:text-neutral-300 truncate">{i.title}</span>
@@ -8140,7 +8140,7 @@ function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove,
 
       {widget.widgetType === 'VELOCITY_LINE' && (() => {
         const points = velocityPoints(velocity);
-        if (points.length === 0) return <p className="text-xs text-neutral-400">No sprint history yet.</p>;
+        if (points.length === 0) return <p className="text-xs text-neutral-600">No sprint history yet.</p>;
         const max = Math.max(1, ...points.map(p => p.value));
         const n = points.length;
         const path = points.map((p, i) => `${n <= 1 ? 0 : (i / (n - 1)) * 100},${30 - (p.value / max) * 28}`).join(' ');
@@ -8159,7 +8159,7 @@ function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove,
       {widget.widgetType === 'CUMULATIVE_FLOW' && (() => {
         const series = statusBreakdown(items);
         const total = series.reduce((a, b) => a + b.value, 0) || 1;
-        if (series.length === 0) return <p className="text-xs text-neutral-400">No matching items.</p>;
+        if (series.length === 0) return <p className="text-xs text-neutral-600">No matching items.</p>;
         return (
           <div className="mt-1">
             <div className="flex w-full h-3 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-700">
@@ -8230,7 +8230,7 @@ function DashboardDrillModal({ drill, onClose, onOpenItem }) {
         </div>
         <div className="overflow-y-auto p-2">
           {items.length === 0 ? (
-            <p className="text-xs text-neutral-600 dark:text-neutral-400 p-4 text-center">No matching items.</p>
+            <p className="text-xs text-neutral-600 dark:text-neutral-600 p-4 text-center">No matching items.</p>
           ) : items.map(i => (
             <button key={i.id} type="button" onClick={() => onOpenItem(i)}
               className="flex w-full items-center justify-between gap-2 px-3 py-2 rounded-md text-left hover:bg-neutral-50 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors">
@@ -8324,7 +8324,7 @@ function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
       .then(r => r.json()).then(d => setItems(Array.isArray(d) ? d : [])).catch(() => {});
   }, [sprintId]);
 
-  if (items.length === 0) return <div className="px-5 py-4 text-sm text-neutral-400 text-center">No items in this sprint yet.</div>;
+  if (items.length === 0) return <div className="px-5 py-4 text-sm text-neutral-600 text-center">No items in this sprint yet.</div>;
   return (
     <div className="divide-y divide-neutral-50 dark:divide-neutral-700">
       {items.map(item => (

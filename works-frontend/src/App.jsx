@@ -2622,11 +2622,11 @@ export default function App() {
               {/* Role tabs */}
               <div className="flex gap-1 mb-6 border-b border-neutral-200 dark:border-neutral-700 overflow-x-auto">
                 {[
-                  { key: 'developer',     label: '💻 Developer',     minTier: 1 },
-                  { key: 'scrum-master',  label: '🏃 Scrum Master',  minTier: 2 },
-                  { key: 'product-owner', label: '📋 Product Owner', minTier: 2 },
-                  { key: 'executive',     label: '📈 Executive',     minTier: 3 },
-                  { key: 'admin',         label: '⚙ Admin',          minTier: 4 },
+                  { key: 'developer',     label: 'Developer',     minTier: 1 },
+                  { key: 'scrum-master',  label: 'Scrum Master',  minTier: 2 },
+                  { key: 'product-owner', label: 'Product Owner', minTier: 2 },
+                  { key: 'executive',     label: 'Executive',     minTier: 3 },
+                  { key: 'admin',         label: 'Admin',          minTier: 4 },
                 ].filter(t => userRole.tier >= t.minTier).map(t => (
                   <button key={t.key} onClick={() => { setDashboardRole(t.key); fetchDashboard(t.key); }}
                     className={`text-xs font-medium px-4 py-2 border-b-2 whitespace-nowrap transition-colors ${dashboardRole === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
@@ -2648,7 +2648,7 @@ export default function App() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">📌 My Open Items</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">My Open Items</h3>
                       {(developerDash?.myOpenItems ?? workItems.filter(i => i.assigneeId === currentUser?.id && i.status !== 'Done')).slice(0, 7).map(item => (
                         <div key={item.id} onClick={() => setSelectedItem(item)} role="button" tabIndex={0} onKeyDown={onPressKey} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 -mx-2 px-2 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                           <TypeBadge type={item.type} compact />
@@ -2660,7 +2660,7 @@ export default function App() {
                       {(developerDash?.myOpenItemCount ?? 0) === 0 && (developerDash?.myOpenItems?.length ?? workItems.filter(i => i.assigneeId === currentUser?.id && i.status !== 'Done').length) === 0 && <p className="text-sm text-neutral-400 text-center py-4">All caught up! 🎉</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">⚡ Active Sprint</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Active Sprint</h3>
                       {developerDash?.activeSprint ? (
                         <div>
                           <p className="text-sm font-semibold text-brand-navy dark:text-blue-300 mb-1">{developerDash.activeSprint.name}</p>
@@ -2688,7 +2688,7 @@ export default function App() {
                       ) : <p className="text-sm text-neutral-400 text-center py-4">No active sprint right now.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">🚫 Blockers</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Blockers</h3>
                       {(developerDash?.blockers || []).length === 0
                         ? <p className="text-sm text-neutral-400 text-center py-4">No blockers — you're clear! ✓</p>
                         : (developerDash.blockers || []).map(b => (
@@ -2700,7 +2700,7 @@ export default function App() {
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">⏱ My Time Logs</h3>
+                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">My Time Logs</h3>
                         <button onClick={() => selectedItem ? setIsWorklogOpen(true) : showToast('Open a work item first', 'error')} className="text-xs text-brand-navy hover:underline">+ Log Time</button>
                       </div>
                       {(developerDash?.recentWorklogs || []).slice(0, 5).map(wl => (
@@ -2727,7 +2727,7 @@ export default function App() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-4">📈 Velocity Trend</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-4">Velocity Trend</h3>
                       {[...(smDash?.velocityTrend || [])].reverse().map(s => (
                         <div key={s.id} className="mb-3">
                           <div className="flex justify-between text-xs mb-1">
@@ -2742,7 +2742,7 @@ export default function App() {
                       {(smDash?.velocityTrend || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No sprint data yet.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">👥 Team Capacity (14 days)</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Team Capacity (14 days)</h3>
                       {(smDash?.teamCapacity || []).slice(0, 8).map(m => (
                         <div key={m.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <Avatar name={m.full_name} size={6} />
@@ -2758,7 +2758,7 @@ export default function App() {
                       {(smDash?.teamCapacity || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No time logs found.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">⚠ High Risk Items</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">High Risk Items</h3>
                       {(smDash?.highRiskItems || []).slice(0, 5).map(i => (
                         <div key={i.id} onClick={() => setSelectedItem(i)} role="button" tabIndex={0} onKeyDown={onPressKey} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 -mx-2 px-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                           <TypeBadge type={i.type} compact />
@@ -2769,7 +2769,7 @@ export default function App() {
                       {(smDash?.highRiskItems || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No high-risk items — great!</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">🔄 Scope Changes</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Scope Changes</h3>
                       {(smDash?.scopeChanges || []).slice(0, 5).map(c => (
                         <div key={c.id} className="flex items-start gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <span className="text-xs font-bold flex-shrink-0 mt-0.5 text-semantic-success">+</span>
@@ -2797,7 +2797,7 @@ export default function App() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">🚀 Releases</h3>
+                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Releases</h3>
                         <button onClick={() => setView('releases')} className="text-xs text-brand-navy hover:underline">View all →</button>
                       </div>
                       {(poDash?.releases || []).slice(0, 5).map(r => (
@@ -2823,7 +2823,7 @@ export default function App() {
                       {(poDash?.releases || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No releases defined yet.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">📊 Backlog Breakdown</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Backlog Breakdown</h3>
                       {(poDash?.backlogByType || []).map(b => (
                         <div key={b.type} className="flex items-center gap-3 py-2">
                           <TypeBadge type={b.type} compact />
@@ -2846,7 +2846,7 @@ export default function App() {
                     </div>
                     <div className="md:col-span-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">📝 Ungroomed Backlog</h3>
+                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Ungroomed Backlog</h3>
                         <button onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); }} className="text-xs text-brand-navy hover:underline">Open backlog →</button>
                       </div>
                       {(poDash?.ungroomedItems || []).map(i => (
@@ -2874,7 +2874,7 @@ export default function App() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-4">📁 Project Portfolio</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-4">Project Portfolio</h3>
                       {(execDash?.projectPortfolio || []).map(p => {
                         const pct = p.total_items > 0 ? Math.round(p.done_items * 100 / p.total_items) : 0;
                         return (
@@ -2896,7 +2896,7 @@ export default function App() {
                       {(execDash?.projectPortfolio || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No projects found.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">🚀 Release Schedule</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Release Schedule</h3>
                       {(execDash?.releaseSchedule || []).map(r => (
                         <div key={r.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <span className={`w-2 h-2 rounded-full flex-shrink-0 ${r.status === 'RELEASED' ? 'bg-semantic-success' : r.status === 'IN_PROGRESS' ? 'bg-brand-navy' : 'bg-neutral-300'}`} />
@@ -2913,7 +2913,7 @@ export default function App() {
                       {(execDash?.releaseSchedule || []).length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No releases defined.</p>}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">🎯 RAID Summary</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">RAID Summary</h3>
                       {(execDash?.raidSummary || []).map(r => (
                         <div key={r.type} className="flex items-center justify-between py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <span className="text-sm text-neutral-700 dark:text-neutral-200 capitalize">{r.type}</span>
@@ -2925,7 +2925,7 @@ export default function App() {
                       ))}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">👥 Team Utilization (30 days)</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Team Utilization (30 days)</h3>
                       {(execDash?.teamUtilization || []).slice(0, 6).map(m => (
                         <div key={m.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <Avatar name={m.full_name} size={6} />
@@ -2951,7 +2951,7 @@ export default function App() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">👥 Members</h3>
+                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Members</h3>
                         <button onClick={() => { setView('workspace'); fetchMembers(); }} className="text-xs text-brand-navy hover:underline">Manage →</button>
                       </div>
                       {(adminDash?.members || []).slice(0, 8).map(m => (
@@ -2966,7 +2966,7 @@ export default function App() {
                       ))}
                     </div>
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">🔐 Role Distribution</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Role Distribution</h3>
                       {(adminDash?.roleDistribution || []).map(r => (
                         <div key={r.role} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                           <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 w-20">{r.role}</span>
@@ -2985,7 +2985,7 @@ export default function App() {
                       ))}
                     </div>
                     <div className="md:col-span-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">📋 Permission Audit Log</h3>
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Permission Audit Log</h3>
                       {(adminDash?.recentAuditLog || []).length === 0
                         ? <p className="text-sm text-neutral-400 text-center py-4">No permission changes recorded yet.</p>
                         : <div className="overflow-x-auto">

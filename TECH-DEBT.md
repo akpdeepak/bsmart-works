@@ -93,3 +93,9 @@ Format: What · Why accepted · Impact · Trigger to fix.
 - **What:** §4.19 requires each component to have a co-located `.stories.jsx`; Storybook is not set up
 - **Why accepted:** Visual component library is not the immediate priority; components are tested via Vitest + RTL
 - **Trigger:** When the component library reaches ~10 components and visual regression testing becomes valuable
+
+### TD-015 — `AggregationController` (iteration 6) does not validate `projectId`/`teamId` against the caller's workspace
+- **What:** `/api/v1/insights/work-items` resolves a PROJECT/TEAM scope from request params without checking the project/team belongs to the caller's workspace (RB-40 §1). A member could pass another workspace's `projectId`/`teamId` and receive aggregated counts for that tenant.
+- **Why accepted:** Pre-existing pattern from iteration 6; out of scope for the iteration 12 work. The equivalent gap in the new KPI endpoints (iteration 12) **was fixed** in `KpiService` (`assertProjectInWorkspace` + team workspace check), so the new surface is safe.
+- **Impact:** Cross-tenant read of aggregated delivery metrics (counts, not row-level records). Tenant isolation is the single catastrophic risk for a multi-DISCOM product (RB-40 §1).
+- **Trigger:** Apply the same workspace-ownership check to `AggregationController` (reuse `RbacService.workspaceForProject` + a team workspace check); add an unauthorized/cross-tenant test. Tenant-isolation change → confirm with Deepak (CLAUDE.md §5).

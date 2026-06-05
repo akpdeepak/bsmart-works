@@ -5,6 +5,7 @@ import { Mail, ShieldCheck, PanelLeft, Bell } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
 import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
+import { PerformanceDashboard } from '@/components/works/organisms/performance-dashboard';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
@@ -2053,6 +2054,7 @@ export default function App() {
             {sprints.find(s => s.status === 'ACTIVE') && <span className="ml-auto w-2 h-2 rounded-full bg-semantic-success flex-shrink-0"></span>}
           </NavItem>
           <NavItem active={view === 'reports'} onClick={() => { setView('reports'); fetchSprints(); fetchVelocityData(); }} icon="📊">Reports</NavItem>
+          <NavItem active={view === 'performance'} onClick={() => { setView('performance'); fetchTeams(); }} icon="📈">Performance</NavItem>
           <NavItem active={view === 'dashboards'} onClick={() => { setView('dashboards'); setSelectedDashboard(null); fetchCustomDashboards(); fetchTeams(); }} icon="📐">Dashboards</NavItem>
           <NavItem active={view === 'reportbuilder'} onClick={() => { setView('reportbuilder'); setSelectedReport(null); fetchReports(); fetchReportTemplates(); }} icon="📄">Report builder</NavItem>
           <NavItem active={view === 'releases'} onClick={() => { setView('releases'); fetchReleases(); }} icon="🚀">Releases</NavItem>
@@ -5929,6 +5931,17 @@ export default function App() {
                 </div>
               )}
             </div>
+          )}
+
+          {view === 'performance' && (
+            <PerformanceDashboard
+              workspaceId={activeWorkspaceId}
+              currentUser={currentUser}
+              users={users}
+              teams={teams}
+              projects={projects}
+              onToast={showToast}
+            />
           )}
 
         </div>

@@ -23,7 +23,7 @@
 | 9 | 9.0 | Service Management — Customer Portal | 10 | 10 |
 | 10 | 10.0 | AI Orchestration Foundation + AI Control Plane | 13 | 0 |
 | 11 | 11.0 | AI Expansion + Conversational Command Bar | 15 | 0 |
-| 12 | 12.0 | KPI Framework with Privacy Guardrails | 12 | 0 |
+| 12 | 12.0 | KPI Framework with Privacy Guardrails | 12 | 12 |
 | 13 | 13.0 | Automation Engine + Integrations | 12 | 0 |
 | 14 | 14.0 | Developer Workspace + IDE Extension | 11 | 0 |
 | 15 | 15.0 | Scrum Master Cockpit + Product Owner Workspace | 14 | 0 |
@@ -32,7 +32,7 @@
 | 18 | 18.0 | Mobile + Real-time + Performance | 12 | 0 |
 | 19 | 19.0 | Enterprise Security + Compliance Certifications | 12 | 0 |
 | 20 | 20.0 | Polish, Advanced AI, Marketplace Foundation | 12 | 0 |
-| **Total** | | | **224** | **39** |
+| **Total** | | | **224** | **51** |
 
 ## Specs
 
@@ -208,18 +208,18 @@
 
 | ID | Cap | Spec | Status | Branch | PR | Date | Notes |
 |---|---|---|---|---|---|---|---|
-| I12-S01 | L | Metric definitions and snapshots | Pending | — | — | — | — |
-| I12-S02 | L | Default metric catalog | Pending | — | — | — | — |
-| I12-S03 | L | Custom metric builder | Pending | — | — | — | — |
-| I12-S04 | L | Personal view (private) | Pending | — | — | — | — |
-| I12-S05 | L | Team view (aggregated) | Pending | — | — | — | — |
-| I12-S06 | L | Project view | Pending | — | — | — | — |
-| I12-S07 | L | Manager view (privacy-enforced) | Pending | — | — | — | — |
-| I12-S08 | L | Executive / Org view | Pending | — | — | — | — |
-| I12-S09 | L | Voluntary individual sharing | Pending | — | — | — | — |
-| I12-S10 | L | Team health composite | Pending | — | — | — | — |
-| I12-S11 | L | Cycle time distribution | Pending | — | — | — | — |
-| I12-S12 | L | AI team-health narrative | Pending | — | — | — | — |
+| I12-S01 | L | Metric definitions and snapshots | Done | claude/iteration-12-complete-3f0s5 | #98 | 2026-06-05 | `metric_definitions` + immutable append-only `metric_snapshots` (V44); weekly scheduler |
+| I12-S02 | L | Default metric catalog | Done | claude/iteration-12-complete-3f0s5 | #98 | 2026-06-05 | 11 seeded global metrics (velocity, cycle/lead time, rework, WIP, bug escape, throughput, …) |
+| I12-S03 | L | Custom metric builder | Done | claude/iteration-12-complete-3f0s5 | #98 | 2026-06-05 | Safe formula primitives (SUM/AVG/PERCENTILE/COUNT/RATIO) via MetricFormulaService — no raw SQL |
+| I12-S04 | L | Personal view (private) | Done | claude/iteration-12-complete-3f0s5 | #98 | 2026-06-05 | PERSONAL layer; visible only to owner unless voluntarily shared |
+| I12-S05 | L | Team view (aggregated) | Done | claude/iteration-12-complete-3f0s5 | #98 | 2026-06-05 | TEAM aggregate, no individual breakdown; anonymity floor suppresses thin teams |
+| I12-S06 | L | Project view | Done | claude/iteration-12-complete-3f0s5 | #98 | 2026-06-05 | PROJECT rollup; project workspace-ownership validated (tenant isolation) |
+| I12-S07 | L | Manager view (privacy-enforced) | Done | claude/iteration-12-complete-3f0s5 | #98 | 2026-06-05 | API-enforced: individual scope on any aggregated layer → 403 (KpiPrivacyService); tested |
+| I12-S08 | L | Executive / Org view | Done | claude/iteration-12-complete-3f0s5 | #98 | 2026-06-05 | ORG layer, `view_org_metrics` permission |
+| I12-S09 | L | Voluntary individual sharing | Done | claude/iteration-12-complete-3f0s5 | #98 | 2026-06-05 | `metric_shares`; owner-only grant/revoke, no manager override |
+| I12-S10 | L | Team health composite | Done | claude/iteration-12-complete-3f0s5 | #98 | 2026-06-05 | Predictability · scope stability · flow efficiency → composite + band |
+| I12-S11 | L | Cycle time distribution | Done | claude/iteration-12-complete-3f0s5 | #98 | 2026-06-05 | Histogram + median/P85 + outlier drill-down, projected from events |
+| I12-S12 | L | AI team-health narrative | Done | claude/iteration-12-complete-3f0s5 | #98 | 2026-06-05 | Deterministic narrative generator = mandatory AI fallback (RB-40 §2); seam to the AI plane on main |
 
 ### Iteration 13 — Release 13.0 · Automation Engine + Integrations
 

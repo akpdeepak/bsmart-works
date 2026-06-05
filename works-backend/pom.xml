@@ -253,6 +253,11 @@
 								<exclude>**/ServiceRequest.class</exclude>
 								<exclude>**/CsatResponse.class</exclude>
 								<exclude>**/CustomerSlaTier.class</exclude>
+								<!-- Iteration 12 (KPI Framework) entities — pure data holders. -->
+								<exclude>**/MetricDefinition.class</exclude>
+								<exclude>**/MetricSnapshot.class</exclude>
+								<exclude>**/MetricShare.class</exclude>
+								<exclude>**/WorkspaceKpiSettings.class</exclude>
 							</excludes>
 							<rules>
 								<rule>

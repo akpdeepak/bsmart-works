@@ -1,18 +1,30 @@
 import { useEffect, useState } from 'react';
 import { ShieldCheck, Lock, Sparkles } from 'lucide-react';
 import { kpiClient } from '@/lib/kpi';
+import { api } from '@/lib/apiClient';
 import { Badge } from '@/components/works/atoms/badge';
 
 // Organism — the iteration-12 Performance surface (Cap L). Layered metrics with a prominent layer
-// switcher and a privacy banner. The Individual/Manager/Org layers need no entity id; the manager
-// layer carries the locked-by-design "individual comparison unavailable" callout (commitment 4,
-// RB-40 §1). Tokens only, five interactive states, WCAG-AA. All HTTP via the kpi client (apiClient).
+// switcher and a privacy banner. Individual/Manager/Org need no entity id; Team and Project pick an
+// entity (selector) and resolve to a single aggregated Layer; the manager layer carries the
+// locked-by-design "individual comparison unavailable" callout (commitment 4, RB-40 §1). Tokens
+// only, five interactive states, WCAG-AA. All HTTP via the kpi client / apiClient (CLAUDE.md §3).
 
 const LAYERS = [
   { id: 'INDIVIDUAL', label: 'Individual' },
+  { id: 'TEAM', label: 'Team' },
+  { id: 'PROJECT', label: 'Project' },
   { id: 'MANAGER', label: 'Manager' },
   { id: 'ORG', label: 'Organization' },
 ];
+
+const PRIVACY_NOTE = {
+  INDIVIDUAL: 'These are your private metrics. They are visible only to you unless you choose to share them.',
+  TEAM: 'Team metrics are aggregated across the team — no individual engineer numbers are shown.',
+  PROJECT: 'Project metrics are aggregated across everyone working in the project.',
+  MANAGER: 'Individual engineer comparison is unavailable by design — managers see only aggregated team metrics, enforced at the API.',
+  ORG: 'Organization metrics are fully aggregated.',
+};
 
 function MetricCard({ metric }) {
   return (
@@ -61,29 +73,68 @@ export function PerformancePanel({ workspaceId }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // null = not yet loaded; [] = loaded-but-empty (lets us distinguish loading from "no entities").
+  const [teams, setTeams] = useState(null);
+  const [projects, setProjects] = useState(null);
+  const [teamId, setTeamId] = useState('');
+  const [projectId, setProjectId] = useState('');
 
-  // Fetch inlined in the effect with setState only in the .then continuation (never synchronously in
-  // the effect body) — mirrors the AiCommandBar pattern and satisfies react-hooks/set-state-in-effect.
+  // Load the team + project lists once per workspace so the Team/Project selectors have options and a
+  // default. setState only in the async continuation (react-hooks/set-state-in-effect).
   useEffect(() => {
     if (!workspaceId) return undefined;
     let active = true;
-    const fetcher =
-      layer === 'INDIVIDUAL' ? kpiClient.personal(workspaceId).then((r) => ({ single: r }))
-        : layer === 'ORG' ? kpiClient.org(workspaceId).then((r) => ({ single: r }))
-          : kpiClient.manager(workspaceId).then((r) => ({ many: r }));
+    const enc = encodeURIComponent(workspaceId);
+    Promise.all([
+      Promise.resolve().then(() => api.send(`/teams?workspaceId=${enc}`)).catch(() => []),
+      Promise.resolve().then(() => api.send(`/projects?workspaceId=${enc}`)).catch(() => []),
+    ]).then(([t, p]) => {
+      if (!active) return;
+      const ts = Array.isArray(t) ? t : [];
+      const ps = Array.isArray(p) ? p : [];
+      setTeams(ts);
+      setProjects(ps);
+      setTeamId((cur) => cur || ts[0]?.id || '');
+      setProjectId((cur) => cur || ps[0]?.id || '');
+    });
+    return () => { active = false; };
+  }, [workspaceId]);
+
+  // Fetch the metrics for the active layer. Team/Project wait for a selected id (no synchronous
+  // setState in the effect body — the empty case is derived in render).
+  useEffect(() => {
+    if (!workspaceId) return undefined;
+    let active = true;
+    let fetcher;
+    if (layer === 'INDIVIDUAL') fetcher = kpiClient.personal(workspaceId).then((r) => ({ single: r }));
+    else if (layer === 'ORG') fetcher = kpiClient.org(workspaceId).then((r) => ({ single: r }));
+    else if (layer === 'MANAGER') fetcher = kpiClient.manager(workspaceId).then((r) => ({ many: r }));
+    else if (layer === 'TEAM') {
+      if (!teamId) return () => { active = false; };
+      fetcher = kpiClient.team(workspaceId, teamId).then((r) => ({ single: r }));
+    } else if (layer === 'PROJECT') {
+      if (!projectId) return () => { active = false; };
+      fetcher = kpiClient.project(workspaceId, projectId).then((r) => ({ single: r }));
+    } else return () => { active = false; };
     fetcher
       .then((next) => { if (active) { setData(next); setError(null); } })
       .catch((e) => { if (active) setError(e.message || 'Could not load metrics.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [workspaceId, layer]);
+  }, [workspaceId, layer, teamId, projectId]);
+
+  const noTeam = layer === 'TEAM' && teams !== null && teams.length === 0;
+  const noProject = layer === 'PROJECT' && projects !== null && projects.length === 0;
+  const noEntity = noTeam || noProject;
+  const selectorItems = layer === 'TEAM' ? teams : layer === 'PROJECT' ? projects : null;
+  const selectorValue = layer === 'TEAM' ? teamId : projectId;
 
   return (
     <div className="p-8 max-w-7xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-brand-navy">Performance</h1>
         <p className="mt-0.5 text-sm text-neutral-600">
-          Layered metrics — individual data is private; team and org views are aggregated.
+          Layered metrics — individual data is private; team, project, and org views are aggregated.
         </p>
       </div>
 
@@ -113,16 +164,37 @@ export function PerformancePanel({ workspaceId }) {
       {/* Privacy banner */}
       <div className="mb-4 flex items-start gap-2 rounded-lg bg-semantic-info-surface p-3">
         <ShieldCheck aria-hidden="true" className="mt-0.5 h-4 w-4 text-semantic-info" />
-        <p className="text-xs text-neutral-700 dark:text-neutral-200">
-          {layer === 'MANAGER'
-            ? 'Individual engineer comparison is unavailable by design — managers see only aggregated team metrics, enforced at the API.'
-            : layer === 'INDIVIDUAL'
-              ? 'These are your private metrics. They are visible only to you unless you choose to share them.'
-              : 'Organization metrics are fully aggregated.'}
-        </p>
+        <p className="text-xs text-neutral-700 dark:text-neutral-200">{PRIVACY_NOTE[layer]}</p>
       </div>
 
-      {loading && (
+      {/* Entity selector (Team / Project) */}
+      {selectorItems && selectorItems.length > 0 && (
+        <div className="mb-4">
+          <label htmlFor="kpi-entity" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-neutral-600">
+            {layer === 'TEAM' ? 'Team' : 'Project'}
+          </label>
+          <select
+            id="kpi-entity"
+            value={selectorValue}
+            onChange={(e) => { setLoading(true); (layer === 'TEAM' ? setTeamId : setProjectId)(e.target.value); }}
+            className="rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-sm text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+          >
+            {selectorItems.map((x) => (
+              <option key={x.id} value={x.id}>{x.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {noEntity && (
+        <p className="text-sm text-neutral-600">
+          {noTeam
+            ? 'No teams yet. Create a team to see aggregated team metrics.'
+            : 'No projects yet. Create a project to see aggregated project metrics.'}
+        </p>
+      )}
+
+      {loading && !noEntity && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="h-24 animate-pulse rounded-lg bg-neutral-100 dark:bg-neutral-800" />

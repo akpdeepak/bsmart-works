@@ -49,6 +49,7 @@ toasts; the shell works on mobile; 5/6 modals are accessible; `Field` inputs are
 | #137 | Architecture | A3/H2 (+C3) | **Home dashboard** (the flagship, 413 lines) → `views/dashboard-view.jsx` + `Avatar` atom (16×). 21 props across 5 role panels (developer/SM/PO/exec/admin); RTL-tested (tier-filtered tabs, loading, role switch). Lint surfaced & fixed an arbitrary `max-w-[150px]` (→ flex truncation). Smoke: all 5 role tabs load **real data** (Developer 5 open / Sprint 3; SM 35% health; Admin 2 members / 78 events), tab-switch refetches, zero console errors. App.jsx 7,930 → **7,533 lines** (−987 from the 8,520 session start). |
 | #138 | Architecture | A3/H2 (+D3/E1) | **Workspace Settings** view (212 lines) → `views/workspace-view.jsx` (32 props: members, invite, notification prefs, MFA enrol, role management, branding, project members; RTL-tested). Lint surfaced & fixed two unassociated `<label>`s (branding colour + description → `htmlFor`/`id`). Smoke: all 6 sections render with 4 real members + MFA setup, zero console errors. App.jsx **7,356 lines**. |
 | #139 | Architecture | A3/H2 | **PO Workspace cockpit** (211 lines) → `views/po-workspace-view.jsx` (40 props, 6 tabs: roadmap / ideas / feedback / OKRs / release-notes / stakeholders; RTL-tested) + **`AiMetaBadge`** atom (6× — unblocks the SM & PO AI cockpits). Smoke: all 6 tabs render, real project selector, feedback log form, zero console errors. App.jsx **7,177 lines**. |
+| #140 | Tests | RB-10 §7 | Backfilled the two missing view-level RTL tests (`notifications-view`, `trash-view`) — the first two extractions had relied on their atoms' tests + live smoke. +8 tests (238 total). Also refreshed this log's "Remaining" section to the true post-extraction state. |
 
 ## Remaining — and why each is deferred
 
@@ -74,14 +75,31 @@ either needs a **running app** to verify (the static gate can't prove it works) 
   Changes mutation/caching behaviour — needs runtime verification.
 - **F4 / G2** — uniform empty-state next-actions; full dark-mode contrast audit.
 - **A3/H2 + H1 + J — decompose `App.jsx`** into per-view route modules under lint, then
-  `React.lazy` per route and re-enable the guardrail gate (export libs are already lazy).
-  **In progress** — the running full stack (above) makes this safe; views are now extracted one
-  at a time and smoke-tested live. Done so far: `EmptyState` atom + **Notifications** view.
-  Remaining views (~26): My Works, Board, Projects, Developer, Backlog, Sprint, Reports,
-  Workspace/Settings, Workflows, BQL, PM Artifacts, Dashboards, Report builder, Knowledge,
-  Releases, SM/PO cockpits, Compliance, Service Desk, Trash, etc. After extraction:
-  `React.lazy` per route (H1) and re-enable ESLint/guardrails on the de-`eslint-disable`d
-  slices (J).
+  `React.lazy` per route and re-enable the guardrail gate. **Well under way** — the running full
+  stack makes it safe; each view is extracted one at a time, RTL-tested, and smoke-tested live.
+  Repeatable loop: script-extract the JSX byte-identical → `eslint no-undef` proves the prop set
+  → RTL test → live smoke against real data → squash-merge. **App.jsx 8,520 → 7,177 lines (−16%).**
+  - **Foundational shared layer — DONE** (every small/medium shared helper is now an own-file,
+    lint-clean, tested component): `EmptyState`, `work-item-type` (TYPES/`TypeBadge`/`TypeIcon`),
+    `priority-badge`, `stat-card`, `role-badge`, `field`, `avatar`, `ai-meta-badge`, plus the
+    `isIconComponent`/`onPressKey` utils. This unblocks the remaining views.
+  - **Views extracted (10/~24):** Notifications, Trash, Releases, BQL, My Works, Projects,
+    Sprint Reports, **Home dashboard** (flagship, 5 role panels), Workspace Settings, PO Workspace.
+    (Developer, SLA, Performance, Automations, Integrations were already organism-delegated.)
+  - **Remaining views (~13), grouped by what they still need:**
+    - *Use only already-extracted helpers (tractable now):* **SM Cockpit** (7 tabs; uses
+      `StatCard`+`AiMetaBadge` — note `text-[11px]`/`max-w-[880px]` to tokenise), **Compliance**,
+      **Service Desk**.
+    - *Need their own big helper extracted first:* **Board / Backlog / Sprint** (→ `SprintBoard`,
+      `SprintItemList`), **Custom Dashboards** (→ `DashboardWidgetCard`, `DashboardDrillModal`,
+      `PublicDashboardEmbed`), **Report builder** (→ `ReportSectionCard`/`Controls`), **Knowledge**
+      (→ `RichTextEditor`), **PM Artifacts** (→ `PmArtifactList`).
+    - *Giant, do with fresh context:* **Settings/Workflows&Fields** (~594 lines), **PM Artifacts**
+      (~552 lines).
+  - **Then:** `React.lazy` per route (H1) — defer until most views are out so the Suspense
+    boundary is placed once (the content `<div>` has a same-class sibling inside a helper, so a
+    single boundary needs care) — and re-enable ESLint/guardrails on the de-`eslint-disable`d
+    slices (J).
 
 ## Needs a human runtime smoke (merged on the static gate)
 - #119 error toasts — trigger a failed save (offline) → expect one error toast.

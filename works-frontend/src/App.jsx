@@ -26,6 +26,7 @@ import { PerformancePanel } from '@/components/works/organisms/performance-panel
 import { AiSettingsPanel } from '@/components/works/organisms/ai-settings-panel';
 import { WorkItemStatusTimeline } from '@/components/works/organisms/work-item-status-timeline';
 import { AcceptanceCriteria } from '@/components/works/organisms/acceptance-criteria';
+import { BoardWipBadge } from '@/components/works/organisms/board-wip-badge';
 import { AutomationsPanel } from '@/components/works/organisms/automations-panel';
 import { IntegrationsPanel } from '@/components/works/organisms/integrations-panel';
 import { Modal } from '@/components/works/molecules/modal';
@@ -470,6 +471,8 @@ export default function App() {
   // Derived from the membership list + the active selection (see fetchMyWorkspaces).
   const workspace = workspaces.find(w => w.id === activeWorkspaceId)
     || { id: activeWorkspaceId, name: 'Workspace' };
+  // Board WIP limits for the active workspace ({ todoLimit, inProgressLimit, doneLimit }); empty = none.
+  const [wipLimits, setWipLimits] = useState({});
 
   const headers = (extra = {}) => ({
     'Content-Type': 'application/json',
@@ -647,6 +650,27 @@ export default function App() {
       })).catch(reportError);
   }
 
+  function fetchWipLimits() {
+    if (!activeWorkspaceId) return;
+    api.send(`/board/wip-limits?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
+      .then(d => setWipLimits(d || {}))
+      .catch(() => setWipLimits({}));
+  }
+
+  // Managers set/clear a column's WIP limit. The PUT carries all three lanes so passing one null
+  // cleanly clears a single column without disturbing the others (RB-40 §1: workspace-scoped).
+  const setWipLimit = (key, next) => {
+    const body = {
+      todoLimit: wipLimits.todoLimit ?? null,
+      inProgressLimit: wipLimits.inProgressLimit ?? null,
+      doneLimit: wipLimits.doneLimit ?? null,
+      [key]: next,
+    };
+    api.send(`/board/wip-limits?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, { method: 'PUT', body })
+      .then(d => { setWipLimits(d || {}); showToast('WIP limits updated'); })
+      .catch(err => showToast(err.message, 'error'));
+  };
+
   function fetchAll() {
     setLoading(true);
     Promise.all([
@@ -665,6 +689,7 @@ export default function App() {
     fetchUnreadCount();
     fetchUserRole();
     fetchBranding();
+    fetchWipLimits();
   }
 
   function fetchUnreadCount() {
@@ -2146,9 +2171,9 @@ export default function App() {
   };
 
   const columns = [
-    { name: 'Todo',        dot: 'bg-neutral-400' },
-    { name: 'In Progress', dot: 'bg-brand-navy-tint' },
-    { name: 'Done',        dot: 'bg-semantic-success' },
+    { name: 'Todo',        dot: 'bg-neutral-400',     limitKey: 'todoLimit' },
+    { name: 'In Progress', dot: 'bg-brand-navy-tint',  limitKey: 'inProgressLimit' },
+    { name: 'Done',        dot: 'bg-semantic-success', limitKey: 'doneLimit' },
   ];
 
   const densityPad = { compact: 'p-2', comfortable: 'p-3', spacious: 'p-4' };
@@ -2653,17 +2678,23 @@ export default function App() {
                   <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
                     {columns.map(col => {
                       const colItems = workItems.filter(i => i.status === col.name);
+                      const wipLimit = wipLimits[col.limitKey] ?? null;
+                      const overWip = wipLimit != null && colItems.length > wipLimit;
                       return (
                         <div key={col.name}
-                          className="flex-1 min-w-56 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3"
+                          className={`flex-1 min-w-56 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3 ${overWip ? 'ring-1 ring-semantic-danger/40' : ''}`}
                           onDragOver={handleDragOver}
                           onDrop={(e) => handleDrop(e, col.name)}>
-                          <div className="flex items-center justify-between mb-3 px-1">
-                            <div className="flex items-center gap-2">
-                              <span className={`w-2 h-2 rounded-full ${col.dot}`}></span>
-                              <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{col.name}</h3>
+                          <div className="mb-3 px-1">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${col.dot}`}></span>
+                                <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{col.name}</h3>
+                              </div>
+                              <BoardWipBadge count={colItems.length} limit={wipLimit}
+                                canEdit={can('manage_projects')} onSet={(next) => setWipLimit(col.limitKey, next)} />
                             </div>
-                            <span className="text-xs bg-white dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full shadow-sm">{colItems.length}</span>
+                            {overWip && <p className="mt-1 text-xs font-medium text-semantic-danger">Over WIP limit</p>}
                           </div>
                           <div className="space-y-2 flex-1">
                             {colItems.length === 0 && (

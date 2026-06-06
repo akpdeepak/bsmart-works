@@ -3,7 +3,7 @@ import {
   Home, User, Bell, Code, LayoutGrid, ListTodo, Zap, Rocket, FolderKanban,
   BarChart2, LayoutDashboard, FileText, TrendingUp, Headset, Timer, ShieldCheck,
   Gauge, Map as MapIcon, ClipboardList, Workflow, Plug, Search, BookOpen,
-  SlidersHorizontal, Settings, Trash2, PanelLeftClose, LogOut, ChevronDown, Check,
+  SlidersHorizontal, Settings, Trash2, PanelLeftClose, LogOut, ChevronDown, Check, Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/works/atoms/badge';
@@ -62,6 +62,7 @@ const NAV_SECTIONS = [
   ] },
   { id: 'configure', label: 'Configure', items: [
     { id: 'settings3', label: 'Workflows & Fields', icon: SlidersHorizontal },
+    { id: 'aicontrol', label: 'AI Control',         icon: Sparkles },
     { id: 'workspace', label: 'Settings',           icon: Settings },
     { id: 'trash',     label: 'Trash',              icon: Trash2 },
   ] },

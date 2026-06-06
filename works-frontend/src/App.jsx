@@ -41,9 +41,11 @@ import { isIconComponent } from '@/lib/utils';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { TYPES, TYPE_ICON_SET, TYPE_ICON_KEYS } from '@/lib/work-item-types';
 import { TypeBadge, TypeIcon } from '@/components/works/work-item-type';
+import { PriorityBadge } from '@/components/works/priority-badge';
 import NotificationsView from '@/views/notifications-view';
 import TrashView from '@/views/trash-view';
 import ReleasesView from '@/views/releases-view';
+import BqlView from '@/views/bql-view';
 import {
   filterItems as filterWidgetItems, statusBreakdown, statusPriorityMatrix,
   sprintProgress, velocityPoints, SERIES_BG, EXTRA_WIDGET_PRESETS, EXTRA_WIDGET_CATEGORIES,
@@ -4417,82 +4419,20 @@ export default function App() {
                ITERATION 3 — BQL QUERY
              ====================================================== */}
           {view === 'bql' && (
-            <div className="p-8 max-w-5xl">
-              <h1 className="text-2xl font-bold text-brand-navy mb-1">BQL — bSmart Query Language</h1>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">Write composable queries to filter work items. Use AND/OR, comparison operators, and functions like currentUser() and today().</p>
-
-              <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 mb-4">
-                <div className="mb-3">
-                  <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider">Query</label>
-                  <div className="flex gap-2 mt-2">
-                    <textarea
-                      className="input flex-1 font-mono text-sm resize-none"
-                      rows={3}
-                      placeholder={'priority = High AND assignee = currentUser()\nstatus != Done AND type = Bug\ndueDate < today() AND priority IN (High, Highest)'}
-                      value={bqlQuery}
-                      onChange={e => setBqlQuery(e.target.value)}
-                      onKeyDown={e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runBql(); } }}
-                    />
-                  </div>
-                  {bqlError && <p className="text-xs text-semantic-danger mt-2 font-mono">{bqlError}</p>}
-                </div>
-                <div className="flex items-center gap-3">
-                  <Button variant="action" onClick={runBql}>Run Query (Ctrl+Enter)</Button>
-                  <div className="flex gap-2 items-center flex-1">
-                    <input className="input flex-1 text-sm" placeholder="Filter name..." value={bqlFilterName} onChange={e => setBqlFilterName(e.target.value)} />
-                    <Button variant="secondary" onClick={saveBqlFilter}>Save Filter</Button>
-                  </div>
-                </div>
-                <div className="mt-3 text-xs text-neutral-600 dark:text-neutral-400">
-                  <span className="font-semibold text-neutral-600">Fields:</span> priority, status, type, assignee, dueDate, sprint, storyPoints &nbsp;·&nbsp;
-                  <span className="font-semibold text-neutral-600">Ops:</span> = != {'<'} {'>'} {'<='} {'>='} IN CONTAINS STARTSWITH &nbsp;·&nbsp;
-                  <span className="font-semibold text-neutral-600">Functions:</span> currentUser() today() now()
-                </div>
-              </div>
-
-              {/* Saved filters */}
-              {bqlFilters.length > 0 && (
-                <div className="mb-4">
-                  <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-2">Saved Filters</p>
-                  <div className="flex flex-wrap gap-2">
-                    {bqlFilters.map(f => (
-                      <button key={f.id} onClick={() => { setBqlQuery(f.query); runBql(); }}
-                        className="flex items-center gap-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5 text-sm hover:border-brand-navy transition-colors group">
-                        <span className="font-medium text-neutral-900">{f.name}</span>
-                        {f.isShared && <span className="text-xs text-neutral-600 dark:text-neutral-400">shared</span>}
-                        <button onClick={e => { e.stopPropagation(); api.raw(`/bql/filters/${f.id}`, { method: 'DELETE' }).then(() => fetchBqlFilters()); }}
-                          className="text-neutral-300 hover:text-semantic-danger opacity-0 group-hover:opacity-100 transition-opacity ml-1" aria-label="Remove"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Results */}
-              {bqlResults.length > 0 && (
-                <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-                  <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
-                    <span className="text-sm font-semibold text-neutral-900">{bqlResults.length} result{bqlResults.length !== 1 ? 's' : ''}</span>
-                  </div>
-                  <div className="divide-y divide-neutral-50 max-h-96 overflow-y-auto">
-                    {bqlResults.map((item, i) => (
-                      <div key={item.id || i} className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 cursor-pointer"
-                        onClick={() => { const full = workItems.find(w => w.id === item.id); if (full) setSelectedItem(full); }}>
-                        <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400 w-24 flex-shrink-0">{item.id}</span>
-                        <span className="flex-1 text-sm font-medium text-neutral-900 truncate">{item.title}</span>
-                        {item.status && <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>}
-                        {item.priority && <PriorityBadge priority={item.priority} />}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {bqlResults.length === 0 && bqlQuery && !bqlError && (
-                <div className="text-center py-12 text-neutral-600 dark:text-neutral-400">
-                  <p className="text-sm">No results. Run the query to see results.</p>
-                </div>
-              )}
-            </div>
+            <BqlView
+              bqlQuery={bqlQuery}
+              bqlError={bqlError}
+              bqlFilterName={bqlFilterName}
+              bqlFilters={bqlFilters}
+              bqlResults={bqlResults}
+              workItems={workItems}
+              setBqlQuery={setBqlQuery}
+              setBqlFilterName={setBqlFilterName}
+              setSelectedItem={setSelectedItem}
+              runBql={runBql}
+              saveBqlFilter={saveBqlFilter}
+              fetchBqlFilters={fetchBqlFilters}
+            />
           )}
 
           {/* ======================================================
@@ -8036,17 +7976,6 @@ function formatEventType(eventType) {
     USER_SIGNED_UP:    'signed up',
   };
   return map[eventType] || (eventType || '').toLowerCase().replace(/_/g, ' ');
-}
-
-const PRIORITY_CONFIG = {
-  CRITICAL: { color: 'text-semantic-danger',  bg: 'bg-semantic-danger-surface',  label: 'Critical' },
-  HIGH:     { color: 'text-semantic-warning',  bg: 'bg-semantic-warning-surface', label: 'High' },
-  MEDIUM:   { color: 'text-neutral-600',       bg: 'bg-neutral-100',              label: 'Medium' },
-  LOW:      { color: 'text-neutral-600 dark:text-neutral-400',       bg: 'bg-neutral-50',               label: 'Low' },
-};
-function PriorityBadge({ priority }) {
-  const p = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.MEDIUM;
-  return <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${p.bg} ${p.color}`}>{p.label}</span>;
 }
 
 function PmArtifactList({ title, icon: Icon, items, columns, renderRow, onDelete, onAdd, statusColors = {} }) {

@@ -1,0 +1,74 @@
+import { Folder } from 'lucide-react';
+import { Button } from '@/components/works/button';
+import { EmptyState } from '@/components/works/atoms/empty-state';
+
+// Projects view — extracted from the App.jsx monolith (UX finding A3/H2). Behaviour-preserving:
+// the parent owns the projects + work items and the create/archive handlers and the userName lookup.
+export default function ProjectsView({
+  projects,
+  workItems,
+  setIsProjectOpen,
+  handleArchiveProject,
+  userName,
+}) {
+  return (
+    <div className="p-8 max-w-4xl">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-brand-navy">Projects</h1>
+          <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-0.5">{projects.length} project{projects.length !== 1 ? 's' : ''} in this workspace</p>
+        </div>
+        <Button variant="action" onClick={() => setIsProjectOpen(true)}>+ New Project</Button>
+      </div>
+      {projects.length === 0
+        ? <EmptyState icon={Folder} title="No projects yet"
+            subtitle="Projects help you organise work items into focused areas. Create your first project to get started."
+            action={<Button variant="action" onClick={() => setIsProjectOpen(true)}>Create first project</Button>} />
+        : (
+          <div className="space-y-3">
+            {projects.map(p => {
+              const count = workItems.filter(i => i.projectId === p.id).length;
+              const done  = workItems.filter(i => i.projectId === p.id && i.status === 'Done').length;
+              return (
+                <div key={p.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 hover:shadow-sm transition-shadow">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-brand-navy rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0">{p.keyPrefix}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold text-neutral-900">{p.name}</h3>
+                        {p.slug && (
+                          <span className="text-xs font-mono bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-600"
+                            title="Slug-based project URL">
+                            /projects/{p.slug}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{p.description || 'No description'}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-sm font-semibold text-neutral-900">{count} items</p>
+                      {count > 0 && <p className="text-xs text-semantic-success">{done} done</p>}
+                      {p.leadUserId && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">Lead: {userName(p.leadUserId)}</p>}
+                      <button onClick={() => handleArchiveProject(p.id)}
+                        className="text-xs text-neutral-300 hover:text-neutral-600 mt-1 transition-colors">
+                        {p.archived ? 'Unarchive' : 'Archive'}
+                      </button>
+                    </div>
+                  </div>
+                  {count > 0 && (
+                    <div className="mt-3">
+                      <div className="h-1.5 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
+                        <div className="h-full bg-semantic-success rounded-full transition-all" style={{ width: `${Math.round((done / count) * 100)}%` }}></div>
+                      </div>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">{Math.round((done / count) * 100)}% complete</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )
+      }
+    </div>
+  );
+}

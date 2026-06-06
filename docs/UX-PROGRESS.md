@@ -42,6 +42,7 @@ toasts; the shell works on mobile; 5/6 modals are accessible; `Field` inputs are
 | #129 | Architecture | A3/H2 (+A4 prep) | **Work-item type module + Trash view.** `TYPES`/icon-set/`resolveTypeIcon` → `lib/work-item-types.js`; `TypeBadge`/`TypeIcon` → `components/works/work-item-type.jsx` (lint surfaced & fixed `react-hooks/static-components` via `createElement`). **Trash** view → `views/trash-view.jsx`. Smoke: 319 `TypeBadge`s render on Backlog, type-icon picker intact, zero console errors. |
 | #130 | Architecture | A3/H2 (+D3) | **Releases** view → `views/releases-view.jsx` (17 props, RTL-tested). Extraction also labelled the search box + project filter (`aria-label`). Smoke: two-pane list/detail renders, empty state + CTA work, zero console errors. App.jsx now 8,338 lines (was 8,520). |
 | #131 | Architecture | A3/H2 (+D1/D3) | **PriorityBadge module + BQL view.** `PriorityBadge` → `components/works/priority-badge.jsx`; **BQL** view → `views/bql-view.jsx`. Extraction associated the Query `<label>`, labelled the filter-name input, and made result rows keyboard-operable. Smoke: live query `type = Bug` → 18 results with priority badges, zero console errors. App.jsx 8,267 lines. |
+| #132 | Architecture | A3/H2 | **My Works** view → `views/my-works-view.jsx` (tabbed: Assigned / Starred / Mentions / Activity; 9 props, RTL-tested). Smoke: all four tabs render and switch, empty states correct, zero console errors. App.jsx 8,194 lines. |
 
 ## Remaining — and why each is deferred
 

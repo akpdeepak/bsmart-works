@@ -14,6 +14,8 @@ vi.mock('@/lib/ai', async () => {
       auditLog: vi.fn(),
       setPolicy: vi.fn(),
       setBudget: vi.fn(),
+      settings: vi.fn(),
+      setSettings: vi.fn(),
     },
   };
 });
@@ -24,6 +26,7 @@ const CAPS = [
 ];
 const BUDGET = { period: '2026-06', capCents: 5000000, spentCents: 3240000, percent: 65, degraded: false, disabled: false };
 const AUDIT = { items: [{ id: 'inv1', capability: 'story_drafting', modelTier: 'SONNET', costCents: 12, cacheHit: false, fallbackUsed: false, createdAt: '2026-06-06T10:00:00Z' }] };
+const SETTINGS = { defaultModelTier: 'SONNET', blockPii: true, blockFinancial: true };
 
 const admin = (p) => p === 'manage_ai';
 const member = () => false;
@@ -36,6 +39,8 @@ beforeEach(() => {
   aiClient.auditLog.mockResolvedValue(AUDIT);
   aiClient.setPolicy.mockResolvedValue({});
   aiClient.setBudget.mockResolvedValue({});
+  aiClient.settings.mockResolvedValue(SETTINGS);
+  aiClient.setSettings.mockResolvedValue(SETTINGS);
 });
 
 describe('AiSettingsPanel', () => {
@@ -46,6 +51,24 @@ describe('AiSettingsPanel', () => {
     expect(screen.getByText(/used of/)).toBeInTheDocument();
     expect(screen.getByRole('switch', { name: 'AI features for this workspace' })).toBeInTheDocument();
     expect(screen.getByText('AI usage audit')).toBeInTheDocument(); // admin sees the audit log
+  });
+
+  it('changes the default model tier (admin)', async () => {
+    render(<AiSettingsPanel workspaceId="WS-001" can={admin} onToast={() => {}} />);
+    await screen.findByText('Default model tier');
+    fireEvent.click(screen.getByRole('button', { name: 'Opus · best' }));
+    await waitFor(() => expect(aiClient.setSettings).toHaveBeenCalledWith(
+      'WS-001', expect.objectContaining({ defaultModelTier: 'OPUS' }),
+    ));
+  });
+
+  it('toggles a data-boundary flag (admin)', async () => {
+    render(<AiSettingsPanel workspaceId="WS-001" can={admin} onToast={() => {}} />);
+    const sw = await screen.findByRole('switch', { name: 'Block customer PII from AI' });
+    fireEvent.click(sw);
+    await waitFor(() => expect(aiClient.setSettings).toHaveBeenCalledWith(
+      'WS-001', expect.objectContaining({ blockPii: false }),
+    ));
   });
 
   it('toggles a capability through a CAPABILITY policy (admin)', async () => {

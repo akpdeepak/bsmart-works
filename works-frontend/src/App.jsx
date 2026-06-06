@@ -2757,7 +2757,39 @@ export default function App() {
 
           {/* BACKLOG VIEW */}
           {view === 'backlog' && (
-            <div className="p-6 max-w-5xl">
+            <div className="p-6">
+              <div className="flex gap-6">
+                {/* Epic panel (mockup 03) — sticky left rail with per-epic progress */}
+                <aside className="hidden lg:block w-56 flex-shrink-0">
+                  <div className="sticky top-6 rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-800">
+                    <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-neutral-600">Epics</p>
+                    {workItems.filter(i => i.type === 'Epic').length === 0 ? (
+                      <p className="px-1 text-xs text-neutral-600 dark:text-neutral-400">No epics yet.</p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {workItems.filter(i => i.type === 'Epic').map(epic => {
+                          const kids = workItems.filter(i => i.parentId === epic.id);
+                          const done = kids.filter(i => i.status === 'Done').length;
+                          const pct = kids.length ? Math.round((done / kids.length) * 100) : 0;
+                          return (
+                            <li key={epic.id}>
+                              <button type="button" onClick={() => setSelectedItem(epic)}
+                                className="w-full rounded-md px-2 py-1.5 text-left transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
+                                <span className="block truncate text-xs font-medium text-neutral-900 dark:text-neutral-100">{epic.title}</span>
+                                <span className="mt-1 block h-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-700">
+                                  <span className="block h-full rounded-full bg-semantic-success" style={{ width: `${pct}%` }} />
+                                </span>
+                                <span className="mt-0.5 block text-xs text-neutral-600 dark:text-neutral-400">{done}/{kids.length} done · {pct}%</span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                </aside>
+
+                <div className="min-w-0 flex-1 max-w-5xl">
               <div className="flex justify-between items-center mb-5">
                 <div>
                   <h1 className="text-xl font-bold text-brand-navy">Backlog</h1>
@@ -2856,6 +2888,8 @@ export default function App() {
                     </div>
                   ))
                 }
+              </div>
+                </div>
               </div>
             </div>
           )}

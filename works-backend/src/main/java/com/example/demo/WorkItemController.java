@@ -188,6 +188,7 @@ public class WorkItemController {
         w.setDueDate(rs.getDate("due_date") != null ? rs.getDate("due_date").toLocalDate() : null);
         w.setProjectId(rs.getString("project_id"));
         w.setParentId(rs.getString("parent_id"));
+        w.setAcceptanceCriteria(rs.getString("acceptance_criteria"));
         return w;
     }
 
@@ -267,6 +268,7 @@ public class WorkItemController {
             existing.setStatus(updatedItem.getStatus());
             existing.setType(updatedItem.getType());
             existing.setDescription(updatedItem.getDescription());
+            existing.setAcceptanceCriteria(updatedItem.getAcceptanceCriteria());
             existing.setAssigneeId(updatedItem.getAssigneeId());
             existing.setDueDate(updatedItem.getDueDate());
             existing.setSprintId(updatedItem.getSprintId());

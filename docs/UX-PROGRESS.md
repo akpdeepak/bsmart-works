@@ -4,9 +4,15 @@ Companion to `docs/UX-CODEBASE-ANALYSIS.md` (the roadmap). Tracks what has shipp
 `main` so the state is always legible. Newest first.
 
 > Verification norm: CI runner is degraded, so each change is verified **locally** before
-> merge — `vite build` + `vitest` (172 tests) + `eslint` (changed component files) +
+> merge — `vite build` + `vitest` + `eslint` (changed component files) +
 > `scripts/guardrails.sh` (exit 0). `App.jsx` is the `/* eslint-disable */` monolith, so it
 > relies on build + guardrails + careful review.
+>
+> **A full local stack now runs for live smoke-testing** (the gap UX-PROGRESS kept flagging):
+> native PostgreSQL 17 on `:5432` (`works_db`, Flyway-migrated to head, seeded), Spring Boot
+> backend on `:8080`, and the Vite dev server on `:5173` (`.env.local` → `:8080`). Every
+> decomposition/behaviour change below is **smoke-tested in the running app against real data**,
+> not just build-green.
 
 ## Shipped (this session)
 
@@ -26,6 +32,13 @@ Companion to `docs/UX-CODEBASE-ANALYSIS.md` (the roadmap). Tracks what has shipp
 **Result:** `App.jsx` UI is emoji-free (only the legacy type-icon back-compat data map
 references emoji); no light-mode `neutral-400` readable text remains; failures surface as
 toasts; the shell works on mobile; 5/6 modals are accessible; `Field` inputs are labelled.
+
+## Shipped — decomposition & live-smoke session (newest first)
+
+| PR | Area | Finding(s) | Summary |
+|----|------|-----------|---------|
+| #127 | Bug / a11y | C1 fallout | **P0 home-dashboard crash fixed.** `lucide-react` 1.17 ships icons as `forwardRef` objects, so the `typeof Icon === 'function'` guards in `EmptyState`/`StatCard`/`PmArtifactList` rendered the icon object as a child → "Objects are not valid as a React child", blanking the dashboard. New pure `isIconComponent` helper (`lib/utils.js`, unit-tested) used at the 3 sites. Found only because the app now boots against a DB. |
+| — | Architecture | A3/H2 | **Decomposition begun.** `EmptyState` (51 call-sites) extracted to a tested atom (`atoms/empty-state.jsx`); **Notifications** view extracted to `views/notifications-view.jsx` (props-driven, lint-clean, RTL-smoke-tested). First slice out of the monolith; pattern established: extract → eslint `no-undef` proves the prop set → RTL test → live smoke. |
 
 ## Remaining — and why each is deferred
 
@@ -52,12 +65,13 @@ either needs a **running app** to verify (the static gate can't prove it works) 
 - **F4 / G2** — uniform empty-state next-actions; full dark-mode contrast audit.
 - **A3/H2 + H1 + J — decompose `App.jsx`** into per-view route modules under lint, then
   `React.lazy` per route and re-enable the guardrail gate (export libs are already lazy).
-  > **Strong recommendation: do this with a running app.** It is deep surgery on an 8,378-line
-  > file with 253 hooks and shared closures; build + the current unit tests do **not** exercise
-  > the views, so "build-green" ≠ "works". Splitting it blind risks silent runtime breakage on
-  > `main`. Sequence it as its own effort with runtime verification, extracting one view at a
-  > time and smoke-testing each — this also unblocks H1 route-splitting and finding J (re-enabling
-  > ESLint/guardrails on the de-`eslint-disable`d slices).
+  **In progress** — the running full stack (above) makes this safe; views are now extracted one
+  at a time and smoke-tested live. Done so far: `EmptyState` atom + **Notifications** view.
+  Remaining views (~26): My Works, Board, Projects, Developer, Backlog, Sprint, Reports,
+  Workspace/Settings, Workflows, BQL, PM Artifacts, Dashboards, Report builder, Knowledge,
+  Releases, SM/PO cockpits, Compliance, Service Desk, Trash, etc. After extraction:
+  `React.lazy` per route (H1) and re-enable ESLint/guardrails on the de-`eslint-disable`d
+  slices (J).
 
 ## Needs a human runtime smoke (merged on the static gate)
 - #119 error toasts — trigger a failed save (offline) → expect one error toast.

@@ -38,6 +38,8 @@ import { DonutChart, BarChart } from '@/components/works/molecules';
 import { exportElementToPng, exportElementToPdf, exportRowsToCsv } from '@/lib/export';
 import { api } from '@/lib/apiClient';
 import { isIconComponent } from '@/lib/utils';
+import { EmptyState } from '@/components/works/atoms/empty-state';
+import NotificationsView from '@/views/notifications-view';
 import {
   filterItems as filterWidgetItems, statusBreakdown, statusPriorityMatrix,
   sprintProgress, velocityPoints, SERIES_BG, EXTRA_WIDGET_PRESETS, EXTRA_WIDGET_CATEGORIES,
@@ -175,20 +177,6 @@ function TypeBadge({ type, compact = false }) {
       {!compact && <TypeIcon value={t.icon} className="h-3 w-3" />}
       {type}
     </span>
-  );
-}
-
-// Empty state helper — icon should be a lucide element (h-10 w-10 text-neutral-300) or emoji
-function EmptyState({ icon: Icon, title, subtitle, action }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="h-10 w-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-300 mb-4">
-        {isIconComponent(Icon) ? <Icon aria-hidden="true" className="h-5 w-5" /> : Icon}
-      </div>
-      <h3 className="text-base font-semibold text-neutral-700 mb-1">{title}</h3>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5 max-w-xs">{subtitle}</p>
-      {action}
-    </div>
   );
 }
 
@@ -3270,41 +3258,14 @@ export default function App() {
           )}
 
           {view === 'notifications' && (
-            <div className="p-8 max-w-2xl">
-              <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-brand-navy">Notifications</h1>
-                {unreadCount > 0 && (
-                  <button onClick={() => {
-                    api.raw(`/notifications/mark-all-read?userId=${currentUser.id}`, { method: 'PUT' })
-                      .then(() => { fetchNotifications(); setUnreadCount(0); });
-                  }} className="text-sm text-brand-navy-tint hover:underline">Mark all as read</button>
-                )}
-              </div>
-              {notifications.length === 0
-                ? <EmptyState icon={Bell} title="You're all caught up"
-                    subtitle="Notifications about assignments, comments, and mentions will appear here." />
-                : (
-                  <div className="space-y-2">
-                    {notifications.map(n => (
-                      <div key={n.id}
-                        className={`bg-white dark:bg-neutral-800 border rounded-xl p-4 flex gap-3 items-start transition-colors ${!n.read ? 'border-brand-navy-tint/30 bg-semantic-info-surface/30' : 'border-neutral-200 dark:border-neutral-700'}`}>
-                        <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${!n.read ? 'bg-brand-orange' : 'bg-transparent'}`}></div>
-                        <div className="flex-1">
-                          <p className="text-sm text-neutral-900">{n.message}</p>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">{n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}</p>
-                        </div>
-                        {!n.read && (
-                          <button onClick={() => {
-                            api.raw(`/notifications/${n.id}/read`, { method: 'PUT' })
-                              .then(() => { fetchNotifications(); fetchUnreadCount(); });
-                          }} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy mt-0.5" aria-label="Mark as read"><Check className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )
-              }
-            </div>
+            <NotificationsView
+              notifications={notifications}
+              unreadCount={unreadCount}
+              currentUser={currentUser}
+              fetchNotifications={fetchNotifications}
+              fetchUnreadCount={fetchUnreadCount}
+              setUnreadCount={setUnreadCount}
+            />
           )}
 
           {/* BACKLOG VIEW */}

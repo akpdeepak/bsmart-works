@@ -24,6 +24,7 @@ import { DeveloperWorkspace } from '@/components/works/organisms/developer-works
 import { SlaView } from '@/components/works/organisms/sla-view';
 import { PerformancePanel } from '@/components/works/organisms/performance-panel';
 import { AiSettingsPanel } from '@/components/works/organisms/ai-settings-panel';
+import { WorkItemStatusTimeline } from '@/components/works/organisms/work-item-status-timeline';
 import { AutomationsPanel } from '@/components/works/organisms/automations-panel';
 import { IntegrationsPanel } from '@/components/works/organisms/integrations-panel';
 import { Modal } from '@/components/works/molecules/modal';
@@ -6137,17 +6138,8 @@ export default function App() {
               <div>
                 {/* Iteration 7 (Cap B) — auto time-in-status, projected from the event log */}
                 {statusDurations.length > 0 && (
-                  <div className="mb-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3">
-                    <p className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 font-semibold mb-2">Time in status</p>
-                    {statusDurations.map(d => (
-                      <div key={d.status} className="flex items-center justify-between py-1 text-sm">
-                        <span className="text-neutral-700 dark:text-neutral-200">{d.status}</span>
-                        <span className="text-neutral-500">
-                          {humanDuration(d.totalSeconds)}
-                          {d.timesEntered > 1 && <span className="text-neutral-600 dark:text-neutral-400"> · {d.timesEntered}×</span>}
-                        </span>
-                      </div>
-                    ))}
+                  <div className="mb-4 rounded-xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-700 dark:bg-neutral-800">
+                    <WorkItemStatusTimeline durations={statusDurations} />
                   </div>
                 )}
                 {/* Event type filter */}

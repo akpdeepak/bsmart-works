@@ -44,4 +44,11 @@ describe('WorkItemStatusTimeline', () => {
     render(<WorkItemStatusTimeline workItemId="WRK-1" />);
     await waitFor(() => expect(screen.getByText('boom')).toBeInTheDocument());
   });
+
+  it('renders from a controlled durations prop without fetching', () => {
+    render(<WorkItemStatusTimeline durations={DURATIONS} />);
+    expect(screen.getByText('Total cycle time')).toBeInTheDocument();
+    expect(screen.getByText('In Progress')).toBeInTheDocument();
+    expect(api.send).not.toHaveBeenCalled();
+  });
 });

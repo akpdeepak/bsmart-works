@@ -78,18 +78,21 @@ export function AiSettingsPanel({ workspaceId, can, onToast }) {
   const [savingCap, setSavingCap] = useState(null);
   const [capInput, setCapInput] = useState('');
   const [savingBudget, setSavingBudget] = useState(false);
+  const [settings, setSettings] = useState(null);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const load = useCallback((ref) => {
     if (!workspaceId) return;
     const live = () => !ref || ref.alive;
-    const calls = [aiClient.capabilities(workspaceId), aiClient.policies(workspaceId), aiClient.budget(workspaceId)];
+    const calls = [aiClient.capabilities(workspaceId), aiClient.policies(workspaceId), aiClient.budget(workspaceId), aiClient.settings(workspaceId)];
     if (isAdmin) calls.push(aiClient.auditLog(workspaceId, 0, 50));
     Promise.all(calls)
-      .then(([c, p, b, a]) => {
+      .then(([c, p, b, s, a]) => {
         if (!live()) return;
         setCaps(Array.isArray(c) ? c : []);
         setPolicies(Array.isArray(p) ? p : []);
         setBudget(b || null);
+        setSettings(s || null);
         setAudit(a?.items || []);
         setError(null);
       })
@@ -108,6 +111,21 @@ export function AiSettingsPanel({ workspaceId, can, onToast }) {
   // Master AI = the WORKSPACE-scope policy; absent ⇒ on by default (resolve is most-restrictive-wins).
   const wsPolicy = policies.find((p) => String(p.scopeType).toUpperCase() === 'WORKSPACE');
   const masterEnabled = wsPolicy ? wsPolicy.enabled : true;
+
+  const tier = settings?.defaultModelTier || 'SONNET';
+  const blockPii = settings?.blockPii ?? true;
+  const blockFinancial = settings?.blockFinancial ?? true;
+
+  const saveSettings = useCallback((patch) => {
+    const base = settings || { defaultModelTier: 'SONNET', blockPii: true, blockFinancial: true };
+    const next = { defaultModelTier: base.defaultModelTier, blockPii: base.blockPii, blockFinancial: base.blockFinancial, ...patch };
+    setSettings(next); // optimistic (§4.16)
+    setSavingSettings(true);
+    aiClient.setSettings(workspaceId, next)
+      .then((saved) => { if (saved) setSettings(saved); })
+      .catch((e) => { setSettings(base); notify(e.message || 'Could not update AI settings.', 'error'); })
+      .finally(() => setSavingSettings(false));
+  }, [workspaceId, settings, notify]);
 
   const toggleMaster = useCallback((next) => {
     setSavingMaster(true);
@@ -270,7 +288,43 @@ export function AiSettingsPanel({ workspaceId, can, onToast }) {
         )}
       </Card>
 
-      {/* Deterministic fallbacks + tiering/data-boundary (honest read-only notes) */}
+      {/* Default model tier */}
+      <Card title="Default model tier" subtitle="Used as the default when a capability doesn't pin its own tier; the budget can still force the cheaper tier at 80% spend." icon={<Layers className="h-5 w-5" />}>
+        <div className="flex flex-wrap gap-2">
+          {[['HAIKU', 'Haiku · fast'], ['SONNET', 'Sonnet · balanced'], ['OPUS', 'Opus · best']].map(([id, label]) => (
+            <button
+              key={id} type="button" disabled={!isAdmin || savingSettings} aria-pressed={tier === id}
+              onClick={() => saveSettings({ defaultModelTier: id })}
+              className={[
+                'rounded-md border px-3 py-1.5 text-sm font-medium transition-colors duration-[120ms]',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-1',
+                tier === id
+                  ? 'border-brand-navy bg-brand-navy text-white'
+                  : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300',
+                (!isAdmin || savingSettings) ? 'cursor-not-allowed opacity-50' : '',
+              ].join(' ')}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {/* Data boundary */}
+      <Card title="Data boundary" subtitle="Restrict what data may be sent to the AI provider — enforced server-side before any model call (RB-40 §2/§4)." icon={<ShieldCheck className="h-5 w-5" />}>
+        <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
+          <li className="flex items-center justify-between gap-4 py-3">
+            <p className="min-w-0 text-sm font-medium text-neutral-900 dark:text-neutral-100">Block customer PII from AI</p>
+            <Switch checked={blockPii} disabled={!isAdmin || savingSettings} onChange={(next) => saveSettings({ blockPii: next })} label="Block customer PII from AI" />
+          </li>
+          <li className="flex items-center justify-between gap-4 py-3">
+            <p className="min-w-0 text-sm font-medium text-neutral-900 dark:text-neutral-100">Block financial / billing data from AI</p>
+            <Switch checked={blockFinancial} disabled={!isAdmin || savingSettings} onChange={(next) => saveSettings({ blockFinancial: next })} label="Block financial / billing data from AI" />
+          </li>
+        </ul>
+      </Card>
+
+      {/* Deterministic fallbacks */}
       <Card
         title="What runs when AI is off"
         subtitle="Every capability has a deterministic fallback, so Works stays fully functional with AI disabled or over budget."
@@ -287,10 +341,6 @@ export function AiSettingsPanel({ workspaceId, can, onToast }) {
             ))}
           </ul>
         )}
-        <p className="flex items-start gap-2 text-xs text-neutral-600 dark:text-neutral-400 mt-4">
-          <Layers className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" aria-hidden="true" />
-          Model tiering is automatic — a fast tier (Haiku) handles classification and intent, a capable tier (Sonnet) handles generation. PII is redacted server-side and AI calls never originate in the browser.
-        </p>
       </Card>
 
       {/* Audit log (admin only) */}

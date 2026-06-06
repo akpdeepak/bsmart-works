@@ -18,6 +18,9 @@ export const aiClient = {
     api.send(`/ai/budget?workspaceId=${ws(workspaceId)}`, { method: 'PUT', body: { monthlyCapCents } }),
   auditLog: (workspaceId, page = 0, size = 50) =>
     api.send(`/ai/invocations?workspaceId=${ws(workspaceId)}&page=${page}&size=${size}`),
+  settings: (workspaceId) => api.send(`/ai/settings?workspaceId=${ws(workspaceId)}`),
+  setSettings: (workspaceId, body) =>
+    api.send(`/ai/settings?workspaceId=${ws(workspaceId)}`, { method: 'PUT', body }),
 
   // ── Iteration-11 capability surfaces ──────────────────────────────────────
   parseCommand: (workspaceId, text, aiInContext = true) =>

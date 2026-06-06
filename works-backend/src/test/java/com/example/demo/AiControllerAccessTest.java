@@ -30,8 +30,9 @@ class AiControllerAccessTest {
     private final AiInvocationRepository invocations = mock(AiInvocationRepository.class);
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
+    private final AiWorkspaceSettingsService settings = mock(AiWorkspaceSettingsService.class);
 
-    private final AiController controller = new AiController(cp, invocations, authenticatedUser, rbac);
+    private final AiController controller = new AiController(cp, invocations, authenticatedUser, rbac, settings);
 
     AiControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

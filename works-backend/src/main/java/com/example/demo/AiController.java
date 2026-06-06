@@ -21,13 +21,16 @@ public class AiController {
     private final AiInvocationRepository invocations;
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
+    private final AiWorkspaceSettingsService settingsService;
 
     public AiController(AiControlPlaneService controlPlane, AiInvocationRepository invocations,
-                        AuthenticatedUser authenticatedUser, RbacService rbac) {
+                        AuthenticatedUser authenticatedUser, RbacService rbac,
+                        AiWorkspaceSettingsService settingsService) {
         this.controlPlane = controlPlane;
         this.invocations = invocations;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
+        this.settingsService = settingsService;
     }
 
     /** The capability catalogue with each capability's effective enabled state for the caller and
@@ -85,6 +88,23 @@ public class AiController {
             throw ApiException.badRequest("INVALID_CAP", "monthlyCapCents must be >= 0.");
         }
         return controlPlane.setBudgetCap(workspaceId, req.monthlyCapCents());
+    }
+
+    /** The workspace's default model tier + data-boundary flags (mockup 09). Defaults if unset. */
+    @GetMapping("/settings")
+    public AiWorkspaceSettings settings(@RequestParam String workspaceId) {
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "view_items");
+        return settingsService.get(workspaceId);
+    }
+
+    public record SettingsRequest(String defaultModelTier, boolean blockPii, boolean blockFinancial) { }
+
+    @PutMapping("/settings")
+    public AiWorkspaceSettings setSettings(@RequestParam String workspaceId, @RequestBody SettingsRequest req) {
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "manage_ai");
+        return settingsService.set(workspaceId, req.defaultModelTier(), req.blockPii(), req.blockFinancial());
     }
 
     @GetMapping("/invocations")

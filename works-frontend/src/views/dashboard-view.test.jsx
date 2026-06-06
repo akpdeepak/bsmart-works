@@ -5,55 +5,50 @@ import DashboardView from './dashboard-view';
 const noop = () => {};
 const baseProps = {
   currentUser: { id: 'USR-1', fullName: 'Deepak Pandey' },
-  userRole: { tier: 5 },
-  dashboardRole: 'developer',
-  dashLoading: false,
-  developerDash: { myOpenItemCount: 3, myOpenItems: [], mySprintItems: [], blockers: [], recentWorklogs: [], weeklyMinutes: 0 },
-  smDash: null,
-  poDash: null,
-  execDash: null,
-  adminDash: null,
+  developerDash: {
+    myOpenItemCount: 2,
+    myOpenItems: [{ id: 'WRK-1', title: 'Fix login', type: 'Bug', status: 'In Progress', priority: 'HIGH' }],
+    mySprintItems: [{ id: 'WRK-1' }],
+    blockers: [],
+    recentWorklogs: [],
+    weeklyMinutes: 120,
+    activeSprint: { name: 'Sprint 24', goal: 'Ship SAML', done_items: 6, total_items: 12, done_points: 24, total_points: 40 },
+  },
   workItems: [],
   selectedItem: null,
   setIsCreateOpen: noop,
-  setDashboardRole: noop,
-  fetchDashboard: noop,
   setView: noop,
   setSelectedItem: noop,
   setIsWorklogOpen: noop,
   showToast: noop,
-  fetchBacklog: noop,
-  fetchSprints: noop,
-  fetchMembers: noop,
 };
 
-describe('DashboardView', () => {
-  it('greets the user and renders the developer StatCards', () => {
+describe('DashboardView (My Works home)', () => {
+  it('greets the user and renders the KPI cards', () => {
     render(<DashboardView {...baseProps} />);
     expect(screen.getByRole('heading', { name: /Deepak/ })).toBeInTheDocument();
-    // "My Open Items" / "Blockers" appear as both a StatCard and a panel heading; assert on the
-    // StatCards' unique sub-labels instead.
-    expect(screen.getByText('Assigned to me')).toBeInTheDocument();
+    expect(screen.getByText('Open work items')).toBeInTheDocument();
     expect(screen.getByText('Items blocked on me')).toBeInTheDocument();
   });
 
-  it('shows role tabs filtered by the user tier and switches role on click', () => {
-    const setDashboardRole = vi.fn();
-    const fetchDashboard = vi.fn();
-    render(<DashboardView {...baseProps} setDashboardRole={setDashboardRole} fetchDashboard={fetchDashboard} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Admin' }));
-    expect(setDashboardRole).toHaveBeenCalledWith('admin');
-    expect(fetchDashboard).toHaveBeenCalledWith('admin');
+  it('lists assigned items in the needs-attention table and opens one on click', () => {
+    const setSelectedItem = vi.fn();
+    render(<DashboardView {...baseProps} setSelectedItem={setSelectedItem} />);
+    const row = screen.getByText('Fix login');
+    expect(row).toBeInTheDocument();
+    fireEvent.click(row);
+    expect(setSelectedItem).toHaveBeenCalled();
   });
 
-  it('hides higher-tier tabs for a low-tier user', () => {
-    render(<DashboardView {...baseProps} userRole={{ tier: 1 }} />);
-    expect(screen.getByRole('button', { name: 'Developer' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Admin' })).toBeNull();
+  it('renders the active-sprint ring with the completion percent', () => {
+    render(<DashboardView {...baseProps} />);
+    expect(screen.getByText('Active sprint')).toBeInTheDocument();
+    expect(screen.getByText('50%')).toBeInTheDocument(); // 6 of 12 items
+    expect(screen.getByText(/6\/12 items/)).toBeInTheDocument();
   });
 
-  it('shows a loading state while the dashboard is fetching', () => {
-    render(<DashboardView {...baseProps} dashLoading={true} />);
-    expect(screen.getByText('Loading dashboard...')).toBeInTheDocument();
+  it('shows the empty state when nothing is assigned', () => {
+    render(<DashboardView {...baseProps} developerDash={{ ...baseProps.developerDash, myOpenItems: [], myOpenItemCount: 0 }} />);
+    expect(screen.getByText(/All caught up/)).toBeInTheDocument();
   });
 });

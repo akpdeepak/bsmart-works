@@ -23,6 +23,7 @@ import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
 import { DeveloperWorkspace } from '@/components/works/organisms/developer-workspace';
 import { SlaView } from '@/components/works/organisms/sla-view';
 import { PerformancePanel } from '@/components/works/organisms/performance-panel';
+import { AiSettingsPanel } from '@/components/works/organisms/ai-settings-panel';
 import { AutomationsPanel } from '@/components/works/organisms/automations-panel';
 import { IntegrationsPanel } from '@/components/works/organisms/integrations-panel';
 import { Modal } from '@/components/works/molecules/modal';
@@ -4097,6 +4098,11 @@ export default function App() {
           {/* ITERATION 12 — Performance (KPI framework with privacy guardrails) */}
           {view === 'performance' && (
             <PerformancePanel workspaceId={activeWorkspaceId} can={can} onToast={showToast} />
+          )}
+
+          {/* ITERATION 11 — AI Control (AI Control Plane settings; mockup 09) */}
+          {view === 'aicontrol' && (
+            <AiSettingsPanel workspaceId={activeWorkspaceId} can={can} onToast={showToast} />
           )}
 
           {/* ITERATION 13 — Automation engine */}

@@ -18,19 +18,23 @@ const CAT_BG = {
 
 const tone = (status) => CAT_BG[statusToCategory(status)] || 'bg-neutral-300';
 
-export function WorkItemStatusTimeline({ workItemId }) {
-  const [durations, setDurations] = useState(null); // null = loading
+export function WorkItemStatusTimeline({ workItemId, durations: durationsProp }) {
+  // Controlled mode: when the parent already holds the durations, pass them in to avoid a 2nd fetch.
+  const controlled = durationsProp !== undefined;
+  const [fetched, setFetched] = useState(null); // null = loading (fetch mode only)
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!workItemId) return undefined;
+    if (controlled || !workItemId) return undefined;
     let active = true;
     Promise.resolve()
       .then(() => api.send(`/work-items/${encodeURIComponent(workItemId)}/status-durations`))
-      .then((rows) => { if (active) { setDurations(Array.isArray(rows) ? rows : []); setError(null); } })
-      .catch((e) => { if (active) { setError(e.message || 'Could not load the status timeline.'); setDurations([]); } });
+      .then((rows) => { if (active) { setFetched(Array.isArray(rows) ? rows : []); setError(null); } })
+      .catch((e) => { if (active) { setError(e.message || 'Could not load the status timeline.'); setFetched([]); } });
     return () => { active = false; };
-  }, [workItemId]);
+  }, [workItemId, controlled]);
+
+  const durations = controlled ? (Array.isArray(durationsProp) ? durationsProp : []) : fetched;
 
   if (durations === null) {
     return (

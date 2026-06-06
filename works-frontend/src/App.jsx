@@ -37,6 +37,7 @@ import { ResetPasswordScreen } from '@/components/works/reset-password-screen';
 import { DonutChart, BarChart } from '@/components/works/molecules';
 import { exportElementToPng, exportElementToPdf, exportRowsToCsv } from '@/lib/export';
 import { api } from '@/lib/apiClient';
+import { isIconComponent } from '@/lib/utils';
 import {
   filterItems as filterWidgetItems, statusBreakdown, statusPriorityMatrix,
   sprintProgress, velocityPoints, SERIES_BG, EXTRA_WIDGET_PRESETS, EXTRA_WIDGET_CATEGORIES,
@@ -182,7 +183,7 @@ function EmptyState({ icon: Icon, title, subtitle, action }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <div className="h-10 w-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-300 mb-4">
-        {typeof Icon === 'function' ? <Icon aria-hidden="true" className="h-5 w-5" /> : Icon}
+        {isIconComponent(Icon) ? <Icon aria-hidden="true" className="h-5 w-5" /> : Icon}
       </div>
       <h3 className="text-base font-semibold text-neutral-700 mb-1">{title}</h3>
       <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5 max-w-xs">{subtitle}</p>
@@ -7722,7 +7723,7 @@ function StatCard({ label, value, sub, color, icon: Icon, onClick }) {
       className={`bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 hover:shadow-md transition-shadow group ${clickable ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40' : ''}`}
     >
       <div className="flex items-start justify-between mb-3">
-        {typeof Icon === 'function' ? <Icon aria-hidden="true" className="h-6 w-6 text-neutral-600 dark:text-neutral-400" /> : <span className="text-2xl">{Icon}</span>}
+        {isIconComponent(Icon) ? <Icon aria-hidden="true" className="h-6 w-6 text-neutral-600 dark:text-neutral-400" /> : <span className="text-2xl">{Icon}</span>}
         <span className="text-xs text-neutral-600 dark:text-neutral-400 group-hover:text-brand-navy transition-colors">View <ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /></span>
       </div>
       <p className={`text-3xl font-bold ${color} mb-1`}>{value}</p>
@@ -8236,7 +8237,7 @@ function PmArtifactList({ title, icon: Icon, items, columns, renderRow, onDelete
     <div>
       <div className="flex justify-between items-center mb-4">
         <h2 className="font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-          {typeof Icon === 'function' ? <Icon aria-hidden="true" className="h-4 w-4 text-neutral-600 dark:text-neutral-400" /> : <span>{Icon}</span>} {title}
+          {isIconComponent(Icon) ? <Icon aria-hidden="true" className="h-4 w-4 text-neutral-600 dark:text-neutral-400" /> : <span>{Icon}</span>} {title}
         </h2>
         <Button variant="action" onClick={onAdd}>+ New</Button>
       </div>

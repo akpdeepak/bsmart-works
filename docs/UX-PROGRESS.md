@@ -45,6 +45,7 @@ toasts; the shell works on mobile; 5/6 modals are accessible; `Field` inputs are
 | #132 | Architecture | A3/H2 | **My Works** view → `views/my-works-view.jsx` (tabbed: Assigned / Starred / Mentions / Activity; 9 props, RTL-tested). Smoke: all four tabs render and switch, empty states correct, zero console errors. App.jsx 8,194 lines. |
 | #133 | Architecture | A3/H2 | **Projects** view → `views/projects-view.jsx` (5 props, RTL-tested). Smoke: 2 real projects render with item counts + progress bars, zero console errors. App.jsx 8,144 lines. |
 | #134 | Architecture | A3/H2 | **Sprint Reports** view → `views/reports-view.jsx` (7 props, RTL-tested). Smoke: velocity chart + sprint selector render across real sprints; clicking a sprint loads KPI cards + burndown; zero console errors. App.jsx **below 8,000 → 7,978 lines** (was 8,520 at session start). |
+| #135 | Architecture | A3/H2 (+A4/D1) | **Shared helpers `StatCard` / `RoleBadge` / `Field` + `onPressKey`.** Extracted to `components/works/{stat-card,role-badge,field}.jsx` and `lib/utils.js` — foundational, unblocks the dashboard / settings / cockpits (StatCard 32×, Field 95×). Lint surfaced & fixed two hidden a11y issues (StatCard click-without-keys; cleaner interactive pattern). Smoke: dashboard StatCards + Workspace-Settings Fields/RoleBadges render, zero console errors. App.jsx 7,930 lines. |
 
 ## Remaining — and why each is deferred
 

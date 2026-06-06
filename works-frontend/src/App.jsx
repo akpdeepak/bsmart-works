@@ -37,11 +37,14 @@ import { ResetPasswordScreen } from '@/components/works/reset-password-screen';
 import { DonutChart, BarChart } from '@/components/works/molecules';
 import { exportElementToPng, exportElementToPdf, exportRowsToCsv } from '@/lib/export';
 import { api } from '@/lib/apiClient';
-import { isIconComponent } from '@/lib/utils';
+import { isIconComponent, onPressKey } from '@/lib/utils';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { TYPES, TYPE_ICON_SET, TYPE_ICON_KEYS } from '@/lib/work-item-types';
 import { TypeBadge, TypeIcon } from '@/components/works/work-item-type';
 import { PriorityBadge } from '@/components/works/priority-badge';
+import { StatCard } from '@/components/works/stat-card';
+import { RoleBadge } from '@/components/works/role-badge';
+import { Field } from '@/components/works/field';
 import NotificationsView from '@/views/notifications-view';
 import TrashView from '@/views/trash-view';
 import ReleasesView from '@/views/releases-view';
@@ -7123,18 +7126,6 @@ export default function App() {
 // Modal now lives in components/works/molecules/modal.jsx — accessible (role=dialog, aria-modal,
 // focus trap, Escape, backdrop close, scroll lock, focus restoration). Imported at the top.
 
-function Field({ label, children }) {
-  // Implicit label association (D3/E1): wrapping the control in the <label> ties the visible
-  // label to it for assistive tech without needing an id on every call site. The label text is a
-  // block <span> so the visual layout is unchanged.
-  return (
-    <label className="block">
-      <span className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">{label}</span>
-      {children}
-    </label>
-  );
-}
-
 function renderMd(text) {
   if (!text) return '';
   // Article / comment / reply bodies are user-supplied, so the generated HTML is sanitised
@@ -7159,47 +7150,8 @@ function getTimeOfDay() {
   return 'evening';
 }
 
-const ROLE_CONFIG = {
-  OWNER:  { label: 'Owner',  bg: 'bg-brand-amber/10', text: 'text-brand-amber', tier: 5 },
-  ADMIN:  { label: 'Admin',  bg: 'bg-brand-navy/10', text: 'text-brand-navy', tier: 4 },
-  LEAD:   { label: 'Lead',   bg: 'bg-semantic-success/10', text: 'text-semantic-success', tier: 3 },
-  MEMBER: { label: 'Member', bg: 'bg-neutral-100',   text: 'text-neutral-600', tier: 2 },
-  VIEWER: { label: 'Viewer', bg: 'bg-neutral-50',    text: 'text-neutral-600 dark:text-neutral-400', tier: 1 },
-};
-
-function RoleBadge({ role, tier, small = false }) {
-  const r = ROLE_CONFIG[role] || Object.values(ROLE_CONFIG).find(config => config.tier === tier) || ROLE_CONFIG.MEMBER;
-  return (
-    <span className={`inline-flex items-center gap-1 font-semibold rounded ${small ? 'text-xs px-1 py-0.5' : 'text-xs px-1.5 py-0.5'} ${r.bg} ${r.text}`}>
-      {r.label}
-    </span>
-  );
-}
-
-// Make a non-button clickable element keyboard-operable (Enter/Space) — pair with
-// role="button" + tabIndex={0} + a focus ring. Fires the element's own onClick via a click().
-const onPressKey = (e) => {
-  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); }
-};
-
-function StatCard({ label, value, sub, color, icon: Icon, onClick }) {
-  const clickable = typeof onClick === 'function';
-  return (
-    <div
-      onClick={onClick}
-      {...(clickable ? { role: 'button', tabIndex: 0, onKeyDown: onPressKey } : {})}
-      className={`bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 hover:shadow-md transition-shadow group ${clickable ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40' : ''}`}
-    >
-      <div className="flex items-start justify-between mb-3">
-        {isIconComponent(Icon) ? <Icon aria-hidden="true" className="h-6 w-6 text-neutral-600 dark:text-neutral-400" /> : <span className="text-2xl">{Icon}</span>}
-        <span className="text-xs text-neutral-600 dark:text-neutral-400 group-hover:text-brand-navy transition-colors">View <ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /></span>
-      </div>
-      <p className={`text-3xl font-bold ${color} mb-1`}>{value}</p>
-      <p className="text-sm font-medium text-neutral-700">{label}</p>
-      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{sub}</p>
-    </div>
-  );
-}
+// StatCard, RoleBadge, Field and the onPressKey keyboard helper now live in
+// components/works/{stat-card,role-badge,field}.jsx and lib/utils.js (imported above).
 
 // Iteration 6 — PNG/PDF/CSV export controls for a dashboard or report. PNG/PDF capture
 // the element with id=targetId; CSV uses the supplied flat rows. Heavy libs are

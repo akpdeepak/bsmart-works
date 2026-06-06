@@ -16,3 +16,9 @@ export function isIconComponent(icon) {
   if (typeof icon === 'function') return true;
   return typeof icon === 'object' && icon !== null && '$$typeof' in icon && !isValidElement(icon);
 }
+
+// Make a non-button clickable element keyboard-operable (Enter/Space) — pair with
+// role="button" + tabIndex={0} + a focus ring. Fires the element's own onClick via a click().
+export function onPressKey(e) {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); }
+}

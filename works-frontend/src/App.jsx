@@ -2243,14 +2243,42 @@ export default function App() {
     );
 
     return (
-      <div className="flex h-screen bg-neutral-50 dark:bg-neutral-900 items-center justify-center font-sans">
-        <div className="bg-white dark:bg-neutral-800 p-8 rounded-xl shadow-xl w-96 border border-neutral-200 dark:border-neutral-700">
-          <div className="flex justify-center mb-8"><Logo /></div>
-          <h2 className="text-xl font-bold text-brand-navy text-center mb-6">
-            {authMode === 'login' ? 'Sign in to your account' : 'Create your account'}
-          </h2>
-          {authError && <div className="bg-semantic-danger-surface text-semantic-danger text-sm p-3 rounded-md mb-4 text-center">{authError}</div>}
-          <form onSubmit={handleAuthSubmit} className="space-y-4">
+      <div className="flex h-screen font-sans">
+        {/* Brand canvas (mockup 01) — hero on dark; hidden below lg */}
+        <div className="hidden lg:flex lg:flex-1 flex-col justify-between bg-gradient-to-br from-brand-navy to-brand-navy-tint p-12 text-white">
+          <Logo variant="reverse" size="lg" />
+          <div className="max-w-md">
+            <h1 className="mb-4 text-4xl font-bold tracking-tight">Work, in rhythm.</h1>
+            <p className="mb-8 text-base text-white/75">
+              Plan, deliver, and prove it — with a project workspace built for utilities and engineering teams who run on work, not chaos.
+            </p>
+            <ul className="space-y-3">
+              {[[ShieldCheck, 'Native compliance rules with full audit history'], [Gauge, 'Internal & external SLAs from one engine'], [TrendingUp, 'KPIs at every layer with privacy guardrails'], [Zap, 'No-code workflows, rules, and automations']].map(([Icon, label]) => (
+                <li key={label} className="flex items-center gap-3 text-sm text-white/90">
+                  <Icon aria-hidden="true" className="h-4 w-4 flex-shrink-0 text-brand-amber" />
+                  {label}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="text-xs text-white/45">A BCITS product · 25 years of utility-grade reliability</p>
+        </div>
+
+        {/* Auth form panel */}
+        <div className="flex w-full flex-col justify-center overflow-y-auto bg-white px-8 py-12 dark:bg-neutral-900 sm:px-12 lg:w-2/5 lg:px-16">
+          <div className="mx-auto w-full max-w-sm">
+            <div className="mb-8 lg:hidden"><Logo /></div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-navy-tint">
+              {authMode === 'login' ? 'Sign in' : 'Get started'}
+            </p>
+            <h2 className="mb-1 text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+              {authMode === 'login' ? 'Welcome back' : 'Create your account'}
+            </h2>
+            <p className="mb-6 text-sm text-neutral-600 dark:text-neutral-400">
+              {authMode === 'login' ? 'Pick up where you left off.' : 'Start running your work in rhythm.'}
+            </p>
+            {authError && <div className="mb-4 rounded-md bg-semantic-danger-surface p-3 text-center text-sm text-semantic-danger">{authError}</div>}
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
             {authMode === 'signup' && (
               <Field label="Full Name">
                 <input type="text" required value={authForm.fullName}
@@ -2297,21 +2325,44 @@ export default function App() {
                 </div>
               </Field>
             )}
-            <Button type="submit" variant="action" fullWidth>
-              {authMode === 'login' ? 'Sign In' : 'Create Account'}
+            {authMode === 'login' && (
+              <div className="-mt-1 flex justify-end">
+                <button type="button" onClick={() => setForgotMode(true)} className="text-sm text-brand-navy-tint hover:underline">Forgot password?</button>
+              </div>
+            )}
+            <Button type="submit" variant="primary" fullWidth>
+              {authMode === 'login' ? 'Sign in' : 'Create account'}
             </Button>
           </form>
           {authMode === 'login' && (
-            <div className="mt-3 text-center">
-              <button onClick={() => setForgotMode(true)} className="text-neutral-600 dark:text-neutral-400 text-sm hover:underline">Forgot password?</button>
+            <div className="mt-5">
+              <div className="flex items-center gap-3">
+                <span className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700" />
+                <span className="text-xs text-neutral-400">or continue with</span>
+                <span className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700" />
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                {['Google', 'Microsoft'].map((p) => (
+                  <button key={p} type="button" disabled title="Single sign-on is coming soon"
+                    className="cursor-not-allowed rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+                    {p}
+                  </button>
+                ))}
+              </div>
+              <button type="button" disabled title="Single sign-on is coming soon"
+                className="mt-3 w-full cursor-not-allowed rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+                Sign in with SAML SSO
+              </button>
+              <p className="mt-2 text-center text-xs text-neutral-400">Single sign-on is coming soon — use your work email for now.</p>
             </div>
           )}
-          <div className="mt-4 text-center text-sm text-neutral-600">
-            {authMode === 'login' ? "Don't have an account? " : "Already have an account? "}
+          <div className="mt-6 text-center text-sm text-neutral-600 dark:text-neutral-400">
+            {authMode === 'login' ? 'New to Works? ' : 'Already have an account? '}
             <button onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setAuthError(''); setShowPassword(false); setConfirmEmail(''); setConfirmPassword(''); }}
-              className="text-brand-orange font-bold hover:underline">
-              {authMode === 'login' ? 'Sign up' : 'Log in'}
+              className="font-bold text-brand-orange hover:underline">
+              {authMode === 'login' ? 'Create an account' : 'Log in'}
             </button>
+          </div>
           </div>
         </div>
       </div>

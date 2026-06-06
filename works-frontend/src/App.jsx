@@ -25,6 +25,7 @@ import { SlaView } from '@/components/works/organisms/sla-view';
 import { PerformancePanel } from '@/components/works/organisms/performance-panel';
 import { AiSettingsPanel } from '@/components/works/organisms/ai-settings-panel';
 import { WorkItemStatusTimeline } from '@/components/works/organisms/work-item-status-timeline';
+import { AcceptanceCriteria } from '@/components/works/organisms/acceptance-criteria';
 import { AutomationsPanel } from '@/components/works/organisms/automations-panel';
 import { IntegrationsPanel } from '@/components/works/organisms/integrations-panel';
 import { Modal } from '@/components/works/molecules/modal';
@@ -5859,6 +5860,13 @@ export default function App() {
                 onChange={val => setSelectedItem({ ...selectedItem, description: val })}
                 onBlur={() => handleUpdateItem(selectedItem)}
                 placeholder="Add a description... (supports **bold**, *italic*, `code`, - bullets)"
+              />
+            </div>
+
+            <div>
+              <AcceptanceCriteria
+                value={selectedItem.acceptanceCriteria || ''}
+                onSave={val => { const u = { ...selectedItem, acceptanceCriteria: val }; setSelectedItem(u); handleUpdateItem(u); }}
               />
             </div>
 

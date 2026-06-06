@@ -15,6 +15,8 @@ public class WorkItem {
     private String type;
     @Column(columnDefinition = "TEXT")
     private String description;
+    @Column(name = "acceptance_criteria", columnDefinition = "TEXT")
+    private String acceptanceCriteria;
     private String assigneeId;
     private LocalDate dueDate;
     private String projectId;
@@ -37,6 +39,8 @@ public class WorkItem {
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+    public String getAcceptanceCriteria() { return acceptanceCriteria; }
+    public void setAcceptanceCriteria(String acceptanceCriteria) { this.acceptanceCriteria = acceptanceCriteria; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getStatus() { return status; }

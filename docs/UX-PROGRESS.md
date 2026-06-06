@@ -38,7 +38,8 @@ toasts; the shell works on mobile; 5/6 modals are accessible; `Field` inputs are
 | PR | Area | Finding(s) | Summary |
 |----|------|-----------|---------|
 | #127 | Bug / a11y | C1 fallout | **P0 home-dashboard crash fixed.** `lucide-react` 1.17 ships icons as `forwardRef` objects, so the `typeof Icon === 'function'` guards in `EmptyState`/`StatCard`/`PmArtifactList` rendered the icon object as a child → "Objects are not valid as a React child", blanking the dashboard. New pure `isIconComponent` helper (`lib/utils.js`, unit-tested) used at the 3 sites. Found only because the app now boots against a DB. |
-| — | Architecture | A3/H2 | **Decomposition begun.** `EmptyState` (51 call-sites) extracted to a tested atom (`atoms/empty-state.jsx`); **Notifications** view extracted to `views/notifications-view.jsx` (props-driven, lint-clean, RTL-smoke-tested). First slice out of the monolith; pattern established: extract → eslint `no-undef` proves the prop set → RTL test → live smoke. |
+| #128 | Architecture | A3/H2 | **Decomposition begun.** `EmptyState` (51 call-sites) extracted to a tested atom (`atoms/empty-state.jsx`); **Notifications** view → `views/notifications-view.jsx` (props-driven, lint-clean, RTL-smoke-tested). Pattern established: extract → eslint `no-undef` proves the prop set → RTL test → live smoke. |
+| #129 | Architecture | A3/H2 (+A4 prep) | **Work-item type module + Trash view.** `TYPES`/icon-set/`resolveTypeIcon` → `lib/work-item-types.js`; `TypeBadge`/`TypeIcon` → `components/works/work-item-type.jsx` (lint surfaced & fixed `react-hooks/static-components` via `createElement`). **Trash** view → `views/trash-view.jsx`. Smoke: 319 `TypeBadge`s render on Backlog, type-icon picker intact, zero console errors. |
 
 ## Remaining — and why each is deferred
 

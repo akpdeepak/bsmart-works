@@ -39,7 +39,10 @@ import { exportElementToPng, exportElementToPdf, exportRowsToCsv } from '@/lib/e
 import { api } from '@/lib/apiClient';
 import { isIconComponent } from '@/lib/utils';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { TYPES, TYPE_ICON_SET, TYPE_ICON_KEYS } from '@/lib/work-item-types';
+import { TypeBadge, TypeIcon } from '@/components/works/work-item-type';
 import NotificationsView from '@/views/notifications-view';
+import TrashView from '@/views/trash-view';
 import {
   filterItems as filterWidgetItems, statusBreakdown, statusPriorityMatrix,
   sprintProgress, velocityPoints, SERIES_BG, EXTRA_WIDGET_PRESETS, EXTRA_WIDGET_CATEGORIES,
@@ -129,56 +132,8 @@ function readStoredSession() {
   }
 }
 
-const TYPES = {
-  Task:            { color: 'bg-brand-navy-tint',     icon: 'check-square' },
-  Story:           { color: 'bg-semantic-success',    icon: 'book' },
-  Bug:             { color: 'bg-semantic-danger',      icon: 'bug' },
-  Epic:            { color: 'bg-neutral-700',          icon: 'zap' },
-  'Sub-task':      { color: 'bg-neutral-600',          icon: 'corner-down-right' },
-  Incident:        { color: 'bg-semantic-warning',     icon: 'flame' },
-  'Service Request': { color: 'bg-brand-navy',         icon: 'ticket' },
-};
-
-// Curated Lucide icon set for work-item types (RB-30 §8 — icons, never emoji). Values are
-// stable string keys persisted on custom types; built-in TYPES above reference the same keys.
-const TYPE_ICON_SET = {
-  'check-square': SquareCheck, book: BookOpen, bug: Bug, zap: Zap,
-  'corner-down-right': CornerDownRight, flame: Flame, ticket: Ticket, package: Package,
-  clipboard: ClipboardList, target: Target, wrench: Wrench, rocket: Rocket,
-  shield: Shield, flag: Flag, lightbulb: Lightbulb, star: Star, file: FileText, gauge: Gauge,
-};
-// Back-compat: pre-existing rows stored an emoji string — map the known ones to a curated key
-// so legacy data renders as a Lucide glyph; anything unmapped falls back to the raw value.
-const LEGACY_TYPE_ICON = {
-  '✓': 'check-square', '📖': 'book', '🐛': 'bug', '⚡': 'zap', '↳': 'corner-down-right',
-  '🔥': 'flame', '🎫': 'ticket', '📦': 'package', '📋': 'clipboard', '🎯': 'target',
-  '🔧': 'wrench', '🚀': 'rocket', '🛡': 'shield', '🚩': 'flag', '💡': 'lightbulb', '⭐': 'star',
-};
-const TYPE_ICON_KEYS = Object.keys(TYPE_ICON_SET);
-
-function resolveTypeIcon(value) {
-  if (!value) return Package;
-  if (TYPE_ICON_SET[value]) return TYPE_ICON_SET[value];
-  if (LEGACY_TYPE_ICON[value]) return TYPE_ICON_SET[LEGACY_TYPE_ICON[value]];
-  return null;
-}
-
-// Renders a work-item type icon from its stored key (or legacy emoji). Decorative by default.
-function TypeIcon({ value, className = 'h-3.5 w-3.5' }) {
-  const Ic = resolveTypeIcon(value);
-  if (Ic) return <Ic className={className} aria-hidden="true" />;
-  return <span className={className} aria-hidden="true">{value}</span>;
-}
-
-function TypeBadge({ type, compact = false }) {
-  const t = TYPES[type] || TYPES.Task;
-  return (
-    <span className={`inline-flex items-center gap-1 text-xs uppercase tracking-wider font-bold text-white px-1.5 py-0.5 rounded-sm ${t.color}`}>
-      {!compact && <TypeIcon value={t.icon} className="h-3 w-3" />}
-      {type}
-    </span>
-  );
-}
+// Work-item type vocabulary + presentation now live in lib/work-item-types.js and
+// components/works/work-item-type.jsx (imported above).
 
 // Iteration 15 — retro board columns per template (Cap V · retro toolkit).
 const RETRO_COLUMNS = {
@@ -5084,37 +5039,11 @@ export default function App() {
 
           {/* TRASH VIEW */}
           {view === 'trash' && (
-            <div className="p-8 max-w-3xl">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h1 className="text-2xl font-bold text-brand-navy">Trash</h1>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-0.5">Deleted items are kept for 30 days</p>
-                </div>
-              </div>
-              {trashItems.length === 0
-                ? <EmptyState icon={Trash2} title="Trash is empty" subtitle="Deleted work items will appear here for 30 days before permanent removal." />
-                : (
-                  <div className="space-y-2">
-                    {trashItems.map(item => (
-                      <div key={item.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 flex items-center gap-4">
-                        <TypeBadge type={item.type} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-neutral-900 truncate">{item.title}</p>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{item.id} · Deleted {item.deletedAt ? new Date(item.deletedAt).toLocaleDateString() : ''}</p>
-                        </div>
-                        <div className="flex gap-2 flex-shrink-0">
-                          <Button variant="secondary" size="sm" onClick={() => restoreFromTrash(item.id)}>Restore</Button>
-                          <button onClick={() => permanentDelete(item.id)}
-                            className="text-xs text-semantic-danger hover:text-semantic-danger/80 px-2 py-1 rounded border border-semantic-danger/30 hover:bg-semantic-danger-surface transition-colors">
-                            Delete permanently
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )
-              }
-            </div>
+            <TrashView
+              trashItems={trashItems}
+              restoreFromTrash={restoreFromTrash}
+              permanentDelete={permanentDelete}
+            />
           )}
 
           {/* ======================================================

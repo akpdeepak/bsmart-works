@@ -170,13 +170,14 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   documented deterministic fallback. Built on the full stack of prior iterations — incl. **11** (AI
   Control Plane), **12** (KPI Framework), **13** (Automation + Integrations), **14** (Developer
   Workspace), **15** (Scrum Master Cockpit + Product Owner Workspace), **16** (Leadership Console
-  Cap X + Admin Operations Center Cap Y — all five role surfaces now live), **17** (Universal
-  Customization Engine Cap R), and the Compliance/Service iterations (7–9).
-- **Flyway high-water mark:** **V56** (`V56__user_locale_and_perf_indexes.sql`; note: V16 was
+  Cap X + Admin Operations Center Cap Y), **17** (Universal Customization Engine Cap R), **19**
+  (Enterprise Security + Compliance Certifications Cap T), and the Compliance/Service iterations (7–9).
+- **Flyway high-water mark:** **V57** (`V57__user_locale_and_perf_indexes.sql`; note: V16 was
   skipped, V23 does not exist; V50 is iteration 16's `V50__iteration16_leadership_admin.sql`, V51 is
-  iteration 17's `V51__iteration17_customization_engine.sql`; V52–V55 are iteration 20's advanced-AI /
-  marketplace / knowledge / customer-chat migrations).
-- **Next migration:** **`V57__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+  iteration 17's `V51__iteration17_customization_engine.sql`, V52 is iteration 19's
+  `V52__iteration19_enterprise_security.sql`; V53–V56 are iteration 20's advanced-AI / marketplace /
+  knowledge / customer-chat migrations).
+- **Next migration:** **`V58__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

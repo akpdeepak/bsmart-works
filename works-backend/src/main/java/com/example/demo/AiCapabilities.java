@@ -35,6 +35,8 @@ public final class AiCapabilities {
     public static final String BACKLOG_REFINE     = "backlog_refine";     // Cap W — backlog refinement ranking (I15-S09)
     public static final String FEEDBACK_CLUSTER   = "feedback_cluster";   // Cap W — customer-feedback theme clustering (I15-S11)
     public static final String RELEASE_NOTES      = "release_notes";      // Cap W — release-notes auto-draft (I15-S13)
+    public static final String EXEC_BRIEFING      = "exec_briefing";      // Cap X — AI executive briefing (iteration 16)
+    public static final String BOARD_DECK         = "board_deck";         // Cap X — quarterly board-deck auto-draft (iteration 16)
 
     /** Description of each capability and its deterministic fallback, surfaced to the UI panel. */
     public record Descriptor(String id, String label, AiModelTier defaultTier, String fallback) { }
@@ -84,7 +86,13 @@ public final class AiCapabilities {
         new Descriptor(FEEDBACK_CLUSTER, "Customer-feedback theme clustering", AiModelTier.SONNET,
             "Falls back to keyword bucketing into themes with lexicon sentiment — the deterministic clusterer."),
         new Descriptor(RELEASE_NOTES, "Release-notes auto-draft", AiModelTier.SONNET,
-            "Falls back to completed items grouped by type into a plain markdown changelog for manual editing.")
+            "Falls back to completed items grouped by type into a plain markdown changelog for manual editing."),
+        new Descriptor(EXEC_BRIEFING, "AI executive briefing", AiModelTier.SONNET,
+            "Falls back to the deterministic briefing assembled from the cross-team rollup, customer-health "
+            + "and risk-portfolio figures — the numbers and headlines, without the narrative prose."),
+        new Descriptor(BOARD_DECK, "Quarterly board-deck auto-draft", AiModelTier.SONNET,
+            "Falls back to the deterministic slide outline built from the same rollup, OKR and risk data — "
+            + "the structured slides for manual narration.")
     );
 
     private static final Map<String, Descriptor> BY_ID =

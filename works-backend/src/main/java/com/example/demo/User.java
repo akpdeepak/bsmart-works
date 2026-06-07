@@ -44,9 +44,17 @@ public class User {
     @Column(name = "mfa_secret")
     private String mfaSecret;
 
+    // Iteration 20 (Cap A — localization): the user's preferred UI language as a BCP-47 code
+    // (en, hi, es, fr, de, pt, ja, zh, ar, ko). Defaults to English; drives the frontend i18n layer.
+    @Column(name = "locale", nullable = false)
+    private String locale = "en";
+
     public boolean isMfaEnabled()               { return mfaEnabled; }
     public void    setMfaEnabled(boolean v)     { this.mfaEnabled = v; }
 
     public String getMfaSecret()                { return mfaSecret; }
     public void   setMfaSecret(String s)        { this.mfaSecret = s; }
+
+    public String getLocale()                   { return locale == null ? "en" : locale; }
+    public void   setLocale(String locale)      { this.locale = locale; }
 }

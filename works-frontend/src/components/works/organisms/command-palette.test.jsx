@@ -67,4 +67,15 @@ describe('CommandPalette', () => {
     expect(screen.queryByRole('option')).not.toBeInTheDocument();
     expect(screen.getByText(/No matches/)).toBeInTheDocument();
   });
+
+  it('appends debounced server search results when onSearch is provided', async () => {
+    const onSearch = vi.fn().mockResolvedValue([
+      { id: 'WRK-1', label: 'WRK-1 · Fix login', group: 'Item', run: vi.fn() },
+    ]);
+    const user = userEvent.setup();
+    render(<CommandPalette onClose={() => {}} commands={commands} onSearch={onSearch} />);
+    await user.keyboard('login');
+    expect(await screen.findByText('WRK-1 · Fix login')).toBeInTheDocument();
+    expect(onSearch).toHaveBeenCalledWith('login');
+  });
 });

@@ -22,3 +22,10 @@
 export { SidebarNav } from './sidebar-nav';
 export { UserMenu } from './user-menu';
 export { DeveloperWorkspace } from './developer-workspace';
+export { CommandPalette } from './command-palette';
+export { OfflineBanner } from './offline-banner';
+export { PresenceBar } from './presence-bar';
+export { ConflictResolver } from './conflict-resolver';
+export { ShortcutsHelp } from './shortcuts-help';
+export { StatusPage } from './status-page';
+export { PushSettingsPanel } from './push-settings-panel';

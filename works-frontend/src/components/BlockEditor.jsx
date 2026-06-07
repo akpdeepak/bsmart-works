@@ -11,7 +11,6 @@ import {
   GitBranch, ChevronDown as ChevronDownIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/works/button';
 
 const BLOCK_TYPES = [
   { type: 'paragraph', label: 'Paragraph', Icon: AlignLeft },
@@ -54,7 +53,6 @@ function ParagraphBlock({ block, onChange, focused }) {
 }
 
 function HeadingBlock({ block, onChange, level }) {
-  const Tag = `h${level}`;
   const sizeClass = { 1: 'text-2xl font-bold', 2: 'text-xl font-semibold', 3: 'text-base font-semibold' }[level];
   return (
     <input
@@ -239,6 +237,8 @@ function Block({ block, index, total, focused, onFocus, onChange, onMove, onDele
   return (
     <div
       ref={wrapRef}
+      role="option"
+      aria-selected={focused}
       tabIndex={0}
       aria-label={`Block ${index + 1}: ${block.type}`}
       onFocus={() => onFocus(index)}
@@ -252,7 +252,7 @@ function Block({ block, index, total, focused, onFocus, onChange, onMove, onDele
     >
       {/* Block type label */}
       <div className="flex items-center gap-1 mb-2">
-        <span className="text-[10px] uppercase tracking-wide font-semibold text-neutral-400 select-none">
+        <span className="text-xs uppercase tracking-wide font-semibold text-neutral-400 select-none">
           {BLOCK_TYPES.find((t) => t.type === block.type)?.label || block.type}
         </span>
         {/* Block controls — visible on focus/hover */}
@@ -406,7 +406,7 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange }) {
   };
 
   return (
-    <div className="space-y-2" role="region" aria-label="Block editor">
+    <div className="space-y-2" role="listbox" aria-label="Block editor" aria-multiselectable="false">
       {blocks.map((block, index) => (
         <Block
           key={block.id}

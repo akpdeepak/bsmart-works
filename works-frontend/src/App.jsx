@@ -1,19 +1,18 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import DOMPurify from 'dompurify';
 import {
-  Mail, PanelLeft, ChevronDown, Check,
+  Mail, PanelLeft, Check,
   Home, User, Bell, LayoutGrid, ListTodo, Zap, Rocket, FolderKanban,
   BarChart2, LayoutDashboard, FileText, TrendingUp, Headset, Timer, ShieldCheck,
   Gauge, Map as MapIcon, ClipboardList, Workflow, Plug, Search, BookOpen,
   SlidersHorizontal, Settings, Trash2, Code, Crown, ShieldHalf,
   CheckCircle2, AlertCircle, Heart, AlertTriangle, Puzzle, Link, Lock,
   File as FileIcon, Folder, Lightbulb, Users, Shield, Ban, Construction,
-  MessageCircle, Archive, RefreshCw, Repeat, Send, Megaphone, ScrollText,
-  Pin, Calendar, Eye, EyeOff, Building2, Target, Globe, Star, Scale, Clock, Reply, AtSign,
+  MessageCircle, Archive, RefreshCw, Repeat, Megaphone, ScrollText,
+  Calendar, Eye, EyeOff, Building2, Target, Globe, Star, Scale, Clock, Reply,
   X, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronRight, ChevronUp,
-  SquarePen, Upload, IndentIncrease, IndentDecrease, MapPin, KeyRound,
+  SquarePen, Upload, IndentIncrease, IndentDecrease, MapPin,
   Unlock, CornerDownRight, Image as ImageIcon, Flame, Bug,
-  Package, Ticket, Wrench, Flag, SquareCheck,
   Activity, BellRing, Keyboard,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
@@ -52,13 +51,13 @@ import { ResetPasswordScreen } from '@/components/works/reset-password-screen';
 import { DonutChart, BarChart } from '@/components/works/molecules';
 import { exportElementToPng, exportElementToPdf, exportRowsToCsv } from '@/lib/export';
 import { api } from '@/lib/apiClient';
+import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { isIconComponent, onPressKey } from '@/lib/utils';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { TYPES, TYPE_ICON_SET, TYPE_ICON_KEYS } from '@/lib/work-item-types';
 import { TypeBadge, TypeIcon } from '@/components/works/work-item-type';
 import { PriorityBadge } from '@/components/works/priority-badge';
 import { StatCard } from '@/components/works/stat-card';
-import { RoleBadge } from '@/components/works/role-badge';
 import { Field } from '@/components/works/field';
 import { Avatar } from '@/components/works/atoms/avatar';
 import DashboardView from '@/views/dashboard-view';
@@ -80,6 +79,7 @@ import DeveloperPortalView from '@/views/developer-portal-view';
 import KnowledgeTemplatesView from '@/views/knowledge-templates-view';
 import SupportInboxView from '@/views/support-inbox-view';
 import { LanguageSwitcher } from '@/components/works/organisms/language-switcher';
+import { BlockEditor } from '@/components/BlockEditor';
 import {
   filterItems as filterWidgetItems, statusBreakdown, statusPriorityMatrix,
   sprintProgress, velocityPoints, SERIES_BG, EXTRA_WIDGET_PRESETS, EXTRA_WIDGET_CATEGORIES,
@@ -306,7 +306,7 @@ export default function App() {
   // Workspace switcher dropdown + multi-workspace tenant context (I01-S02).
   // The active workspace is client-held and server-validated on every request (membership is the
   // isolation guarantee — JWT stays identity-only). Persisted so a reload keeps the same tenant.
-  const [wsOpen, setWsOpen]             = useState(false);
+  const [, setWsOpen]                    = useState(false);
   const wsRef                           = useRef(null);
   const [workspaces, setWorkspaces]     = useState([]);
   const [wsLoading, setWsLoading]       = useState(false);
@@ -356,7 +356,8 @@ export default function App() {
   const [meetingNotes, setMeetingNotes]     = useState({});
   const [pmForm, setPmForm]                 = useState({});
   const [pmFormOpen, setPmFormOpen]         = useState(null); // 'risk'|'assumption'|...|null
-  const [selectedPmItem, setSelectedPmItem] = useState(null);
+  // eslint-disable-next-line no-unused-vars
+  const [, setSelectedPmItem]               = useState(null);
 
   // Iteration 6 — Role-tuned Dashboards
   const [dashboardRole, setDashboardRole]       = useState('developer');
@@ -410,7 +411,8 @@ export default function App() {
   const [releaseNotesName, setReleaseNotesName] = useState('');
 
   // Iteration 6 — Worklogs
-  const [myWorklogs, setMyWorklogs]             = useState([]);
+  // eslint-disable-next-line no-unused-vars
+  const [, setMyWorklogs]                        = useState([]);
   const [worklogForm, setWorklogForm]           = useState({ timeSpentMinutes: 30, description: '', workDate: '' });
   const [isWorklogOpen, setIsWorklogOpen]       = useState(false);
 
@@ -440,6 +442,7 @@ export default function App() {
   const [isArticleFormOpen, setIsArticleFormOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState(false);
   const [articlePanel, setArticlePanel] = useState(null); // 'history' | 'comments' | 'analytics' | null
+  const [articleContentFormat, setArticleContentFormat] = useState('markdown'); // 'markdown' | 'blocks'
   const [articleComments, setArticleComments] = useState([]);
   const [newArticleComment, setNewArticleComment] = useState('');
   const [articleAnalytics, setArticleAnalytics] = useState(null);
@@ -498,6 +501,16 @@ export default function App() {
   const [brandingColor, setBrandingColor] = useState('#E94E1B');
   const [brandingDesc, setBrandingDesc]  = useState('');
 
+  // AI Control Plane — capabilities loaded once per workspace; drives hide/show of AI buttons (RB-40 §2).
+  const [aiCapabilities, setAiCapabilities] = useState([]);
+  const [aiLoading, setAiLoading] = useState({}); // { [key]: true } while an AI call is in flight
+
+  // B20 — inline metrics strips (sprint + project views)
+  const [sprintMetrics, setSprintMetrics] = useState(null);      // { velocity, completionPct, cycleTimeDays }
+  const [sprintMetricsLoading, setSprintMetricsLoading] = useState(false);
+  const [projectMetrics, setProjectMetrics] = useState({});      // keyed by projectId
+  const [projectMetricsLoading, setProjectMetricsLoading] = useState(false);
+
   // Derived from the membership list + the active selection (see fetchMyWorkspaces).
   const workspace = workspaces.find(w => w.id === activeWorkspaceId)
     || { id: activeWorkspaceId, name: 'Workspace' };
@@ -511,6 +524,7 @@ export default function App() {
   });
 
   // Shared request wrapper (throws on error, returns JSON) — delegates to the single apiClient.
+  // eslint-disable-next-line no-unused-vars
   const apiFetch = (url, options = {}) => api.send(url, options);
 
   useEffect(() => {
@@ -746,6 +760,57 @@ export default function App() {
     fetchUserRole();
     fetchBranding();
     fetchWipLimits();
+    // Load AI capabilities for this workspace — drives hide/show of AI action buttons (RB-40 §2).
+    aiClient.capabilities(activeWorkspaceId).then(caps => {
+      setAiCapabilities(Array.isArray(caps) ? caps : []);
+    }).catch(() => { setAiCapabilities([]); });
+  }
+
+  // B20 — load per-project metrics for the projects list view.
+  function fetchProjectMetrics(projectList) {
+    if (!projectList || projectList.length === 0) return;
+    setProjectMetricsLoading(true);
+    Promise.all(
+      projectList.map(p =>
+        api.send(`/kpi/project?workspaceId=${encodeURIComponent(activeWorkspaceId)}&projectId=${encodeURIComponent(p.id)}`)
+          .then(data => ({ id: p.id, metrics: { velocity: data.velocity ?? data.avgVelocity ?? null, completionPct: data.completionPct ?? data.completionPercent ?? null, cycleTimeDays: data.cycleTimeDays ?? data.avgCycleTime ?? null } }))
+          .catch(() => ({ id: p.id, metrics: null }))
+      )
+    ).then(results => {
+      const map = {};
+      results.forEach(r => { map[r.id] = r.metrics; });
+      setProjectMetrics(map);
+      setProjectMetricsLoading(false);
+    });
+  }
+
+  // B20 — load sprint-level metrics (velocity, completion%, cycle time) for the active sprint.
+  function fetchSprintMetrics(sprint, projectId) {
+    if (!sprint || !projectId) return;
+    setSprintMetricsLoading(true);
+    api.send(`/kpi/project?workspaceId=${encodeURIComponent(activeWorkspaceId)}&projectId=${encodeURIComponent(projectId)}&sprintId=${encodeURIComponent(sprint.id)}`)
+      .then(data => {
+        setSprintMetrics({
+          velocity: data.velocity ?? data.avgVelocity ?? null,
+          completionPct: data.completionPct ?? data.completionPercent ?? null,
+          cycleTimeDays: data.cycleTimeDays ?? data.avgCycleTime ?? null,
+        });
+        setSprintMetricsLoading(false);
+      })
+      .catch(() => { setSprintMetrics(null); setSprintMetricsLoading(false); });
+  }
+
+  // AI helper — checks capability, fires an AI call, shows the result in a toast or state setter.
+  // key: unique string for aiLoading tracking; fallbackMsg: shown if AI is off/over budget.
+  function aiAction(key, call, onResult, fallbackMsg) {
+    if (!anyCapabilityEnabled(aiCapabilities)) {
+      showToast(fallbackMsg || 'AI is not enabled for this workspace.', 'info');
+      return;
+    }
+    setAiLoading(l => ({ ...l, [key]: true }));
+    call()
+      .then(res => { setAiLoading(l => ({ ...l, [key]: false })); onResult(res); })
+      .catch(() => { setAiLoading(l => ({ ...l, [key]: false })); showToast('AI request failed. Please try again.', 'error'); });
   }
 
   function fetchUnreadCount() {
@@ -1059,7 +1124,7 @@ export default function App() {
         const list = Array.isArray(d) ? d : [];
         setSprints(list);
         const active = list.find(s => s.status === 'ACTIVE') || list[0];
-        if (active) { setActiveSprint(active); fetchSprintItems(active.id); }
+        if (active) { setActiveSprint(active); fetchSprintItems(active.id); fetchSprintMetrics(active, 'PROJ-WORKS'); }
       }).catch(reportError);
   }
   function fetchSprintItems(sprintId) {
@@ -1383,6 +1448,7 @@ export default function App() {
     RESOLVED:     'bg-semantic-success text-white',
     WONT_FIX:     'bg-neutral-300 text-neutral-700',
   };
+  // eslint-disable-next-line no-unused-vars
   function humanDuration(seconds) {
     if (seconds == null) return '—';
     const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60);
@@ -2293,7 +2359,7 @@ export default function App() {
           <input type="text" inputMode="numeric" maxLength={6} placeholder="000000"
             value={mfaCode} onChange={e => setMfaCode(e.target.value.replace(/\D/g,''))}
             onKeyDown={e => e.key === 'Enter' && mfaCode.length === 6 && handleMfaVerify()}
-            className="input text-center text-2xl tracking-widest mb-4" autoFocus />
+            className="input text-center text-2xl tracking-widest mb-4" />
           <Button variant="action" fullWidth onClick={handleMfaVerify}
             disabled={mfaCode.length !== 6}>Verify Code</Button>
           <button onClick={() => { setMfaChallenge(null); setMfaCode(''); }}
@@ -2365,7 +2431,7 @@ export default function App() {
             {authMode === 'signup' && (
               <Field label="Full Name">
                 <input type="text" required value={authForm.fullName}
-                  onChange={e => setAuthForm({ ...authForm, fullName: e.target.value })} className="input" autoFocus />
+                  onChange={e => setAuthForm({ ...authForm, fullName: e.target.value })} className="input" />
               </Field>
             )}
             <Field label="Email">
@@ -2483,6 +2549,7 @@ export default function App() {
       case 'poworkspace': openPoWorkspace(); break;
       case 'workspace': fetchMembers(); fetchNotifPrefs(); fetchBranding(); break;
       case 'trash': fetchTrash(); break;
+      case 'projects': fetchProjectMetrics(projects); break;
       default: break;
     }
   };
@@ -2828,8 +2895,8 @@ export default function App() {
                                     <button onClick={() => handleDelete(item.id)} className="text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label="Delete work item"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                                   </div>
                                 </div>
-                                <p className="text-sm font-medium text-neutral-900 leading-snug mb-2 cursor-pointer"
-                                  onClick={() => setSelectedItem(item)}>{item.title}</p>
+                                <button type="button" className="text-sm font-medium text-neutral-900 leading-snug mb-2 cursor-pointer text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
+                                  onClick={() => setSelectedItem(item)}>{item.title}</button>
                                 {density !== 'compact' && item.description && (
                                   <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2 line-clamp-2">{item.description}</p>
                                 )}
@@ -2872,6 +2939,8 @@ export default function App() {
               setIsProjectOpen={setIsProjectOpen}
               handleArchiveProject={handleArchiveProject}
               userName={userName}
+              projectMetrics={projectMetrics}
+              projectMetricsLoading={projectMetricsLoading}
             />
           )}
 
@@ -3086,7 +3155,7 @@ export default function App() {
                     </div>
                     <div className="flex items-center gap-2 flex-wrap justify-end">
                       <select value={activeSprint.id}
-                        onChange={e => { const s = sprints.find(x => x.id === e.target.value); if (s) { setActiveSprint(s); fetchSprintItems(s.id); } }}
+                        onChange={e => { const s = sprints.find(x => x.id === e.target.value); if (s) { setActiveSprint(s); fetchSprintItems(s.id); fetchSprintMetrics(s, selectedProjectId || 'PROJ-WORKS'); } }}
                         className="text-sm border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 rounded-md px-2 py-1.5 focus:outline-none">
                         {sprints.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
@@ -3106,6 +3175,38 @@ export default function App() {
                       </span>
                     </div>
                   )}
+
+                  {/* B20 — Inline metrics strip (velocity, completion%, cycle time) — team-level only */}
+                  <div className="mb-3 flex flex-wrap gap-3">
+                    {sprintMetricsLoading ? (
+                      <>
+                        <div className="animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded-lg h-14 w-36" aria-hidden="true" />
+                        <div className="animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded-lg h-14 w-36" aria-hidden="true" />
+                        <div className="animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded-lg h-14 w-36" aria-hidden="true" />
+                      </>
+                    ) : sprintMetrics ? (
+                      <>
+                        {sprintMetrics.velocity != null && (
+                          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-4 py-2.5 min-w-[9rem]">
+                            <p className="text-xs text-neutral-500 uppercase tracking-wider font-semibold">Velocity</p>
+                            <p className="text-2xl font-bold text-brand-navy">{sprintMetrics.velocity}<span className="text-xs font-normal text-neutral-500 ml-1">pts</span></p>
+                          </div>
+                        )}
+                        {sprintMetrics.completionPct != null && (
+                          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-4 py-2.5 min-w-[9rem]">
+                            <p className="text-xs text-neutral-500 uppercase tracking-wider font-semibold">Completion</p>
+                            <p className="text-2xl font-bold text-semantic-success">{Math.round(sprintMetrics.completionPct)}<span className="text-xs font-normal text-neutral-500 ml-0.5">%</span></p>
+                          </div>
+                        )}
+                        {sprintMetrics.cycleTimeDays != null && (
+                          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-4 py-2.5 min-w-[9rem]">
+                            <p className="text-xs text-neutral-500 uppercase tracking-wider font-semibold">Cycle Time</p>
+                            <p className="text-2xl font-bold text-neutral-700 dark:text-neutral-200">{sprintMetrics.cycleTimeDays.toFixed(1)}<span className="text-xs font-normal text-neutral-500 ml-1">days</span></p>
+                          </div>
+                        )}
+                      </>
+                    ) : null}
+                  </div>
 
                   {/* Quick filters + Swimlane + Saved filters */}
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -3313,7 +3414,7 @@ export default function App() {
                                   {wf.isDefault && <span className="text-xs bg-brand-navy text-white px-2 py-0.5 rounded-full font-semibold">DEFAULT</span>}
                                   {wf.itemType && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded">{wf.itemType}</span>}
                                 </div>
-                                <div className="flex gap-3 items-center" onClick={e => e.stopPropagation()}>
+                                <div className="flex gap-3 items-center" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()} role="none">
                                   <span className="font-mono text-xs text-neutral-300">{wf.id}</span>
                                   <button onClick={() => api.raw(`/workflows/${wf.id}`, { method: 'DELETE' }).then(() => { fetchWorkflows(); if (expandedWorkflowId === wf.id) setExpandedWorkflowId(null); })}
                                     className="text-xs text-semantic-danger hover:underline">Delete</button>
@@ -3342,20 +3443,20 @@ export default function App() {
                                         {/* Add status inline form */}
                                         <div className="flex gap-2 items-end flex-wrap">
                                           <div>
-                                            <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Status Name</label>
-                                            <input className="input text-sm w-36" placeholder="e.g. In Review" value={newStatusForm.name}
+                                            <label htmlFor="new-status-name" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Status Name</label>
+                                            <input id="new-status-name" className="input text-sm w-36" placeholder="e.g. In Review" value={newStatusForm.name}
                                               onChange={e => setNewStatusForm(f => ({ ...f, name: e.target.value }))} />
                                           </div>
                                           <div>
-                                            <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Category</label>
-                                            <select className="input text-sm" value={newStatusForm.category}
+                                            <label htmlFor="new-status-category" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Category</label>
+                                            <select id="new-status-category" className="input text-sm" value={newStatusForm.category}
                                               onChange={e => setNewStatusForm(f => ({ ...f, category: e.target.value }))}>
                                               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                             </select>
                                           </div>
                                           <div>
-                                            <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Color</label>
-                                            <input type="color" className="h-9 w-12 rounded border border-neutral-200 cursor-pointer" value={newStatusForm.color}
+                                            <label htmlFor="new-status-color" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Color</label>
+                                            <input id="new-status-color" type="color" className="h-9 w-12 rounded border border-neutral-200 cursor-pointer" value={newStatusForm.color}
                                               onChange={e => setNewStatusForm(f => ({ ...f, color: e.target.value }))} />
                                           </div>
                                           <Button variant="secondary" onClick={() => addStatus(wf.id)}>+ Add Status</Button>
@@ -3385,21 +3486,21 @@ export default function App() {
                                         {statuses.length >= 2 && (
                                           <div className="flex gap-2 items-end flex-wrap">
                                             <div>
-                                              <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Transition Name</label>
-                                              <input className="input text-sm w-32" placeholder="e.g. Start Review" value={newTransitionForm.name}
+                                              <label htmlFor="new-transition-name" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Transition Name</label>
+                                              <input id="new-transition-name" className="input text-sm w-32" placeholder="e.g. Start Review" value={newTransitionForm.name}
                                                 onChange={e => setNewTransitionForm(f => ({ ...f, name: e.target.value }))} />
                                             </div>
                                             <div>
-                                              <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">From</label>
-                                              <select className="input text-sm" value={newTransitionForm.fromStatus}
+                                              <label htmlFor="new-transition-from" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">From</label>
+                                              <select id="new-transition-from" className="input text-sm" value={newTransitionForm.fromStatus}
                                                 onChange={e => setNewTransitionForm(f => ({ ...f, fromStatus: e.target.value }))}>
                                                 <option value="">— From —</option>
                                                 {statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                               </select>
                                             </div>
                                             <div>
-                                              <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">To</label>
-                                              <select className="input text-sm" value={newTransitionForm.toStatus}
+                                              <label htmlFor="new-transition-to" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">To</label>
+                                              <select id="new-transition-to" className="input text-sm" value={newTransitionForm.toStatus}
                                                 onChange={e => setNewTransitionForm(f => ({ ...f, toStatus: e.target.value }))}>
                                                 <option value="">— To —</option>
                                                 {statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -3438,13 +3539,13 @@ export default function App() {
                       <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">New Custom Field</p>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Field Name *</label>
-                          <input className="input text-sm w-full" placeholder="e.g. Meter Serial Number" value={newFieldForm.name}
+                          <label htmlFor="new-field-name" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Field Name *</label>
+                          <input id="new-field-name" className="input text-sm w-full" placeholder="e.g. Meter Serial Number" value={newFieldForm.name}
                             onChange={e => setNewFieldForm(f => ({ ...f, name: e.target.value }))} />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Field Type *</label>
-                          <select className="input text-sm w-full" value={newFieldForm.fieldType}
+                          <label htmlFor="new-field-type" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Field Type *</label>
+                          <select id="new-field-type" className="input text-sm w-full" value={newFieldForm.fieldType}
                             onChange={e => setNewFieldForm(f => ({ ...f, fieldType: e.target.value }))}>
                             {['TEXT','NUMBER','CURRENCY','DATE','SELECT','MULTI_SELECT','USER','URL','CHECKBOX','FILE','JSON','TEXTAREA','EMAIL','PHONE','RATING','PROGRESS'].map(t => (
                               <option key={t} value={t}>{t}</option>
@@ -3452,8 +3553,8 @@ export default function App() {
                           </select>
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Description</label>
-                          <input className="input text-sm w-full" placeholder="What is this field for?" value={newFieldForm.description}
+                          <label htmlFor="new-field-desc" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Description</label>
+                          <input id="new-field-desc" className="input text-sm w-full" placeholder="What is this field for?" value={newFieldForm.description}
                             onChange={e => setNewFieldForm(f => ({ ...f, description: e.target.value }))} />
                         </div>
                         <div className="flex items-center gap-3 pt-5">
@@ -3574,16 +3675,16 @@ export default function App() {
                     <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 mb-3">Add Visibility Rule</p>
                     <div className="flex gap-3 flex-wrap items-end">
                       <div>
-                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Field</label>
-                        <select className="input text-sm" value={newFieldVisForm.fieldDefId}
+                        <label htmlFor="vis-field-id" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Field</label>
+                        <select id="vis-field-id" className="input text-sm" value={newFieldVisForm.fieldDefId}
                           onChange={e => setNewFieldVisForm(f => ({ ...f, fieldDefId: e.target.value }))}>
                           <option value="">— Select field —</option>
                           {fieldDefs.map(fd => <option key={fd.id} value={fd.id}>{fd.name}</option>)}
                         </select>
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Role</label>
-                        <select className="input text-sm" value={newFieldVisForm.roleId}
+                        <label htmlFor="vis-role-id" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Role</label>
+                        <select id="vis-role-id" className="input text-sm" value={newFieldVisForm.roleId}
                           onChange={e => setNewFieldVisForm(f => ({ ...f, roleId: e.target.value }))}>
                           <option value="">— Select role —</option>
                           {[{id:'VIEWER',name:'VIEWER'},{id:'MEMBER',name:'MEMBER'},{id:'LEAD',name:'LEAD'},{id:'ADMIN',name:'ADMIN'},{id:'OWNER',name:'OWNER'},...roles].map(r => (
@@ -3592,8 +3693,8 @@ export default function App() {
                         </select>
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Visibility</label>
-                        <select className="input text-sm" value={newFieldVisForm.visibility}
+                        <label htmlFor="vis-visibility" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Visibility</label>
+                        <select id="vis-visibility" className="input text-sm" value={newFieldVisForm.visibility}
                           onChange={e => setNewFieldVisForm(f => ({ ...f, visibility: e.target.value }))}>
                           <option value="EDITABLE">EDITABLE</option>
                           <option value="READONLY">READ ONLY</option>
@@ -3657,13 +3758,13 @@ export default function App() {
                       <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 mb-3">New Custom Role</p>
                       <div className="flex gap-4 items-end flex-wrap">
                         <div>
-                          <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Role Name *</label>
-                          <input className="input text-sm w-44" placeholder="e.g. Support Agent" value={newRoleForm.name}
+                          <label htmlFor="new-role-name" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Role Name *</label>
+                          <input id="new-role-name" className="input text-sm w-44" placeholder="e.g. Support Agent" value={newRoleForm.name}
                             onChange={e => setNewRoleForm(f => ({ ...f, name: e.target.value }))} />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Tier (1-5)</label>
-                          <select className="input text-sm" value={newRoleForm.tier}
+                          <label htmlFor="new-role-tier" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Tier (1-5)</label>
+                          <select id="new-role-tier" className="input text-sm" value={newRoleForm.tier}
                             onChange={e => setNewRoleForm(f => ({ ...f, tier: Number(e.target.value) }))}>
                             {[1,2,3,4,5].map(t => <option key={t} value={t}>Tier {t} — {['Viewer','Member','Lead','Admin','Owner'][t-1]}</option>)}
                           </select>
@@ -3747,18 +3848,18 @@ export default function App() {
                       <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 mb-3">New Custom Type</p>
                       <div className="flex gap-4 items-end flex-wrap">
                         <div>
-                          <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Label *</label>
-                          <input className="input text-sm w-44" placeholder="e.g. Meter Rollout" value={newTypeForm.label}
+                          <label htmlFor="new-type-label" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Label *</label>
+                          <input id="new-type-label" className="input text-sm w-44" placeholder="e.g. Meter Rollout" value={newTypeForm.label}
                             onChange={e => setNewTypeForm(f => ({ ...f, label: e.target.value, typeKey: e.target.value.toUpperCase().replace(/\s+/g,'_') }))} />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Key</label>
-                          <input className="input text-sm w-36 font-mono" placeholder="METER_ROLLOUT" value={newTypeForm.typeKey}
+                          <label htmlFor="new-type-key" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Key</label>
+                          <input id="new-type-key" className="input text-sm w-36 font-mono" placeholder="METER_ROLLOUT" value={newTypeForm.typeKey}
                             onChange={e => setNewTypeForm(f => ({ ...f, typeKey: e.target.value.toUpperCase() }))} />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Icon</label>
-                          <div className="flex flex-wrap gap-1 max-w-[240px]">
+                          <span className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1" id="new-type-icon-label">Icon</span>
+                          <div className="flex flex-wrap gap-1 max-w-[240px]" role="group" aria-labelledby="new-type-icon-label">
                             {TYPE_ICON_KEYS.map(key => {
                               const Ic = TYPE_ICON_SET[key];
                               const sel = newTypeForm.icon === key;
@@ -4021,7 +4122,7 @@ export default function App() {
                         ? <EmptyState icon={Calendar} title="No meetings yet" subtitle="Log meeting notes with structured agenda, notes, decisions, and action items." />
                         : <div className="space-y-3">
                             {meetings.map(m => (
-                              <div key={m.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 cursor-pointer hover:shadow-sm transition-shadow"
+                              <button type="button" key={m.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 cursor-pointer hover:shadow-sm transition-shadow w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
                                 onClick={() => { setSelectedMeeting(m); setPmTab('meeting-detail'); api.raw(`/meetings/${m.id}`).then(r => r.json()).then(d => setMeetingNotes(d.notes || [])); }}>
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
@@ -4035,7 +4136,7 @@ export default function App() {
                                   </div>
                                   <button onClick={e => { e.stopPropagation(); pmDelete('meeting', m.id); }} className="text-neutral-300 hover:text-semantic-danger text-xs ml-3" aria-label="Delete meeting"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                                 </div>
-                              </div>
+                              </button>
                             ))}
                           </div>
                       }
@@ -4214,7 +4315,7 @@ export default function App() {
                             <div className="space-y-3">
                               <Field label="Title *">
                                 <input className="input" placeholder="What does this project depend on?" value={crossProjForm.title}
-                                  onChange={e => setCrossProjForm(f => ({ ...f, title: e.target.value }))} autoFocus />
+                                  onChange={e => setCrossProjForm(f => ({ ...f, title: e.target.value }))} />
                               </Field>
                               <Field label="Description">
                                 <textarea className="input" rows={2} placeholder="Details of the dependency..."
@@ -4256,7 +4357,7 @@ export default function App() {
                 <Modal title={<span className="capitalize">New {pmFormOpen.replace('issue','PM Issue').replace('lesson','Lesson Learned').replace('action','Action Item').replace('dependency','Dependency')}</span>} onClose={() => { setPmFormOpen(null); setPmForm({}); }} size="lg">
                     <div className="space-y-3">
                       <Field label="Title">
-                        <input className="input" placeholder="Brief title" value={pmForm.title || ''} onChange={e => setPmForm(p => ({ ...p, title: e.target.value }))} autoFocus />
+                        <input className="input" placeholder="Brief title" value={pmForm.title || ''} onChange={e => setPmForm(p => ({ ...p, title: e.target.value }))} />
                       </Field>
                       <Field label="Description">
                         <textarea className="input" rows={2} placeholder="Details..." value={pmForm.description || ''} onChange={e => setPmForm(p => ({ ...p, description: e.target.value }))} />
@@ -4677,16 +4778,16 @@ export default function App() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">Add a schedule</p>
                   <div className="grid grid-cols-2 gap-3 mb-3">
                     <div>
-                      <label className="block text-xs text-neutral-500 mb-1">Cadence</label>
-                      <select className="input w-full" value={scheduleForm.cadence} onChange={e => setScheduleForm({ ...scheduleForm, cadence: e.target.value })}>
+                      <label htmlFor="sched-cadence" className="block text-xs text-neutral-500 mb-1">Cadence</label>
+                      <select id="sched-cadence" className="input w-full" value={scheduleForm.cadence} onChange={e => setScheduleForm({ ...scheduleForm, cadence: e.target.value })}>
                         <option value="DAILY">Daily</option>
                         <option value="WEEKLY">Weekly</option>
                         <option value="MONTHLY">Monthly</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-neutral-500 mb-1">Channel</label>
-                      <select className="input w-full" value={scheduleForm.channel} onChange={e => setScheduleForm({ ...scheduleForm, channel: e.target.value })}>
+                      <label htmlFor="sched-channel" className="block text-xs text-neutral-500 mb-1">Channel</label>
+                      <select id="sched-channel" className="input w-full" value={scheduleForm.channel} onChange={e => setScheduleForm({ ...scheduleForm, channel: e.target.value })}>
                         <option value="IN_APP">In-app</option>
                         <option value="EMAIL">Email</option>
                         <option value="BOTH">Both</option>
@@ -4694,8 +4795,8 @@ export default function App() {
                     </div>
                   </div>
                   <div className="mb-3">
-                    <label className="block text-xs text-neutral-500 mb-1">Recipients (comma-separated user ids — optional; owner always included)</label>
-                    <input className="input w-full" value={scheduleForm.recipients} onChange={e => setScheduleForm({ ...scheduleForm, recipients: e.target.value })} placeholder="USR-123, USR-456" />
+                    <label htmlFor="sched-recipients" className="block text-xs text-neutral-500 mb-1">Recipients (comma-separated user ids — optional; owner always included)</label>
+                    <input id="sched-recipients" className="input w-full" value={scheduleForm.recipients} onChange={e => setScheduleForm({ ...scheduleForm, recipients: e.target.value })} placeholder="USR-123, USR-456" />
                   </div>
                   <div className="flex justify-end">
                     <Button variant="action" onClick={createReportSchedule}>Add schedule</Button>
@@ -4897,27 +4998,56 @@ export default function App() {
                         {editingArticle ? (
                           <div className="space-y-4">
                             <div>
-                              <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Title</label>
-                              <input className="input text-lg font-bold w-full" value={selectedArticle.title || ''}
+                              <label htmlFor="article-title" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Title</label>
+                              <input id="article-title" className="input text-lg font-bold w-full" value={selectedArticle.title || ''}
                                 onChange={e => setSelectedArticle(a => ({ ...a, title: e.target.value }))}
                                 onBlur={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content })} />
                             </div>
-                            <div>
-                              <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Template Type</label>
-                              <select className="input text-sm w-48" value={selectedArticle.templateType || 'KB'}
-                                onChange={e => { const t = e.target.value; setSelectedArticle(a => ({ ...a, templateType: t })); updateArticle(selectedArticle.id, { templateType: t }); }}>
-                                {['KB','RUNBOOK','ADR','POSTMORTEM','ONBOARDING','TROUBLESHOOTING','CUSTOM'].map(t => <option key={t} value={t}>{t}</option>)}
-                              </select>
+                            <div className="flex items-center gap-4">
+                              <div>
+                                <label htmlFor="article-template-type" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Template Type</label>
+                                <select id="article-template-type" className="input text-sm w-48" value={selectedArticle.templateType || 'KB'}
+                                  onChange={e => { const t = e.target.value; setSelectedArticle(a => ({ ...a, templateType: t })); updateArticle(selectedArticle.id, { templateType: t }); }}>
+                                  {['KB','RUNBOOK','ADR','POSTMORTEM','ONBOARDING','TROUBLESHOOTING','CUSTOM'].map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                              </div>
+                              {/* B09 — content format toggle: markdown ↔ blocks */}
+                              <div className="flex-1 flex justify-end">
+                                <div className="flex rounded-lg border border-neutral-200 dark:border-neutral-600 overflow-hidden" role="group" aria-label="Content format">
+                                  {(['markdown', 'blocks']).map(fmt => (
+                                    <button key={fmt} type="button"
+                                      onClick={() => setArticleContentFormat(fmt)}
+                                      aria-pressed={articleContentFormat === fmt}
+                                      className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${articleContentFormat === fmt ? 'bg-brand-navy text-white' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700'}`}>
+                                      {fmt}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
                             </div>
-                            <div>
-                              <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Content (Markdown supported)</label>
-                              <textarea rows={20} className="input resize-none font-mono text-sm w-full"
-                                value={selectedArticle.content || ''}
-                                onChange={e => setSelectedArticle(a => ({ ...a, content: e.target.value }))}
-                                onBlur={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, templateType: selectedArticle.templateType })}
-                                placeholder="Write your article content here... Supports Markdown formatting." />
-                            </div>
-                            <Button variant="action" onClick={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, templateType: selectedArticle.templateType })}>
+                            {articleContentFormat === 'markdown' ? (
+                              <div>
+                                <label htmlFor="article-content" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Content (Markdown supported)</label>
+                                <textarea id="article-content" rows={20} className="input resize-none font-mono text-sm w-full"
+                                  value={selectedArticle.content || ''}
+                                  onChange={e => setSelectedArticle(a => ({ ...a, content: e.target.value }))}
+                                  onBlur={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, templateType: selectedArticle.templateType })}
+                                  placeholder="Write your article content here... Supports Markdown formatting." />
+                              </div>
+                            ) : (
+                              <div>
+                                <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-2">Content (Block editor)</span>
+                                <BlockEditor
+                                  blocks={(() => { try { return JSON.parse(selectedArticle.contentBlocks || '[]'); } catch { return []; } })()}
+                                  onChange={blocks => {
+                                    const json = JSON.stringify(blocks);
+                                    setSelectedArticle(a => ({ ...a, contentBlocks: json }));
+                                    updateArticle(selectedArticle.id, { contentBlocks: json, templateType: selectedArticle.templateType });
+                                  }}
+                                />
+                              </div>
+                            )}
+                            <Button variant="action" onClick={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, contentBlocks: selectedArticle.contentBlocks, templateType: selectedArticle.templateType })}>
                               Save Changes
                             </Button>
                           </div>
@@ -5148,9 +5278,28 @@ export default function App() {
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Standup — {activeStandup.session.status}</h3>
                         {activeStandup.session.status !== 'COMPLETED' && (
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 flex-wrap">
                             <Button variant="secondary" onClick={advanceStandup}>Next member</Button>
                             <Button variant="action" onClick={completeStandup}>Complete</Button>
+                            {/* B18 — AI standup draft (hidden when AI off) */}
+                            {anyCapabilityEnabled(aiCapabilities) && (
+                              <Button
+                                variant="secondary"
+                                disabled={!!aiLoading['standup-draft']}
+                                onClick={() => aiAction(
+                                  'standup-draft',
+                                  () => aiClient.generate(activeWorkspaceId, 'standup_draft', { sprintId: activeSprint?.id }),
+                                  res => {
+                                    const draft = res?.result || res?.text || '';
+                                    if (draft) { setStandupDraft(d => ({ ...d, today: draft })); showToast('AI drafted standup update', 'info'); }
+                                    if (res?.meta?.fallback) showToast('AI standup draft used fallback.', 'info');
+                                  },
+                                  'Enable AI to draft standup updates',
+                                )}
+                              >
+                                {aiLoading['standup-draft'] ? 'Drafting…' : '✦ Draft standup'}
+                              </Button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -5221,9 +5370,28 @@ export default function App() {
 
               {smTab === 'planning' && (
                 <div>
-                  <div className="flex items-end gap-2 mb-4">
+                  <div className="flex items-end gap-2 mb-4 flex-wrap">
                     <Field label="Time off (points)"><input type="number" className="input text-sm w-28" value={planningTimeOff} onChange={e => setPlanningTimeOff(e.target.value)} /></Field>
                     <Button variant="action" onClick={runSprintPlanning}>Suggest commit</Button>
+                    {/* B18 — AI sprint planning suggestion (hidden when AI off) */}
+                    {anyCapabilityEnabled(aiCapabilities) && (
+                      <Button
+                        variant="secondary"
+                        disabled={!!aiLoading['sprint-plan']}
+                        onClick={() => aiAction(
+                          'sprint-plan',
+                          () => aiClient.generate(activeWorkspaceId, 'sprint_plan', { sprintId: activeSprint?.id, timeOffPoints: Number(planningTimeOff) || 0 }),
+                          res => {
+                            const suggestion = res?.result || res?.text || '';
+                            if (suggestion) showToast(`AI sprint plan: ${suggestion.slice(0, 120)}`, 'info');
+                            if (res?.meta?.fallback) showToast('AI sprint planning used fallback (capacity calc).', 'info');
+                          },
+                          'Enable AI for sprint planning suggestions',
+                        )}
+                      >
+                        {aiLoading['sprint-plan'] ? 'Planning…' : '✦ AI Sprint Plan'}
+                      </Button>
+                    )}
                   </div>
                   {!planningResult ? <EmptyState icon={LayoutDashboard} title="Sprint planning helper" subtitle="Capacity from rolling velocity, an AI-suggested commit, and the refined-item list." />
                     : (
@@ -5574,6 +5742,15 @@ export default function App() {
                       )}
                     </div>
 
+                    {/* B27 — AI compliance rule suggestion (hidden when AI is off; RB-40 §2) */}
+                    {anyCapabilityEnabled(aiCapabilities) && can('manage_compliance') && (
+                      <AiComplianceSuggestion
+                        workspaceId={activeWorkspaceId}
+                        onAdopt={rule => { setRuleBuilder({ ...rule, id: null }); }}
+                        onToast={showToast}
+                      />
+                    )}
+
                     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">Seeded template library</h3>
                       <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3">Opinionated defaults — clone one, test it, then activate.</p>
@@ -5665,46 +5842,46 @@ export default function App() {
                 <Modal title={ruleBuilder.id ? 'Edit rule' : 'New compliance rule'} onClose={() => setRuleBuilder(null)} size="xl" className="max-h-[90vh] overflow-y-auto">
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-xs font-medium text-neutral-500 mb-1">Name</label>
-                        <input className="input w-full" value={ruleBuilder.name} onChange={e => setRuleBuilder({ ...ruleBuilder, name: e.target.value })} placeholder="Stories need acceptance criteria before In Progress" />
+                        <label htmlFor="rule-name" className="block text-xs font-medium text-neutral-500 mb-1">Name</label>
+                        <input id="rule-name" className="input w-full" value={ruleBuilder.name} onChange={e => setRuleBuilder({ ...ruleBuilder, name: e.target.value })} placeholder="Stories need acceptance criteria before In Progress" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-neutral-500 mb-1">Description</label>
-                        <input className="input w-full" value={ruleBuilder.description} onChange={e => setRuleBuilder({ ...ruleBuilder, description: e.target.value })} />
+                        <label htmlFor="rule-desc" className="block text-xs font-medium text-neutral-500 mb-1">Description</label>
+                        <input id="rule-desc" className="input w-full" value={ruleBuilder.description} onChange={e => setRuleBuilder({ ...ruleBuilder, description: e.target.value })} />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-neutral-500 mb-1">Scope (BQL) — which items the rule applies to</label>
-                        <input className="input w-full font-mono text-sm" value={ruleBuilder.scopeBql} onChange={e => setRuleBuilder({ ...ruleBuilder, scopeBql: e.target.value })} placeholder="type = Story AND status = In Progress" />
+                        <label htmlFor="rule-scope-bql" className="block text-xs font-medium text-neutral-500 mb-1">Scope (BQL) — which items the rule applies to</label>
+                        <input id="rule-scope-bql" className="input w-full font-mono text-sm" value={ruleBuilder.scopeBql} onChange={e => setRuleBuilder({ ...ruleBuilder, scopeBql: e.target.value })} placeholder="type = Story AND status = In Progress" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-neutral-500 mb-1">Assertion (BQL) — what scoped items must satisfy</label>
-                        <input className="input w-full font-mono text-sm" value={ruleBuilder.assertionBql} onChange={e => setRuleBuilder({ ...ruleBuilder, assertionBql: e.target.value })} placeholder="acceptance_criteria != ''" />
+                        <label htmlFor="rule-assertion-bql" className="block text-xs font-medium text-neutral-500 mb-1">Assertion (BQL) — what scoped items must satisfy</label>
+                        <input id="rule-assertion-bql" className="input w-full font-mono text-sm" value={ruleBuilder.assertionBql} onChange={e => setRuleBuilder({ ...ruleBuilder, assertionBql: e.target.value })} placeholder="acceptance_criteria != ''" />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-neutral-500 mb-1">Severity</label>
-                          <select className="input w-full" value={ruleBuilder.severity} onChange={e => setRuleBuilder({ ...ruleBuilder, severity: e.target.value })}>
+                          <label htmlFor="rule-severity" className="block text-xs font-medium text-neutral-500 mb-1">Severity</label>
+                          <select id="rule-severity" className="input w-full" value={ruleBuilder.severity} onChange={e => setRuleBuilder({ ...ruleBuilder, severity: e.target.value })}>
                             {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-neutral-500 mb-1">Evaluation</label>
-                          <select className="input w-full" value={ruleBuilder.evaluationMode} onChange={e => setRuleBuilder({ ...ruleBuilder, evaluationMode: e.target.value })}>
+                          <label htmlFor="rule-eval-mode" className="block text-xs font-medium text-neutral-500 mb-1">Evaluation</label>
+                          <select id="rule-eval-mode" className="input w-full" value={ruleBuilder.evaluationMode} onChange={e => setRuleBuilder({ ...ruleBuilder, evaluationMode: e.target.value })}>
                             <option value="CONTINUOUS">Continuous</option>
                             <option value="SCHEDULED">Scheduled</option>
                           </select>
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-neutral-500 mb-1">Notify</label>
+                        <span className="block text-xs font-medium text-neutral-500 mb-1">Notify</span>
                         <div className="flex gap-4 text-sm text-neutral-700 dark:text-neutral-200">
                           <label className="flex items-center gap-2"><input type="checkbox" checked={ruleBuilder.notifyOwner} onChange={e => setRuleBuilder({ ...ruleBuilder, notifyOwner: e.target.checked })} /> Item owner</label>
                           <label className="flex items-center gap-2"><input type="checkbox" checked={ruleBuilder.notifyAdmin} onChange={e => setRuleBuilder({ ...ruleBuilder, notifyAdmin: e.target.checked })} /> Project admins</label>
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-neutral-500 mb-1">Escalate if unacknowledged after (hours) — optional</label>
-                        <input type="number" min="0" className="input w-full" value={ruleBuilder.escalateAfterHours} onChange={e => setRuleBuilder({ ...ruleBuilder, escalateAfterHours: e.target.value })} placeholder="e.g. 24" />
+                        <label htmlFor="rule-escalate-hours" className="block text-xs font-medium text-neutral-500 mb-1">Escalate if unacknowledged after (hours) — optional</label>
+                        <input id="rule-escalate-hours" type="number" min="0" className="input w-full" value={ruleBuilder.escalateAfterHours} onChange={e => setRuleBuilder({ ...ruleBuilder, escalateAfterHours: e.target.value })} placeholder="e.g. 24" />
                       </div>
                     </div>
                     <div className="flex justify-end gap-2 mt-5">
@@ -5866,19 +6043,19 @@ export default function App() {
                 <Modal title="New customer" onClose={() => setNewCustomer(null)} size="lg">
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-xs font-medium text-neutral-500 mb-1">Name</label>
-                        <input className="input w-full" value={newCustomer.name} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} />
+                        <label htmlFor="cust-name" className="block text-xs font-medium text-neutral-500 mb-1">Name</label>
+                        <input id="cust-name" className="input w-full" value={newCustomer.name} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-neutral-500 mb-1">Tier</label>
-                          <select className="input w-full" value={newCustomer.tier} onChange={e => setNewCustomer({ ...newCustomer, tier: e.target.value })}>
+                          <label htmlFor="cust-tier" className="block text-xs font-medium text-neutral-500 mb-1">Tier</label>
+                          <select id="cust-tier" className="input w-full" value={newCustomer.tier} onChange={e => setNewCustomer({ ...newCustomer, tier: e.target.value })}>
                             {['PLATINUM', 'GOLD', 'SILVER'].map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-neutral-500 mb-1">Subdomain</label>
-                          <input className="input w-full" value={newCustomer.subdomain} onChange={e => setNewCustomer({ ...newCustomer, subdomain: e.target.value })} />
+                          <label htmlFor="cust-subdomain" className="block text-xs font-medium text-neutral-500 mb-1">Subdomain</label>
+                          <input id="cust-subdomain" className="input w-full" value={newCustomer.subdomain} onChange={e => setNewCustomer({ ...newCustomer, subdomain: e.target.value })} />
                         </div>
                       </div>
                     </div>
@@ -5944,32 +6121,32 @@ export default function App() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Status</label>
-                <select value={selectedItem.status}
+                <label htmlFor="detail-status" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Status</label>
+                <select id="detail-status" value={selectedItem.status}
                   onChange={e => { const u = { ...selectedItem, status: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }}
                   className="input">
                   <option>Todo</option><option>In Progress</option><option>Done</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Type</label>
-                <select value={selectedItem.type}
+                <label htmlFor="detail-type" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Type</label>
+                <select id="detail-type" value={selectedItem.type}
                   onChange={e => { const u = { ...selectedItem, type: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }}
                   className="input">
                   {Object.keys(TYPES).map(t => <option key={t}>{t}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Priority</label>
-                <select value={selectedItem.priority || 'MEDIUM'}
+                <label htmlFor="detail-priority" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Priority</label>
+                <select id="detail-priority" value={selectedItem.priority || 'MEDIUM'}
                   onChange={e => { const u = { ...selectedItem, priority: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }}
                   className="input">
                   {['CRITICAL','HIGH','MEDIUM','LOW'].map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Assignee</label>
-                <select value={selectedItem.assigneeId || ''}
+                <label htmlFor="detail-assignee" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Assignee</label>
+                <select id="detail-assignee" value={selectedItem.assigneeId || ''}
                   onChange={e => { const u = { ...selectedItem, assigneeId: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
                   className="input">
                   <option value="">Unassigned</option>
@@ -5977,14 +6154,14 @@ export default function App() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Due Date</label>
-                <input type="date" value={selectedItem.dueDate || ''}
+                <label htmlFor="detail-due-date" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Due Date</label>
+                <input id="detail-due-date" type="date" value={selectedItem.dueDate || ''}
                   onChange={e => { const u = { ...selectedItem, dueDate: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
                   className="input" />
               </div>
               <div>
-                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Story Points</label>
-                <input type="number" min={0} max={100} value={selectedItem.storyPoints || 0}
+                <label htmlFor="detail-story-points" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Story Points</label>
+                <input id="detail-story-points" type="number" min={0} max={100} value={selectedItem.storyPoints || 0}
                   onChange={e => { const u = { ...selectedItem, storyPoints: parseInt(e.target.value) || 0 }; setSelectedItem(u); handleUpdateItem(u); }}
                   className="input" />
               </div>
@@ -5992,8 +6169,8 @@ export default function App() {
 
             {/* Parent item selector */}
             <div>
-              <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Parent Item</label>
-              <select value={selectedItem.parentId || ''}
+              <label htmlFor="detail-parent-id" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Parent Item</label>
+              <select id="detail-parent-id" value={selectedItem.parentId || ''}
                 onChange={e => { const u = { ...selectedItem, parentId: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
                 className="input">
                 <option value="">No parent</option>
@@ -6004,10 +6181,10 @@ export default function App() {
               {selectedItem.parentId && (() => {
                 const parent = workItems.find(i => i.id === selectedItem.parentId);
                 return parent ? (
-                  <div className="mt-1.5 flex items-center gap-2 text-xs text-brand-navy cursor-pointer hover:underline"
-                    onClick={() => setSelectedItem(parent)}>
+                  <button type="button" className="mt-1.5 flex items-center gap-2 text-xs text-brand-navy hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
+                    onClick={() => setSelectedItem(parent)} aria-label={`Navigate to parent: ${parent.title}`}>
                     <span aria-hidden="true"><ArrowUp className="inline-block h-3.5 w-3.5 align-text-bottom" /></span><TypeBadge type={parent.type} compact /><span>{parent.title}</span>
-                  </div>
+                  </button>
                 ) : null;
               })()}
             </div>
@@ -6032,8 +6209,8 @@ export default function App() {
             )}
 
             <div>
-              <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Tags</label>
-              <input type="text" value={tagInput}
+              <label htmlFor="detail-tags" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Tags</label>
+              <input id="detail-tags" type="text" value={tagInput}
                 onChange={e => setTagInput(e.target.value)}
                 onBlur={() => {
                   const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
@@ -6046,8 +6223,9 @@ export default function App() {
             </div>
 
             <div>
-              <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Description</label>
+              <label htmlFor="detail-description" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Description</label>
               <RichTextEditor
+                id="detail-description"
                 value={selectedItem.description || ''}
                 onChange={val => setSelectedItem({ ...selectedItem, description: val })}
                 onBlur={() => handleUpdateItem(selectedItem)}
@@ -6062,6 +6240,43 @@ export default function App() {
               />
             </div>
 
+            {/* B18 — AI action buttons (hidden when AI is off; RB-40 §2) */}
+            {anyCapabilityEnabled(aiCapabilities) && (
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                <Button
+                  variant="secondary"
+                  disabled={!!aiLoading['ac-gen']}
+                  onClick={() => aiAction(
+                    'ac-gen',
+                    () => aiClient.generate(activeWorkspaceId, 'acceptance_criteria', { item: selectedItem }),
+                    res => {
+                      const ac = res?.result || res?.text || '';
+                      if (ac) { const u = { ...selectedItem, acceptanceCriteria: ac }; setSelectedItem(u); handleUpdateItem(u); showToast('Acceptance criteria generated'); }
+                    },
+                    'Enable AI to generate acceptance criteria',
+                  )}
+                >
+                  {aiLoading['ac-gen'] ? 'Generating…' : '✦ Generate AC'}
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={!!aiLoading['triage']}
+                  onClick={() => aiAction(
+                    'triage',
+                    () => aiClient.triage(activeWorkspaceId, { itemId: selectedItem.id, title: selectedItem.title, description: selectedItem.description }),
+                    res => {
+                      const suggestion = res?.suggestedPriority || res?.priority;
+                      if (suggestion) showToast(`AI triage: suggested priority ${suggestion}`, 'info');
+                      if (res?.meta?.fallback) showToast('AI triage used fallback (rules-based).', 'info');
+                    },
+                    'Enable AI to triage this item',
+                  )}
+                >
+                  {aiLoading['triage'] ? 'Triaging…' : '✦ AI Triage'}
+                </Button>
+              </div>
+            )}
+
             </> /* end details tab */}
 
             {/* CUSTOM FIELDS TAB */}
@@ -6071,12 +6286,12 @@ export default function App() {
                   <EmptyState icon={ClipboardList} title="No custom fields defined" subtitle="Go to Workflows & Fields settings to define custom fields for your work items." />
                 ) : (
                   <div className="space-y-3">
-                    <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-2 font-medium uppercase tracking-wider">Custom Fields</label>
+                    <span className="block text-xs text-neutral-600 dark:text-neutral-400 mb-2 font-medium uppercase tracking-wider">Custom Fields</span>
                     {fieldDefs.map(fd => (
                       <div key={fd.id} className="flex items-center gap-2">
-                        <label className="text-xs text-neutral-500 w-32 flex-shrink-0">{fd.name}{fd.required && <span className="text-semantic-danger ml-0.5">*</span>}</label>
+                        <label htmlFor={`cf-${fd.id}`} className="text-xs text-neutral-500 w-32 flex-shrink-0">{fd.name}{fd.required && <span className="text-semantic-danger ml-0.5">*</span>}</label>
                         {(fd.fieldType === 'TEXT' || fd.fieldType === 'EMAIL' || fd.fieldType === 'URL' || fd.fieldType === 'PHONE') && (
-                          <input type={fd.fieldType === 'EMAIL' ? 'email' : fd.fieldType === 'URL' ? 'url' : 'text'}
+                          <input id={`cf-${fd.id}`} type={fd.fieldType === 'EMAIL' ? 'email' : fd.fieldType === 'URL' ? 'url' : 'text'}
                             className="input flex-1 text-sm py-1"
                             value={fieldValues[fd.id] || ''}
                             onChange={e => setFieldValues(v => ({ ...v, [fd.id]: e.target.value }))}
@@ -6084,30 +6299,30 @@ export default function App() {
                             placeholder={fd.description || fd.name} />
                         )}
                         {fd.fieldType === 'TEXTAREA' && (
-                          <textarea rows={2} className="input flex-1 text-sm resize-none"
+                          <textarea id={`cf-${fd.id}`} rows={2} className="input flex-1 text-sm resize-none"
                             value={fieldValues[fd.id] || ''}
                             onChange={e => setFieldValues(v => ({ ...v, [fd.id]: e.target.value }))}
                             onBlur={e => saveFieldValue(selectedItem.id, fd.id, e.target.value)}
                             placeholder={fd.description || fd.name} />
                         )}
                         {fd.fieldType === 'NUMBER' && (
-                          <input type="number" className="input flex-1 text-sm py-1"
+                          <input id={`cf-${fd.id}`} type="number" className="input flex-1 text-sm py-1"
                             value={fieldValues[fd.id] || ''}
                             onChange={e => setFieldValues(v => ({ ...v, [fd.id]: e.target.value }))}
                             onBlur={e => saveFieldValue(selectedItem.id, fd.id, e.target.value)} />
                         )}
                         {fd.fieldType === 'DATE' && (
-                          <input type="date" className="input flex-1 text-sm py-1"
+                          <input id={`cf-${fd.id}`} type="date" className="input flex-1 text-sm py-1"
                             value={fieldValues[fd.id] || ''}
                             onChange={e => { setFieldValues(v => ({ ...v, [fd.id]: e.target.value })); saveFieldValue(selectedItem.id, fd.id, e.target.value); }} />
                         )}
                         {fd.fieldType === 'CHECKBOX' && (
-                          <input type="checkbox" className="w-4 h-4 accent-brand-navy"
+                          <input id={`cf-${fd.id}`} type="checkbox" className="w-4 h-4 accent-brand-navy"
                             checked={fieldValues[fd.id] === 'true' || fieldValues[fd.id] === true}
                             onChange={e => { const v = String(e.target.checked); setFieldValues(fv => ({ ...fv, [fd.id]: v })); saveFieldValue(selectedItem.id, fd.id, v); }} />
                         )}
                         {fd.fieldType === 'SELECT' && (
-                          <select className="input flex-1 text-sm py-1"
+                          <select id={`cf-${fd.id}`} className="input flex-1 text-sm py-1"
                             value={fieldValues[fd.id] || ''}
                             onChange={e => { setFieldValues(v => ({ ...v, [fd.id]: e.target.value })); saveFieldValue(selectedItem.id, fd.id, e.target.value); }}>
                             <option value="">— Select —</option>
@@ -6117,7 +6332,7 @@ export default function App() {
                           </select>
                         )}
                         {fd.fieldType === 'USER' && (
-                          <select className="input flex-1 text-sm py-1"
+                          <select id={`cf-${fd.id}`} className="input flex-1 text-sm py-1"
                             value={fieldValues[fd.id] || ''}
                             onChange={e => { setFieldValues(v => ({ ...v, [fd.id]: e.target.value })); saveFieldValue(selectedItem.id, fd.id, e.target.value); }}>
                             <option value="">— Select user —</option>
@@ -6277,11 +6492,11 @@ export default function App() {
                                 {l.linkType?.replace('_', ' ')}
                               </span>
                               <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-700"></div>
-                              <div className={`text-xs font-semibold px-2 py-1 rounded-lg border ${colorClass} cursor-pointer hover:opacity-80 truncate max-w-32`}
+                              <button type="button" className={`text-xs font-semibold px-2 py-1 rounded-lg border ${colorClass} cursor-pointer hover:opacity-80 truncate max-w-32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40`}
                                 onClick={() => { const t = workItems.find(i => i.id === l.targetId); if (t) setSelectedItem(t); }}
-                                title={l.targetTitle || l.targetId}>
+                                title={l.targetTitle || l.targetId} aria-label={`Navigate to ${l.targetId}`}>
                                 {l.targetId}
-                              </div>
+                              </button>
                             </div>
                           );
                         })}
@@ -6430,7 +6645,7 @@ export default function App() {
           <div className="space-y-3">
             <Field label="Space Name *">
               <input type="text" className="input" placeholder="e.g. Engineering, Support, Onboarding" value={spaceForm.name}
-                onChange={e => setSpaceForm(f => ({ ...f, name: e.target.value }))} autoFocus />
+                onChange={e => setSpaceForm(f => ({ ...f, name: e.target.value }))} />
             </Field>
             <Field label="Description">
               <textarea rows={2} className="input resize-none" placeholder="What kind of knowledge does this space contain?"
@@ -6457,7 +6672,7 @@ export default function App() {
           <div className="space-y-3">
             <Field label="Title *">
               <input type="text" className="input" placeholder="Article title" value={articleForm.title}
-                onChange={e => setArticleForm(f => ({ ...f, title: e.target.value }))} autoFocus />
+                onChange={e => setArticleForm(f => ({ ...f, title: e.target.value }))} />
             </Field>
             <Field label="Template Type">
               <select className="input" value={articleForm.templateType} onChange={e => setArticleForm(f => ({ ...f, templateType: e.target.value }))}>
@@ -6481,7 +6696,7 @@ export default function App() {
         <Modal title="New Release" onClose={() => setIsReleaseOpen(false)}>
           <div className="space-y-3">
             <Field label="Release Name *">
-              <input type="text" className="input" placeholder="e.g. Q2 Feature Release" value={newRelease.name} onChange={e => setNewRelease(r => ({ ...r, name: e.target.value }))} autoFocus />
+              <input type="text" className="input" placeholder="e.g. Q2 Feature Release" value={newRelease.name} onChange={e => setNewRelease(r => ({ ...r, name: e.target.value }))} />
             </Field>
             <Field label="Version *">
               <input type="text" className="input" placeholder="e.g. 2.1.0" value={newRelease.version} onChange={e => setNewRelease(r => ({ ...r, version: e.target.value }))} />
@@ -6514,7 +6729,7 @@ export default function App() {
           <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3">{selectedItem.title}</p>
           <div className="space-y-3">
             <Field label="Time Spent (minutes) *">
-              <input type="number" className="input" min={1} value={worklogForm.timeSpentMinutes} onChange={e => setWorklogForm(f => ({ ...f, timeSpentMinutes: parseInt(e.target.value) || 0 }))} autoFocus />
+              <input type="number" className="input" min={1} value={worklogForm.timeSpentMinutes} onChange={e => setWorklogForm(f => ({ ...f, timeSpentMinutes: parseInt(e.target.value) || 0 }))} />
               <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{Math.round(worklogForm.timeSpentMinutes / 60 * 10) / 10} hours</p>
             </Field>
             <Field label="Date">
@@ -6565,7 +6780,7 @@ export default function App() {
           <div className="space-y-3">
             <Field label="Sprint Name *">
               <input type="text" value={newSprint.name} onChange={e => setNewSprint({ ...newSprint, name: e.target.value })}
-                className="input" placeholder="e.g. Sprint 1" autoFocus />
+                className="input" placeholder="e.g. Sprint 1" />
             </Field>
             <Field label="Sprint Goal">
               <input type="text" value={newSprint.goal} onChange={e => setNewSprint({ ...newSprint, goal: e.target.value })}
@@ -6593,7 +6808,7 @@ export default function App() {
           <div className="space-y-3">
             <Field label="Title *">
               <input type="text" value={newItem.title} onChange={e => setNewItem({ ...newItem, title: e.target.value })}
-                className="input" placeholder="What needs to be done?" autoFocus />
+                className="input" placeholder="What needs to be done?" />
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Type">
@@ -6652,7 +6867,7 @@ export default function App() {
           <div className="space-y-3">
             <Field label="Project Name *">
               <input type="text" value={newProject.name} onChange={e => setNewProject({ ...newProject, name: e.target.value })}
-                className="input" placeholder="e.g. WEB Portal" autoFocus />
+                className="input" placeholder="e.g. WEB Portal" />
             </Field>
             <Field label="Key Prefix *">
               <input type="text" maxLength={5} value={newProject.keyPrefix}
@@ -6695,6 +6910,7 @@ function renderMd(text) {
   });
 }
 
+// eslint-disable-next-line no-unused-vars
 function getTimeOfDay() {
   const h = new Date().getHours();
   if (h < 12) return 'morning';
@@ -7142,20 +7358,88 @@ function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove,
 
 // Iteration 6 — drill-down modal: lists the work items behind a clicked widget
 // element. Each row opens that item's detail (no navigation away from the dashboard).
+// B27 — AI-assisted compliance rule suggestion. Sends a natural-language prompt to the AI
+// which returns suggested rules; the user can adopt one directly into the rule builder.
+// Fallback: when AI is off or over budget, the component is not rendered (hidden by the parent).
+function AiComplianceSuggestion({ workspaceId, onAdopt, onToast }) {
+  const [prompt, setPrompt] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState(null);
+
+  function handleSuggest() {
+    if (!prompt.trim()) return;
+    setLoading(true);
+    setSuggestions(null);
+    aiClient.suggestComplianceRules(workspaceId, prompt.trim())
+      .then(res => {
+        const rules = res?.suggestions || res?.rules || [];
+        setSuggestions(rules);
+        setLoading(false);
+        if (!rules.length) onToast('No rule suggestions returned — try a different prompt.', 'info');
+        if (res?.meta?.fallback) onToast('AI rule suggestion used fallback (template match).', 'info');
+      })
+      .catch(() => { setLoading(false); onToast('AI rule suggestion failed. Please try again.', 'error'); });
+  }
+
+  return (
+    <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-5">
+      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">✦ AI Rule Suggestions</h3>
+      <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3">
+        Describe a compliance concern in plain language — AI will suggest a BQL rule to encode it.
+        <span className="block mt-0.5 italic">Fallback: seeded templates below when AI is off.</span>
+      </p>
+      <div className="flex gap-2">
+        <input
+          id="ai-compliance-prompt"
+          className="input flex-1 text-sm"
+          placeholder="e.g. Incidents should be assigned within 2 hours of creation"
+          value={prompt}
+          onChange={e => setPrompt(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleSuggest(); }}
+          aria-label="Describe the compliance rule you need"
+        />
+        <Button variant="secondary" disabled={loading || !prompt.trim()} onClick={handleSuggest}>
+          {loading ? 'Thinking…' : 'Suggest'}
+        </Button>
+      </div>
+      {loading && (
+        <div className="mt-3 space-y-2" aria-busy="true" aria-label="Loading suggestions">
+          <div className="animate-pulse h-10 bg-neutral-100 dark:bg-neutral-700 rounded" aria-hidden="true" />
+          <div className="animate-pulse h-10 bg-neutral-100 dark:bg-neutral-700 rounded" aria-hidden="true" />
+        </div>
+      )}
+      {suggestions && suggestions.length > 0 && (
+        <ul className="mt-3 space-y-2">
+          {suggestions.map((s, i) => (
+            <li key={i} className="flex items-start gap-3 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{s.name || `Rule ${i + 1}`}</p>
+                {s.description && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{s.description}</p>}
+                {s.scopeBql && <p className="text-xs font-mono text-brand-navy mt-1 truncate">{s.scopeBql} ⟶ {s.assertionBql}</p>}
+              </div>
+              <Button variant="secondary" onClick={() => { onAdopt(s); onToast('Rule draft opened in the rule builder.'); }}>Adopt</Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function DashboardDrillModal({ drill, onClose, onOpenItem }) {
   const items = drill.items || [];
   return (
     <div className="fixed inset-0 bg-neutral-900/50 dark:bg-black/70 flex items-center justify-center z-50 p-4"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
-      role="dialog" aria-modal="true" aria-label={drill.title}>
+      role="presentation" tabIndex={-1} aria-label={drill.title}>
       <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-lg border border-neutral-100 dark:border-neutral-700 w-full max-w-md max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-700">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-neutral-900 dark:text-white truncate">{drill.title}</h2>
             <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{items.length} {items.length === 1 ? 'item' : 'items'}</p>
           </div>
-          <button onClick={onClose} aria-label="Close" autoFocus
+          <button onClick={onClose} aria-label="Close"
             className="flex-shrink-0 ml-2 text-lg leading-none text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -7270,7 +7554,7 @@ function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
  * Formatting (bold, italic, lists, headings, links) is applied and rendered immediately —
  * no separate "preview" mode needed. Stores and emits HTML.
  */
-function RichTextEditor({ value, onChange, onBlur, placeholder }) {
+function RichTextEditor({ id, value, onChange, onBlur, placeholder }) {
   const editorRef = useRef(null);
   const isComposing = useRef(false);
 
@@ -7309,8 +7593,8 @@ function RichTextEditor({ value, onChange, onBlur, placeholder }) {
     onBlur?.();
   };
 
-  const ToolBtn = ({ cmd, arg, title, children, active }) => (
-    <button type="button" title={title}
+  const renderToolBtn = ({ cmd, arg, title, children, active }) => (
+    <button key={`${cmd}-${arg || 'default'}`} type="button" title={title}
       onMouseDown={e => { e.preventDefault(); exec(cmd, arg); }}
       className={`w-7 h-7 flex items-center justify-center rounded text-xs transition-colors
         ${active ? 'bg-brand-navy text-white' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'}`}>
@@ -7322,29 +7606,34 @@ function RichTextEditor({ value, onChange, onBlur, placeholder }) {
     <div className="border border-neutral-200 dark:border-neutral-600 rounded-lg overflow-hidden focus-within:border-brand-navy transition-colors dark:bg-neutral-800">
       {/* WYSIWYG Toolbar */}
       <div className="flex items-center gap-0.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 flex-wrap">
-        <ToolBtn cmd="bold"          title="Bold (Ctrl+B)"><strong>B</strong></ToolBtn>
-        <ToolBtn cmd="italic"        title="Italic (Ctrl+I)"><em>I</em></ToolBtn>
-        <ToolBtn cmd="underline"     title="Underline (Ctrl+U)"><u>U</u></ToolBtn>
-        <ToolBtn cmd="strikeThrough" title="Strikethrough"><s>S</s></ToolBtn>
+        {renderToolBtn({ cmd: 'bold',                title: 'Bold (Ctrl+B)',    children: <strong>B</strong> })}
+        {renderToolBtn({ cmd: 'italic',              title: 'Italic (Ctrl+I)',  children: <em>I</em> })}
+        {renderToolBtn({ cmd: 'underline',           title: 'Underline (Ctrl+U)', children: <u>U</u> })}
+        {renderToolBtn({ cmd: 'strikeThrough',       title: 'Strikethrough',    children: <s>S</s> })}
         <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1"/>
-        <ToolBtn cmd="formatBlock" arg="h2"  title="Heading 2"><span className="font-bold text-xs">H2</span></ToolBtn>
-        <ToolBtn cmd="formatBlock" arg="h3"  title="Heading 3"><span className="font-bold text-xs">H3</span></ToolBtn>
-        <ToolBtn cmd="formatBlock" arg="p"   title="Paragraph"><span className="text-xs">¶</span></ToolBtn>
+        {renderToolBtn({ cmd: 'formatBlock', arg: 'h2', title: 'Heading 2',    children: <span className="font-bold text-xs">H2</span> })}
+        {renderToolBtn({ cmd: 'formatBlock', arg: 'h3', title: 'Heading 3',    children: <span className="font-bold text-xs">H3</span> })}
+        {renderToolBtn({ cmd: 'formatBlock', arg: 'p',  title: 'Paragraph',    children: <span className="text-xs">¶</span> })}
         <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1"/>
-        <ToolBtn cmd="insertUnorderedList" title="Bullet list"><span className="text-[11px]">• —</span></ToolBtn>
-        <ToolBtn cmd="insertOrderedList"   title="Numbered list"><span className="text-[11px]">1.</span></ToolBtn>
-        <ToolBtn cmd="indent"              title="Indent"><IndentIncrease className="h-4 w-4" aria-hidden="true" /></ToolBtn>
-        <ToolBtn cmd="outdent"             title="Outdent"><IndentDecrease className="h-4 w-4" aria-hidden="true" /></ToolBtn>
+        {renderToolBtn({ cmd: 'insertUnorderedList', title: 'Bullet list',     children: <span className="text-[11px]">{'• —'}</span> })}
+        {renderToolBtn({ cmd: 'insertOrderedList',   title: 'Numbered list',   children: <span className="text-[11px]">1.</span> })}
+        {renderToolBtn({ cmd: 'indent',              title: 'Indent',          children: <IndentIncrease className="h-4 w-4" aria-hidden="true" /> })}
+        {renderToolBtn({ cmd: 'outdent',             title: 'Outdent',         children: <IndentDecrease className="h-4 w-4" aria-hidden="true" /> })}
         <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-600 mx-1"/>
-        <ToolBtn cmd="removeFormat" title="Clear formatting"><X className="h-4 w-4" aria-hidden="true" /></ToolBtn>
+        {renderToolBtn({ cmd: 'removeFormat',        title: 'Clear formatting', children: <X className="h-4 w-4" aria-hidden="true" /> })}
         <span className="ml-auto text-xs text-neutral-300 pr-1">WYSIWYG</span>
       </div>
 
       {/* Editable area — true WYSIWYG */}
       <div
+        id={id}
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning
+        role="textbox"
+        aria-multiline="true"
+        aria-label={placeholder}
+        tabIndex={0}
         onInput={handleInput}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
@@ -7460,7 +7749,7 @@ function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOve
                             <button onClick={() => onDelete(item.id)} className="text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label="Delete"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                           </div>
                         </div>
-                        <p className="text-sm font-medium text-neutral-900 leading-snug mb-2 cursor-pointer" onClick={() => onSelect(item)}>{item.title}</p>
+                        <button type="button" className="text-sm font-medium text-neutral-900 leading-snug mb-2 cursor-pointer text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => onSelect(item)}>{item.title}</button>
                         <div className="flex items-center justify-between">
                           <TypeBadge type={item.type} compact={density === 'compact'} />
                           <div className="flex items-center gap-1.5">

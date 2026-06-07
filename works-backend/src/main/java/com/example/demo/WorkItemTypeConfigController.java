@@ -25,9 +25,12 @@ public class WorkItemTypeConfigController {
     @GetMapping
     public Map<String, Object> list(@RequestParam(required = false) String workspaceId,
                                     @RequestParam(required = false) String projectId) {
+        String userId = authenticatedUser.id();
+        // Workspace-scoped (RB-40 §1): caller sees only custom types from their workspaces.
         List<WorkItemTypeConfig> customTypes = projectId != null
             ? typeConfigRepo.findByProjectId(projectId)
-            : (workspaceId != null ? typeConfigRepo.findByWorkspaceId(workspaceId) : typeConfigRepo.findAll());
+            : (workspaceId != null ? typeConfigRepo.findByWorkspaceId(workspaceId)
+                                   : typeConfigRepo.findAllScopedToUser(userId));
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("builtIn", BUILT_IN_TYPES);
         result.put("custom", customTypes);

@@ -21,9 +21,11 @@ public class FieldLayoutController {
     @GetMapping
     public List<FieldLayout> list(@RequestParam(required = false) String workspaceId,
                                   @RequestParam(required = false) String projectId) {
+        String userId = authenticatedUser.id();
+        // Workspace-scoped (RB-40 §1): caller sees only layouts from their workspaces.
         if (projectId != null) return layoutRepo.findByWorkspaceId(projectId);
         if (workspaceId != null) return layoutRepo.findByWorkspaceId(workspaceId);
-        return layoutRepo.findAll();
+        return layoutRepo.findAllScopedToUser(userId);
     }
 
     @GetMapping("/{itemType}")

@@ -33,8 +33,10 @@ public class PermissionSchemeController {
 
     @GetMapping
     public List<PermissionScheme> list(@RequestParam(required = false) String workspaceId) {
+        String userId = authenticatedUser.id();
+        // Workspace-scoped (RB-40 §1): caller sees only schemes from their workspaces.
         if (workspaceId != null) return schemeRepo.findByWorkspaceId(workspaceId);
-        return schemeRepo.findAll();
+        return schemeRepo.findAllScopedToUser(userId);
     }
 
     @GetMapping("/{id}")
@@ -81,8 +83,10 @@ public class PermissionSchemeController {
 
     @GetMapping("/roles")
     public List<RoleDef> listRoles(@RequestParam(required = false) String workspaceId) {
+        String userId = authenticatedUser.id();
+        // Workspace-scoped (RB-40 §1): caller sees only role definitions from their workspaces.
         if (workspaceId != null) return roleDefRepo.findByWorkspaceId(workspaceId);
-        return roleDefRepo.findAll();
+        return roleDefRepo.findAllScopedToUser(userId);
     }
 
     @PostMapping("/roles")

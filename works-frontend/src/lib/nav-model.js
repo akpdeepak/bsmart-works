@@ -74,6 +74,50 @@ export const LENSES = [
   { id: 'admin',         label: 'Admin',         view: 'adminops',    role: 'admin' },
 ];
 
+// ─── Feature → role mapping ──────────────────────────────────────────────────────
+// Which surfaces each role leans on, ordered by how central they are to that role's day-to-day
+// responsibilities and Agile/delivery practice. This is a USABILITY lens (what to surface first),
+// NOT an access boundary — access is RBAC, enforced server-side (RB-40). Every surface stays
+// reachable to everyone via the rail and ⌘K; this only decides emphasis/ordering.
+//
+//   Developer      — executes the work: own queue, the board, the sprint, code/runbooks, the API.
+//   Scrum Master   — facilitates flow & ceremonies, clears impediments, watches velocity/health.
+//   Product Owner  — owns backlog, value, releases, stakeholders, and the delivery roadmap.
+//   Leadership     — portfolio outcomes: KPIs, performance, SLA & compliance posture across teams.
+//   Admin          — operates the platform: config, governance, security, integrations, AI control.
+export const ROLE_PROFILES = {
+  developer: {
+    landing: 'developer',
+    primary: ['developer', 'dashboard', 'myworks', 'board', 'sprint', 'backlog', 'releases', 'knowledge', 'developerportal', 'bql', 'notifications'],
+  },
+  'scrum-master': {
+    landing: 'smcockpit',
+    primary: ['smcockpit', 'board', 'sprint', 'backlog', 'reports', 'performance', 'pm', 'automations', 'sla', 'notifications'],
+  },
+  'product-owner': {
+    landing: 'poworkspace',
+    primary: ['poworkspace', 'backlog', 'projects', 'releases', 'reports', 'dashboards', 'pm', 'knowledge', 'knowledgeadvanced', 'notifications'],
+  },
+  leadership: {
+    landing: 'leadership',
+    primary: ['leadership', 'dashboards', 'reports', 'performance', 'projects', 'sla', 'compliance', 'service', 'supportinbox', 'aicontrol'],
+  },
+  admin: {
+    landing: 'adminops',
+    primary: ['adminops', 'workspace', 'settings3', 'aicontrol', 'security', 'integrations', 'automations', 'marketplace', 'customization', 'compliance', 'developerportal', 'trash'],
+  },
+};
+
+// lens id -> ordered list of that role's primary surface ids (empty list if unknown).
+export function primarySurfacesFor(lensId) {
+  return ROLE_PROFILES[lensId]?.primary || [];
+}
+
+// Is this surface a primary one for the given role lens? Drives "for your role" emphasis.
+export function isPrimaryForRole(lensId, view) {
+  return primarySurfacesFor(lensId).includes(view);
+}
+
 // Views reachable from a lens / the BQL chip / the command palette but not pinned to a sub-rail.
 // Kept here so modeForView() can resolve which mode to highlight when one of them is active.
 const SATELLITE_MODE = {

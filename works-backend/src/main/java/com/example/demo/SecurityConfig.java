@@ -69,6 +69,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll()
                 // External customer-portal login (iteration 9) — separate identity, own login flow.
                 .requestMatchers("/api/v1/portal/auth/login").permitAll()
+                // SCIM 2.0 endpoints authenticate via their own Bearer token (not JWT); the
+                // ScimController resolves the workspace from the token itself (RB-40 §1).
+                .requestMatchers("/scim/v2/**").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);

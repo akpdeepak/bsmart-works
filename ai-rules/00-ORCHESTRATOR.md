@@ -153,18 +153,20 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
 > should be extended to verify the migration number against `db/migration/`.
 
 - **Iterations:** 20 total · 26 capabilities · ~346 sub-features.
-- **Active iteration:** **13 (complete)** — Automation Engine + Integrations (Cap C/Q/A): visual
-  When/If/Then rules with test-mode and a run audit log, signed outbound webhooks with retry +
-  dead-letter, the public-API token foundation, and the connector registry (Slack / GitHub / GitLab /
-  email / calendar + SSO/SCIM). Built on iteration **12** (KPI Framework with privacy guardrails —
-  Cap L: layered metrics, manager view API-blocked from individual drill-down, immutable snapshots)
-  and iteration **11** (broad AI expansion on the **AI Control Plane** — one policy hierarchy, one
-  budget, one audit trail, one fallback contract, RB-40 §2). Iteration 7 (Compliance Rules Engine)
-  complete. **Iteration 15 (Scrum Master Cockpit Cap V + Product Owner Workspace Cap W) was also
-  delivered ahead of 14**, by explicit owner directive, on the same AI-Control-Plane foundation.
-- **Flyway high-water mark:** **V45** (`V45__automation_and_integrations.sql`; note: V16 was skipped,
-  V23 does not exist; V41 is iteration 15's `V41__iteration15_scrum_po.sql`).
-- **Next migration:** **`V46__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+- **Active iteration:** **18 (complete)** — Mobile + Real-time + Performance (Cap S): the
+  mobile-optimized PWA (service worker, installable, offline app-shell), offline drafts with
+  sync-on-reconnect and optimistic-concurrency conflict resolution, real-time updates over SSE with
+  live co-presence, web-push preferences (per-event-type, quiet hours, snooze, P0-overrides-quiet),
+  the Cmd-K command palette with server-side item/people search, customizable keyboard shortcuts,
+  per-operation performance monitoring vs the RB-40 §5 budgets, and an in-product status page.
+  Native iOS/Android (Swift/Kotlin) are delivered as the install-free PWA in this monorepo; native
+  app shells are separate repos out of scope here. Built on the earlier delivered layers —
+  iteration **13** (Automation Engine + Integrations, Cap C/Q/A), **12** (KPI Framework, Cap L),
+  **11** (AI Control Plane), **7** (Compliance Rules Engine), and **14/15** (Developer Workspace +
+  Scrum Master Cockpit Cap V / Product Owner Workspace Cap W).
+- **Flyway high-water mark:** **V50** (`V50__iteration18_mobile_realtime_perf.sql`; note: V16 was
+  skipped, V23 does not exist).
+- **Next migration:** **`V51__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

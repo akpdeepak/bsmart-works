@@ -19,7 +19,8 @@ import static org.mockito.Mockito.*;
 class EventServiceTest {
 
     private final EventRepository repo = mock(EventRepository.class);
-    private final EventService service = new EventService(repo);
+    private final RealtimeService realtime = mock(RealtimeService.class);
+    private final EventService service = new EventService(repo, realtime);
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Test

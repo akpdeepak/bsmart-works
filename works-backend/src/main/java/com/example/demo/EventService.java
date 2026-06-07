@@ -10,10 +10,12 @@ import java.util.Map;
 public class EventService {
 
     private final EventRepository eventRepository;
+    private final RealtimeService realtime;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public EventService(EventRepository eventRepository) {
+    public EventService(EventRepository eventRepository, RealtimeService realtime) {
         this.eventRepository = eventRepository;
+        this.realtime = realtime;
     }
 
     public void record(String aggregateId, String eventType, String actorId, String payload) {
@@ -35,6 +37,19 @@ public class EventService {
         AppEvent event = baseEvent(aggregateId, eventType, actorId, toJson(payload));
         event.setWorkspaceId(workspaceId);
         eventRepository.save(event);
+        // Real-time fan-out (iteration 18, Cap S): notify every open client in this workspace so
+        // their views refresh within a second. Best-effort — a streaming hiccup must never break the
+        // business write that this event records (RB-40 §1 keeps the broadcast workspace-scoped).
+        if (realtime != null) {
+            try {
+                realtime.publish(workspaceId, "event", Map.of(
+                        "aggregateId", aggregateId == null ? "" : aggregateId,
+                        "eventType", eventType == null ? "" : eventType,
+                        "actorId", actorId == null ? "" : actorId));
+            } catch (Exception ignored) {
+                // swallow — audit + business write already succeeded
+            }
+        }
     }
 
     public void recordDiff(String aggregateId, String eventType, String actorId,

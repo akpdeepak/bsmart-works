@@ -97,9 +97,21 @@ public class SecurityConfig {
                 String authHeader = request.getHeader("Authorization");
                 String userId = null;
 
+                // The browser EventSource API (real-time SSE, iteration 18) cannot set an
+                // Authorization header, so for those streaming requests we also accept the JWT as an
+                // access_token query param. The token is still validated exactly the same way.
+                String token = null;
                 if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                    token = authHeader.substring(7);
+                } else {
+                    String paramToken = request.getParameter("access_token");
+                    if (paramToken != null && !paramToken.isBlank()) {
+                        token = paramToken;
+                    }
+                }
+
+                if (token != null) {
                     try {
-                        String token = authHeader.substring(7);
                         userId = jwtUtil.extractUserId(token);
                     } catch (Exception e) {
                         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

@@ -11,7 +11,7 @@ import { getMode } from '@/lib/nav-model';
 // and the active-sprint dot carry over from the old sidebar. Design: tokens only, all five states,
 // labelled controls (§4.6, §4.8, §4.12).
 
-export function SubRail({ activeMode, activeView, onNavigate, badges = {}, dots = {} }) {
+export function SubRail({ activeMode, activeView, activeExtra, onNavigate, badges = {}, dots = {} }) {
   const mode = getMode(activeMode);
 
   return (
@@ -19,6 +19,20 @@ export function SubRail({ activeMode, activeView, onNavigate, badges = {}, dots 
       <h2 className="px-2 pb-3 pt-0.5 text-sm font-bold text-brand-navy dark:text-neutral-100">
         {mode.label}
       </h2>
+
+      {/* Orientation row — when the current view is a lens cockpit / BQL (not pinned to this mode's
+          surfaces), show it highlighted so the nav still answers "where am I?". */}
+      {activeExtra && (
+        <div className="mb-1.5 border-b border-neutral-100 pb-1.5 dark:border-neutral-800">
+          <span className="relative flex w-full items-center gap-2.5 rounded-md bg-neutral-100 px-2.5 py-2 text-sm font-semibold text-brand-navy dark:bg-neutral-800 dark:text-neutral-100">
+            <span aria-hidden="true" className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-brand-orange" />
+            <span className="flex-1 truncate">{activeExtra.label}</span>
+            {activeExtra.tag && (
+              <span className="shrink-0 rounded-full bg-brand-orange/10 px-1.5 py-0.5 text-2xs font-semibold uppercase tracking-wide text-brand-orange">{activeExtra.tag}</span>
+            )}
+          </span>
+        </div>
+      )}
 
       <nav aria-label={`${mode.label} surfaces`} className="space-y-0.5">
         {mode.surfaces.map((s) => {

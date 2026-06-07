@@ -21,7 +21,7 @@ import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
 import { ModeRail } from '@/components/works/organisms/mode-rail';
 import { SubRail } from '@/components/works/organisms/sub-rail';
-import { MODES, LENSES, modeForView, firstSurfaceOf } from '@/lib/nav-model';
+import { MODES, LENSES, modeForView, firstSurfaceOf, getMode, labelForView } from '@/lib/nav-model';
 import { CustomizationView } from '@/components/works/organisms/customization-view';
 import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
 import { DeveloperWorkspace } from '@/components/works/organisms/developer-workspace';
@@ -363,7 +363,7 @@ export default function App() {
 
   // Role lens (top-bar switcher) — retunes the workspace to a role and jumps to its cockpit.
   // Mirrors the role-tuned dashboard (dashboardRole) so "Today" follows the selected lens.
-  const [lens, setLens]                         = useState('scrum-master');
+  const [lens, setLens]                         = useState('developer'); // matches dashboardRole default
   const [lensOpen, setLensOpen]                 = useState(false);
   const lensRef                                 = useRef(null);
 
@@ -2512,6 +2512,11 @@ export default function App() {
   };
   const activeLens = LENSES.find((x) => x.id === lens) || LENSES[0];
   const activeMode = modeForView(view);
+  // When the current view isn't pinned to its mode's sub-rail (a lens cockpit or the BQL chip),
+  // surface it as a highlighted orientation row so the nav still shows "where am I?".
+  const activeExtra = getMode(activeMode).surfaces.some((s) => s.id === view)
+    ? null
+    : { id: view, label: labelForView(view), tag: LENSES.some((l) => l.view === view) ? 'Lens' : null };
 
   // Commands for the Cmd-K palette: every destination + a couple of quick actions.
   // Offline-draft sync result handler (iteration 18, Cap S). APPLIED drafts are already dropped by
@@ -2769,6 +2774,7 @@ export default function App() {
             <SubRail
               activeMode={activeMode}
               activeView={view}
+              activeExtra={activeExtra}
               onNavigate={navigate}
               badges={{ myworks: myItems.length, notifications: unreadCount }}
               dots={{ sprint: Boolean(sprints.find(s => s.status === 'ACTIVE')) }}

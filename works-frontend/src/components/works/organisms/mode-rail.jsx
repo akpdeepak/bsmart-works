@@ -29,7 +29,7 @@ export function ModeRail({ activeMode, onSelectMode }) {
               'relative flex w-full flex-col items-center gap-1 py-2 transition-colors duration-fast',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/40',
               pinnedBottom && 'mt-auto',
-              active ? 'text-white' : 'text-white/55 hover:text-white/85'
+              active ? 'text-white' : 'text-white/70 hover:text-white'
             )}
           >
             {active && (

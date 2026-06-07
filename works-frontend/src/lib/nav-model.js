@@ -103,3 +103,16 @@ export function firstSurfaceOf(modeId) {
 export function getMode(modeId) {
   return MODES.find((x) => x.id === modeId) || MODES[0];
 }
+
+// Friendly label for any known view id. Used to orient the user when the active view is a
+// satellite (a lens cockpit or the BQL chip) that isn't pinned to its mode's sub-rail.
+const EXTRA_LABELS = { bql: 'BQL Query', developer: 'Developer' };
+export function labelForView(view) {
+  for (const m of MODES) {
+    const s = m.surfaces.find((x) => x.id === view);
+    if (s) return s.label;
+  }
+  if (EXTRA_LABELS[view]) return EXTRA_LABELS[view];
+  const l = LENSES.find((x) => x.view === view);
+  return l ? l.label : view;
+}

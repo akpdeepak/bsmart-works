@@ -21,9 +21,11 @@ public class LessonLearnedController {
     @GetMapping
     public List<LessonLearned> list(@RequestParam(required = false) String projectId,
                                      @RequestParam(required = false) String workspaceId) {
-        if (projectId != null)   return repo.findByProjectIdAndDeletedAtIsNull(projectId);
-        if (workspaceId != null) return repo.findByWorkspaceIdAndDeletedAtIsNull(workspaceId);
-        return repo.findAll();
+        String userId = authenticatedUser.id();
+        // Workspace-scoped (RB-40 §1): caller sees only lessons from their workspaces.
+        if (projectId != null)   return repo.findByProjectIdScopedToUser(projectId, userId);
+        if (workspaceId != null) return repo.findByWorkspaceIdScopedToUser(workspaceId, userId);
+        return repo.findAllScopedToUser(userId);
     }
 
     @GetMapping("/{id}")

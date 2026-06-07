@@ -27,8 +27,10 @@ public class MeetingController {
 
     @GetMapping
     public List<Meeting> list(@RequestParam(required = false) String projectId) {
-        if (projectId != null) return meetingRepo.findByProjectIdAndDeletedAtIsNullOrderByScheduledAtDesc(projectId);
-        return meetingRepo.findAll();
+        String userId = authenticatedUser.id();
+        // Workspace-scoped (RB-40 §1): caller sees only meetings from their workspaces.
+        if (projectId != null) return meetingRepo.findByProjectIdScopedToUser(projectId, userId);
+        return meetingRepo.findAllScopedToUser(userId);
     }
 
     @GetMapping("/{id}")

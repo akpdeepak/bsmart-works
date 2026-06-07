@@ -19,6 +19,7 @@ import {
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
 import { SidebarNav } from '@/components/works/organisms/sidebar-nav';
+import { CustomizationView } from '@/components/works/organisms/customization-view';
 import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
 import { DeveloperWorkspace } from '@/components/works/organisms/developer-workspace';
 import { SlaView } from '@/components/works/organisms/sla-view';
@@ -119,9 +120,10 @@ const NAV_GROUPS = [
     { id: 'knowledge', label: 'Knowledge', Icon: BookOpen },
   ] },
   { label: 'Configure', items: [
-    { id: 'settings3', label: 'Workflows & Fields', Icon: SlidersHorizontal },
-    { id: 'workspace', label: 'Settings',           Icon: Settings },
-    { id: 'trash',     label: 'Trash',              Icon: Trash2 },
+    { id: 'settings3',     label: 'Workflows & Fields', Icon: SlidersHorizontal },
+    { id: 'customization', label: 'Customization',      Icon: Puzzle },
+    { id: 'workspace',     label: 'Settings',           Icon: Settings },
+    { id: 'trash',         label: 'Trash',              Icon: Trash2 },
   ] },
 ];
 
@@ -3089,6 +3091,17 @@ export default function App() {
               addProjectMember={addProjectMember}
               can={can}
               showToast={showToast}
+            />
+          )}
+          {/* ======================================================
+               ITERATION 17 — UNIVERSAL CUSTOMIZATION ENGINE (Cap R)
+             ====================================================== */}
+          {view === 'customization' && (
+            <CustomizationView
+              workspaceId={activeWorkspaceId}
+              canManage={can('manage_workspace')}
+              isOwner={userRole.tier >= 5}
+              onToast={showToast}
             />
           )}
           {/* ======================================================

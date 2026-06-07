@@ -93,3 +93,9 @@ Format: What · Why accepted · Impact · Trigger to fix.
 - **What:** §4.19 requires each component to have a co-located `.stories.jsx`; Storybook is not set up
 - **Why accepted:** Visual component library is not the immediate priority; components are tested via Vitest + RTL
 - **Trigger:** When the component library reaches ~10 components and visual regression testing becomes valuable
+
+### TD-015 — Code-extension execution runtime not built (iteration 17, Cap R — Extension API)
+- **What:** The Universal Customization Engine **stores, validates, versions and audits** code extensions and exposes a server-owned extension-point catalog (`ConfigExtensionPoints`), but it does **not execute** customer-authored JavaScript. An extension is defined and surfaced but never evaluated.
+- **Why accepted:** Running tenant-supplied code is a security-critical capability (RB-40 — stop-and-ask territory). It must run in an isolated, resource-capped, time-bounded sandbox (e.g. a worker/V8 isolate) with no access to other tenants' data, the event log, or secrets — and that design must be reviewed before any code runs. Shipping execution half-built would be an RCE surface. The definition/validation/versioning/audit half (which the rest of the engine needs) is genuinely done.
+- **Impact:** Admins can author and save extensions and bind them to hooks; the hooks do not yet fire. The UI states this explicitly so it is not mistaken for working behavior.
+- **Trigger:** A dedicated, security-reviewed task — sandbox runtime selection + isolation model + per-extension resource/timeout budgets + tenant-scoped capability allow-list — signed off with Deepak before execution is enabled (CLAUDE.md §5).

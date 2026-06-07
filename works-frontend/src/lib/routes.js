@@ -28,6 +28,7 @@ export const VIEW_PATHS = {
   bql: '/bql',
   knowledge: '/knowledge',
   settings3: '/settings/workflows',
+  customization: '/customization',
   workspace: '/settings',
   trash: '/trash',
 };

@@ -27,9 +27,11 @@ public class ReleaseController {
 
     @GetMapping
     public List<Release> getReleases(@RequestParam(required = false) String projectId) {
+        String userId = authenticatedUser.id();
+        // Workspace-scoped (RB-40 §1): caller sees only releases in their workspaces' projects.
         return projectId != null
-            ? releaseRepository.findByProjectIdOrderByCreatedAtDesc(projectId)
-            : releaseRepository.findAll();
+            ? releaseRepository.findByProjectIdScopedToUser(projectId, userId)
+            : releaseRepository.findAllScopedToUser(userId);
     }
 
     @GetMapping("/{id}")

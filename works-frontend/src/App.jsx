@@ -61,6 +61,12 @@ import BqlView from '@/views/bql-view';
 import MyWorksView from '@/views/my-works-view';
 import ProjectsView from '@/views/projects-view';
 import ReportsView from '@/views/reports-view';
+import AiStudioView from '@/views/ai-studio-view';
+import MarketplaceView from '@/views/marketplace-view';
+import DeveloperPortalView from '@/views/developer-portal-view';
+import KnowledgeTemplatesView from '@/views/knowledge-templates-view';
+import SupportInboxView from '@/views/support-inbox-view';
+import { LanguageSwitcher } from '@/components/works/organisms/language-switcher';
 import {
   filterItems as filterWidgetItems, statusBreakdown, statusPriorityMatrix,
   sprintProgress, velocityPoints, SERIES_BG, EXTRA_WIDGET_PRESETS, EXTRA_WIDGET_CATEGORIES,
@@ -2565,6 +2571,7 @@ export default function App() {
                 + Create
               </Button>
             )}
+            <LanguageSwitcher className="hidden md:flex" />
             <button onClick={() => { setView('notifications'); fetchNotifications(); }}
               aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
               className="relative w-9 h-9 rounded-md flex items-center justify-center text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
@@ -2774,6 +2781,26 @@ export default function App() {
                   .catch(reportError)}
               />
             </div>
+          )}
+
+          {view === 'aistudio' && (
+            <AiStudioView workspaceId={activeWorkspaceId} onToast={showToast} />
+          )}
+
+          {view === 'marketplace' && (
+            <MarketplaceView workspaceId={activeWorkspaceId} onToast={showToast} />
+          )}
+
+          {view === 'developerportal' && (
+            <DeveloperPortalView workspaceId={activeWorkspaceId} onToast={showToast} />
+          )}
+
+          {view === 'knowledgeadvanced' && (
+            <KnowledgeTemplatesView workspaceId={activeWorkspaceId} onToast={showToast} />
+          )}
+
+          {view === 'supportinbox' && (
+            <SupportInboxView workspaceId={activeWorkspaceId} onToast={showToast} />
           )}
 
           {view === 'notifications' && (

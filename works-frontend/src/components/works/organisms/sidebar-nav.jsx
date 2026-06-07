@@ -4,9 +4,11 @@ import {
   BarChart2, LayoutDashboard, FileText, TrendingUp, Headset, Timer, ShieldCheck,
   Gauge, Map as MapIcon, ClipboardList, Workflow, Plug, Search, BookOpen,
   SlidersHorizontal, Settings, Trash2, PanelLeftClose, LogOut, ChevronDown, Check, Sparkles,
+  Bot, Package, Code2, MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/works/atoms/badge';
+import { useI18n } from '@/lib/i18n';
 
 // Organism — brand-navy sidebar nav (CLAUDE.md §4.6, §4.12).
 // Props are domain-typed: accepts current view, workspace, user, counts.
@@ -23,29 +25,30 @@ import { Badge } from '@/components/works/atoms/badge';
 // ─── Nav item data ────────────────────────────────────────────────────────────
 
 const NAV_SECTIONS = [
-  { id: null, items: [{ id: 'dashboard', label: 'Home', icon: Home }] },
+  { id: null, items: [{ id: 'dashboard', label: 'Home', icon: Home, i18nKey: 'nav.home' }] },
   { id: 'my-work', label: 'My Work', items: [
-    { id: 'myworks',       label: 'My Works',      icon: User },
+    { id: 'myworks',       label: 'My Works',      icon: User, i18nKey: 'nav.myWork' },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'developer',     label: 'Developer',     icon: Code },
   ] },
   { id: 'plan', label: 'Plan & Track', items: [
-    { id: 'board',    label: 'Board',         icon: LayoutGrid },
-    { id: 'backlog',  label: 'Backlog',       icon: ListTodo },
-    { id: 'sprint',   label: 'Active Sprint', icon: Zap },
+    { id: 'board',    label: 'Board',         icon: LayoutGrid, i18nKey: 'nav.board' },
+    { id: 'backlog',  label: 'Backlog',       icon: ListTodo, i18nKey: 'nav.backlog' },
+    { id: 'sprint',   label: 'Active Sprint', icon: Zap, i18nKey: 'nav.sprint' },
     { id: 'releases', label: 'Releases',      icon: Rocket },
     { id: 'projects', label: 'Projects',      icon: FolderKanban },
   ] },
   { id: 'insights', label: 'Insights', items: [
-    { id: 'reports',       label: 'Reports',        icon: BarChart2 },
-    { id: 'dashboards',    label: 'Dashboards',     icon: LayoutDashboard },
+    { id: 'reports',       label: 'Reports',        icon: BarChart2, i18nKey: 'nav.reports' },
+    { id: 'dashboards',    label: 'Dashboards',     icon: LayoutDashboard, i18nKey: 'nav.dashboards' },
     { id: 'reportbuilder', label: 'Report builder', icon: FileText },
     { id: 'performance',   label: 'Performance',    icon: TrendingUp },
   ] },
   { id: 'service', label: 'Service & Compliance', items: [
-    { id: 'service',    label: 'Service Desk', icon: Headset },
-    { id: 'sla',        label: 'SLA',          icon: Timer },
-    { id: 'compliance', label: 'Compliance',   icon: ShieldCheck },
+    { id: 'service',      label: 'Service Desk',  icon: Headset },
+    { id: 'supportinbox', label: 'Support Inbox', icon: MessageSquare },
+    { id: 'sla',          label: 'SLA',           icon: Timer },
+    { id: 'compliance',   label: 'Compliance',    icon: ShieldCheck },
   ] },
   { id: 'cockpits', label: 'Cockpits', items: [
     { id: 'smcockpit',   label: 'SM Cockpit',   icon: Gauge },
@@ -57,8 +60,14 @@ const NAV_SECTIONS = [
     { id: 'integrations', label: 'Integrations', icon: Plug },
     { id: 'bql',          label: 'BQL Query',    icon: Search },
   ] },
+  { id: 'ai-ecosystem', label: 'AI & Ecosystem', items: [
+    { id: 'aistudio',        label: 'AI Studio',        icon: Bot, i18nKey: 'nav.aiStudio' },
+    { id: 'marketplace',     label: 'Marketplace',      icon: Package, i18nKey: 'nav.marketplace' },
+    { id: 'developerportal', label: 'Developer Portal', icon: Code2 },
+  ] },
   { id: 'knowledge', label: 'Knowledge', items: [
-    { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
+    { id: 'knowledge',         label: 'Knowledge',          icon: BookOpen, i18nKey: 'nav.knowledge' },
+    { id: 'knowledgeadvanced', label: 'Templates & Extract', icon: FileText },
   ] },
   { id: 'configure', label: 'Configure', items: [
     { id: 'settings3', label: 'Workflows & Fields', icon: SlidersHorizontal },
@@ -72,11 +81,13 @@ const NAV_SECTIONS = [
 
 function NavItem({ item, active, collapsed, badge, badgeTone = 'neutral', dot, onClick }) {
   const Icon = item.icon;
+  const { t } = useI18n();
+  const label = item.i18nKey ? t(item.i18nKey) : item.label;
 
   return (
     <button
       type="button"
-      title={collapsed ? item.label : undefined}
+      title={collapsed ? label : undefined}
       onClick={onClick}
       className={cn(
         'relative flex w-full items-center gap-3 rounded-md text-sm transition-colors duration-fast',
@@ -99,7 +110,7 @@ function NavItem({ item, active, collapsed, badge, badgeTone = 'neutral', dot, o
 
       {!collapsed && (
         <>
-          <span className="flex-1 truncate text-left">{item.label}</span>
+          <span className="flex-1 truncate text-left">{label}</span>
           {badge != null && (
             <Badge
               tone="neutral"

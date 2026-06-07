@@ -4,6 +4,7 @@ import { Badge } from '@/components/works/atoms/badge';
 import { api } from '@/lib/apiClient';
 import { smartDate } from '@/lib/format';
 import { slaLabel, slaTone } from '@/lib/serviceSla';
+import { SupportChatWidget } from '@/components/works/organisms/support-chat-widget';
 
 // ── Separate customer session (distinct from the internal bSmartSession) ──────────────
 const PORTAL_KEY = 'bSmartPortalSession';
@@ -417,6 +418,15 @@ export default function CustomerPortal() {
           {toast}
         </div>
       )}
+
+      {/* Iteration 20 (Cap N) — real-time customer chat with AI tier-1 + human escalation. The
+          portal token scopes the conversation to this customer's workspace server-side. */}
+      <SupportChatWidget
+        token={token}
+        workspaceId={account?.workspaceId}
+        accountId={account?.id}
+        customerName={account?.name}
+      />
     </div>
   );
 }

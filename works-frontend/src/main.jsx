@@ -6,6 +6,7 @@ import './index.css'
 import App from './App.jsx'
 import CustomerPortal from './CustomerPortal.jsx'
 import { ErrorBoundary } from './components/works/error-boundary.jsx'
+import { I18nProvider } from './lib/i18n.jsx'
 
 // The external customer portal is a separate, lighter experience (iteration 9). It lives under
 // /portal so it can be white-labeled per customer and never shares the internal app shell or session.
@@ -15,7 +16,9 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>
-        {isPortal ? <CustomerPortal /> : <App />}
+        <I18nProvider>
+          {isPortal ? <CustomerPortal /> : <App />}
+        </I18nProvider>
       </ErrorBoundary>
     </QueryClientProvider>
   </StrictMode>,

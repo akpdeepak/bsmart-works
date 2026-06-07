@@ -278,6 +278,19 @@
 								<exclude>**/WebhookDelivery.class</exclude>
 								<exclude>**/IntegrationConnection.class</exclude>
 								<exclude>**/ApiToken.class</exclude>
+								<!-- Iteration 19 (enterprise security) entities. The security *logic*
+								     (AuditHashChain, ConditionalAccessEvaluator, AnomalyDetector,
+								     WebAuthnCrypto) is pure and IS measured by unit tests. -->
+								<exclude>**/WebAuthnCredential.class</exclude>
+								<exclude>**/WebAuthnChallenge.class</exclude>
+								<exclude>**/ConditionalAccessPolicy.class</exclude>
+								<exclude>**/WorkspaceSecuritySettings.class</exclude>
+								<exclude>**/AuditLogEntry.class</exclude>
+								<exclude>**/AuditLogStreamConfig.class</exclude>
+								<exclude>**/AccessAnomaly.class</exclude>
+								<exclude>**/DataSubjectRequest.class</exclude>
+								<exclude>**/ComplianceEvidenceBundle.class</exclude>
+								<exclude>**/PentestEngagement.class</exclude>
 							</excludes>
 							<rules>
 								<rule>

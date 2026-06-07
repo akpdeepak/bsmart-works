@@ -20,6 +20,7 @@ export const VIEW_PATHS = {
   service: '/service-desk',
   sla: '/sla',
   compliance: '/compliance',
+  security: '/security',
   smcockpit: '/sm-cockpit',
   poworkspace: '/po-workspace',
   leadership: '/leadership',

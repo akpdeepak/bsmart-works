@@ -61,7 +61,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/login", "/api/v1/auth/signup",
                                  "/api/v1/auth/verify", "/api/v1/auth/forgot-password",
                                  // token-based reset (no session yet) + MFA challenge during login
-                                 "/api/v1/auth/reset-password", "/api/v1/auth/mfa/verify").permitAll()
+                                 "/api/v1/auth/reset-password", "/api/v1/auth/mfa/verify",
+                                 // passwordless passkey sign-in ceremony (pre-auth, iteration 19 Cap T)
+                                 "/api/v1/auth/passkey/authenticate/begin",
+                                 "/api/v1/auth/passkey/authenticate/finish").permitAll()
                 // Public, read-only, token-scoped dashboard embeds (iteration 6). GET only.
                 .requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll()
                 // External customer-portal login (iteration 9) — separate identity, own login flow.

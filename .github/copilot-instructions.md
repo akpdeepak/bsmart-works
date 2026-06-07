@@ -157,22 +157,32 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
 > should be extended to verify the migration number against `db/migration/`.
 
 - **Iterations:** 20 total · 26 capabilities · ~346 sub-features.
-- **Active iteration:** **18 (complete)** — Mobile + Real-time + Performance (Cap S): the
-  mobile-optimized PWA (service worker, installable, offline app-shell), offline drafts with
-  sync-on-reconnect and optimistic-concurrency conflict resolution, real-time updates over SSE with
+- **Active iteration:** **19 (complete)** — Enterprise Security + Compliance Certifications (Cap T):
+  passkeys / WebAuthn (phishing-resistant, passwordless sign-in), conditional-access policies
+  (IP / geo / device-trust / time-of-day, per workspace & role), a **tamper-evident, hash-chained
+  security audit log** (append-only, DB-enforced) with browse / export / SIEM streaming, data
+  residency + **BYOK** (customer-managed key references), AI access-anomaly detection (deterministic
+  fallback, RB-40 §2), GDPR / DPDP data export + right-to-be-forgotten (crypto-shred semantics,
+  RB-40 §3), a pen-test / red-team / bug-bounty register, and one-click **SOC 2 Type 2 / ISO 27001**
+  evidence bundles. **Iteration 18 (Mobile + Real-time + Performance, Cap S)** is also delivered —
+  the mobile-optimized PWA (service worker, installable, offline app-shell), offline drafts with
+  sync-on-reconnect + optimistic-concurrency conflict resolution, real-time updates over SSE with
   live co-presence, web-push preferences (per-event-type, quiet hours, snooze, P0-overrides-quiet),
   the Cmd-K command palette with server-side item/people search, customizable keyboard shortcuts,
-  per-operation performance monitoring vs the RB-40 §5 budgets, and an in-product status page.
-  Native iOS/Android (Swift/Kotlin) are delivered as the install-free PWA in this monorepo; native
-  app shells are separate repos out of scope here. Built on the earlier delivered layers —
-  iteration **17** (Universal Customization Engine, Cap R), **16** (Leadership Console Cap X + Admin
-  Operations Center Cap Y), **14/15** (Developer Workspace Cap U + Scrum Master Cockpit Cap V /
-  Product Owner Workspace Cap W), **13** (Automation Engine + Integrations, Cap C/Q/A), **12** (KPI
-  Framework, Cap L), **11** (AI Control Plane), and **7** (Compliance Rules Engine).
-- **Flyway high-water mark:** **V52** (`V52__iteration18_mobile_realtime_perf.sql`; note: V16 was
-  skipped, V23 does not exist; V51 is iteration 17's `V51__iteration17_customization_engine.sql`,
-  V50 is iteration 16's `V50__iteration16_leadership_admin.sql`).
-- **Next migration:** **`V53__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+  per-operation performance monitoring vs the RB-40 §5 budgets, and an in-product status page; native
+  iOS/Android ship as the install-free PWA here. Built on the prior line: iteration **17** (Universal
+  Customization Engine Cap R), **16** (Leadership Console Cap X + Admin Operations Center Cap Y),
+  **15** (Scrum Master Cockpit Cap V + Product Owner Workspace Cap W), **14** (Developer Workspace
+  Cap U), **13** (Automation Engine + Integrations Cap C/Q/A), **12** (KPI Framework Cap L) and **11**
+  (the **AI Control Plane** — one policy hierarchy, one budget, one audit trail, one fallback
+  contract, RB-40 §2). All five role surfaces are live (Developer / SM / PO / Leadership / Admin).
+  Iteration 7 (Compliance Rules Engine) complete. (Iterations 14/15 were delivered ahead of order by
+  explicit owner directive.)
+- **Flyway high-water mark:** **V53** (`V53__iteration18_mobile_realtime_perf.sql`; note: V16 was
+  skipped, V23 does not exist; V52 is iteration 19's `V52__iteration19_enterprise_security.sql`;
+  V51 is iteration 17's `V51__iteration17_customization_engine.sql`; V50 is iteration 16's
+  `V50__iteration16_leadership_admin.sql`).
+- **Next migration:** **`V54__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

@@ -66,7 +66,7 @@ self.addEventListener('fetch', (event) => {
 
 /* Web Push: show the notification the server sent (payload is JSON: { title, body, url }). */
 self.addEventListener('push', (event) => {
-  let data = {};
+  let data;
   try {
     data = event.data ? event.data.json() : {};
   } catch {

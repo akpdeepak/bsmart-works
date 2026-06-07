@@ -15,6 +15,7 @@ import {
   SquarePen, Upload, IndentIncrease, IndentDecrease, MapPin, KeyRound,
   Unlock, CornerDownRight, Image as ImageIcon, Flame, Bug,
   Package, Ticket, Wrench, Flag, SquareCheck,
+  Activity, BellRing, Keyboard,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
@@ -35,6 +36,15 @@ import { Modal } from '@/components/works/molecules/modal';
 import { Toast } from '@/components/works/atoms/toast';
 import { Skeleton } from '@/components/works/atoms/skeleton';
 import { CommandPalette } from '@/components/works/organisms/command-palette';
+import { OfflineBanner } from '@/components/works/organisms/offline-banner';
+import { PresenceBar } from '@/components/works/organisms/presence-bar';
+import { ShortcutsHelp } from '@/components/works/organisms/shortcuts-help';
+import { ConflictResolver } from '@/components/works/organisms/conflict-resolver';
+import { StatusPage } from '@/components/works/organisms/status-page';
+import { PushSettingsPanel } from '@/components/works/organisms/push-settings-panel';
+import { connectRealtime, sendPresence, leavePresence } from '@/lib/realtime';
+import { queueDraft, removeDraft, pendingDrafts, syncDrafts } from '@/lib/offline';
+import { queryClient } from '@/lib/query-client';
 import { viewToPath, pathToView } from '@/lib/routes';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
@@ -244,6 +254,13 @@ export default function App() {
   const [paletteOpen, setPaletteOpen]   = useState(false);
   const goToRef                         = useRef(false); // 'g' then a key — quick go-to (brand §5.2)
   const navigateRef                     = useRef(null);  // latest navigate(), for global shortcuts
+
+  // Iteration 18 (Cap S): real-time presence roster, lightweight overlays (status / push / shortcuts
+  // help) opened from the command palette or shortcuts, and the offline-sync conflict queue.
+  const [presence, setPresence]         = useState([]);
+  const [overlay, setOverlay]           = useState(null); // null | 'status' | 'push'
+  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
+  const [conflicts, setConflicts]       = useState([]);
 
   const [workspaceMembers, setWorkspaceMembers] = useState([]);
   const [inviteEmail, setInviteEmail]   = useState('');
@@ -576,10 +593,36 @@ export default function App() {
       if (e.key === 'g') { goToRef.current = true; setTimeout(() => { goToRef.current = false; }, 1200); return; }
       if (e.key === '/') { e.preventDefault(); searchRef.current?.querySelector('input')?.focus(); return; }
       if (e.key === 'c') { e.preventDefault(); setView('board'); setIsCreateOpen(true); return; }
+      if (e.key === '?') { e.preventDefault(); setShortcutsHelpOpen(o => !o); return; } // iteration 18: shortcuts help
     }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, []);
+
+  // Real-time stream + co-presence (iteration 18, Cap S). Open an SSE connection for the active
+  // workspace: any server-side event invalidates the cached queries so open views refresh within a
+  // second, and the presence roster drives the live "who's here" avatars. A heartbeat keeps this
+  // client in the roster; on unmount/workspace-switch we close the stream and leave presence.
+  useEffect(() => {
+    if (!currentUser || !activeWorkspaceId) return undefined;
+    const dispose = connectRealtime(activeWorkspaceId, {
+      event: () => { queryClient.invalidateQueries(); },
+      presence: (data) => { if (data?.present) setPresence(data.present); },
+    });
+    const beat = () => sendPresence({
+      workspaceId: activeWorkspaceId,
+      name: currentUser.fullName || currentUser.email,
+      location: viewToPath(view) || view,
+    });
+    beat();
+    const timer = setInterval(beat, 15000);
+    return () => {
+      clearInterval(timer);
+      dispose();
+      leavePresence(activeWorkspaceId);
+    };
+    // view is intentionally read live inside beat(); re-subscribing on every view change is wasteful.
+  }, [currentUser, activeWorkspaceId]);
 
   // Reflect the active view in the URL so views are deep-linkable and refresh-stable. Unknown
   // views (viewToPath === null) leave the URL alone. Skipped when already correct, so it does not
@@ -2447,6 +2490,52 @@ export default function App() {
   navigateRef.current = navigate; // keep the global shortcut handler pointed at the latest navigate
 
   // Commands for the Cmd-K palette: every destination + a couple of quick actions.
+  // Offline-draft sync result handler (iteration 18, Cap S). APPLIED drafts are already dropped by
+  // syncDrafts; any CONFLICT is surfaced in the conflict-resolution UI, pairing the server state with
+  // the still-queued local draft.
+  function handleSynced(res) {
+    const queued = pendingDrafts();
+    const conflicting = (res?.results || [])
+      .filter(r => r.result === 'CONFLICT')
+      .map(r => ({ id: r.id, server: r.server, draft: queued.find(d => d.id === r.id) || {} }));
+    if (conflicting.length) setConflicts(conflicting);
+  }
+
+  // Resolve one sync conflict: keep mine (re-queue against the server's new version, then re-sync) or
+  // keep theirs (discard the local draft).
+  async function resolveConflict(c, choice) {
+    if (choice === 'mine' && c.draft?.id) {
+      removeDraft(c.id);
+      queueDraft({ ...c.draft, baseVersion: c.server?.version });
+      try { await syncDrafts(); } catch { /* stays queued for the next attempt */ }
+    } else {
+      removeDraft(c.id);
+    }
+    setConflicts(prev => prev.filter(x => x.id !== c.id));
+  }
+
+  // Command-palette server search (iteration 18, Cap S): items + people, workspace-scoped, mapped to
+  // runnable palette commands. Selecting an item opens it; selecting a person filters to their work.
+  async function commandSearch(q) {
+    if (!activeWorkspaceId) return [];
+    try {
+      const res = await api.send(
+        `/command-palette/search?workspaceId=${encodeURIComponent(activeWorkspaceId)}&q=${encodeURIComponent(q)}`,
+      );
+      const items = (res.items || []).map(it => ({
+        id: `item-${it.id}`, label: `${it.id} · ${it.title}`, group: 'Items', Icon: ListTodo,
+        run: () => { setSelectedItem({ id: it.id, title: it.title, type: it.type, status: it.status }); },
+      }));
+      const people = (res.people || []).map(p => ({
+        id: `person-${p.id}`, label: p.full_name || p.email, group: 'People', Icon: User,
+        run: () => { setView('myworks'); },
+      }));
+      return [...items, ...people];
+    } catch {
+      return [];
+    }
+  }
+
   const paletteCommands = [
     ...NAV_GROUPS.flatMap(g => g.items.map(item => ({
       id: `go-${item.id}`, label: item.label, group: g.label || 'Go to', Icon: item.Icon,
@@ -2456,6 +2545,12 @@ export default function App() {
       run: () => { setView('board'); setIsCreateOpen(true); } },
     { id: 'act-search', label: 'Search work items', group: 'Action', Icon: Search, keywords: ['find'],
       run: () => searchRef.current?.querySelector('input')?.focus() },
+    { id: 'act-status', label: 'System status', group: 'Action', Icon: Activity, keywords: ['health', 'uptime', 'observability'],
+      run: () => setOverlay('status') },
+    { id: 'act-push', label: 'Notification preferences', group: 'Action', Icon: BellRing, keywords: ['push', 'quiet hours', 'snooze'],
+      run: () => setOverlay('push') },
+    { id: 'act-shortcuts', label: 'Keyboard shortcuts', group: 'Action', Icon: Keyboard, keywords: ['keys', 'help'],
+      run: () => setShortcutsHelpOpen(true) },
   ];
 
   return (
@@ -2502,6 +2597,8 @@ export default function App() {
 
       {/* MAIN */}
       <main className="flex-1 flex flex-col min-w-0 dark:bg-neutral-900">
+        {/* OFFLINE / SYNC STATUS BAR (iteration 18, Cap S) */}
+        <OfflineBanner onSynced={handleSynced} />
         {/* TOPBAR */}
         <header className="h-14 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between px-3 md:px-6 flex-shrink-0 relative">
           <div className="flex items-center gap-2 min-w-0">
@@ -2562,6 +2659,8 @@ export default function App() {
           </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Live co-presence — who else is in this workspace (iteration 18, Cap S) */}
+            <PresenceBar present={presence} currentUserId={currentUser?.id} />
             <button onClick={() => setPaletteOpen(true)}
               aria-label="Open command palette"
               className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-md border border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:text-neutral-900 hover:border-neutral-400 dark:hover:text-neutral-100 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
@@ -6433,8 +6532,30 @@ export default function App() {
         </Modal>
       )}
 
-      {/* COMMAND PALETTE (Cmd/Ctrl-K) */}
-      {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} commands={paletteCommands} />}
+      {/* COMMAND PALETTE (Cmd/Ctrl-K) — actions + live server search of items & people (iteration 18) */}
+      {paletteOpen && (
+        <CommandPalette
+          onClose={() => setPaletteOpen(false)}
+          commands={paletteCommands}
+          onSearch={commandSearch}
+        />
+      )}
+
+      {/* ITERATION 18 OVERLAYS — status page, push prefs, shortcuts help, sync conflicts */}
+      {overlay === 'status' && (
+        <Modal title="System status" onClose={() => setOverlay(null)} size="lg">
+          <StatusPage />
+        </Modal>
+      )}
+      {overlay === 'push' && (
+        <Modal title="Notification preferences" onClose={() => setOverlay(null)} size="lg">
+          <PushSettingsPanel onSaved={() => showToast('Notification preferences saved')} />
+        </Modal>
+      )}
+      {shortcutsHelpOpen && <ShortcutsHelp onClose={() => setShortcutsHelpOpen(false)} />}
+      {conflicts.length > 0 && (
+        <ConflictResolver conflicts={conflicts} onResolve={resolveConflict} onClose={() => setConflicts([])} />
+      )}
 
       {/* TOAST NOTIFICATION — accessible live region (components/works/atoms/toast.jsx) */}
       <Toast toast={toast} canUndo={Boolean(deleteUndoItem)} onUndo={handleUndoDelete} />

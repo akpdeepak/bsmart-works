@@ -20,7 +20,7 @@ Plane** (RB-40 §2) without disturbing the iterations beneath it.
 | AI memory / context | Preferences, context and history remembered across sessions, scoped to (workspace, user); grounds the assistant | `/api/v1/ai/memory` |
 | Conversational dashboards | Natural-language ask → structured widget spec (metric · grouping · timeframe · chart), saveable | `/api/v1/ai/conversational-dashboards` (+ `/compile`) |
 
-Migration **V53**. Frontend: **AI Studio** view (Assistants · Agents · Ask), each reply badged with
+Migration **V54**. Frontend: **AI Studio** view (Assistants · Agents · Ask), each reply badged with
 the control-plane verdict (AI vs Offline fallback).
 
 ## 2. App Marketplace foundation + Developer Portal — Cap R
@@ -32,7 +32,7 @@ the control-plane verdict (AI vs Offline fallback).
 - **Developer Portal:** an SDK manifest (extension points, scopes, example manifest) and sandbox
   credentials for third-party developers. `/api/v1/developer-portal/{sdk,sandbox-credentials}`.
 
-Migration **V54**. Frontend: Marketplace + Developer Portal views.
+Migration **V55**. Frontend: Marketplace + Developer Portal views.
 
 ## 3. Advanced Knowledge — Cap I
 
@@ -41,7 +41,7 @@ Migration **V54**. Frontend: Marketplace + Developer Portal views.
 - **AI structured-data extraction** (deterministic regex/keyword fallback: emails, dates, ids,
   key:value pairs), routed through the control plane.
 
-Migration **V55**. Frontend: Advanced-Knowledge templates + extraction view.
+Migration **V56**. Frontend: Advanced-Knowledge templates + extraction view.
 
 ## 4. Customer chat support — Cap N
 
@@ -50,20 +50,20 @@ message runs through the `support_chat` capability; on fallback (AI off/over-bud
 "talk to a human" request, the conversation is escalated with a canned holding reply for an agent to
 pick up. Agent-side **Support Inbox** (claim, reply, resolve) and a customer-portal chat widget.
 
-Migration **V56**. Endpoints `/api/v1/support-chat` (agent) + `/portal` (customer).
+Migration **V57**. Endpoints `/api/v1/support-chat` (agent) + `/portal` (customer).
 
 ## 5. Localization — Cap A
 
 A dependency-free i18n layer: a **10-language** catalogue (en/hi/es/fr/de/pt/ja/zh/ar/ko) with
 English fallback, **RTL** support for Arabic (`<html dir>`), a persisted per-user locale
 (`PUT /api/v1/users/me/locale`, server-validated against the 10 supported codes), and a top-bar
-language switcher. The primary navigation is translated end to end. Migration **V57** (locale column).
+language switcher. The primary navigation is translated end to end. Migration **V58** (locale column).
 
 ## 6. Performance (Cap S), Security (Cap T), Accessibility (Cap A)
 
 - **Performance:** composite indexes for the hottest query shapes (`work_items(project_id,status)`,
   `work_items(assignee_id,status)`, `events(workspace_id,occurred_at)`); the load-test plan and the
-  RB-40 §5 NFR budgets are documented in **`PERFORMANCE.md`**. Migration **V57**.
+  RB-40 §5 NFR budgets are documented in **`PERFORMANCE.md`**. Migration **V58**.
 - **Security:** the disclosure / coordinated-response / bug-bounty policy and the enforced security
   posture are documented in **`SECURITY.md`** (on top of the existing CI gate: gitleaks, `npm
   audit`, guardrails, unauthorized + cross-tenant tests).
@@ -79,7 +79,7 @@ language switcher. The primary navigation is translated end to end. Migration **
   fallbacks; scope/budget/cache/audit applied centrally; PII redacted at the server boundary.
 - **Gate:** backend unit suite + JaCoCo coverage green; all blocking guardrails pass; frontend lint +
   build green; full Vitest suite (292 tests) passes. Migrations are forward-only, the next sequential
-  numbers (V53–V57), and valid PostgreSQL (applied end-to-end by the Testcontainers CI job).
+  numbers (V54–V58), and valid PostgreSQL (applied end-to-end by the Testcontainers CI job).
 
-Orchestrator §6 updated: **active iteration 20 (complete)**, Flyway high-water mark **V57**, next
-migration **V58**. The generated AI-rules files were regenerated from `ai-rules/` and are in sync.
+Orchestrator §6 updated: **active iteration 20 (complete)**, Flyway high-water mark **V58**, next
+migration **V59**. The generated AI-rules files were regenerated from `ai-rules/` and are in sync.

@@ -21,7 +21,7 @@ budgets and are the pass/fail bar for load testing.
 
 ## What iteration 20 hardened
 
-**Query/index optimization (`V57__user_locale_and_perf_indexes.sql`).** The single-column foreign-key
+**Query/index optimization (`V58__user_locale_and_perf_indexes.sql`).** The single-column foreign-key
 indexes already exist (V40+); iteration 20 adds the **composite** index shapes that match the
 product's hottest multi-column query patterns, so the planner stops sorting/extra-filtering at scale:
 

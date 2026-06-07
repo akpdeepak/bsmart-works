@@ -174,8 +174,8 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   (Mobile + Real-time + Performance Cap S), **19** (Enterprise Security + Compliance Certifications
   Cap T), and the Compliance/Service iterations (7–9).
 - **Flyway high-water mark:** **V58** (`V58__user_locale_and_perf_indexes.sql`; note: V16 was
-  skipped, V23 does not exist; V50–V53 are iterations 16/17/19/18's migrations; V54–V57 are
-  iteration 20's advanced-AI / marketplace / knowledge / customer-chat migrations).
+  skipped, V23 does not exist; V50–V53 are iterations 16/17/19/18's migrations; V54–V58 are
+  iteration 20's advanced-AI / marketplace / knowledge / customer-chat / locale+perf-index migrations).
 - **Next migration:** **`V59__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---

@@ -1,4 +1,4 @@
--- V53: Iteration 20 — Customer chat support (Capability N).
+-- V57: Iteration 20 — Customer chat support (Capability N).
 -- Real-time chat on the customer portal with AI tier-1 auto-response + human escalation. A
 -- conversation is opened by a customer from the portal; the first message runs through the AI
 -- Control Plane (capability "support_chat", RB-40 §2) for a deterministic tier-1 answer, and falls

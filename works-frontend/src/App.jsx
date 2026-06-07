@@ -523,7 +523,7 @@ export default function App() {
       const iv = setInterval(fetchUnreadCount, 30000);
       return () => clearInterval(iv);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [currentUser]);
 
   // Deep-link load: when signed in on a non-default URL, run that view's data fetch once (the
@@ -533,7 +533,7 @@ export default function App() {
     didInitRoute.current = true;
     const v = pathToView(window.location.pathname);
     if (v && v !== 'dashboard' && navigateRef.current) navigateRef.current(v);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [currentUser]);
 
   useEffect(() => {
@@ -545,7 +545,7 @@ export default function App() {
     if (!selectedItem) return;
     const id = selectedItem.id;
     // Keep detail drawer controls aligned with the selected work item.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setTagInput((selectedItem.tags || []).join(', '));
     setActivityEventFilter('');
     const h = headers();
@@ -556,7 +556,7 @@ export default function App() {
     fetchStatusDurations(id); // Iteration 7 (Cap B) — auto time-in-status, projected from the event log
     setDetailTab('details');
     if (fieldDefs.length > 0) fetchFieldValues(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [selectedItem?.id]);
 
   // Close workspace dropdown on outside click
@@ -648,7 +648,7 @@ export default function App() {
   // Track recently viewed items
   useEffect(() => {
     if (!selectedItem) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setRecentlyViewed(prev => {
       const filtered = prev.filter(i => i.id !== selectedItem.id);
       const updated = [{ id: selectedItem.id, title: selectedItem.title, type: selectedItem.type }, ...filtered].slice(0, 8);
@@ -660,7 +660,7 @@ export default function App() {
       .then(r => r.json())
       .then(d => setItemChildren((Array.isArray(d) ? d : []).filter(i => i.parentId === selectedItem.id)))
       .catch(() => setItemChildren([]));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [selectedItem?.id]);
 
   const showToast = (message, type = 'success') => {
@@ -996,7 +996,7 @@ export default function App() {
   // SEARCH
   useEffect(() => {
     if (!searchQuery.trim()) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setSearchResults([]);
       return;
     }

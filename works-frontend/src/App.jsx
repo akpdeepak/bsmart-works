@@ -21,7 +21,7 @@ import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
 import { ModeRail } from '@/components/works/organisms/mode-rail';
 import { SubRail } from '@/components/works/organisms/sub-rail';
-import { MODES, LENSES, TIER, modeForView, firstSurfaceOf, getMode, labelForView, canSeeSurface } from '@/lib/nav-model';
+import { LENSES, TIER, modeForView, firstSurfaceOf, getMode, labelForView, allowed, navDestinations, primarySurfacesFor } from '@/lib/nav-model';
 import { CustomizationView } from '@/components/works/organisms/customization-view';
 import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
 import { DeveloperWorkspace } from '@/components/works/organisms/developer-workspace';
@@ -97,59 +97,6 @@ function reportError(e) {
   if (e) { try { console.error('[bSmart]', e); } catch { /* noop */ } }
   if (_emitToast) _emitToast('Something went wrong. Please try again.', 'error');
 }
-
-// Sidebar information architecture — data-driven, grouped by workflow so the ~25 destinations
-// scan as a handful of intents instead of one flat list (RB-30 §7 navigation; brand §5.2). Lucide
-// icons only, never emoji (RB-30 §8). Each item's click side-effects live in the `navigate`
-// dispatcher inside App(); badge/dot keys are resolved per-render from live state.
-const NAV_GROUPS = [
-  { label: null, items: [{ id: 'dashboard', label: 'Home', Icon: Home }] },
-  { label: 'My Work', items: [
-    { id: 'myworks',       label: 'My Works',      Icon: User, badge: 'myItems' },
-    { id: 'notifications', label: 'Notifications', Icon: Bell, badge: 'unread' },
-    { id: 'developer',     label: 'Developer',     Icon: Code },
-  ] },
-  { label: 'Plan & Track', items: [
-    { id: 'board',    label: 'Board',         Icon: LayoutGrid },
-    { id: 'backlog',  label: 'Backlog',       Icon: ListTodo },
-    { id: 'sprint',   label: 'Active Sprint', Icon: Zap, dot: 'activeSprint' },
-    { id: 'releases', label: 'Releases',      Icon: Rocket },
-    { id: 'projects', label: 'Projects',      Icon: FolderKanban, badge: 'projects' },
-  ] },
-  { label: 'Insights', items: [
-    { id: 'reports',       label: 'Reports',        Icon: BarChart2 },
-    { id: 'dashboards',    label: 'Dashboards',     Icon: LayoutDashboard },
-    { id: 'reportbuilder', label: 'Report builder', Icon: FileText },
-    { id: 'performance',   label: 'Performance',    Icon: TrendingUp },
-  ] },
-  { label: 'Service & Compliance', items: [
-    { id: 'service',    label: 'Service Desk',    Icon: Headset },
-    { id: 'sla',        label: 'SLA',             Icon: Timer },
-    { id: 'compliance', label: 'Compliance',      Icon: ShieldCheck },
-    { id: 'security',   label: 'Security Center',  Icon: Shield },
-  ] },
-  { label: 'Cockpits', items: [
-    { id: 'smcockpit',   label: 'SM Cockpit',   Icon: Gauge },
-    { id: 'poworkspace', label: 'PO Workspace', Icon: MapIcon },
-    { id: 'leadership',  label: 'Leadership',   Icon: Crown },
-    { id: 'adminops',    label: 'Admin Ops',    Icon: ShieldHalf },
-    { id: 'pm',          label: 'PM Artifacts', Icon: ClipboardList },
-  ] },
-  { label: 'Automate & Connect', items: [
-    { id: 'automations',  label: 'Automations',  Icon: Workflow },
-    { id: 'integrations', label: 'Integrations', Icon: Plug },
-    { id: 'bql',          label: 'BQL Query',    Icon: Search },
-  ] },
-  { label: 'Knowledge', items: [
-    { id: 'knowledge', label: 'Knowledge', Icon: BookOpen },
-  ] },
-  { label: 'Configure', items: [
-    { id: 'settings3',     label: 'Workflows & Fields', Icon: SlidersHorizontal },
-    { id: 'customization', label: 'Customization',      Icon: Puzzle },
-    { id: 'workspace',     label: 'Settings',           Icon: Settings },
-    { id: 'trash',         label: 'Trash',              Icon: Trash2 },
-  ] },
-];
 
 const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
@@ -279,7 +226,7 @@ export default function App() {
   const [darkMode, setDarkMode]         = useState(() => localStorage.getItem('bSmartTheme') === 'dark');
 
   // RBAC
-  const [userRole, setUserRole]         = useState({ role: 'MEMBER', tier: 2, permissions: [] });
+  const [userRole, setUserRole]         = useState({ role: 'MEMBER', tier: 2, permissions: [], surfaces: null });
   const can = (perm) => userRole.permissions.includes(perm) || userRole.tier >= 4;
 
   // My Works sub-tab
@@ -363,9 +310,12 @@ export default function App() {
 
   // Role lens (top-bar switcher) — retunes the workspace to a role and jumps to its cockpit.
   // Mirrors the role-tuned dashboard (dashboardRole) so "Today" follows the selected lens.
-  const [lens, setLens]                         = useState('developer'); // matches dashboardRole default
+  // Role lens — Admin/Owner-only "preview as role". null = not previewing (admin sees their own
+  // full, real nav); a lens id = previewing that role's reduced nav + emphasis.
+  const [lens, setLens]                         = useState(null);
   const [lensOpen, setLensOpen]                 = useState(false);
   const lensRef                                 = useRef(null);
+  const [roleLoaded, setRoleLoaded]             = useState(false); // /rbac/me resolved — gates the access guard
 
   // Iteration 6 — Role-tuned Dashboards
   const [dashboardRole, setDashboardRole]       = useState('developer');
@@ -680,6 +630,19 @@ export default function App() {
   };
   _emitToast = showToast; // register the live emitter for module-level reportError (F1/F2)
 
+  // Access guard — once the real role is known, bounce out of any surface this user can't see
+  // (e.g. a deep link or stale URL into an admin area). Server RBAC already 403s the data; this
+  // only avoids rendering an empty, forbidden surface. Preview mode is cosmetic and never triggers
+  // this (it checks the user's real visibility, not the previewed tier).
+  useEffect(() => {
+    if (!roleLoaded) return;
+    if (!allowed(view, { tier: userRole.tier, surfaces: userRole.surfaces })) {
+      setView('dashboard');
+      showToast('You don’t have access to that area.', 'error');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roleLoaded, view, userRole.tier, userRole.surfaces]);
+
   // Multi-workspace context (I01-S02). Loads the workspaces the user belongs to and reconciles the
   // active selection: keep the persisted choice if still a member, else fall back to the first.
   function fetchMyWorkspaces() {
@@ -714,8 +677,11 @@ export default function App() {
       .then(r => r.json()).then(d => setUserRole({
         role: d.role || 'MEMBER',
         tier: d.tier || 2,
-        permissions: Array.isArray(d.permissions) ? d.permissions : []
-      })).catch(reportError);
+        permissions: Array.isArray(d.permissions) ? d.permissions : [],
+        // Server-authoritative nav surface list (RbacController). Absent on older servers — the
+        // nav then falls back to the client tier map (lib/nav-model SURFACE_TIER).
+        surfaces: Array.isArray(d.surfaces) ? d.surfaces : null,
+      })).catch(reportError).finally(() => setRoleLoaded(true));
   }
 
   function fetchWipLimits() {
@@ -2468,8 +2434,8 @@ export default function App() {
   // MAIN APP
   // ==========================================
 
-  // One dispatcher for sidebar navigation — preserves each destination's exact load side-effects
-  // (the data each view needs) while the markup stays data-driven (NAV_GROUPS).
+  // One dispatcher for nav — preserves each destination's exact load side-effects (the data each
+  // view needs) while the rail/sub-rail markup stays data-driven (lib/nav-model MODES).
   const navigate = (id) => {
     setView(id);
     setMobileNavOpen(false); // close the mobile drawer on any navigation (G1)
@@ -2500,17 +2466,26 @@ export default function App() {
   };
   navigateRef.current = navigate; // keep the global shortcut handler pointed at the latest navigate
 
-  // Pick a role lens (top-bar switcher) — retune the role-tuned "Today" dashboard and jump to that
-  // role's cockpit. Keeps every role surface first-class while honouring the mockup's lens model.
+  // Enter "preview as role" (Admin/Owner only): reduce the nav to that role's tier + emphasis,
+  // retune the role-tuned "Today" dashboard, and jump to the role's cockpit.
   const selectLens = (lensId) => {
     const l = LENSES.find((x) => x.id === lensId) || LENSES[0];
     setLens(l.id);
     setLensOpen(false);
     setDashboardRole(l.role);
     navigate(l.view);
-    showToast(`Lens: ${l.label} — surface retuned`);
+    showToast(`Previewing as ${l.label}`);
   };
-  const activeLens = LENSES.find((x) => x.id === lens) || LENSES[0];
+  const exitPreview = () => { setLens(null); setLensOpen(false); showToast('Exited role preview'); };
+
+  // The user's real, server-authoritative visibility (surface list when present, else tier).
+  const realVisibility = { tier: userRole.tier, surfaces: userRole.surfaces };
+  // Only Admin/Owner can preview; for them an active lens reduces the nav to that role's tier.
+  const activeLens = userRole.tier >= TIER.ADMIN && lens ? LENSES.find((x) => x.id === lens) : null;
+  const previewing = Boolean(activeLens);
+  const visibility = previewing ? activeLens.previewTier : realVisibility;
+  const primarySurfaces = previewing ? primarySurfacesFor(activeLens.id) : null;
+
   const activeMode = modeForView(view);
   // When the current view isn't pinned to its mode's sub-rail (a lens cockpit or the BQL chip),
   // surface it as a highlighted orientation row so the nav still shows "where am I?".
@@ -2566,14 +2541,14 @@ export default function App() {
   }
 
   const paletteCommands = [
-    // Only offer "go to" jumps for surfaces this tier may see, so ⌘K matches the rail's
-    // role-based visibility (a Member can't palette-jump to Admin Ops). Server RBAC still governs.
-    ...NAV_GROUPS.flatMap(g => g.items
-      .filter(item => canSeeSurface(item.id, userRole.tier))
-      .map(item => ({
-        id: `go-${item.id}`, label: item.label, group: g.label || 'Go to', Icon: item.Icon,
-        run: () => navigate(item.id),
-      }))),
+    // Only offer "go to" jumps for surfaces the current visibility allows, so ⌘K matches the rail
+    // (a Member can't palette-jump to Admin Ops). Server RBAC still governs the actual data.
+    ...navDestinations()
+      .filter(d => allowed(d.id, visibility))
+      .map(d => ({
+        id: `go-${d.id}`, label: d.label, group: d.group, Icon: d.Icon,
+        run: () => navigate(d.id),
+      })),
     { id: 'act-create', label: 'Create work item', group: 'Action', Icon: ListTodo, keywords: ['new', 'add'],
       run: () => { setView('board'); setIsCreateOpen(true); } },
     { id: 'act-search', label: 'Search work items', group: 'Action', Icon: Search, keywords: ['find'],
@@ -2654,7 +2629,7 @@ export default function App() {
                       );
                     })
                   )}
-                  {canSeeSurface('workspace', userRole.tier) && (
+                  {allowed('workspace', visibility) && (
                     <div className="mt-1 border-t border-neutral-100 pt-1 dark:border-neutral-700">
                       <button type="button" onClick={() => { setWsOpen(false); navigate('workspace'); }}
                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-neutral-500 hover:bg-neutral-50 hover:text-brand-navy dark:hover:bg-neutral-700">
@@ -2666,8 +2641,8 @@ export default function App() {
               )}
             </div>
 
-            {/* BQL chip — hidden for tiers that can't use it (matches rail visibility) */}
-            {canSeeSurface('bql', userRole.tier) && (
+            {/* BQL chip — hidden when the current visibility can't use it (matches rail) */}
+            {allowed('bql', visibility) && (
             <button
               type="button"
               onClick={() => navigate('bql')}
@@ -2696,8 +2671,8 @@ export default function App() {
             {/* Live co-presence — who else is in this workspace (iteration 18, Cap S) */}
             <div className="hidden lg:flex"><PresenceBar present={presence} currentUserId={currentUser?.id} /></div>
 
-            {/* Role lens — Admin/Owner only: a "view as role" preview that emphasises a role's
-                surfaces and jumps to its cockpit. NOT access control — server RBAC governs. */}
+            {/* Role lens — Admin/Owner only: opt-in "preview as role" that reduces the nav to that
+                role's tier + stars its key surfaces. NOT access control — server RBAC governs. */}
             {userRole.tier >= TIER.ADMIN && (
             <div className="relative shrink-0" ref={lensRef}>
               <button
@@ -2705,17 +2680,18 @@ export default function App() {
                 onClick={() => setLensOpen(o => !o)}
                 aria-haspopup="menu"
                 aria-expanded={lensOpen}
-                aria-label={`Preview as role: ${activeLens.label}`}
-                className="hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-semibold text-white bg-white/10 border border-white/15 hover:bg-white/15 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
-                <span className="max-w-28 truncate">{activeLens.label}</span>
+                aria-label={previewing ? `Previewing as ${activeLens.label}. Open role preview menu` : 'Preview as role'}
+                className={`hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-semibold border transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${previewing ? 'bg-brand-orange/25 border-brand-orange/50 text-white' : 'bg-white/10 border-white/15 text-white hover:bg-white/15'}`}>
+                {previewing && <Eye aria-hidden="true" className="h-3.5 w-3.5 text-brand-orange" />}
+                <span className="max-w-28 truncate">{previewing ? activeLens.label : 'View as'}</span>
                 <ChevronDown aria-hidden="true" className="h-3.5 w-3.5 text-white/60" />
               </button>
               {lensOpen && (
-                <div className="absolute right-0 top-full mt-1 w-56 rounded-lg border border-neutral-200 bg-white py-1 text-neutral-900 shadow-xl z-dropdown dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
+                <div className="absolute right-0 top-full mt-1 w-60 rounded-lg border border-neutral-200 bg-white py-1 text-neutral-900 shadow-xl z-dropdown dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
                   <p className="px-3 pt-2 text-xs font-semibold uppercase tracking-wider text-neutral-400">Preview as role</p>
-                  <p className="px-3 pb-2 pt-0.5 text-xs text-neutral-400">Emphasis only · doesn’t change permissions</p>
+                  <p className="px-3 pb-2 pt-0.5 text-xs text-neutral-400">Reduces the nav to that role · doesn’t change your permissions</p>
                   {LENSES.map(l => {
-                    const isActive = l.id === lens;
+                    const isActive = previewing && l.id === lens;
                     return (
                       <button key={l.id} type="button" onClick={() => selectLens(l.id)}
                         aria-current={isActive ? 'true' : undefined}
@@ -2725,6 +2701,14 @@ export default function App() {
                       </button>
                     );
                   })}
+                  {previewing && (
+                    <div className="mt-1 border-t border-neutral-100 pt-1 dark:border-neutral-700">
+                      <button type="button" onClick={exitPreview}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-neutral-500 hover:bg-neutral-50 hover:text-brand-navy dark:hover:bg-neutral-700">
+                        <X aria-hidden="true" className="h-3.5 w-3.5 shrink-0" /> Exit preview
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -2781,14 +2765,15 @@ export default function App() {
           >
             <ModeRail
               activeMode={activeMode}
-              userTier={userRole.tier}
-              onSelectMode={(m) => navigate(firstSurfaceOf(m, userRole.tier))}
+              visibility={visibility}
+              onSelectMode={(m) => navigate(firstSurfaceOf(m, visibility))}
             />
             <SubRail
               activeMode={activeMode}
               activeView={view}
               activeExtra={activeExtra}
-              userTier={userRole.tier}
+              visibility={visibility}
+              primary={primarySurfaces}
               onNavigate={navigate}
               badges={{ myworks: myItems.length, notifications: unreadCount }}
               dots={{ sprint: Boolean(sprints.find(s => s.status === 'ACTIVE')) }}

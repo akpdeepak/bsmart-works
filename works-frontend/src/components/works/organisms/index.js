@@ -6,7 +6,7 @@
  * Target inventory (build as features require):
  *   WorkItemRow      — single row in the work-item list (title, status, assignee, priority)
  *   SprintCard       — sprint summary card (name, dates, capacity bar, item count)
- *   SidebarNav       — the full left navigation (brand-navy, collapsed/expanded, active state)
+ *   ModeRail/SubRail — the two-tier left navigation (navy icon rail + contextual surface list)
  *   CommandPalette   — ⌘K overlay (search input, fuzzy results, keyboard nav)
  *   BulkActionBar    — fixed-bottom bar that appears when ≥1 row is selected
  *   NotificationList — notification panel content (bell icon → right panel)
@@ -19,7 +19,8 @@
  *   - Export each organism from this index once it exists.
  */
 
-export { SidebarNav } from './sidebar-nav';
+export { ModeRail } from './mode-rail';
+export { SubRail } from './sub-rail';
 export { UserMenu } from './user-menu';
 export { DeveloperWorkspace } from './developer-workspace';
 export { CommandPalette } from './command-palette';

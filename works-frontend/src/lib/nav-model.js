@@ -7,6 +7,10 @@
 
 import {
   Home, LayoutGrid, BarChart2, Headset, BookOpen, Puzzle, Settings,
+  User, Bell, Gauge, ListTodo, Zap, Rocket, FolderKanban, ClipboardList,
+  LayoutDashboard, FileText, TrendingUp, MessageSquare, Timer, ShieldCheck,
+  Workflow, Plug, Bot, Package, Code2, SlidersHorizontal, Sparkles, Shield, Trash2,
+  Code, Map as MapIcon, Crown, ShieldHalf, Search,
 } from 'lucide-react';
 
 // ─── Permission tiers (mirror the server: RbacService) ───────────────────────────
@@ -46,9 +50,21 @@ export function tierForSurface(view) {
   return SURFACE_TIER[view] ?? TIER.VIEWER;
 }
 
-// Can a user at `userTier` see this surface? (Owner/tier 5 sees all.)
+// Can a user at `userTier` see this surface? (Owner/tier 5 sees all.) Pure tier predicate — the
+// client fallback when the server hasn't supplied an explicit surface list.
 export function canSeeSurface(view, userTier) {
   return (userTier ?? TIER.VIEWER) >= tierForSurface(view);
+}
+
+// Visibility resolver. `vis` may be:
+//   • a number            — a tier (used by tests + the Admin/Owner "preview as tier" mode)
+//   • { surfaces: [...] }  — the server-authoritative list from /rbac/me (preferred; single source)
+//   • { tier }            — tier fallback when the server didn't send a surface list
+// The server list always wins when present, so the client tier map is only a resilience fallback.
+export function allowed(view, vis) {
+  if (vis && Array.isArray(vis.surfaces)) return vis.surfaces.includes(view);
+  const tier = typeof vis === 'number' ? vis : vis?.tier;
+  return canSeeSurface(view, tier);
 }
 
 // ─── Modes & their surfaces ─────────────────────────────────────────────────────
@@ -57,63 +73,83 @@ export function canSeeSurface(view, userTier) {
 
 export const MODES = [
   { id: 'today', label: 'Home', Icon: Home, surfaces: [
-    { id: 'dashboard',     label: 'Today' },
-    { id: 'myworks',       label: 'My Works' },
-    { id: 'notifications', label: 'Notifications' },
+    { id: 'dashboard',     label: 'Today',         Icon: Home },
+    { id: 'myworks',       label: 'My Works',      Icon: User },
+    { id: 'notifications', label: 'Notifications', Icon: Bell },
   ] },
   { id: 'deliver', label: 'Deliver', Icon: LayoutGrid, surfaces: [
-    { id: 'smcockpit', label: 'Sprint Cockpit' },
-    { id: 'board',     label: 'Board' },
-    { id: 'backlog',   label: 'Backlog' },
-    { id: 'sprint',    label: 'Active Sprint' },
-    { id: 'releases',  label: 'Releases' },
-    { id: 'projects',  label: 'Projects' },
-    { id: 'pm',        label: 'PM Artifacts' },
+    { id: 'smcockpit', label: 'Sprint Cockpit', Icon: Gauge },
+    { id: 'board',     label: 'Board',          Icon: LayoutGrid },
+    { id: 'backlog',   label: 'Backlog',        Icon: ListTodo },
+    { id: 'sprint',    label: 'Active Sprint',  Icon: Zap },
+    { id: 'releases',  label: 'Releases',       Icon: Rocket },
+    { id: 'projects',  label: 'Projects',       Icon: FolderKanban },
+    { id: 'pm',        label: 'PM Artifacts',   Icon: ClipboardList },
   ] },
   { id: 'insight', label: 'Insight', Icon: BarChart2, surfaces: [
-    { id: 'reports',       label: 'Reports' },
-    { id: 'dashboards',    label: 'Dashboards' },
-    { id: 'reportbuilder', label: 'Report Builder' },
-    { id: 'performance',   label: 'Performance' },
+    { id: 'reports',       label: 'Reports',       Icon: BarChart2 },
+    { id: 'dashboards',    label: 'Dashboards',    Icon: LayoutDashboard },
+    { id: 'reportbuilder', label: 'Report Builder', Icon: FileText },
+    { id: 'performance',   label: 'Performance',   Icon: TrendingUp },
   ] },
   { id: 'service', label: 'Service', Icon: Headset, surfaces: [
-    { id: 'service',      label: 'Service Desk' },
-    { id: 'supportinbox', label: 'Support Inbox' },
-    { id: 'sla',          label: 'SLA' },
-    { id: 'compliance',   label: 'Compliance' },
+    { id: 'service',      label: 'Service Desk',  Icon: Headset },
+    { id: 'supportinbox', label: 'Support Inbox', Icon: MessageSquare },
+    { id: 'sla',          label: 'SLA',           Icon: Timer },
+    { id: 'compliance',   label: 'Compliance',    Icon: ShieldCheck },
   ] },
   { id: 'know', label: 'Know', Icon: BookOpen, surfaces: [
-    { id: 'knowledge',         label: 'Knowledge' },
-    { id: 'knowledgeadvanced', label: 'Templates & Extract' },
+    { id: 'knowledge',         label: 'Knowledge',           Icon: BookOpen },
+    { id: 'knowledgeadvanced', label: 'Templates & Extract', Icon: FileText },
   ] },
   { id: 'extend', label: 'Extend', Icon: Puzzle, surfaces: [
-    { id: 'automations',     label: 'Automations' },
-    { id: 'integrations',    label: 'Integrations' },
-    { id: 'aistudio',        label: 'AI Studio' },
-    { id: 'marketplace',     label: 'Marketplace' },
-    { id: 'developerportal', label: 'Developer Portal' },
+    { id: 'automations',     label: 'Automations',      Icon: Workflow },
+    { id: 'integrations',    label: 'Integrations',     Icon: Plug },
+    { id: 'aistudio',        label: 'AI Studio',        Icon: Bot },
+    { id: 'marketplace',     label: 'Marketplace',      Icon: Package },
+    { id: 'developerportal', label: 'Developer Portal', Icon: Code2 },
   ] },
   { id: 'setup', label: 'Set up', Icon: Settings, surfaces: [
-    { id: 'workspace',     label: 'Settings' },
-    { id: 'settings3',     label: 'Workflows & Fields' },
-    { id: 'aicontrol',     label: 'AI Control' },
-    { id: 'customization', label: 'Customization' },
-    { id: 'security',      label: 'Security' },
-    { id: 'trash',         label: 'Trash' },
+    { id: 'workspace',     label: 'Settings',           Icon: Settings },
+    { id: 'settings3',     label: 'Workflows & Fields', Icon: SlidersHorizontal },
+    { id: 'aicontrol',     label: 'AI Control',         Icon: Sparkles },
+    { id: 'customization', label: 'Customization',      Icon: Puzzle },
+    { id: 'security',      label: 'Security',           Icon: Shield },
+    { id: 'trash',         label: 'Trash',              Icon: Trash2 },
   ] },
 ];
+
+// Satellite destinations — reachable via a lens / the BQL chip / ⌘K, but not pinned to a sub-rail.
+export const SATELLITES = [
+  { id: 'developer',   label: 'Developer',    Icon: Code },
+  { id: 'poworkspace', label: 'PO Workspace', Icon: MapIcon },
+  { id: 'leadership',  label: 'Leadership',   Icon: Crown },
+  { id: 'adminops',    label: 'Admin Ops',    Icon: ShieldHalf },
+  { id: 'bql',         label: 'BQL Query',    Icon: Search },
+];
+
+// Flat list of every navigable destination (mode surfaces + satellites), each tagged with the
+// group it belongs to — the single source the ⌘K palette builds its "go to" commands from.
+export function navDestinations() {
+  const out = [];
+  for (const m of MODES) for (const s of m.surfaces) out.push({ ...s, group: m.label });
+  for (const s of SATELLITES) out.push({ ...s, group: 'More' });
+  return out;
+}
 
 // ─── Lenses ─────────────────────────────────────────────────────────────────────
 // The top-right lens switcher retunes the workspace to a role. Each lens maps to the existing
 // role cockpit view + the dashboardRole string fetchDashboard() understands, so picking a lens
 // jumps to that role's cockpit and the role-tuned "Today" dashboard follows.
 
+// `previewTier` is the representative permission tier each role typically holds — so when an
+// Admin/Owner previews a role, the nav reduces to what that role would actually see.
 export const LENSES = [
-  { id: 'scrum-master',  label: 'Scrum Master',  view: 'smcockpit',   role: 'scrum-master' },
-  { id: 'developer',     label: 'Developer',     view: 'developer',   role: 'developer' },
-  { id: 'product-owner', label: 'Product Owner', view: 'poworkspace', role: 'product-owner' },
-  { id: 'leadership',    label: 'Leadership',    view: 'leadership',  role: 'executive' },
-  { id: 'admin',         label: 'Admin',         view: 'adminops',    role: 'admin' },
+  { id: 'scrum-master',  label: 'Scrum Master',  view: 'smcockpit',   role: 'scrum-master',  previewTier: TIER.LEAD },
+  { id: 'developer',     label: 'Developer',     view: 'developer',   role: 'developer',     previewTier: TIER.MEMBER },
+  { id: 'product-owner', label: 'Product Owner', view: 'poworkspace', role: 'product-owner', previewTier: TIER.LEAD },
+  { id: 'leadership',    label: 'Leadership',    view: 'leadership',  role: 'executive',     previewTier: TIER.ADMIN },
+  { id: 'admin',         label: 'Admin',         view: 'adminops',    role: 'admin',         previewTier: TIER.ADMIN },
 ];
 
 // ─── Feature → role mapping ──────────────────────────────────────────────────────
@@ -179,21 +215,21 @@ export function modeForView(view) {
   return SATELLITE_MODE[view] || MODES[0].id;
 }
 
-// The surfaces of a mode that `userTier` may see. Owner sees all.
-export function visibleSurfaces(modeId, userTier) {
+// The surfaces of a mode that `vis` may see (vis = tier number | { surfaces } | { tier }).
+export function visibleSurfaces(modeId, vis) {
   const m = getMode(modeId);
-  return m.surfaces.filter((s) => canSeeSurface(s.id, userTier));
+  return m.surfaces.filter((s) => allowed(s.id, vis));
 }
 
-// The modes that have at least one surface visible to `userTier` — empty modes drop off the rail.
-export function visibleModes(userTier) {
-  return MODES.filter((m) => m.surfaces.some((s) => canSeeSurface(s.id, userTier)));
+// The modes that have at least one visible surface — empty modes drop off the rail.
+export function visibleModes(vis) {
+  return MODES.filter((m) => m.surfaces.some((s) => allowed(s.id, vis)));
 }
 
 // mode id -> first surface view id the user may actually see (where the rail lands you when you
-// click a mode). Falls back to the mode's first surface if the tier is unknown.
-export function firstSurfaceOf(modeId, userTier) {
-  const visible = visibleSurfaces(modeId, userTier);
+// click a mode). Falls back to the mode's first surface if nothing is visible.
+export function firstSurfaceOf(modeId, vis) {
+  const visible = visibleSurfaces(modeId, vis);
   if (visible.length) return visible[0].id;
   const m = getMode(modeId);
   return m.surfaces[0]?.id ?? MODES[0].surfaces[0].id;
@@ -206,13 +242,13 @@ export function getMode(modeId) {
 
 // Friendly label for any known view id. Used to orient the user when the active view is a
 // satellite (a lens cockpit or the BQL chip) that isn't pinned to its mode's sub-rail.
-const EXTRA_LABELS = { bql: 'BQL Query', developer: 'Developer' };
 export function labelForView(view) {
   for (const m of MODES) {
     const s = m.surfaces.find((x) => x.id === view);
     if (s) return s.label;
   }
-  if (EXTRA_LABELS[view]) return EXTRA_LABELS[view];
+  const sat = SATELLITES.find((x) => x.id === view);
+  if (sat) return sat.label;
   const l = LENSES.find((x) => x.view === view);
   return l ? l.label : view;
 }

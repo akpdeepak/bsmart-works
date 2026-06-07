@@ -1,4 +1,4 @@
-import { Command } from 'lucide-react';
+import { Command, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/works/atoms/badge';
 import { getMode, visibleSurfaces } from '@/lib/nav-model';
@@ -11,9 +11,12 @@ import { getMode, visibleSurfaces } from '@/lib/nav-model';
 // and the active-sprint dot carry over from the old sidebar. Design: tokens only, all five states,
 // labelled controls (§4.6, §4.8, §4.12).
 
-export function SubRail({ activeMode, activeView, activeExtra, onNavigate, userTier, badges = {}, dots = {} }) {
+// `primary` (optional) is the set of surface ids that are core to an active role preview; those
+// get a small star so an Admin/Owner previewing a role sees what that role leans on.
+export function SubRail({ activeMode, activeView, activeExtra, onNavigate, visibility, primary, badges = {}, dots = {} }) {
   const mode = getMode(activeMode);
-  const surfaces = visibleSurfaces(activeMode, userTier);
+  const surfaces = visibleSurfaces(activeMode, visibility);
+  const primarySet = primary instanceof Set ? primary : new Set(primary || []);
 
   return (
     <div className="flex h-full w-subrail shrink-0 flex-col overflow-y-auto border-r border-neutral-200 bg-white px-2.5 py-3 dark:border-neutral-700 dark:bg-neutral-900">
@@ -61,12 +64,15 @@ export function SubRail({ activeMode, activeView, activeExtra, onNavigate, userT
                 />
               )}
               <span className="flex-1 truncate">{s.label}</span>
+              {primarySet.has(s.id) && (
+                <Star aria-label="Key surface for this role" className="ml-auto h-3 w-3 shrink-0 fill-brand-orange text-brand-orange" />
+              )}
               {badge != null && badge > 0 && (
-                <Badge tone={s.id === 'notifications' ? 'danger' : 'neutral'} className="ml-auto shrink-0">
+                <Badge tone={s.id === 'notifications' ? 'danger' : 'neutral'} className={cn('shrink-0', primarySet.has(s.id) ? 'ml-1.5' : 'ml-auto')}>
                   {badge}
                 </Badge>
               )}
-              {dot && (
+              {dot && !primarySet.has(s.id) && (
                 <span aria-hidden="true" className="ml-auto h-2 w-2 shrink-0 rounded-full bg-semantic-success" />
               )}
             </button>

@@ -8,8 +8,8 @@ import { visibleModes } from '@/lib/nav-model';
 // Design rules: bg-brand-navy, lucide icons only, brand-orange active accent, all five interactive
 // states, labelled buttons (§4.6, §4.8, §4.12, §4.23). Width is the `w-rail` token, not a literal.
 
-export function ModeRail({ activeMode, onSelectMode, userTier }) {
-  const modes = visibleModes(userTier);
+export function ModeRail({ activeMode, onSelectMode, visibility }) {
+  const modes = visibleModes(visibility);
   return (
     <nav
       aria-label="Workspace modes"

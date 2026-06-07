@@ -14,23 +14,31 @@ public class WorkflowController {
     private final WorkflowStatusRepository statusRepo;
     private final WorkflowTransitionRepository transitionRepo;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
+    private final EventService eventService;
 
     public WorkflowController(WorkflowRepository workflowRepo,
                                WorkflowStatusRepository statusRepo,
                                WorkflowTransitionRepository transitionRepo,
-                               AuthenticatedUser authenticatedUser) {
+                               AuthenticatedUser authenticatedUser,
+                               RbacService rbac,
+                               EventService eventService) {
         this.workflowRepo = workflowRepo;
         this.statusRepo = statusRepo;
         this.transitionRepo = transitionRepo;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
+        this.eventService = eventService;
     }
 
     @GetMapping
     public List<Workflow> list(@RequestParam(required = false) String projectId,
                                @RequestParam(required = false) String workspaceId) {
+        String userId = authenticatedUser.id();
+        // Workspace-scoped (RB-40 §1): caller sees only workflows from their workspaces.
         if (projectId != null) return workflowRepo.findByProjectId(projectId);
         if (workspaceId != null) return workflowRepo.findByWorkspaceId(workspaceId);
-        return workflowRepo.findAll();
+        return workflowRepo.findAllScopedToUser(userId);
     }
 
     @GetMapping("/{id}")
@@ -47,26 +55,65 @@ public class WorkflowController {
 
     @PostMapping
     public Workflow create(@Valid @RequestBody Workflow wf) {
+        String userId = authenticatedUser.id();
+        // RBAC (RB-10 §2 / B02): only workspace members with manage_workflows permission may create.
+        String wsId = wf.getWorkspaceId();
+        if (wsId != null) rbac.require(userId, wsId, "manage_workflows");
         wf.setId("WF-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         wf.setCreatedAt(OffsetDateTime.now());
         wf.setUpdatedAt(OffsetDateTime.now());
-        return workflowRepo.save(wf);
+        Workflow saved = workflowRepo.save(wf);
+        // Event emission (RB-10 §3 / B06): every state change is recorded to the event store.
+        if (wsId != null) {
+            eventService.recordInWorkspace(wsId, saved.getId(), "WORKFLOW_CREATED", userId,
+                    Map.of("name", saved.getName() != null ? saved.getName() : "",
+                           "itemType", saved.getItemType() != null ? saved.getItemType() : ""));
+        } else {
+            eventService.record(saved.getId(), "WORKFLOW_CREATED", userId,
+                    Map.of("name", saved.getName() != null ? saved.getName() : ""));
+        }
+        return saved;
     }
 
     @PutMapping("/{id}")
     public Workflow update(@PathVariable String id, @Valid @RequestBody Workflow updated) {
-        return workflowRepo.findById(id).map(wf -> {
-            wf.setName(updated.getName());
-            wf.setItemType(updated.getItemType());
-            wf.setIsDefault(updated.getIsDefault());
-            wf.setUpdatedAt(OffsetDateTime.now());
-            return workflowRepo.save(wf);
-        }).orElseThrow();
+        String userId = authenticatedUser.id();
+        Workflow existing = workflowRepo.findById(id).orElseThrow(() -> ApiException.notFound("Workflow", id));
+        // RBAC (RB-10 §2 / B02): only members with manage_workflows may mutate.
+        String wsId = existing.getWorkspaceId();
+        if (wsId != null) rbac.require(userId, wsId, "manage_workflows");
+        existing.setName(updated.getName());
+        existing.setItemType(updated.getItemType());
+        existing.setIsDefault(updated.getIsDefault());
+        existing.setUpdatedAt(OffsetDateTime.now());
+        Workflow saved = workflowRepo.save(existing);
+        // Event emission (B06).
+        if (wsId != null) {
+            eventService.recordInWorkspace(wsId, id, "WORKFLOW_UPDATED", userId,
+                    Map.of("name", saved.getName() != null ? saved.getName() : ""));
+        } else {
+            eventService.record(id, "WORKFLOW_UPDATED", userId,
+                    Map.of("name", saved.getName() != null ? saved.getName() : ""));
+        }
+        return saved;
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
+        String userId = authenticatedUser.id();
+        Workflow existing = workflowRepo.findById(id).orElseThrow(() -> ApiException.notFound("Workflow", id));
+        // RBAC (RB-10 §2 / B02): only members with manage_workflows may delete.
+        String wsId = existing.getWorkspaceId();
+        if (wsId != null) rbac.require(userId, wsId, "manage_workflows");
         workflowRepo.deleteById(id);
+        // Event emission (B06).
+        if (wsId != null) {
+            eventService.recordInWorkspace(wsId, id, "WORKFLOW_DELETED", userId,
+                    Map.of("name", existing.getName() != null ? existing.getName() : ""));
+        } else {
+            eventService.record(id, "WORKFLOW_DELETED", userId,
+                    Map.of("name", existing.getName() != null ? existing.getName() : ""));
+        }
         return ResponseEntity.noContent().build();
     }
 
@@ -79,15 +126,29 @@ public class WorkflowController {
 
     @PostMapping("/{id}/statuses")
     public WorkflowStatus addStatus(@PathVariable String id, @Valid @RequestBody WorkflowStatus status) {
+        String userId = authenticatedUser.id();
+        Workflow wf = workflowRepo.findById(id).orElseThrow(() -> ApiException.notFound("Workflow", id));
+        // RBAC (B02): manage_workflows required to mutate statuses.
+        if (wf.getWorkspaceId() != null) rbac.require(userId, wf.getWorkspaceId(), "manage_workflows");
         status.setId("WFS-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         status.setWorkflowId(id);
-        return statusRepo.save(status);
+        WorkflowStatus saved = statusRepo.save(status);
+        // Event emission (B06).
+        String wsId = wf.getWorkspaceId();
+        if (wsId != null) {
+            eventService.recordInWorkspace(wsId, id, "WORKFLOW_STATUS_ADDED", userId,
+                    Map.of("statusName", saved.getName() != null ? saved.getName() : ""));
+        }
+        return saved;
     }
 
     @PutMapping("/{id}/statuses/{statusId}")
     public WorkflowStatus updateStatus(@PathVariable String id, @PathVariable String statusId,
                                        @Valid @RequestBody WorkflowStatus updated) {
-        return statusRepo.findById(statusId).map(s -> {
+        String userId = authenticatedUser.id();
+        Workflow wf = workflowRepo.findById(id).orElseThrow(() -> ApiException.notFound("Workflow", id));
+        if (wf.getWorkspaceId() != null) rbac.require(userId, wf.getWorkspaceId(), "manage_workflows");
+        WorkflowStatus saved = statusRepo.findById(statusId).map(s -> {
             s.setName(updated.getName());
             s.setCategory(updated.getCategory());
             s.setColor(updated.getColor());
@@ -95,10 +156,14 @@ public class WorkflowController {
             s.setIsInitial(updated.getIsInitial());
             return statusRepo.save(s);
         }).orElseThrow();
+        return saved;
     }
 
     @DeleteMapping("/{id}/statuses/{statusId}")
     public ResponseEntity<Void> deleteStatus(@PathVariable String id, @PathVariable String statusId) {
+        String userId = authenticatedUser.id();
+        Workflow wf = workflowRepo.findById(id).orElseThrow(() -> ApiException.notFound("Workflow", id));
+        if (wf.getWorkspaceId() != null) rbac.require(userId, wf.getWorkspaceId(), "manage_workflows");
         statusRepo.deleteById(statusId);
         return ResponseEntity.noContent().build();
     }
@@ -107,6 +172,9 @@ public class WorkflowController {
     @PutMapping("/{id}/statuses/reorder")
     public List<WorkflowStatus> reorderStatuses(@PathVariable String id,
                                                  @Valid @RequestBody List<Map<String, Object>> order) {
+        String userId = authenticatedUser.id();
+        Workflow wf = workflowRepo.findById(id).orElseThrow(() -> ApiException.notFound("Workflow", id));
+        if (wf.getWorkspaceId() != null) rbac.require(userId, wf.getWorkspaceId(), "manage_workflows");
         order.forEach(item -> {
             String statusId = (String) item.get("id");
             Integer pos = ((Number) item.get("position")).intValue();
@@ -125,18 +193,31 @@ public class WorkflowController {
     @PostMapping("/{id}/transitions")
     public WorkflowTransition addTransition(@PathVariable String id,
                                              @Valid @RequestBody WorkflowTransition transition) {
+        String userId = authenticatedUser.id();
+        Workflow wf = workflowRepo.findById(id).orElseThrow(() -> ApiException.notFound("Workflow", id));
+        if (wf.getWorkspaceId() != null) rbac.require(userId, wf.getWorkspaceId(), "manage_workflows");
         transition.setId("WFT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         transition.setWorkflowId(id);
         if (transition.getConditions() == null) transition.setConditions("[]");
         if (transition.getValidators() == null) transition.setValidators("[]");
         if (transition.getPostFunctions() == null) transition.setPostFunctions("[]");
-        return transitionRepo.save(transition);
+        WorkflowTransition saved = transitionRepo.save(transition);
+        // Event emission (B06).
+        String wsId = wf.getWorkspaceId();
+        if (wsId != null) {
+            eventService.recordInWorkspace(wsId, id, "WORKFLOW_TRANSITION_ADDED", userId,
+                    Map.of("transitionName", saved.getName() != null ? saved.getName() : ""));
+        }
+        return saved;
     }
 
     @PutMapping("/{id}/transitions/{transId}")
     public WorkflowTransition updateTransition(@PathVariable String id,
                                                 @PathVariable String transId,
                                                 @Valid @RequestBody WorkflowTransition updated) {
+        String userId = authenticatedUser.id();
+        Workflow wf = workflowRepo.findById(id).orElseThrow(() -> ApiException.notFound("Workflow", id));
+        if (wf.getWorkspaceId() != null) rbac.require(userId, wf.getWorkspaceId(), "manage_workflows");
         return transitionRepo.findById(transId).map(t -> {
             t.setName(updated.getName());
             t.setFromStatus(updated.getFromStatus());
@@ -151,6 +232,9 @@ public class WorkflowController {
     @DeleteMapping("/{id}/transitions/{transId}")
     public ResponseEntity<Void> deleteTransition(@PathVariable String id,
                                                    @PathVariable String transId) {
+        String userId = authenticatedUser.id();
+        Workflow wf = workflowRepo.findById(id).orElseThrow(() -> ApiException.notFound("Workflow", id));
+        if (wf.getWorkspaceId() != null) rbac.require(userId, wf.getWorkspaceId(), "manage_workflows");
         transitionRepo.deleteById(transId);
         return ResponseEntity.noContent().build();
     }

@@ -18,8 +18,9 @@ ALTER TABLE notification_preferences ADD COLUMN IF NOT EXISTS notify_automation 
 ALTER TABLE notification_preferences ADD COLUMN IF NOT EXISTS push_enabled         BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE notification_preferences ADD COLUMN IF NOT EXISTS quiet_hours_enabled  BOOLEAN NOT NULL DEFAULT FALSE;
 -- Quiet-hours window as local hours-of-day [start, end); a wrap-around (e.g. 22 → 7) is allowed.
-ALTER TABLE notification_preferences ADD COLUMN IF NOT EXISTS quiet_hours_start    SMALLINT NOT NULL DEFAULT 22;
-ALTER TABLE notification_preferences ADD COLUMN IF NOT EXISTS quiet_hours_end      SMALLINT NOT NULL DEFAULT 7;
+-- INTEGER (not SMALLINT) to match the entity's int fields under Hibernate ddl-auto=validate.
+ALTER TABLE notification_preferences ADD COLUMN IF NOT EXISTS quiet_hours_start    INTEGER NOT NULL DEFAULT 22;
+ALTER TABLE notification_preferences ADD COLUMN IF NOT EXISTS quiet_hours_end      INTEGER NOT NULL DEFAULT 7;
 -- "Snooze all non-critical pushes until" — NULL = not snoozed.
 ALTER TABLE notification_preferences ADD COLUMN IF NOT EXISTS snooze_until         TIMESTAMPTZ;
 -- P0/critical pushes pierce quiet hours and snooze when this is on (the on-call safety valve).

@@ -22,8 +22,12 @@ public class PushSubscription {
     @Column(name = "user_id")
     private String userId;
 
+    // TEXT columns — mirror the AppEvent pattern so Hibernate ddl-auto=validate matches the schema.
+    @Column(columnDefinition = "TEXT")
     private String endpoint;
+    @Column(columnDefinition = "TEXT")
     private String p256dh;
+    @Column(columnDefinition = "TEXT")
     private String auth;
 
     @Column(name = "user_agent")

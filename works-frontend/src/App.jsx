@@ -29,6 +29,7 @@ import { AcceptanceCriteria } from '@/components/works/organisms/acceptance-crit
 import { BoardWipBadge } from '@/components/works/organisms/board-wip-badge';
 import { AutomationsPanel } from '@/components/works/organisms/automations-panel';
 import { IntegrationsPanel } from '@/components/works/organisms/integrations-panel';
+import { SecurityCenter } from '@/components/works/organisms/security-center';
 import { Modal } from '@/components/works/molecules/modal';
 import { Toast } from '@/components/works/atoms/toast';
 import { Skeleton } from '@/components/works/atoms/skeleton';
@@ -101,9 +102,10 @@ const NAV_GROUPS = [
     { id: 'performance',   label: 'Performance',    Icon: TrendingUp },
   ] },
   { label: 'Service & Compliance', items: [
-    { id: 'service',    label: 'Service Desk', Icon: Headset },
-    { id: 'sla',        label: 'SLA',          Icon: Timer },
-    { id: 'compliance', label: 'Compliance',   Icon: ShieldCheck },
+    { id: 'service',    label: 'Service Desk',    Icon: Headset },
+    { id: 'sla',        label: 'SLA',             Icon: Timer },
+    { id: 'compliance', label: 'Compliance',      Icon: ShieldCheck },
+    { id: 'security',   label: 'Security Center',  Icon: Shield },
   ] },
   { label: 'Cockpits', items: [
     { id: 'smcockpit',   label: 'SM Cockpit',   Icon: Gauge },
@@ -4231,6 +4233,12 @@ export default function App() {
           {/* ITERATION 13 — Integrations (connectors, webhooks, API tokens) */}
           {view === 'integrations' && (
             <IntegrationsPanel workspaceId={activeWorkspaceId} can={can} onToast={showToast} />
+          )}
+
+          {/* ITERATION 19 — Security Center (Cap T: passkeys, conditional access, audit log,
+              data residency/BYOK, anomalies, GDPR/DPDP, SOC 2 / ISO 27001 evidence) */}
+          {view === 'security' && (
+            <SecurityCenter workspaceId={activeWorkspaceId} can={can} onToast={showToast} />
           )}
 
           {/* TRASH VIEW */}

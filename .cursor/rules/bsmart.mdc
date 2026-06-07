@@ -162,18 +162,23 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
 > should be extended to verify the migration number against `db/migration/`.
 
 - **Iterations:** 20 total · 26 capabilities · ~346 sub-features.
-- **Active iteration:** **13 (complete)** — Automation Engine + Integrations (Cap C/Q/A): visual
-  When/If/Then rules with test-mode and a run audit log, signed outbound webhooks with retry +
-  dead-letter, the public-API token foundation, and the connector registry (Slack / GitHub / GitLab /
-  email / calendar + SSO/SCIM). Built on iteration **12** (KPI Framework with privacy guardrails —
-  Cap L: layered metrics, manager view API-blocked from individual drill-down, immutable snapshots)
-  and iteration **11** (broad AI expansion on the **AI Control Plane** — one policy hierarchy, one
-  budget, one audit trail, one fallback contract, RB-40 §2). Iteration 7 (Compliance Rules Engine)
-  complete. **Iteration 15 (Scrum Master Cockpit Cap V + Product Owner Workspace Cap W) was also
-  delivered ahead of 14**, by explicit owner directive, on the same AI-Control-Plane foundation.
-- **Flyway high-water mark:** **V45** (`V45__automation_and_integrations.sql`; note: V16 was skipped,
-  V23 does not exist; V41 is iteration 15's `V41__iteration15_scrum_po.sql`).
-- **Next migration:** **`V46__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+- **Active iteration:** **19 (complete)** — Enterprise Security + Compliance Certifications (Cap T):
+  passkeys / WebAuthn (phishing-resistant, passwordless sign-in), conditional-access policies
+  (IP / geo / device-trust / time-of-day, per workspace & role), a **tamper-evident, hash-chained
+  audit log** (append-only, DB-enforced) with browse / export / SIEM streaming, data residency +
+  **BYOK** (customer-managed key references), AI access-anomaly detection (deterministic fallback,
+  RB-40 §2), GDPR / DPDP data export + right-to-be-forgotten (crypto-shred semantics, RB-40 §3), a
+  pen-test / red-team / bug-bounty register, and one-click **SOC 2 Type 2 / ISO 27001** evidence
+  bundles. Built on the AI-Control-Plane foundation (iteration **11**), the KPI Framework
+  (iteration **12**, Cap L), Automation + Integrations (iteration **13**, Cap C/Q/A), the Developer
+  Workspace (iteration **14**, Cap U), and the Scrum Master Cockpit + Product Owner Workspace
+  (iteration **15**, Cap V/W, delivered ahead of 14 by owner directive). Iteration 7 (Compliance
+  Rules Engine) complete.
+- **Flyway high-water mark:** **V50** (`V50__iteration19_enterprise_security.sql`; note: V16 was
+  skipped, V23 does not exist; V41 is iteration 15's `V41__iteration15_scrum_po.sql`; V47 is
+  iteration 14's developer workspace; V46 the SLA engine; V48 AI workspace settings; V49 board WIP
+  limits).
+- **Next migration:** **`V51__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

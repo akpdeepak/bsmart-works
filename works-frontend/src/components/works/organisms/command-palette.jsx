@@ -18,13 +18,44 @@ function matches(cmd, q) {
   return q.toLowerCase().split(/\s+/).every((tok) => hay.includes(tok));
 }
 
-export function CommandPalette({ onClose, commands = [], placeholder = 'Search actions and pages…' }) {
+export function CommandPalette({ onClose, commands = [], onSearch, placeholder = 'Search actions and pages…' }) {
   const [query, setQuery] = React.useState('');
   const [active, setActive] = React.useState(0);
+  const [dynamic, setDynamic] = React.useState([]);
   const inputRef = React.useRef(null);
   const listRef = React.useRef(null);
 
-  const filtered = React.useMemo(() => commands.filter((c) => matches(c, query)), [commands, query]);
+  // Server-side search (iteration 18, Cap S — "fuzzy search across actions, items, people"). When an
+  // onSearch is supplied, the static actions filter locally and the dynamic results (items + people)
+  // are fetched, debounced, as the user types. The two are concatenated below.
+  React.useEffect(() => {
+    if (!onSearch) return undefined;
+    let cancelled = false;
+    // All setDynamic calls happen inside this async (timeout/promise) continuation, never
+    // synchronously in the effect body (react-hooks/set-state-in-effect).
+    const t = setTimeout(() => {
+      if (!query.trim()) {
+        if (!cancelled) setDynamic([]);
+        return;
+      }
+      Promise.resolve(onSearch(query))
+        .then((results) => {
+          if (!cancelled) setDynamic(Array.isArray(results) ? results : []);
+        })
+        .catch(() => {
+          if (!cancelled) setDynamic([]);
+        });
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [onSearch, query]);
+
+  const filtered = React.useMemo(
+    () => [...commands.filter((c) => matches(c, query)), ...dynamic],
+    [commands, query, dynamic],
+  );
 
   // Focus the input and lock body scroll while the palette is mounted (= open).
   React.useEffect(() => {

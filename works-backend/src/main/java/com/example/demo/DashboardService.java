@@ -14,32 +14,42 @@ public class DashboardService {
     public Map<String, Object> getDeveloperDashboard(String userId) {
         Map<String, Object> result = new LinkedHashMap<>();
 
-        // My open items
+        // My open items — already user-scoped via assignee_id; also workspace-scoped through
+        // workspace_members → projects join (RB-40 §1 / B10).
         List<Map<String, Object>> myItems = jdbc.queryForList(
-            "SELECT id, title, status, type, priority, due_date, project_id, sprint_id, story_points " +
-            "FROM work_items WHERE assignee_id = ? AND status != 'Done' AND deleted_at IS NULL " +
-            "ORDER BY CASE priority WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 ELSE 4 END, due_date NULLS LAST LIMIT 20",
-            userId);
+            "SELECT wi.id, wi.title, wi.status, wi.type, wi.priority, wi.due_date, wi.project_id, wi.sprint_id, wi.story_points " +
+            "FROM work_items wi JOIN projects p ON p.id = wi.project_id " +
+            "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id " +
+            "WHERE wi.assignee_id = ? AND wi.status != 'Done' AND wi.deleted_at IS NULL AND wm.user_id = ? " +
+            "ORDER BY CASE wi.priority WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 ELSE 4 END, wi.due_date NULLS LAST LIMIT 20",
+            userId, userId);
         result.put("myOpenItems", myItems);
         result.put("myOpenItemCount", myItems.size());
 
-        // Active sprint
+        // Active sprint — workspace-scoped: only sprints in the caller's workspaces (B10).
         List<Map<String, Object>> activeSprint = jdbc.queryForList(
             "SELECT s.id, s.name, s.goal, s.status, s.capacity, s.start_date, s.end_date, " +
             "COUNT(wi.id) as total_items, " +
             "SUM(CASE WHEN wi.status = 'Done' THEN 1 ELSE 0 END) as done_items, " +
             "COALESCE(SUM(wi.story_points), 0) as total_points, " +
             "COALESCE(SUM(CASE WHEN wi.status = 'Done' THEN wi.story_points ELSE 0 END), 0) as done_points " +
-            "FROM sprints s LEFT JOIN work_items wi ON wi.sprint_id = s.id AND wi.deleted_at IS NULL " +
-            "WHERE s.status = 'ACTIVE' GROUP BY s.id LIMIT 1");
+            "FROM sprints s " +
+            "JOIN projects p ON p.id = s.project_id " +
+            "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.user_id = ? " +
+            "LEFT JOIN work_items wi ON wi.sprint_id = s.id AND wi.deleted_at IS NULL " +
+            "WHERE s.status = 'ACTIVE' GROUP BY s.id LIMIT 1",
+            userId);
         result.put("activeSprint", activeSprint.isEmpty() ? null : activeSprint.get(0));
 
-        // My items in active sprint
+        // My items in active sprint — workspace-scoped (B10).
         List<Map<String, Object>> mySprintItems = jdbc.queryForList(
             "SELECT wi.id, wi.title, wi.status, wi.type, wi.story_points, wi.priority " +
-            "FROM work_items wi JOIN sprints s ON s.id = wi.sprint_id " +
+            "FROM work_items wi " +
+            "JOIN sprints s ON s.id = wi.sprint_id " +
+            "JOIN projects p ON p.id = wi.project_id " +
+            "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.user_id = ? " +
             "WHERE s.status = 'ACTIVE' AND wi.assignee_id = ? AND wi.deleted_at IS NULL",
-            userId);
+            userId, userId);
         result.put("mySprintItems", mySprintItems);
 
         // My recent worklogs (last 7 days)
@@ -59,22 +69,26 @@ public class DashboardService {
             userId);
         result.put("weeklyMinutes", weekHours.isEmpty() ? 0 : weekHours.get(0).get("total_minutes"));
 
-        // My blockers (items linked BLOCKED_BY)
+        // My blockers (items linked BLOCKED_BY) — workspace-scoped (B10).
         List<Map<String, Object>> blockers = jdbc.queryForList(
             "SELECT wi.id, wi.title, wi.status, wil.link_type, wb.title as blocking_title " +
             "FROM work_item_links wil " +
             "JOIN work_items wi ON wi.id = wil.source_id " +
             "JOIN work_items wb ON wb.id = wil.target_id " +
+            "JOIN projects p ON p.id = wi.project_id " +
+            "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.user_id = ? " +
             "WHERE wi.assignee_id = ? AND wil.link_type = 'BLOCKED_BY' AND wi.deleted_at IS NULL",
-            userId);
+            userId, userId);
         result.put("blockers", blockers);
 
-        // Overdue items
+        // Overdue items — workspace-scoped (B10).
         List<Map<String, Object>> overdue = jdbc.queryForList(
-            "SELECT id, title, status, type, priority, due_date FROM work_items " +
-            "WHERE assignee_id = ? AND status != 'Done' AND due_date < CURRENT_DATE AND deleted_at IS NULL " +
-            "ORDER BY due_date LIMIT 5",
-            userId);
+            "SELECT wi.id, wi.title, wi.status, wi.type, wi.priority, wi.due_date FROM work_items wi " +
+            "JOIN projects p ON p.id = wi.project_id " +
+            "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.user_id = ? " +
+            "WHERE wi.assignee_id = ? AND wi.status != 'Done' AND wi.due_date < CURRENT_DATE AND wi.deleted_at IS NULL " +
+            "ORDER BY wi.due_date LIMIT 5",
+            userId, userId);
         result.put("overdueItems", overdue);
 
         return result;

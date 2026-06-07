@@ -52,7 +52,7 @@ and roll it back if it was wrong — all versioned and audited.
   every interactive element labelled, with explicit loading / empty / error states; branding colors
   are stored as **token names**, never literals.
 
-## Data model (Flyway `V50__iteration17_customization_engine.sql`)
+## Data model (Flyway `V51__iteration17_customization_engine.sql`)
 
 `workspace_configs` (live doc + current_version) · `config_versions` (append-only history) ·
 `config_templates` (owner/shareable) · `config_sandboxes` (DRAFT/PROMOTED/DISCARDED). All plural,
@@ -66,7 +66,7 @@ snake_case, jsonb documents (the proven `String` + `columnDefinition="jsonb"` ma
 - **Frontend:** new `customization-view` + `customization.js` client; 6 new Vitest tests. Full suite
   **272 green**; lint clean; `vite build` green.
 - **Gate:** `guardrails.sh` blocking rules pass; `generate-ai-rules.mjs --check` and
-  `check-dod-sync.sh` green. Orchestrator §6 updated (high-water mark **V50**, next **V51**, active
+  `check-dod-sync.sh` green. Orchestrator §6 updated (high-water mark **V51**, next **V52**, active
   iteration **17**).
 
 ## Frontend

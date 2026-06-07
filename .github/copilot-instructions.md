@@ -164,13 +164,16 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   history), diff, rollback, reusable templates (internal + customer-shareable), sandbox-before-promote,
   JSON/YAML import-export, owner-only lockable settings, and pre-apply impact analysis all apply
   uniformly across the whole surface. Extension *execution* is deliberately deferred to a sandboxed
-  runtime (security — RB-40; TECH-DEBT). Built on the prior line: iteration **13** (Automation Engine +
-  Integrations, Cap C/Q/A), **12** (KPI Framework, Cap L), **11** (AI Control Plane), **14** (Developer
-  Workspace) and **15** (Scrum Master Cockpit Cap V + Product Owner Workspace Cap W, delivered ahead of
-  14 by owner directive). Iteration 7 (Compliance Rules Engine) complete.
-- **Flyway high-water mark:** **V50** (`V50__iteration17_customization_engine.sql`; note: V16 was
-  skipped, V23 does not exist; V41 is iteration 15's `V41__iteration15_scrum_po.sql`).
-- **Next migration:** **`V51__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+  runtime (security — RB-40; TECH-DEBT). Built on the prior line: iteration **16** (Leadership Console
+  Cap X + Admin Operations Center Cap Y), **15** (Scrum Master Cockpit Cap V + Product Owner Workspace
+  Cap W), **14** (Developer Workspace Cap U), **13** (Automation Engine + Integrations, Cap C/Q/A),
+  **12** (KPI Framework, Cap L) and **11** (AI Control Plane). Iteration 7 (Compliance Rules Engine)
+  complete. All five role surfaces (Developer / SM / PO / Leadership / Admin) are live as of 16.
+- **Flyway high-water mark:** **V51** (`V51__iteration17_customization_engine.sql`; note: V16 was
+  skipped, V23 does not exist; V41 is iteration 15's `V41__iteration15_scrum_po.sql`, V47 is iteration
+  14's `V47__iteration14_developer_workspace.sql`, V50 is iteration 16's
+  `V50__iteration16_leadership_admin.sql`).
+- **Next migration:** **`V52__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

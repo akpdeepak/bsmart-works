@@ -13,6 +13,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -178,5 +180,32 @@ class KpiServiceTest {
         List<Double> hours = List.of(10.0, 50.0, 100.0, 400.0);
         List<Integer> buckets = KpiService.bucketize(hours, new int[]{24, 72, 168, 336});
         assertThat(buckets).containsExactly(1, 1, 1, 0, 1);
+    }
+
+    // ── tenant isolation: /distribution project scope (RB-40 §1) ───────────────────
+
+    @Test
+    void distribution_projectScope_refusesProjectOutsideTheWorkspace() {
+        // The caller's workspace contains only PROJ-1; they request a foreign project's distribution.
+        when(projects.findByWorkspaceId(WS)).thenReturn(List.of(project()));
+
+        KpiService.Distribution dist = kpi.distribution(WS, "PROJECT", "PROJ-FOREIGN");
+
+        // No cross-tenant query is issued, and nothing is leaked.
+        verify(workItems, never()).findByProjectId("PROJ-FOREIGN");
+        assertThat(dist.outliers()).isEmpty();
+        assertThat(dist.median()).isZero();
+    }
+
+    @Test
+    void distribution_projectScope_allowsProjectInTheWorkspace() {
+        when(projects.findByWorkspaceId(WS)).thenReturn(List.of(project()));
+        when(workItems.findByProjectId("PROJ-1")).thenReturn(List.of(
+            item("A-1", ME, "Done", 3, "Story"), item("A-2", OTHER, "Done", 2, "Bug")));
+
+        kpi.distribution(WS, "PROJECT", "PROJ-1");
+
+        // The in-workspace project is queried normally.
+        verify(workItems).findByProjectId("PROJ-1");
     }
 }

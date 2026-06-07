@@ -415,12 +415,22 @@ public class KpiService {
     private List<WorkItem> scopeItems(String workspaceId, String scopeLevel, String scopeId) {
         String level = scopeLevel == null ? "ORG" : scopeLevel.trim().toUpperCase(Locale.ROOT);
         return switch (level) {
-            case "PROJECT" -> scopeId == null ? List.of() : workItems.findByProjectId(scopeId);
+            // Tenant guard (RB-40 §1): the project must belong to the caller's workspace, else a
+            // view_team_metrics holder could read another workspace's project distribution by id.
+            case "PROJECT" -> isProjectInWorkspace(workspaceId, scopeId)
+                ? workItems.findByProjectId(scopeId) : List.of();
             case "TEAM" -> teams.findByWorkspaceIdOrderByNameAsc(workspaceId).stream()
                 .filter(t -> t.getId().equals(scopeId)).findFirst()
                 .map(t -> teamItems(workspaceId, t)).orElse(List.of());
             default -> scopedItems(workspaceId);
         };
+    }
+
+    /** True when {@code projectId} is a project in {@code workspaceId} — the tenant-isolation check
+     *  shared by the project scope of {@code /distribution} (RB-40 §1). */
+    private boolean isProjectInWorkspace(String workspaceId, String projectId) {
+        return projectId != null && projects.findByWorkspaceId(workspaceId).stream()
+            .anyMatch(p -> projectId.equals(p.getId()));
     }
 
     private List<String> parseProjectIds(String jsonArray) {

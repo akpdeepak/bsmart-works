@@ -165,12 +165,13 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   per-operation performance monitoring vs the RB-40 §5 budgets, and an in-product status page.
   Native iOS/Android (Swift/Kotlin) are delivered as the install-free PWA in this monorepo; native
   app shells are separate repos out of scope here. Built on the earlier delivered layers —
-  iteration **13** (Automation Engine + Integrations, Cap C/Q/A), **12** (KPI Framework, Cap L),
-  **11** (AI Control Plane), **7** (Compliance Rules Engine), and **14/15** (Developer Workspace +
-  Scrum Master Cockpit Cap V / Product Owner Workspace Cap W).
-- **Flyway high-water mark:** **V50** (`V50__iteration18_mobile_realtime_perf.sql`; note: V16 was
-  skipped, V23 does not exist).
-- **Next migration:** **`V51__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+  iteration **16** (Leadership Console Cap X + Admin Operations Center Cap Y), **14/15** (Developer
+  Workspace Cap U + Scrum Master Cockpit Cap V / Product Owner Workspace Cap W), **13** (Automation
+  Engine + Integrations, Cap C/Q/A), **12** (KPI Framework, Cap L), **11** (AI Control Plane), and
+  **7** (Compliance Rules Engine).
+- **Flyway high-water mark:** **V51** (`V51__iteration18_mobile_realtime_perf.sql`; note: V16 was
+  skipped, V23 does not exist; V50 is iteration 16's `V50__iteration16_leadership_admin.sql`).
+- **Next migration:** **`V52__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

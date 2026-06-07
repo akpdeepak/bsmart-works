@@ -19,7 +19,9 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
-import { SidebarNav } from '@/components/works/organisms/sidebar-nav';
+import { ModeRail } from '@/components/works/organisms/mode-rail';
+import { SubRail } from '@/components/works/organisms/sub-rail';
+import { MODES, LENSES, modeForView, firstSurfaceOf } from '@/lib/nav-model';
 import { CustomizationView } from '@/components/works/organisms/customization-view';
 import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
 import { DeveloperWorkspace } from '@/components/works/organisms/developer-workspace';
@@ -359,6 +361,12 @@ export default function App() {
   const [pmFormOpen, setPmFormOpen]         = useState(null); // 'risk'|'assumption'|...|null
   const [selectedPmItem, setSelectedPmItem] = useState(null);
 
+  // Role lens (top-bar switcher) — retunes the workspace to a role and jumps to its cockpit.
+  // Mirrors the role-tuned dashboard (dashboardRole) so "Today" follows the selected lens.
+  const [lens, setLens]                         = useState('scrum-master');
+  const [lensOpen, setLensOpen]                 = useState(false);
+  const lensRef                                 = useRef(null);
+
   // Iteration 6 — Role-tuned Dashboards
   const [dashboardRole, setDashboardRole]       = useState('developer');
   const [developerDash, setDeveloperDash]       = useState(null);
@@ -559,9 +567,12 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedItem?.id]);
 
-  // Close workspace dropdown on outside click
+  // Close workspace + lens dropdowns on outside click
   useEffect(() => {
-    function handler(e) { if (wsRef.current && !wsRef.current.contains(e.target)) setWsOpen(false); }
+    function handler(e) {
+      if (wsRef.current && !wsRef.current.contains(e.target)) setWsOpen(false);
+      if (lensRef.current && !lensRef.current.contains(e.target)) setLensOpen(false);
+    }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
@@ -591,7 +602,7 @@ export default function App() {
         return;
       }
       if (e.key === 'g') { goToRef.current = true; setTimeout(() => { goToRef.current = false; }, 1200); return; }
-      if (e.key === '/') { e.preventDefault(); searchRef.current?.querySelector('input')?.focus(); return; }
+      if (e.key === '/') { e.preventDefault(); setPaletteOpen(true); return; }
       if (e.key === 'c') { e.preventDefault(); setView('board'); setIsCreateOpen(true); return; }
       if (e.key === '?') { e.preventDefault(); setShortcutsHelpOpen(o => !o); return; } // iteration 18: shortcuts help
     }
@@ -2489,6 +2500,19 @@ export default function App() {
   };
   navigateRef.current = navigate; // keep the global shortcut handler pointed at the latest navigate
 
+  // Pick a role lens (top-bar switcher) — retune the role-tuned "Today" dashboard and jump to that
+  // role's cockpit. Keeps every role surface first-class while honouring the mockup's lens model.
+  const selectLens = (lensId) => {
+    const l = LENSES.find((x) => x.id === lensId) || LENSES[0];
+    setLens(l.id);
+    setLensOpen(false);
+    setDashboardRole(l.role);
+    navigate(l.view);
+    showToast(`Lens: ${l.label} — surface retuned`);
+  };
+  const activeLens = LENSES.find((x) => x.id === lens) || LENSES[0];
+  const activeMode = modeForView(view);
+
   // Commands for the Cmd-K palette: every destination + a couple of quick actions.
   // Offline-draft sync result handler (iteration 18, Cap S). APPLIED drafts are already dropped by
   // syncDrafts; any CONFLICT is surfaced in the conflict-resolution UI, pairing the server state with
@@ -2544,7 +2568,7 @@ export default function App() {
     { id: 'act-create', label: 'Create work item', group: 'Action', Icon: ListTodo, keywords: ['new', 'add'],
       run: () => { setView('board'); setIsCreateOpen(true); } },
     { id: 'act-search', label: 'Search work items', group: 'Action', Icon: Search, keywords: ['find'],
-      run: () => searchRef.current?.querySelector('input')?.focus() },
+      run: () => setPaletteOpen(true) },
     { id: 'act-status', label: 'System status', group: 'Action', Icon: Activity, keywords: ['health', 'uptime', 'observability'],
       run: () => setOverlay('status') },
     { id: 'act-push', label: 'Notification preferences', group: 'Action', Icon: BellRing, keywords: ['push', 'quiet hours', 'snooze'],
@@ -2554,134 +2578,155 @@ export default function App() {
   ];
 
   return (
-    <div className="flex h-screen bg-neutral-50 dark:bg-neutral-900 font-sans text-neutral-900 dark:text-neutral-100">
+    <div className="flex flex-col h-screen bg-neutral-50 dark:bg-neutral-900 font-sans text-neutral-900 dark:text-neutral-100">
 
-      {/* SIDEBAR — design-system navy nav (organisms/sidebar-nav.jsx).
-          Desktop (md+): static, in-flow, width driven by collapse.
-          Mobile (<md): off-canvas drawer toggled from the header, with a backdrop (G1). */}
-      {mobileNavOpen && (
-        <button
-          type="button"
-          aria-label="Close navigation"
-          onClick={() => setMobileNavOpen(false)}
-          className="fixed inset-0 z-modal bg-black/40 md:hidden"
-        />
-      )}
-      <aside
-        className={`${navCollapsed ? 'w-sidebar-collapsed' : 'w-sidebar'} shrink-0
-          fixed inset-y-0 left-0 z-modal transition-transform duration-base
-          md:static md:z-auto md:translate-x-0 md:transition-[width] md:duration-fast
-          ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}
-      >
-        <SidebarNav
-          activeView={view}
-          onNavigate={navigate}
-          workspace={workspace}
-          currentUser={currentUser}
-          userRole={userRole.role}
-          myItemCount={myItems.length}
-          unreadCount={unreadCount}
-          projectCount={projects.length}
-          hasActiveSprint={Boolean(sprints.find(s => s.status === 'ACTIVE'))}
-          collapsed={navCollapsed}
-          onToggleCollapse={() => setNavCollapsed(c => !c)}
-          workspaces={workspaces}
-          activeWorkspaceId={activeWorkspaceId}
-          workspacesLoading={wsLoading}
-          workspacesError={wsError}
-          onSwitchWorkspace={switchWorkspace}
-          onRetryWorkspaces={fetchMyWorkspaces}
-          onOpenWorkspaceSettings={() => { setView('workspace'); fetchMembers(); }}
-        />
-      </aside>
-
-      {/* MAIN */}
-      <main className="flex-1 flex flex-col min-w-0 dark:bg-neutral-900">
+      {/* SHELL — full-width navy topbar spans the top; the two-tier nav (mode-rail + sub-rail)
+          and the scrollable content sit in a row beneath it (redesign mockup). */}
+      <main className="flex-1 flex flex-col min-w-0 min-h-0 dark:bg-neutral-900">
         {/* OFFLINE / SYNC STATUS BAR (iteration 18, Cap S) */}
         <OfflineBanner onSynced={handleSynced} />
-        {/* TOPBAR */}
-        <header className="h-14 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between px-3 md:px-6 flex-shrink-0 relative">
-          <div className="flex items-center gap-2 min-w-0">
-          <button
-            type="button"
-            aria-label="Open navigation"
-            aria-expanded={mobileNavOpen}
-            onClick={() => setMobileNavOpen(true)}
-            className="md:hidden -ml-1 p-1.5 rounded-md text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
-            <PanelLeft aria-hidden="true" className="h-5 w-5" />
-          </button>
-          <div className="relative" ref={searchRef}>
-            <input type="text" placeholder="Search work items..." aria-label="Search work items"
-              value={searchQuery}
-              onFocus={() => setSearchOpen(true)}
-              onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-100 rounded-md px-3 py-1.5 w-40 sm:w-56 md:w-72 text-sm focus:outline-none focus:ring-1 focus:ring-brand-navy" />
-            {searchOpen && searchResults.length > 0 && (
-              <div className="absolute top-full mt-1 w-80 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 z-50 max-h-64 overflow-y-auto">
-                {searchResults.map(item => (
-                  <button key={item.id} onClick={() => { setSelectedItem(item); setSearchQuery(''); setSearchOpen(false); }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-700 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                    <div className="flex items-center gap-2">
-                      <TypeBadge type={item.type} compact />
-                      <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.id}</span>
-                    </div>
-                    <div className="text-sm text-neutral-900 font-medium mt-0.5">{item.title}</div>
-                  </button>
-                ))}
-              </div>
-            )}
-            {searchOpen && searchQuery.trim() && searchResults.length === 0 && (
-              <div className="absolute top-full mt-1 w-80 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 z-50 px-4 py-6 text-center">
-                <p className="text-sm text-neutral-600 dark:text-neutral-400">No results for "<span className="text-neutral-700">{searchQuery}</span>"</p>
-              </div>
-            )}
-            {searchOpen && !searchQuery.trim() && recentlyViewed.length > 0 && (
-              <div className="absolute top-full mt-1 w-80 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 z-50 max-h-64 overflow-y-auto">
-                <div className="px-4 py-2 border-b border-neutral-100 dark:border-neutral-700">
-                  <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">Recently Viewed</p>
-                </div>
-                {recentlyViewed.map(item => {
-                  const full = workItems.find(i => i.id === item.id);
-                  return (
-                    <button key={item.id} onClick={() => { if (full) { setSelectedItem(full); } setSearchQuery(''); setSearchOpen(false); }}
-                      className="w-full text-left px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-700 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                      <div className="flex items-center gap-2">
-                        <TypeBadge type={item.type} compact />
-                        <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.id}</span>
-                      </div>
-                      <div className="text-sm text-neutral-900 font-medium mt-0.5 truncate">{item.title}</div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Live co-presence — who else is in this workspace (iteration 18, Cap S) */}
-            <PresenceBar present={presence} currentUserId={currentUser?.id} />
-            <button onClick={() => setPaletteOpen(true)}
-              aria-label="Open command palette"
-              className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-md border border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:text-neutral-900 hover:border-neutral-400 dark:hover:text-neutral-100 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
-              <Search aria-hidden="true" className="h-4 w-4" />
-              <span className="text-xs">Quick find</span>
-              <kbd className="text-xs font-mono bg-neutral-100 dark:bg-neutral-800 rounded px-1 border border-neutral-200 dark:border-neutral-700">⌘K</kbd>
+        {/* TOPBAR — navy three-zone command bar (redesign mockup):
+              left  = brand + workspace switcher + BQL chip
+              center= command-palette intent pill (⌘K)
+              right = role lens + Ask AI + create + notifications + account */}
+        <header className="h-14 bg-brand-navy border-b border-white/10 grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-3 md:px-4 flex-shrink-0 relative z-sticky">
+          {/* LEFT */}
+          <div className="flex items-center gap-2 min-w-0 justify-self-start">
+            <button
+              type="button"
+              aria-label="Open navigation"
+              aria-expanded={mobileNavOpen}
+              onClick={() => setMobileNavOpen(true)}
+              className="md:hidden -ml-1 p-1.5 rounded-md text-white/80 hover:bg-white/10 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
+              <PanelLeft aria-hidden="true" className="h-5 w-5" />
             </button>
+            <span className="flex items-center shrink-0 select-none pr-1">
+              <Logo size="sm" variant="reverse" />
+            </span>
+
+            {/* Workspace switcher chip */}
+            <div className="relative shrink-0" ref={wsRef}>
+              <button
+                type="button"
+                onClick={() => setWsOpen(o => !o)}
+                aria-haspopup="menu"
+                aria-expanded={wsOpen}
+                aria-label="Switch workspace"
+                className="hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-semibold text-white bg-white/10 border border-white/15 hover:bg-white/15 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
+                <span className="max-w-32 truncate">{workspace.name}</span>
+                <ChevronDown aria-hidden="true" className="h-3.5 w-3.5 text-white/60" />
+              </button>
+              {wsOpen && (
+                <div className="absolute left-0 top-full mt-1 w-60 rounded-lg border border-neutral-200 bg-white py-1 text-neutral-900 shadow-xl z-dropdown dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
+                  <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-400">Workspaces</p>
+                  {wsLoading ? (
+                    <div className="space-y-2 px-3 py-2">
+                      <div className="h-7 animate-pulse rounded-md bg-neutral-100 dark:bg-neutral-700" />
+                      <div className="h-7 animate-pulse rounded-md bg-neutral-100 dark:bg-neutral-700" />
+                    </div>
+                  ) : wsError ? (
+                    <div className="px-3 py-3">
+                      <p className="mb-2 text-xs text-semantic-danger">Couldn’t load your workspaces.</p>
+                      <button type="button" onClick={fetchMyWorkspaces} className="text-xs font-medium text-brand-navy hover:text-brand-navy-tint dark:text-neutral-200">Try again</button>
+                    </div>
+                  ) : workspaces.length === 0 ? (
+                    <p className="px-3 py-3 text-xs text-neutral-400">You don’t belong to any workspace yet.</p>
+                  ) : (
+                    workspaces.map(w => {
+                      const isActive = w.id === activeWorkspaceId;
+                      return (
+                        <button key={w.id} type="button" onClick={() => switchWorkspace(w.id)}
+                          aria-current={isActive ? 'true' : undefined}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left outline-none hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:hover:bg-neutral-700">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-brand-navy text-xs font-bold text-white">{(w.name || '?').slice(0, 1).toUpperCase()}</span>
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium">{w.name}</span>
+                          {isActive && <Check aria-hidden="true" className="h-4 w-4 shrink-0 text-brand-orange" />}
+                        </button>
+                      );
+                    })
+                  )}
+                  <div className="mt-1 border-t border-neutral-100 pt-1 dark:border-neutral-700">
+                    <button type="button" onClick={() => { setWsOpen(false); navigate('workspace'); }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-neutral-500 hover:bg-neutral-50 hover:text-brand-navy dark:hover:bg-neutral-700">
+                      <Settings aria-hidden="true" className="h-3.5 w-3.5 shrink-0" /> Workspace settings
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* BQL chip */}
+            <button
+              type="button"
+              onClick={() => navigate('bql')}
+              aria-label="Open BQL query"
+              className="hidden md:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-semibold text-white bg-white/10 border border-white/15 hover:bg-white/15 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
+              <Code aria-hidden="true" className="h-3.5 w-3.5 text-white/70" /> BQL
+            </button>
+          </div>
+
+          {/* CENTER — command-palette intent pill */}
+          <div className="justify-self-center w-full max-w-lg flex justify-center px-2">
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              aria-label="Search, create, or ask anything"
+              className="flex items-center gap-2.5 h-9 w-full px-3 rounded-lg bg-white text-left shadow-sm hover:shadow-md transition-shadow duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50">
+              <Search aria-hidden="true" className="h-4 w-4 text-neutral-500 shrink-0" />
+              <span className="flex-1 truncate text-sm text-neutral-400">Search, create, or ask anything…</span>
+              <kbd className="hidden sm:inline text-xs font-mono bg-neutral-100 rounded px-1.5 py-0.5 border border-neutral-200 text-neutral-600">⌘K</kbd>
+            </button>
+          </div>
+
+          {/* RIGHT */}
+          <div className="flex items-center gap-1.5 justify-self-end">
+            {/* Live co-presence — who else is in this workspace (iteration 18, Cap S) */}
+            <div className="hidden lg:flex"><PresenceBar present={presence} currentUserId={currentUser?.id} /></div>
+
+            {/* Role lens switcher */}
+            <div className="relative shrink-0" ref={lensRef}>
+              <button
+                type="button"
+                onClick={() => setLensOpen(o => !o)}
+                aria-haspopup="menu"
+                aria-expanded={lensOpen}
+                aria-label={`Role lens: ${activeLens.label}`}
+                className="hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-semibold text-white bg-white/10 border border-white/15 hover:bg-white/15 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
+                <span className="max-w-28 truncate">{activeLens.label}</span>
+                <ChevronDown aria-hidden="true" className="h-3.5 w-3.5 text-white/60" />
+              </button>
+              {lensOpen && (
+                <div className="absolute right-0 top-full mt-1 w-52 rounded-lg border border-neutral-200 bg-white py-1 text-neutral-900 shadow-xl z-dropdown dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
+                  <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-400">View as</p>
+                  {LENSES.map(l => {
+                    const isActive = l.id === lens;
+                    return (
+                      <button key={l.id} type="button" onClick={() => selectLens(l.id)}
+                        aria-current={isActive ? 'true' : undefined}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm outline-none hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:hover:bg-neutral-700">
+                        <span className="min-w-0 flex-1 truncate">{l.label}</span>
+                        {isActive && <Check aria-hidden="true" className="h-4 w-4 shrink-0 text-brand-orange" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             <AiCommandBar
               workspaceId={activeWorkspaceId}
               onToast={showToast}
               onExecuted={() => { fetchAll(); fetchNotifications(); }}
             />
             {can('create_items') && (
-              <Button variant="action" onClick={() => { setView('board'); setIsCreateOpen(true); }}>
+              <Button variant="action" className="hidden md:inline-flex" onClick={() => { setView('board'); setIsCreateOpen(true); }}>
                 + Create
               </Button>
             )}
-            <LanguageSwitcher className="hidden md:flex" />
-            <button onClick={() => { setView('notifications'); fetchNotifications(); }}
+            <div className="hidden md:flex"><LanguageSwitcher /></div>
+            <button onClick={() => { navigate('notifications'); }}
               aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
-              className="relative w-9 h-9 rounded-md flex items-center justify-center text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2">
+              className="relative w-9 h-9 rounded-md flex items-center justify-center text-white/80 hover:bg-white/10 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
               <Bell aria-hidden="true" className="h-5 w-5" />
               {unreadCount > 0 && (
                 <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-brand-orange text-white text-xs font-bold flex items-center justify-center">
@@ -2699,6 +2744,36 @@ export default function App() {
             />
           </div>
         </header>
+
+        {/* NAV + CONTENT ROW — two-tier nav on the left, scrollable deck on the right.
+            Desktop (md+): nav static, in-flow. Mobile (<md): off-canvas drawer + backdrop (G1). */}
+        <div className="flex flex-1 min-h-0">
+          {mobileNavOpen && (
+            <button
+              type="button"
+              aria-label="Close navigation"
+              onClick={() => setMobileNavOpen(false)}
+              className="fixed inset-0 z-modal bg-black/40 md:hidden"
+            />
+          )}
+          <aside
+            className={`flex shrink-0
+              fixed inset-y-0 left-0 z-modal transition-transform duration-base
+              md:static md:z-auto md:translate-x-0 md:transition-none
+              ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          >
+            <ModeRail
+              activeMode={activeMode}
+              onSelectMode={(m) => navigate(firstSurfaceOf(m))}
+            />
+            <SubRail
+              activeMode={activeMode}
+              activeView={view}
+              onNavigate={navigate}
+              badges={{ myworks: myItems.length, notifications: unreadCount }}
+              dots={{ sprint: Boolean(sprints.find(s => s.status === 'ACTIVE')) }}
+            />
+          </aside>
 
         {/* CONTENT */}
         <div className="flex-1 overflow-auto dark:bg-neutral-900">
@@ -5893,11 +5968,19 @@ export default function App() {
           )}
 
         </div>
+        </div>
       </main>
 
-      {/* DETAIL PANEL */}
+      {/* DETAIL PANEL — right slide-in overlay; the shell persists (mockup side-panel pattern) */}
       {selectedItem && (
-        <div className="w-[500px] bg-white dark:bg-neutral-900 border-l border-neutral-200 dark:border-neutral-700 flex flex-col h-screen overflow-hidden flex-shrink-0">
+        <>
+        <button
+          type="button"
+          aria-label="Close details"
+          onClick={() => setSelectedItem(null)}
+          className="fixed inset-0 z-panel cursor-default bg-brand-navy/20 md:bg-transparent"
+        />
+        <div className="fixed right-0 top-0 bottom-0 z-panel w-[500px] max-w-[92vw] bg-white dark:bg-neutral-900 border-l border-neutral-200 dark:border-neutral-700 flex flex-col overflow-hidden shadow-xl">
           <div className="h-14 flex items-center justify-between px-5 border-b border-neutral-200 dark:border-neutral-700">
             <div className="flex items-center gap-2">
               <TypeBadge type={selectedItem.type} compact />
@@ -6423,6 +6506,7 @@ export default function App() {
             )}
           </div>
         </div>
+        </>
       )}
 
       {/* CREATE KNOWLEDGE SPACE MODAL */}

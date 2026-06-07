@@ -1,0 +1,48 @@
+import { cn } from '@/lib/utils';
+import { MODES } from '@/lib/nav-model';
+
+// Organism — the narrow navy icon rail (mockup left edge). One icon per top-level mode; the active
+// mode gets a brand-orange left accent + white icon. The final mode ("Set up") is pinned to the
+// bottom. Clicking a mode hands its id up; the parent lands on that mode's first surface.
+//
+// Design rules: bg-brand-navy, lucide icons only, brand-orange active accent, all five interactive
+// states, labelled buttons (§4.6, §4.8, §4.12, §4.23). Width is the `w-rail` token, not a literal.
+
+export function ModeRail({ activeMode, onSelectMode }) {
+  return (
+    <nav
+      aria-label="Workspace modes"
+      className="flex h-full w-rail shrink-0 flex-col items-center gap-1 overflow-y-auto border-r border-white/5 bg-brand-navy py-2"
+    >
+      {MODES.map((mode, i) => {
+        const Icon = mode.Icon;
+        const active = activeMode === mode.id;
+        const pinnedBottom = i === MODES.length - 1;
+        return (
+          <button
+            key={mode.id}
+            type="button"
+            title={mode.label}
+            aria-current={active ? 'page' : undefined}
+            onClick={() => onSelectMode?.(mode.id)}
+            className={cn(
+              'relative flex w-full flex-col items-center gap-1 py-2 transition-colors duration-fast',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/40',
+              pinnedBottom && 'mt-auto',
+              active ? 'text-white' : 'text-white/55 hover:text-white/85'
+            )}
+          >
+            {active && (
+              <span
+                aria-hidden="true"
+                className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-brand-orange"
+              />
+            )}
+            <Icon aria-hidden="true" className="h-5 w-5" />
+            <span className="text-2xs font-semibold leading-none">{mode.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}

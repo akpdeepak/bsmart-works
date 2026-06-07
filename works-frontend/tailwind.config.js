@@ -44,6 +44,10 @@ export default {
           done:          '#0E7C5E',
         },
       },
+      fontSize: {
+        // Sub-12px label used on the narrow icon mode-rail (mockup). Token, not an arbitrary value.
+        '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
+      },
       fontFamily: {
         sans: ['Inter', 'Segoe UI', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
         mono: ['JetBrains Mono', 'Consolas', 'monospace'],
@@ -79,6 +83,9 @@ export default {
         sidebar:             '240px',
         'sidebar-collapsed': '48px',
         panel:               '360px',
+        // Two-tier shell (mockup): a narrow navy icon mode-rail + a contextual surface sub-rail.
+        rail:                '72px',
+        subrail:             '208px',
       },
       // Stacking order — single source of truth so sidebar / sticky header / dropdown / panel /
       // modal / command palette / toast never fight. Matches CLAUDE.md §4.21. Use z-sticky etc.

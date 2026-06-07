@@ -37,6 +37,12 @@ public final class AiCapabilities {
     public static final String RELEASE_NOTES      = "release_notes";      // Cap W — release-notes auto-draft (I15-S13)
     public static final String EXEC_BRIEFING      = "exec_briefing";      // Cap X — AI executive briefing (iteration 16)
     public static final String BOARD_DECK         = "board_deck";         // Cap X — quarterly board-deck auto-draft (iteration 16)
+    // Iteration 20 — advanced AI + ecosystem capabilities.
+    public static final String AGENT_ORCHESTRATION    = "agent_orchestration";    // Cap O — multi-step agent planning + execution
+    public static final String CUSTOM_ASSISTANT       = "custom_assistant";       // Cap O — workspace-defined assistant personas
+    public static final String CONVERSATIONAL_DASHBOARD = "conversational_dashboard"; // Cap O — NL → dashboard widget spec
+    public static final String STRUCTURED_EXTRACTION  = "structured_extraction";  // Cap I — structured-data extraction from text
+    public static final String SUPPORT_CHAT           = "support_chat";           // Cap N — customer-chat tier-1 auto-response
 
     /** Description of each capability and its deterministic fallback, surfaced to the UI panel. */
     public record Descriptor(String id, String label, AiModelTier defaultTier, String fallback) { }
@@ -92,7 +98,20 @@ public final class AiCapabilities {
             + "and risk-portfolio figures — the numbers and headlines, without the narrative prose."),
         new Descriptor(BOARD_DECK, "Quarterly board-deck auto-draft", AiModelTier.SONNET,
             "Falls back to the deterministic slide outline built from the same rollup, OKR and risk data — "
-            + "the structured slides for manual narration.")
+            + "the structured slides for manual narration."),
+        new Descriptor(AGENT_ORCHESTRATION, "Multi-step AI agent", AiModelTier.SONNET,
+            "Falls back to the deterministic plan (goal keywords → ordered capability steps); each step then "
+            + "runs on its own capability's documented fallback, so the run still produces an auditable result."),
+        new Descriptor(CUSTOM_ASSISTANT, "Custom AI assistant", AiModelTier.SONNET,
+            "Falls back to a grounded answer assembled from the assistant's remembered context plus ranked "
+            + "knowledge-base search over workspace articles, without the persona narrative."),
+        new Descriptor(CONVERSATIONAL_DASHBOARD, "Conversational dashboards", AiModelTier.SONNET,
+            "Falls back to the deterministic natural-language → widget-spec parser (metric, grouping, timeframe), "
+            + "which pre-fills the manual visual dashboard builder."),
+        new Descriptor(STRUCTURED_EXTRACTION, "Structured data extraction", AiModelTier.HAIKU,
+            "Falls back to deterministic pattern extraction (dates, ids, emails, key: value lines) from the text."),
+        new Descriptor(SUPPORT_CHAT, "Customer-chat tier-1 assistant", AiModelTier.HAIKU,
+            "Falls back to a canned acknowledgement and automatic escalation to a human agent — no customer waits on AI.")
     );
 
     private static final Map<String, Descriptor> BY_ID =

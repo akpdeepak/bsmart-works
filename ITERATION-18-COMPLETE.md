@@ -24,7 +24,7 @@ visual language, no disturbance to the iterations beneath it (RB-30, Orchestrato
 | Conflict resolution UI | Side-by-side "your edit vs server" with keep-mine (re-queue against the new version, re-sync) or keep-theirs (discard) | `ConflictResolver`, `OfflineBanner` |
 | Real-time updates | SSE stream per workspace; every workspace-scoped event broadcasts via `EventService` → clients invalidate their queries within a second | `GET /api/v1/realtime/stream`, `RealtimeService` |
 | Real-time co-presence | Heartbeat-driven roster with cursor coords; live "who's here" avatars; stale entries pruned | `/api/v1/realtime/presence`, `PresenceService`, `PresenceBar` |
-| Push notifications | Per-event-type toggles, quiet-hours window (wrap-around aware), snooze, and **P0 overrides quiet hours**; web-push subscription registry | `/api/v1/push/preferences`, `/api/v1/push/subscriptions` (V51), `PushPreferenceService`, `PushSettingsPanel` |
+| Push notifications | Per-event-type toggles, quiet-hours window (wrap-around aware), snooze, and **P0 overrides quiet hours**; web-push subscription registry | `/api/v1/push/preferences`, `/api/v1/push/subscriptions` (V52), `PushPreferenceService`, `PushSettingsPanel` |
 | Command palette | Cmd-K palette now runs **server-side fuzzy search across items + people** (workspace-scoped), merged with static actions | `GET /api/v1/command-palette/search`, `CommandSearchService` |
 | Keyboard shortcuts | Catalogue + **per-user customizable** bindings; "?" opens a grouped help overlay marking customized keys | `/api/v1/shortcuts`, `lib/shortcuts`, `ShortcutsHelp` |
 | Performance SLAs | Per-operation P50/P95/P99 monitor (bounded ring buffer) compared to the RB-40 §5 budgets; over-budget flag | `GET /api/v1/observability/performance`, `PerformanceMonitor(+Filter)` |
@@ -40,8 +40,8 @@ visual language, no disturbance to the iterations beneath it (RB-30, Orchestrato
   offline-draft sync re-checks edit permission per draft.
 - **Auth for SSE:** the browser `EventSource` API can't set headers, so the JWT rides as an
   `access_token` query param that the existing JWT filter validates identically.
-- **Migration:** `V51__iteration18_mobile_realtime_perf.sql` — extends `notification_preferences`,
-  adds push_subscriptions and user_shortcuts. Forward-only; Flyway high-water mark now **V51**
+- **Migration:** `V52__iteration18_mobile_realtime_perf.sql` — extends `notification_preferences`,
+  adds push_subscriptions and user_shortcuts. Forward-only; Flyway high-water mark now **V52**
   (Orchestrator §6).
 - **Tests:** 28 new backend unit tests (push-preference delivery logic incl. quiet-hours/snooze/P0,
   presence roster + pruning, percentile/over-budget maths, draft-sync conflict detection); 40+ new

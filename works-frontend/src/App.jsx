@@ -21,7 +21,7 @@ import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
 import { ModeRail } from '@/components/works/organisms/mode-rail';
 import { SubRail } from '@/components/works/organisms/sub-rail';
-import { MODES, LENSES, TIER, modeForView, firstSurfaceOf, getMode, labelForView } from '@/lib/nav-model';
+import { MODES, LENSES, TIER, modeForView, firstSurfaceOf, getMode, labelForView, canSeeSurface } from '@/lib/nav-model';
 import { CustomizationView } from '@/components/works/organisms/customization-view';
 import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
 import { DeveloperWorkspace } from '@/components/works/organisms/developer-workspace';
@@ -2566,10 +2566,14 @@ export default function App() {
   }
 
   const paletteCommands = [
-    ...NAV_GROUPS.flatMap(g => g.items.map(item => ({
-      id: `go-${item.id}`, label: item.label, group: g.label || 'Go to', Icon: item.Icon,
-      run: () => navigate(item.id),
-    }))),
+    // Only offer "go to" jumps for surfaces this tier may see, so ⌘K matches the rail's
+    // role-based visibility (a Member can't palette-jump to Admin Ops). Server RBAC still governs.
+    ...NAV_GROUPS.flatMap(g => g.items
+      .filter(item => canSeeSurface(item.id, userRole.tier))
+      .map(item => ({
+        id: `go-${item.id}`, label: item.label, group: g.label || 'Go to', Icon: item.Icon,
+        run: () => navigate(item.id),
+      }))),
     { id: 'act-create', label: 'Create work item', group: 'Action', Icon: ListTodo, keywords: ['new', 'add'],
       run: () => { setView('board'); setIsCreateOpen(true); } },
     { id: 'act-search', label: 'Search work items', group: 'Action', Icon: Search, keywords: ['find'],
@@ -2650,17 +2654,20 @@ export default function App() {
                       );
                     })
                   )}
-                  <div className="mt-1 border-t border-neutral-100 pt-1 dark:border-neutral-700">
-                    <button type="button" onClick={() => { setWsOpen(false); navigate('workspace'); }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-neutral-500 hover:bg-neutral-50 hover:text-brand-navy dark:hover:bg-neutral-700">
-                      <Settings aria-hidden="true" className="h-3.5 w-3.5 shrink-0" /> Workspace settings
-                    </button>
-                  </div>
+                  {canSeeSurface('workspace', userRole.tier) && (
+                    <div className="mt-1 border-t border-neutral-100 pt-1 dark:border-neutral-700">
+                      <button type="button" onClick={() => { setWsOpen(false); navigate('workspace'); }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-neutral-500 hover:bg-neutral-50 hover:text-brand-navy dark:hover:bg-neutral-700">
+                        <Settings aria-hidden="true" className="h-3.5 w-3.5 shrink-0" /> Workspace settings
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* BQL chip */}
+            {/* BQL chip — hidden for tiers that can't use it (matches rail visibility) */}
+            {canSeeSurface('bql', userRole.tier) && (
             <button
               type="button"
               onClick={() => navigate('bql')}
@@ -2668,6 +2675,7 @@ export default function App() {
               className="hidden md:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-semibold text-white bg-white/10 border border-white/15 hover:bg-white/15 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
               <Code aria-hidden="true" className="h-3.5 w-3.5 text-white/70" /> BQL
             </button>
+            )}
           </div>
 
           {/* CENTER — command-palette intent pill */}

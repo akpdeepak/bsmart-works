@@ -17,18 +17,18 @@ import static org.mockito.Mockito.when;
 /** Unauthorized / cross-tenant access tests for the audit-log API (RB-40 §1). Every read requires
  *  {@code view_audit_log}, checked before anything is read. */
 @Tag("unit")
-class AuditLogControllerAccessTest {
+class SecurityAuditLogControllerAccessTest {
 
     private static final String CALLER = "user-A";
     private static final String FOREIGN_WS = "ws-B";
 
-    private final AuditLogService auditLog = mock(AuditLogService.class);
+    private final SecurityAuditLogService auditLog = mock(SecurityAuditLogService.class);
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
-    private final AuditLogController controller =
-            new AuditLogController(auditLog, authenticatedUser, rbac);
+    private final SecurityAuditLogController controller =
+            new SecurityAuditLogController(auditLog, authenticatedUser, rbac);
 
-    AuditLogControllerAccessTest() {
+    SecurityAuditLogControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);
         doThrow(ApiException.forbidden("denied")).when(rbac)
                 .require(eq(CALLER), eq(FOREIGN_WS), eq("view_audit_log"));

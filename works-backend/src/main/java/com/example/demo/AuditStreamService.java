@@ -23,10 +23,10 @@ public class AuditStreamService {
 
     private final AuditLogStreamConfigRepository repo;
     private final AuditLogEntryRepository entries;
-    private final AuditLogService auditLog;
+    private final SecurityAuditLogService auditLog;
 
     public AuditStreamService(AuditLogStreamConfigRepository repo, AuditLogEntryRepository entries,
-                              AuditLogService auditLog) {
+                              SecurityAuditLogService auditLog) {
         this.repo = repo;
         this.entries = entries;
         this.auditLog = auditLog;

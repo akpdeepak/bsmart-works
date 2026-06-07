@@ -23,6 +23,8 @@ export const VIEW_PATHS = {
   security: '/security',
   smcockpit: '/sm-cockpit',
   poworkspace: '/po-workspace',
+  leadership: '/leadership',
+  adminops: '/admin-ops',
   pm: '/pm-artifacts',
   automations: '/automations',
   integrations: '/integrations',

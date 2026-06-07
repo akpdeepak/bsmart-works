@@ -23,11 +23,11 @@ public class WebAuthnService {
 
     private final WebAuthnCredentialRepository credentials;
     private final WebAuthnChallengeRepository challenges;
-    private final AuditLogService auditLog;
+    private final SecurityAuditLogService auditLog;
 
     public WebAuthnService(WebAuthnCredentialRepository credentials,
                            WebAuthnChallengeRepository challenges,
-                           AuditLogService auditLog) {
+                           SecurityAuditLogService auditLog) {
         this.credentials = credentials;
         this.challenges = challenges;
         this.auditLog = auditLog;

@@ -6,7 +6,7 @@ import {
   Home, User, Bell, LayoutGrid, ListTodo, Zap, Rocket, FolderKanban,
   BarChart2, LayoutDashboard, FileText, TrendingUp, Headset, Timer, ShieldCheck,
   Gauge, Map as MapIcon, ClipboardList, Workflow, Plug, Search, BookOpen,
-  SlidersHorizontal, Settings, Trash2, Code,
+  SlidersHorizontal, Settings, Trash2, Code, Crown, ShieldHalf,
   CheckCircle2, AlertCircle, Heart, AlertTriangle, Puzzle, Link, Lock,
   File as FileIcon, Folder, Lightbulb, Users, Shield, Ban, Construction,
   MessageCircle, Archive, RefreshCw, Repeat, Send, Megaphone, ScrollText,
@@ -54,6 +54,8 @@ import { Avatar } from '@/components/works/atoms/avatar';
 import DashboardView from '@/views/dashboard-view';
 import WorkspaceView from '@/views/workspace-view';
 import PoWorkspaceView from '@/views/po-workspace-view';
+import LeadershipConsoleView from '@/views/leadership-console-view';
+import AdminOpsView from '@/views/admin-ops-view';
 import { AiMetaBadge } from '@/components/works/ai-meta-badge';
 import NotificationsView from '@/views/notifications-view';
 import TrashView from '@/views/trash-view';
@@ -110,6 +112,8 @@ const NAV_GROUPS = [
   { label: 'Cockpits', items: [
     { id: 'smcockpit',   label: 'SM Cockpit',   Icon: Gauge },
     { id: 'poworkspace', label: 'PO Workspace', Icon: MapIcon },
+    { id: 'leadership',  label: 'Leadership',   Icon: Crown },
+    { id: 'adminops',    label: 'Admin Ops',    Icon: ShieldHalf },
     { id: 'pm',          label: 'PM Artifacts', Icon: ClipboardList },
   ] },
   { label: 'Automate & Connect', items: [
@@ -2776,6 +2780,17 @@ export default function App() {
                   .catch(reportError)}
               />
             </div>
+          )}
+
+          {/* ITERATION 16 — Leadership Console (Cap X) + Admin Operations Center (Cap Y).
+              Both are self-contained surfaces that fetch their own workspace-scoped, RBAC-gated
+              data via their lib clients → apiClient, like the Developer Workspace. */}
+          {view === 'leadership' && (
+            <LeadershipConsoleView workspaceId={activeWorkspaceId} onToast={showToast} />
+          )}
+
+          {view === 'adminops' && (
+            <AdminOpsView workspaceId={activeWorkspaceId} onToast={showToast} />
           )}
 
           {view === 'notifications' && (

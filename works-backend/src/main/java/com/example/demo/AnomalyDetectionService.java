@@ -18,11 +18,11 @@ public class AnomalyDetectionService {
 
     private final AccessAnomalyRepository repo;
     private final WorkspaceSecuritySettingsService settings;
-    private final AuditLogService auditLog;
+    private final SecurityAuditLogService auditLog;
 
     public AnomalyDetectionService(AccessAnomalyRepository repo,
                                    WorkspaceSecuritySettingsService settings,
-                                   AuditLogService auditLog) {
+                                   SecurityAuditLogService auditLog) {
         this.repo = repo;
         this.settings = settings;
         this.auditLog = auditLog;

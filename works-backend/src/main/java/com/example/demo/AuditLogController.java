@@ -1,52 +1,55 @@
 package com.example.demo;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 
 /**
- * The browsable, tamper-evident security audit log (iteration 19 Cap T, RB-40 §4): filter/search,
- * cryptographic chain verification, and export. RBAC is enforced at the service boundary
- * (RB-10 §2) — every endpoint requires {@code view_audit_log} — and is workspace-scoped (RB-40 §1).
- * The log is append-only (DB-enforced); there is intentionally no write endpoint here.
+ * Cap Y · Audit log explorer HTTP surface (iteration 16). Thin; delegates to {@link AuditLogService}.
  */
 @RestController
-@RequestMapping("/api/v1/security/audit-log")
+@RequestMapping("/api/v1/audit-log")
 public class AuditLogController {
 
-    private final AuditLogService auditLog;
+    private final AuditLogService service;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
 
-    public AuditLogController(AuditLogService auditLog, AuthenticatedUser authenticatedUser,
-                             RbacService rbac) {
-        this.auditLog = auditLog;
+    public AuditLogController(AuditLogService service, AuthenticatedUser authenticatedUser) {
+        this.service = service;
         this.authenticatedUser = authenticatedUser;
-        this.rbac = rbac;
     }
 
     @GetMapping
-    public PageResponse<AuditLogEntry> search(@RequestParam String workspaceId,
-                                              @RequestParam(required = false) String action,
-                                              @RequestParam(required = false) String actor,
-                                              @RequestParam(required = false) String q,
-                                              @RequestParam(defaultValue = "0") int page,
-                                              @RequestParam(defaultValue = "50") int size) {
-        rbac.require(authenticatedUser.id(), workspaceId, "view_audit_log");
-        return auditLog.search(workspaceId, action, actor, q, page, size);
+    public Map<String, Object> query(@RequestParam String workspaceId,
+                                     @RequestParam(required = false) String eventType,
+                                     @RequestParam(required = false) String actorId,
+                                     @RequestParam(required = false) String aggregateId,
+                                     @RequestParam(required = false) String search,
+                                     @RequestParam(defaultValue = "0") int page,
+                                     @RequestParam(defaultValue = "50") int size) {
+        return service.query(authenticatedUser.id(), workspaceId, eventType, actorId, aggregateId, search, page, size);
     }
 
-    /** Recompute the hash chain and report whether the log is intact (tamper detection). */
-    @GetMapping("/verify")
-    public AuditHashChain.Result verify(@RequestParam String workspaceId) {
-        rbac.require(authenticatedUser.id(), workspaceId, "view_audit_log");
-        return auditLog.verify(workspaceId);
+    @GetMapping("/event-types")
+    public List<String> eventTypes(@RequestParam String workspaceId) {
+        return service.eventTypes(authenticatedUser.id(), workspaceId);
     }
 
-    /** Full chronological export (CSV/PDF rendering happens client-side via the shared export lib). */
-    @GetMapping("/export")
-    public List<AuditLogEntry> export(@RequestParam String workspaceId) {
-        rbac.require(authenticatedUser.id(), workspaceId, "view_audit_log");
-        return auditLog.all(workspaceId);
+    @GetMapping("/saved-queries")
+    public List<AuditSavedQuery> savedQueries(@RequestParam String workspaceId) {
+        return service.listSavedQueries(authenticatedUser.id(), workspaceId);
+    }
+
+    @PostMapping("/saved-queries")
+    public AuditSavedQuery saveQuery(@Valid @RequestBody AuditSavedQuery query) {
+        return service.saveQuery(authenticatedUser.id(), query);
+    }
+
+    @DeleteMapping("/saved-queries/{id}")
+    public ResponseEntity<Void> deleteQuery(@PathVariable String id) {
+        service.deleteSavedQuery(authenticatedUser.id(), id);
+        return ResponseEntity.noContent().build();
     }
 }

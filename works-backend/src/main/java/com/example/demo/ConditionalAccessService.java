@@ -19,9 +19,9 @@ import java.util.UUID;
 public class ConditionalAccessService {
 
     private final ConditionalAccessPolicyRepository repo;
-    private final AuditLogService auditLog;
+    private final SecurityAuditLogService auditLog;
 
-    public ConditionalAccessService(ConditionalAccessPolicyRepository repo, AuditLogService auditLog) {
+    public ConditionalAccessService(ConditionalAccessPolicyRepository repo, SecurityAuditLogService auditLog) {
         this.repo = repo;
         this.auditLog = auditLog;
     }

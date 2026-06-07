@@ -25,14 +25,14 @@ public class ComplianceEvidenceService {
 
     private final ComplianceEvidenceBundleRepository bundles;
     private final WorkspaceSecuritySettingsService settings;
-    private final AuditLogService auditLog;
+    private final SecurityAuditLogService auditLog;
     private final ConditionalAccessPolicyRepository policies;
     private final PentestEngagementRepository pentests;
     private final ObjectMapper json = new ObjectMapper();
 
     public ComplianceEvidenceService(ComplianceEvidenceBundleRepository bundles,
                                      WorkspaceSecuritySettingsService settings,
-                                     AuditLogService auditLog,
+                                     SecurityAuditLogService auditLog,
                                      ConditionalAccessPolicyRepository policies,
                                      PentestEngagementRepository pentests) {
         this.bundles = bundles;

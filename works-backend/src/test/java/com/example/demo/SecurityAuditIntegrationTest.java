@@ -14,11 +14,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Iteration 19 (enterprise security) integration coverage against a real Postgres (V50). Verifies:
+ * Iteration 19 (enterprise security) integration coverage against a real Postgres (V51). Verifies:
  *   - the SQL-seeded audit chain verifies under the same SHA-256 the application uses (so the seed
  *     is genuinely tamper-evident, not faked),
  *   - the audit log is append-only at the DB layer (UPDATE/DELETE blocked),
- *   - {@link AuditLogService#record} appends a contiguous, verifiable link, and
+ *   - {@link SecurityAuditLogService#record} appends a contiguous, verifiable link, and
  *   - the security tables migrated and seeded.
  */
 @Tag("integration")
@@ -34,7 +34,7 @@ class SecurityAuditIntegrationTest {
     JdbcTemplate jdbc;
 
     @Autowired
-    AuditLogService auditLog;
+    SecurityAuditLogService auditLog;
 
     @Test
     void seededAuditChainVerifies() {

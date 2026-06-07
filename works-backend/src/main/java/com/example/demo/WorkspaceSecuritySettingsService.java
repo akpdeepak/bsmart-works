@@ -20,10 +20,10 @@ public class WorkspaceSecuritySettingsService {
     private static final List<String> ALGORITHMS = List.of("AES-256-GCM", "AES-256-CBC");
 
     private final WorkspaceSecuritySettingsRepository repo;
-    private final AuditLogService auditLog;
+    private final SecurityAuditLogService auditLog;
 
     public WorkspaceSecuritySettingsService(WorkspaceSecuritySettingsRepository repo,
-                                            AuditLogService auditLog) {
+                                            SecurityAuditLogService auditLog) {
         this.repo = repo;
         this.auditLog = auditLog;
     }

@@ -17,7 +17,7 @@ import java.util.List;
  * {@link #GENESIS} (64 zeros) as its previous hash.
  *
  * <p>The canonical form is intentionally simple and stable so it can be reproduced verbatim in SQL
- * (see the seed in {@code V50}) — never change it without a forward migration that re-chains.
+ * (see the seed in {@code V51}) — never change it without a forward migration that re-chains.
  *
  * <p>Pure and deterministic: no Spring, no DB — unit-testable in isolation (RB-10 §2).
  */
@@ -28,7 +28,7 @@ public final class AuditHashChain {
 
     private AuditHashChain() {}
 
-    /** The exact string that gets hashed for one entry. Mirrors the SQL seed in V50. */
+    /** The exact string that gets hashed for one entry. Mirrors the SQL seed in V51. */
     public static String canonical(String prevHash, String workspaceId, long seq, String actorId,
                                    String action, String targetType, String targetId,
                                    OffsetDateTime occurredAt, String detail) {

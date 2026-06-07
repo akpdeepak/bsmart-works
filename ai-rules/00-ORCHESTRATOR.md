@@ -156,20 +156,22 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
 - **Active iteration:** **19 (complete)** — Enterprise Security + Compliance Certifications (Cap T):
   passkeys / WebAuthn (phishing-resistant, passwordless sign-in), conditional-access policies
   (IP / geo / device-trust / time-of-day, per workspace & role), a **tamper-evident, hash-chained
-  audit log** (append-only, DB-enforced) with browse / export / SIEM streaming, data residency +
-  **BYOK** (customer-managed key references), AI access-anomaly detection (deterministic fallback,
-  RB-40 §2), GDPR / DPDP data export + right-to-be-forgotten (crypto-shred semantics, RB-40 §3), a
-  pen-test / red-team / bug-bounty register, and one-click **SOC 2 Type 2 / ISO 27001** evidence
-  bundles. Built on the AI-Control-Plane foundation (iteration **11**), the KPI Framework
-  (iteration **12**, Cap L), Automation + Integrations (iteration **13**, Cap C/Q/A), the Developer
-  Workspace (iteration **14**, Cap U), and the Scrum Master Cockpit + Product Owner Workspace
-  (iteration **15**, Cap V/W, delivered ahead of 14 by owner directive). Iteration 7 (Compliance
-  Rules Engine) complete.
-- **Flyway high-water mark:** **V50** (`V50__iteration19_enterprise_security.sql`; note: V16 was
+  security audit log** (append-only, DB-enforced) with browse / export / SIEM streaming, data
+  residency + **BYOK** (customer-managed key references), AI access-anomaly detection (deterministic
+  fallback, RB-40 §2), GDPR / DPDP data export + right-to-be-forgotten (crypto-shred semantics,
+  RB-40 §3), a pen-test / red-team / bug-bounty register, and one-click **SOC 2 Type 2 / ISO 27001**
+  evidence bundles. Built on iteration **16** (Leadership Console Cap X + Admin Operations Center
+  Cap Y), **15** (Scrum Master Cockpit Cap V + Product Owner Workspace Cap W), **14** (Developer
+  Workspace Cap U), **13** (Automation Engine + Integrations Cap C/Q/A), **12** (KPI Framework Cap L)
+  and **11** (the **AI Control Plane** — one policy hierarchy, one budget, one audit trail, one
+  fallback contract, RB-40 §2). All five role surfaces are live (Developer / SM / PO / Leadership /
+  Admin). Iteration 7 (Compliance Rules Engine) complete. (Iterations 14/15 were delivered ahead of
+  order by explicit owner directive on the AI-Control-Plane foundation.)
+- **Flyway high-water mark:** **V51** (`V51__iteration19_enterprise_security.sql`; note: V16 was
   skipped, V23 does not exist; V41 is iteration 15's `V41__iteration15_scrum_po.sql`; V47 is
-  iteration 14's developer workspace; V46 the SLA engine; V48 AI workspace settings; V49 board WIP
-  limits).
-- **Next migration:** **`V51__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+  iteration 14's `V47__iteration14_developer_workspace.sql`; V50 is iteration 16's
+  `V50__iteration16_leadership_admin.sql`).
+- **Next migration:** **`V52__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

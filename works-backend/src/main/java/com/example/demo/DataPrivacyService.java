@@ -26,11 +26,11 @@ public class DataPrivacyService {
 
     private final DataSubjectRequestRepository requests;
     private final UserRepository users;
-    private final AuditLogService auditLog;
+    private final SecurityAuditLogService auditLog;
     private final ObjectMapper json = new ObjectMapper();
 
     public DataPrivacyService(DataSubjectRequestRepository requests, UserRepository users,
-                              AuditLogService auditLog) {
+                              SecurityAuditLogService auditLog) {
         this.requests = requests;
         this.users = users;
         this.auditLog = auditLog;

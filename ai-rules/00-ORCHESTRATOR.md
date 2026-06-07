@@ -160,18 +160,19 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   residency + **BYOK** (customer-managed key references), AI access-anomaly detection (deterministic
   fallback, RB-40 §2), GDPR / DPDP data export + right-to-be-forgotten (crypto-shred semantics,
   RB-40 §3), a pen-test / red-team / bug-bounty register, and one-click **SOC 2 Type 2 / ISO 27001**
-  evidence bundles. Built on iteration **16** (Leadership Console Cap X + Admin Operations Center
-  Cap Y), **15** (Scrum Master Cockpit Cap V + Product Owner Workspace Cap W), **14** (Developer
-  Workspace Cap U), **13** (Automation Engine + Integrations Cap C/Q/A), **12** (KPI Framework Cap L)
-  and **11** (the **AI Control Plane** — one policy hierarchy, one budget, one audit trail, one
-  fallback contract, RB-40 §2). All five role surfaces are live (Developer / SM / PO / Leadership /
-  Admin). Iteration 7 (Compliance Rules Engine) complete. (Iterations 14/15 were delivered ahead of
-  order by explicit owner directive on the AI-Control-Plane foundation.)
-- **Flyway high-water mark:** **V51** (`V51__iteration19_enterprise_security.sql`; note: V16 was
+  evidence bundles. Built on the prior line: iteration **17** (Universal Customization Engine Cap R),
+  **16** (Leadership Console Cap X + Admin Operations Center Cap Y), **15** (Scrum Master Cockpit
+  Cap V + Product Owner Workspace Cap W), **14** (Developer Workspace Cap U), **13** (Automation
+  Engine + Integrations Cap C/Q/A), **12** (KPI Framework Cap L) and **11** (the **AI Control Plane**
+  — one policy hierarchy, one budget, one audit trail, one fallback contract, RB-40 §2). All five
+  role surfaces are live (Developer / SM / PO / Leadership / Admin). Iteration 7 (Compliance Rules
+  Engine) complete. (Iterations 14/15 were delivered ahead of order by explicit owner directive.)
+- **Flyway high-water mark:** **V52** (`V52__iteration19_enterprise_security.sql`; note: V16 was
   skipped, V23 does not exist; V41 is iteration 15's `V41__iteration15_scrum_po.sql`; V47 is
   iteration 14's `V47__iteration14_developer_workspace.sql`; V50 is iteration 16's
-  `V50__iteration16_leadership_admin.sql`).
-- **Next migration:** **`V52__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+  `V50__iteration16_leadership_admin.sql`; V51 is iteration 17's
+  `V51__iteration17_customization_engine.sql`).
+- **Next migration:** **`V53__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

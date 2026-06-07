@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 /** The tamper-evident audit log. Every finder is workspace-scoped (RB-40 §1); the append-only
- *  contract is enforced in the DB (V51 trigger) — there is intentionally no update/delete path. */
+ *  contract is enforced in the DB (V52 trigger) — there is intentionally no update/delete path. */
 public interface AuditLogEntryRepository extends JpaRepository<AuditLogEntry, Long> {
 
     List<AuditLogEntry> findByWorkspaceIdOrderBySeqAsc(String workspaceId);

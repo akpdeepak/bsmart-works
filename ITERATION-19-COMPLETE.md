@@ -10,7 +10,7 @@ AI-Control-Plane foundations and **does not disturb the iterations beneath it** 
 > (`06 §ITER 19`) and is the iteration RB-40 §4 names for SOC 2 Type 2 + ISO 27001. Everything here
 > is spec-authoritative governance content (RB-40), built to the code as it actually exists
 > (CLAUDE.md stack — Spring Boot 4, JPA, React/Vite). Orchestrator §6 is updated: active iteration
-> **19 (complete)**, Flyway high-water **V51**, next **V52**.
+> **19 (complete)**, Flyway high-water **V52**, next **V53**.
 
 > **No live model in this build.** AI anomaly detection routes through a deterministic heuristic
 > (`AnomalyDetector`) that is the always-available fallback (RB-40 §2); an AI tier can later re-rank
@@ -70,7 +70,7 @@ event store** (`events`):
 passkeys, conditional access, audit log + streaming, security settings, anomalies, data-subject
 requests, evidence bundles, and the pen-test register. Controllers: `WebAuthnController`,
 `SecurityAdminController`, `SecurityAuditLogController`, `CompliancePrivacyController`. Migration
-`V51__iteration19_enterprise_security.sql`.
+`V52__iteration19_enterprise_security.sql`.
 
 **Frontend** — `components/works/organisms/security-center.jsx` (the admin surface), `lib/security.js`
 (API client), `lib/passkey.js` (WebCrypto software authenticator), wired into `App.jsx` + `routes.js`.

@@ -1,4 +1,4 @@
--- V51 · Iteration 19 — Enterprise Security + Compliance Certifications (Cap T)
+-- V52 · Iteration 19 — Enterprise Security + Compliance Certifications (Cap T)
 -- SOC 2 Type 2 / ISO 27001 readiness: phishing-resistant auth (passkeys), conditional access,
 -- a tamper-evident (hash-chained) security audit log with browse/export/SIEM-streaming,
 -- data residency + BYOK, AI anomaly detection on access, GDPR/DPDP data export + right-to-be-

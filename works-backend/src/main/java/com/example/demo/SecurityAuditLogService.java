@@ -14,7 +14,7 @@ import java.util.List;
  * streaming and cryptographic verification.
  *
  * <p>The chain ({@link AuditHashChain}) makes the log tamper-evident: each entry's hash folds in the
- * previous entry's hash, and the DB blocks UPDATE/DELETE (V51 trigger), so any alteration is
+ * previous entry's hash, and the DB blocks UPDATE/DELETE (V52 trigger), so any alteration is
  * detectable by {@link #verify}. Callers apply RBAC + workspace scoping before recording.
  */
 @Service

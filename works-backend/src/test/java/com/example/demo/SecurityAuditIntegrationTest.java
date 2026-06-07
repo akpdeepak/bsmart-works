@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Iteration 19 (enterprise security) integration coverage against a real Postgres (V51). Verifies:
+ * Iteration 19 (enterprise security) integration coverage against a real Postgres (V52). Verifies:
  *   - the SQL-seeded audit chain verifies under the same SHA-256 the application uses (so the seed
  *     is genuinely tamper-evident, not faked),
  *   - the audit log is append-only at the DB layer (UPDATE/DELETE blocked),

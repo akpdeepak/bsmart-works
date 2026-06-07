@@ -9,7 +9,7 @@ import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 
 /** One entry in the tamper-evident, hash-chained security audit log (iteration 19 Cap T,
- *  RB-40 §4). Append-only — never updated or deleted (enforced by a DB trigger in V51). seq is a
+ *  RB-40 §4). Append-only — never updated or deleted (enforced by a DB trigger in V52). seq is a
  *  per-workspace monotonic counter; entry_hash chains prev_hash (see {@link AuditHashChain}). */
 @Entity
 @Table(name = "audit_log_entries")

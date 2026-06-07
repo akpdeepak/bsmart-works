@@ -35,6 +35,7 @@ export const VIEW_PATHS = {
   developerportal: '/developer-portal',
   supportinbox: '/support-inbox',
   settings3: '/settings/workflows',
+  customization: '/customization',
   workspace: '/settings',
   trash: '/trash',
 };

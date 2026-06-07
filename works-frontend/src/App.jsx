@@ -1,5 +1,4 @@
-﻿/* eslint-disable */ // legacy monolith — a11y and hooks violations are known baseline debt; new components must pass clean
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import DOMPurify from 'dompurify';
 import {
   Mail, PanelLeft, ChevronDown, Check,

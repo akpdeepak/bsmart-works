@@ -1,7 +1,7 @@
 import { Command } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/works/atoms/badge';
-import { getMode } from '@/lib/nav-model';
+import { getMode, visibleSurfaces } from '@/lib/nav-model';
 
 // Organism — the white contextual sub-rail (mockup second column). Shows the active mode's title
 // and its surfaces; the current surface gets a brand-orange left accent + navy label. A footer
@@ -11,8 +11,9 @@ import { getMode } from '@/lib/nav-model';
 // and the active-sprint dot carry over from the old sidebar. Design: tokens only, all five states,
 // labelled controls (§4.6, §4.8, §4.12).
 
-export function SubRail({ activeMode, activeView, activeExtra, onNavigate, badges = {}, dots = {} }) {
+export function SubRail({ activeMode, activeView, activeExtra, onNavigate, userTier, badges = {}, dots = {} }) {
   const mode = getMode(activeMode);
+  const surfaces = visibleSurfaces(activeMode, userTier);
 
   return (
     <div className="flex h-full w-subrail shrink-0 flex-col overflow-y-auto border-r border-neutral-200 bg-white px-2.5 py-3 dark:border-neutral-700 dark:bg-neutral-900">
@@ -35,7 +36,7 @@ export function SubRail({ activeMode, activeView, activeExtra, onNavigate, badge
       )}
 
       <nav aria-label={`${mode.label} surfaces`} className="space-y-0.5">
-        {mode.surfaces.map((s) => {
+        {surfaces.map((s) => {
           const active = activeView === s.id;
           const badge = badges[s.id];
           const dot = dots[s.id];

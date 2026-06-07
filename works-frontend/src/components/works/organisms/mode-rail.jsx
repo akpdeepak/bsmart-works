@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { MODES } from '@/lib/nav-model';
+import { visibleModes } from '@/lib/nav-model';
 
 // Organism — the narrow navy icon rail (mockup left edge). One icon per top-level mode; the active
 // mode gets a brand-orange left accent + white icon. The final mode ("Set up") is pinned to the
@@ -8,16 +8,17 @@ import { MODES } from '@/lib/nav-model';
 // Design rules: bg-brand-navy, lucide icons only, brand-orange active accent, all five interactive
 // states, labelled buttons (§4.6, §4.8, §4.12, §4.23). Width is the `w-rail` token, not a literal.
 
-export function ModeRail({ activeMode, onSelectMode }) {
+export function ModeRail({ activeMode, onSelectMode, userTier }) {
+  const modes = visibleModes(userTier);
   return (
     <nav
       aria-label="Workspace modes"
       className="flex h-full w-rail shrink-0 flex-col items-center gap-1 overflow-y-auto border-r border-white/5 bg-brand-navy py-2"
     >
-      {MODES.map((mode, i) => {
+      {modes.map((mode, i) => {
         const Icon = mode.Icon;
         const active = activeMode === mode.id;
-        const pinnedBottom = i === MODES.length - 1;
+        const pinnedBottom = mode.id === 'setup' && i === modes.length - 1;
         return (
           <button
             key={mode.id}

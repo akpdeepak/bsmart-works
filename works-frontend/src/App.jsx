@@ -21,7 +21,7 @@ import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
 import { ModeRail } from '@/components/works/organisms/mode-rail';
 import { SubRail } from '@/components/works/organisms/sub-rail';
-import { MODES, LENSES, modeForView, firstSurfaceOf, getMode, labelForView } from '@/lib/nav-model';
+import { MODES, LENSES, TIER, modeForView, firstSurfaceOf, getMode, labelForView } from '@/lib/nav-model';
 import { CustomizationView } from '@/components/works/organisms/customization-view';
 import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
 import { DeveloperWorkspace } from '@/components/works/organisms/developer-workspace';
@@ -2688,21 +2688,24 @@ export default function App() {
             {/* Live co-presence — who else is in this workspace (iteration 18, Cap S) */}
             <div className="hidden lg:flex"><PresenceBar present={presence} currentUserId={currentUser?.id} /></div>
 
-            {/* Role lens switcher */}
+            {/* Role lens — Admin/Owner only: a "view as role" preview that emphasises a role's
+                surfaces and jumps to its cockpit. NOT access control — server RBAC governs. */}
+            {userRole.tier >= TIER.ADMIN && (
             <div className="relative shrink-0" ref={lensRef}>
               <button
                 type="button"
                 onClick={() => setLensOpen(o => !o)}
                 aria-haspopup="menu"
                 aria-expanded={lensOpen}
-                aria-label={`Role lens: ${activeLens.label}`}
+                aria-label={`Preview as role: ${activeLens.label}`}
                 className="hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-semibold text-white bg-white/10 border border-white/15 hover:bg-white/15 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
                 <span className="max-w-28 truncate">{activeLens.label}</span>
                 <ChevronDown aria-hidden="true" className="h-3.5 w-3.5 text-white/60" />
               </button>
               {lensOpen && (
-                <div className="absolute right-0 top-full mt-1 w-52 rounded-lg border border-neutral-200 bg-white py-1 text-neutral-900 shadow-xl z-dropdown dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
-                  <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-400">View as</p>
+                <div className="absolute right-0 top-full mt-1 w-56 rounded-lg border border-neutral-200 bg-white py-1 text-neutral-900 shadow-xl z-dropdown dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
+                  <p className="px-3 pt-2 text-xs font-semibold uppercase tracking-wider text-neutral-400">Preview as role</p>
+                  <p className="px-3 pb-2 pt-0.5 text-xs text-neutral-400">Emphasis only · doesn’t change permissions</p>
                   {LENSES.map(l => {
                     const isActive = l.id === lens;
                     return (
@@ -2717,6 +2720,7 @@ export default function App() {
                 </div>
               )}
             </div>
+            )}
 
             <AiCommandBar
               workspaceId={activeWorkspaceId}
@@ -2769,12 +2773,14 @@ export default function App() {
           >
             <ModeRail
               activeMode={activeMode}
-              onSelectMode={(m) => navigate(firstSurfaceOf(m))}
+              userTier={userRole.tier}
+              onSelectMode={(m) => navigate(firstSurfaceOf(m, userRole.tier))}
             />
             <SubRail
               activeMode={activeMode}
               activeView={view}
               activeExtra={activeExtra}
+              userTier={userRole.tier}
               onNavigate={navigate}
               badges={{ myworks: myItems.length, notifications: unreadCount }}
               dots={{ sprint: Boolean(sprints.find(s => s.status === 'ACTIVE')) }}

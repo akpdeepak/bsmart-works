@@ -9,6 +9,48 @@ import {
   Home, LayoutGrid, BarChart2, Headset, BookOpen, Puzzle, Settings,
 } from 'lucide-react';
 
+// ─── Permission tiers (mirror the server: RbacService) ───────────────────────────
+// VIEWER(1) < MEMBER(2) < LEAD(3) < ADMIN(4) < OWNER(5). This client map decides nav VISIBILITY
+// (declutter) only — it is NOT the access boundary. Every action/query is still authorised
+// server-side by RbacService (RB-10 §2, RB-40 §1): hiding a surface never grants or denies access.
+export const TIER = { VIEWER: 1, MEMBER: 2, LEAD: 3, ADMIN: 4, OWNER: 5 };
+
+// Surface id -> minimum tier that should SEE it in the nav. Owner(5) sees everything. Unlisted
+// surfaces default to VIEWER(1) (visible to all members). Keep this reconciled with the server's
+// permissions.min_tier as the real contract evolves (tracked as tech-debt).
+export const SURFACE_TIER = {
+  // Home
+  dashboard: TIER.VIEWER, myworks: TIER.MEMBER, notifications: TIER.MEMBER,
+  // Deliver
+  smcockpit: TIER.LEAD, board: TIER.VIEWER, backlog: TIER.MEMBER, sprint: TIER.MEMBER,
+  releases: TIER.MEMBER, projects: TIER.VIEWER, pm: TIER.LEAD,
+  // Insight
+  reports: TIER.VIEWER, dashboards: TIER.VIEWER, reportbuilder: TIER.LEAD, performance: TIER.LEAD,
+  // Service
+  service: TIER.MEMBER, supportinbox: TIER.MEMBER, sla: TIER.MEMBER, compliance: TIER.ADMIN,
+  // Know
+  knowledge: TIER.VIEWER, knowledgeadvanced: TIER.MEMBER,
+  // Extend
+  automations: TIER.LEAD, integrations: TIER.ADMIN, aistudio: TIER.ADMIN,
+  marketplace: TIER.ADMIN, developerportal: TIER.ADMIN,
+  // Set up
+  workspace: TIER.ADMIN, settings3: TIER.ADMIN, aicontrol: TIER.ADMIN,
+  customization: TIER.ADMIN, security: TIER.OWNER, trash: TIER.LEAD,
+  // Satellite cockpits + BQL
+  developer: TIER.MEMBER, poworkspace: TIER.LEAD, leadership: TIER.ADMIN,
+  adminops: TIER.ADMIN, bql: TIER.MEMBER,
+};
+
+// Minimum tier (1 = everyone) required to see a surface in the nav.
+export function tierForSurface(view) {
+  return SURFACE_TIER[view] ?? TIER.VIEWER;
+}
+
+// Can a user at `userTier` see this surface? (Owner/tier 5 sees all.)
+export function canSeeSurface(view, userTier) {
+  return (userTier ?? TIER.VIEWER) >= tierForSurface(view);
+}
+
 // ─── Modes & their surfaces ─────────────────────────────────────────────────────
 // Order matches the mockup rail top-to-bottom. The last mode ("Set up") is pinned to the
 // bottom of the rail by the ModeRail component.
@@ -137,10 +179,24 @@ export function modeForView(view) {
   return SATELLITE_MODE[view] || MODES[0].id;
 }
 
-// mode id -> first surface view id (where the rail lands you when you click a mode).
-export function firstSurfaceOf(modeId) {
-  const m = MODES.find((x) => x.id === modeId);
-  return m ? m.surfaces[0].id : MODES[0].surfaces[0].id;
+// The surfaces of a mode that `userTier` may see. Owner sees all.
+export function visibleSurfaces(modeId, userTier) {
+  const m = getMode(modeId);
+  return m.surfaces.filter((s) => canSeeSurface(s.id, userTier));
+}
+
+// The modes that have at least one surface visible to `userTier` — empty modes drop off the rail.
+export function visibleModes(userTier) {
+  return MODES.filter((m) => m.surfaces.some((s) => canSeeSurface(s.id, userTier)));
+}
+
+// mode id -> first surface view id the user may actually see (where the rail lands you when you
+// click a mode). Falls back to the mode's first surface if the tier is unknown.
+export function firstSurfaceOf(modeId, userTier) {
+  const visible = visibleSurfaces(modeId, userTier);
+  if (visible.length) return visible[0].id;
+  const m = getMode(modeId);
+  return m.surfaces[0]?.id ?? MODES[0].surfaces[0].id;
 }
 
 // mode id -> mode object.

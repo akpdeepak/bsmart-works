@@ -153,18 +153,22 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
 > should be extended to verify the migration number against `db/migration/`.
 
 - **Iterations:** 20 total · 26 capabilities · ~346 sub-features.
-- **Active iteration:** **13 (complete)** — Automation Engine + Integrations (Cap C/Q/A): visual
-  When/If/Then rules with test-mode and a run audit log, signed outbound webhooks with retry +
-  dead-letter, the public-API token foundation, and the connector registry (Slack / GitHub / GitLab /
-  email / calendar + SSO/SCIM). Built on iteration **12** (KPI Framework with privacy guardrails —
-  Cap L: layered metrics, manager view API-blocked from individual drill-down, immutable snapshots)
-  and iteration **11** (broad AI expansion on the **AI Control Plane** — one policy hierarchy, one
-  budget, one audit trail, one fallback contract, RB-40 §2). Iteration 7 (Compliance Rules Engine)
-  complete. **Iteration 15 (Scrum Master Cockpit Cap V + Product Owner Workspace Cap W) was also
-  delivered ahead of 14**, by explicit owner directive, on the same AI-Control-Plane foundation.
-- **Flyway high-water mark:** **V45** (`V45__automation_and_integrations.sql`; note: V16 was skipped,
-  V23 does not exist; V41 is iteration 15's `V41__iteration15_scrum_po.sql`).
-- **Next migration:** **`V46__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+- **Active iteration:** **16 (complete)** — Leadership Console (Cap X) + Admin Operations Center
+  (Cap Y): cross-team rollup, AI executive briefing + board-deck auto-draft, strategic-theme tracker,
+  resource-allocation view, risk portfolio, customer-health dashboard and strategy-to-execution map;
+  plus user-lifecycle playbooks, license/seat management, workspace-health monitor, AI cost dashboard,
+  audit-log explorer, integration-health (with retry), access review (bulk-deactivate) and on-demand
+  SOC 2 / ISO 27001 compliance-evidence packages. All five role surfaces are now live (Developer / SM /
+  PO / Leadership / Admin). Built on iteration **15** (Scrum Master Cockpit Cap V + Product Owner
+  Workspace Cap W), **14** (Developer Workspace Cap U), **13** (Automation Engine + Integrations
+  Cap C/Q/A), **12** (KPI Framework Cap L) and **11** (the **AI Control Plane** — one policy hierarchy,
+  one budget, one audit trail, one fallback contract, RB-40 §2). Iteration 7 (Compliance Rules Engine)
+  complete. (Iterations 14/15 were delivered by explicit owner directive on the AI-Control-Plane
+  foundation; 16 layers cleanly on all of them.)
+- **Flyway high-water mark:** **V50** (`V50__iteration16_leadership_admin.sql`; note: V16 was skipped,
+  V23 does not exist; V41 is iteration 15's `V41__iteration15_scrum_po.sql`,
+  V47 is iteration 14's `V47__iteration14_developer_workspace.sql`).
+- **Next migration:** **`V51__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

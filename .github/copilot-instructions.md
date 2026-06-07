@@ -157,18 +157,24 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
 > should be extended to verify the migration number against `db/migration/`.
 
 - **Iterations:** 20 total · 26 capabilities · ~346 sub-features.
-- **Active iteration:** **13 (complete)** — Automation Engine + Integrations (Cap C/Q/A): visual
-  When/If/Then rules with test-mode and a run audit log, signed outbound webhooks with retry +
-  dead-letter, the public-API token foundation, and the connector registry (Slack / GitHub / GitLab /
-  email / calendar + SSO/SCIM). Built on iteration **12** (KPI Framework with privacy guardrails —
-  Cap L: layered metrics, manager view API-blocked from individual drill-down, immutable snapshots)
-  and iteration **11** (broad AI expansion on the **AI Control Plane** — one policy hierarchy, one
-  budget, one audit trail, one fallback contract, RB-40 §2). Iteration 7 (Compliance Rules Engine)
-  complete. **Iteration 15 (Scrum Master Cockpit Cap V + Product Owner Workspace Cap W) was also
-  delivered ahead of 14**, by explicit owner directive, on the same AI-Control-Plane foundation.
-- **Flyway high-water mark:** **V45** (`V45__automation_and_integrations.sql`; note: V16 was skipped,
-  V23 does not exist; V41 is iteration 15's `V41__iteration15_scrum_po.sql`).
-- **Next migration:** **`V46__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+- **Active iteration:** **20 (complete)** — Polish, Advanced AI & Marketplace Foundation. Cap O:
+  multi-step AI agents (audited runs), workspace-defined custom assistants, AI memory/context, and
+  conversational dashboards (NL → widget spec). Cap R: the app marketplace foundation (global
+  catalogue, per-workspace installs with permission scoping) + developer portal SDK/sandbox. Cap I:
+  document templates, multi-author collaboration, AI structured-data extraction. Cap N: customer
+  chat support (portal chat, AI tier-1 + human escalation). Cap A: localization across 10 languages
+  (en/hi/es/fr/de/pt/ja/zh/ar/ko, RTL-aware) + accessibility audit (WCAG 2.2 AA). Cap S/T:
+  performance-hardening composite indexes and the final security-hardening posture
+  (`SECURITY.md` disclosure policy). Every new AI surface routes through the **AI Control Plane**
+  (one policy hierarchy, one budget, one audit trail, one fallback contract, RB-40 §2) with a
+  documented deterministic fallback. Built on the full stack of prior iterations — incl. **11** (AI
+  Control Plane), **12** (KPI Framework), **13** (Automation + Integrations), **14** (Developer
+  Workspace), **15** (Scrum Master Cockpit + Product Owner Workspace), and the Compliance/Service
+  iterations (7–9).
+- **Flyway high-water mark:** **V54** (`V54__user_locale_and_perf_indexes.sql`; note: V16 was
+  skipped, V23 does not exist; V50–V53 are iteration 20's advanced-AI / marketplace / knowledge /
+  customer-chat migrations).
+- **Next migration:** **`V55__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

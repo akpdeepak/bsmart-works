@@ -22,6 +22,8 @@ export const VIEW_PATHS = {
   compliance: '/compliance',
   smcockpit: '/sm-cockpit',
   poworkspace: '/po-workspace',
+  leadership: '/leadership',
+  adminops: '/admin-ops',
   pm: '/pm-artifacts',
   automations: '/automations',
   integrations: '/integrations',

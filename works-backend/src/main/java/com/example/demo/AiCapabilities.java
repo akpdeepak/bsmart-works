@@ -35,6 +35,8 @@ public final class AiCapabilities {
     public static final String BACKLOG_REFINE     = "backlog_refine";     // Cap W — backlog refinement ranking (I15-S09)
     public static final String FEEDBACK_CLUSTER   = "feedback_cluster";   // Cap W — customer-feedback theme clustering (I15-S11)
     public static final String RELEASE_NOTES      = "release_notes";      // Cap W — release-notes auto-draft (I15-S13)
+    public static final String EXEC_BRIEFING      = "exec_briefing";      // Cap X — AI executive briefing (iteration 16)
+    public static final String BOARD_DECK         = "board_deck";         // Cap X — quarterly board-deck auto-draft (iteration 16)
     // Iteration 20 — advanced AI + ecosystem capabilities.
     public static final String AGENT_ORCHESTRATION    = "agent_orchestration";    // Cap O — multi-step agent planning + execution
     public static final String CUSTOM_ASSISTANT       = "custom_assistant";       // Cap O — workspace-defined assistant personas
@@ -91,6 +93,12 @@ public final class AiCapabilities {
             "Falls back to keyword bucketing into themes with lexicon sentiment — the deterministic clusterer."),
         new Descriptor(RELEASE_NOTES, "Release-notes auto-draft", AiModelTier.SONNET,
             "Falls back to completed items grouped by type into a plain markdown changelog for manual editing."),
+        new Descriptor(EXEC_BRIEFING, "AI executive briefing", AiModelTier.SONNET,
+            "Falls back to the deterministic briefing assembled from the cross-team rollup, customer-health "
+            + "and risk-portfolio figures — the numbers and headlines, without the narrative prose."),
+        new Descriptor(BOARD_DECK, "Quarterly board-deck auto-draft", AiModelTier.SONNET,
+            "Falls back to the deterministic slide outline built from the same rollup, OKR and risk data — "
+            + "the structured slides for manual narration."),
         new Descriptor(AGENT_ORCHESTRATION, "Multi-step AI agent", AiModelTier.SONNET,
             "Falls back to the deterministic plan (goal keywords → ordered capability steps); each step then "
             + "runs on its own capability's documented fallback, so the run still produces an auditable result."),

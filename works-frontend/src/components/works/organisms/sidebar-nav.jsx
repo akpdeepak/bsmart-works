@@ -4,7 +4,7 @@ import {
   BarChart2, LayoutDashboard, FileText, TrendingUp, Headset, Timer, ShieldCheck,
   Gauge, Map as MapIcon, ClipboardList, Workflow, Plug, Search, BookOpen,
   SlidersHorizontal, Settings, Trash2, PanelLeftClose, LogOut, ChevronDown, Check, Sparkles,
-  Bot, Package, Code2, MessageSquare,
+  Bot, Package, Code2, MessageSquare, Crown, ShieldHalf,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/works/atoms/badge';
@@ -53,6 +53,8 @@ const NAV_SECTIONS = [
   { id: 'cockpits', label: 'Cockpits', items: [
     { id: 'smcockpit',   label: 'SM Cockpit',   icon: Gauge },
     { id: 'poworkspace', label: 'PO Workspace', icon: MapIcon },
+    { id: 'leadership',  label: 'Leadership',   icon: Crown },
+    { id: 'adminops',    label: 'Admin Ops',    icon: ShieldHalf },
     { id: 'pm',          label: 'PM Artifacts', icon: ClipboardList },
   ] },
   { id: 'automate', label: 'Automate & Connect', items: [

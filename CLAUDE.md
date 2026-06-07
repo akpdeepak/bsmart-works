@@ -169,12 +169,13 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   (one policy hierarchy, one budget, one audit trail, one fallback contract, RB-40 §2) with a
   documented deterministic fallback. Built on the full stack of prior iterations — incl. **11** (AI
   Control Plane), **12** (KPI Framework), **13** (Automation + Integrations), **14** (Developer
-  Workspace), **15** (Scrum Master Cockpit + Product Owner Workspace), and the Compliance/Service
-  iterations (7–9).
-- **Flyway high-water mark:** **V54** (`V54__user_locale_and_perf_indexes.sql`; note: V16 was
-  skipped, V23 does not exist; V50–V53 are iteration 20's advanced-AI / marketplace / knowledge /
-  customer-chat migrations).
-- **Next migration:** **`V55__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+  Workspace), **15** (Scrum Master Cockpit + Product Owner Workspace), **16** (Leadership Console
+  Cap X + Admin Operations Center Cap Y — all five role surfaces now live), and the
+  Compliance/Service iterations (7–9).
+- **Flyway high-water mark:** **V55** (`V55__user_locale_and_perf_indexes.sql`; note: V16 was
+  skipped, V23 does not exist; V50 is iteration 16's `V50__iteration16_leadership_admin.sql`;
+  V51–V54 are iteration 20's advanced-AI / marketplace / knowledge / customer-chat migrations).
+- **Next migration:** **`V56__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

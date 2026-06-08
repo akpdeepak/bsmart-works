@@ -66,6 +66,22 @@ public class WebhookService {
         subscriptions.delete(s);
     }
 
+    public record RotatedSecret(WebhookSubscription subscription, String newSecret) { }
+
+    /** Rotate the signing secret for a subscription. Returns the new secret exactly once. */
+    @Transactional
+    public RotatedSecret rotateSecret(String workspaceId, String id) {
+        WebhookSubscription s = subscriptions.findById(id)
+            .orElseThrow(() -> ApiException.notFound("Webhook subscription", id));
+        if (!workspaceId.equals(s.getWorkspaceId())) {
+            throw ApiException.forbidden("Subscription belongs to a different workspace.");
+        }
+        String newSecret = "whsec_" + UUID.randomUUID().toString().replace("-", "");
+        s.setSecret(newSecret);
+        s.setUpdatedAt(OffsetDateTime.now());
+        return new RotatedSecret(subscriptions.save(s), newSecret);
+    }
+
     // ── Delivery ──────────────────────────────────────────────────────────────────
 
     /** Enqueue + attempt one delivery per active subscription matching the event type (or '*'). */

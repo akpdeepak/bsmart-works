@@ -67,4 +67,13 @@ public class WebhookController {
         rbac.require(authenticatedUser.id(), workspaceId, "manage_integrations");
         return webhooks.redeliver(workspaceId, id);
     }
+
+    /** Rotates the HMAC signing secret for a subscription. The new secret is returned exactly once. */
+    @PostMapping("/{id}/rotate-secret")
+    public Map<String, Object> rotateSecret(@RequestParam String workspaceId, @PathVariable String id) {
+        rbac.require(authenticatedUser.id(), workspaceId, "manage_integrations");
+        WebhookService.RotatedSecret result = webhooks.rotateSecret(workspaceId, id);
+        return Map.of("subscription", result.subscription(), "secret", result.newSecret(),
+            "notice", "Copy this secret now — it will not be shown again.");
+    }
 }

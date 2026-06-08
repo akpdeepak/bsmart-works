@@ -153,3 +153,13 @@ The following items from the Layer A validation (Prompt A, 2026-06-07) cannot be
 - **Decision needed:** Confirm whether SSE is accepted as the long-term protocol, or whether WebSocket is required (e.g. for bidirectional cursor sync or collaborative editing in a future iteration). Switching to WebSocket is an architectural change touching `RealtimeService`, the SSE endpoint, and the frontend `EventSource` client.
 - **Impact until resolved:** Co-presence works correctly via SSE; the only gap is the spec says "WebSocket."
 - **Trigger:** Explicit decision from Deepak — "SSE is fine" closes this; "need WebSocket" opens a planned migration task.
+
+---
+
+## Code debt (cont.)
+
+### TD-024 — Nav-surface tier catalog is duplicated client + server
+- **What:** Nav visibility is **server-authoritative**: `/rbac/me` returns a `surfaces` list derived from `NavSurfaces` (backend), and the front-end renders the rail / sub-rail / ⌘K from it. The client's `SURFACE_TIER` map (`works-frontend/src/lib/nav-model.js`) is kept only as a **fallback** for older servers / offline. So the surface→min-tier catalog exists in two places (`NavSurfaces.java` and `nav-model.js`) that must be kept in sync by hand.
+- **Why accepted:** Shipping the server endpoint closed the "client decides access" gap (the real win). Eliminating the second copy entirely would mean the front-end never has a fallback, or generating one file from the other — neither worth blocking on now. Neither map is a security boundary; `RbacService` still authorises every query/action (RB-10 §2, RB-40 §1).
+- **Impact:** If the two catalogs drift, an old-server/offline fallback could mis-declutter the menu (show/hide a surface the live server would decide differently). Cosmetic, never a breach — the live path uses the server list.
+- **Trigger:** Generate the client fallback from the server catalog (or a shared JSON), or drop the client map once every deployed server returns `surfaces`. Do this when the catalog starts changing often or before external tenants self-serve roles.

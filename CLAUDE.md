@@ -267,6 +267,8 @@ these is ever intentionally reverted (e.g. the package rename), **update this le
 | API path | `/api/work-items` (unversioned) | **`/api/v1/work-items`** (versioned, kebab) | |
 | Event store table | `event_log` | **`events`** | `event_log` dropped in V20 |
 | Message broker | RabbitMQ / SQS early, Kafka at scale | **in-process events + outbox now; broker on service extraction** | per [ADR-0001](../docs/architecture/ADR-0001-service-decomposition.md) + RB-10 §2 |
+| Real-time co-presence protocol | WebSocket (spec `06 §4.8`, iter 18) | **SSE (Server-Sent Events)** with heartbeat + `PresenceService` | SSE is unidirectional (server→client); sufficient for all current use cases; works through HTTP/2 proxies + CDN without sticky sessions. Decision 2026-06-08 — see TD-023. |
+| Mobile apps | Native iOS (Swift) + Android (Kotlin) (spec `06 §4.9`, iter 18) | **PWA only** (service worker, offline drafts, Web Push, WebAuthn biometric) | Native apps are separate platform repos (`bsmart-works-ios`, `bsmart-works-android`) — not built in this codebase. Decision 2026-06-08 — see TD-020. |
 
 ---
 

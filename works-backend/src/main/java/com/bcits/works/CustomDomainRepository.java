@@ -26,4 +26,9 @@ public interface CustomDomainRepository extends JpaRepository<CustomDomain, Stri
      * Used during registration to reject duplicates without relying solely on the DB constraint.
      */
     Optional<CustomDomain> findByDomainAndDeletedAtIsNull(String domain);
+
+    /** Returns all live (not soft-deleted) domains in the given status. Used by the verification job. */
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT d FROM CustomDomain d WHERE d.status = :status AND d.deletedAt IS NULL")
+    List<CustomDomain> findByStatus(String status);
 }

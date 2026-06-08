@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,8 +34,12 @@ public class KnowledgeSpaceController {
     }
 
     @GetMapping
-    public List<KnowledgeSpace> getSpaces() {
-        return knowledgeSpaceRepository.findAllByOrderByNameAsc();
+    public List<KnowledgeSpace> getSpaces(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        int limit = Math.min(Math.max(size, 1), 200);
+        return knowledgeSpaceRepository.findAllByOrderByNameAsc(
+                PageRequest.of(Math.max(page, 0), limit)).getContent();
     }
 
     @GetMapping("/{id}")
@@ -44,10 +49,14 @@ public class KnowledgeSpaceController {
 
     @GetMapping("/{id}/articles")
     public List<Article> getSpaceArticles(@PathVariable String id,
-                                           @RequestParam(required = false) String status) {
+                                           @RequestParam(required = false) String status,
+                                           @RequestParam(defaultValue = "0") int page,
+                                           @RequestParam(defaultValue = "50") int size) {
+        int limit = Math.min(Math.max(size, 1), 200);
+        PageRequest pr = PageRequest.of(Math.max(page, 0), limit);
         return status != null
-            ? articleRepository.findBySpaceIdAndStatusOrderByUpdatedAtDesc(id, status)
-            : articleRepository.findBySpaceIdOrderByUpdatedAtDesc(id);
+            ? articleRepository.findBySpaceIdAndStatusOrderByUpdatedAtDesc(id, status, pr).getContent()
+            : articleRepository.findBySpaceIdOrderByUpdatedAtDesc(id, pr).getContent();
     }
 
     @PostMapping

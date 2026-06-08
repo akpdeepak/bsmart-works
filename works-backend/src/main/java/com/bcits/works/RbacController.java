@@ -37,7 +37,10 @@ public class RbacController {
         int tier    = rbacService.getUserTier(userId, WS);
         List<String> perms = jdbc.queryForList(
             "SELECT id FROM permissions WHERE min_tier <= ?", String.class, tier);
-        return Map.of("role", role, "tier", tier, "permissions", perms);
+        // Nav surfaces this tier may see — the front-end uses this to declutter the rail / ⌘K.
+        // Authoritative here; the client only falls back to its own copy if this is absent.
+        List<String> surfaces = NavSurfaces.visibleFor(tier);
+        return Map.of("role", role, "tier", tier, "permissions", perms, "surfaces", surfaces);
     }
 
     // List all roles

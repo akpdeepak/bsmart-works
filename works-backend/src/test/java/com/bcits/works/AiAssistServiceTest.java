@@ -208,6 +208,27 @@ class AiAssistServiceTest {
         org.mockito.Mockito.verify(workItems, org.mockito.Mockito.never()).save(any());
     }
 
+    @Test
+    void executePlan_assign_resolvesUserWithinWorkspaceOnly() {
+        // Prove that ASSIGN uses workspace-scoped user lookup (RB-40 §1), not a global findAll.
+        WorkItem wi = item("WEB-1", "Login broken", "");
+        when(workItems.findById("WEB-1")).thenReturn(java.util.Optional.of(wi));
+        when(rbac.workspaceForProject("PROJ-1")).thenReturn("ws");
+        org.mockito.Mockito.doNothing().when(rbac).require("me", "ws", "edit_any_item");
+        User rahul = user("user-9", "Rahul");
+        when(users.findByWorkspaceIdAndFullNameContaining("ws", "Rahul"))
+                .thenReturn(List.of(rahul));
+
+        var step = new AiAssistService.PlanStep(AiAssistService.ActionType.ASSIGN.name(),
+                "assign", Map.of("workItemId", "WEB-1", "assigneeName", "Rahul"), true);
+        var result = assist.executePlan("ws", "me", List.of(step));
+
+        assertThat(result.get("executed")).isEqualTo(1);
+        // Scoped lookup was used; global findAll must never be called
+        org.mockito.Mockito.verify(users).findByWorkspaceIdAndFullNameContaining("ws", "Rahul");
+        org.mockito.Mockito.verify(users, org.mockito.Mockito.never()).findAll();
+    }
+
     // ── fixtures ─────────────────────────────────────────────────────────────────
 
     private static WorkItem item(String id, String title, String desc) {

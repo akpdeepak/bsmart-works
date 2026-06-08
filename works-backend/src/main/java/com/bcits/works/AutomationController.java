@@ -1,0 +1,104 @@
+package com.bcits.works;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Automation engine API (iteration 13, Cap C). Reads need workspace membership; creating, editing,
+ * toggling, testing and running rules require {@code manage_automations}. RBAC is enforced here at
+ * the service boundary (RB-10 §2) and every endpoint is workspace-scoped (RB-40 §1).
+ */
+@RestController
+@RequestMapping("/api/v1/automations")
+public class AutomationController {
+
+    private final AutomationService automation;
+    private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
+
+    public AutomationController(AutomationService automation, AuthenticatedUser authenticatedUser, RbacService rbac) {
+        this.automation = automation;
+        this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
+    }
+
+    @GetMapping("/catalog")
+    public Map<String, Object> catalog(@RequestParam String workspaceId) {
+        rbac.require(authenticatedUser.id(), workspaceId, "view_items");
+        return Map.of("triggers", AutomationCatalog.triggers(),
+            "actions", AutomationCatalog.actions(), "templates", AutomationCatalog.templates());
+    }
+
+    @GetMapping
+    public List<AutomationRule> list(@RequestParam String workspaceId) {
+        rbac.require(authenticatedUser.id(), workspaceId, "view_items");
+        return automation.list(workspaceId);
+    }
+
+    @GetMapping("/{id}")
+    public AutomationRule get(@RequestParam String workspaceId, @PathVariable String id) {
+        rbac.require(authenticatedUser.id(), workspaceId, "view_items");
+        return automation.require(workspaceId, id);
+    }
+
+    @PostMapping
+    public AutomationRule create(@RequestParam String workspaceId, @RequestBody AutomationRule rule) {
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "manage_automations");
+        return automation.create(workspaceId, userId, rule);
+    }
+
+    @PutMapping("/{id}")
+    public AutomationRule update(@RequestParam String workspaceId, @PathVariable String id,
+                                @RequestBody AutomationRule rule) {
+        rbac.require(authenticatedUser.id(), workspaceId, "manage_automations");
+        return automation.update(workspaceId, id, rule);
+    }
+
+    @DeleteMapping("/{id}")
+    public Map<String, Object> delete(@RequestParam String workspaceId, @PathVariable String id) {
+        rbac.require(authenticatedUser.id(), workspaceId, "manage_automations");
+        automation.delete(workspaceId, id);
+        return Map.of("ok", true);
+    }
+
+    @PostMapping("/{id}/toggle")
+    public AutomationRule toggle(@RequestParam String workspaceId, @PathVariable String id,
+                                @RequestParam boolean enabled) {
+        rbac.require(authenticatedUser.id(), workspaceId, "manage_automations");
+        return automation.setEnabled(workspaceId, id, enabled);
+    }
+
+    /** Test mode — preview the affected items without mutating anything (RB-05 Stage 3). */
+    @PostMapping("/{id}/test")
+    public AutomationService.Preview test(@RequestParam String workspaceId, @PathVariable String id) {
+        rbac.require(authenticatedUser.id(), workspaceId, "manage_automations");
+        return automation.test(workspaceId, id);
+    }
+
+    @PostMapping("/{id}/run")
+    public AutomationService.Preview run(@RequestParam String workspaceId, @PathVariable String id) {
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "manage_automations");
+        return automation.runNow(workspaceId, id, userId);
+    }
+
+    @GetMapping("/runs")
+    public PageResponse<AutomationRun> runs(@RequestParam String workspaceId,
+                                            @RequestParam(defaultValue = "0") int page,
+                                            @RequestParam(defaultValue = "50") int size) {
+        rbac.require(authenticatedUser.id(), workspaceId, "view_items");
+        return PageResponse.of(automation.runLog(workspaceId,
+            PageRequest.of(Math.max(0, page), Math.min(200, Math.max(1, size)))));
+    }
+
+    @PostMapping("/suggest")
+    public Map<String, Object> suggest(@RequestParam String workspaceId) {
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "view_items");
+        return automation.suggest(workspaceId, userId, true);
+    }
+}

@@ -20,7 +20,7 @@
     <!-- Quieten noisy Spring internals locally -->
     <logger name="org.springframework.web" level="WARN"/>
     <logger name="org.hibernate.SQL"       level="DEBUG"/>
-    <logger name="com.example.demo"        level="DEBUG"/>
+    <logger name="com.bcits.works"        level="DEBUG"/>
   </springProfile>
 
   <!-- ── JSON console (staging + production) ───────────────────────────── -->
@@ -39,7 +39,7 @@
     </root>
     <logger name="org.springframework" level="WARN"/>
     <logger name="org.hibernate"       level="WARN"/>
-    <logger name="com.example.demo"    level="INFO"/>
+    <logger name="com.bcits.works"    level="INFO"/>
   </springProfile>
 
 </configuration>

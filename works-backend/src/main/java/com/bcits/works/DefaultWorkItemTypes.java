@@ -17,12 +17,12 @@ public final class DefaultWorkItemTypes {
     private DefaultWorkItemTypes() {}
 
     public static final List<Map<String, Object>> ALL = List.of(
-        Map.of("typeKey", "EPIC",            "label", "Epic",            "icon", "⚡", "color", "#0B2F5C", "isCustom", false),
-        Map.of("typeKey", "STORY",           "label", "Story",           "icon", "📖", "color", "#0E7C5E", "isCustom", false),
-        Map.of("typeKey", "TASK",            "label", "Task",            "icon", "✓",  "color", "#1E4D8C", "isCustom", false),
-        Map.of("typeKey", "BUG",             "label", "Bug",             "icon", "🐛", "color", "#C0392B", "isCustom", false),
-        Map.of("typeKey", "SUBTASK",         "label", "Sub-task",        "icon", "↳",  "color", "#475569", "isCustom", false),
-        Map.of("typeKey", "INCIDENT",        "label", "Incident",        "icon", "🔥", "color", "#B97A00", "isCustom", false),
-        Map.of("typeKey", "SERVICE_REQUEST", "label", "Service Request", "icon", "🎫", "color", "#334155", "isCustom", false)
+        Map.of("typeKey", "EPIC",            "label", "Epic",            "icon", "layers",         "color", "#0B2F5C", "isCustom", false),
+        Map.of("typeKey", "STORY",           "label", "Story",           "icon", "book-open",       "color", "#0E7C5E", "isCustom", false),
+        Map.of("typeKey", "TASK",            "label", "Task",            "icon", "check-square",    "color", "#1E4D8C", "isCustom", false),
+        Map.of("typeKey", "BUG",             "label", "Bug",             "icon", "bug",             "color", "#C0392B", "isCustom", false),
+        Map.of("typeKey", "SUBTASK",         "label", "Sub-task",        "icon", "git-branch",      "color", "#475569", "isCustom", false),
+        Map.of("typeKey", "INCIDENT",        "label", "Incident",        "icon", "alert-triangle",  "color", "#B97A00", "isCustom", false),
+        Map.of("typeKey", "SERVICE_REQUEST", "label", "Service Request", "icon", "headphones",      "color", "#334155", "isCustom", false)
     );
 }

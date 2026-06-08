@@ -1,17 +1,17 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
-import DOMPurify from 'dompurify';
+// DOMPurify was used only by renderMd, which now lives in @/lib/utils (TD-003).
 import {
   Mail, PanelLeft, Check,
   Home, User, Bell, LayoutGrid, ListTodo, Zap, Rocket, FolderKanban,
   BarChart2, LayoutDashboard, FileText, TrendingUp, Headset, Timer, ShieldCheck,
   Gauge, Map as MapIcon, ClipboardList, Workflow, Plug, Search, BookOpen,
   SlidersHorizontal, Settings, Trash2, Code, Crown, ShieldHalf,
-  CheckCircle2, AlertCircle, Heart, AlertTriangle, Puzzle, Link, Lock,
-  File as FileIcon, Folder, Lightbulb, Users, Shield, Ban, Construction,
+  CheckCircle2, AlertTriangle, Puzzle, Link,
+  Shield, Construction,
   MessageCircle, RefreshCw, Repeat, Megaphone,
-  Calendar, Eye, EyeOff, Target, Globe, Star, Scale, Clock, Reply,
-  X, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronRight, ChevronUp,
-  Upload, IndentIncrease, IndentDecrease, MapPin,
+  Eye, EyeOff, Target, Star, Clock, Reply,
+  X, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronUp,
+  Upload, IndentIncrease, IndentDecrease,
   CornerDownRight, Image as ImageIcon,
   Activity, BellRing, Keyboard,
 } from 'lucide-react';
@@ -52,7 +52,7 @@ import { ResetPasswordScreen } from '@/components/works/reset-password-screen';
 // exportElementToPng / exportElementToPdf / exportRowsToCsv moved to export-buttons.jsx (TD-003).
 import { api } from '@/lib/apiClient';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
-import { isIconComponent, onPressKey } from '@/lib/utils';
+import { isIconComponent, onPressKey, renderMd } from '@/lib/utils';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { TYPES, TYPE_ICON_SET, TYPE_ICON_KEYS } from '@/lib/work-item-types';
 import { TypeBadge, TypeIcon } from '@/components/works/work-item-type';
@@ -88,6 +88,9 @@ import DashboardsView from '@/views/dashboards-view';
 import ReportBuilderView from '@/views/reportbuilder-view';
 import ComplianceView from '@/views/compliance-view';
 import ServiceView from '@/views/service-view';
+import KnowledgeView from '@/views/knowledge-view';
+import PmView from '@/views/pm-view';
+import Settings3View from '@/views/settings3-view';
 import { DashboardWidgetCard } from '@/components/works/organisms/dashboard-widget-card';
 // DashboardDrillModal extracted to src/components/works/organisms/dashboard-drill-modal.jsx (TD-003).
 // ExportButtons extracted to src/components/works/export-buttons.jsx (TD-003).
@@ -3034,574 +3037,59 @@ export default function App() {
                ITERATION 3 — WORKFLOWS & FIELDS SETTINGS
              ====================================================== */}
           {view === 'settings3' && (
-            <div className="p-8 max-w-5xl">
-              <h1 className="text-2xl font-bold text-brand-navy dark:text-white mb-1">Workflows & Fields</h1>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">Configure workflows, custom fields, permissions, and work item types</p>
-
-              {/* Sub-tabs */}
-              <div className="flex gap-1 mb-6 border-b border-neutral-200 dark:border-neutral-700">
-                {[
-                  { key: 'workflows',   label: 'Workflows' },
-                  { key: 'fields',      label: 'Custom Fields' },
-                  { key: 'layout',      label: 'Field Layout' },
-                  { key: 'visibility',  label: 'Field Visibility' },
-                  { key: 'permissions', label: 'Permissions' },
-                  { key: 'types',       label: 'Item Types' },
-                ].map(t => (
-                  <button key={t.key} onClick={() => {
-                    setSettings3Tab(t.key);
-                    if (t.key === 'permissions') fetchPermMatrix();
-                    if (t.key === 'layout') { fetchFieldDefs(); fetchFieldLayouts(); }
-                    if (t.key === 'visibility') { fetchFieldDefs(); fetchRoles(); fetchFieldVisibility(); }
-                  }}
-                    className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${settings3Tab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* WORKFLOWS TAB */}
-              {settings3Tab === 'workflows' && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Workflow Definitions</h2>
-                    <Button variant="action" onClick={() => {
-                      const name = 'New Workflow ' + (workflows.length + 1);
-                      api.raw(`/workflows`, { method: 'POST', body: JSON.stringify({ name, workspaceId: activeWorkspaceId, isDefault: false }) })
-                        .then(r => r.json()).then(() => fetchWorkflows());
-                    }}>+ New Workflow</Button>
-                  </div>
-                  {workflows.length === 0
-                    ? <EmptyState icon={Settings} title="No workflows yet" subtitle="Create a workflow to define statuses and transitions for your work items."
-                        action={<Button variant="action" onClick={() => {
-                          api.raw(`/workflows`, { method: 'POST', body: JSON.stringify({ name: 'Default Workflow', workspaceId: activeWorkspaceId, isDefault: true }) })
-                            .then(r => r.json()).then(() => fetchWorkflows());
-                        }}>Create default workflow</Button>} />
-                    : <div className="space-y-3">
-                        {workflows.map(wf => {
-                          const isExpanded = expandedWorkflowId === wf.id;
-                          const detail = isExpanded ? workflowDetail : null;
-                          const statuses = detail?.statuses || [];
-                          const transitions = detail?.transitions || [];
-                          const CATEGORIES = ['TO_DO', 'IN_PROGRESS', 'DONE'];
-                          const catColor = { TO_DO: 'bg-neutral-200 text-neutral-700', IN_PROGRESS: 'bg-brand-navy/10 text-brand-navy', DONE: 'bg-semantic-success/10 text-semantic-success' };
-                          return (
-                            <div key={wf.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-                              {/* Workflow header */}
-                              <div role="button" tabIndex={0} onKeyDown={onPressKey} aria-expanded={isExpanded}
-                                className="flex items-center justify-between p-5 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40"
-                                onClick={() => expandWorkflow(wf.id)}>
-                                <div className="flex items-center gap-3">
-                                  <span className={`transition-transform ${isExpanded ? 'rotate-90' : ''} text-neutral-600 dark:text-neutral-400`}><ChevronRight className="h-4 w-4" aria-hidden="true" /></span>
-                                  <span className="font-semibold text-neutral-900 dark:text-neutral-100">{wf.name}</span>
-                                  {wf.isDefault && <span className="text-xs bg-brand-navy text-white px-2 py-0.5 rounded-full font-semibold">DEFAULT</span>}
-                                  {wf.itemType && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded">{wf.itemType}</span>}
-                                </div>
-                                <div className="flex gap-3 items-center" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()} role="none">
-                                  <span className="font-mono text-xs text-neutral-300">{wf.id}</span>
-                                  <button onClick={() => api.raw(`/workflows/${wf.id}`, { method: 'DELETE' }).then(() => { fetchWorkflows(); if (expandedWorkflowId === wf.id) setExpandedWorkflowId(null); })}
-                                    className="text-xs text-semantic-danger hover:underline">Delete</button>
-                                </div>
-                              </div>
-
-                              {/* Expanded detail */}
-                              {isExpanded && (
-                                <div className="border-t border-neutral-100 dark:border-neutral-700 p-5 bg-neutral-50 dark:bg-neutral-900 space-y-6">
-                                  {!detail ? <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-4">Loading...</p> : (
-                                    <>
-                                      {/* Statuses */}
-                                      <div>
-                                        <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-3">Statuses ({statuses.length})</p>
-                                        <div className="flex flex-wrap gap-2 mb-3">
-                                          {statuses.map(s => (
-                                            <div key={s.id} className="flex items-center gap-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5">
-                                              <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: s.color || '#0B2F5C' }}></span>
-                                              <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{s.name}</span>
-                                              <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${catColor[s.category] || 'bg-neutral-100 text-neutral-600'}`}>{s.category}</span>
-                                              {s.isInitial && <span className="text-xs text-brand-amber font-bold">INITIAL</span>}
-                                              <button onClick={() => deleteStatus(wf.id, s.id)} className="text-neutral-300 hover:text-semantic-danger ml-1 text-xs" aria-label="Delete status"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                                            </div>
-                                          ))}
-                                        </div>
-                                        {/* Add status inline form */}
-                                        <div className="flex gap-2 items-end flex-wrap">
-                                          <div>
-                                            <label htmlFor="new-status-name" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Status Name</label>
-                                            <input id="new-status-name" className="input text-sm w-36" placeholder="e.g. In Review" value={newStatusForm.name}
-                                              onChange={e => setNewStatusForm(f => ({ ...f, name: e.target.value }))} />
-                                          </div>
-                                          <div>
-                                            <label htmlFor="new-status-category" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Category</label>
-                                            <select id="new-status-category" className="input text-sm" value={newStatusForm.category}
-                                              onChange={e => setNewStatusForm(f => ({ ...f, category: e.target.value }))}>
-                                              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                            </select>
-                                          </div>
-                                          <div>
-                                            <label htmlFor="new-status-color" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Color</label>
-                                            <input id="new-status-color" type="color" className="h-9 w-12 rounded border border-neutral-200 cursor-pointer" value={newStatusForm.color}
-                                              onChange={e => setNewStatusForm(f => ({ ...f, color: e.target.value }))} />
-                                          </div>
-                                          <Button variant="secondary" onClick={() => addStatus(wf.id)}>+ Add Status</Button>
-                                        </div>
-                                      </div>
-
-                                      {/* Transitions */}
-                                      <div>
-                                        <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-3">Transitions ({transitions.length})</p>
-                                        {transitions.length > 0 && (
-                                          <div className="space-y-1.5 mb-3">
-                                            {transitions.map(t => {
-                                              const fromS = statuses.find(s => s.id === t.fromStatus);
-                                              const toS = statuses.find(s => s.id === t.toStatus);
-                                              return (
-                                                <div key={t.id} className="flex items-center gap-2 text-sm">
-                                                  <span className="font-medium text-neutral-700 dark:text-neutral-200 w-32 truncate">{t.name}</span>
-                                                  <span className="text-neutral-600 dark:text-neutral-400 text-xs">{fromS?.name || t.fromStatus}</span>
-                                                  <span className="text-neutral-300"><ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /></span>
-                                                  <span className="text-neutral-600 dark:text-neutral-400 text-xs">{toS?.name || t.toStatus}</span>
-                                                  <button onClick={() => deleteTransition(wf.id, t.id)} className="text-neutral-300 hover:text-semantic-danger ml-auto text-xs" aria-label="Delete transition"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
-                                        )}
-                                        {statuses.length >= 2 && (
-                                          <div className="flex gap-2 items-end flex-wrap">
-                                            <div>
-                                              <label htmlFor="new-transition-name" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Transition Name</label>
-                                              <input id="new-transition-name" className="input text-sm w-32" placeholder="e.g. Start Review" value={newTransitionForm.name}
-                                                onChange={e => setNewTransitionForm(f => ({ ...f, name: e.target.value }))} />
-                                            </div>
-                                            <div>
-                                              <label htmlFor="new-transition-from" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">From</label>
-                                              <select id="new-transition-from" className="input text-sm" value={newTransitionForm.fromStatus}
-                                                onChange={e => setNewTransitionForm(f => ({ ...f, fromStatus: e.target.value }))}>
-                                                <option value="">— From —</option>
-                                                {statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                              </select>
-                                            </div>
-                                            <div>
-                                              <label htmlFor="new-transition-to" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">To</label>
-                                              <select id="new-transition-to" className="input text-sm" value={newTransitionForm.toStatus}
-                                                onChange={e => setNewTransitionForm(f => ({ ...f, toStatus: e.target.value }))}>
-                                                <option value="">— To —</option>
-                                                {statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                              </select>
-                                            </div>
-                                            <Button variant="secondary" onClick={() => addTransition(wf.id)}>+ Add Transition</Button>
-                                          </div>
-                                        )}
-                                        {statuses.length < 2 && <p className="text-xs text-neutral-600 dark:text-neutral-400 italic">Add at least 2 statuses to define transitions.</p>}
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                  }
-                </div>
-              )}
-
-              {/* CUSTOM FIELDS TAB */}
-              {settings3Tab === 'fields' && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Custom Field Library</h2>
-                    <Button variant="action" onClick={() => setShowFieldForm(f => !f)}>
-                      {showFieldForm ? 'Cancel' : '+ New Field'}
-                    </Button>
-                  </div>
-
-                  {/* Inline add field form */}
-                  {showFieldForm && (
-                    <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-5 mb-5 space-y-4">
-                      <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">New Custom Field</p>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label htmlFor="new-field-name" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Field Name *</label>
-                          <input id="new-field-name" className="input text-sm w-full" placeholder="e.g. Meter Serial Number" value={newFieldForm.name}
-                            onChange={e => setNewFieldForm(f => ({ ...f, name: e.target.value }))} />
-                        </div>
-                        <div>
-                          <label htmlFor="new-field-type" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Field Type *</label>
-                          <select id="new-field-type" className="input text-sm w-full" value={newFieldForm.fieldType}
-                            onChange={e => setNewFieldForm(f => ({ ...f, fieldType: e.target.value }))}>
-                            {['TEXT','NUMBER','CURRENCY','DATE','SELECT','MULTI_SELECT','USER','URL','CHECKBOX','FILE','JSON','TEXTAREA','EMAIL','PHONE','RATING','PROGRESS'].map(t => (
-                              <option key={t} value={t}>{t}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label htmlFor="new-field-desc" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Description</label>
-                          <input id="new-field-desc" className="input text-sm w-full" placeholder="What is this field for?" value={newFieldForm.description}
-                            onChange={e => setNewFieldForm(f => ({ ...f, description: e.target.value }))} />
-                        </div>
-                        <div className="flex items-center gap-3 pt-5">
-                          <input type="checkbox" id="req" checked={newFieldForm.required}
-                            onChange={e => setNewFieldForm(f => ({ ...f, required: e.target.checked }))} className="w-4 h-4 accent-brand-navy" />
-                          <label htmlFor="req" className="text-sm text-neutral-700 dark:text-neutral-200">Required field</label>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="action" onClick={createFieldDef}>Create Field</Button>
-                        <Button variant="ghost" onClick={() => setShowFieldForm(false)}>Cancel</Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {fieldDefs.length === 0
-                    ? <EmptyState icon={FileText} title="No custom fields" subtitle="Create custom fields to capture domain-specific data on work items." />
-                    : <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-                        <table className="w-full text-sm">
-                          <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
-                            <tr>
-                              {['Field Name', 'Type', 'Key', 'Required', ''].map(h => (
-                                <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                            {fieldDefs.map(fd => (
-                              <tr key={fd.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
-                                <td className="px-4 py-3 font-medium text-neutral-900 dark:text-neutral-100">
-                                  {fd.name}
-                                  {fd.description && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{fd.description}</p>}
-                                </td>
-                                <td className="px-4 py-3"><span className="text-xs bg-brand-navy/10 dark:bg-brand-navy/20 text-brand-navy dark:text-blue-300 px-2 py-0.5 rounded font-mono">{fd.fieldType}</span></td>
-                                <td className="px-4 py-3 font-mono text-xs text-neutral-600 dark:text-neutral-400">{fd.fieldKey}</td>
-                                <td className="px-4 py-3"><span className={`text-xs font-semibold ${fd.required ? 'text-semantic-danger' : 'text-neutral-300'}`}>{fd.required ? <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" aria-hidden="true" />Required</span> : 'Optional'}</span></td>
-                                <td className="px-4 py-3">
-                                  <button onClick={() => api.raw(`/field-defs/${fd.id}`, { method: 'DELETE' }).then(() => fetchFieldDefs())}
-                                    className="text-xs text-semantic-danger hover:underline">Delete</button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                  }
-                </div>
-              )}
-
-              {/* FIELD LAYOUT TAB */}
-              {settings3Tab === 'layout' && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <div>
-                      <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Field Layout</h2>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">Control which custom fields appear on each work item type and in what order.</p>
-                    </div>
-                  </div>
-                  {fieldDefs.length === 0 ? (
-                    <EmptyState icon={LayoutDashboard} title="No custom fields defined" subtitle="Go to Custom Fields tab and create fields first, then configure layout here." />
-                  ) : (
-                    <div className="space-y-4">
-                      {Object.keys(TYPES).map(itemType => {
-                        const layoutForType = fieldLayouts.find(fl => fl.itemType === itemType);
-                        const orderedFields = layoutForType?.layout || fieldDefs.map(fd => ({ fieldDefId: fd.id, visible: true }));
-                        return (
-                          <div key={itemType} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <TypeBadge type={itemType} compact />
-                                <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{itemType}</span>
-                              </div>
-                              <Button variant="secondary" onClick={() => {
-                                const layout = fieldDefs.map(fd => ({ fieldDefId: fd.id, visible: true }));
-                                api.send(`/field-layouts`, { method: 'PUT', body: JSON.stringify({ itemType, layout, workspaceId: activeWorkspaceId }) })
-                                  .then(() => { showToast('Layout saved'); fetchFieldLayouts(); }).catch(() => showToast('Failed', 'error'));
-                              }}>Save Layout</Button>
-                            </div>
-                            <div className="space-y-1">
-                              {fieldDefs.map((fd, idx) => {
-                                const entry = orderedFields.find(e => e.fieldDefId === fd.id);
-                                const visible = entry ? entry.visible !== false : true;
-                                return (
-                                  <div key={fd.id} className="flex items-center gap-3 py-2 px-3 bg-neutral-50 dark:bg-neutral-700 rounded-lg">
-                                    <span className="text-neutral-300 cursor-grab text-sm">⠿</span>
-                                    <div className="flex-1">
-                                      <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{fd.name}</span>
-                                      <span className="ml-2 text-xs font-mono text-neutral-600 dark:text-neutral-400">{fd.fieldType}</span>
-                                    </div>
-                                    <input type="checkbox" checked={visible} className="w-4 h-4 accent-brand-navy"
-                                      onChange={() => showToast('Toggle field visibility in Field Visibility tab')}
-                                      title="Toggle visibility" />
-                                    <span className="text-xs text-neutral-600 dark:text-neutral-400">#{idx + 1}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* FIELD VISIBILITY TAB */}
-              {settings3Tab === 'visibility' && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <div>
-                      <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Field Visibility by Role</h2>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">Control who can see or edit each custom field. Default is EDITABLE for all roles.</p>
-                    </div>
-                  </div>
-
-                  {/* Add visibility rule */}
-                  <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-5 mb-5">
-                    <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 mb-3">Add Visibility Rule</p>
-                    <div className="flex gap-3 flex-wrap items-end">
-                      <div>
-                        <label htmlFor="vis-field-id" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Field</label>
-                        <select id="vis-field-id" className="input text-sm" value={newFieldVisForm.fieldDefId}
-                          onChange={e => setNewFieldVisForm(f => ({ ...f, fieldDefId: e.target.value }))}>
-                          <option value="">— Select field —</option>
-                          {fieldDefs.map(fd => <option key={fd.id} value={fd.id}>{fd.name}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label htmlFor="vis-role-id" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Role</label>
-                        <select id="vis-role-id" className="input text-sm" value={newFieldVisForm.roleId}
-                          onChange={e => setNewFieldVisForm(f => ({ ...f, roleId: e.target.value }))}>
-                          <option value="">— Select role —</option>
-                          {[{id:'VIEWER',name:'VIEWER'},{id:'MEMBER',name:'MEMBER'},{id:'LEAD',name:'LEAD'},{id:'ADMIN',name:'ADMIN'},{id:'OWNER',name:'OWNER'},...roles].map(r => (
-                            <option key={r.id} value={r.id}>{r.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label htmlFor="vis-visibility" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Visibility</label>
-                        <select id="vis-visibility" className="input text-sm" value={newFieldVisForm.visibility}
-                          onChange={e => setNewFieldVisForm(f => ({ ...f, visibility: e.target.value }))}>
-                          <option value="EDITABLE">EDITABLE</option>
-                          <option value="READONLY">READ ONLY</option>
-                          <option value="HIDDEN">HIDDEN</option>
-                        </select>
-                      </div>
-                      <Button variant="action" onClick={saveFieldVisibility}>Add Rule</Button>
-                    </div>
-                  </div>
-
-                  {fieldVisibility.length === 0 ? (
-                    <EmptyState icon={Eye} title="No visibility rules defined" subtitle="All fields are visible and editable by all roles by default. Add rules to restrict access." />
-                  ) : (
-                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-                      <table className="w-full text-sm">
-                        <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
-                          <tr>
-                            {['Field', 'Role', 'Visibility', ''].map(h => (
-                              <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                          {fieldVisibility.map(fv => (
-                            <tr key={fv.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
-                              <td className="px-4 py-3 font-medium text-neutral-900 dark:text-neutral-100">
-                                {fieldDefs.find(fd => fd.id === fv.fieldDefId)?.name || fv.fieldDefId}
-                              </td>
-                              <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">{fv.roleId}</td>
-                              <td className="px-4 py-3">
-                                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${fv.visibility === 'HIDDEN' ? 'bg-semantic-danger-surface text-semantic-danger' : fv.visibility === 'READONLY' ? 'bg-semantic-warning-surface text-semantic-warning' : 'bg-semantic-success-surface text-semantic-success'}`}>
-                                  {fv.visibility}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <button onClick={() => api.send(`/field-visibility/${fv.id}`, { method: 'DELETE' }).then(() => { showToast('Rule deleted'); fetchFieldVisibility(); }).catch(reportError)}
-                                  className="text-xs text-semantic-danger hover:underline">Delete</button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* PERMISSIONS MATRIX TAB */}
-              {settings3Tab === 'permissions' && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Roles & Permissions Matrix</h2>
-                    <Button variant="action" onClick={() => setShowRoleForm(f => !f)}>
-                      {showRoleForm ? 'Cancel' : '+ New Role'}
-                    </Button>
-                  </div>
-
-                  {/* Inline add role form */}
-                  {showRoleForm && (
-                    <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-5 mb-5">
-                      <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 mb-3">New Custom Role</p>
-                      <div className="flex gap-4 items-end flex-wrap">
-                        <div>
-                          <label htmlFor="new-role-name" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Role Name *</label>
-                          <input id="new-role-name" className="input text-sm w-44" placeholder="e.g. Support Agent" value={newRoleForm.name}
-                            onChange={e => setNewRoleForm(f => ({ ...f, name: e.target.value }))} />
-                        </div>
-                        <div>
-                          <label htmlFor="new-role-tier" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Tier (1-5)</label>
-                          <select id="new-role-tier" className="input text-sm" value={newRoleForm.tier}
-                            onChange={e => setNewRoleForm(f => ({ ...f, tier: Number(e.target.value) }))}>
-                            {[1,2,3,4,5].map(t => <option key={t} value={t}>Tier {t} — {['Viewer','Member','Lead','Admin','Owner'][t-1]}</option>)}
-                          </select>
-                        </div>
-                        <Button variant="action" onClick={createRole}>Create Role</Button>
-                        <Button variant="ghost" onClick={() => setShowRoleForm(false)}>Cancel</Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {!permMatrix
-                    ? <div className="text-center py-12 text-neutral-600 dark:text-neutral-400">Loading permissions matrix...</div>
-                    : (
-                      <>
-                        {/* System roles legend */}
-                        <div className="mb-4 p-4 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700">
-                          <p className="text-xs font-semibold text-neutral-600 uppercase tracking-wider mb-2">System Roles</p>
-                          <div className="flex flex-wrap gap-3">
-                            {[{id:'VIEWER',tier:1},{id:'MEMBER',tier:2},{id:'LEAD',tier:3},{id:'ADMIN',tier:4},{id:'OWNER',tier:5}].map(r => (
-                              <div key={r.id} className="flex items-center gap-2 text-xs">
-                                <span className="font-semibold text-neutral-700 dark:text-neutral-200">{r.id}</span>
-                                <span className="text-neutral-600 dark:text-neutral-400">Tier {r.tier}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-2">System roles are tier-based. A role can do anything its tier permits. A check = permitted, — = not permitted.</p>
-                        </div>
-                        {permMatrix.matrix.length === 0
-                          ? <EmptyState icon={Lock} title="No custom roles" subtitle="Create roles to define fine-grained access control for your team." />
-                          : <div className="overflow-x-auto">
-                              <table className="w-full text-xs border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden dark:text-neutral-300">
-                                <thead className="bg-neutral-50 dark:bg-neutral-900">
-                                  <tr>
-                                    <th className="text-left px-4 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 sticky left-0 bg-neutral-50 dark:bg-neutral-900">Permission</th>
-                                    {permMatrix.roles.map(r => (
-                                      <th key={r.id} className="px-3 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 text-center min-w-24">
-                                        <div>{r.name}</div>
-                                        <div className="font-normal text-neutral-600 dark:text-neutral-400">Tier {r.tier}</div>
-                                      </th>
-                                    ))}
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                                  {permMatrix.allPermissions.map(perm => (
-                                    <tr key={perm} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
-                                      <td className="px-4 py-2 font-mono sticky left-0 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200">{perm}</td>
-                                      {permMatrix.matrix.map(row => (
-                                        <td key={row.role.id} className="px-3 py-2 text-center">
-                                          <button onClick={() => togglePermission(row.role.id, perm, row.permissions[perm])}
-                                            className={`w-7 h-7 rounded transition-colors text-sm font-bold ${row.permissions[perm] ? 'bg-semantic-success text-white hover:opacity-80' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-brand-navy/10'}`}
-                                            title={row.permissions[perm] ? 'Click to revoke' : 'Click to grant'}>
-                                            {row.permissions[perm] ? <Check className="inline-block h-4 w-4 text-semantic-success" aria-label="Permitted" /> : <span aria-label="Not permitted">—</span>}
-                                          </button>
-                                        </td>
-                                      ))}
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                        }
-                      </>
-                    )
-                  }
-                </div>
-              )}
-
-              {/* ITEM TYPES TAB */}
-              {settings3Tab === 'types' && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Work Item Types</h2>
-                    <Button variant="action" onClick={() => setShowTypeForm(f => !f)}>
-                      {showTypeForm ? 'Cancel' : '+ Custom Type'}
-                    </Button>
-                  </div>
-
-                  {/* Inline add type form */}
-                  {showTypeForm && (
-                    <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-5 mb-5">
-                      <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 mb-3">New Custom Type</p>
-                      <div className="flex gap-4 items-end flex-wrap">
-                        <div>
-                          <label htmlFor="new-type-label" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Label *</label>
-                          <input id="new-type-label" className="input text-sm w-44" placeholder="e.g. Meter Rollout" value={newTypeForm.label}
-                            onChange={e => setNewTypeForm(f => ({ ...f, label: e.target.value, typeKey: e.target.value.toUpperCase().replace(/\s+/g,'_') }))} />
-                        </div>
-                        <div>
-                          <label htmlFor="new-type-key" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Key</label>
-                          <input id="new-type-key" className="input text-sm w-36 font-mono" placeholder="METER_ROLLOUT" value={newTypeForm.typeKey}
-                            onChange={e => setNewTypeForm(f => ({ ...f, typeKey: e.target.value.toUpperCase() }))} />
-                        </div>
-                        <div>
-                          <span className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1" id="new-type-icon-label">Icon</span>
-                          <div className="flex flex-wrap gap-1 max-w-[240px]" role="group" aria-labelledby="new-type-icon-label">
-                            {TYPE_ICON_KEYS.map(key => {
-                              const Ic = TYPE_ICON_SET[key];
-                              const sel = newTypeForm.icon === key;
-                              return (
-                                <button key={key} type="button" onClick={() => setNewTypeForm(f => ({ ...f, icon: key }))}
-                                  aria-label={key} aria-pressed={sel}
-                                  className={`p-1.5 rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${sel ? 'border-brand-navy bg-brand-navy/10 text-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy/40'}`}>
-                                  <Ic className="h-4 w-4" aria-hidden="true" />
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                        <Button variant="action" onClick={createWorkItemType}>Create Type</Button>
-                        <Button variant="ghost" onClick={() => setShowTypeForm(false)}>Cancel</Button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-3">Built-in Types</p>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {(workItemTypes.builtIn || []).map(t => (
-                          <div key={t.typeKey} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 flex items-center gap-3">
-                            <TypeIcon value={t.icon} className="h-6 w-6 text-neutral-700 dark:text-neutral-300" />
-                            <div>
-                              <p className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">{t.label}</p>
-                              <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{t.typeKey}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    {(workItemTypes.custom || []).length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-3">Custom Types</p>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          {(workItemTypes.custom || []).map(t => (
-                            <div key={t.id} className="bg-white dark:bg-neutral-800 border border-brand-navy/20 dark:border-brand-navy/30 rounded-xl p-4 flex items-center gap-3 relative group">
-                              <TypeIcon value={t.icon} className="h-6 w-6 text-neutral-700 dark:text-neutral-300" />
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">{t.label}</p>
-                                <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono truncate">{t.typeKey}</p>
-                              </div>
-                              <button onClick={() => api.raw(`/work-item-types/${t.id}`, { method: 'DELETE' }).then(() => fetchWorkItemTypes())}
-                                className="opacity-0 group-hover:opacity-100 text-semantic-danger text-xs transition-opacity absolute top-2 right-2" aria-label="Remove"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {(workItemTypes.custom || []).length === 0 && !showTypeForm && (
-                      <p className="text-sm text-neutral-600 italic">No custom types yet. Create utility-domain types like Meter Rollout, Tariff Change, or Substation Commission.</p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+            <Settings3View
+              settings3Tab={settings3Tab}
+              workflows={workflows}
+              expandedWorkflowId={expandedWorkflowId}
+              workflowDetail={workflowDetail}
+              newStatusForm={newStatusForm}
+              newTransitionForm={newTransitionForm}
+              fieldDefs={fieldDefs}
+              showFieldForm={showFieldForm}
+              newFieldForm={newFieldForm}
+              fieldLayouts={fieldLayouts}
+              fieldVisibility={fieldVisibility}
+              newFieldVisForm={newFieldVisForm}
+              roles={roles}
+              permMatrix={permMatrix}
+              showRoleForm={showRoleForm}
+              newRoleForm={newRoleForm}
+              workItemTypes={workItemTypes}
+              showTypeForm={showTypeForm}
+              newTypeForm={newTypeForm}
+              activeWorkspaceId={activeWorkspaceId}
+              setSettings3Tab={setSettings3Tab}
+              setExpandedWorkflowId={setExpandedWorkflowId}
+              setNewStatusForm={setNewStatusForm}
+              setNewTransitionForm={setNewTransitionForm}
+              setShowFieldForm={setShowFieldForm}
+              setNewFieldForm={setNewFieldForm}
+              setNewFieldVisForm={setNewFieldVisForm}
+              setShowRoleForm={setShowRoleForm}
+              setNewRoleForm={setNewRoleForm}
+              setShowTypeForm={setShowTypeForm}
+              setNewTypeForm={setNewTypeForm}
+              fetchWorkflows={fetchWorkflows}
+              fetchFieldDefs={fetchFieldDefs}
+              fetchFieldLayouts={fetchFieldLayouts}
+              fetchRoles={fetchRoles}
+              fetchFieldVisibility={fetchFieldVisibility}
+              fetchPermMatrix={fetchPermMatrix}
+              fetchWorkItemTypes={fetchWorkItemTypes}
+              expandWorkflow={expandWorkflow}
+              addStatus={addStatus}
+              deleteStatus={deleteStatus}
+              addTransition={addTransition}
+              deleteTransition={deleteTransition}
+              createFieldDef={createFieldDef}
+              saveFieldVisibility={saveFieldVisibility}
+              togglePermission={togglePermission}
+              createRole={createRole}
+              createWorkItemType={createWorkItemType}
+              reportError={reportError}
+              showToast={showToast}
+              api={api}
+            />
           )}
 
           {/* ======================================================
@@ -3628,528 +3116,54 @@ export default function App() {
                ITERATION 4 — PM ARTIFACTS
              ====================================================== */}
           {view === 'pm' && (
-            <div className="p-6 max-w-6xl">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h1 className="text-2xl font-bold text-brand-navy">Project Management</h1>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-0.5">RAID logs, decisions, meetings, action items</p>
-                </div>
-                {/* Project selector */}
-                <select className="input text-sm w-48" value={pmProjectId} onChange={e => {
-                  const pid = e.target.value;
-                  setPmProjectId(pid);
-                  if (pid) { fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); }
-                }}>
-                  <option value="">— Select project —</option>
-                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </div>
-
-              {!pmProjectId ? (
-                <EmptyState icon={ClipboardList} title="Select a project" subtitle="Choose a project above to view its PM artifacts." />
-              ) : (
-                <>
-                  {/* Sub-tabs */}
-                  <div className="flex gap-1 mb-5 border-b border-neutral-200 dark:border-neutral-700 overflow-x-auto">
-                    {[
-                      { key: 'raid',         Icon: Target,       label: 'RAID Dashboard' },
-                      { key: 'risks',        Icon: AlertTriangle, label: `Risks (${risks.length})` },
-                      { key: 'assumptions',  Icon: Lightbulb,    label: `Assumptions (${assumptions.length})` },
-                      { key: 'issues',       Icon: AlertCircle,  label: `Issues (${pmIssues.length})` },
-                      { key: 'deps',         Icon: Link,         label: `Dependencies (${dependencies.length})` },
-                      { key: 'decisions',    Icon: Scale,        label: `Decisions (${decisions.length})` },
-                      { key: 'meetings',     Icon: Calendar,     label: `Meetings (${meetings.length})` },
-                      { key: 'actions',      Icon: CheckCircle2, label: `Actions (${actionItems.length})` },
-                      { key: 'stakeholders', Icon: Users,        label: `Stakeholders (${stakeholders.length})` },
-                      { key: 'lessons',      Icon: BookOpen,     label: `Lessons (${lessonsLearned.length})` },
-                      { key: 'cross-deps',   Icon: Globe,        label: `Cross-Project (${crossProjectDeps.length})` },
-                    ].map(t => (
-                      <button key={t.key} onClick={() => { setPmTab(t.key); if (t.key === 'cross-deps') fetchCrossProjectDeps(); }}
-                        className={`text-xs font-medium px-3 py-2 border-b-2 whitespace-nowrap transition-colors ${pmTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
-                        {t.Icon && <t.Icon className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />}{t.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* RAID DASHBOARD */}
-                  {pmTab === 'raid' && raidDashboard && (
-                    <div>
-                      {/* Health score */}
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                        <StatCard label="Health Score" value={`${raidDashboard.healthScore}%`} sub="Overall project health" color={raidDashboard.healthScore > 70 ? 'text-semantic-success' : raidDashboard.healthScore > 40 ? 'text-semantic-warning' : 'text-semantic-danger'} icon={Heart} />
-                        <StatCard label="Open Risks" value={raidDashboard.riskSummary?.open || 0} sub={`${raidDashboard.riskSummary?.total || 0} total`} color="text-semantic-warning" icon={AlertTriangle} onClick={() => setPmTab('risks')} />
-                        <StatCard label="Open Issues" value={raidDashboard.issueSummary?.open || 0} sub={`${raidDashboard.issueSummary?.total || 0} total`} color="text-semantic-danger" icon={AlertCircle} onClick={() => setPmTab('issues')} />
-                        <StatCard label="Blockers" value={raidDashboard.dependencySummary?.blockers || 0} sub={`${raidDashboard.dependencySummary?.total || 0} deps`} color="text-brand-orange" icon={Link} onClick={() => setPmTab('deps')} />
-                        <StatCard label="Overdue Actions" value={raidDashboard.actionSummary?.overdue || 0} sub={`${raidDashboard.actionSummary?.open || 0} open`} color="text-semantic-danger" icon={Clock} onClick={() => setPmTab('actions')} />
-                      </div>
-
-                      {/* Risk heatmap */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                          <h3 className="font-semibold text-neutral-900 mb-3">Risk Heat Matrix</h3>
-                          {(() => {
-                            const probs = ['VERY_HIGH', 'HIGH', 'MEDIUM', 'LOW'];
-                            const impacts = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
-                            return (
-                              <div>
-                                <div className="flex gap-1 mb-1">
-                                  <div className="w-16 flex-shrink-0"></div>
-                                  {impacts.map(i => <div key={i} className="flex-1 text-xs text-neutral-600 dark:text-neutral-400 text-center uppercase">{i}</div>)}
-                                </div>
-                                {probs.map(p => (
-                                  <div key={p} className="flex gap-1 mb-1">
-                                    <div className="w-16 text-xs text-neutral-600 dark:text-neutral-400 flex items-center flex-shrink-0">{p}</div>
-                                    {impacts.map(imp => {
-                                      const count = (raidDashboard.risks || []).filter(r => r.probability === p && r.impact === imp && r.status === 'OPEN').length;
-                                      const heat = (probs.indexOf(p) + impacts.indexOf(imp));
-                                      const bg = count === 0 ? 'bg-neutral-100 dark:bg-neutral-700' : heat >= 5 ? 'bg-semantic-danger' : heat >= 3 ? 'bg-semantic-warning' : 'bg-semantic-success';
-                                      return (
-                                        <div key={imp} className={`flex-1 h-8 rounded flex items-center justify-center text-xs font-bold ${bg} ${count > 0 ? 'text-white' : 'text-neutral-300'}`}>
-                                          {count > 0 ? count : ''}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                ))}
-                                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-2">Rows = Probability, Columns = Impact. Color = severity.</p>
-                              </div>
-                            );
-                          })()}
-                        </div>
-
-                        {/* Open action items */}
-                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                          <h3 className="font-semibold text-neutral-900 mb-3">Overdue & High-Priority Actions</h3>
-                          {(raidDashboard.actionItems || []).filter(a => a.status !== 'DONE').slice(0, 5).map(a => (
-                            <div key={a.id} className="flex items-center gap-3 py-2 border-b border-neutral-50 last:border-0">
-                              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${a.dueDate && new Date(a.dueDate) < new Date() ? 'bg-semantic-danger' : 'bg-semantic-warning'}`}></span>
-                              <span className="flex-1 text-sm text-neutral-900 truncate">{a.title}</span>
-                              {a.dueDate && <span className="text-xs text-neutral-600 dark:text-neutral-400">{a.dueDate}</span>}
-                            </div>
-                          ))}
-                          {(raidDashboard.actionItems || []).filter(a => a.status !== 'DONE').length === 0 && <p className="text-sm text-neutral-600 text-center py-4">No open action items</p>}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {pmTab === 'raid' && !raidDashboard && <div className="text-center py-12 text-neutral-600 dark:text-neutral-400">Loading RAID dashboard...</div>}
-
-                  {/* RISKS */}
-                  {pmTab === 'risks' && (
-                    <PmArtifactList
-                      title="Risks Register" icon={AlertTriangle}
-                      items={risks}
-                      columns={['Title', 'Category', 'Probability', 'Impact', 'Status', 'Owner']}
-                      renderRow={r => [r.title, r.category || '—', r.probability, r.impact, r.status, users.find(u => u.id === r.ownerId)?.fullName || '—']}
-                      onDelete={id => pmDelete('risk', id)}
-                      onAdd={() => { setPmFormOpen('risk'); setPmForm({ probability: 'MEDIUM', impact: 'MEDIUM', status: 'OPEN' }); }}
-                    />
-                  )}
-
-                  {/* ASSUMPTIONS */}
-                  {pmTab === 'assumptions' && (
-                    <PmArtifactList
-                      title="Assumptions Log" icon={Lightbulb}
-                      items={assumptions}
-                      columns={['Title', 'Validation', 'Owner', 'Expiry']}
-                      renderRow={a => [a.title, a.validationStatus, users.find(u => u.id === a.ownerId)?.fullName || '—', a.expiryDate || '—']}
-                      onDelete={id => pmDelete('assumption', id)}
-                      onAdd={() => { setPmFormOpen('assumption'); setPmForm({ validationStatus: 'UNVALIDATED' }); }}
-                    />
-                  )}
-
-                  {/* PM ISSUES */}
-                  {pmTab === 'issues' && (
-                    <PmArtifactList
-                      title="Issues Log" icon={AlertCircle}
-                      items={pmIssues}
-                      columns={['Title', 'Priority', 'Status', 'Owner']}
-                      renderRow={i => [i.title, i.priority, i.status, users.find(u => u.id === i.ownerId)?.fullName || '—']}
-                      onDelete={id => pmDelete('issue', id)}
-                      onAdd={() => { setPmFormOpen('issue'); setPmForm({ priority: 'MEDIUM', status: 'OPEN' }); }}
-                    />
-                  )}
-
-                  {/* DEPENDENCIES */}
-                  {pmTab === 'deps' && (
-                    <PmArtifactList
-                      title="Dependencies Tracker" icon={Link}
-                      items={dependencies}
-                      columns={['Title', 'From', 'To', 'Status', 'Deadline', 'Blocker']}
-                      renderRow={d => [d.title, d.dependentTeam || '—', d.providingTeam || '—', d.status, d.deadline || '—', d.isBlocker ? <span className="inline-flex items-center gap-1 text-semantic-danger font-semibold"><Ban className="h-3.5 w-3.5" aria-hidden="true" />Yes</span> : 'No']}
-                      onDelete={id => pmDelete('dependency', id)}
-                      onAdd={() => { setPmFormOpen('dependency'); setPmForm({ status: 'PENDING', isBlocker: false }); }}
-                    />
-                  )}
-
-                  {/* DECISIONS */}
-                  {pmTab === 'decisions' && (
-                    <PmArtifactList
-                      title="Decisions Register" icon={Scale}
-                      items={decisions}
-                      columns={['Title', 'Status', 'Decision Date', 'Owner']}
-                      renderRow={d => [d.title, d.status, d.decisionDate || '—', users.find(u => u.id === d.ownerId)?.fullName || '—']}
-                      onDelete={id => pmDelete('decision', id)}
-                      onAdd={() => { setPmFormOpen('decision'); setPmForm({ status: 'PROPOSED' }); }}
-                    />
-                  )}
-
-                  {/* MEETINGS */}
-                  {pmTab === 'meetings' && (
-                    <div>
-                      <div className="flex justify-between items-center mb-4">
-                        <h2 className="font-semibold text-neutral-900 flex items-center gap-2"><Calendar className="h-5 w-5 text-neutral-500" aria-hidden="true" /> Meeting Notes</h2>
-                        <Button variant="action" onClick={() => { setPmFormOpen('meeting'); setPmForm({ meetingType: 'GENERAL', status: 'SCHEDULED' }); }}>+ New Meeting</Button>
-                      </div>
-                      {meetings.length === 0
-                        ? <EmptyState icon={Calendar} title="No meetings yet" subtitle="Log meeting notes with structured agenda, notes, decisions, and action items." />
-                        : <div className="space-y-3">
-                            {meetings.map(m => (
-                              <button type="button" key={m.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 cursor-pointer hover:shadow-sm transition-shadow w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
-                                onClick={() => { setSelectedMeeting(m); setPmTab('meeting-detail'); api.raw(`/meetings/${m.id}`).then(r => r.json()).then(d => setMeetingNotes(d.notes || [])); }}>
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="text-xs bg-brand-navy/10 text-brand-navy px-2 py-0.5 rounded font-medium">{m.meetingType}</span>
-                                      <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${m.status === 'COMPLETED' ? 'bg-semantic-success/10 text-semantic-success' : m.status === 'CANCELLED' ? 'bg-neutral-100 text-neutral-600 dark:text-neutral-400' : 'bg-semantic-warning/10 text-semantic-warning'}`}>{m.status}</span>
-                                    </div>
-                                    <p className="font-semibold text-neutral-900">{m.title}</p>
-                                    {m.scheduledAt && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1"><Calendar className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{new Date(m.scheduledAt).toLocaleString()}{m.durationMins ? ` · ${m.durationMins}min` : ''}</p>}
-                                    {m.location && <p className="text-xs text-neutral-600 dark:text-neutral-400"><MapPin className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{m.location}</p>}
-                                  </div>
-                                  <button onClick={e => { e.stopPropagation(); pmDelete('meeting', m.id); }} className="text-neutral-300 hover:text-semantic-danger text-xs ml-3" aria-label="Delete meeting"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                      }
-                    </div>
-                  )}
-
-                  {/* MEETING DETAIL */}
-                  {pmTab === 'meeting-detail' && selectedMeeting && (
-                    <div>
-                      <div className="flex items-center gap-3 mb-5">
-                        <button onClick={() => { setPmTab('meetings'); setSelectedMeeting(null); }} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-sm" aria-label="Back"><ArrowLeft className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Back</button>
-                        <h2 className="font-bold text-brand-navy text-lg">{selectedMeeting.title}</h2>
-                        <span className="text-xs bg-brand-navy/10 text-brand-navy px-2 py-0.5 rounded">{selectedMeeting.meetingType}</span>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {['AGENDA', 'NOTES', 'DECISIONS', 'ACTIONS'].map(section => {
-                          const note = Array.isArray(meetingNotes) ? meetingNotes.find(n => n.section === section) : null;
-                          return (
-                            <div key={section} className="bg-white border border-neutral-200 rounded-xl p-4">
-                              <p className="text-xs font-bold text-neutral-600 uppercase tracking-wider mb-2">{section}</p>
-                              <textarea
-                                className="w-full text-sm text-neutral-900 dark:text-neutral-100 border-none outline-none resize-none min-h-[100px] bg-transparent"
-                                placeholder={`Enter ${section.toLowerCase()}...`}
-                                defaultValue={note?.content || ''}
-                                onBlur={e => {
-                                  api.raw(`/meetings/${selectedMeeting.id}/notes/${section}`, {
-                                    method: 'PUT',
-                                    body: JSON.stringify({ content: e.target.value })
-                                  }).catch(reportError);
-                                }}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ACTION ITEMS */}
-                  {pmTab === 'actions' && (
-                    <PmArtifactList
-                      title="Action Items" icon={CheckCircle2}
-                      items={actionItems}
-                      columns={['Title', 'Owner', 'Due Date', 'Status', 'Priority']}
-                      renderRow={a => [a.title, users.find(u => u.id === a.ownerId)?.fullName || '—', a.dueDate || '—', a.status, a.priority]}
-                      onDelete={id => pmDelete('action', id)}
-                      onAdd={() => { setPmFormOpen('action'); setPmForm({ status: 'OPEN', priority: 'MEDIUM' }); }}
-                      statusColors={{ OPEN: 'text-semantic-warning', IN_PROGRESS: 'text-brand-navy', DONE: 'text-semantic-success', CANCELLED: 'text-neutral-600 dark:text-neutral-400' }}
-                    />
-                  )}
-
-                  {/* STAKEHOLDERS */}
-                  {pmTab === 'stakeholders' && (
-                    <div>
-                      <PmArtifactList
-                        title="Stakeholder Register" icon={Users}
-                        items={stakeholders}
-                        columns={['Name', 'Role', 'Org', 'Influence', 'Interest', 'Strategy']}
-                        renderRow={s => [s.name, s.role || '—', s.organization || '—', s.influence || '—', s.interest || '—', s.engagementStrategy || '—']}
-                        onDelete={id => pmDelete('stakeholder', id)}
-                        onAdd={() => { setPmFormOpen('stakeholder'); setPmForm({ influence: 'MEDIUM', interest: 'MEDIUM', engagementStrategy: 'INFORM', communicationFreq: 'MONTHLY' }); }}
-                      />
-                      {stakeholders.length > 0 && (
-                        <div className="mt-6 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-4">Influence / Interest Matrix</h3>
-                          <div className="grid grid-cols-2 gap-2 max-w-lg">
-                            {[
-                              { label: 'High Influence, High Interest', key: 'HH', desc: 'Manage Closely', color: 'bg-semantic-danger-surface border-semantic-danger/30' },
-                              { label: 'High Influence, Low Interest', key: 'HL', desc: 'Keep Satisfied', color: 'bg-semantic-warning-surface border-semantic-warning/30' },
-                              { label: 'Low Influence, High Interest', key: 'LH', desc: 'Keep Informed', color: 'bg-semantic-info-surface border-semantic-info/30' },
-                              { label: 'Low Influence, Low Interest', key: 'LL', desc: 'Monitor', color: 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700' },
-                            ].map(q => {
-                              const quadrantStakeholders = stakeholders.filter(s => {
-                                const inf = (s.influence || '').toUpperCase();
-                                const int = (s.interest || '').toUpperCase();
-                                const highInf = inf === 'HIGH';
-                                const highInt = int === 'HIGH';
-                                if (q.key === 'HH') return highInf && highInt;
-                                if (q.key === 'HL') return highInf && !highInt;
-                                if (q.key === 'LH') return !highInf && highInt;
-                                return !highInf && !highInt;
-                              });
-                              return (
-                                <div key={q.key} className={`p-4 rounded-xl border ${q.color} min-h-[100px]`}>
-                                  <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">{q.desc}</p>
-                                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2">{q.label}</p>
-                                  <div className="space-y-1">
-                                    {quadrantStakeholders.length === 0 && <p className="text-xs text-neutral-300 italic">None</p>}
-                                    {quadrantStakeholders.map(s => (
-                                      <div key={s.id} className="flex items-center gap-1.5">
-                                        <Avatar name={s.name} size={5} />
-                                        <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100">{s.name}</span>
-                                        <span className="text-xs text-neutral-600 dark:text-neutral-400">{s.role}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-3">Based on Influence (HIGH/MEDIUM/LOW) and Interest (HIGH/MEDIUM/LOW) fields. HIGH means above MEDIUM.</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* LESSONS LEARNED */}
-                  {pmTab === 'lessons' && (
-                    <PmArtifactList
-                      title="Lessons Learned" icon={BookOpen}
-                      items={lessonsLearned}
-                      columns={['Title', 'Category', 'Created']}
-                      renderRow={ll => [ll.title, ll.category || '—', ll.createdAt ? new Date(ll.createdAt).toLocaleDateString() : '—']}
-                      onDelete={id => pmDelete('lesson', id)}
-                      onAdd={() => { setPmFormOpen('lesson'); setPmForm({ category: 'PROCESS' }); }}
-                    />
-                  )}
-
-                  {pmTab === 'cross-deps' && (
-                    <div>
-                      <div className="flex justify-between items-center mb-4">
-                        <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Cross-Project Dependencies</h2>
-                        <Button variant="action" onClick={() => setIsCrossProjOpen(true)}>+ Add Dependency</Button>
-                      </div>
-                      {crossProjectDeps.length === 0 ? (
-                        <EmptyState icon={Globe} title="No cross-project dependencies" subtitle="Track dependencies between this project and other projects or teams." />
-                      ) : (
-                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-                          <table className="w-full text-sm">
-                            <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
-                              <tr>
-                                {['Title', 'Target Project', 'Deadline', 'Blocker', 'Status', ''].map(h => (
-                                  <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{h}</th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                              {crossProjectDeps.map(dep => (
-                                <tr key={dep.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
-                                  <td className="px-4 py-3 font-medium text-neutral-900 dark:text-neutral-100">
-                                    {dep.title}
-                                    {dep.description && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{dep.description}</p>}
-                                  </td>
-                                  <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">
-                                    {projects.find(p => p.id === dep.targetProjectId)?.name || dep.targetProjectId || '—'}
-                                  </td>
-                                  <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">
-                                    {dep.deadline ? new Date(dep.deadline).toLocaleDateString() : '—'}
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    {dep.isBlocker ? (
-                                      <span className="text-xs font-bold text-semantic-danger bg-semantic-danger-surface px-2 py-0.5 rounded">BLOCKER</span>
-                                    ) : (
-                                      <span className="text-xs text-neutral-600 dark:text-neutral-400">—</span>
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${dep.status === 'RESOLVED' ? 'bg-semantic-success-surface text-semantic-success' : dep.status === 'AT_RISK' ? 'bg-semantic-danger-surface text-semantic-danger' : 'bg-semantic-warning-surface text-semantic-warning'}`}>
-                                      {dep.status || 'OPEN'}
-                                    </span>
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    <button onClick={() => api.send(`/cross-project-dependencies/${dep.id}`, { method: 'DELETE' }).then(() => { showToast('Deleted'); fetchCrossProjectDeps(); }).catch(reportError)}
-                                      className="text-xs text-semantic-danger hover:underline">Delete</button>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-
-                      {/* Create cross-project dep modal */}
-                      {isCrossProjOpen && (
-                        <Modal title="New Cross-Project Dependency" onClose={() => setIsCrossProjOpen(false)} size="lg">
-                            <div className="space-y-3">
-                              <Field label="Title *">
-                                <input className="input" placeholder="What does this project depend on?" value={crossProjForm.title}
-                                  onChange={e => setCrossProjForm(f => ({ ...f, title: e.target.value }))} />
-                              </Field>
-                              <Field label="Description">
-                                <textarea className="input" rows={2} placeholder="Details of the dependency..."
-                                  value={crossProjForm.description} onChange={e => setCrossProjForm(f => ({ ...f, description: e.target.value }))} />
-                              </Field>
-                              <Field label="Target Project">
-                                <select className="input" value={crossProjForm.targetProjectId}
-                                  onChange={e => setCrossProjForm(f => ({ ...f, targetProjectId: e.target.value }))}>
-                                  <option value="">— Select project —</option>
-                                  {projects.filter(p => p.id !== pmProjectId).map(p => (
-                                    <option key={p.id} value={p.id}>{p.name}</option>
-                                  ))}
-                                </select>
-                              </Field>
-                              <Field label="Deadline">
-                                <input type="date" className="input" value={crossProjForm.deadline}
-                                  onChange={e => setCrossProjForm(f => ({ ...f, deadline: e.target.value }))} />
-                              </Field>
-                              <div className="flex items-center gap-2">
-                                <input type="checkbox" id="blocker" className="w-4 h-4 accent-brand-navy"
-                                  checked={crossProjForm.isBlocker}
-                                  onChange={e => setCrossProjForm(f => ({ ...f, isBlocker: e.target.checked }))} />
-                                <label htmlFor="blocker" className="text-sm text-neutral-700 dark:text-neutral-200">This is a blocker (blocks our delivery)</label>
-                              </div>
-                            </div>
-                            <div className="flex justify-end gap-3 mt-5">
-                              <Button variant="ghost" onClick={() => setIsCrossProjOpen(false)}>Cancel</Button>
-                              <Button variant="action" onClick={createCrossProjectDep}>Create Dependency</Button>
-                            </div>
-                        </Modal>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* PM CREATE MODAL */}
-              {pmFormOpen && (
-                <Modal title={<span className="capitalize">New {pmFormOpen.replace('issue','PM Issue').replace('lesson','Lesson Learned').replace('action','Action Item').replace('dependency','Dependency')}</span>} onClose={() => { setPmFormOpen(null); setPmForm({}); }} size="lg">
-                    <div className="space-y-3">
-                      <Field label="Title">
-                        <input className="input" placeholder="Brief title" value={pmForm.title || ''} onChange={e => setPmForm(p => ({ ...p, title: e.target.value }))} />
-                      </Field>
-                      <Field label="Description">
-                        <textarea className="input" rows={2} placeholder="Details..." value={pmForm.description || ''} onChange={e => setPmForm(p => ({ ...p, description: e.target.value }))} />
-                      </Field>
-
-                      {pmFormOpen === 'risk' && <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Probability">
-                            <select className="input" value={pmForm.probability || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, probability: e.target.value }))}>
-                              {['LOW','MEDIUM','HIGH','VERY_HIGH'].map(v => <option key={v}>{v}</option>)}
-                            </select>
-                          </Field>
-                          <Field label="Impact">
-                            <select className="input" value={pmForm.impact || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, impact: e.target.value }))}>
-                              {['LOW','MEDIUM','HIGH','CRITICAL'].map(v => <option key={v}>{v}</option>)}
-                            </select>
-                          </Field>
-                        </div>
-                        <Field label="Mitigation Plan">
-                          <textarea className="input" rows={2} placeholder="How will you mitigate this risk?" value={pmForm.mitigationPlan || ''} onChange={e => setPmForm(p => ({ ...p, mitigationPlan: e.target.value }))} />
-                        </Field>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
-                          <Field label="Review Date"><input type="date" className="input" value={pmForm.reviewDate || ''} onChange={e => setPmForm(p => ({ ...p, reviewDate: e.target.value || null }))} /></Field>
-                        </div>
-                      </>}
-
-                      {pmFormOpen === 'assumption' && <>
-                        <Field label="Rationale"><textarea className="input" rows={2} placeholder="Why was this assumption made?" value={pmForm.rationale || ''} onChange={e => setPmForm(p => ({ ...p, rationale: e.target.value }))} /></Field>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
-                          <Field label="Expiry Date"><input type="date" className="input" value={pmForm.expiryDate || ''} onChange={e => setPmForm(p => ({ ...p, expiryDate: e.target.value || null }))} /></Field>
-                        </div>
-                      </>}
-
-                      {pmFormOpen === 'issue' && <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Priority"><select className="input" value={pmForm.priority || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, priority: e.target.value }))}>{['CRITICAL','HIGH','MEDIUM','LOW'].map(v => <option key={v}>{v}</option>)}</select></Field>
-                          <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
-                        </div>
-                        <Field label="Impact"><textarea className="input" rows={2} placeholder="Impact of this issue..." value={pmForm.impact || ''} onChange={e => setPmForm(p => ({ ...p, impact: e.target.value }))} /></Field>
-                      </>}
-
-                      {pmFormOpen === 'dependency' && <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Dependent Team"><input className="input" placeholder="Team that needs this" value={pmForm.dependentTeam || ''} onChange={e => setPmForm(p => ({ ...p, dependentTeam: e.target.value }))} /></Field>
-                          <Field label="Providing Team"><input className="input" placeholder="Team that provides this" value={pmForm.providingTeam || ''} onChange={e => setPmForm(p => ({ ...p, providingTeam: e.target.value }))} /></Field>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Deadline"><input type="date" className="input" value={pmForm.deadline || ''} onChange={e => setPmForm(p => ({ ...p, deadline: e.target.value || null }))} /></Field>
-                          <Field label="Status"><select className="input" value={pmForm.status || 'PENDING'} onChange={e => setPmForm(p => ({ ...p, status: e.target.value }))}>{['PENDING','IN_PROGRESS','RESOLVED','BLOCKED'].map(v => <option key={v}>{v}</option>)}</select></Field>
-                        </div>
-                        <label className="flex items-center gap-2 text-sm text-neutral-700"><input type="checkbox" checked={!!pmForm.isBlocker} onChange={e => setPmForm(p => ({ ...p, isBlocker: e.target.checked }))} /> <span>This is a blocker</span></label>
-                      </>}
-
-                      {pmFormOpen === 'decision' && <>
-                        <Field label="Alternatives Considered"><textarea className="input" rows={2} placeholder="What other options were considered?" value={pmForm.alternatives || ''} onChange={e => setPmForm(p => ({ ...p, alternatives: e.target.value }))} /></Field>
-                        <Field label="Rationale"><textarea className="input" rows={2} placeholder="Why was this decision made?" value={pmForm.rationale || ''} onChange={e => setPmForm(p => ({ ...p, rationale: e.target.value }))} /></Field>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
-                          <Field label="Decision Date"><input type="date" className="input" value={pmForm.decisionDate || ''} onChange={e => setPmForm(p => ({ ...p, decisionDate: e.target.value || null }))} /></Field>
-                        </div>
-                      </>}
-
-                      {pmFormOpen === 'meeting' && <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Type"><select className="input" value={pmForm.meetingType || 'GENERAL'} onChange={e => setPmForm(p => ({ ...p, meetingType: e.target.value }))}>{['GENERAL','STANDUP','PLANNING','RETRO','REVIEW','STEERING'].map(v => <option key={v}>{v}</option>)}</select></Field>
-                          <Field label="Scheduled"><input type="datetime-local" className="input" value={pmForm.scheduledAt || ''} onChange={e => setPmForm(p => ({ ...p, scheduledAt: e.target.value || null }))} /></Field>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Duration (min)"><input type="number" className="input" value={pmForm.durationMins || ''} onChange={e => setPmForm(p => ({ ...p, durationMins: parseInt(e.target.value) || null }))} /></Field>
-                          <Field label="Location"><input className="input" placeholder="Room / URL" value={pmForm.location || ''} onChange={e => setPmForm(p => ({ ...p, location: e.target.value }))} /></Field>
-                        </div>
-                      </>}
-
-                      {pmFormOpen === 'action' && <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
-                          <Field label="Due Date"><input type="date" className="input" value={pmForm.dueDate || ''} onChange={e => setPmForm(p => ({ ...p, dueDate: e.target.value || null }))} /></Field>
-                        </div>
-                        <Field label="Priority"><select className="input" value={pmForm.priority || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, priority: e.target.value }))}>{['CRITICAL','HIGH','MEDIUM','LOW'].map(v => <option key={v}>{v}</option>)}</select></Field>
-                      </>}
-
-                      {pmFormOpen === 'stakeholder' && <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Role"><input className="input" placeholder="PM / Sponsor / Customer..." value={pmForm.role || ''} onChange={e => setPmForm(p => ({ ...p, role: e.target.value }))} /></Field>
-                          <Field label="Organisation"><input className="input" placeholder="Company name" value={pmForm.organization || ''} onChange={e => setPmForm(p => ({ ...p, organization: e.target.value }))} /></Field>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Influence"><select className="input" value={pmForm.influence || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, influence: e.target.value }))}>{['LOW','MEDIUM','HIGH'].map(v => <option key={v}>{v}</option>)}</select></Field>
-                          <Field label="Interest"><select className="input" value={pmForm.interest || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, interest: e.target.value }))}>{['LOW','MEDIUM','HIGH'].map(v => <option key={v}>{v}</option>)}</select></Field>
-                        </div>
-                        <Field label="Strategy"><select className="input" value={pmForm.engagementStrategy || 'INFORM'} onChange={e => setPmForm(p => ({ ...p, engagementStrategy: e.target.value }))}>{['INFORM','CONSULT','INVOLVE','COLLABORATE','EMPOWER'].map(v => <option key={v}>{v}</option>)}</select></Field>
-                      </>}
-
-                      {pmFormOpen === 'lesson' && <>
-                        <Field label="Category"><select className="input" value={pmForm.category || 'PROCESS'} onChange={e => setPmForm(p => ({ ...p, category: e.target.value }))}>{['PROCESS','TECHNICAL','COMMUNICATION','RISK','OTHER'].map(v => <option key={v}>{v}</option>)}</select></Field>
-                        <Field label="What Worked"><textarea className="input" rows={2} value={pmForm.whatWorked || ''} onChange={e => setPmForm(p => ({ ...p, whatWorked: e.target.value }))} /></Field>
-                        <Field label="What Didn't Work"><textarea className="input" rows={2} value={pmForm.whatDidntWork || ''} onChange={e => setPmForm(p => ({ ...p, whatDidntWork: e.target.value }))} /></Field>
-                        <Field label="Recommendation"><textarea className="input" rows={2} value={pmForm.recommendation || ''} onChange={e => setPmForm(p => ({ ...p, recommendation: e.target.value }))} /></Field>
-                      </>}
-                    </div>
-                    <div className="flex gap-3 mt-5">
-                      <Button variant="action" onClick={() => pmCreate(pmFormOpen, pmForm)} disabled={!pmForm.title}>Create</Button>
-                      <Button variant="secondary" onClick={() => { setPmFormOpen(null); setPmForm({}); }}>Cancel</Button>
-                    </div>
-                </Modal>
-              )}
-            </div>
+            <PmView
+              pmProjectId={pmProjectId}
+              pmTab={pmTab}
+              raidDashboard={raidDashboard}
+              risks={risks}
+              assumptions={assumptions}
+              pmIssues={pmIssues}
+              dependencies={dependencies}
+              decisions={decisions}
+              meetings={meetings}
+              actionItems={actionItems}
+              stakeholders={stakeholders}
+              lessonsLearned={lessonsLearned}
+              crossProjectDeps={crossProjectDeps}
+              selectedMeeting={selectedMeeting}
+              meetingNotes={meetingNotes}
+              pmFormOpen={pmFormOpen}
+              pmForm={pmForm}
+              isCrossProjOpen={isCrossProjOpen}
+              crossProjForm={crossProjForm}
+              projects={projects}
+              users={users}
+              setPmProjectId={setPmProjectId}
+              setPmTab={setPmTab}
+              setSelectedMeeting={setSelectedMeeting}
+              setMeetingNotes={setMeetingNotes}
+              setPmFormOpen={setPmFormOpen}
+              setPmForm={setPmForm}
+              setIsCrossProjOpen={setIsCrossProjOpen}
+              setCrossProjForm={setCrossProjForm}
+              fetchRaidDashboard={fetchRaidDashboard}
+              fetchRisks={fetchRisks}
+              fetchAssumptions={fetchAssumptions}
+              fetchPmIssues={fetchPmIssues}
+              fetchDependencies={fetchDependencies}
+              fetchDecisions={fetchDecisions}
+              fetchMeetings={fetchMeetings}
+              fetchActionItems={fetchActionItems}
+              fetchStakeholders={fetchStakeholders}
+              fetchLessons={fetchLessons}
+              fetchCrossProjectDeps={fetchCrossProjectDeps}
+              pmDelete={pmDelete}
+              pmCreate={pmCreate}
+              createCrossProjectDep={createCrossProjectDep}
+              reportError={reportError}
+              showToast={showToast}
+              api={api}
+            />
           )}
 
           {/* ITERATION 12 — Performance (KPI framework with privacy guardrails) */}
@@ -4263,348 +3277,48 @@ export default function App() {
                ITERATION 5 — KNOWLEDGE REPOSITORY
              ====================================================== */}
           {view === 'knowledge' && (
-            <div className="flex h-full overflow-hidden">
-              {/* Left sidebar — spaces */}
-              <div className="w-64 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col">
-                <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">Knowledge Spaces</h2>
-                    <button onClick={() => setIsSpaceFormOpen(true)} className="w-6 h-6 flex items-center justify-center rounded bg-brand-navy text-white text-sm hover:opacity-80 transition-opacity" title="New space">+</button>
-                  </div>
-                  {/* Search */}
-                  <div className="relative">
-                    <input type="text" placeholder="Search articles..." value={knowledgeSearch}
-                      onChange={e => setKnowledgeSearch(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') { searchKnowledge(); setKnowledgeTab('search'); } }}
-                      className="input text-xs pl-6 py-1.5 w-full" />
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-600 dark:text-neutral-400"><Search className="h-3.5 w-3.5" aria-hidden="true" /></span>
-                  </div>
-                </div>
-                {/* All articles shortcut */}
-                <div className="px-2 py-1">
-                  <button onClick={() => { setSelectedSpace(null); setSelectedArticle(null); setKnowledgeTab('all'); fetchKnowledgeArticles(null); }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${knowledgeTab === 'all' && !selectedSpace ? 'bg-brand-navy/10 text-brand-navy' : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700'}`}>
-                    <FileText className="inline-block h-3.5 w-3.5 mr-1.5 align-text-bottom" aria-hidden="true" />All Articles
-                  </button>
-                </div>
-                {/* Space list */}
-                <div className="flex-1 overflow-y-auto px-2 pb-2">
-                  {knowledgeSpaces.length === 0 && (
-                    <p className="text-xs text-neutral-600 text-center py-6">No spaces yet. Create one to get started.</p>
-                  )}
-                  {knowledgeSpaces.map(space => (
-                    <div key={space.id}>
-                      <button onClick={() => { setSelectedSpace(space); setSelectedArticle(null); setEditingArticle(false); setKnowledgeTab('space'); fetchKnowledgeArticles(space.id); }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors group flex items-center justify-between ${selectedSpace?.id === space.id ? 'bg-brand-navy/10 text-brand-navy' : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700'}`}>
-                        <span className="flex items-center gap-1.5">
-                          {space.icon ? <span>{space.icon}</span> : <Folder className="h-3.5 w-3.5" aria-hidden="true" />}
-                          <span className="truncate">{space.name}</span>
-                        </span>
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${space.visibility === 'PUBLIC' ? 'bg-semantic-success-surface text-semantic-success' : space.visibility === 'PRIVATE' ? 'bg-semantic-danger-surface text-semantic-danger' : 'bg-brand-navy/10 text-brand-navy'}`}>
-                          {space.visibility || 'TEAM'}
-                        </span>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Main content area */}
-              <div className="flex-1 flex overflow-hidden">
-                {/* Article list panel */}
-                {!selectedArticle && (
-                  <div className="flex-1 overflow-y-auto p-6">
-                    {knowledgeTab === 'search' ? (
-                      <div>
-                        <div className="flex items-center gap-3 mb-4">
-                          <h1 className="text-xl font-bold text-brand-navy dark:text-white">Search Results</h1>
-                          <span className="text-sm text-neutral-600 dark:text-neutral-400">{knowledgeSearchResults.length} results for "{knowledgeSearch}"</span>
-                          <button onClick={() => { setKnowledgeTab('spaces'); setKnowledgeSearch(''); setKnowledgeSearchResults([]); }} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 ml-auto">Clear</button>
-                        </div>
-                        {knowledgeSearchResults.length === 0 ? (
-                          <EmptyState icon={Search} title="No results found" subtitle={`No articles match "${knowledgeSearch}". Try different keywords.`} />
-                        ) : (
-                          <div className="space-y-2">
-                            {knowledgeSearchResults.map(art => (
-                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); }} role="button" tabIndex={0} onKeyDown={onPressKey}
-                                className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{art.title}</p>
-                                    <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5 line-clamp-2">{(art.content || '').substring(0, 120)}{(art.content || '').length > 120 ? '...' : ''}</p>
-                                  </div>
-                                  <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${art.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : art.status === 'DRAFT' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500' : 'bg-semantic-warning-surface text-semantic-warning'}`}>{art.status || 'DRAFT'}</span>
-                                    <span className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{art.templateType || 'KB'}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ) : (selectedSpace || knowledgeTab === 'all') ? (
-                      <div>
-                        <div className="flex items-center justify-between mb-5">
-                          <div className="flex items-center gap-3">
-                            {selectedSpace && <button onClick={() => { setSelectedSpace(null); setKnowledgeTab('spaces'); }} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Spaces</button>}
-                            <h1 className="text-xl font-bold text-brand-navy dark:text-white">{selectedSpace ? selectedSpace.name : 'All Articles'}</h1>
-                            {selectedSpace?.description && <p className="text-xs text-neutral-600 dark:text-neutral-400">{selectedSpace.description}</p>}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {selectedSpace && can('manage_projects') && (
-                              <button onClick={() => deleteKnowledgeSpace(selectedSpace.id)} className="text-xs text-semantic-danger hover:underline">Delete Space</button>
-                            )}
-                            {selectedSpace && (
-                              <Button variant="action" onClick={() => { setIsArticleFormOpen(true); setArticleForm({ title: '', content: '', templateType: 'KB', status: 'DRAFT' }); }}>+ New Article</Button>
-                            )}
-                          </div>
-                        </div>
-                        {knowledgeArticles.length === 0 ? (
-                          <EmptyState icon={FileIcon} title={selectedSpace ? `No articles in ${selectedSpace.name}` : 'No articles'} subtitle="Create your first article to capture knowledge for the team."
-                            action={selectedSpace && <Button variant="action" onClick={() => setIsArticleFormOpen(true)}>Write Article</Button>} />
-                        ) : (
-                          <div className="space-y-2">
-                            {knowledgeArticles.map(art => (
-                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); }} role="button" tabIndex={0} onKeyDown={onPressKey}
-                                className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{art.title}</p>
-                                    </div>
-                                    <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-2">{(art.content || '').substring(0, 120)}{(art.content || '').length > 120 ? '...' : ''}</p>
-                                    <div className="flex items-center gap-3 mt-2">
-                                      <span className="text-xs text-neutral-600 dark:text-neutral-400">v{art.versionNumber || 1} · {art.authorName || 'Unknown'}</span>
-                                      {art.updatedAt && <span className="text-xs text-neutral-600 dark:text-neutral-400">{new Date(art.updatedAt).toLocaleDateString()}</span>}
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${art.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : art.status === 'DRAFT' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500' : art.status === 'ARCHIVED' ? 'bg-neutral-200 dark:bg-neutral-600 text-neutral-500' : 'bg-semantic-warning-surface text-semantic-warning'}`}>{art.status || 'DRAFT'}</span>
-                                    <span className="text-xs bg-brand-navy/10 text-brand-navy px-1.5 py-0.5 rounded font-mono">{art.templateType || 'KB'}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <EmptyState icon={BookOpen} title="Select a space" subtitle="Choose a knowledge space from the left sidebar to browse articles, or search for specific content." />
-                    )}
-                  </div>
-                )}
-
-                {/* Article detail / editor panel */}
-                {selectedArticle && (
-                  <div className="flex-1 overflow-y-auto flex flex-col">
-                    {/* Article header */}
-                    <div className="border-b border-neutral-200 dark:border-neutral-700 px-6 py-4 flex items-center justify-between bg-white dark:bg-neutral-800 flex-shrink-0">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <button onClick={() => { setSelectedArticle(null); setEditingArticle(false); setArticlePanel(null); }} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0" aria-label="Back"><ArrowLeft className="h-4 w-4" aria-hidden="true" /></button>
-                        <div className="min-w-0">
-                          <h1 className="font-bold text-lg text-neutral-900 dark:text-white truncate">{selectedArticle.title}</h1>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded ${selectedArticle.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : selectedArticle.status === 'DRAFT' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500' : 'bg-neutral-200 dark:bg-neutral-600 text-neutral-500'}`}>{selectedArticle.status || 'DRAFT'}</span>
-                            <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400">{selectedArticle.templateType || 'KB'}</span>
-                            <span className="text-xs text-neutral-600 dark:text-neutral-400">v{selectedArticle.versionNumber || 1}</span>
-                            {selectedArticle.updatedAt && <span className="text-xs text-neutral-600 dark:text-neutral-400">Updated {new Date(selectedArticle.updatedAt).toLocaleDateString()}</span>}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {[
-                          { key: 'history',   label: `History (${articleVersions.length})` },
-                          { key: 'comments',  label: 'Comments' },
-                          { key: 'analytics', label: 'Analytics' },
-                        ].map(p => (
-                          <button key={p.key} onClick={() => openArticlePanel(p.key)} aria-pressed={articlePanel === p.key}
-                            className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${articlePanel === p.key ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy'}`}>
-                            {p.label}
-                          </button>
-                        ))}
-                        {/* Status-aware publishing workflow — single primary action per state */}
-                        {selectedArticle.status === 'IN_REVIEW' && (
-                          <button onClick={() => rejectArticle(selectedArticle.id)} className="text-xs text-semantic-warning hover:underline">Request changes</button>
-                        )}
-                        {(!selectedArticle.status || selectedArticle.status === 'DRAFT') && (
-                          <Button variant="action" onClick={() => submitArticleForReview(selectedArticle.id)}>Submit for review</Button>
-                        )}
-                        {selectedArticle.status === 'IN_REVIEW' && (
-                          <Button variant="action" onClick={() => publishArticle(selectedArticle.id)}>Publish</Button>
-                        )}
-                        {selectedArticle.status === 'PUBLISHED' && (
-                          <Button variant="secondary" onClick={() => archiveArticle(selectedArticle.id)}>Archive</Button>
-                        )}
-                        {selectedArticle.status === 'ARCHIVED' && (
-                          <Button variant="secondary" onClick={() => restoreArticle(selectedArticle.id)}>Restore</Button>
-                        )}
-                        <Button variant="secondary" onClick={() => setEditingArticle(e => !e)}>
-                          {editingArticle ? 'View' : 'Edit'}
-                        </Button>
-                        <button onClick={() => deleteArticle(selectedArticle.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-1 overflow-hidden">
-                      {/* Content area */}
-                      <div className="flex-1 overflow-y-auto p-6">
-                        {editingArticle ? (
-                          <div className="space-y-4">
-                            <div>
-                              <label htmlFor="article-title" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Title</label>
-                              <input id="article-title" className="input text-lg font-bold w-full" value={selectedArticle.title || ''}
-                                onChange={e => setSelectedArticle(a => ({ ...a, title: e.target.value }))}
-                                onBlur={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content })} />
-                            </div>
-                            <div className="flex items-center gap-4">
-                              <div>
-                                <label htmlFor="article-template-type" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Template Type</label>
-                                <select id="article-template-type" className="input text-sm w-48" value={selectedArticle.templateType || 'KB'}
-                                  onChange={e => { const t = e.target.value; setSelectedArticle(a => ({ ...a, templateType: t })); updateArticle(selectedArticle.id, { templateType: t }); }}>
-                                  {['KB','RUNBOOK','ADR','POSTMORTEM','ONBOARDING','TROUBLESHOOTING','CUSTOM'].map(t => <option key={t} value={t}>{t}</option>)}
-                                </select>
-                              </div>
-                              {/* B09 — content format toggle: markdown ↔ blocks */}
-                              <div className="flex-1 flex justify-end">
-                                <div className="flex rounded-lg border border-neutral-200 dark:border-neutral-600 overflow-hidden" role="group" aria-label="Content format">
-                                  {(['markdown', 'blocks']).map(fmt => (
-                                    <button key={fmt} type="button"
-                                      onClick={() => setArticleContentFormat(fmt)}
-                                      aria-pressed={articleContentFormat === fmt}
-                                      className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${articleContentFormat === fmt ? 'bg-brand-navy text-white' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700'}`}>
-                                      {fmt}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                            {articleContentFormat === 'markdown' ? (
-                              <div>
-                                <label htmlFor="article-content" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Content (Markdown supported)</label>
-                                <textarea id="article-content" rows={20} className="input resize-none font-mono text-sm w-full"
-                                  value={selectedArticle.content || ''}
-                                  onChange={e => setSelectedArticle(a => ({ ...a, content: e.target.value }))}
-                                  onBlur={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, templateType: selectedArticle.templateType })}
-                                  placeholder="Write your article content here... Supports Markdown formatting." />
-                              </div>
-                            ) : (
-                              <div>
-                                <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-2">Content (Block editor)</span>
-                                <BlockEditor
-                                  blocks={(() => { try { return JSON.parse(selectedArticle.contentBlocks || '[]'); } catch { return []; } })()}
-                                  onChange={blocks => {
-                                    const json = JSON.stringify(blocks);
-                                    setSelectedArticle(a => ({ ...a, contentBlocks: json }));
-                                    updateArticle(selectedArticle.id, { contentBlocks: json, templateType: selectedArticle.templateType });
-                                  }}
-                                />
-                              </div>
-                            )}
-                            <Button variant="action" onClick={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, contentBlocks: selectedArticle.contentBlocks, templateType: selectedArticle.templateType })}>
-                              Save Changes
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="prose prose-sm max-w-none dark:prose-invert">
-                            {selectedArticle.content ? (
-                              <div className="text-neutral-800 dark:text-neutral-200 leading-relaxed whitespace-pre-wrap text-sm"
-                                dangerouslySetInnerHTML={{ __html: renderMd(selectedArticle.content) }} />
-                            ) : (
-                              <EmptyState icon={FileText} title="No content yet" subtitle="Click Edit to start writing." action={<Button variant="action" onClick={() => setEditingArticle(true)}>Start Writing</Button>} />
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Contextual side panel — history / comments / analytics */}
-                      {articlePanel === 'history' && (
-                        <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
-                          <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Version history</h3>
-                          {articleVersions.length === 0 ? (
-                            <p className="text-xs text-neutral-600">No versions saved yet.</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {articleVersions.map(v => (
-                                <div key={v.id} className="bg-white dark:bg-neutral-800 rounded-lg p-3 border border-neutral-200 dark:border-neutral-700">
-                                  <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">Version {v.versionNumber}</p>
-                                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{v.savedBy || 'Unknown'}</p>
-                                  <p className="text-xs text-neutral-600 dark:text-neutral-400">{v.savedAt ? new Date(v.savedAt).toLocaleString() : '—'}</p>
-                                  <button onClick={() => setSelectedArticle(a => ({ ...a, content: v.content }))}
-                                    className="text-xs text-brand-navy hover:underline mt-1">Restore</button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {articlePanel === 'comments' && (
-                        <div className="w-72 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4 flex flex-col">
-                          <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Comments ({articleComments.length})</h3>
-                          <div className="flex-1 space-y-2">
-                            {articleComments.length === 0 && (
-                              <p className="text-xs text-neutral-600">No comments yet. Start the discussion below.</p>
-                            )}
-                            {articleComments.map(c => (
-                              <div key={c.id} className={`rounded-lg p-3 border ${c.resolved ? 'bg-semantic-success-surface border-semantic-success/30' : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700'}`}>
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{c.authorName || 'Unknown'}</span>
-                                  <span className="text-xs text-neutral-600 dark:text-neutral-400">{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : ''}</span>
-                                </div>
-                                <p className="text-xs text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">{c.body}</p>
-                                <div className="flex items-center gap-3 mt-1.5">
-                                  <button onClick={() => toggleArticleComment(selectedArticle.id, c.id, !c.resolved)}
-                                    className="text-xs text-brand-navy hover:underline">{c.resolved ? 'Reopen' : 'Resolve'}</button>
-                                  <button onClick={() => deleteArticleComment(selectedArticle.id, c.id)}
-                                    className="text-xs text-semantic-danger hover:underline">Delete</button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
-                            <textarea rows={3} value={newArticleComment} onChange={e => setNewArticleComment(e.target.value)}
-                              placeholder="Add a comment…" className="input resize-none text-xs w-full" />
-                            <Button variant="action" className="mt-2 w-full" onClick={() => addArticleComment(selectedArticle.id)}>Comment</Button>
-                          </div>
-                        </div>
-                      )}
-
-                      {articlePanel === 'analytics' && (
-                        <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
-                          <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Analytics</h3>
-                          {!articleAnalytics ? (
-                            <p className="text-xs text-neutral-600 dark:text-neutral-400">Loading…</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {[
-                                { label: 'Views', value: articleAnalytics.viewCount },
-                                { label: 'Helpful votes', value: articleAnalytics.helpfulVotes },
-                                { label: 'Work-item citations', value: articleAnalytics.citationCount },
-                                { label: 'Open comments', value: articleAnalytics.openComments },
-                                { label: 'Versions', value: articleAnalytics.versionCount },
-                                { label: 'Days since update', value: articleAnalytics.daysSinceUpdate },
-                              ].map(m => (
-                                <div key={m.label} className="bg-white dark:bg-neutral-800 rounded-lg p-3 border border-neutral-200 dark:border-neutral-700 flex items-center justify-between">
-                                  <span className="text-xs text-neutral-600 dark:text-neutral-400">{m.label}</span>
-                                  <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{m.value ?? '—'}</span>
-                                </div>
-                              ))}
-                              {articleAnalytics.stale && (
-                                <div className="bg-semantic-warning-surface border border-semantic-warning/30 rounded-lg p-3 flex items-center gap-2">
-                                  <AlertTriangle className="h-4 w-4 text-semantic-warning flex-shrink-0" aria-hidden="true" />
-                                  <span className="text-xs text-semantic-warning font-medium">Stale — published over {90} days ago without an update.</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <KnowledgeView
+              knowledgeSearch={knowledgeSearch}
+              knowledgeTab={knowledgeTab}
+              knowledgeSpaces={knowledgeSpaces}
+              selectedSpace={selectedSpace}
+              selectedArticle={selectedArticle}
+              editingArticle={editingArticle}
+              articlePanel={articlePanel}
+              knowledgeSearchResults={knowledgeSearchResults}
+              knowledgeArticles={knowledgeArticles}
+              articleVersions={articleVersions}
+              articleComments={articleComments}
+              articleAnalytics={articleAnalytics}
+              newArticleComment={newArticleComment}
+              articleContentFormat={articleContentFormat}
+              can={can}
+              setKnowledgeSearch={setKnowledgeSearch}
+              setKnowledgeTab={setKnowledgeTab}
+              setSelectedSpace={setSelectedSpace}
+              setSelectedArticle={setSelectedArticle}
+              setEditingArticle={setEditingArticle}
+              setArticlePanel={setArticlePanel}
+              setNewArticleComment={setNewArticleComment}
+              setArticleContentFormat={setArticleContentFormat}
+              setIsSpaceFormOpen={setIsSpaceFormOpen}
+              setIsArticleFormOpen={setIsArticleFormOpen}
+              setArticleForm={setArticleForm}
+              searchKnowledge={searchKnowledge}
+              fetchKnowledgeArticles={fetchKnowledgeArticles}
+              deleteKnowledgeSpace={deleteKnowledgeSpace}
+              updateArticle={updateArticle}
+              submitArticleForReview={submitArticleForReview}
+              publishArticle={publishArticle}
+              archiveArticle={archiveArticle}
+              restoreArticle={restoreArticle}
+              deleteArticle={deleteArticle}
+              addArticleComment={addArticleComment}
+              toggleArticleComment={toggleArticleComment}
+              deleteArticleComment={deleteArticleComment}
+              openArticlePanel={openArticlePanel}
+              rejectArticle={rejectArticle}
+            />
           )}
 
           {/* ======================================================
@@ -5941,22 +4655,7 @@ export default function App() {
 // Modal now lives in components/works/molecules/modal.jsx — accessible (role=dialog, aria-modal,
 // focus trap, Escape, backdrop close, scroll lock, focus restoration). Imported at the top.
 
-function renderMd(text) {
-  if (!text) return '';
-  // Article / comment / reply bodies are user-supplied, so the generated HTML is sanitised
-  // (tight tag + attr allowlist) before any call site hands it to dangerouslySetInnerHTML.
-  // RB-10 §8 / CLAUDE.md §17.3 — never inject unsanitised user content (closes stored XSS).
-  const html = text
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`(.+?)`/g, '<code class="prose-md-code">$1</code>')
-    .replace(/^- (.+)$/gm, '• $1')
-    .replace(/\n/g, '<br/>');
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['strong', 'em', 'code', 'br'],
-    ALLOWED_ATTR: ['class'],
-  });
-}
+// renderMd extracted to @/lib/utils (imported above). Imported as renderMd from utils (TD-003).
 
 // eslint-disable-next-line no-unused-vars
 function getTimeOfDay() {
@@ -6135,50 +4834,7 @@ function formatEventType(eventType) {
   return map[eventType] || (eventType || '').toLowerCase().replace(/_/g, ' ');
 }
 
-function PmArtifactList({ title, icon: Icon, items, columns, renderRow, onDelete, onAdd, statusColors = {} }) {
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-          {isIconComponent(Icon) ? <Icon aria-hidden="true" className="h-4 w-4 text-neutral-600 dark:text-neutral-400" /> : <span>{Icon}</span>} {title}
-        </h2>
-        <Button variant="action" onClick={onAdd}>+ New</Button>
-      </div>
-      {items.length === 0
-        ? <EmptyState icon={Icon} title={`No ${title.toLowerCase()} yet`} subtitle="Click + New to add your first entry." action={<Button variant="action" onClick={onAdd}>+ New</Button>} />
-        : <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
-                <tr>
-                  {columns.map(c => <th key={c} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">{c}</th>)}
-                  <th className="px-4 py-2.5"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                {items.map(item => {
-                  const cells = renderRow(item);
-                  return (
-                    <tr key={item.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
-                      {cells.map((cell, i) => (
-                        <td key={i} className={`px-4 py-3 ${i === 0 ? 'font-medium text-neutral-900 dark:text-neutral-100 max-w-xs truncate' : 'text-neutral-600 dark:text-neutral-300 text-xs'}`}>
-                          {i === 0 ? cell : (statusColors[cell]
-                            ? <span className={`font-semibold ${statusColors[cell]}`}>{cell}</span>
-                            : cell)}
-                        </td>
-                      ))}
-                      <td className="px-4 py-3">
-                        <button onClick={() => onDelete(item.id)} className="text-neutral-300 hover:text-semantic-danger text-xs transition-colors">Delete</button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-      }
-    </div>
-  );
-}
+// PmArtifactList extracted to src/components/works/organisms/pm-artifact-list.jsx (TD-003).
 
 function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
   const [items, setItems] = React.useState([]);

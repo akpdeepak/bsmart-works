@@ -1,8 +1,18 @@
 package com.bcits.works;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
@@ -15,6 +25,7 @@ import java.util.Map;
  * {@link ComplianceRuleService}; both scope and assertion BQL are validated before save so an
  * un-compilable rule can never be persisted. Every mutation is recorded as an event (RB-10 §3).
  */
+@Tag(name = "Compliance Rules", description = "Workspace-scoped compliance rule CRUD, BQL validation, dry-run testing, and activate/deactivate lifecycle")
 @RestController
 @RequestMapping("/api/v1/compliance/rules")
 public class ComplianceRuleController {
@@ -40,6 +51,7 @@ public class ComplianceRuleController {
         this.rbac = rbac;
     }
 
+    @Operation(summary = "List compliance rules", description = "Returns all compliance rules for a workspace. Requires view_items. Filter by projectId to narrow scope.")
     @GetMapping
     public List<ComplianceRule> list(@RequestParam String workspaceId,
                                      @RequestParam(required = false) String projectId) {
@@ -62,6 +74,7 @@ public class ComplianceRuleController {
         return rule;
     }
 
+    @Operation(summary = "Create compliance rule", description = "Creates and persists a new compliance rule. BQL expressions are validated before save. Requires manage_compliance.")
     @PostMapping
     public ComplianceRule create(@Valid @RequestBody ComplianceRule rule) {
         String userId = authenticatedUser.id();
@@ -127,6 +140,7 @@ public class ComplianceRuleController {
     }
 
     /** Test-before-activate: report how many items the rule would flag now, without persisting. */
+    @Operation(summary = "Dry-run a compliance rule", description = "Reports how many items the rule would flag without persisting any violation records. Useful before activation.")
     @PostMapping("/{id}/test")
     public Map<String, Object> test(@PathVariable String id) {
         String userId = authenticatedUser.id();

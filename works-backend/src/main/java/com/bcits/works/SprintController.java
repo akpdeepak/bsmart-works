@@ -1,13 +1,29 @@
 package com.bcits.works;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
+@Tag(name = "Sprints", description = "Sprint lifecycle, velocity charts, scope-change timeline, and item assignment")
 @RestController
 @RequestMapping("/api/v1/sprints")
 public class SprintController {
@@ -30,6 +46,7 @@ public class SprintController {
         this.rbac = rbac;
     }
 
+    @Operation(summary = "List sprints", description = "Returns sprints for the authenticated user's workspaces. Filter by projectId to scope to a single project.")
     @GetMapping
     public List<Sprint> getSprints(@RequestParam(required = false) String projectId) {
         String userId = authenticatedUser.id();
@@ -47,12 +64,14 @@ public class SprintController {
         return sprints;
     }
 
+    @Operation(summary = "Create sprint", description = "Creates a new sprint in PLANNING state. Requires manage_sprints permission.")
     @PostMapping
     public Sprint createSprint(@Valid @RequestBody Sprint sprint) {
         String userId = authenticatedUser.id();
         String wsId = rbac.workspaceForProject(sprint.getProjectId());
-        if (wsId != null) rbac.require(userId, wsId, "manage_sprints");
+        if (wsId != null) rbac.require(userId, wsId, "manage_sprints"); {
         sprint.setId("SPR-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        }
         sprint.setStatus("PLANNING");
         sprint.setCreatedAt(OffsetDateTime.now());
         Sprint saved = sprintRepository.save(sprint);
@@ -66,8 +85,9 @@ public class SprintController {
         Sprint existing = sprintRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Sprint", id));
         String wsId = rbac.workspaceForProject(existing.getProjectId());
-        if (wsId != null) rbac.require(userId, wsId, "manage_sprints");
+        if (wsId != null) rbac.require(userId, wsId, "manage_sprints"); {
         return sprintRepository.findById(id).map(s -> {
+        }
             String oldStatus = s.getStatus();
             s.setName(updated.getName());
             s.setGoal(updated.getGoal());
@@ -132,6 +152,7 @@ public class SprintController {
     }
 
     // Multi-sprint velocity chart data
+    @Operation(summary = "Velocity chart", description = "Returns story-point completion data across all sprints for the authenticated user's workspaces.")
     @GetMapping("/velocity")
     public List<Map<String, Object>> getVelocityChart() {
         // Workspace-scoped (RB-40 §1 / B04): caller sees only sprints in their own workspaces.

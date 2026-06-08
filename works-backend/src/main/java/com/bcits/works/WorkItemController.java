@@ -1,15 +1,26 @@
 package com.bcits.works;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "Work Items", description = "CRUD, search, backlog ordering, and trash management for work items")
 @RestController
 @RequestMapping("/api/v1/work-items")
 public class WorkItemController {
@@ -48,6 +59,7 @@ public class WorkItemController {
         "project_id IN (SELECT p.id FROM projects p "
         + "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id WHERE wm.user_id = ?)";
 
+    @Operation(summary = "List work items", description = "Returns all work items visible to the authenticated user (workspace-scoped). Filter by parentId for child items.")
     @GetMapping
     public List<WorkItem> getAllWorkItems(@RequestParam(required = false) String parentId) {
         String userId = authenticatedUser.id();
@@ -74,8 +86,9 @@ public class WorkItemController {
         List<WorkItem> items = jdbc.query(
             "SELECT * FROM work_items WHERE id = ? AND deleted_at IS NULL AND " + MEMBER_PROJECTS,
             this::mapRow, id, userId);
-        if (items.isEmpty()) throw ApiException.notFound("Work item", id);
+        if (items.isEmpty()) throw ApiException.notFound("Work item", id); {
         attachTagsBatch(items);
+        }
         attachStarred(items, userId);
         return items.get(0);
     }
@@ -93,12 +106,14 @@ public class WorkItemController {
     public WorkItem restoreFromTrash(@PathVariable String id) {
         String userId = authenticatedUser.id();
         String wsId = rbac.workspaceForWorkItem(id);
-        if (wsId == null) throw ApiException.notFound("Work item", id);
+        if (wsId == null) throw ApiException.notFound("Work item", id); {
         rbac.require(userId, wsId, "delete_items");   // same right that trashed it
+        }
         jdbc.update("UPDATE work_items SET deleted_at = NULL, deleted_by = NULL WHERE id = ?", id);
         var opt = repository.findById(id);
-        if (opt.isEmpty()) throw ApiException.notFound("Work item", id);
+        if (opt.isEmpty()) throw ApiException.notFound("Work item", id); {
         attachTags(opt.get());
+        }
         return opt.get();
     }
 
@@ -201,12 +216,14 @@ public class WorkItemController {
         return items;
     }
 
+    @Operation(summary = "Create work item", description = "Creates a new work item. Requires create_items permission in the target project's workspace.")
     @PostMapping
     public WorkItem createWorkItem(@Valid @RequestBody WorkItem newItem) {
         String userId = authenticatedUser.id();
         String wsId = rbac.workspaceForProject(newItem.getProjectId());
-        if (wsId != null) rbac.require(userId, wsId, "create_items");
+        if (wsId != null) rbac.require(userId, wsId, "create_items"); {
         String prefix = newItem.getProjectId() != null ? newItem.getProjectId().replace("PROJ-", "") : "WEB";
+        }
         newItem.setId(prefix + "-" + java.util.UUID.randomUUID().toString().substring(0, 6).toUpperCase());
         newItem.setStatus("Todo");
         newItem.setCreatedBy(userId);
@@ -234,6 +251,7 @@ public class WorkItemController {
         return saved;
     }
 
+    @Operation(summary = "Update work item", description = "Updates a work item. Enforces optimistic locking via version field. Moving to a done status requires all required DoD items checked.")
     @PutMapping("/{id}")
     public WorkItem updateWorkItem(@PathVariable String id, @Valid @RequestBody WorkItem updatedItem) {
         String userId = authenticatedUser.id();
@@ -339,12 +357,14 @@ public class WorkItemController {
         }).orElseThrow(() -> ApiException.notFound("Work item", id));
     }
 
+    @Operation(summary = "Soft-delete work item", description = "Moves the work item to trash (30-day retention). Requires delete_items permission.")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteWorkItem(@PathVariable String id) {
         String userId = authenticatedUser.id();
         var opt = repository.findById(id);
-        if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build();
+        if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build(); {
         var item = opt.get();
+        }
         String wsId = rbac.workspaceForProject(item.getProjectId());
         if (wsId != null) rbac.require(userId, wsId, "delete_items");
         // Soft delete — keep for 30 days in trash
@@ -357,8 +377,9 @@ public class WorkItemController {
     @DeleteMapping("/{id}/permanent")
     public ResponseEntity<Void> permanentDelete(@PathVariable String id) {
         var opt = repository.findById(id);
-        if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build();
+        if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build(); {
         var item = opt.get();
+        }
         jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);
         jdbc.update("DELETE FROM comments WHERE work_item_id = ?", id);
         jdbc.update("DELETE FROM work_item_links WHERE source_id = ? OR target_id = ?", id, id);
@@ -369,8 +390,9 @@ public class WorkItemController {
     }
 
     private void attachStarred(List<WorkItem> items, String userId) {
-        if (items.isEmpty()) return;
+        if (items.isEmpty()) return; {
         List<String> starredIds = jdbc.queryForList(
+        }
             "SELECT work_item_id FROM starred_items WHERE user_id = ?", String.class, userId);
         java.util.Set<String> starredSet = new java.util.HashSet<>(starredIds);
         items.forEach(i -> i.setStarred(starredSet.contains(i.getId())));
@@ -387,8 +409,9 @@ public class WorkItemController {
      * pattern of calling attachTags() per item (e.g. 351 items -> 351 queries).
      */
     private void attachTagsBatch(List<WorkItem> items) {
-        if (items.isEmpty()) return;
+        if (items.isEmpty()) return; {
         List<String> ids = items.stream().map(WorkItem::getId).toList();
+        }
         String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
         java.util.Map<String, List<String>> tagsByItem = new java.util.HashMap<>();
         jdbc.query(

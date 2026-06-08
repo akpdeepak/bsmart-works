@@ -1,9 +1,17 @@
 package com.bcits.works;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
@@ -19,6 +27,7 @@ import java.util.UUID;
  * exposed — which is field-level security in practice. SLA math reuses {@link ServiceRequestService}
  * so the countdown matches the agent's exactly (one engine, two contexts).
  */
+@Tag(name = "Customer Portal", description = "Customer-facing portal: service requests, CSAT, and published knowledge base. Scoped to the authenticated customer's account and workspace.")
 @RestController
 @RequestMapping("/api/v1/portal")
 public class CustomerPortalController {
@@ -67,6 +76,7 @@ public class CustomerPortalController {
     }
 
     // ── Submit + view requests ──────────────────────────────────────────────────────
+    @Operation(summary = "Submit service request", description = "Submits a new service request on behalf of the authenticated customer. Auto-creates a linked internal work item.")
     @PostMapping("/requests")
     public Map<String, Object> submit(@RequestBody Map<String, Object> body) {
         CustomerContext.CustomerPrincipal me = customerContext.current();
@@ -105,6 +115,7 @@ public class CustomerPortalController {
         return customerView(saved, OffsetDateTime.now());
     }
 
+    @Operation(summary = "List customer requests", description = "Returns all service requests for the authenticated customer's account. Filter by status=open for active requests.")
     @GetMapping("/requests")
     public List<Map<String, Object>> myRequests(@RequestParam(required = false) String status) {
         CustomerContext.CustomerPrincipal me = customerContext.current();

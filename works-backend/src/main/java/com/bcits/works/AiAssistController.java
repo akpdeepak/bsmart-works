@@ -1,6 +1,12 @@
 package com.bcits.works;
 
-import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
@@ -15,6 +21,7 @@ import java.util.Map;
  * <p>"In-context" AI can be turned off per request via the {@code aiInContext=false} flag — the
  * fourth, most-granular scope in the hierarchy (RB-40 §2).
  */
+@Tag(name = "AI Assist", description = "AI Control Plane endpoints: command bar, summarisation, NL filter, story generation, and knowledge Q&A. All workspace-scoped; budget/audit via AiControlPlaneService.")
 @RestController
 @RequestMapping("/api/v1/ai")
 public class AiAssistController {
@@ -50,6 +57,7 @@ public class AiAssistController {
 
     // ── Cap P · command bar ───────────────────────────────────────────────────────
 
+    @Operation(summary = "Parse AI command", description = "Parses a natural-language command into a typed ActionPlan. The plan can then be reviewed before execution via /command/execute.")
     @PostMapping("/command/parse")
     public AiAssistService.ActionPlan parse(@RequestParam String workspaceId, @RequestBody Map<String, Object> body) {
         String userId = requireMember(workspaceId);
@@ -69,6 +77,7 @@ public class AiAssistController {
 
     // ── Cap O · triage / generation / anomaly ─────────────────────────────────────
 
+    @Operation(summary = "AI triage", description = "Suggests type, priority, and assignee for a work item based on title and description. Falls back to rules engine when AI is off or over budget.")
     @PostMapping("/triage")
     public AiAssistService.TriageSuggestion triage(@RequestParam String workspaceId, @RequestBody Map<String, Object> body) {
         String userId = requireMember(workspaceId);

@@ -17,7 +17,7 @@
 | Auth | Spring Security + **JWT (stateless)** · MFA TOTP | OAuth2/SAML are spec targets, not built |
 | Frontend | **React 19.2 · Vite 8 · JavaScript/JSX · Tailwind 4** | not Angular; not TypeScript |
 | Data fetching | TanStack Query via a single `apiClient` | no inline `fetch`/`axios` |
-| Package | `com.example.demo` (flat) | spec target `com.bcits.works.*`; rename is its own PR |
+| Package | `com.bcits.works` (flat) | TD-001 rename complete; sub-package split is a separate planned task |
 
 **Do not "fix" the stack to match the spec inside a feature PR.** Closing a spec-vs-code gap
 (package rename, TS migration) is a planned migration with its own issue and PR (§3.7 of

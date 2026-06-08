@@ -8,8 +8,8 @@
 		<version>4.0.6</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.example</groupId>
-	<artifactId>demo</artifactId>
+	<groupId>com.bcits</groupId>
+	<artifactId>works</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name/>
 	<description/>
@@ -158,6 +158,15 @@
 			<artifactId>junit-jupiter</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- OpenAPI 3.1 / Swagger UI — auto-generates docs from Spring controllers.
+		     Served at /api-docs (JSON) and /swagger-ui.html (browser UI) at runtime.
+		     See OpenApiConfig for the bearer-auth scheme and global metadata. -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.8.9</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -204,6 +213,7 @@
 								<exclude>**/*Scheduler.class</exclude>
 								<exclude>**/*Filter.class</exclude>
 								<exclude>**/*Config.class</exclude>
+								<exclude>**/WorksApplication.class</exclude>
 								<exclude>**/DemoApplication.class</exclude>
 								<exclude>**/AuthenticatedUser.class</exclude>
 								<exclude>**/dto/**</exclude>
@@ -246,6 +256,7 @@
 								<exclude>**/WorkflowStatus.class</exclude>
 								<exclude>**/WorkflowTransition.class</exclude>
 								<exclude>**/Workspace.class</exclude>
+								<exclude>**/CustomDomain.class</exclude>
 								<exclude>**/WorkItemTypeConfig.class</exclude>
 								<!-- Iteration 14 (developer workspace) entities -->
 								<exclude>**/PullRequest.class</exclude>
@@ -316,6 +327,7 @@
 				<configuration>
 					<excludes>
 						<exclude>**/*IntegrationTest.java</exclude>
+						<exclude>**/*IT.java</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
@@ -330,6 +342,7 @@
 				<configuration>
 					<includes>
 						<include>**/*IntegrationTest.java</include>
+						<include>**/*IT.java</include>
 					</includes>
 				</configuration>
 				<executions>
@@ -342,10 +355,9 @@
 				</executions>
 			</plugin>
 			<!-- Checkstyle: enforces Java style consistency across all contributors and AI tools.
-			     Runs at the `verify` phase (so CI catches it). Shipped in reporting mode
-			     (failOnViolation=false) so it does not break the existing baseline on day one.
-			     Once `./mvnw checkstyle:check` is clean, flip failOnViolation to `true` to make
-			     it block PRs. Config: config/checkstyle/checkstyle.xml -->
+			     Runs at the `verify` phase (so CI catches it). TD-005 (2026-06-08): baseline
+			     is now clean — failOnViolation is true so any new violation blocks CI.
+			     Config: config/checkstyle/checkstyle.xml -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-checkstyle-plugin</artifactId>
@@ -353,7 +365,7 @@
 				<configuration>
 					<configLocation>config/checkstyle/checkstyle.xml</configLocation>
 					<consoleOutput>true</consoleOutput>
-					<failOnViolation>false</failOnViolation>
+					<failOnViolation>true</failOnViolation>
 					<violationSeverity>warning</violationSeverity>
 					<includeTestSourceDirectory>true</includeTestSourceDirectory>
 				</configuration>

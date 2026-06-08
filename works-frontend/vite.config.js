@@ -1,16 +1,17 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
-import { fileURLToPath } from 'url'
+/// <reference types="vitest/config" />
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
+      '@': path.resolve(__dirname, './src')
+    }
   },
   test: {
     environment: 'jsdom',
@@ -23,10 +24,10 @@ export default defineConfig({
         lines: 60,
         functions: 60,
         branches: 50,
-        statements: 60,
+        statements: 60
       },
       include: ['src/components/works/**/*.{js,jsx}'],
-      exclude: ['src/components/works/**/*.stories.{js,jsx}'],
+      exclude: ['src/components/works/**/*.stories.{js,jsx}']
     },
-  },
-})
+  }
+});

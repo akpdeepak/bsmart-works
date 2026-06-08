@@ -56,10 +56,10 @@ check BLOCK "No works-* token names (use brand-navy/brand-orange — CLAUDE.md �
 check BLOCK "No Tailwind gray-* classes (use neutral-* tokens — CLAUDE.md §4.2)" \
   "$(grep -RInE '\b(bg|text|border|ring|ring-offset|from|to|via|divide|fill|stroke|placeholder|outline|decoration|shadow|accent|caret)-gray-[0-9]' "$FE" 2>/dev/null || true)"
 
-# New code must stay in com.example.demo until a rename is scheduled.
+# Package rename complete (TD-001): all code must use com.bcits.works; no com.example.demo allowed.
 if [ -d "$BE" ]; then
-  check BLOCK "No new com.bcits.works.* packages yet (match com.example.demo — CLAUDE.md §3)" \
-    "$(grep -RIn '^package com\.bcits\.works' "$BE" 2>/dev/null || true)"
+  check BLOCK "No com.example.demo package declarations (renamed to com.bcits.works — TD-001)" \
+    "$(grep -RIn '^package com\.example\.demo' "$BE" 2>/dev/null || true)"
 fi
 
 # RBAC must not be enforced in controllers (belongs in the service layer).

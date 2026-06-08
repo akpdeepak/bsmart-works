@@ -1,0 +1,100 @@
+package com.bcits.works;
+
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+/**
+ * Cross-tenant / unauthorized access tests for the sprint write paths (RB-40 §1, RB-05 Stage 3).
+ * Sprints resolve their workspace via the parent project; a caller outside that workspace is denied
+ * with 403 before the sprint is persisted or its items are touched. Pure unit level — no DB.
+ */
+@Tag("unit")
+class SprintControllerAccessTest {
+
+    private static final String CALLER = "user-A";
+    private static final String FOREIGN_WS = "ws-B";
+    private static final String PERM = "manage_sprints";
+
+    private final SprintRepository sprintRepository = mock(SprintRepository.class);
+    private final WorkItemRepository workItemRepository = mock(WorkItemRepository.class);
+    private final EventService eventService = mock(EventService.class);
+    private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
+    private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
+    private final RbacService rbac = mock(RbacService.class);
+
+    private final SprintController controller = new SprintController(
+            sprintRepository, workItemRepository, eventService, jdbc, authenticatedUser, rbac);
+
+    SprintControllerAccessTest() {
+        when(authenticatedUser.id()).thenReturn(CALLER);
+        when(rbac.workspaceForProject("PROJ-B")).thenReturn(FOREIGN_WS);
+        doThrow(ApiException.forbidden("denied")).when(rbac).require(eq(CALLER), eq(FOREIGN_WS), eq(PERM));
+    }
+
+    private Sprint sprintInForeignWorkspace() {
+        Sprint s = new Sprint();
+        s.setId("SPR-1");
+        s.setProjectId("PROJ-B");        // project belongs to the foreign workspace
+        s.setName("Foreign sprint");
+        s.setStatus("PLANNING");
+        return s;
+    }
+
+    @Test
+    void createSprint_deniedForCallerOutsideTheProjectWorkspace() {
+        Sprint incoming = new Sprint();
+        incoming.setProjectId("PROJ-B");
+
+        assertThatThrownBy(() -> controller.createSprint(incoming))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+
+        verify(sprintRepository, never()).save(any());
+    }
+
+    @Test
+    void updateSprint_deniedForCallerOutsideTheProjectWorkspace() {
+        when(sprintRepository.findById("SPR-1")).thenReturn(Optional.of(sprintInForeignWorkspace()));
+
+        assertThatThrownBy(() -> controller.updateSprint("SPR-1", new Sprint()))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+
+        verify(sprintRepository, never()).save(any());
+    }
+
+    @Test
+    void updateSprint_unknownSprintThrowsNotFound() {
+        when(sprintRepository.findById("SPR-missing")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> controller.updateSprint("SPR-missing", new Sprint()))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void deleteSprint_deniedForCallerOutsideTheProjectWorkspace() {
+        when(sprintRepository.findById("SPR-1")).thenReturn(Optional.of(sprintInForeignWorkspace()));
+
+        assertThatThrownBy(() -> controller.deleteSprint("SPR-1"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+
+        // The delete must not run for a cross-tenant caller.
+        verify(sprintRepository, never()).deleteById(any());
+    }
+}

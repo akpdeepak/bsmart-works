@@ -63,7 +63,7 @@ these is ever intentionally reverted (e.g. the package rename), **update this le
 | Build tool | Gradle (Kotlin DSL) preferred, or Maven | **Maven** (`pom.xml`, `mvnw`) | |
 | Persistence / query | JPA + Hibernate + **jOOQ** | **JPA + Hibernate** (no jOOQ) | |
 | Auth | Spring Security 6 + **OAuth2 + SAML** | **Spring Security + JWT (stateless)**, MFA TOTP | SSO not yet built |
-| Backend package | `com.bcits.works.<domain>` | **`com.example.demo`** (flat) | rename is its own task; do not fragment |
+| Backend package | `com.bcits.works.<domain>` | **`com.bcits.works`** (flat) | TD-001 rename complete 2026-06-08; sub-package split is a separate task |
 | DB table naming | singular (`work_item`, `project`) | **plural** (`work_items`, `projects`) | |
 | Entity / mapping | `<Domain>Entity` + MapStruct mapper + `<Domain>EventPublisher` | **`<Entity>` + `EventService` / `AppEvent`** | |
 | API path | `/api/work-items` (unversioned) | **`/api/v1/work-items`** (versioned, kebab) | |

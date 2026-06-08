@@ -1,18 +1,18 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
-import DOMPurify from 'dompurify';
+// DOMPurify was used only by renderMd, which now lives in @/lib/utils (TD-003).
 import {
-  Mail, PanelLeft, ChevronDown, Check,
-  User, Bell, ListTodo, Zap,
+  Mail, PanelLeft, Check,
+  Home, User, Bell, LayoutGrid, ListTodo, Zap, Rocket, FolderKanban,
   BarChart2, LayoutDashboard, FileText, TrendingUp, Headset, Timer, ShieldCheck,
-  Gauge, ClipboardList, Search, BookOpen,
-  Settings, Code,
-  CheckCircle2, AlertCircle, Heart, AlertTriangle, Puzzle, Link, Lock,
-  File as FileIcon, Folder, Lightbulb, Users, Shield, Ban, Construction,
-  MessageCircle, Archive, RefreshCw, Repeat, Megaphone, ScrollText,
-  Calendar, Eye, EyeOff, Building2, Target, Globe, Star, Scale, Clock, Reply,
-  X, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronRight, ChevronUp,
-  SquarePen, Upload, IndentIncrease, IndentDecrease, MapPin,
-  Unlock, CornerDownRight, Image as ImageIcon, Flame, Bug,
+  Gauge, Map as MapIcon, ClipboardList, Workflow, Plug, Search, BookOpen,
+  SlidersHorizontal, Settings, Trash2, Code, Crown, ShieldHalf,
+  CheckCircle2, AlertTriangle, Puzzle, Link,
+  Shield, Construction,
+  MessageCircle, RefreshCw, Repeat, Megaphone,
+  Eye, EyeOff, Target, Star, Clock, Reply,
+  X, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronUp,
+  Upload, IndentIncrease, IndentDecrease,
+  CornerDownRight, Image as ImageIcon,
   Activity, BellRing, Keyboard,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
@@ -28,7 +28,7 @@ import { PerformancePanel } from '@/components/works/organisms/performance-panel
 import { AiSettingsPanel } from '@/components/works/organisms/ai-settings-panel';
 import { WorkItemStatusTimeline } from '@/components/works/organisms/work-item-status-timeline';
 import { AcceptanceCriteria } from '@/components/works/organisms/acceptance-criteria';
-import { BoardWipBadge } from '@/components/works/organisms/board-wip-badge';
+// BoardWipBadge moved to board-view.jsx (TD-003)
 import { AutomationsPanel } from '@/components/works/organisms/automations-panel';
 import { IntegrationsPanel } from '@/components/works/organisms/integrations-panel';
 import { SecurityCenter } from '@/components/works/organisms/security-center';
@@ -50,19 +50,20 @@ import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
 import { ResetPasswordScreen } from '@/components/works/reset-password-screen';
-import { DonutChart, BarChart } from '@/components/works/molecules';
-import { exportElementToPng, exportElementToPdf, exportRowsToCsv } from '@/lib/export';
+// DonutChart / BarChart moved to dashboard-widget-card.jsx + report-section-card.jsx (TD-003).
+// exportElementToPng / exportElementToPdf / exportRowsToCsv moved to export-buttons.jsx (TD-003).
 import { api } from '@/lib/apiClient';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
-import { isIconComponent, onPressKey } from '@/lib/utils';
+import { isIconComponent, onPressKey, renderMd } from '@/lib/utils';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { TYPES, TYPE_ICON_SET, TYPE_ICON_KEYS } from '@/lib/work-item-types';
 import { TypeBadge, TypeIcon } from '@/components/works/work-item-type';
-import { PriorityBadge } from '@/components/works/priority-badge';
+// PriorityBadge moved to backlog-view.jsx (TD-003)
 import { StatCard } from '@/components/works/stat-card';
 import { Field } from '@/components/works/field';
 import { Avatar } from '@/components/works/atoms/avatar';
 import DashboardView from '@/views/dashboard-view';
+import BoardView from '@/views/board-view';
 import WorkspaceView from '@/views/workspace-view';
 import PoWorkspaceView from '@/views/po-workspace-view';
 import LeadershipConsoleView from '@/views/leadership-console-view';
@@ -82,10 +83,22 @@ import KnowledgeTemplatesView from '@/views/knowledge-templates-view';
 import SupportInboxView from '@/views/support-inbox-view';
 import { LanguageSwitcher } from '@/components/works/organisms/language-switcher';
 import { BlockEditor } from '@/components/BlockEditor';
-import {
-  filterItems as filterWidgetItems, statusBreakdown, statusPriorityMatrix,
-  sprintProgress, velocityPoints, SERIES_BG, EXTRA_WIDGET_PRESETS, EXTRA_WIDGET_CATEGORIES,
-} from '@/lib/dashboard-metrics';
+// PortalFormDesigner moved to service-view.jsx (TD-003).
+import BacklogView from '@/views/backlog-view';
+import SprintView from '@/views/sprint-view';
+import DashboardsView from '@/views/dashboards-view';
+import ReportBuilderView from '@/views/reportbuilder-view';
+import ComplianceView from '@/views/compliance-view';
+import ServiceView from '@/views/service-view';
+import KnowledgeView from '@/views/knowledge-view';
+import PmView from '@/views/pm-view';
+import Settings3View from '@/views/settings3-view';
+import { DashboardWidgetCard } from '@/components/works/organisms/dashboard-widget-card';
+// DashboardDrillModal extracted to src/components/works/organisms/dashboard-drill-modal.jsx (TD-003).
+// ExportButtons extracted to src/components/works/export-buttons.jsx (TD-003).
+// ReportSectionCard extracted to src/components/works/organisms/report-section-card.jsx (TD-003).
+// Dashboard widget metrics moved to dashboard-widget-card.jsx (TD-003).
+// EXTRA_WIDGET_PRESETS / EXTRA_WIDGET_CATEGORIES moved to dashboards-view.jsx (TD-003).
 
 // One error-presentation contract (findings F1/F2 in docs/UX-CODEBASE-ANALYSIS.md): failures are
 // never swallowed silently. `reportError` is registered with the live toast emitter from inside
@@ -249,7 +262,7 @@ export default function App() {
   // Workspace switcher dropdown + multi-workspace tenant context (I01-S02).
   // The active workspace is client-held and server-validated on every request (membership is the
   // isolation guarantee — JWT stays identity-only). Persisted so a reload keeps the same tenant.
-  const [wsOpen, setWsOpen]             = useState(false);
+  const [, setWsOpen]                    = useState(false);
   const wsRef                           = useRef(null);
   const [workspaces, setWorkspaces]     = useState([]);
   const [wsLoading, setWsLoading]       = useState(false);
@@ -301,15 +314,6 @@ export default function App() {
   const [pmFormOpen, setPmFormOpen]         = useState(null); // 'risk'|'assumption'|...|null
   // eslint-disable-next-line no-unused-vars
   const [, setSelectedPmItem]               = useState(null);
-
-  // Role lens (top-bar switcher) — retunes the workspace to a role and jumps to its cockpit.
-  // Mirrors the role-tuned dashboard (dashboardRole) so "Today" follows the selected lens.
-  // Role lens — Admin/Owner-only "preview as role". null = not previewing (admin sees their own
-  // full, real nav); a lens id = previewing that role's reduced nav + emphasis.
-  const [lens, setLens]                         = useState(null);
-  const [lensOpen, setLensOpen]                 = useState(false);
-  const lensRef                                 = useRef(null);
-  const [roleLoaded, setRoleLoaded]             = useState(false); // /rbac/me resolved — gates the access guard
 
   // Iteration 6 — Role-tuned Dashboards
   const [dashboardRole, setDashboardRole]       = useState('developer');
@@ -1353,6 +1357,8 @@ export default function App() {
   const [serviceTiers, setServiceTiers] = useState([]);
   const [serviceCsat, setServiceCsat] = useState(null);
   const [newCustomer, setNewCustomer] = useState(null);
+  // B15 — form designer: ID of the request type currently being designed (null = closed)
+  const [formDesignerTypeId, setFormDesignerTypeId] = useState(null);
   function fetchServiceRequests(q = serviceQueue) {
     api.raw(`/service/requests?workspaceId=${activeWorkspaceId}&queue=${q}`).then(r => r.json())
       .then(d => setServiceRequests(Array.isArray(d) ? d : [])).catch(reportError);
@@ -1393,19 +1399,7 @@ export default function App() {
     api.raw(`/work-items/${itemId}/status-durations`).then(r => r.json())
       .then(d => setStatusDurations(Array.isArray(d) ? d : [])).catch(reportError);
   }
-  const severityClass = {
-    CRITICAL: 'bg-semantic-danger text-white',
-    HIGH:     'bg-brand-orange text-white',
-    MEDIUM:   'bg-semantic-warning text-white',
-    LOW:      'bg-brand-navy-tint text-white',
-    INFO:     'bg-neutral-200 text-neutral-700',
-  };
-  const vStatusClass = {
-    OPEN:         'bg-semantic-danger text-white',
-    ACKNOWLEDGED: 'bg-semantic-warning text-white',
-    RESOLVED:     'bg-semantic-success text-white',
-    WONT_FIX:     'bg-neutral-300 text-neutral-700',
-  };
+  // severityClass / vStatusClass moved to compliance-view.jsx (TD-003).
   // eslint-disable-next-line no-unused-vars
   function humanDuration(seconds) {
     if (seconds == null) return '—';
@@ -2256,7 +2250,7 @@ export default function App() {
     { name: 'Done',        dot: 'bg-semantic-success', limitKey: 'doneLimit' },
   ];
 
-  const densityPad = { compact: 'p-2', comfortable: 'p-3', spacious: 'p-4' };
+  // densityPad moved to board-view.jsx (TD-003)
   const userName = u => users.find(x => x.id === u)?.fullName || '';
   const myItems  = workItems.filter(i => i.assigneeId === currentUser?.id);
 
@@ -2874,124 +2868,27 @@ export default function App() {
             />
           )}
 
-          {/* BOARD */}
+          {/* BOARD — extracted to src/views/board-view.jsx (TD-003) */}
           {view === 'board' && (
-            <div className="p-6 h-full flex flex-col">
-              <div className="flex justify-between items-center mb-5">
-                <div>
-                  <h1 className="text-xl font-bold text-brand-navy">Board</h1>
-                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{workItems.length} items total</p>
-                </div>
-                {/* Density toggle */}
-                <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1">
-                  {['compact', 'comfortable', 'spacious'].map(d => (
-                    <button key={d} onClick={() => setDensity(d)}
-                      className={`px-3 py-1 rounded-md text-xs font-medium transition-colors capitalize ${density === d ? 'bg-white dark:bg-neutral-700 shadow-sm text-brand-navy' : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
-                      {d}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {loading ? (
-                  /* Skeleton, never a spinner (Constitution Part 4). */
-                  <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
-                    {columns.map(col => (
-                      <div key={col.name} className="flex-1 min-w-56 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3">
-                        <div className="flex items-center justify-between mb-3 px-1">
-                          <div className="h-3 w-20 bg-neutral-200 rounded animate-pulse"></div>
-                          <div className="h-5 w-6 bg-white rounded-full animate-pulse"></div>
-                        </div>
-                        {[1,2,3].map(n => (
-                          <div key={n} className="bg-white rounded-lg p-3 mb-2 border border-neutral-200">
-                            <div className="h-2 w-16 bg-neutral-100 rounded animate-pulse mb-2"></div>
-                            <div className="h-3 w-full bg-neutral-100 rounded animate-pulse mb-1"></div>
-                            <div className="h-3 w-3/4 bg-neutral-100 rounded animate-pulse mb-3"></div>
-                            <div className="flex justify-between">
-                              <div className="h-4 w-14 bg-neutral-100 rounded animate-pulse"></div>
-                              <div className="h-5 w-5 bg-neutral-100 rounded-full animate-pulse"></div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
-                    {columns.map(col => {
-                      const colItems = workItems.filter(i => i.status === col.name);
-                      const wipLimit = wipLimits[col.limitKey] ?? null;
-                      const overWip = wipLimit != null && colItems.length > wipLimit;
-                      return (
-                        <div key={col.name}
-                          className={`flex-1 min-w-56 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3 ${overWip ? 'ring-1 ring-semantic-danger/40' : ''}`}
-                          onDragOver={handleDragOver}
-                          onDrop={(e) => handleDrop(e, col.name)}>
-                          <div className="mb-3 px-1">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className={`w-2 h-2 rounded-full ${col.dot}`}></span>
-                                <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{col.name}</h3>
-                              </div>
-                              <BoardWipBadge count={colItems.length} limit={wipLimit}
-                                canEdit={can('manage_projects')} onSet={(next) => setWipLimit(col.limitKey, next)} />
-                            </div>
-                            {overWip && <p className="mt-1 text-xs font-medium text-semantic-danger">Over WIP limit</p>}
-                          </div>
-                          <div className="space-y-2 flex-1">
-                            {colItems.length === 0 && (
-                              <div className="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed border-neutral-200 rounded-lg">
-                                <p className="text-xs text-neutral-600 dark:text-neutral-400">Drop items here</p>
-                              </div>
-                            )}
-                            {colItems.map(item => (
-                              <div key={item.id} draggable
-                                onDragStart={(e) => handleDragStart(e, item.id)}
-                                className={`bg-white dark:bg-neutral-700 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-600 cursor-grab hover:shadow-md transition-shadow group ${densityPad[density]} ${item.starred ? 'border-brand-orange/40' : ''}`}>
-                                <div className="flex items-start justify-between mb-1.5">
-                                  <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.id}</span>
-                                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => toggleStar(item)} title={item.starred ? 'Unstar' : 'Star'}
-                                      className={`text-xs p-0.5 transition-colors ${item.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}`}><Star className={`h-3.5 w-3.5 ${item.starred ? 'fill-current' : ''}`} aria-hidden="true" /></button>
-                                    <button onClick={() => setSelectedItem(item)} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-xs p-0.5" aria-label="Edit work item"><SquarePen className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                                    <button onClick={() => handleDelete(item.id)} className="text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label="Delete work item"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                                  </div>
-                                </div>
-                                <button type="button" className="text-sm font-medium text-neutral-900 leading-snug mb-2 cursor-pointer text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
-                                  onClick={() => setSelectedItem(item)}>{item.title}</button>
-                                {density !== 'compact' && item.description && (
-                                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2 line-clamp-2">{item.description}</p>
-                                )}
-                                <div className="flex items-center justify-between">
-                                  <TypeBadge type={item.type} compact={density === 'compact'} />
-                                  <div className="flex items-center gap-1.5">
-                                    {item.dueDate && <span className="text-xs text-semantic-warning font-medium">{item.dueDate}</span>}
-                                    {item.assigneeId && <Avatar name={userName(item.assigneeId)} size={5} />}
-                                  </div>
-                                </div>
-                                {density !== 'compact' && item.tags && item.tags.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mt-2">
-                                    {item.tags.map(t => (
-                                      <span key={t} className="text-xs bg-neutral-100 dark:bg-neutral-600 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{t}</span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                          {/* Add item shortcut */}
-                          <button onClick={() => { setNewItem(p => ({ ...p, status: col.name })); setIsCreateOpen(true); }}
-                            className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-700 rounded-lg transition-colors">
-                            <span>+</span> Add item
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )
-              }
-            </div>
+            <BoardView
+              workItems={workItems}
+              loading={loading}
+              density={density}
+              wipLimits={wipLimits}
+              setDensity={setDensity}
+              setIsCreateOpen={setIsCreateOpen}
+              setNewItem={setNewItem}
+              setSelectedItem={setSelectedItem}
+              handleDragStart={handleDragStart}
+              handleDragOver={handleDragOver}
+              handleDrop={handleDrop}
+              handleDelete={handleDelete}
+              toggleStar={toggleStar}
+              setWipLimit={setWipLimit}
+              can={can}
+              userName={userName}
+            />
           )}
-
           {/* PROJECTS */}
           {view === 'projects' && (
             <ProjectsView
@@ -3061,290 +2958,70 @@ export default function App() {
             />
           )}
 
-          {/* BACKLOG VIEW */}
+          {/* BACKLOG VIEW — extracted to src/views/backlog-view.jsx (TD-003) */}
           {view === 'backlog' && (
-            <div className="p-6">
-              <div className="flex gap-6">
-                {/* Epic panel (mockup 03) — sticky left rail with per-epic progress */}
-                <aside className="hidden lg:block w-56 flex-shrink-0">
-                  <div className="sticky top-6 rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-800">
-                    <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-neutral-600">Epics</p>
-                    {workItems.filter(i => i.type === 'Epic').length === 0 ? (
-                      <p className="px-1 text-xs text-neutral-600 dark:text-neutral-400">No epics yet.</p>
-                    ) : (
-                      <ul className="space-y-1">
-                        {workItems.filter(i => i.type === 'Epic').map(epic => {
-                          const kids = workItems.filter(i => i.parentId === epic.id);
-                          const done = kids.filter(i => i.status === 'Done').length;
-                          const pct = kids.length ? Math.round((done / kids.length) * 100) : 0;
-                          return (
-                            <li key={epic.id}>
-                              <button type="button" onClick={() => setSelectedItem(epic)}
-                                className="w-full rounded-md px-2 py-1.5 text-left transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
-                                <span className="block truncate text-xs font-medium text-neutral-900 dark:text-neutral-100">{epic.title}</span>
-                                <span className="mt-1 block h-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-700">
-                                  <span className="block h-full rounded-full bg-semantic-success" style={{ width: `${pct}%` }} />
-                                </span>
-                                <span className="mt-0.5 block text-xs text-neutral-600 dark:text-neutral-400">{done}/{kids.length} done · {pct}%</span>
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </div>
-                </aside>
-
-                <div className="min-w-0 flex-1 max-w-5xl">
-              <div className="flex justify-between items-center mb-5">
-                <div>
-                  <h1 className="text-xl font-bold text-brand-navy">Backlog</h1>
-                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{backlogItems.length} items not in any sprint</p>
-                </div>
-                <div className="flex gap-2 items-center">
-                  <label className="flex items-center gap-1.5 cursor-pointer mr-2">
-                    <input type="checkbox" checked={refinementMode} onChange={e => setRefinementMode(e.target.checked)} className="w-3 h-3 accent-brand-navy" />
-                    <span className="text-xs text-neutral-600 font-medium">Refinement mode</span>
-                  </label>
-                  <Button variant="secondary" size="sm" onClick={() => setIsSprintOpen(true)}>+ New Sprint</Button>
-                  <Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>+ Add Item</Button>
-                </div>
-              </div>
-
-              {/* Sprints with capacity bar */}
-              {sprints.map(sprint => {
-                const usedPts = sprint.usedPoints || 0;
-                const capPct = sprint.capacity > 0 ? Math.min(100, Math.round((usedPts / sprint.capacity) * 100)) : 0;
-                const capColor = capPct >= 100 ? 'bg-semantic-danger' : capPct >= 80 ? 'bg-semantic-warning' : 'bg-semantic-success';
-                return (
-                  <div key={sprint.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl mb-4 overflow-hidden">
-                    <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900">
-                      <div className="flex items-center gap-3">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${sprint.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : sprint.status === 'COMPLETED' ? 'bg-neutral-200 text-neutral-600' : 'bg-brand-navy-tint/10 text-brand-navy-tint'}`}>{sprint.status}</span>
-                        <h3 className="font-semibold text-neutral-900">{sprint.name}</h3>
-                        {sprint.goal && <span className="text-xs text-neutral-600 dark:text-neutral-400 italic hidden md:inline">"{sprint.goal}"</span>}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {/* Capacity bar — shows actual committed pts vs capacity */}
-                        {sprint.capacity > 0 && (
-                          <div className="flex items-center gap-2">
-                            <div className="w-24 h-1.5 bg-neutral-200 rounded-full overflow-hidden" title={`${usedPts}/${sprint.capacity} story points`}>
-                              <div className={`h-full rounded-full transition-all ${capColor}`} style={{ width: `${capPct}%` }}></div>
-                            </div>
-                            <span className={`text-xs font-medium ${capPct >= 100 ? 'text-semantic-danger' : capPct >= 80 ? 'text-semantic-warning' : 'text-neutral-600 dark:text-neutral-400'}`}>
-                              {usedPts}/{sprint.capacity}pt
-                            </span>
-                          </div>
-                        )}
-                        {sprint.startDate && <span className="text-xs text-neutral-600 dark:text-neutral-400 hidden md:inline">{sprint.startDate} → {sprint.endDate}</span>}
-                        {sprint.status === 'PLANNING' && <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'ACTIVE')}>Start Sprint</Button>}
-                        {sprint.status === 'ACTIVE' && <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'COMPLETED')}>Complete</Button>}
-                      </div>
-                    </div>
-                    <SprintItemList sprintId={sprint.id} users={users} onMoveToBacklog={(id) => handleMoveToBacklog(id, sprint.id)} onSelect={setSelectedItem} />
-                  </div>
-                );
-              })}
-
-              {/* Backlog items with drag-drop reorder */}
-              <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900">
-                  <h3 className="font-semibold text-neutral-900">Backlog</h3>
-                  <span className="text-xs text-neutral-600 dark:text-neutral-400">{backlogItems.length} items</span>
-                </div>
-                {backlogItems.length === 0
-                  ? <EmptyState icon={FileText} title="Backlog is empty" subtitle="Create work items to add them to the backlog." action={<Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>Add to backlog</Button>} />
-                  : backlogItems.map((item) => (
-                    <div key={item.id}
-                      draggable onDragStart={(e) => handleBacklogDragStart(e, item.id)}
-                      onDragOver={(e) => { e.preventDefault(); setDragOverId(item.id); }}
-                      onDragLeave={() => setDragOverId(null)}
-                      onDrop={(e) => handleBacklogDrop(e, item.id)}
-                      className={`flex items-center gap-3 px-5 py-3 border-b border-neutral-50 dark:border-neutral-700 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-700 group transition-colors ${dragOverId === item.id ? 'border-t-2 border-t-brand-navy bg-brand-navy/5' : ''}`}>
-                      <span className="text-neutral-300 cursor-grab text-xs mr-1">⠿</span>
-                      <TypeBadge type={item.type} compact />
-                      <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
-                      <span role="button" tabIndex={0} onKeyDown={onPressKey} className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => setSelectedItem(item)}>{item.title}</span>
-                      {/* Refinement mode — inline edit */}
-                      {refinementMode ? (
-                        <div className="flex items-center gap-2">
-                          <select value={item.priority || 'MEDIUM'} onChange={e => handleRefinementUpdate(item.id, 'priority', e.target.value)}
-                            className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-300 rounded px-1.5 py-1 focus:outline-none text-neutral-600">
-                            {['LOW','MEDIUM','HIGH','CRITICAL'].map(p => <option key={p} value={p}>{p}</option>)}
-                          </select>
-                          <input type="number" min={0} max={100} value={item.storyPoints || 0}
-                            onChange={e => handleRefinementUpdate(item.id, 'storyPoints', parseInt(e.target.value) || 0)}
-                            className="w-14 text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-300 rounded px-1.5 py-1 focus:outline-none text-center"
-                            placeholder="pts" />
-                        </div>
-                      ) : (
-                        <>
-                          <PriorityBadge priority={item.priority} />
-                          {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
-                        </>
-                      )}
-                      {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}
-                      {sprints.filter(s => s.status !== 'COMPLETED').length > 0 && (
-                        <select className="opacity-0 group-hover:opacity-100 text-xs border border-neutral-200 rounded px-1 py-0.5 text-neutral-600 transition-opacity"
-                          onChange={e => e.target.value && handleMoveToSprint(item.id, e.target.value)} defaultValue="">
-                          <option value="" disabled>→ Sprint</option>
-                          {sprints.filter(s => s.status !== 'COMPLETED').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </select>
-                      )}
-                    </div>
-                  ))
-                }
-              </div>
-                </div>
-              </div>
-            </div>
+            <BacklogView
+              workItems={workItems}
+              backlogItems={backlogItems}
+              sprints={sprints}
+              users={users}
+              refinementMode={refinementMode}
+              dragOverId={dragOverId}
+              setRefinementMode={setRefinementMode}
+              setDragOverId={setDragOverId}
+              setIsCreateOpen={setIsCreateOpen}
+              setIsSprintOpen={setIsSprintOpen}
+              setSelectedItem={setSelectedItem}
+              handleBacklogDragStart={handleBacklogDragStart}
+              handleBacklogDrop={handleBacklogDrop}
+              handleMoveToSprint={handleMoveToSprint}
+              handleMoveToBacklog={handleMoveToBacklog}
+              handleSprintStatusChange={handleSprintStatusChange}
+              handleRefinementUpdate={handleRefinementUpdate}
+              SprintItemList={SprintItemList}
+            />
           )}
 
-          {/* ACTIVE SPRINT VIEW */}
+          {/* ACTIVE SPRINT VIEW — extracted to src/views/sprint-view.jsx (TD-003) */}
           {view === 'sprint' && (
-            <div className="p-6 h-full flex flex-col">
-              {activeSprint ? (
-                <>
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <div className="flex items-center gap-3 mb-0.5">
-                        <h1 className="text-xl font-bold text-brand-navy">{activeSprint.name}</h1>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${activeSprint.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : 'bg-neutral-200 text-neutral-600'}`}>{activeSprint.status}</span>
-                      </div>
-                      {activeSprint.goal && <p className="text-sm text-neutral-600 dark:text-neutral-400 italic">"{activeSprint.goal}"</p>}
-                      {activeSprint.startDate && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{activeSprint.startDate} → {activeSprint.endDate}</p>}
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap justify-end">
-                      <select value={activeSprint.id}
-                        onChange={e => { const s = sprints.find(x => x.id === e.target.value); if (s) { setActiveSprint(s); fetchSprintItems(s.id); fetchSprintMetrics(s, selectedProjectId || 'PROJ-WORKS'); } }}
-                        className="text-sm border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 rounded-md px-2 py-1.5 focus:outline-none">
-                        {sprints.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Capacity bar */}
-                  {activeSprint.capacity > 0 && (
-                    <div className="mb-3 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-4 py-2.5 flex items-center gap-4">
-                      <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium w-20">Capacity</span>
-                      <div className="flex-1 h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
-                        <div className="h-full bg-brand-navy-tint rounded-full transition-all"
-                          style={{ width: `${Math.min(100, (sprintItems.reduce((a, i) => a + (i.storyPoints || 0), 0) / activeSprint.capacity) * 100)}%` }}></div>
-                      </div>
-                      <span className="text-xs text-neutral-600 font-medium w-28 text-right">
-                        {sprintItems.reduce((a, i) => a + (i.storyPoints || 0), 0)} / {activeSprint.capacity} pts
-                      </span>
-                    </div>
-                  )}
-
-                  {/* B20 — Inline metrics strip (velocity, completion%, cycle time) — team-level only */}
-                  <div className="mb-3 flex flex-wrap gap-3">
-                    {sprintMetricsLoading ? (
-                      <>
-                        <div className="animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded-lg h-14 w-36" aria-hidden="true" />
-                        <div className="animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded-lg h-14 w-36" aria-hidden="true" />
-                        <div className="animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded-lg h-14 w-36" aria-hidden="true" />
-                      </>
-                    ) : sprintMetrics ? (
-                      <>
-                        {sprintMetrics.velocity != null && (
-                          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-4 py-2.5 min-w-[9rem]">
-                            <p className="text-xs text-neutral-500 uppercase tracking-wider font-semibold">Velocity</p>
-                            <p className="text-2xl font-bold text-brand-navy">{sprintMetrics.velocity}<span className="text-xs font-normal text-neutral-500 ml-1">pts</span></p>
-                          </div>
-                        )}
-                        {sprintMetrics.completionPct != null && (
-                          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-4 py-2.5 min-w-[9rem]">
-                            <p className="text-xs text-neutral-500 uppercase tracking-wider font-semibold">Completion</p>
-                            <p className="text-2xl font-bold text-semantic-success">{Math.round(sprintMetrics.completionPct)}<span className="text-xs font-normal text-neutral-500 ml-0.5">%</span></p>
-                          </div>
-                        )}
-                        {sprintMetrics.cycleTimeDays != null && (
-                          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-4 py-2.5 min-w-[9rem]">
-                            <p className="text-xs text-neutral-500 uppercase tracking-wider font-semibold">Cycle Time</p>
-                            <p className="text-2xl font-bold text-neutral-700 dark:text-neutral-200">{sprintMetrics.cycleTimeDays.toFixed(1)}<span className="text-xs font-normal text-neutral-500 ml-1">days</span></p>
-                          </div>
-                        )}
-                      </>
-                    ) : null}
-                  </div>
-
-                  {/* Quick filters + Swimlane + Saved filters */}
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    {[
-                      { label: 'All', filter: null },
-                      { label: 'Mine', filter: { type: 'mine' } },
-                      { label: 'Blockers', Icon: Flame, filter: { type: 'blockers' } },
-                      { label: 'High Priority', Icon: ArrowUp, filter: { type: 'priority', value: 'HIGH' } },
-                      { label: 'Bugs', Icon: Bug, filter: { type: 'itemType', value: 'Bug' } },
-                    ].map(f => (
-                      <button key={f.label} onClick={() => setActiveFilter(f.filter)}
-                        className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${JSON.stringify(activeFilter) === JSON.stringify(f.filter) ? 'bg-brand-navy text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'}`}>
-                        {f.Icon && <f.Icon className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />}{f.label}
-                      </button>
-                    ))}
-                    {savedFilters.map(f => (
-                      <div key={f.id} className="flex items-center gap-0.5">
-                        <button onClick={() => setActiveFilter(JSON.parse(f.filterJson))}
-                          className={`text-xs px-2.5 py-1.5 rounded-l-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/10 text-semantic-success' : 'bg-brand-navy/10 text-brand-navy'} hover:opacity-80`}>
-                          {f.shared ? <Globe className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /> : <Star className="inline-block h-3.5 w-3.5 align-text-bottom fill-current" aria-hidden="true" />}{f.name}
-                        </button>
-                        {f.createdBy === currentUser?.id && (
-                          <button onClick={() => {
-                            api.raw(`/saved-filters/${f.id}/share`, { method: 'PUT', headers: headers() })
-                              .then(r => r.json()).then(() => fetchSavedFilters())
-                              .catch(reportError);
-                          }}
-                            title={f.shared ? 'Make private' : 'Share with team'}
-                            className={`text-xs px-1.5 py-1.5 rounded-r-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/20 text-semantic-success hover:bg-semantic-success/30' : 'bg-neutral-100 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200'}`}>
-                            {f.shared ? <Unlock className="h-3.5 w-3.5" aria-hidden="true" /> : <Lock className="h-3.5 w-3.5" aria-hidden="true" />}
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    {activeFilter && (
-                      <div className="flex items-center gap-1 ml-auto">
-                        {!showSaveFilter
-                          ? <button onClick={() => setShowSaveFilter(true)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy">Save filter</button>
-                          : <div className="flex gap-1">
-                              <input type="text" value={saveFilterName} onChange={e => setSaveFilterName(e.target.value)}
-                                placeholder="Filter name" className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 rounded px-2 py-1 focus:outline-none" />
-                              <Button size="sm" variant="secondary" onClick={handleSaveFilter}>Save</Button>
-                              <button onClick={() => setShowSaveFilter(false)} className="text-xs text-neutral-600 dark:text-neutral-400 px-1" aria-label="Cancel"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                            </div>
-                        }
-                      </div>
-                    )}
-                    <select value={swimlaneBy} onChange={e => setSwimlaneBy(e.target.value)}
-                      className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 rounded-md px-2 py-1.5 focus:outline-none text-neutral-600 ml-auto">
-                      <option value="none">No swimlane</option>
-                      <option value="assignee">By Assignee</option>
-                      <option value="type">By Type</option>
-                      <option value="priority">By Priority</option>
-                      <option value="epic">By Epic</option>
-                      <option value="tag">By Tag</option>
-                    </select>
-                  </div>
-
-                  <SprintBoard items={applyFilter(sprintItems)} columns={columns} users={users}
-                    swimlaneBy={swimlaneBy} allItems={workItems} onDragStart={handleDragStart} onDragOver={handleDragOver}
-                    onDrop={(e, status) => {
-                      e.preventDefault();
-                      const itemId = e.dataTransfer.getData('itemId');
-                      const item = sprintItems.find(i => i.id === itemId);
-                      if (!item || item.status === status) return;
-                      setSprintItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
-                      api.raw(`/work-items/${itemId}`, { method: 'PUT', body: JSON.stringify({ ...item, status }) })
-                        .then(r => { if (r.status === 409) { showToast('That item changed elsewhere — refreshing', 'error'); fetchSprints(); } })
-                        .catch(reportError);
-                    }}
-                    onSelect={setSelectedItem} onDelete={handleDelete} density={density} />
-                </>
-              ) : (
-                <EmptyState icon={Zap} title="No sprints yet" subtitle="Create a sprint in the Backlog view to get started."
-                  action={<Button variant="action" onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); }}>Go to Backlog</Button>} />
-              )}
-            </div>
+            <SprintView
+              activeSprint={activeSprint}
+              sprints={sprints}
+              sprintItems={sprintItems}
+              sprintMetrics={sprintMetrics}
+              sprintMetricsLoading={sprintMetricsLoading}
+              swimlaneBy={swimlaneBy}
+              activeFilter={activeFilter}
+              savedFilters={savedFilters}
+              showSaveFilter={showSaveFilter}
+              saveFilterName={saveFilterName}
+              density={density}
+              workItems={workItems}
+              users={users}
+              columns={columns}
+              currentUser={currentUser}
+              setActiveSprint={setActiveSprint}
+              setSwimlaneBy={setSwimlaneBy}
+              setActiveFilter={setActiveFilter}
+              setShowSaveFilter={setShowSaveFilter}
+              setSaveFilterName={setSaveFilterName}
+              setSprintItems={setSprintItems}
+              setSelectedItem={setSelectedItem}
+              setView={setView}
+              fetchSprintItems={fetchSprintItems}
+              fetchSprintMetrics={fetchSprintMetrics}
+              fetchBacklog={fetchBacklog}
+              fetchSprints={fetchSprints}
+              fetchSavedFilters={fetchSavedFilters}
+              handleSaveFilter={handleSaveFilter}
+              handleDragStart={handleDragStart}
+              handleDragOver={handleDragOver}
+              handleDelete={handleDelete}
+              applyFilter={applyFilter}
+              showToast={showToast}
+              reportError={reportError}
+              selectedProjectId={selectedProjectId}
+            />
           )}
 
           {/* REPORTS VIEW */}
@@ -3412,574 +3089,59 @@ export default function App() {
                ITERATION 3 — WORKFLOWS & FIELDS SETTINGS
              ====================================================== */}
           {view === 'settings3' && (
-            <div className="p-8 max-w-5xl">
-              <h1 className="text-2xl font-bold text-brand-navy dark:text-white mb-1">Workflows & Fields</h1>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">Configure workflows, custom fields, permissions, and work item types</p>
-
-              {/* Sub-tabs */}
-              <div className="flex gap-1 mb-6 border-b border-neutral-200 dark:border-neutral-700">
-                {[
-                  { key: 'workflows',   label: 'Workflows' },
-                  { key: 'fields',      label: 'Custom Fields' },
-                  { key: 'layout',      label: 'Field Layout' },
-                  { key: 'visibility',  label: 'Field Visibility' },
-                  { key: 'permissions', label: 'Permissions' },
-                  { key: 'types',       label: 'Item Types' },
-                ].map(t => (
-                  <button key={t.key} onClick={() => {
-                    setSettings3Tab(t.key);
-                    if (t.key === 'permissions') fetchPermMatrix();
-                    if (t.key === 'layout') { fetchFieldDefs(); fetchFieldLayouts(); }
-                    if (t.key === 'visibility') { fetchFieldDefs(); fetchRoles(); fetchFieldVisibility(); }
-                  }}
-                    className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${settings3Tab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* WORKFLOWS TAB */}
-              {settings3Tab === 'workflows' && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Workflow Definitions</h2>
-                    <Button variant="action" onClick={() => {
-                      const name = 'New Workflow ' + (workflows.length + 1);
-                      api.raw(`/workflows`, { method: 'POST', body: JSON.stringify({ name, workspaceId: activeWorkspaceId, isDefault: false }) })
-                        .then(r => r.json()).then(() => fetchWorkflows());
-                    }}>+ New Workflow</Button>
-                  </div>
-                  {workflows.length === 0
-                    ? <EmptyState icon={Settings} title="No workflows yet" subtitle="Create a workflow to define statuses and transitions for your work items."
-                        action={<Button variant="action" onClick={() => {
-                          api.raw(`/workflows`, { method: 'POST', body: JSON.stringify({ name: 'Default Workflow', workspaceId: activeWorkspaceId, isDefault: true }) })
-                            .then(r => r.json()).then(() => fetchWorkflows());
-                        }}>Create default workflow</Button>} />
-                    : <div className="space-y-3">
-                        {workflows.map(wf => {
-                          const isExpanded = expandedWorkflowId === wf.id;
-                          const detail = isExpanded ? workflowDetail : null;
-                          const statuses = detail?.statuses || [];
-                          const transitions = detail?.transitions || [];
-                          const CATEGORIES = ['TO_DO', 'IN_PROGRESS', 'DONE'];
-                          const catColor = { TO_DO: 'bg-neutral-200 text-neutral-700', IN_PROGRESS: 'bg-brand-navy/10 text-brand-navy', DONE: 'bg-semantic-success/10 text-semantic-success' };
-                          return (
-                            <div key={wf.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-                              {/* Workflow header */}
-                              <div role="button" tabIndex={0} onKeyDown={onPressKey} aria-expanded={isExpanded}
-                                className="flex items-center justify-between p-5 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40"
-                                onClick={() => expandWorkflow(wf.id)}>
-                                <div className="flex items-center gap-3">
-                                  <span className={`transition-transform ${isExpanded ? 'rotate-90' : ''} text-neutral-600 dark:text-neutral-400`}><ChevronRight className="h-4 w-4" aria-hidden="true" /></span>
-                                  <span className="font-semibold text-neutral-900 dark:text-neutral-100">{wf.name}</span>
-                                  {wf.isDefault && <span className="text-xs bg-brand-navy text-white px-2 py-0.5 rounded-full font-semibold">DEFAULT</span>}
-                                  {wf.itemType && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded">{wf.itemType}</span>}
-                                </div>
-                                <div className="flex gap-3 items-center" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()} role="none">
-                                  <span className="font-mono text-xs text-neutral-300">{wf.id}</span>
-                                  <button onClick={() => api.raw(`/workflows/${wf.id}`, { method: 'DELETE' }).then(() => { fetchWorkflows(); if (expandedWorkflowId === wf.id) setExpandedWorkflowId(null); })}
-                                    className="text-xs text-semantic-danger hover:underline">Delete</button>
-                                </div>
-                              </div>
-
-                              {/* Expanded detail */}
-                              {isExpanded && (
-                                <div className="border-t border-neutral-100 dark:border-neutral-700 p-5 bg-neutral-50 dark:bg-neutral-900 space-y-6">
-                                  {!detail ? <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-4">Loading...</p> : (
-                                    <>
-                                      {/* Statuses */}
-                                      <div>
-                                        <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-3">Statuses ({statuses.length})</p>
-                                        <div className="flex flex-wrap gap-2 mb-3">
-                                          {statuses.map(s => (
-                                            <div key={s.id} className="flex items-center gap-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5">
-                                              <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: s.color || '#0B2F5C' }}></span>
-                                              <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{s.name}</span>
-                                              <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${catColor[s.category] || 'bg-neutral-100 text-neutral-600'}`}>{s.category}</span>
-                                              {s.isInitial && <span className="text-xs text-brand-amber font-bold">INITIAL</span>}
-                                              <button onClick={() => deleteStatus(wf.id, s.id)} className="text-neutral-300 hover:text-semantic-danger ml-1 text-xs" aria-label="Delete status"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                                            </div>
-                                          ))}
-                                        </div>
-                                        {/* Add status inline form */}
-                                        <div className="flex gap-2 items-end flex-wrap">
-                                          <div>
-                                            <label htmlFor="new-status-name" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Status Name</label>
-                                            <input id="new-status-name" className="input text-sm w-36" placeholder="e.g. In Review" value={newStatusForm.name}
-                                              onChange={e => setNewStatusForm(f => ({ ...f, name: e.target.value }))} />
-                                          </div>
-                                          <div>
-                                            <label htmlFor="new-status-category" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Category</label>
-                                            <select id="new-status-category" className="input text-sm" value={newStatusForm.category}
-                                              onChange={e => setNewStatusForm(f => ({ ...f, category: e.target.value }))}>
-                                              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                            </select>
-                                          </div>
-                                          <div>
-                                            <label htmlFor="new-status-color" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Color</label>
-                                            <input id="new-status-color" type="color" className="h-9 w-12 rounded border border-neutral-200 cursor-pointer" value={newStatusForm.color}
-                                              onChange={e => setNewStatusForm(f => ({ ...f, color: e.target.value }))} />
-                                          </div>
-                                          <Button variant="secondary" onClick={() => addStatus(wf.id)}>+ Add Status</Button>
-                                        </div>
-                                      </div>
-
-                                      {/* Transitions */}
-                                      <div>
-                                        <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-3">Transitions ({transitions.length})</p>
-                                        {transitions.length > 0 && (
-                                          <div className="space-y-1.5 mb-3">
-                                            {transitions.map(t => {
-                                              const fromS = statuses.find(s => s.id === t.fromStatus);
-                                              const toS = statuses.find(s => s.id === t.toStatus);
-                                              return (
-                                                <div key={t.id} className="flex items-center gap-2 text-sm">
-                                                  <span className="font-medium text-neutral-700 dark:text-neutral-200 w-32 truncate">{t.name}</span>
-                                                  <span className="text-neutral-600 dark:text-neutral-400 text-xs">{fromS?.name || t.fromStatus}</span>
-                                                  <span className="text-neutral-300"><ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /></span>
-                                                  <span className="text-neutral-600 dark:text-neutral-400 text-xs">{toS?.name || t.toStatus}</span>
-                                                  <button onClick={() => deleteTransition(wf.id, t.id)} className="text-neutral-300 hover:text-semantic-danger ml-auto text-xs" aria-label="Delete transition"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
-                                        )}
-                                        {statuses.length >= 2 && (
-                                          <div className="flex gap-2 items-end flex-wrap">
-                                            <div>
-                                              <label htmlFor="new-transition-name" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">Transition Name</label>
-                                              <input id="new-transition-name" className="input text-sm w-32" placeholder="e.g. Start Review" value={newTransitionForm.name}
-                                                onChange={e => setNewTransitionForm(f => ({ ...f, name: e.target.value }))} />
-                                            </div>
-                                            <div>
-                                              <label htmlFor="new-transition-from" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">From</label>
-                                              <select id="new-transition-from" className="input text-sm" value={newTransitionForm.fromStatus}
-                                                onChange={e => setNewTransitionForm(f => ({ ...f, fromStatus: e.target.value }))}>
-                                                <option value="">— From —</option>
-                                                {statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                              </select>
-                                            </div>
-                                            <div>
-                                              <label htmlFor="new-transition-to" className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase block mb-1">To</label>
-                                              <select id="new-transition-to" className="input text-sm" value={newTransitionForm.toStatus}
-                                                onChange={e => setNewTransitionForm(f => ({ ...f, toStatus: e.target.value }))}>
-                                                <option value="">— To —</option>
-                                                {statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                              </select>
-                                            </div>
-                                            <Button variant="secondary" onClick={() => addTransition(wf.id)}>+ Add Transition</Button>
-                                          </div>
-                                        )}
-                                        {statuses.length < 2 && <p className="text-xs text-neutral-600 dark:text-neutral-400 italic">Add at least 2 statuses to define transitions.</p>}
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                  }
-                </div>
-              )}
-
-              {/* CUSTOM FIELDS TAB */}
-              {settings3Tab === 'fields' && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Custom Field Library</h2>
-                    <Button variant="action" onClick={() => setShowFieldForm(f => !f)}>
-                      {showFieldForm ? 'Cancel' : '+ New Field'}
-                    </Button>
-                  </div>
-
-                  {/* Inline add field form */}
-                  {showFieldForm && (
-                    <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-5 mb-5 space-y-4">
-                      <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">New Custom Field</p>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label htmlFor="new-field-name" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Field Name *</label>
-                          <input id="new-field-name" className="input text-sm w-full" placeholder="e.g. Meter Serial Number" value={newFieldForm.name}
-                            onChange={e => setNewFieldForm(f => ({ ...f, name: e.target.value }))} />
-                        </div>
-                        <div>
-                          <label htmlFor="new-field-type" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Field Type *</label>
-                          <select id="new-field-type" className="input text-sm w-full" value={newFieldForm.fieldType}
-                            onChange={e => setNewFieldForm(f => ({ ...f, fieldType: e.target.value }))}>
-                            {['TEXT','NUMBER','CURRENCY','DATE','SELECT','MULTI_SELECT','USER','URL','CHECKBOX','FILE','JSON','TEXTAREA','EMAIL','PHONE','RATING','PROGRESS'].map(t => (
-                              <option key={t} value={t}>{t}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label htmlFor="new-field-desc" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Description</label>
-                          <input id="new-field-desc" className="input text-sm w-full" placeholder="What is this field for?" value={newFieldForm.description}
-                            onChange={e => setNewFieldForm(f => ({ ...f, description: e.target.value }))} />
-                        </div>
-                        <div className="flex items-center gap-3 pt-5">
-                          <input type="checkbox" id="req" checked={newFieldForm.required}
-                            onChange={e => setNewFieldForm(f => ({ ...f, required: e.target.checked }))} className="w-4 h-4 accent-brand-navy" />
-                          <label htmlFor="req" className="text-sm text-neutral-700 dark:text-neutral-200">Required field</label>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="action" onClick={createFieldDef}>Create Field</Button>
-                        <Button variant="ghost" onClick={() => setShowFieldForm(false)}>Cancel</Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {fieldDefs.length === 0
-                    ? <EmptyState icon={FileText} title="No custom fields" subtitle="Create custom fields to capture domain-specific data on work items." />
-                    : <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-                        <table className="w-full text-sm">
-                          <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
-                            <tr>
-                              {['Field Name', 'Type', 'Key', 'Required', ''].map(h => (
-                                <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                            {fieldDefs.map(fd => (
-                              <tr key={fd.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
-                                <td className="px-4 py-3 font-medium text-neutral-900 dark:text-neutral-100">
-                                  {fd.name}
-                                  {fd.description && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{fd.description}</p>}
-                                </td>
-                                <td className="px-4 py-3"><span className="text-xs bg-brand-navy/10 dark:bg-brand-navy/20 text-brand-navy dark:text-blue-300 px-2 py-0.5 rounded font-mono">{fd.fieldType}</span></td>
-                                <td className="px-4 py-3 font-mono text-xs text-neutral-600 dark:text-neutral-400">{fd.fieldKey}</td>
-                                <td className="px-4 py-3"><span className={`text-xs font-semibold ${fd.required ? 'text-semantic-danger' : 'text-neutral-300'}`}>{fd.required ? <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" aria-hidden="true" />Required</span> : 'Optional'}</span></td>
-                                <td className="px-4 py-3">
-                                  <button onClick={() => api.raw(`/field-defs/${fd.id}`, { method: 'DELETE' }).then(() => fetchFieldDefs())}
-                                    className="text-xs text-semantic-danger hover:underline">Delete</button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                  }
-                </div>
-              )}
-
-              {/* FIELD LAYOUT TAB */}
-              {settings3Tab === 'layout' && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <div>
-                      <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Field Layout</h2>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">Control which custom fields appear on each work item type and in what order.</p>
-                    </div>
-                  </div>
-                  {fieldDefs.length === 0 ? (
-                    <EmptyState icon={LayoutDashboard} title="No custom fields defined" subtitle="Go to Custom Fields tab and create fields first, then configure layout here." />
-                  ) : (
-                    <div className="space-y-4">
-                      {Object.keys(TYPES).map(itemType => {
-                        const layoutForType = fieldLayouts.find(fl => fl.itemType === itemType);
-                        const orderedFields = layoutForType?.layout || fieldDefs.map(fd => ({ fieldDefId: fd.id, visible: true }));
-                        return (
-                          <div key={itemType} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <TypeBadge type={itemType} compact />
-                                <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{itemType}</span>
-                              </div>
-                              <Button variant="secondary" onClick={() => {
-                                const layout = fieldDefs.map(fd => ({ fieldDefId: fd.id, visible: true }));
-                                api.send(`/field-layouts`, { method: 'PUT', body: JSON.stringify({ itemType, layout, workspaceId: activeWorkspaceId }) })
-                                  .then(() => { showToast('Layout saved'); fetchFieldLayouts(); }).catch(() => showToast('Failed', 'error'));
-                              }}>Save Layout</Button>
-                            </div>
-                            <div className="space-y-1">
-                              {fieldDefs.map((fd, idx) => {
-                                const entry = orderedFields.find(e => e.fieldDefId === fd.id);
-                                const visible = entry ? entry.visible !== false : true;
-                                return (
-                                  <div key={fd.id} className="flex items-center gap-3 py-2 px-3 bg-neutral-50 dark:bg-neutral-700 rounded-lg">
-                                    <span className="text-neutral-300 cursor-grab text-sm">⠿</span>
-                                    <div className="flex-1">
-                                      <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{fd.name}</span>
-                                      <span className="ml-2 text-xs font-mono text-neutral-600 dark:text-neutral-400">{fd.fieldType}</span>
-                                    </div>
-                                    <input type="checkbox" checked={visible} className="w-4 h-4 accent-brand-navy"
-                                      onChange={() => showToast('Toggle field visibility in Field Visibility tab')}
-                                      title="Toggle visibility" />
-                                    <span className="text-xs text-neutral-600 dark:text-neutral-400">#{idx + 1}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* FIELD VISIBILITY TAB */}
-              {settings3Tab === 'visibility' && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <div>
-                      <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Field Visibility by Role</h2>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">Control who can see or edit each custom field. Default is EDITABLE for all roles.</p>
-                    </div>
-                  </div>
-
-                  {/* Add visibility rule */}
-                  <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-5 mb-5">
-                    <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 mb-3">Add Visibility Rule</p>
-                    <div className="flex gap-3 flex-wrap items-end">
-                      <div>
-                        <label htmlFor="vis-field-id" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Field</label>
-                        <select id="vis-field-id" className="input text-sm" value={newFieldVisForm.fieldDefId}
-                          onChange={e => setNewFieldVisForm(f => ({ ...f, fieldDefId: e.target.value }))}>
-                          <option value="">— Select field —</option>
-                          {fieldDefs.map(fd => <option key={fd.id} value={fd.id}>{fd.name}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label htmlFor="vis-role-id" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Role</label>
-                        <select id="vis-role-id" className="input text-sm" value={newFieldVisForm.roleId}
-                          onChange={e => setNewFieldVisForm(f => ({ ...f, roleId: e.target.value }))}>
-                          <option value="">— Select role —</option>
-                          {[{id:'VIEWER',name:'VIEWER'},{id:'MEMBER',name:'MEMBER'},{id:'LEAD',name:'LEAD'},{id:'ADMIN',name:'ADMIN'},{id:'OWNER',name:'OWNER'},...roles].map(r => (
-                            <option key={r.id} value={r.id}>{r.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label htmlFor="vis-visibility" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Visibility</label>
-                        <select id="vis-visibility" className="input text-sm" value={newFieldVisForm.visibility}
-                          onChange={e => setNewFieldVisForm(f => ({ ...f, visibility: e.target.value }))}>
-                          <option value="EDITABLE">EDITABLE</option>
-                          <option value="READONLY">READ ONLY</option>
-                          <option value="HIDDEN">HIDDEN</option>
-                        </select>
-                      </div>
-                      <Button variant="action" onClick={saveFieldVisibility}>Add Rule</Button>
-                    </div>
-                  </div>
-
-                  {fieldVisibility.length === 0 ? (
-                    <EmptyState icon={Eye} title="No visibility rules defined" subtitle="All fields are visible and editable by all roles by default. Add rules to restrict access." />
-                  ) : (
-                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-                      <table className="w-full text-sm">
-                        <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
-                          <tr>
-                            {['Field', 'Role', 'Visibility', ''].map(h => (
-                              <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                          {fieldVisibility.map(fv => (
-                            <tr key={fv.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
-                              <td className="px-4 py-3 font-medium text-neutral-900 dark:text-neutral-100">
-                                {fieldDefs.find(fd => fd.id === fv.fieldDefId)?.name || fv.fieldDefId}
-                              </td>
-                              <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">{fv.roleId}</td>
-                              <td className="px-4 py-3">
-                                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${fv.visibility === 'HIDDEN' ? 'bg-semantic-danger-surface text-semantic-danger' : fv.visibility === 'READONLY' ? 'bg-semantic-warning-surface text-semantic-warning' : 'bg-semantic-success-surface text-semantic-success'}`}>
-                                  {fv.visibility}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <button onClick={() => api.send(`/field-visibility/${fv.id}`, { method: 'DELETE' }).then(() => { showToast('Rule deleted'); fetchFieldVisibility(); }).catch(reportError)}
-                                  className="text-xs text-semantic-danger hover:underline">Delete</button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* PERMISSIONS MATRIX TAB */}
-              {settings3Tab === 'permissions' && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Roles & Permissions Matrix</h2>
-                    <Button variant="action" onClick={() => setShowRoleForm(f => !f)}>
-                      {showRoleForm ? 'Cancel' : '+ New Role'}
-                    </Button>
-                  </div>
-
-                  {/* Inline add role form */}
-                  {showRoleForm && (
-                    <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-5 mb-5">
-                      <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 mb-3">New Custom Role</p>
-                      <div className="flex gap-4 items-end flex-wrap">
-                        <div>
-                          <label htmlFor="new-role-name" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Role Name *</label>
-                          <input id="new-role-name" className="input text-sm w-44" placeholder="e.g. Support Agent" value={newRoleForm.name}
-                            onChange={e => setNewRoleForm(f => ({ ...f, name: e.target.value }))} />
-                        </div>
-                        <div>
-                          <label htmlFor="new-role-tier" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Tier (1-5)</label>
-                          <select id="new-role-tier" className="input text-sm" value={newRoleForm.tier}
-                            onChange={e => setNewRoleForm(f => ({ ...f, tier: Number(e.target.value) }))}>
-                            {[1,2,3,4,5].map(t => <option key={t} value={t}>Tier {t} — {['Viewer','Member','Lead','Admin','Owner'][t-1]}</option>)}
-                          </select>
-                        </div>
-                        <Button variant="action" onClick={createRole}>Create Role</Button>
-                        <Button variant="ghost" onClick={() => setShowRoleForm(false)}>Cancel</Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {!permMatrix
-                    ? <div className="text-center py-12 text-neutral-600 dark:text-neutral-400">Loading permissions matrix...</div>
-                    : (
-                      <>
-                        {/* System roles legend */}
-                        <div className="mb-4 p-4 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700">
-                          <p className="text-xs font-semibold text-neutral-600 uppercase tracking-wider mb-2">System Roles</p>
-                          <div className="flex flex-wrap gap-3">
-                            {[{id:'VIEWER',tier:1},{id:'MEMBER',tier:2},{id:'LEAD',tier:3},{id:'ADMIN',tier:4},{id:'OWNER',tier:5}].map(r => (
-                              <div key={r.id} className="flex items-center gap-2 text-xs">
-                                <span className="font-semibold text-neutral-700 dark:text-neutral-200">{r.id}</span>
-                                <span className="text-neutral-600 dark:text-neutral-400">Tier {r.tier}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-2">System roles are tier-based. A role can do anything its tier permits. A check = permitted, — = not permitted.</p>
-                        </div>
-                        {permMatrix.matrix.length === 0
-                          ? <EmptyState icon={Lock} title="No custom roles" subtitle="Create roles to define fine-grained access control for your team." />
-                          : <div className="overflow-x-auto">
-                              <table className="w-full text-xs border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden dark:text-neutral-300">
-                                <thead className="bg-neutral-50 dark:bg-neutral-900">
-                                  <tr>
-                                    <th className="text-left px-4 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 sticky left-0 bg-neutral-50 dark:bg-neutral-900">Permission</th>
-                                    {permMatrix.roles.map(r => (
-                                      <th key={r.id} className="px-3 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 text-center min-w-24">
-                                        <div>{r.name}</div>
-                                        <div className="font-normal text-neutral-600 dark:text-neutral-400">Tier {r.tier}</div>
-                                      </th>
-                                    ))}
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                                  {permMatrix.allPermissions.map(perm => (
-                                    <tr key={perm} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
-                                      <td className="px-4 py-2 font-mono sticky left-0 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200">{perm}</td>
-                                      {permMatrix.matrix.map(row => (
-                                        <td key={row.role.id} className="px-3 py-2 text-center">
-                                          <button onClick={() => togglePermission(row.role.id, perm, row.permissions[perm])}
-                                            className={`w-7 h-7 rounded transition-colors text-sm font-bold ${row.permissions[perm] ? 'bg-semantic-success text-white hover:opacity-80' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-brand-navy/10'}`}
-                                            title={row.permissions[perm] ? 'Click to revoke' : 'Click to grant'}>
-                                            {row.permissions[perm] ? <Check className="inline-block h-4 w-4 text-semantic-success" aria-label="Permitted" /> : <span aria-label="Not permitted">—</span>}
-                                          </button>
-                                        </td>
-                                      ))}
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                        }
-                      </>
-                    )
-                  }
-                </div>
-              )}
-
-              {/* ITEM TYPES TAB */}
-              {settings3Tab === 'types' && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Work Item Types</h2>
-                    <Button variant="action" onClick={() => setShowTypeForm(f => !f)}>
-                      {showTypeForm ? 'Cancel' : '+ Custom Type'}
-                    </Button>
-                  </div>
-
-                  {/* Inline add type form */}
-                  {showTypeForm && (
-                    <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-5 mb-5">
-                      <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 mb-3">New Custom Type</p>
-                      <div className="flex gap-4 items-end flex-wrap">
-                        <div>
-                          <label htmlFor="new-type-label" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Label *</label>
-                          <input id="new-type-label" className="input text-sm w-44" placeholder="e.g. Meter Rollout" value={newTypeForm.label}
-                            onChange={e => setNewTypeForm(f => ({ ...f, label: e.target.value, typeKey: e.target.value.toUpperCase().replace(/\s+/g,'_') }))} />
-                        </div>
-                        <div>
-                          <label htmlFor="new-type-key" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1">Key</label>
-                          <input id="new-type-key" className="input text-sm w-36 font-mono" placeholder="METER_ROLLOUT" value={newTypeForm.typeKey}
-                            onChange={e => setNewTypeForm(f => ({ ...f, typeKey: e.target.value.toUpperCase() }))} />
-                        </div>
-                        <div>
-                          <span className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1" id="new-type-icon-label">Icon</span>
-                          <div className="flex flex-wrap gap-1 max-w-[240px]" role="group" aria-labelledby="new-type-icon-label">
-                            {TYPE_ICON_KEYS.map(key => {
-                              const Ic = TYPE_ICON_SET[key];
-                              const sel = newTypeForm.icon === key;
-                              return (
-                                <button key={key} type="button" onClick={() => setNewTypeForm(f => ({ ...f, icon: key }))}
-                                  aria-label={key} aria-pressed={sel}
-                                  className={`p-1.5 rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${sel ? 'border-brand-navy bg-brand-navy/10 text-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy/40'}`}>
-                                  <Ic className="h-4 w-4" aria-hidden="true" />
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                        <Button variant="action" onClick={createWorkItemType}>Create Type</Button>
-                        <Button variant="ghost" onClick={() => setShowTypeForm(false)}>Cancel</Button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-3">Built-in Types</p>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {(workItemTypes.builtIn || []).map(t => (
-                          <div key={t.typeKey} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 flex items-center gap-3">
-                            <TypeIcon value={t.icon} className="h-6 w-6 text-neutral-700 dark:text-neutral-300" />
-                            <div>
-                              <p className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">{t.label}</p>
-                              <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{t.typeKey}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    {(workItemTypes.custom || []).length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-3">Custom Types</p>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          {(workItemTypes.custom || []).map(t => (
-                            <div key={t.id} className="bg-white dark:bg-neutral-800 border border-brand-navy/20 dark:border-brand-navy/30 rounded-xl p-4 flex items-center gap-3 relative group">
-                              <TypeIcon value={t.icon} className="h-6 w-6 text-neutral-700 dark:text-neutral-300" />
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">{t.label}</p>
-                                <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono truncate">{t.typeKey}</p>
-                              </div>
-                              <button onClick={() => api.raw(`/work-item-types/${t.id}`, { method: 'DELETE' }).then(() => fetchWorkItemTypes())}
-                                className="opacity-0 group-hover:opacity-100 text-semantic-danger text-xs transition-opacity absolute top-2 right-2" aria-label="Remove"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {(workItemTypes.custom || []).length === 0 && !showTypeForm && (
-                      <p className="text-sm text-neutral-600 italic">No custom types yet. Create utility-domain types like Meter Rollout, Tariff Change, or Substation Commission.</p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+            <Settings3View
+              settings3Tab={settings3Tab}
+              workflows={workflows}
+              expandedWorkflowId={expandedWorkflowId}
+              workflowDetail={workflowDetail}
+              newStatusForm={newStatusForm}
+              newTransitionForm={newTransitionForm}
+              fieldDefs={fieldDefs}
+              showFieldForm={showFieldForm}
+              newFieldForm={newFieldForm}
+              fieldLayouts={fieldLayouts}
+              fieldVisibility={fieldVisibility}
+              newFieldVisForm={newFieldVisForm}
+              roles={roles}
+              permMatrix={permMatrix}
+              showRoleForm={showRoleForm}
+              newRoleForm={newRoleForm}
+              workItemTypes={workItemTypes}
+              showTypeForm={showTypeForm}
+              newTypeForm={newTypeForm}
+              activeWorkspaceId={activeWorkspaceId}
+              setSettings3Tab={setSettings3Tab}
+              setExpandedWorkflowId={setExpandedWorkflowId}
+              setNewStatusForm={setNewStatusForm}
+              setNewTransitionForm={setNewTransitionForm}
+              setShowFieldForm={setShowFieldForm}
+              setNewFieldForm={setNewFieldForm}
+              setNewFieldVisForm={setNewFieldVisForm}
+              setShowRoleForm={setShowRoleForm}
+              setNewRoleForm={setNewRoleForm}
+              setShowTypeForm={setShowTypeForm}
+              setNewTypeForm={setNewTypeForm}
+              fetchWorkflows={fetchWorkflows}
+              fetchFieldDefs={fetchFieldDefs}
+              fetchFieldLayouts={fetchFieldLayouts}
+              fetchRoles={fetchRoles}
+              fetchFieldVisibility={fetchFieldVisibility}
+              fetchPermMatrix={fetchPermMatrix}
+              fetchWorkItemTypes={fetchWorkItemTypes}
+              expandWorkflow={expandWorkflow}
+              addStatus={addStatus}
+              deleteStatus={deleteStatus}
+              addTransition={addTransition}
+              deleteTransition={deleteTransition}
+              createFieldDef={createFieldDef}
+              saveFieldVisibility={saveFieldVisibility}
+              togglePermission={togglePermission}
+              createRole={createRole}
+              createWorkItemType={createWorkItemType}
+              reportError={reportError}
+              showToast={showToast}
+              api={api}
+            />
           )}
 
           {/* ======================================================
@@ -4006,528 +3168,54 @@ export default function App() {
                ITERATION 4 — PM ARTIFACTS
              ====================================================== */}
           {view === 'pm' && (
-            <div className="p-6 max-w-6xl">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h1 className="text-2xl font-bold text-brand-navy">Project Management</h1>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-0.5">RAID logs, decisions, meetings, action items</p>
-                </div>
-                {/* Project selector */}
-                <select className="input text-sm w-48" value={pmProjectId} onChange={e => {
-                  const pid = e.target.value;
-                  setPmProjectId(pid);
-                  if (pid) { fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); }
-                }}>
-                  <option value="">— Select project —</option>
-                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </div>
-
-              {!pmProjectId ? (
-                <EmptyState icon={ClipboardList} title="Select a project" subtitle="Choose a project above to view its PM artifacts." />
-              ) : (
-                <>
-                  {/* Sub-tabs */}
-                  <div className="flex gap-1 mb-5 border-b border-neutral-200 dark:border-neutral-700 overflow-x-auto">
-                    {[
-                      { key: 'raid',         Icon: Target,       label: 'RAID Dashboard' },
-                      { key: 'risks',        Icon: AlertTriangle, label: `Risks (${risks.length})` },
-                      { key: 'assumptions',  Icon: Lightbulb,    label: `Assumptions (${assumptions.length})` },
-                      { key: 'issues',       Icon: AlertCircle,  label: `Issues (${pmIssues.length})` },
-                      { key: 'deps',         Icon: Link,         label: `Dependencies (${dependencies.length})` },
-                      { key: 'decisions',    Icon: Scale,        label: `Decisions (${decisions.length})` },
-                      { key: 'meetings',     Icon: Calendar,     label: `Meetings (${meetings.length})` },
-                      { key: 'actions',      Icon: CheckCircle2, label: `Actions (${actionItems.length})` },
-                      { key: 'stakeholders', Icon: Users,        label: `Stakeholders (${stakeholders.length})` },
-                      { key: 'lessons',      Icon: BookOpen,     label: `Lessons (${lessonsLearned.length})` },
-                      { key: 'cross-deps',   Icon: Globe,        label: `Cross-Project (${crossProjectDeps.length})` },
-                    ].map(t => (
-                      <button key={t.key} onClick={() => { setPmTab(t.key); if (t.key === 'cross-deps') fetchCrossProjectDeps(); }}
-                        className={`text-xs font-medium px-3 py-2 border-b-2 whitespace-nowrap transition-colors ${pmTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
-                        {t.Icon && <t.Icon className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />}{t.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* RAID DASHBOARD */}
-                  {pmTab === 'raid' && raidDashboard && (
-                    <div>
-                      {/* Health score */}
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                        <StatCard label="Health Score" value={`${raidDashboard.healthScore}%`} sub="Overall project health" color={raidDashboard.healthScore > 70 ? 'text-semantic-success' : raidDashboard.healthScore > 40 ? 'text-semantic-warning' : 'text-semantic-danger'} icon={Heart} />
-                        <StatCard label="Open Risks" value={raidDashboard.riskSummary?.open || 0} sub={`${raidDashboard.riskSummary?.total || 0} total`} color="text-semantic-warning" icon={AlertTriangle} onClick={() => setPmTab('risks')} />
-                        <StatCard label="Open Issues" value={raidDashboard.issueSummary?.open || 0} sub={`${raidDashboard.issueSummary?.total || 0} total`} color="text-semantic-danger" icon={AlertCircle} onClick={() => setPmTab('issues')} />
-                        <StatCard label="Blockers" value={raidDashboard.dependencySummary?.blockers || 0} sub={`${raidDashboard.dependencySummary?.total || 0} deps`} color="text-brand-orange" icon={Link} onClick={() => setPmTab('deps')} />
-                        <StatCard label="Overdue Actions" value={raidDashboard.actionSummary?.overdue || 0} sub={`${raidDashboard.actionSummary?.open || 0} open`} color="text-semantic-danger" icon={Clock} onClick={() => setPmTab('actions')} />
-                      </div>
-
-                      {/* Risk heatmap */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                          <h3 className="font-semibold text-neutral-900 mb-3">Risk Heat Matrix</h3>
-                          {(() => {
-                            const probs = ['VERY_HIGH', 'HIGH', 'MEDIUM', 'LOW'];
-                            const impacts = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
-                            return (
-                              <div>
-                                <div className="flex gap-1 mb-1">
-                                  <div className="w-16 flex-shrink-0"></div>
-                                  {impacts.map(i => <div key={i} className="flex-1 text-xs text-neutral-600 dark:text-neutral-400 text-center uppercase">{i}</div>)}
-                                </div>
-                                {probs.map(p => (
-                                  <div key={p} className="flex gap-1 mb-1">
-                                    <div className="w-16 text-xs text-neutral-600 dark:text-neutral-400 flex items-center flex-shrink-0">{p}</div>
-                                    {impacts.map(imp => {
-                                      const count = (raidDashboard.risks || []).filter(r => r.probability === p && r.impact === imp && r.status === 'OPEN').length;
-                                      const heat = (probs.indexOf(p) + impacts.indexOf(imp));
-                                      const bg = count === 0 ? 'bg-neutral-100 dark:bg-neutral-700' : heat >= 5 ? 'bg-semantic-danger' : heat >= 3 ? 'bg-semantic-warning' : 'bg-semantic-success';
-                                      return (
-                                        <div key={imp} className={`flex-1 h-8 rounded flex items-center justify-center text-xs font-bold ${bg} ${count > 0 ? 'text-white' : 'text-neutral-300'}`}>
-                                          {count > 0 ? count : ''}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                ))}
-                                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-2">Rows = Probability, Columns = Impact. Color = severity.</p>
-                              </div>
-                            );
-                          })()}
-                        </div>
-
-                        {/* Open action items */}
-                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                          <h3 className="font-semibold text-neutral-900 mb-3">Overdue & High-Priority Actions</h3>
-                          {(raidDashboard.actionItems || []).filter(a => a.status !== 'DONE').slice(0, 5).map(a => (
-                            <div key={a.id} className="flex items-center gap-3 py-2 border-b border-neutral-50 last:border-0">
-                              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${a.dueDate && new Date(a.dueDate) < new Date() ? 'bg-semantic-danger' : 'bg-semantic-warning'}`}></span>
-                              <span className="flex-1 text-sm text-neutral-900 truncate">{a.title}</span>
-                              {a.dueDate && <span className="text-xs text-neutral-600 dark:text-neutral-400">{a.dueDate}</span>}
-                            </div>
-                          ))}
-                          {(raidDashboard.actionItems || []).filter(a => a.status !== 'DONE').length === 0 && <p className="text-sm text-neutral-600 text-center py-4">No open action items</p>}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {pmTab === 'raid' && !raidDashboard && <div className="text-center py-12 text-neutral-600 dark:text-neutral-400">Loading RAID dashboard...</div>}
-
-                  {/* RISKS */}
-                  {pmTab === 'risks' && (
-                    <PmArtifactList
-                      title="Risks Register" icon={AlertTriangle}
-                      items={risks}
-                      columns={['Title', 'Category', 'Probability', 'Impact', 'Status', 'Owner']}
-                      renderRow={r => [r.title, r.category || '—', r.probability, r.impact, r.status, users.find(u => u.id === r.ownerId)?.fullName || '—']}
-                      onDelete={id => pmDelete('risk', id)}
-                      onAdd={() => { setPmFormOpen('risk'); setPmForm({ probability: 'MEDIUM', impact: 'MEDIUM', status: 'OPEN' }); }}
-                    />
-                  )}
-
-                  {/* ASSUMPTIONS */}
-                  {pmTab === 'assumptions' && (
-                    <PmArtifactList
-                      title="Assumptions Log" icon={Lightbulb}
-                      items={assumptions}
-                      columns={['Title', 'Validation', 'Owner', 'Expiry']}
-                      renderRow={a => [a.title, a.validationStatus, users.find(u => u.id === a.ownerId)?.fullName || '—', a.expiryDate || '—']}
-                      onDelete={id => pmDelete('assumption', id)}
-                      onAdd={() => { setPmFormOpen('assumption'); setPmForm({ validationStatus: 'UNVALIDATED' }); }}
-                    />
-                  )}
-
-                  {/* PM ISSUES */}
-                  {pmTab === 'issues' && (
-                    <PmArtifactList
-                      title="Issues Log" icon={AlertCircle}
-                      items={pmIssues}
-                      columns={['Title', 'Priority', 'Status', 'Owner']}
-                      renderRow={i => [i.title, i.priority, i.status, users.find(u => u.id === i.ownerId)?.fullName || '—']}
-                      onDelete={id => pmDelete('issue', id)}
-                      onAdd={() => { setPmFormOpen('issue'); setPmForm({ priority: 'MEDIUM', status: 'OPEN' }); }}
-                    />
-                  )}
-
-                  {/* DEPENDENCIES */}
-                  {pmTab === 'deps' && (
-                    <PmArtifactList
-                      title="Dependencies Tracker" icon={Link}
-                      items={dependencies}
-                      columns={['Title', 'From', 'To', 'Status', 'Deadline', 'Blocker']}
-                      renderRow={d => [d.title, d.dependentTeam || '—', d.providingTeam || '—', d.status, d.deadline || '—', d.isBlocker ? <span className="inline-flex items-center gap-1 text-semantic-danger font-semibold"><Ban className="h-3.5 w-3.5" aria-hidden="true" />Yes</span> : 'No']}
-                      onDelete={id => pmDelete('dependency', id)}
-                      onAdd={() => { setPmFormOpen('dependency'); setPmForm({ status: 'PENDING', isBlocker: false }); }}
-                    />
-                  )}
-
-                  {/* DECISIONS */}
-                  {pmTab === 'decisions' && (
-                    <PmArtifactList
-                      title="Decisions Register" icon={Scale}
-                      items={decisions}
-                      columns={['Title', 'Status', 'Decision Date', 'Owner']}
-                      renderRow={d => [d.title, d.status, d.decisionDate || '—', users.find(u => u.id === d.ownerId)?.fullName || '—']}
-                      onDelete={id => pmDelete('decision', id)}
-                      onAdd={() => { setPmFormOpen('decision'); setPmForm({ status: 'PROPOSED' }); }}
-                    />
-                  )}
-
-                  {/* MEETINGS */}
-                  {pmTab === 'meetings' && (
-                    <div>
-                      <div className="flex justify-between items-center mb-4">
-                        <h2 className="font-semibold text-neutral-900 flex items-center gap-2"><Calendar className="h-5 w-5 text-neutral-500" aria-hidden="true" /> Meeting Notes</h2>
-                        <Button variant="action" onClick={() => { setPmFormOpen('meeting'); setPmForm({ meetingType: 'GENERAL', status: 'SCHEDULED' }); }}>+ New Meeting</Button>
-                      </div>
-                      {meetings.length === 0
-                        ? <EmptyState icon={Calendar} title="No meetings yet" subtitle="Log meeting notes with structured agenda, notes, decisions, and action items." />
-                        : <div className="space-y-3">
-                            {meetings.map(m => (
-                              <button type="button" key={m.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 cursor-pointer hover:shadow-sm transition-shadow w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
-                                onClick={() => { setSelectedMeeting(m); setPmTab('meeting-detail'); api.raw(`/meetings/${m.id}`).then(r => r.json()).then(d => setMeetingNotes(d.notes || [])); }}>
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="text-xs bg-brand-navy/10 text-brand-navy px-2 py-0.5 rounded font-medium">{m.meetingType}</span>
-                                      <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${m.status === 'COMPLETED' ? 'bg-semantic-success/10 text-semantic-success' : m.status === 'CANCELLED' ? 'bg-neutral-100 text-neutral-600 dark:text-neutral-400' : 'bg-semantic-warning/10 text-semantic-warning'}`}>{m.status}</span>
-                                    </div>
-                                    <p className="font-semibold text-neutral-900">{m.title}</p>
-                                    {m.scheduledAt && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1"><Calendar className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{new Date(m.scheduledAt).toLocaleString()}{m.durationMins ? ` · ${m.durationMins}min` : ''}</p>}
-                                    {m.location && <p className="text-xs text-neutral-600 dark:text-neutral-400"><MapPin className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{m.location}</p>}
-                                  </div>
-                                  <button onClick={e => { e.stopPropagation(); pmDelete('meeting', m.id); }} className="text-neutral-300 hover:text-semantic-danger text-xs ml-3" aria-label="Delete meeting"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                      }
-                    </div>
-                  )}
-
-                  {/* MEETING DETAIL */}
-                  {pmTab === 'meeting-detail' && selectedMeeting && (
-                    <div>
-                      <div className="flex items-center gap-3 mb-5">
-                        <button onClick={() => { setPmTab('meetings'); setSelectedMeeting(null); }} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-sm" aria-label="Back"><ArrowLeft className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Back</button>
-                        <h2 className="font-bold text-brand-navy text-lg">{selectedMeeting.title}</h2>
-                        <span className="text-xs bg-brand-navy/10 text-brand-navy px-2 py-0.5 rounded">{selectedMeeting.meetingType}</span>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {['AGENDA', 'NOTES', 'DECISIONS', 'ACTIONS'].map(section => {
-                          const note = Array.isArray(meetingNotes) ? meetingNotes.find(n => n.section === section) : null;
-                          return (
-                            <div key={section} className="bg-white border border-neutral-200 rounded-xl p-4">
-                              <p className="text-xs font-bold text-neutral-600 uppercase tracking-wider mb-2">{section}</p>
-                              <textarea
-                                className="w-full text-sm text-neutral-900 dark:text-neutral-100 border-none outline-none resize-none min-h-[100px] bg-transparent"
-                                placeholder={`Enter ${section.toLowerCase()}...`}
-                                defaultValue={note?.content || ''}
-                                onBlur={e => {
-                                  api.raw(`/meetings/${selectedMeeting.id}/notes/${section}`, {
-                                    method: 'PUT',
-                                    body: JSON.stringify({ content: e.target.value })
-                                  }).catch(reportError);
-                                }}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ACTION ITEMS */}
-                  {pmTab === 'actions' && (
-                    <PmArtifactList
-                      title="Action Items" icon={CheckCircle2}
-                      items={actionItems}
-                      columns={['Title', 'Owner', 'Due Date', 'Status', 'Priority']}
-                      renderRow={a => [a.title, users.find(u => u.id === a.ownerId)?.fullName || '—', a.dueDate || '—', a.status, a.priority]}
-                      onDelete={id => pmDelete('action', id)}
-                      onAdd={() => { setPmFormOpen('action'); setPmForm({ status: 'OPEN', priority: 'MEDIUM' }); }}
-                      statusColors={{ OPEN: 'text-semantic-warning', IN_PROGRESS: 'text-brand-navy', DONE: 'text-semantic-success', CANCELLED: 'text-neutral-600 dark:text-neutral-400' }}
-                    />
-                  )}
-
-                  {/* STAKEHOLDERS */}
-                  {pmTab === 'stakeholders' && (
-                    <div>
-                      <PmArtifactList
-                        title="Stakeholder Register" icon={Users}
-                        items={stakeholders}
-                        columns={['Name', 'Role', 'Org', 'Influence', 'Interest', 'Strategy']}
-                        renderRow={s => [s.name, s.role || '—', s.organization || '—', s.influence || '—', s.interest || '—', s.engagementStrategy || '—']}
-                        onDelete={id => pmDelete('stakeholder', id)}
-                        onAdd={() => { setPmFormOpen('stakeholder'); setPmForm({ influence: 'MEDIUM', interest: 'MEDIUM', engagementStrategy: 'INFORM', communicationFreq: 'MONTHLY' }); }}
-                      />
-                      {stakeholders.length > 0 && (
-                        <div className="mt-6 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-4">Influence / Interest Matrix</h3>
-                          <div className="grid grid-cols-2 gap-2 max-w-lg">
-                            {[
-                              { label: 'High Influence, High Interest', key: 'HH', desc: 'Manage Closely', color: 'bg-semantic-danger-surface border-semantic-danger/30' },
-                              { label: 'High Influence, Low Interest', key: 'HL', desc: 'Keep Satisfied', color: 'bg-semantic-warning-surface border-semantic-warning/30' },
-                              { label: 'Low Influence, High Interest', key: 'LH', desc: 'Keep Informed', color: 'bg-semantic-info-surface border-semantic-info/30' },
-                              { label: 'Low Influence, Low Interest', key: 'LL', desc: 'Monitor', color: 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700' },
-                            ].map(q => {
-                              const quadrantStakeholders = stakeholders.filter(s => {
-                                const inf = (s.influence || '').toUpperCase();
-                                const int = (s.interest || '').toUpperCase();
-                                const highInf = inf === 'HIGH';
-                                const highInt = int === 'HIGH';
-                                if (q.key === 'HH') return highInf && highInt;
-                                if (q.key === 'HL') return highInf && !highInt;
-                                if (q.key === 'LH') return !highInf && highInt;
-                                return !highInf && !highInt;
-                              });
-                              return (
-                                <div key={q.key} className={`p-4 rounded-xl border ${q.color} min-h-[100px]`}>
-                                  <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">{q.desc}</p>
-                                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2">{q.label}</p>
-                                  <div className="space-y-1">
-                                    {quadrantStakeholders.length === 0 && <p className="text-xs text-neutral-300 italic">None</p>}
-                                    {quadrantStakeholders.map(s => (
-                                      <div key={s.id} className="flex items-center gap-1.5">
-                                        <Avatar name={s.name} size={5} />
-                                        <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100">{s.name}</span>
-                                        <span className="text-xs text-neutral-600 dark:text-neutral-400">{s.role}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-3">Based on Influence (HIGH/MEDIUM/LOW) and Interest (HIGH/MEDIUM/LOW) fields. HIGH means above MEDIUM.</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* LESSONS LEARNED */}
-                  {pmTab === 'lessons' && (
-                    <PmArtifactList
-                      title="Lessons Learned" icon={BookOpen}
-                      items={lessonsLearned}
-                      columns={['Title', 'Category', 'Created']}
-                      renderRow={ll => [ll.title, ll.category || '—', ll.createdAt ? new Date(ll.createdAt).toLocaleDateString() : '—']}
-                      onDelete={id => pmDelete('lesson', id)}
-                      onAdd={() => { setPmFormOpen('lesson'); setPmForm({ category: 'PROCESS' }); }}
-                    />
-                  )}
-
-                  {pmTab === 'cross-deps' && (
-                    <div>
-                      <div className="flex justify-between items-center mb-4">
-                        <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Cross-Project Dependencies</h2>
-                        <Button variant="action" onClick={() => setIsCrossProjOpen(true)}>+ Add Dependency</Button>
-                      </div>
-                      {crossProjectDeps.length === 0 ? (
-                        <EmptyState icon={Globe} title="No cross-project dependencies" subtitle="Track dependencies between this project and other projects or teams." />
-                      ) : (
-                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-                          <table className="w-full text-sm">
-                            <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
-                              <tr>
-                                {['Title', 'Target Project', 'Deadline', 'Blocker', 'Status', ''].map(h => (
-                                  <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{h}</th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                              {crossProjectDeps.map(dep => (
-                                <tr key={dep.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
-                                  <td className="px-4 py-3 font-medium text-neutral-900 dark:text-neutral-100">
-                                    {dep.title}
-                                    {dep.description && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{dep.description}</p>}
-                                  </td>
-                                  <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">
-                                    {projects.find(p => p.id === dep.targetProjectId)?.name || dep.targetProjectId || '—'}
-                                  </td>
-                                  <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">
-                                    {dep.deadline ? new Date(dep.deadline).toLocaleDateString() : '—'}
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    {dep.isBlocker ? (
-                                      <span className="text-xs font-bold text-semantic-danger bg-semantic-danger-surface px-2 py-0.5 rounded">BLOCKER</span>
-                                    ) : (
-                                      <span className="text-xs text-neutral-600 dark:text-neutral-400">—</span>
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${dep.status === 'RESOLVED' ? 'bg-semantic-success-surface text-semantic-success' : dep.status === 'AT_RISK' ? 'bg-semantic-danger-surface text-semantic-danger' : 'bg-semantic-warning-surface text-semantic-warning'}`}>
-                                      {dep.status || 'OPEN'}
-                                    </span>
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    <button onClick={() => api.send(`/cross-project-dependencies/${dep.id}`, { method: 'DELETE' }).then(() => { showToast('Deleted'); fetchCrossProjectDeps(); }).catch(reportError)}
-                                      className="text-xs text-semantic-danger hover:underline">Delete</button>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-
-                      {/* Create cross-project dep modal */}
-                      {isCrossProjOpen && (
-                        <Modal title="New Cross-Project Dependency" onClose={() => setIsCrossProjOpen(false)} size="lg">
-                            <div className="space-y-3">
-                              <Field label="Title *">
-                                <input className="input" placeholder="What does this project depend on?" value={crossProjForm.title}
-                                  onChange={e => setCrossProjForm(f => ({ ...f, title: e.target.value }))} />
-                              </Field>
-                              <Field label="Description">
-                                <textarea className="input" rows={2} placeholder="Details of the dependency..."
-                                  value={crossProjForm.description} onChange={e => setCrossProjForm(f => ({ ...f, description: e.target.value }))} />
-                              </Field>
-                              <Field label="Target Project">
-                                <select className="input" value={crossProjForm.targetProjectId}
-                                  onChange={e => setCrossProjForm(f => ({ ...f, targetProjectId: e.target.value }))}>
-                                  <option value="">— Select project —</option>
-                                  {projects.filter(p => p.id !== pmProjectId).map(p => (
-                                    <option key={p.id} value={p.id}>{p.name}</option>
-                                  ))}
-                                </select>
-                              </Field>
-                              <Field label="Deadline">
-                                <input type="date" className="input" value={crossProjForm.deadline}
-                                  onChange={e => setCrossProjForm(f => ({ ...f, deadline: e.target.value }))} />
-                              </Field>
-                              <div className="flex items-center gap-2">
-                                <input type="checkbox" id="blocker" className="w-4 h-4 accent-brand-navy"
-                                  checked={crossProjForm.isBlocker}
-                                  onChange={e => setCrossProjForm(f => ({ ...f, isBlocker: e.target.checked }))} />
-                                <label htmlFor="blocker" className="text-sm text-neutral-700 dark:text-neutral-200">This is a blocker (blocks our delivery)</label>
-                              </div>
-                            </div>
-                            <div className="flex justify-end gap-3 mt-5">
-                              <Button variant="ghost" onClick={() => setIsCrossProjOpen(false)}>Cancel</Button>
-                              <Button variant="action" onClick={createCrossProjectDep}>Create Dependency</Button>
-                            </div>
-                        </Modal>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* PM CREATE MODAL */}
-              {pmFormOpen && (
-                <Modal title={<span className="capitalize">New {pmFormOpen.replace('issue','PM Issue').replace('lesson','Lesson Learned').replace('action','Action Item').replace('dependency','Dependency')}</span>} onClose={() => { setPmFormOpen(null); setPmForm({}); }} size="lg">
-                    <div className="space-y-3">
-                      <Field label="Title">
-                        <input className="input" placeholder="Brief title" value={pmForm.title || ''} onChange={e => setPmForm(p => ({ ...p, title: e.target.value }))} />
-                      </Field>
-                      <Field label="Description">
-                        <textarea className="input" rows={2} placeholder="Details..." value={pmForm.description || ''} onChange={e => setPmForm(p => ({ ...p, description: e.target.value }))} />
-                      </Field>
-
-                      {pmFormOpen === 'risk' && <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Probability">
-                            <select className="input" value={pmForm.probability || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, probability: e.target.value }))}>
-                              {['LOW','MEDIUM','HIGH','VERY_HIGH'].map(v => <option key={v}>{v}</option>)}
-                            </select>
-                          </Field>
-                          <Field label="Impact">
-                            <select className="input" value={pmForm.impact || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, impact: e.target.value }))}>
-                              {['LOW','MEDIUM','HIGH','CRITICAL'].map(v => <option key={v}>{v}</option>)}
-                            </select>
-                          </Field>
-                        </div>
-                        <Field label="Mitigation Plan">
-                          <textarea className="input" rows={2} placeholder="How will you mitigate this risk?" value={pmForm.mitigationPlan || ''} onChange={e => setPmForm(p => ({ ...p, mitigationPlan: e.target.value }))} />
-                        </Field>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
-                          <Field label="Review Date"><input type="date" className="input" value={pmForm.reviewDate || ''} onChange={e => setPmForm(p => ({ ...p, reviewDate: e.target.value || null }))} /></Field>
-                        </div>
-                      </>}
-
-                      {pmFormOpen === 'assumption' && <>
-                        <Field label="Rationale"><textarea className="input" rows={2} placeholder="Why was this assumption made?" value={pmForm.rationale || ''} onChange={e => setPmForm(p => ({ ...p, rationale: e.target.value }))} /></Field>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
-                          <Field label="Expiry Date"><input type="date" className="input" value={pmForm.expiryDate || ''} onChange={e => setPmForm(p => ({ ...p, expiryDate: e.target.value || null }))} /></Field>
-                        </div>
-                      </>}
-
-                      {pmFormOpen === 'issue' && <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Priority"><select className="input" value={pmForm.priority || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, priority: e.target.value }))}>{['CRITICAL','HIGH','MEDIUM','LOW'].map(v => <option key={v}>{v}</option>)}</select></Field>
-                          <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
-                        </div>
-                        <Field label="Impact"><textarea className="input" rows={2} placeholder="Impact of this issue..." value={pmForm.impact || ''} onChange={e => setPmForm(p => ({ ...p, impact: e.target.value }))} /></Field>
-                      </>}
-
-                      {pmFormOpen === 'dependency' && <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Dependent Team"><input className="input" placeholder="Team that needs this" value={pmForm.dependentTeam || ''} onChange={e => setPmForm(p => ({ ...p, dependentTeam: e.target.value }))} /></Field>
-                          <Field label="Providing Team"><input className="input" placeholder="Team that provides this" value={pmForm.providingTeam || ''} onChange={e => setPmForm(p => ({ ...p, providingTeam: e.target.value }))} /></Field>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Deadline"><input type="date" className="input" value={pmForm.deadline || ''} onChange={e => setPmForm(p => ({ ...p, deadline: e.target.value || null }))} /></Field>
-                          <Field label="Status"><select className="input" value={pmForm.status || 'PENDING'} onChange={e => setPmForm(p => ({ ...p, status: e.target.value }))}>{['PENDING','IN_PROGRESS','RESOLVED','BLOCKED'].map(v => <option key={v}>{v}</option>)}</select></Field>
-                        </div>
-                        <label className="flex items-center gap-2 text-sm text-neutral-700"><input type="checkbox" checked={!!pmForm.isBlocker} onChange={e => setPmForm(p => ({ ...p, isBlocker: e.target.checked }))} /> <span>This is a blocker</span></label>
-                      </>}
-
-                      {pmFormOpen === 'decision' && <>
-                        <Field label="Alternatives Considered"><textarea className="input" rows={2} placeholder="What other options were considered?" value={pmForm.alternatives || ''} onChange={e => setPmForm(p => ({ ...p, alternatives: e.target.value }))} /></Field>
-                        <Field label="Rationale"><textarea className="input" rows={2} placeholder="Why was this decision made?" value={pmForm.rationale || ''} onChange={e => setPmForm(p => ({ ...p, rationale: e.target.value }))} /></Field>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
-                          <Field label="Decision Date"><input type="date" className="input" value={pmForm.decisionDate || ''} onChange={e => setPmForm(p => ({ ...p, decisionDate: e.target.value || null }))} /></Field>
-                        </div>
-                      </>}
-
-                      {pmFormOpen === 'meeting' && <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Type"><select className="input" value={pmForm.meetingType || 'GENERAL'} onChange={e => setPmForm(p => ({ ...p, meetingType: e.target.value }))}>{['GENERAL','STANDUP','PLANNING','RETRO','REVIEW','STEERING'].map(v => <option key={v}>{v}</option>)}</select></Field>
-                          <Field label="Scheduled"><input type="datetime-local" className="input" value={pmForm.scheduledAt || ''} onChange={e => setPmForm(p => ({ ...p, scheduledAt: e.target.value || null }))} /></Field>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Duration (min)"><input type="number" className="input" value={pmForm.durationMins || ''} onChange={e => setPmForm(p => ({ ...p, durationMins: parseInt(e.target.value) || null }))} /></Field>
-                          <Field label="Location"><input className="input" placeholder="Room / URL" value={pmForm.location || ''} onChange={e => setPmForm(p => ({ ...p, location: e.target.value }))} /></Field>
-                        </div>
-                      </>}
-
-                      {pmFormOpen === 'action' && <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
-                          <Field label="Due Date"><input type="date" className="input" value={pmForm.dueDate || ''} onChange={e => setPmForm(p => ({ ...p, dueDate: e.target.value || null }))} /></Field>
-                        </div>
-                        <Field label="Priority"><select className="input" value={pmForm.priority || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, priority: e.target.value }))}>{['CRITICAL','HIGH','MEDIUM','LOW'].map(v => <option key={v}>{v}</option>)}</select></Field>
-                      </>}
-
-                      {pmFormOpen === 'stakeholder' && <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Role"><input className="input" placeholder="PM / Sponsor / Customer..." value={pmForm.role || ''} onChange={e => setPmForm(p => ({ ...p, role: e.target.value }))} /></Field>
-                          <Field label="Organisation"><input className="input" placeholder="Company name" value={pmForm.organization || ''} onChange={e => setPmForm(p => ({ ...p, organization: e.target.value }))} /></Field>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Influence"><select className="input" value={pmForm.influence || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, influence: e.target.value }))}>{['LOW','MEDIUM','HIGH'].map(v => <option key={v}>{v}</option>)}</select></Field>
-                          <Field label="Interest"><select className="input" value={pmForm.interest || 'MEDIUM'} onChange={e => setPmForm(p => ({ ...p, interest: e.target.value }))}>{['LOW','MEDIUM','HIGH'].map(v => <option key={v}>{v}</option>)}</select></Field>
-                        </div>
-                        <Field label="Strategy"><select className="input" value={pmForm.engagementStrategy || 'INFORM'} onChange={e => setPmForm(p => ({ ...p, engagementStrategy: e.target.value }))}>{['INFORM','CONSULT','INVOLVE','COLLABORATE','EMPOWER'].map(v => <option key={v}>{v}</option>)}</select></Field>
-                      </>}
-
-                      {pmFormOpen === 'lesson' && <>
-                        <Field label="Category"><select className="input" value={pmForm.category || 'PROCESS'} onChange={e => setPmForm(p => ({ ...p, category: e.target.value }))}>{['PROCESS','TECHNICAL','COMMUNICATION','RISK','OTHER'].map(v => <option key={v}>{v}</option>)}</select></Field>
-                        <Field label="What Worked"><textarea className="input" rows={2} value={pmForm.whatWorked || ''} onChange={e => setPmForm(p => ({ ...p, whatWorked: e.target.value }))} /></Field>
-                        <Field label="What Didn't Work"><textarea className="input" rows={2} value={pmForm.whatDidntWork || ''} onChange={e => setPmForm(p => ({ ...p, whatDidntWork: e.target.value }))} /></Field>
-                        <Field label="Recommendation"><textarea className="input" rows={2} value={pmForm.recommendation || ''} onChange={e => setPmForm(p => ({ ...p, recommendation: e.target.value }))} /></Field>
-                      </>}
-                    </div>
-                    <div className="flex gap-3 mt-5">
-                      <Button variant="action" onClick={() => pmCreate(pmFormOpen, pmForm)} disabled={!pmForm.title}>Create</Button>
-                      <Button variant="secondary" onClick={() => { setPmFormOpen(null); setPmForm({}); }}>Cancel</Button>
-                    </div>
-                </Modal>
-              )}
-            </div>
+            <PmView
+              pmProjectId={pmProjectId}
+              pmTab={pmTab}
+              raidDashboard={raidDashboard}
+              risks={risks}
+              assumptions={assumptions}
+              pmIssues={pmIssues}
+              dependencies={dependencies}
+              decisions={decisions}
+              meetings={meetings}
+              actionItems={actionItems}
+              stakeholders={stakeholders}
+              lessonsLearned={lessonsLearned}
+              crossProjectDeps={crossProjectDeps}
+              selectedMeeting={selectedMeeting}
+              meetingNotes={meetingNotes}
+              pmFormOpen={pmFormOpen}
+              pmForm={pmForm}
+              isCrossProjOpen={isCrossProjOpen}
+              crossProjForm={crossProjForm}
+              projects={projects}
+              users={users}
+              setPmProjectId={setPmProjectId}
+              setPmTab={setPmTab}
+              setSelectedMeeting={setSelectedMeeting}
+              setMeetingNotes={setMeetingNotes}
+              setPmFormOpen={setPmFormOpen}
+              setPmForm={setPmForm}
+              setIsCrossProjOpen={setIsCrossProjOpen}
+              setCrossProjForm={setCrossProjForm}
+              fetchRaidDashboard={fetchRaidDashboard}
+              fetchRisks={fetchRisks}
+              fetchAssumptions={fetchAssumptions}
+              fetchPmIssues={fetchPmIssues}
+              fetchDependencies={fetchDependencies}
+              fetchDecisions={fetchDecisions}
+              fetchMeetings={fetchMeetings}
+              fetchActionItems={fetchActionItems}
+              fetchStakeholders={fetchStakeholders}
+              fetchLessons={fetchLessons}
+              fetchCrossProjectDeps={fetchCrossProjectDeps}
+              pmDelete={pmDelete}
+              pmCreate={pmCreate}
+              createCrossProjectDep={createCrossProjectDep}
+              reportError={reportError}
+              showToast={showToast}
+              api={api}
+            />
           )}
 
           {/* ITERATION 12 — Performance (KPI framework with privacy guardrails) */}
@@ -4566,652 +3254,123 @@ export default function App() {
           )}
 
           {/* ======================================================
-               ITERATION 6 — CUSTOM DASHBOARDS (designer + persistence)
+               ITERATION 6 — CUSTOM DASHBOARDS — extracted to src/views/dashboards-view.jsx (TD-003)
              ====================================================== */}
           {view === 'dashboards' && (
-            <div className="p-6 overflow-y-auto h-full">
-              {!selectedDashboard ? (
-                <>
-                  <div className="flex items-center justify-between mb-5">
-                    <div>
-                      <h1 className="text-xl font-semibold text-neutral-900 dark:text-white">Dashboards</h1>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">Build your own views — add widgets, arrange the grid, save.</p>
-                    </div>
-                    <Button variant="action" onClick={createDashboard}>New dashboard</Button>
-                  </div>
-                  {customDashboards.length === 0 ? (
-                    <EmptyState icon={LayoutDashboard} title="No dashboards yet"
-                      subtitle="Create a dashboard and drop in widgets to track what matters to you."
-                      action={<Button variant="action" onClick={createDashboard}>New dashboard</Button>} />
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {customDashboards.map(d => (
-                        <div key={d.id} onClick={() => openDashboard(d.id)} role="button" tabIndex={0} onKeyDown={onPressKey}
-                          className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
-                          <div className="flex items-start justify-between">
-                            <LayoutDashboard className="h-6 w-6 text-neutral-600 dark:text-neutral-400" aria-hidden="true" />
-                            <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-700 rounded-full px-2 py-0.5">{d.scope || 'PERSONAL'}</span>
-                          </div>
-                          <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mt-2 truncate">{d.name}</p>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                            {d.updatedAt ? `Updated ${new Date(d.updatedAt).toLocaleDateString()}` : '—'}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between mb-5">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <button onClick={() => setSelectedDashboard(null)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Dashboards</button>
-                      <h1 className="text-xl font-semibold text-neutral-900 dark:text-white truncate">{selectedDashboard.name}</h1>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {!dashboardEditMode && <ExportButtons targetId="dashboard-export-area"
-                        rows={workItems.map(i => ({ ID: i.id, Title: i.title, Type: i.type, Status: i.status, Priority: i.priority, Assignee: i.assigneeId }))}
-                        filename={selectedDashboard.name || 'dashboard'} onError={() => showToast('Export failed — try again', 'error')} />}
-                      {!dashboardEditMode && (
-                        <button onClick={() => mintShare(selectedDashboard.id)}
-                          className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">Share</button>
-                      )}
-                      <Button variant={dashboardEditMode ? 'action' : 'secondary'} onClick={() => setDashboardEditMode(e => !e)}>
-                        {dashboardEditMode ? 'Done' : 'Edit'}
-                      </Button>
-                      <button onClick={() => deleteDashboard(selectedDashboard.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
-                    </div>
-                  </div>
-
-                  {shareInfo && shareInfo.id === selectedDashboard.id && shareInfo.token && (
-                    <div className="flex items-center gap-2 mb-4 p-3 rounded-md bg-semantic-info-surface border border-neutral-200 dark:border-neutral-700">
-                      <span className="text-xs font-semibold text-neutral-700 flex-shrink-0">Public link</span>
-                      <input readOnly aria-label="Public embed link"
-                        value={`${window.location.origin}${window.location.pathname}?share=${shareInfo.token}`}
-                        className="flex-1 min-w-0 text-xs font-mono rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-2 py-1" />
-                      <button onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}${window.location.pathname}?share=${shareInfo.token}`); showToast('Link copied'); }}
-                        className="text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors flex-shrink-0">Copy</button>
-                      <button onClick={() => stopShare(selectedDashboard.id)} className="text-xs text-semantic-danger hover:underline flex-shrink-0">Stop sharing</button>
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap items-center gap-2 mb-4">
-                    <span className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Scope</span>
-                    {['PROJECT', 'TEAM', 'ORG'].map(s => (
-                      <button key={s} type="button"
-                        onClick={() => { setDashboardScope(s); fetchDashboardAggregate(s, dashboardTeamId); }}
-                        className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${dashboardScope === s ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy'}`}>
-                        {s === 'PROJECT' ? 'Project' : s === 'TEAM' ? 'Team' : 'Organization'}
-                      </button>
-                    ))}
-                    {dashboardScope === 'TEAM' && (
-                      <select value={dashboardTeamId || ''} aria-label="Team"
-                        onChange={e => { setDashboardTeamId(e.target.value); fetchDashboardAggregate('TEAM', e.target.value); }}
-                        className="text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-1.5 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
-                        <option value="">Select a team…</option>
-                        {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                      </select>
-                    )}
-                    {dashboardScope !== 'PROJECT' && (
-                      <span className="text-xs text-neutral-600 dark:text-neutral-400">Aggregated across {dashboardScope === 'TEAM' ? "the team's projects" : 'the workspace'}</span>
-                    )}
-                  </div>
-
-                  {dashboardEditMode && (
-                    <div className="mb-4 p-3 rounded-md bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide">Widget library</span>
-                        <span className="text-xs text-neutral-600 dark:text-neutral-400">Drag widgets to reorder</span>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider w-20 flex-shrink-0">Basics</span>
-                          <button onClick={() => addDashboardWidget('SCORECARD', { filter: { open: true } }, 'Open items')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Scorecard</button>
-                          <button onClick={() => addDashboardWidget('STATUS_BAR', {}, 'By status')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Status breakdown</button>
-                          <button onClick={() => addDashboardWidget('ITEM_LIST', { filter: { open: true }, limit: 6 }, 'Open work items')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Item list</button>
-                          <button onClick={() => addDashboardWidget('PIE', { dimension: 'status' }, 'Items by status')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Pie chart</button>
-                          <button onClick={() => addDashboardWidget('BAR', { dimension: 'priority' }, 'Items by priority')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Bar chart</button>
-                        </div>
-                        {EXTRA_WIDGET_CATEGORIES.map(cat => (
-                          <div key={cat} className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider w-20 flex-shrink-0">{cat}</span>
-                            {EXTRA_WIDGET_PRESETS.filter(p => p.category === cat).map(p => (
-                              <button key={p.title} onClick={() => addDashboardWidget(p.type, p.config, p.title, p.w)}
-                                className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">
-                                {p.title}
-                              </button>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {(selectedDashboard.widgets || []).length === 0 ? (
-                    <EmptyState icon={Puzzle} title="Empty dashboard"
-                      subtitle="Turn on Edit and add your first widget to start tracking."
-                      action={<Button variant="action" onClick={() => setDashboardEditMode(true)}>Edit dashboard</Button>} />
-                  ) : (
-                    <div id="dashboard-export-area" className="grid grid-cols-12 gap-4">
-                      {selectedDashboard.widgets.map(w => (
-                        <DashboardWidgetCard key={w.id} widget={w} workItems={workItems} aggregate={dashboardAggregate} editMode={dashboardEditMode}
-                          sprints={sprints} velocity={velocityData} currentUserId={currentUser?.id}
-                          onRemove={() => removeDashboardWidget(w.id)}
-                          onResize={gridW => resizeDashboardWidget(w, gridW)}
-                          onConfigChange={cfg => updateDashboardWidgetConfig(w, cfg)}
-                          onDrill={setDashboardDrill}
-                          onDragStart={() => setDragWidgetId(w.id)}
-                          onDrop={() => reorderDashboardWidgets(w.id)} />
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+            <DashboardsView
+              customDashboards={customDashboards}
+              selectedDashboard={selectedDashboard}
+              dashboardEditMode={dashboardEditMode}
+              dashboardScope={dashboardScope}
+              dashboardTeamId={dashboardTeamId}
+              dashboardAggregate={dashboardAggregate}
+              dashboardDrill={dashboardDrill}
+              shareInfo={shareInfo}
+              teams={teams}
+              workItems={workItems}
+              sprints={sprints}
+              velocityData={velocityData}
+              currentUser={currentUser}
+              createDashboard={createDashboard}
+              openDashboard={openDashboard}
+              deleteDashboard={deleteDashboard}
+              addDashboardWidget={addDashboardWidget}
+              removeDashboardWidget={removeDashboardWidget}
+              resizeDashboardWidget={resizeDashboardWidget}
+              updateDashboardWidgetConfig={updateDashboardWidgetConfig}
+              reorderDashboardWidgets={reorderDashboardWidgets}
+              setDashboardEditMode={setDashboardEditMode}
+              setSelectedDashboard={setSelectedDashboard}
+              setDashboardScope={setDashboardScope}
+              setDashboardTeamId={setDashboardTeamId}
+              setDashboardDrill={setDashboardDrill}
+              setDragWidgetId={setDragWidgetId}
+              fetchDashboardAggregate={fetchDashboardAggregate}
+              mintShare={mintShare}
+              stopShare={stopShare}
+              showToast={showToast}
+            />
           )}
 
-          {view === 'dashboards' && dashboardDrill && (
-            <DashboardDrillModal drill={dashboardDrill} onClose={() => setDashboardDrill(null)}
-              onOpenItem={item => { setSelectedItem(item); setDashboardDrill(null); }} />
-          )}
-
+          {/* REPORT BUILDER — extracted to src/views/reportbuilder-view.jsx (TD-003) */}
           {view === 'reportbuilder' && (
-            <div className="p-6 overflow-y-auto h-full">
-              {!selectedReport ? (
-                <>
-                  <div className="flex items-center justify-between mb-5">
-                    <div>
-                      <h1 className="text-xl font-semibold text-neutral-900 dark:text-white">Report builder</h1>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">Compose full-page reports from sections — KPIs, charts, tables and narrative.</p>
-                    </div>
-                    <Button variant="action" onClick={createBlankReport}>New report</Button>
-                  </div>
-
-                  {reportTemplates.length > 0 && (
-                    <div className="mb-6">
-                      <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mb-3">Start from a template</h2>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {reportTemplates.map(t => (
-                          <div key={t.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 flex flex-col">
-                            <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{t.name}</p>
-                            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5 mb-3 flex-1">{t.description || '—'}</p>
-                            <div><Button variant="secondary" onClick={() => createReportFromTemplate(t)}>Use template</Button></div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mb-3">Your reports</h2>
-                  {reports.length === 0 ? (
-                    <EmptyState icon={FileIcon} title="No reports yet"
-                      subtitle="Create a report from scratch or start from a template above."
-                      action={<Button variant="action" onClick={createBlankReport}>New report</Button>} />
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {reports.map(r => (
-                        <div key={r.id} onClick={() => openReport(r.id)} role="button" tabIndex={0} onKeyDown={onPressKey}
-                          className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
-                          <FileText className="h-6 w-6 text-neutral-600 dark:text-neutral-400" aria-hidden="true" />
-                          <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mt-2 truncate">{r.name}</p>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{r.updatedAt ? `Updated ${new Date(r.updatedAt).toLocaleDateString()}` : '—'}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between mb-5">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <button onClick={() => setSelectedReport(null)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Reports</button>
-                      {reportEditMode ? (
-                        <input value={selectedReport.name || ''} onChange={e => setSelectedReport(r => ({ ...r, name: e.target.value }))}
-                          aria-label="Report name"
-                          className="text-xl font-semibold text-neutral-900 dark:text-white bg-transparent border-b border-neutral-200 dark:border-neutral-700 focus-visible:outline-none focus-visible:border-brand-navy" />
-                      ) : (
-                        <h1 className="text-xl font-semibold text-neutral-900 dark:text-white truncate">{selectedReport.name}</h1>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {!reportEditMode && <ExportButtons targetId="report-export-area"
-                        rows={workItems.map(i => ({ ID: i.id, Title: i.title, Type: i.type, Status: i.status, Priority: i.priority, Assignee: i.assigneeId }))}
-                        filename={selectedReport.name || 'report'} onError={() => showToast('Export failed — try again', 'error')} />}
-                      {!reportEditMode && <Button variant="secondary" onClick={() => openScheduleManager(selectedReport.id)}>Schedule</Button>}
-                      {reportEditMode && <Button variant="action" onClick={() => { saveReport(); setReportEditMode(false); }}>Save</Button>}
-                      <Button variant={reportEditMode ? 'secondary' : 'action'} onClick={() => { if (reportEditMode) { openReport(selectedReport.id); } else { setReportEditMode(true); } }}>{reportEditMode ? 'Cancel' : 'Edit'}</Button>
-                      <button onClick={() => deleteReport(selectedReport.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
-                    </div>
-                  </div>
-
-                  {reportEditMode && (
-                    <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-md bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700">
-                      <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mr-1">Add section</span>
-                      <button onClick={() => addReportSection('kpi')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ KPI</button>
-                      <button onClick={() => addReportSection('chart')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Chart</button>
-                      <button onClick={() => addReportSection('table')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Table</button>
-                      <button onClick={() => addReportSection('narrative')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Narrative</button>
-                    </div>
-                  )}
-
-                  {reportSections.length === 0 ? (
-                    <EmptyState icon={Puzzle} title="Empty report"
-                      subtitle="Turn on Edit and add sections — KPIs, charts, tables, narrative."
-                      action={<Button variant="action" onClick={() => setReportEditMode(true)}>Edit report</Button>} />
-                  ) : (
-                    <div id="report-export-area" className="space-y-4 max-w-4xl">
-                      {reportSections.map((sec, i) => (
-                        <ReportSectionCard key={i} section={sec} index={i} total={reportSections.length}
-                          workItems={workItems} editMode={reportEditMode}
-                          onChange={s => updateReportSection(i, s)}
-                          onMove={delta => moveReportSection(i, delta)}
-                          onRemove={() => removeReportSection(i)} />
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Iteration 6 — scheduled report delivery (Cap J, S04) */}
-          {scheduleManagerOpen && selectedReport && (
-            <Modal title="Scheduled delivery" onClose={() => setScheduleManagerOpen(false)} size="lg" className="max-h-[90vh] overflow-y-auto">
-                <p className="text-xs text-neutral-500 mb-4 truncate">“{selectedReport.name}” — delivered on a cadence to recipients (in-app / email).</p>
-
-                <div className="space-y-2 mb-5">
-                  {reportSchedules.length === 0
-                    ? <p className="text-sm text-neutral-600 text-center py-3">No schedules yet.</p>
-                    : reportSchedules.map(s => (
-                      <div key={s.id} className="flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-neutral-900 dark:text-neutral-100">{s.cadence?.toLowerCase()} · {s.channel?.replace('_', '-').toLowerCase()}</p>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{s.recipients ? `to ${s.recipients}` : 'owner only'}{s.nextRunAt ? ` · next ${new Date(s.nextRunAt).toLocaleDateString()}` : ''}</p>
-                        </div>
-                        <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${s.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500'}`}>{s.active ? 'ACTIVE' : 'PAUSED'}</span>
-                        <button onClick={() => toggleReportSchedule(s)} className="text-xs text-brand-navy hover:underline">{s.active ? 'Pause' : 'Resume'}</button>
-                        <button onClick={() => deleteReportSchedule(s.id)} className="text-xs text-semantic-danger hover:underline">Remove</button>
-                      </div>
-                    ))}
-                </div>
-
-                <div className="border-t border-neutral-200 dark:border-neutral-700 pt-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">Add a schedule</p>
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div>
-                      <label htmlFor="sched-cadence" className="block text-xs text-neutral-500 mb-1">Cadence</label>
-                      <select id="sched-cadence" className="input w-full" value={scheduleForm.cadence} onChange={e => setScheduleForm({ ...scheduleForm, cadence: e.target.value })}>
-                        <option value="DAILY">Daily</option>
-                        <option value="WEEKLY">Weekly</option>
-                        <option value="MONTHLY">Monthly</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="sched-channel" className="block text-xs text-neutral-500 mb-1">Channel</label>
-                      <select id="sched-channel" className="input w-full" value={scheduleForm.channel} onChange={e => setScheduleForm({ ...scheduleForm, channel: e.target.value })}>
-                        <option value="IN_APP">In-app</option>
-                        <option value="EMAIL">Email</option>
-                        <option value="BOTH">Both</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="sched-recipients" className="block text-xs text-neutral-500 mb-1">Recipients (comma-separated user ids — optional; owner always included)</label>
-                    <input id="sched-recipients" className="input w-full" value={scheduleForm.recipients} onChange={e => setScheduleForm({ ...scheduleForm, recipients: e.target.value })} placeholder="USR-123, USR-456" />
-                  </div>
-                  <div className="flex justify-end">
-                    <Button variant="action" onClick={createReportSchedule}>Add schedule</Button>
-                  </div>
-                </div>
-            </Modal>
+            <ReportBuilderView
+              reports={reports}
+              selectedReport={selectedReport}
+              reportEditMode={reportEditMode}
+              reportSections={reportSections}
+              reportTemplates={reportTemplates}
+              scheduleManagerOpen={scheduleManagerOpen}
+              reportSchedules={reportSchedules}
+              scheduleForm={scheduleForm}
+              workItems={workItems}
+              createBlankReport={createBlankReport}
+              createReportFromTemplate={createReportFromTemplate}
+              openReport={openReport}
+              deleteReport={deleteReport}
+              saveReport={saveReport}
+              addReportSection={addReportSection}
+              updateReportSection={updateReportSection}
+              moveReportSection={moveReportSection}
+              removeReportSection={removeReportSection}
+              openScheduleManager={openScheduleManager}
+              toggleReportSchedule={toggleReportSchedule}
+              deleteReportSchedule={deleteReportSchedule}
+              createReportSchedule={createReportSchedule}
+              setSelectedReport={setSelectedReport}
+              setReportEditMode={setReportEditMode}
+              setScheduleManagerOpen={setScheduleManagerOpen}
+              setScheduleForm={setScheduleForm}
+              showToast={showToast}
+            />
           )}
 
           {/* ======================================================
                ITERATION 5 — KNOWLEDGE REPOSITORY
              ====================================================== */}
           {view === 'knowledge' && (
-            <div className="flex h-full overflow-hidden">
-              {/* Left sidebar — spaces */}
-              <div className="w-64 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col">
-                <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">Knowledge Spaces</h2>
-                    <button onClick={() => setIsSpaceFormOpen(true)} className="w-6 h-6 flex items-center justify-center rounded bg-brand-navy text-white text-sm hover:opacity-80 transition-opacity" title="New space">+</button>
-                  </div>
-                  {/* Search */}
-                  <div className="relative">
-                    <input type="text" placeholder="Search articles..." value={knowledgeSearch}
-                      onChange={e => setKnowledgeSearch(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') { searchKnowledge(); setKnowledgeTab('search'); } }}
-                      className="input text-xs pl-6 py-1.5 w-full" />
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-600 dark:text-neutral-400"><Search className="h-3.5 w-3.5" aria-hidden="true" /></span>
-                  </div>
-                </div>
-                {/* All articles shortcut */}
-                <div className="px-2 py-1">
-                  <button onClick={() => { setSelectedSpace(null); setSelectedArticle(null); setKnowledgeTab('all'); fetchKnowledgeArticles(null); }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${knowledgeTab === 'all' && !selectedSpace ? 'bg-brand-navy/10 text-brand-navy' : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700'}`}>
-                    <FileText className="inline-block h-3.5 w-3.5 mr-1.5 align-text-bottom" aria-hidden="true" />All Articles
-                  </button>
-                </div>
-                {/* Space list */}
-                <div className="flex-1 overflow-y-auto px-2 pb-2">
-                  {knowledgeSpaces.length === 0 && (
-                    <p className="text-xs text-neutral-600 text-center py-6">No spaces yet. Create one to get started.</p>
-                  )}
-                  {knowledgeSpaces.map(space => (
-                    <div key={space.id}>
-                      <button onClick={() => { setSelectedSpace(space); setSelectedArticle(null); setEditingArticle(false); setKnowledgeTab('space'); fetchKnowledgeArticles(space.id); }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors group flex items-center justify-between ${selectedSpace?.id === space.id ? 'bg-brand-navy/10 text-brand-navy' : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700'}`}>
-                        <span className="flex items-center gap-1.5">
-                          {space.icon ? <span>{space.icon}</span> : <Folder className="h-3.5 w-3.5" aria-hidden="true" />}
-                          <span className="truncate">{space.name}</span>
-                        </span>
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${space.visibility === 'PUBLIC' ? 'bg-semantic-success-surface text-semantic-success' : space.visibility === 'PRIVATE' ? 'bg-semantic-danger-surface text-semantic-danger' : 'bg-brand-navy/10 text-brand-navy'}`}>
-                          {space.visibility || 'TEAM'}
-                        </span>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Main content area */}
-              <div className="flex-1 flex overflow-hidden">
-                {/* Article list panel */}
-                {!selectedArticle && (
-                  <div className="flex-1 overflow-y-auto p-6">
-                    {knowledgeTab === 'search' ? (
-                      <div>
-                        <div className="flex items-center gap-3 mb-4">
-                          <h1 className="text-xl font-bold text-brand-navy dark:text-white">Search Results</h1>
-                          <span className="text-sm text-neutral-600 dark:text-neutral-400">{knowledgeSearchResults.length} results for "{knowledgeSearch}"</span>
-                          <button onClick={() => { setKnowledgeTab('spaces'); setKnowledgeSearch(''); setKnowledgeSearchResults([]); }} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 ml-auto">Clear</button>
-                        </div>
-                        {knowledgeSearchResults.length === 0 ? (
-                          <EmptyState icon={Search} title="No results found" subtitle={`No articles match "${knowledgeSearch}". Try different keywords.`} />
-                        ) : (
-                          <div className="space-y-2">
-                            {knowledgeSearchResults.map(art => (
-                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); }} role="button" tabIndex={0} onKeyDown={onPressKey}
-                                className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{art.title}</p>
-                                    <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5 line-clamp-2">{(art.content || '').substring(0, 120)}{(art.content || '').length > 120 ? '...' : ''}</p>
-                                  </div>
-                                  <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${art.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : art.status === 'DRAFT' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500' : 'bg-semantic-warning-surface text-semantic-warning'}`}>{art.status || 'DRAFT'}</span>
-                                    <span className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{art.templateType || 'KB'}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ) : (selectedSpace || knowledgeTab === 'all') ? (
-                      <div>
-                        <div className="flex items-center justify-between mb-5">
-                          <div className="flex items-center gap-3">
-                            {selectedSpace && <button onClick={() => { setSelectedSpace(null); setKnowledgeTab('spaces'); }} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Spaces</button>}
-                            <h1 className="text-xl font-bold text-brand-navy dark:text-white">{selectedSpace ? selectedSpace.name : 'All Articles'}</h1>
-                            {selectedSpace?.description && <p className="text-xs text-neutral-600 dark:text-neutral-400">{selectedSpace.description}</p>}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {selectedSpace && can('manage_projects') && (
-                              <button onClick={() => deleteKnowledgeSpace(selectedSpace.id)} className="text-xs text-semantic-danger hover:underline">Delete Space</button>
-                            )}
-                            {selectedSpace && (
-                              <Button variant="action" onClick={() => { setIsArticleFormOpen(true); setArticleForm({ title: '', content: '', templateType: 'KB', status: 'DRAFT' }); }}>+ New Article</Button>
-                            )}
-                          </div>
-                        </div>
-                        {knowledgeArticles.length === 0 ? (
-                          <EmptyState icon={FileIcon} title={selectedSpace ? `No articles in ${selectedSpace.name}` : 'No articles'} subtitle="Create your first article to capture knowledge for the team."
-                            action={selectedSpace && <Button variant="action" onClick={() => setIsArticleFormOpen(true)}>Write Article</Button>} />
-                        ) : (
-                          <div className="space-y-2">
-                            {knowledgeArticles.map(art => (
-                              <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); }} role="button" tabIndex={0} onKeyDown={onPressKey}
-                                className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{art.title}</p>
-                                    </div>
-                                    <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-2">{(art.content || '').substring(0, 120)}{(art.content || '').length > 120 ? '...' : ''}</p>
-                                    <div className="flex items-center gap-3 mt-2">
-                                      <span className="text-xs text-neutral-600 dark:text-neutral-400">v{art.versionNumber || 1} · {art.authorName || 'Unknown'}</span>
-                                      {art.updatedAt && <span className="text-xs text-neutral-600 dark:text-neutral-400">{new Date(art.updatedAt).toLocaleDateString()}</span>}
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${art.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : art.status === 'DRAFT' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500' : art.status === 'ARCHIVED' ? 'bg-neutral-200 dark:bg-neutral-600 text-neutral-500' : 'bg-semantic-warning-surface text-semantic-warning'}`}>{art.status || 'DRAFT'}</span>
-                                    <span className="text-xs bg-brand-navy/10 text-brand-navy px-1.5 py-0.5 rounded font-mono">{art.templateType || 'KB'}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <EmptyState icon={BookOpen} title="Select a space" subtitle="Choose a knowledge space from the left sidebar to browse articles, or search for specific content." />
-                    )}
-                  </div>
-                )}
-
-                {/* Article detail / editor panel */}
-                {selectedArticle && (
-                  <div className="flex-1 overflow-y-auto flex flex-col">
-                    {/* Article header */}
-                    <div className="border-b border-neutral-200 dark:border-neutral-700 px-6 py-4 flex items-center justify-between bg-white dark:bg-neutral-800 flex-shrink-0">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <button onClick={() => { setSelectedArticle(null); setEditingArticle(false); setArticlePanel(null); }} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0" aria-label="Back"><ArrowLeft className="h-4 w-4" aria-hidden="true" /></button>
-                        <div className="min-w-0">
-                          <h1 className="font-bold text-lg text-neutral-900 dark:text-white truncate">{selectedArticle.title}</h1>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded ${selectedArticle.status === 'PUBLISHED' ? 'bg-semantic-success-surface text-semantic-success' : selectedArticle.status === 'DRAFT' ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500' : 'bg-neutral-200 dark:bg-neutral-600 text-neutral-500'}`}>{selectedArticle.status || 'DRAFT'}</span>
-                            <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400">{selectedArticle.templateType || 'KB'}</span>
-                            <span className="text-xs text-neutral-600 dark:text-neutral-400">v{selectedArticle.versionNumber || 1}</span>
-                            {selectedArticle.updatedAt && <span className="text-xs text-neutral-600 dark:text-neutral-400">Updated {new Date(selectedArticle.updatedAt).toLocaleDateString()}</span>}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {[
-                          { key: 'history',   label: `History (${articleVersions.length})` },
-                          { key: 'comments',  label: 'Comments' },
-                          { key: 'analytics', label: 'Analytics' },
-                        ].map(p => (
-                          <button key={p.key} onClick={() => openArticlePanel(p.key)} aria-pressed={articlePanel === p.key}
-                            className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${articlePanel === p.key ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy'}`}>
-                            {p.label}
-                          </button>
-                        ))}
-                        {/* Status-aware publishing workflow — single primary action per state */}
-                        {selectedArticle.status === 'IN_REVIEW' && (
-                          <button onClick={() => rejectArticle(selectedArticle.id)} className="text-xs text-semantic-warning hover:underline">Request changes</button>
-                        )}
-                        {(!selectedArticle.status || selectedArticle.status === 'DRAFT') && (
-                          <Button variant="action" onClick={() => submitArticleForReview(selectedArticle.id)}>Submit for review</Button>
-                        )}
-                        {selectedArticle.status === 'IN_REVIEW' && (
-                          <Button variant="action" onClick={() => publishArticle(selectedArticle.id)}>Publish</Button>
-                        )}
-                        {selectedArticle.status === 'PUBLISHED' && (
-                          <Button variant="secondary" onClick={() => archiveArticle(selectedArticle.id)}>Archive</Button>
-                        )}
-                        {selectedArticle.status === 'ARCHIVED' && (
-                          <Button variant="secondary" onClick={() => restoreArticle(selectedArticle.id)}>Restore</Button>
-                        )}
-                        <Button variant="secondary" onClick={() => setEditingArticle(e => !e)}>
-                          {editingArticle ? 'View' : 'Edit'}
-                        </Button>
-                        <button onClick={() => deleteArticle(selectedArticle.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-1 overflow-hidden">
-                      {/* Content area */}
-                      <div className="flex-1 overflow-y-auto p-6">
-                        {editingArticle ? (
-                          <div className="space-y-4">
-                            <div>
-                              <label htmlFor="article-title" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Title</label>
-                              <input id="article-title" className="input text-lg font-bold w-full" value={selectedArticle.title || ''}
-                                onChange={e => setSelectedArticle(a => ({ ...a, title: e.target.value }))}
-                                onBlur={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content })} />
-                            </div>
-                            <div className="flex items-center gap-4">
-                              <div>
-                                <label htmlFor="article-template-type" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Template Type</label>
-                                <select id="article-template-type" className="input text-sm w-48" value={selectedArticle.templateType || 'KB'}
-                                  onChange={e => { const t = e.target.value; setSelectedArticle(a => ({ ...a, templateType: t })); updateArticle(selectedArticle.id, { templateType: t }); }}>
-                                  {['KB','RUNBOOK','ADR','POSTMORTEM','ONBOARDING','TROUBLESHOOTING','CUSTOM'].map(t => <option key={t} value={t}>{t}</option>)}
-                                </select>
-                              </div>
-                              {/* B09 — content format toggle: markdown ↔ blocks */}
-                              <div className="flex-1 flex justify-end">
-                                <div className="flex rounded-lg border border-neutral-200 dark:border-neutral-600 overflow-hidden" role="group" aria-label="Content format">
-                                  {(['markdown', 'blocks']).map(fmt => (
-                                    <button key={fmt} type="button"
-                                      onClick={() => setArticleContentFormat(fmt)}
-                                      aria-pressed={articleContentFormat === fmt}
-                                      className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${articleContentFormat === fmt ? 'bg-brand-navy text-white' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700'}`}>
-                                      {fmt}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                            {articleContentFormat === 'markdown' ? (
-                              <div>
-                                <label htmlFor="article-content" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Content (Markdown supported)</label>
-                                <textarea id="article-content" rows={20} className="input resize-none font-mono text-sm w-full"
-                                  value={selectedArticle.content || ''}
-                                  onChange={e => setSelectedArticle(a => ({ ...a, content: e.target.value }))}
-                                  onBlur={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, templateType: selectedArticle.templateType })}
-                                  placeholder="Write your article content here... Supports Markdown formatting." />
-                              </div>
-                            ) : (
-                              <div>
-                                <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-2">Content (Block editor)</span>
-                                <BlockEditor
-                                  blocks={(() => { try { return JSON.parse(selectedArticle.contentBlocks || '[]'); } catch { return []; } })()}
-                                  onChange={blocks => {
-                                    const json = JSON.stringify(blocks);
-                                    setSelectedArticle(a => ({ ...a, contentBlocks: json }));
-                                    updateArticle(selectedArticle.id, { contentBlocks: json, templateType: selectedArticle.templateType });
-                                  }}
-                                />
-                              </div>
-                            )}
-                            <Button variant="action" onClick={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, contentBlocks: selectedArticle.contentBlocks, templateType: selectedArticle.templateType })}>
-                              Save Changes
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="prose prose-sm max-w-none dark:prose-invert">
-                            {selectedArticle.content ? (
-                              <div className="text-neutral-800 dark:text-neutral-200 leading-relaxed whitespace-pre-wrap text-sm"
-                                dangerouslySetInnerHTML={{ __html: renderMd(selectedArticle.content) }} />
-                            ) : (
-                              <EmptyState icon={FileText} title="No content yet" subtitle="Click Edit to start writing." action={<Button variant="action" onClick={() => setEditingArticle(true)}>Start Writing</Button>} />
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Contextual side panel — history / comments / analytics */}
-                      {articlePanel === 'history' && (
-                        <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
-                          <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Version history</h3>
-                          {articleVersions.length === 0 ? (
-                            <p className="text-xs text-neutral-600">No versions saved yet.</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {articleVersions.map(v => (
-                                <div key={v.id} className="bg-white dark:bg-neutral-800 rounded-lg p-3 border border-neutral-200 dark:border-neutral-700">
-                                  <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">Version {v.versionNumber}</p>
-                                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{v.savedBy || 'Unknown'}</p>
-                                  <p className="text-xs text-neutral-600 dark:text-neutral-400">{v.savedAt ? new Date(v.savedAt).toLocaleString() : '—'}</p>
-                                  <button onClick={() => setSelectedArticle(a => ({ ...a, content: v.content }))}
-                                    className="text-xs text-brand-navy hover:underline mt-1">Restore</button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {articlePanel === 'comments' && (
-                        <div className="w-72 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4 flex flex-col">
-                          <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Comments ({articleComments.length})</h3>
-                          <div className="flex-1 space-y-2">
-                            {articleComments.length === 0 && (
-                              <p className="text-xs text-neutral-600">No comments yet. Start the discussion below.</p>
-                            )}
-                            {articleComments.map(c => (
-                              <div key={c.id} className={`rounded-lg p-3 border ${c.resolved ? 'bg-semantic-success-surface border-semantic-success/30' : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700'}`}>
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{c.authorName || 'Unknown'}</span>
-                                  <span className="text-xs text-neutral-600 dark:text-neutral-400">{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : ''}</span>
-                                </div>
-                                <p className="text-xs text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">{c.body}</p>
-                                <div className="flex items-center gap-3 mt-1.5">
-                                  <button onClick={() => toggleArticleComment(selectedArticle.id, c.id, !c.resolved)}
-                                    className="text-xs text-brand-navy hover:underline">{c.resolved ? 'Reopen' : 'Resolve'}</button>
-                                  <button onClick={() => deleteArticleComment(selectedArticle.id, c.id)}
-                                    className="text-xs text-semantic-danger hover:underline">Delete</button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
-                            <textarea rows={3} value={newArticleComment} onChange={e => setNewArticleComment(e.target.value)}
-                              placeholder="Add a comment…" className="input resize-none text-xs w-full" />
-                            <Button variant="action" className="mt-2 w-full" onClick={() => addArticleComment(selectedArticle.id)}>Comment</Button>
-                          </div>
-                        </div>
-                      )}
-
-                      {articlePanel === 'analytics' && (
-                        <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
-                          <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Analytics</h3>
-                          {!articleAnalytics ? (
-                            <p className="text-xs text-neutral-600 dark:text-neutral-400">Loading…</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {[
-                                { label: 'Views', value: articleAnalytics.viewCount },
-                                { label: 'Helpful votes', value: articleAnalytics.helpfulVotes },
-                                { label: 'Work-item citations', value: articleAnalytics.citationCount },
-                                { label: 'Open comments', value: articleAnalytics.openComments },
-                                { label: 'Versions', value: articleAnalytics.versionCount },
-                                { label: 'Days since update', value: articleAnalytics.daysSinceUpdate },
-                              ].map(m => (
-                                <div key={m.label} className="bg-white dark:bg-neutral-800 rounded-lg p-3 border border-neutral-200 dark:border-neutral-700 flex items-center justify-between">
-                                  <span className="text-xs text-neutral-600 dark:text-neutral-400">{m.label}</span>
-                                  <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{m.value ?? '—'}</span>
-                                </div>
-                              ))}
-                              {articleAnalytics.stale && (
-                                <div className="bg-semantic-warning-surface border border-semantic-warning/30 rounded-lg p-3 flex items-center gap-2">
-                                  <AlertTriangle className="h-4 w-4 text-semantic-warning flex-shrink-0" aria-hidden="true" />
-                                  <span className="text-xs text-semantic-warning font-medium">Stale — published over {90} days ago without an update.</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <KnowledgeView
+              knowledgeSearch={knowledgeSearch}
+              knowledgeTab={knowledgeTab}
+              knowledgeSpaces={knowledgeSpaces}
+              selectedSpace={selectedSpace}
+              selectedArticle={selectedArticle}
+              editingArticle={editingArticle}
+              articlePanel={articlePanel}
+              knowledgeSearchResults={knowledgeSearchResults}
+              knowledgeArticles={knowledgeArticles}
+              articleVersions={articleVersions}
+              articleComments={articleComments}
+              articleAnalytics={articleAnalytics}
+              newArticleComment={newArticleComment}
+              articleContentFormat={articleContentFormat}
+              can={can}
+              setKnowledgeSearch={setKnowledgeSearch}
+              setKnowledgeTab={setKnowledgeTab}
+              setSelectedSpace={setSelectedSpace}
+              setSelectedArticle={setSelectedArticle}
+              setEditingArticle={setEditingArticle}
+              setArticlePanel={setArticlePanel}
+              setNewArticleComment={setNewArticleComment}
+              setArticleContentFormat={setArticleContentFormat}
+              setIsSpaceFormOpen={setIsSpaceFormOpen}
+              setIsArticleFormOpen={setIsArticleFormOpen}
+              setArticleForm={setArticleForm}
+              searchKnowledge={searchKnowledge}
+              fetchKnowledgeArticles={fetchKnowledgeArticles}
+              deleteKnowledgeSpace={deleteKnowledgeSpace}
+              updateArticle={updateArticle}
+              submitArticleForReview={submitArticleForReview}
+              publishArticle={publishArticle}
+              archiveArticle={archiveArticle}
+              restoreArticle={restoreArticle}
+              deleteArticle={deleteArticle}
+              addArticleComment={addArticleComment}
+              toggleArticleComment={toggleArticleComment}
+              deleteArticleComment={deleteArticleComment}
+              openArticlePanel={openArticlePanel}
+              rejectArticle={rejectArticle}
+            />
           )}
 
           {/* ======================================================
@@ -5653,480 +3812,74 @@ export default function App() {
               fetchStakeholders={fetchStakeholders}
             />
           )}
+          {/* COMPLIANCE — extracted to src/views/compliance-view.jsx (TD-003) */}
           {view === 'compliance' && (
-            <div className="flex flex-col h-full overflow-hidden">
-              {/* Header + tabs */}
-              <div className="px-6 pt-5 border-b border-neutral-200 dark:border-neutral-700">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Compliance</h1>
-                    <p className="text-sm text-neutral-500">Native rules engine — define what compliance means, catch drift in hours not quarters.</p>
-                  </div>
-                  {complianceTab === 'rules' && can('manage_compliance') && (
-                    <Button variant="action" onClick={newRuleBuilder}>New Rule</Button>
-                  )}
-                </div>
-                <div className="flex gap-1">
-                  {[
-                    { key: 'dashboard',  label: 'Dashboard',  load: () => fetchComplianceDashboard() },
-                    { key: 'rules',      label: 'Rules',      load: () => { fetchComplianceRules(); fetchComplianceTemplates(); } },
-                    { key: 'violations', label: 'Violations', load: () => fetchComplianceViolations() },
-                    { key: 'audit',      label: 'Audit log',  load: () => fetchComplianceAudit() },
-                  ].map(t => (
-                    <button key={t.key} onClick={() => { setComplianceTab(t.key); t.load(); }}
-                      className={`text-sm font-medium px-3 py-2 border-b-2 transition-colors ${complianceTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-6">
-                {/* ── DASHBOARD ── */}
-                {complianceTab === 'dashboard' && (
-                  !complianceDashboard ? <EmptyState icon={Shield} title="Loading compliance posture…" subtitle="Severity, trend and the rules × projects heatmap appear here." />
-                  : (
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {[
-                          { label: 'Active rules',  value: complianceDashboard.totals?.activeRules ?? 0,           tone: 'text-brand-navy' },
-                          { label: 'Open',          value: complianceDashboard.totals?.openViolations ?? 0,        tone: 'text-semantic-danger' },
-                          { label: 'Acknowledged',  value: complianceDashboard.totals?.acknowledgedViolations ?? 0, tone: 'text-semantic-warning' },
-                          { label: 'Resolved',      value: complianceDashboard.totals?.resolvedViolations ?? 0,    tone: 'text-semantic-success' },
-                        ].map(c => (
-                          <div key={c.label} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
-                            <p className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 font-semibold">{c.label}</p>
-                            <p className={`text-3xl font-bold mt-1 ${c.tone}`}>{c.value}</p>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Open by severity</h3>
-                          {(complianceDashboard.severityBreakdown || []).length === 0
-                            ? <p className="text-sm text-neutral-600 dark:text-neutral-400 py-4 text-center">No active violations. Clean posture.</p>
-                            : (complianceDashboard.severityBreakdown || []).map(s => (
-                              <div key={s.severity} className="flex items-center gap-3 py-1.5">
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[s.severity] || severityClass.MEDIUM}`}>{s.severity}</span>
-                                <div className="flex-1 h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
-                                  <div className="h-full bg-brand-navy rounded-full" style={{ width: `${Math.min(100, Number(s.count) * 12)}%` }} />
-                                </div>
-                                <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 w-8 text-right">{s.count}</span>
-                              </div>
-                            ))}
-                        </div>
-
-                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Top rules by open violations</h3>
-                          {(complianceDashboard.topRules || []).length === 0
-                            ? <p className="text-sm text-neutral-600 dark:text-neutral-400 py-4 text-center">Nothing flagged.</p>
-                            : (complianceDashboard.topRules || []).map(r => (
-                              <div key={r.rule_id} className="flex items-center justify-between py-1.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                                <span className="text-sm text-neutral-700 dark:text-neutral-200 truncate">{r.rule_name}</span>
-                                <span className="text-sm font-semibold text-semantic-danger ml-2">{r.count}</span>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-
-                      <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">30-day detection trend</h3>
-                        {(complianceDashboard.trend || []).length === 0
-                          ? <p className="text-sm text-neutral-600 dark:text-neutral-400 py-4 text-center">No violations detected in the last 30 days.</p>
-                          : (
-                            <div className="flex items-end gap-1 h-28 mt-3">
-                              {(complianceDashboard.trend || []).map(d => {
-                                const max = Math.max(...complianceDashboard.trend.map(x => Number(x.count)), 1);
-                                return (
-                                  <div key={d.day} className="flex-1 flex flex-col items-center justify-end" title={`${d.day}: ${d.count}`}>
-                                    <div className="w-full bg-brand-navy-tint rounded-t" style={{ height: `${Math.max(4, Number(d.count) * 100 / max)}%` }} />
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                      </div>
-
-                      <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Rules × projects heatmap</h3>
-                        {(complianceDashboard.heatmap || []).length === 0
-                          ? <p className="text-sm text-neutral-600 dark:text-neutral-400 py-4 text-center">No open violations to map.</p>
-                          : (
-                            <table className="w-full text-sm">
-                              <thead><tr className="text-left text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">
-                                <th className="py-1">Rule</th><th className="py-1">Project</th><th className="py-1 text-right">Open</th></tr></thead>
-                              <tbody>
-                                {(complianceDashboard.heatmap || []).map((h, i) => (
-                                  <tr key={i} className="border-t border-neutral-100 dark:border-neutral-700">
-                                    <td className="py-1.5 text-neutral-700 dark:text-neutral-200">{h.rule_name}</td>
-                                    <td className="py-1.5 font-mono text-xs text-neutral-600 dark:text-neutral-400">{h.project_id || '—'}</td>
-                                    <td className="py-1.5 text-right font-semibold text-semantic-danger">{h.count}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          )}
-                      </div>
-                    </div>
-                  )
-                )}
-
-                {/* ── RULES ── */}
-                {complianceTab === 'rules' && (
-                  <div className="space-y-6">
-                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Your rules ({complianceRules.length})</h3>
-                      {complianceRules.length === 0
-                        ? <EmptyState icon={ClipboardList} title="No rules yet" subtitle="Create a rule or start from a seeded template below." action={can('manage_compliance') ? <Button variant="action" onClick={newRuleBuilder}>New Rule</Button> : null} />
-                        : complianceRules.map(r => (
-                          <div key={r.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                            <span className={`text-xs font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[r.severity] || severityClass.MEDIUM}`}>{r.severity}</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{r.name}</p>
-                              <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate font-mono">{r.scopeBql ? `${r.scopeBql} ⟶ ` : ''}{r.assertionBql}</p>
-                            </div>
-                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${r.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500'}`}>{r.active ? 'ACTIVE' : 'INACTIVE'}</span>
-                            {can('manage_compliance') && <>
-                              <button onClick={() => testRule(r.id)} className="text-xs text-brand-navy hover:underline">Test</button>
-                              {r.active
-                                ? <button onClick={() => evaluateRule(r.id)} className="text-xs text-brand-navy hover:underline">Run</button>
-                                : null}
-                              <button onClick={() => setRuleActive(r.id, !r.active)} className="text-xs text-brand-navy hover:underline">{r.active ? 'Deactivate' : 'Activate'}</button>
-                              <button onClick={() => editRuleBuilder(r)} className="text-xs text-neutral-500 hover:underline">Edit</button>
-                              <button onClick={() => deleteRule(r.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
-                            </>}
-                          </div>
-                        ))}
-                      {ruleTestResult && ruleTestResult.valid && (
-                        <p className="text-xs text-neutral-500 mt-3">Last test: would flag <b>{ruleTestResult.violations}</b> item(s){ruleTestResult.sample?.length ? ` — e.g. ${ruleTestResult.sample.slice(0, 3).map(s => s.id).join(', ')}` : ''}.</p>
-                      )}
-                    </div>
-
-                    {/* B27 — AI compliance rule suggestion (hidden when AI is off; RB-40 §2) */}
-                    {anyCapabilityEnabled(aiCapabilities) && can('manage_compliance') && (
-                      <AiComplianceSuggestion
-                        workspaceId={activeWorkspaceId}
-                        onAdopt={rule => { setRuleBuilder({ ...rule, id: null }); }}
-                        onToast={showToast}
-                      />
-                    )}
-
-                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">Seeded template library</h3>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3">Opinionated defaults — clone one, test it, then activate.</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {complianceTemplates.map(t => (
-                          <div key={t.id} className="flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
-                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${severityClass[t.severity] || severityClass.MEDIUM}`}>{t.severity}</span>
-                            <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-200 truncate" title={t.description}>{t.name}</span>
-                            {can('manage_compliance') && <button onClick={() => cloneTemplate(t.id)} className="text-xs text-brand-navy hover:underline">+ Add</button>}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── VIOLATIONS ── */}
-                {complianceTab === 'violations' && (
-                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <select value={violationFilter} onChange={e => { setViolationFilter(e.target.value); fetchComplianceViolations(e.target.value); }} className="input text-xs py-1">
-                          <option value="">All statuses</option>
-                          <option value="OPEN">Open</option>
-                          <option value="ACKNOWLEDGED">Acknowledged</option>
-                          <option value="RESOLVED">Resolved</option>
-                          <option value="WONT_FIX">Won't fix</option>
-                        </select>
-                        <span className="text-xs text-neutral-600 dark:text-neutral-400">{complianceViolations.length} violation(s)</span>
-                      </div>
-                      {can('manage_compliance') && selectedViolations.length > 0 && (
-                        <Button variant="secondary" onClick={bulkAcknowledge}>Acknowledge {selectedViolations.length}</Button>
-                      )}
-                    </div>
-                    {complianceViolations.length === 0
-                      ? <EmptyState icon={CheckCircle2} title="No violations" subtitle="Nothing is breaching the active rules for this filter." />
-                      : complianceViolations.map(v => (
-                        <div key={v.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                          {can('manage_compliance') && (v.status === 'OPEN' || v.status === 'ACKNOWLEDGED') && (
-                            <input type="checkbox" checked={selectedViolations.includes(v.id)} onChange={() => toggleViolationSelect(v.id)} />
-                          )}
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[v.severity] || severityClass.MEDIUM}`}>{v.severity}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-neutral-900 dark:text-neutral-100 truncate">{v.workItemTitle || v.workItemId}</p>
-                            <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{v.workItemId}</p>
-                          </div>
-                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${vStatusClass[v.status] || ''}`}>{v.status}{v.escalated ? <ArrowUp className="inline-block h-3 w-3 align-text-bottom" aria-label="Escalated" /> : ''}</span>
-                          {can('manage_compliance') && (v.status === 'OPEN' || v.status === 'ACKNOWLEDGED') && <>
-                            {v.status === 'OPEN' && <button onClick={() => actOnViolation(v.id, 'acknowledge')} className="text-xs text-brand-navy hover:underline">Ack</button>}
-                            <button onClick={() => actOnViolation(v.id, 'resolve')} className="text-xs text-semantic-success hover:underline">Resolve</button>
-                            <button onClick={() => actOnViolation(v.id, 'wont-fix')} className="text-xs text-neutral-500 hover:underline">Won't fix</button>
-                          </>}
-                        </div>
-                      ))}
-                  </div>
-                )}
-
-                {/* ── AUDIT LOG ── */}
-                {complianceTab === 'audit' && (
-                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Append-only audit log</h3>
-                      <Button variant="secondary" onClick={exportComplianceAudit}>Export CSV</Button>
-                    </div>
-                    {complianceAudit.length === 0
-                      ? <EmptyState icon={ScrollText} title="No audit entries yet" subtitle="Rule changes, violations, acknowledgements and resolutions are recorded here." />
-                      : (
-                        <table className="w-full text-sm">
-                          <thead><tr className="text-left text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">
-                            <th className="py-1">When</th><th className="py-1">Event</th><th className="py-1">Subject</th><th className="py-1">Actor</th></tr></thead>
-                          <tbody>
-                            {complianceAudit.map((e, i) => (
-                              <tr key={i} className="border-t border-neutral-100 dark:border-neutral-700">
-                                <td className="py-1.5 text-neutral-600 dark:text-neutral-400 whitespace-nowrap">{e.occurred_at ? new Date(e.occurred_at).toLocaleString() : '—'}</td>
-                                <td className="py-1.5 text-neutral-700 dark:text-neutral-200">{(e.event_type || '').replace(/^COMPLIANCE_/, '').replaceAll('_', ' ').toLowerCase()}</td>
-                                <td className="py-1.5 font-mono text-xs text-neutral-600 dark:text-neutral-400">{e.aggregate_id}</td>
-                                <td className="py-1.5 text-neutral-500">{e.actor_id}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      )}
-                  </div>
-                )}
-              </div>
-
-              {/* Rule builder (test-before-activate) */}
-              {ruleBuilder && (
-                <Modal title={ruleBuilder.id ? 'Edit rule' : 'New compliance rule'} onClose={() => setRuleBuilder(null)} size="xl" className="max-h-[90vh] overflow-y-auto">
-                    <div className="space-y-3">
-                      <div>
-                        <label htmlFor="rule-name" className="block text-xs font-medium text-neutral-500 mb-1">Name</label>
-                        <input id="rule-name" className="input w-full" value={ruleBuilder.name} onChange={e => setRuleBuilder({ ...ruleBuilder, name: e.target.value })} placeholder="Stories need acceptance criteria before In Progress" />
-                      </div>
-                      <div>
-                        <label htmlFor="rule-desc" className="block text-xs font-medium text-neutral-500 mb-1">Description</label>
-                        <input id="rule-desc" className="input w-full" value={ruleBuilder.description} onChange={e => setRuleBuilder({ ...ruleBuilder, description: e.target.value })} />
-                      </div>
-                      <div>
-                        <label htmlFor="rule-scope-bql" className="block text-xs font-medium text-neutral-500 mb-1">Scope (BQL) — which items the rule applies to</label>
-                        <input id="rule-scope-bql" className="input w-full font-mono text-sm" value={ruleBuilder.scopeBql} onChange={e => setRuleBuilder({ ...ruleBuilder, scopeBql: e.target.value })} placeholder="type = Story AND status = In Progress" />
-                      </div>
-                      <div>
-                        <label htmlFor="rule-assertion-bql" className="block text-xs font-medium text-neutral-500 mb-1">Assertion (BQL) — what scoped items must satisfy</label>
-                        <input id="rule-assertion-bql" className="input w-full font-mono text-sm" value={ruleBuilder.assertionBql} onChange={e => setRuleBuilder({ ...ruleBuilder, assertionBql: e.target.value })} placeholder="acceptance_criteria != ''" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label htmlFor="rule-severity" className="block text-xs font-medium text-neutral-500 mb-1">Severity</label>
-                          <select id="rule-severity" className="input w-full" value={ruleBuilder.severity} onChange={e => setRuleBuilder({ ...ruleBuilder, severity: e.target.value })}>
-                            {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].map(s => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label htmlFor="rule-eval-mode" className="block text-xs font-medium text-neutral-500 mb-1">Evaluation</label>
-                          <select id="rule-eval-mode" className="input w-full" value={ruleBuilder.evaluationMode} onChange={e => setRuleBuilder({ ...ruleBuilder, evaluationMode: e.target.value })}>
-                            <option value="CONTINUOUS">Continuous</option>
-                            <option value="SCHEDULED">Scheduled</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div>
-                        <span className="block text-xs font-medium text-neutral-500 mb-1">Notify</span>
-                        <div className="flex gap-4 text-sm text-neutral-700 dark:text-neutral-200">
-                          <label className="flex items-center gap-2"><input type="checkbox" checked={ruleBuilder.notifyOwner} onChange={e => setRuleBuilder({ ...ruleBuilder, notifyOwner: e.target.checked })} /> Item owner</label>
-                          <label className="flex items-center gap-2"><input type="checkbox" checked={ruleBuilder.notifyAdmin} onChange={e => setRuleBuilder({ ...ruleBuilder, notifyAdmin: e.target.checked })} /> Project admins</label>
-                        </div>
-                      </div>
-                      <div>
-                        <label htmlFor="rule-escalate-hours" className="block text-xs font-medium text-neutral-500 mb-1">Escalate if unacknowledged after (hours) — optional</label>
-                        <input id="rule-escalate-hours" type="number" min="0" className="input w-full" value={ruleBuilder.escalateAfterHours} onChange={e => setRuleBuilder({ ...ruleBuilder, escalateAfterHours: e.target.value })} placeholder="e.g. 24" />
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2 mt-5">
-                      <Button variant="secondary" onClick={() => setRuleBuilder(null)}>Cancel</Button>
-                      <Button variant="action" onClick={saveRule}>{ruleBuilder.id ? 'Save rule' : 'Create rule (inactive)'}</Button>
-                    </div>
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-3">New rules are created inactive — test them, then activate from the rules list.</p>
-                </Modal>
-              )}
-            </div>
+            <ComplianceView
+              complianceTab={complianceTab}
+              complianceDashboard={complianceDashboard}
+              complianceRules={complianceRules}
+              complianceTemplates={complianceTemplates}
+              complianceViolations={complianceViolations}
+              complianceAudit={complianceAudit}
+              ruleBuilder={ruleBuilder}
+              ruleTestResult={ruleTestResult}
+              violationFilter={violationFilter}
+              selectedViolations={selectedViolations}
+              activeWorkspaceId={activeWorkspaceId}
+              aiCapabilities={aiCapabilities}
+              can={can}
+              AiComplianceSuggestion={AiComplianceSuggestion}
+              setComplianceTab={setComplianceTab}
+              setRuleBuilder={setRuleBuilder}
+              setViolationFilter={setViolationFilter}
+              newRuleBuilder={newRuleBuilder}
+              saveRule={saveRule}
+              testRule={testRule}
+              evaluateRule={evaluateRule}
+              setRuleActive={setRuleActive}
+              editRuleBuilder={editRuleBuilder}
+              deleteRule={deleteRule}
+              cloneTemplate={cloneTemplate}
+              fetchComplianceDashboard={fetchComplianceDashboard}
+              fetchComplianceRules={fetchComplianceRules}
+              fetchComplianceTemplates={fetchComplianceTemplates}
+              fetchComplianceViolations={fetchComplianceViolations}
+              fetchComplianceAudit={fetchComplianceAudit}
+              actOnViolation={actOnViolation}
+              bulkAcknowledge={bulkAcknowledge}
+              toggleViolationSelect={toggleViolationSelect}
+              exportComplianceAudit={exportComplianceAudit}
+              showToast={showToast}
+              anyCapabilityEnabled={anyCapabilityEnabled}
+            />
           )}
-
+\n          {/* SERVICE DESK — extracted to src/views/service-view.jsx (TD-003) */}
           {view === 'service' && (
-            <div className="flex flex-col h-full overflow-hidden">
-              <div className="px-6 pt-5 border-b border-neutral-200 dark:border-neutral-700">
-                <div className="mb-3">
-                  <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Service Desk</h1>
-                  <p className="text-sm text-neutral-500">Customer requests, agent queues, SLAs and satisfaction — the external face of Works.</p>
-                </div>
-                <div className="flex gap-1">
-                  {[
-                    { key: 'queues', label: 'Queues', load: () => fetchServiceRequests(serviceQueue) },
-                    { key: 'customers', label: 'Customers', load: () => fetchServiceCustomers() },
-                    { key: 'types', label: 'Request types', load: () => fetchServiceTypes() },
-                    { key: 'slas', label: 'SLA tiers', load: () => fetchServiceTiers() },
-                    { key: 'csat', label: 'CSAT', load: () => fetchServiceCsat() },
-                  ].map(t => (
-                    <button key={t.key} onClick={() => { setServiceTab(t.key); t.load(); }}
-                      className={`text-sm font-medium px-3 py-2 border-b-2 transition-colors ${serviceTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700'}`}>{t.label}</button>
-                  ))}
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto p-6">
-                {serviceTab === 'queues' && (
-                  <div className="space-y-4">
-                    <div className="flex gap-2">
-                      {['open', 'mine', 'unassigned', 'high'].map(q => (
-                        <button key={q} onClick={() => { setServiceQueue(q); fetchServiceRequests(q); }}
-                          className={`text-xs font-medium px-3 py-1.5 rounded-md border ${serviceQueue === q ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white dark:bg-neutral-800 text-neutral-600 border-neutral-200 dark:border-neutral-700'}`}>
-                          {q === 'open' ? 'All open' : q === 'mine' ? 'Mine' : q === 'unassigned' ? 'Unassigned' : 'High priority'}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      {serviceRequests.length === 0
-                        ? <EmptyState icon={Headset} title="Queue is clear" subtitle="No requests match this queue right now." />
-                        : serviceRequests.map(({ request: r, sla }) => (
-                          <div key={r.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                            <span className="text-xs font-bold px-2 py-0.5 rounded w-16 text-center bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200">{r.priority}</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{r.subject}</p>
-                              <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{r.typeKey} · {r.id}{r.assigneeId ? ` · ${r.assigneeId}` : ' · unassigned'}</p>
-                            </div>
-                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${sla.breached ? 'bg-semantic-danger text-white' : sla.state === 'AT_RISK' ? 'bg-semantic-warning text-white' : sla.state === 'NONE' ? 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200' : 'bg-semantic-success text-white'}`}>{sla.state === 'NONE' ? 'No SLA' : sla.state}</span>
-                            <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200">{(r.status || '').replace('_', ' ')}</span>
-                            {can('work_service') && (
-                              <>
-                                {!r.assigneeId && <button onClick={() => assignServiceRequest(r.id)} className="text-xs text-brand-navy hover:underline">Pick up</button>}
-                                {r.status !== 'RESOLVED' && r.status !== 'CLOSED' && <button onClick={() => transitionServiceRequest(r.id, 'RESOLVED')} className="text-xs text-semantic-success hover:underline">Resolve</button>}
-                                {r.status === 'RESOLVED' && <button onClick={() => transitionServiceRequest(r.id, 'CLOSED')} className="text-xs text-neutral-500 hover:underline">Close</button>}
-                              </>
-                            )}
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {serviceTab === 'customers' && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Customer accounts ({serviceCustomers.length})</h3>
-                      {can('manage_service') && <Button variant="action" onClick={() => setNewCustomer({ name: '', tier: 'SILVER', primaryColor: '', subdomain: '' })}>New customer</Button>}
-                    </div>
-                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      {serviceCustomers.length === 0
-                        ? <EmptyState icon={Building2} title="No customers yet" subtitle="Add a customer organization to start serving them through the portal." />
-                        : serviceCustomers.map(c => (
-                          <div key={c.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{c.name}</p>
-                              <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{c.subdomain ? `${c.subdomain} · ` : ''}{c.id}</p>
-                            </div>
-                            <span className="text-xs font-bold px-2 py-0.5 rounded bg-brand-navy text-white">{c.tier}</span>
-                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${c.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 text-neutral-600'}`}>{c.active ? 'ACTIVE' : 'INACTIVE'}</span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {serviceTab === 'types' && (
-                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                    {serviceTypes.length === 0
-                      ? <EmptyState icon={Archive} title="No request types" subtitle="Incident, Change and Service types power the portal forms." />
-                      : serviceTypes.map(t => (
-                        <div key={t.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{t.name}</p>
-                            <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{t.typeKey} · default {t.defaultPriority}</p>
-                          </div>
-                          {t.isSystem && <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200">SYSTEM</span>}
-                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${t.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 text-neutral-600'}`}>{t.active ? 'ACTIVE' : 'INACTIVE'}</span>
-                        </div>
-                      ))}
-                  </div>
-                )}
-
-                {serviceTab === 'slas' && (
-                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                    {serviceTiers.length === 0
-                      ? <EmptyState icon={Timer} title="No SLA tiers" subtitle="Define response and resolution targets per customer tier." />
-                      : serviceTiers.map(t => (
-                        <div key={t.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                          <span className="text-xs font-bold px-2 py-0.5 rounded w-20 text-center bg-brand-navy text-white">{t.tier}</span>
-                          <div className="flex-1 text-sm text-neutral-700 dark:text-neutral-200">
-                            Respond in {t.responseMinutes}m · Resolve in {t.resolutionMinutes}m
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
-
-                {serviceTab === 'csat' && (
-                  <div className="space-y-4">
-                    {!serviceCsat ? <EmptyState icon={Star} title="No CSAT yet" subtitle="Ratings appear here once customers rate resolved requests." />
-                      : (
-                        <>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            {[
-                              { label: 'Responses', value: serviceCsat.summary?.count ?? 0 },
-                              { label: 'Average', value: serviceCsat.summary?.average ?? 0 },
-                              { label: '% Satisfied', value: `${serviceCsat.summary?.percentSatisfied ?? 0}%` },
-                            ].map(c => (
-                              <div key={c.label} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
-                                <p className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 font-semibold">{c.label}</p>
-                                <p className="text-3xl font-bold mt-1 text-brand-navy">{c.value}</p>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                            <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Recent feedback</h3>
-                            {(serviceCsat.responses || []).length === 0
-                              ? <p className="text-sm text-neutral-500">No comments yet.</p>
-                              : serviceCsat.responses.slice(0, 10).map(r => (
-                                <div key={r.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                                  <span className="text-brand-orange text-sm inline-flex items-center" aria-label={`Rated ${r.rating} of 5`}>{Array.from({ length: 5 }).map((_, si) => <Star key={si} className={`h-3.5 w-3.5 ${si < r.rating ? 'fill-current' : ''}`} aria-hidden="true" />)}</span>
-                                  <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-200 truncate">{r.comment || '—'}</span>
-                                </div>
-                              ))}
-                          </div>
-                        </>
-                      )}
-                  </div>
-                )}
-              </div>
-
-              {newCustomer && (
-                <Modal title="New customer" onClose={() => setNewCustomer(null)} size="lg">
-                    <div className="space-y-3">
-                      <div>
-                        <label htmlFor="cust-name" className="block text-xs font-medium text-neutral-500 mb-1">Name</label>
-                        <input id="cust-name" className="input w-full" value={newCustomer.name} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label htmlFor="cust-tier" className="block text-xs font-medium text-neutral-500 mb-1">Tier</label>
-                          <select id="cust-tier" className="input w-full" value={newCustomer.tier} onChange={e => setNewCustomer({ ...newCustomer, tier: e.target.value })}>
-                            {['PLATINUM', 'GOLD', 'SILVER'].map(s => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label htmlFor="cust-subdomain" className="block text-xs font-medium text-neutral-500 mb-1">Subdomain</label>
-                          <input id="cust-subdomain" className="input w-full" value={newCustomer.subdomain} onChange={e => setNewCustomer({ ...newCustomer, subdomain: e.target.value })} />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2 mt-5">
-                      <Button variant="secondary" onClick={() => setNewCustomer(null)}>Cancel</Button>
-                      <Button variant="action" onClick={createServiceCustomer}>Create customer</Button>
-                    </div>
-                </Modal>
-              )}
-            </div>
+            <ServiceView
+              serviceTab={serviceTab}
+              serviceQueue={serviceQueue}
+              serviceRequests={serviceRequests}
+              serviceCustomers={serviceCustomers}
+              serviceTypes={serviceTypes}
+              serviceTiers={serviceTiers}
+              serviceCsat={serviceCsat}
+              newCustomer={newCustomer}
+              formDesignerTypeId={formDesignerTypeId}
+              can={can}
+              setServiceTab={setServiceTab}
+              setServiceQueue={setServiceQueue}
+              setNewCustomer={setNewCustomer}
+              setFormDesignerTypeId={setFormDesignerTypeId}
+              fetchServiceRequests={fetchServiceRequests}
+              fetchServiceCustomers={fetchServiceCustomers}
+              fetchServiceTypes={fetchServiceTypes}
+              fetchServiceTiers={fetchServiceTiers}
+              fetchServiceCsat={fetchServiceCsat}
+              assignServiceRequest={assignServiceRequest}
+              transitionServiceRequest={transitionServiceRequest}
+              createServiceCustomer={createServiceCustomer}
+              showToast={showToast}
+            />
           )}
 
         </div>
@@ -6963,22 +4716,7 @@ export default function App() {
 // Modal now lives in components/works/molecules/modal.jsx — accessible (role=dialog, aria-modal,
 // focus trap, Escape, backdrop close, scroll lock, focus restoration). Imported at the top.
 
-function renderMd(text) {
-  if (!text) return '';
-  // Article / comment / reply bodies are user-supplied, so the generated HTML is sanitised
-  // (tight tag + attr allowlist) before any call site hands it to dangerouslySetInnerHTML.
-  // RB-10 §8 / CLAUDE.md §17.3 — never inject unsanitised user content (closes stored XSS).
-  const html = text
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`(.+?)`/g, '<code class="prose-md-code">$1</code>')
-    .replace(/^- (.+)$/gm, '• $1')
-    .replace(/\n/g, '<br/>');
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['strong', 'em', 'code', 'br'],
-    ALLOWED_ATTR: ['class'],
-  });
-}
+// renderMd extracted to @/lib/utils (imported above). Imported as renderMd from utils (TD-003).
 
 // eslint-disable-next-line no-unused-vars
 function getTimeOfDay() {
@@ -6991,157 +4729,12 @@ function getTimeOfDay() {
 // StatCard, RoleBadge, Field and the onPressKey keyboard helper now live in
 // components/works/{stat-card,role-badge,field}.jsx and lib/utils.js (imported above).
 
-// Iteration 6 — PNG/PDF/CSV export controls for a dashboard or report. PNG/PDF capture
-// the element with id=targetId; CSV uses the supplied flat rows. Heavy libs are
-// lazy-loaded inside the export helpers (CLAUDE.md §4.18).
-function ExportButtons({ targetId, rows, filename, onError }) {
-  const run = async (fn) => { try { await fn(); } catch { if (onError) onError(); } };
-  const cls = 'text-xs px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors';
-  return (
-    <div className="flex items-center gap-1">
-      <span className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mr-0.5">Export</span>
-      <button type="button" className={cls} onClick={() => run(() => exportElementToPdf(document.getElementById(targetId), filename))}>PDF</button>
-      <button type="button" className={cls} onClick={() => run(() => exportRowsToCsv(rows, filename))}>CSV</button>
-      <button type="button" className={cls} onClick={() => run(() => exportElementToPng(document.getElementById(targetId), filename))}>PNG</button>
-    </div>
-  );
-}
+// ExportButtons extracted to src/components/works/export-buttons.jsx (TD-003).
 
-// Count work items grouped by one dimension (status/type/priority), sorted desc.
-// Feeds the PIE and BAR dashboard widgets (iteration 6).
-function aggregateByDimension(items, dimension) {
-  const counts = {};
-  (items || []).forEach(i => {
-    const key = i[dimension] || 'None';
-    counts[key] = (counts[key] || 0) + 1;
-  });
-  return Object.entries(counts)
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => b.value - a.value);
-}
+// aggregateByDimension / filterReportItems moved to lib/dashboard-metrics.js (TD-003).
 
-// Apply a report section's filter to the work-item set (mirrors the dashboard widget filter).
-function filterReportItems(items, filter = {}) {
-  return (items || []).filter(i => {
-    if (filter.open && i.status === 'Done') return false;
-    if (filter.status && i.status !== filter.status) return false;
-    if (filter.priority && i.priority !== filter.priority) return false;
-    if (filter.type && i.type !== filter.type) return false;
-    return true;
-  });
-}
-
-// Iteration 6 — edit controls for a report section's config (chart type/dimension,
-// table limit, open-only filter). Shown only in edit mode.
-function ReportSectionControls({ section, onChange }) {
-  const config = section.config || {};
-  const setConfig = (patch) => onChange({ ...section, config: { ...config, ...patch } });
-  const setFilter = (patch) => setConfig({ filter: { ...(config.filter || {}), ...patch } });
-  return (
-    <div className="flex flex-wrap items-center gap-3 mb-3 p-2 rounded-md bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-700">
-      {section.type === 'chart' && (
-        <>
-          <label className="text-xs text-neutral-600 dark:text-neutral-400 flex items-center gap-1">Chart
-            <select value={config.chartType || 'bar'} onChange={e => setConfig({ chartType: e.target.value })}
-              className="text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-1 py-0.5">
-              <option value="bar">Bar</option>
-              <option value="pie">Pie</option>
-            </select>
-          </label>
-          <label className="text-xs text-neutral-600 dark:text-neutral-400 flex items-center gap-1">Group by
-            <select value={config.dimension || 'status'} onChange={e => setConfig({ dimension: e.target.value })}
-              className="text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-1 py-0.5">
-              <option value="status">Status</option>
-              <option value="type">Type</option>
-              <option value="priority">Priority</option>
-            </select>
-          </label>
-        </>
-      )}
-      {section.type === 'table' && (
-        <label className="text-xs text-neutral-600 dark:text-neutral-400 flex items-center gap-1">Limit
-          <input type="number" min="1" max="100" value={config.limit || 20}
-            onChange={e => setConfig({ limit: Math.max(1, Math.min(100, Number(e.target.value) || 20)) })}
-            className="w-16 text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-1 py-0.5" />
-        </label>
-      )}
-      {section.type !== 'narrative' && (
-        <label className="text-xs text-neutral-600 dark:text-neutral-400 flex items-center gap-1.5">
-          <input type="checkbox" checked={!!(config.filter && config.filter.open)}
-            onChange={e => setFilter({ open: e.target.checked })} />
-          Open items only
-        </label>
-      )}
-    </div>
-  );
-}
-
-// Iteration 6 — renders one section of a custom report from the live work-item set.
-// type: kpi | chart | table | narrative. In edit mode it shows title + config controls.
-function ReportSectionCard({ section, index, total, workItems, editMode, onChange, onMove, onRemove }) {
-  const config = section.config || {};
-  const items = filterReportItems(workItems, config.filter);
-
-  return (
-    <section className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-5">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        {editMode ? (
-          <input value={section.title || ''} onChange={e => onChange({ ...section, title: e.target.value })}
-            aria-label="Section title" placeholder="Section title"
-            className="flex-1 text-sm font-semibold text-neutral-900 dark:text-white bg-transparent border-b border-neutral-200 dark:border-neutral-700 focus-visible:outline-none focus-visible:border-brand-navy" />
-        ) : (
-          <h3 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide">{section.title || section.type}</h3>
-        )}
-        {editMode && (
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <button onClick={() => onMove(-1)} disabled={index === 0} aria-label="Move section up"
-              className="text-xs px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy disabled:opacity-40 disabled:pointer-events-none"><ArrowUp className="h-3.5 w-3.5" aria-hidden="true" /></button>
-            <button onClick={() => onMove(1)} disabled={index === total - 1} aria-label="Move section down"
-              className="text-xs px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy disabled:opacity-40 disabled:pointer-events-none"><ArrowDown className="h-3.5 w-3.5" aria-hidden="true" /></button>
-            <button onClick={onRemove} aria-label="Remove section" className="text-xs text-semantic-danger hover:underline ml-1">Remove</button>
-          </div>
-        )}
-      </div>
-
-      {editMode && <ReportSectionControls section={section} onChange={onChange} />}
-
-      {section.type === 'kpi' && (
-        <p className="text-3xl font-bold text-brand-navy dark:text-white">{items.length}</p>
-      )}
-
-      {section.type === 'chart' && (
-        config.chartType === 'pie'
-          ? <DonutChart data={aggregateByDimension(items, config.dimension || 'status')} />
-          : <BarChart data={aggregateByDimension(items, config.dimension || 'status')} />
-      )}
-
-      {section.type === 'table' && (
-        <div className="divide-y divide-neutral-100 dark:divide-neutral-700/50">
-          {items.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-600">No matching items.</p>}
-          {items.slice(0, config.limit || 20).map(i => (
-            <div key={i.id} className="flex items-center justify-between gap-2 py-1.5">
-              <span className="min-w-0 flex-1 truncate text-sm text-neutral-800 dark:text-neutral-200">{i.title}</span>
-              <span className="flex items-center gap-3 flex-shrink-0">
-                <span className="text-xs text-neutral-600 dark:text-neutral-400">{i.priority || '—'}</span>
-                <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">{i.status}</span>
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {section.type === 'narrative' && (
-        editMode
-          ? <textarea value={config.text || ''} rows={3} placeholder="Write the narrative for this section…"
-              onChange={e => onChange({ ...section, config: { ...config, text: e.target.value } })}
-              className="w-full text-sm text-neutral-800 dark:text-neutral-200 bg-neutral-50 dark:bg-neutral-900 rounded-md border border-neutral-200 dark:border-neutral-700 p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40" />
-          : (config.text
-              ? <p className="text-sm text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">{config.text}</p>
-              : <p className="text-sm text-neutral-600 dark:text-neutral-400">—</p>)
-      )}
-    </section>
-  );
-}
+// ReportSectionControls + ReportSectionCard extracted to
+// src/components/works/organisms/report-section-card.jsx (TD-003).
 
 // Iteration 6 — public, read-only embed of a shared dashboard. Rendered before the auth
 // gate from ?share=<token>; fetches the token-scoped public endpoint and renders the widgets
@@ -7215,219 +4808,9 @@ function PublicDashboardEmbed({ token }) {
   );
 }
 
-// Iteration 6 — renders a single dashboard widget from the live work-item set.
-// Widget data is computed client-side from the config (metric + filter) so the
-// designer is fully functional without a per-widget query endpoint.
-function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove, onResize, onConfigChange, onDrill, onDragStart, onDrop, sprints, velocity, currentUserId }) {
-  let config = {};
-  try { config = JSON.parse(widget.config || '{}'); } catch { config = {}; }
-  const filter = config.filter || {};
-  const items = filterWidgetItems(workItems, filter, { currentUserId });
-  const isChart = widget.widgetType === 'PIE' || widget.widgetType === 'BAR';
-  const dimension = config.dimension || 'status';
-  // When a server scope aggregate is present (TEAM/ORG), it takes precedence over the
-  // client-loaded items; its by-dimension series is already [{ label, value }].
-  const aggKey = 'by' + dimension.charAt(0).toUpperCase() + dimension.slice(1);
-  const chartData = aggregate ? (aggregate[aggKey] || []) : aggregateByDimension(items, dimension);
-  const scorecardCount = aggregate ? (aggregate.total ?? 0) : items.length;
-  const statusSeries = aggregate
-    ? (aggregate.byStatus || [])
-    : Object.entries(items.reduce((acc, i) => { const k = i.status || 'Unknown'; acc[k] = (acc[k] || 0) + 1; return acc; }, {}))
-        .map(([label, value]) => ({ label, value }));
-  const listItems = aggregate ? (aggregate.recent || []) : items;
-  const span = Math.max(1, Math.min(widget.gridW || 4, 12));
-  // Drill needs the underlying item set, which the aggregate doesn't carry — disable it then.
-  const canDrill = !editMode && !!onDrill && !aggregate;
-  const drillBy = (label) => items.filter(i => (i[dimension] || 'None') === label);
+// DashboardWidgetCard extracted to src/components/works/organisms/dashboard-widget-card.jsx (TD-003).
+// Imported at the top of this file; used here by PublicDashboardEmbed.
 
-  return (
-    <div
-      style={{ gridColumn: `span ${span} / span ${span}` }}
-      draggable={editMode}
-      onDragStart={editMode ? onDragStart : undefined}
-      onDragOver={editMode ? (e => e.preventDefault()) : undefined}
-      onDrop={editMode ? onDrop : undefined}
-      className={`bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 ${editMode ? 'cursor-move ring-1 ring-brand-navy/20' : ''}`}>
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide truncate">{widget.title || widget.widgetType}</p>
-        {editMode && (
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {[4, 6, 12].map(w => (
-              <button key={w} onClick={() => onResize(w)} aria-label={`Set width ${w}`}
-                className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${span === w ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy'}`}>
-                {w === 12 ? 'Full' : `${w}`}
-              </button>
-            ))}
-            <button onClick={onRemove} aria-label="Remove widget" className="text-xs text-semantic-danger hover:underline ml-1">Remove</button>
-          </div>
-        )}
-      </div>
-
-      {editMode && isChart && (
-        <div className="flex items-center gap-2 mb-2">
-          <label htmlFor={`dim-${widget.id}`} className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Group by</label>
-          <select id={`dim-${widget.id}`} value={dimension}
-            onChange={e => onConfigChange && onConfigChange({ ...config, dimension: e.target.value })}
-            className="text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
-            <option value="status">Status</option>
-            <option value="type">Type</option>
-            <option value="priority">Priority</option>
-          </select>
-        </div>
-      )}
-
-      {widget.widgetType === 'SCORECARD' && (
-        canDrill ? (
-          <button type="button" onClick={() => onDrill({ title: widget.title || 'Items', items })}
-            className="text-3xl font-bold text-brand-navy dark:text-white rounded hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
-            {scorecardCount}
-          </button>
-        ) : (
-          <p className="text-3xl font-bold text-brand-navy dark:text-white">{scorecardCount}</p>
-        )
-      )}
-
-      {widget.widgetType === 'STATUS_BAR' && (
-        <div className="space-y-1.5 mt-1">
-          {(() => {
-            const entries = statusSeries;
-            const max = Math.max(1, ...entries.map(e => e.value));
-            if (entries.length === 0) return <p className="text-xs text-neutral-600 dark:text-neutral-600">No matching items.</p>;
-            return entries.map(({ label: status, value: count }) => {
-              const row = (
-                <>
-                  <span className="text-xs text-neutral-600 dark:text-neutral-400 w-24 truncate text-left">{status}</span>
-                  <div className="flex-1 h-2 rounded-full bg-neutral-100 dark:bg-neutral-700 overflow-hidden">
-                    <div className="h-full bg-brand-navy-tint rounded-full" style={{ width: `${(count / max) * 100}%` }} />
-                  </div>
-                  <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 w-6 text-right">{count}</span>
-                </>
-              );
-              return canDrill ? (
-                <button key={status} type="button" aria-label={`${status}: ${count} — show items`}
-                  onClick={() => onDrill({ title: `${widget.title || 'Items'} · Status: ${status}`, items: items.filter(i => (i.status || 'Unknown') === status) })}
-                  className="flex w-full items-center gap-2 rounded px-1 -mx-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors">
-                  {row}
-                </button>
-              ) : (
-                <div key={status} className="flex items-center gap-2">{row}</div>
-              );
-            });
-          })()}
-        </div>
-      )}
-
-      {widget.widgetType === 'ITEM_LIST' && (
-        <div className="space-y-1 mt-1">
-          {listItems.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-600">No matching items.</p>}
-          {listItems.slice(0, config.limit || 6).map(i => (
-            <div key={i.id} className="flex items-center justify-between gap-2 py-1 border-b border-neutral-100 dark:border-neutral-700/50 last:border-0">
-              <span className="text-xs text-neutral-700 dark:text-neutral-300 truncate">{i.title}</span>
-              <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400 flex-shrink-0">{i.status}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {widget.widgetType === 'PIE' && (
-        <DonutChart data={chartData}
-          onSelect={canDrill ? (e => onDrill({ title: `${widget.title || 'Items'} · ${dimension}: ${e.label}`, items: drillBy(e.label) })) : undefined} />
-      )}
-
-      {widget.widgetType === 'BAR' && (
-        <BarChart data={chartData}
-          onSelect={canDrill ? (e => onDrill({ title: `${widget.title || 'Items'} · ${dimension}: ${e.label}`, items: drillBy(e.label) })) : undefined} />
-      )}
-
-      {(widget.widgetType === 'SPRINT_HEALTH' || widget.widgetType === 'BURNDOWN') && (() => {
-        const p = sprintProgress(sprints, config.mode || (widget.widgetType === 'BURNDOWN' ? 'burndown' : 'health'));
-        const pct = p.max ? Math.round((p.value / p.max) * 100) : 0;
-        return (
-          <div className="mt-1">
-            <div className="flex items-end justify-between mb-1">
-              <span className="text-3xl font-bold text-brand-navy dark:text-white">{pct}%</span>
-              <span className="text-xs text-neutral-600 dark:text-neutral-400">{p.value}/{p.max || 0} pt · {p.label}</span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-neutral-100 dark:bg-neutral-700 overflow-hidden">
-              <div className="h-full bg-semantic-success rounded-full" style={{ width: `${p.max ? Math.min((p.value / p.max) * 100, 100) : 0}%` }} />
-            </div>
-            <p className="text-xs text-neutral-500 mt-1 truncate">{p.sprint?.name || 'No active sprint'}</p>
-          </div>
-        );
-      })()}
-
-      {widget.widgetType === 'VELOCITY_LINE' && (() => {
-        const points = velocityPoints(velocity);
-        if (points.length === 0) return <p className="text-xs text-neutral-600">No sprint history yet.</p>;
-        const max = Math.max(1, ...points.map(p => p.value));
-        const n = points.length;
-        const path = points.map((p, i) => `${n <= 1 ? 0 : (i / (n - 1)) * 100},${30 - (p.value / max) * 28}`).join(' ');
-        return (
-          <div className="mt-1 text-brand-navy dark:text-brand-amber">
-            <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="w-full h-14" aria-hidden="true">
-              <polyline points={path} fill="none" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-            </svg>
-            <div className="flex justify-between text-xs text-neutral-500 mt-1">
-              <span>{points[0]?.label}</span><span>{points[points.length - 1]?.label}</span>
-            </div>
-          </div>
-        );
-      })()}
-
-      {widget.widgetType === 'CUMULATIVE_FLOW' && (() => {
-        const series = statusBreakdown(items);
-        const total = series.reduce((a, b) => a + b.value, 0) || 1;
-        if (series.length === 0) return <p className="text-xs text-neutral-600">No matching items.</p>;
-        return (
-          <div className="mt-1">
-            <div className="flex w-full h-3 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-700">
-              {series.map((s, idx) => (
-                <div key={s.label} className={SERIES_BG[idx % SERIES_BG.length]} style={{ width: `${(s.value / total) * 100}%` }} title={`${s.label}: ${s.value}`} />
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
-              {series.map((s, idx) => (
-                <span key={s.label} className="flex items-center gap-1 text-xs text-neutral-600 dark:text-neutral-400">
-                  <span className={`w-2 h-2 rounded-full ${SERIES_BG[idx % SERIES_BG.length]}`} />
-                  {s.label} <span className="font-semibold text-neutral-700 dark:text-neutral-300">{s.value}</span>
-                </span>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
-
-      {widget.widgetType === 'MATRIX' && (() => {
-        const m = statusPriorityMatrix(items);
-        return (
-          <div className="mt-1 overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-neutral-500">
-                  <th className="text-left font-semibold py-1 pr-2">Status</th>
-                  {m.cols.map(c => <th key={c} className="text-right font-semibold py-1 px-1">{c}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {m.rows.map(row => (
-                  <tr key={row.label} className="border-t border-neutral-100 dark:border-neutral-700/50">
-                    <td className="py-1 pr-2 text-neutral-700 dark:text-neutral-300 truncate">{row.label}</td>
-                    {row.cells.map((c, idx) => (
-                      <td key={idx} className={`text-right py-1 px-1 ${c > 0 ? 'text-neutral-900 dark:text-neutral-100 font-semibold' : 'text-neutral-600 dark:text-neutral-400'}`}>{c || '—'}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
-      })()}
-    </div>
-  );
-}
-
-// Iteration 6 — drill-down modal: lists the work items behind a clicked widget
-// element. Each row opens that item's detail (no navigation away from the dashboard).
 // B27 — AI-assisted compliance rule suggestion. Sends a natural-language prompt to the AI
 // which returns suggested rules; the user can adopt one directly into the rule builder.
 // Fallback: when AI is off or over budget, the component is not rendered (hidden by the parent).
@@ -7496,42 +4879,7 @@ function AiComplianceSuggestion({ workspaceId, onAdopt, onToast }) {
   );
 }
 
-function DashboardDrillModal({ drill, onClose, onOpenItem }) {
-  const items = drill.items || [];
-  return (
-    <div className="fixed inset-0 bg-neutral-900/50 dark:bg-black/70 flex items-center justify-center z-50 p-4"
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-      onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
-      role="presentation" tabIndex={-1} aria-label={drill.title}>
-      <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-lg border border-neutral-100 dark:border-neutral-700 w-full max-w-md max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-700">
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-neutral-900 dark:text-white truncate">{drill.title}</h2>
-            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{items.length} {items.length === 1 ? 'item' : 'items'}</p>
-          </div>
-          <button onClick={onClose} aria-label="Close"
-            className="flex-shrink-0 ml-2 text-lg leading-none text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
-        <div className="overflow-y-auto p-2">
-          {items.length === 0 ? (
-            <p className="text-xs text-neutral-600 dark:text-neutral-600 p-4 text-center">No matching items.</p>
-          ) : items.map(i => (
-            <button key={i.id} type="button" onClick={() => onOpenItem(i)}
-              className="flex w-full items-center justify-between gap-2 px-3 py-2 rounded-md text-left hover:bg-neutral-50 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors">
-              <span className="min-w-0 flex-1 truncate text-sm text-neutral-800 dark:text-neutral-200">{i.title}</span>
-              <span className="flex items-center gap-2 flex-shrink-0">
-                {i.priority && <span className="text-xs text-neutral-600 dark:text-neutral-400">{i.priority}</span>}
-                <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">{i.status}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+// DashboardDrillModal extracted to src/components/works/organisms/dashboard-drill-modal.jsx (TD-003).
 
 function formatEventType(eventType) {
   const map = {
@@ -7547,50 +4895,7 @@ function formatEventType(eventType) {
   return map[eventType] || (eventType || '').toLowerCase().replace(/_/g, ' ');
 }
 
-function PmArtifactList({ title, icon: Icon, items, columns, renderRow, onDelete, onAdd, statusColors = {} }) {
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-          {isIconComponent(Icon) ? <Icon aria-hidden="true" className="h-4 w-4 text-neutral-600 dark:text-neutral-400" /> : <span>{Icon}</span>} {title}
-        </h2>
-        <Button variant="action" onClick={onAdd}>+ New</Button>
-      </div>
-      {items.length === 0
-        ? <EmptyState icon={Icon} title={`No ${title.toLowerCase()} yet`} subtitle="Click + New to add your first entry." action={<Button variant="action" onClick={onAdd}>+ New</Button>} />
-        : <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
-                <tr>
-                  {columns.map(c => <th key={c} className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">{c}</th>)}
-                  <th className="px-4 py-2.5"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                {items.map(item => {
-                  const cells = renderRow(item);
-                  return (
-                    <tr key={item.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
-                      {cells.map((cell, i) => (
-                        <td key={i} className={`px-4 py-3 ${i === 0 ? 'font-medium text-neutral-900 dark:text-neutral-100 max-w-xs truncate' : 'text-neutral-600 dark:text-neutral-300 text-xs'}`}>
-                          {i === 0 ? cell : (statusColors[cell]
-                            ? <span className={`font-semibold ${statusColors[cell]}`}>{cell}</span>
-                            : cell)}
-                        </td>
-                      ))}
-                      <td className="px-4 py-3">
-                        <button onClick={() => onDelete(item.id)} className="text-neutral-300 hover:text-semantic-danger text-xs transition-colors">Delete</button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-      }
-    </div>
-  );
-}
+// PmArtifactList extracted to src/components/works/organisms/pm-artifact-list.jsx (TD-003).
 
 function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
   const [items, setItems] = React.useState([]);
@@ -7720,122 +5025,4 @@ function RichTextEditor({ id, value, onChange, onBlur, placeholder }) {
   );
 }
 
-function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOver, onDrop, onSelect, onDelete, density, allItems = [] }) {
-  const pad = { compact: 'p-2', comfortable: 'p-3', spacious: 'p-4' };
-
-  const getSwimlanes = () => {
-    if (swimlaneBy === 'none') return [{ key: 'all', label: null, items }];
-    if (swimlaneBy === 'assignee') {
-      const keys = [...new Set(items.map(i => i.assigneeId || 'unassigned'))];
-      return keys.map(k => ({ key: k, label: k === 'unassigned' ? 'Unassigned' : users.find(u => u.id === k)?.fullName || k, items: items.filter(i => (i.assigneeId || 'unassigned') === k) }));
-    }
-    if (swimlaneBy === 'type') {
-      const keys = [...new Set(items.map(i => i.type))];
-      return keys.map(k => ({ key: k, label: k, items: items.filter(i => i.type === k) }));
-    }
-    if (swimlaneBy === 'priority') {
-      return ['CRITICAL','HIGH','MEDIUM','LOW'].map(p => ({ key: p, label: p, items: items.filter(i => (i.priority || 'MEDIUM') === p) })).filter(s => s.items.length > 0);
-    }
-    if (swimlaneBy === 'epic') {
-      // Group by parent Epic (or "No Epic" if no parent)
-      const epicMap = {};
-      items.forEach(item => {
-        const epicId = item.parentId || 'no-epic';
-        if (!epicMap[epicId]) epicMap[epicId] = [];
-        epicMap[epicId].push(item);
-      });
-      return Object.entries(epicMap).map(([epicId, epicItems]) => {
-        const epic = allItems.find(i => i.id === epicId && i.type === 'Epic');
-        return {
-          key: epicId,
-          label: epic ? epic.title : epicId === 'no-epic' ? 'No Epic' : epicId,
-          items: epicItems
-        };
-      }).sort((a, b) => {
-        if (a.label === 'No Epic') return 1;
-        if (b.label === 'No Epic') return -1;
-        return a.label.localeCompare(b.label);
-      });
-    }
-    if (swimlaneBy === 'tag') {
-      const tagMap = { 'No Tags': [] };
-      items.forEach(item => {
-        if (!item.tags || item.tags.length === 0) {
-          tagMap['No Tags'].push(item);
-        } else {
-          item.tags.forEach(tag => {
-            if (!tagMap[tag]) tagMap[tag] = [];
-            tagMap[tag].push(item);
-          });
-        }
-      });
-      return Object.entries(tagMap)
-        .filter(([, tagItems]) => tagItems.length > 0)
-        .map(([tag, tagItems]) => ({ key: tag, label: tag, items: tagItems }))
-        .sort((a, b) => {
-          if (a.label === 'No Tags') return 1;
-          if (b.label === 'No Tags') return -1;
-          return a.label.localeCompare(b.label);
-        });
-    }
-    return [{ key: 'all', label: null, items }];
-  };
-
-  return (
-    <div className="flex-1 overflow-auto dark:bg-neutral-900">
-      {getSwimlanes().map(lane => (
-        <div key={lane.key}>
-          {lane.label && (
-            <div className="flex items-center gap-2 mb-2 mt-4 px-1">
-              <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700"></div>
-              <span className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider px-2">{lane.label}</span>
-              <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700"></div>
-            </div>
-          )}
-          <div className="flex gap-4 min-h-40">
-            {columns.map(col => {
-              const colItems = lane.items.filter(i => i.status === col.name);
-              return (
-                <div key={col.name} className="flex-1 min-w-48 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3"
-                  onDragOver={onDragOver} onDrop={(e) => onDrop(e, col.name)}>
-                  {!lane.label && (
-                    <div className="flex items-center justify-between mb-3 px-1">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${col.dot}`}></span>
-                        <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{col.name}</h3>
-                      </div>
-                      <span className="text-xs bg-white dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full shadow-sm">{colItems.length}</span>
-                    </div>
-                  )}
-                  <div className="space-y-2 flex-1">
-                    {colItems.length === 0 && <div className="flex items-center justify-center py-6 border-2 border-dashed border-neutral-200 rounded-lg"><p className="text-xs text-neutral-300">Drop here</p></div>}
-                    {colItems.map(item => (
-                      <div key={item.id} draggable onDragStart={(e) => onDragStart(e, item.id)}
-                        className={`bg-white dark:bg-neutral-700 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-600 cursor-grab hover:shadow-md transition-shadow group ${pad[density]}`}>
-                        <div className="flex items-start justify-between mb-1.5">
-                          <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.id}</span>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => onSelect(item)} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-xs p-0.5" aria-label="Edit"><SquarePen className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                            <button onClick={() => onDelete(item.id)} className="text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label="Delete"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                          </div>
-                        </div>
-                        <button type="button" className="text-sm font-medium text-neutral-900 leading-snug mb-2 cursor-pointer text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => onSelect(item)}>{item.title}</button>
-                        <div className="flex items-center justify-between">
-                          <TypeBadge type={item.type} compact={density === 'compact'} />
-                          <div className="flex items-center gap-1.5">
-                            {(item.storyPoints > 0) && <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">{item.storyPoints}pt</span>}
-                            {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={5} />}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+// SprintBoard extracted to src/components/works/organisms/sprint-board.jsx (TD-003)

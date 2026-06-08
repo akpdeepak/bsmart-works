@@ -229,6 +229,61 @@ class AiAssistServiceTest {
         org.mockito.Mockito.verify(users, org.mockito.Mockito.never()).findAll();
     }
 
+    // ── deterministicNlToBql (iter-10 Cap O fallback) ───────────────────────────
+
+    @Test
+    void deterministicNlToBql_emptyTextReturnsEmpty() {
+        assertThat(AiAssistService.deterministicNlToBql("")).isEmpty();
+    }
+
+    @Test
+    void deterministicNlToBql_mapsInProgressStatusKeyword() {
+        String bql = AiAssistService.deterministicNlToBql("in progress items");
+        assertThat(bql).contains("status").contains("In Progress");
+    }
+
+    @Test
+    void deterministicNlToBql_mapsHighPriorityKeyword() {
+        String bql = AiAssistService.deterministicNlToBql("high priority items");
+        assertThat(bql).contains("priority").contains("High");
+    }
+
+    @Test
+    void deterministicNlToBql_mapsUrgentToCritical() {
+        String bql = AiAssistService.deterministicNlToBql("urgent tasks");
+        assertThat(bql).contains("priority").contains("Critical");
+    }
+
+    @Test
+    void deterministicNlToBql_mapsBugTypeKeyword() {
+        String bql = AiAssistService.deterministicNlToBql("find bugs");
+        assertThat(bql).contains("type").contains("Bug");
+    }
+
+    @Test
+    void deterministicNlToBql_mapsAssignedToMeKeyword() {
+        String bql = AiAssistService.deterministicNlToBql("items assigned to me");
+        assertThat(bql).contains("assigneeId = @me");
+    }
+
+    @Test
+    void deterministicNlToBql_mapsOverdueKeyword() {
+        String bql = AiAssistService.deterministicNlToBql("overdue items");
+        assertThat(bql).contains("dueDate").contains("today");
+    }
+
+    @Test
+    void deterministicNlToBql_mapsTodayKeyword() {
+        String bql = AiAssistService.deterministicNlToBql("created today");
+        assertThat(bql).contains("today");
+    }
+
+    @Test
+    void deterministicNlToBql_combinesMultipleClauses() {
+        String bql = AiAssistService.deterministicNlToBql("in progress high priority bugs assigned to me");
+        assertThat(bql).contains("status").contains("priority").contains("type").contains("assigneeId");
+    }
+
     // ── fixtures ─────────────────────────────────────────────────────────────────
 
     private static WorkItem item(String id, String title, String desc) {

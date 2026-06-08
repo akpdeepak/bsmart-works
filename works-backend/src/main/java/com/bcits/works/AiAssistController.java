@@ -55,6 +55,26 @@ public class AiAssistController {
         return v == null ? null : v.toString();
     }
 
+    // ── Cap O iter-10 · NL → BQL (iteration 10, first AI surface) ───────────────
+
+    @Operation(summary = "Natural language → BQL",
+        description = "Translates a plain-language query to BQL. The result can be previewed in the visual BQL builder before execution. Falls back to a deterministic keyword-to-BQL parser when AI is off or over budget.")
+    @PostMapping("/nl-to-bql")
+    public AiAssistService.NlToBqlResult nlToBql(@RequestParam String workspaceId,
+                                                  @RequestBody Map<String, Object> body) {
+        String userId = requireMember(workspaceId);
+        return assist.nlToBql(workspaceId, userId, str(body, "text"), inContext(body));
+    }
+
+    @Operation(summary = "Summarize content",
+        description = "Summarizes a comments thread (kind=comments, subjectId=workItemId), a project sprint (kind=sprint, subjectId=projectId), or the workspace dashboard (kind=dashboard). Falls back to a structured deterministic extract when AI is off.")
+    @PostMapping("/summarize")
+    public AiAssistService.SummarizeResult summarize(@RequestParam String workspaceId,
+                                                      @RequestBody Map<String, Object> body) {
+        String userId = requireMember(workspaceId);
+        return assist.summarize(workspaceId, userId, str(body, "kind"), str(body, "subjectId"), inContext(body));
+    }
+
     // ── Cap P · command bar ───────────────────────────────────────────────────────
 
     @Operation(summary = "Parse AI command", description = "Parses a natural-language command into a typed ActionPlan. The plan can then be reviewed before execution via /command/execute.")

@@ -456,6 +456,116 @@ public class AiAssistService {
         return Map.of("articles", hits, "meta", AiMeta.of(out));
     }
 
+    // ── Cap O iter-10 · Natural language → BQL (iteration 10, first AI surface) ──
+
+    public record NlToBqlResult(String bql, boolean valid, String confidence, AiMeta meta) { }
+
+    /**
+     * Translates a natural-language query into a BQL expression.
+     * Deterministic fallback: keyword → BQL clause mapping; AI enriches with a more
+     * precise parse and a confidence label.
+     */
+    public NlToBqlResult nlToBql(String workspaceId, String userId, String text, boolean inContext) {
+        String bql = deterministicNlToBql(text == null ? "" : text);
+        AiControlPlaneService.AiOutcome out = controlPlane.invoke(new AiControlPlaneService.AiCall(
+            workspaceId, userId, AiCapabilities.NL_TO_BQL, "Translate to BQL: " + text, bql, null, inContext));
+        String finalBql = out.fallback() ? bql : (out.text() != null && !out.text().isBlank() ? out.text() : bql);
+        String confidence = out.fallback() ? "KEYWORD_MATCH" : "AI";
+        return new NlToBqlResult(finalBql, !finalBql.isBlank(), confidence, AiMeta.of(out));
+    }
+
+    /** Deterministic keyword-to-BQL translator — also the tested fallback. */
+    static String deterministicNlToBql(String text) {
+        String lower = text.toLowerCase(Locale.ROOT);
+        List<String> clauses = new ArrayList<>();
+        // Status
+        String status = detectStatus(lower);
+        if (status != null) {
+            clauses.add("status = \"" + status + "\"");
+        }
+        // Priority
+        String priority = containsAny(lower, "critical", "urgent") ? "Critical"
+            : containsAny(lower, "high") ? "High"
+            : containsAny(lower, "low") ? "Low"
+            : containsAny(lower, "medium") ? "Medium" : null;
+        if (priority != null) {
+            clauses.add("priority = \"" + priority + "\"");
+        }
+        // Type
+        String type = detectType(lower);
+        if (!"Task".equals(type) || containsAny(lower, "task")) {
+            clauses.add("type = \"" + type + "\"");
+        }
+        // Assignee
+        if (containsAny(lower, "assigned to me", "my items", "mine")) {
+            clauses.add("assigneeId = @me");
+        } else if (containsAny(lower, "unassigned")) {
+            clauses.add("assigneeId = null");
+        }
+        // Time windows
+        if (containsAny(lower, "last week", "this week")) {
+            clauses.add("createdAt > @startOfWeek");
+        } else if (containsAny(lower, "today")) {
+            clauses.add("createdAt > @today");
+        } else if (containsAny(lower, "overdue")) {
+            clauses.add("dueDate < @today AND status != \"Done\"");
+        }
+        return String.join(" AND ", clauses);
+    }
+
+    // ── Cap O iter-10 · Summarization (iteration 10, second AI surface) ───────────
+
+    public record SummarizeResult(String kind, String summary, AiMeta meta) { }
+
+    /**
+     * Summarizes a content entity. {@code kind} is one of {@code comments}, {@code sprint},
+     * or {@code dashboard}; {@code subjectId} is the work-item id for comments or project id for
+     * sprints. Deterministic fallback is a structured extract (not a narrative).
+     */
+    public SummarizeResult summarize(String workspaceId, String userId, String kind, String subjectId,
+                                     boolean inContext) {
+        String k = kind == null ? "comments" : kind.toLowerCase(Locale.ROOT);
+        String draft = buildSummarizationDraft(workspaceId, k, subjectId);
+        AiControlPlaneService.AiOutcome out = controlPlane.invoke(new AiControlPlaneService.AiCall(
+            workspaceId, userId, AiCapabilities.SUMMARIZATION,
+            "Summarize " + k + (subjectId != null ? " for " + subjectId : ""), draft, null, inContext));
+        String summary = out.fallback() ? draft : (out.text() != null && !out.text().isBlank() ? out.text() : draft);
+        return new SummarizeResult(k, summary, AiMeta.of(out));
+    }
+
+    private String buildSummarizationDraft(String workspaceId, String kind, String subjectId) {
+        return switch (kind) {
+            case "comments" -> {
+                if (subjectId == null) {
+                    yield "No subject specified.";
+                }
+                List<Comment> threadComments = comments.findByWorkItemIdOrderByCreatedAtAsc(subjectId);
+                if (threadComments.isEmpty()) {
+                    yield "No comments yet.";
+                }
+                Comment last = threadComments.get(threadComments.size() - 1);
+                yield threadComments.size() + " comment(s). Most recent: " + snippet(last.getBody());
+            }
+            case "sprint" -> {
+                String projId = subjectId != null ? subjectId : firstProjectId(workspaceId);
+                if (projId == null) {
+                    yield "No project found.";
+                }
+                List<WorkItem> items = workItems.findByProjectId(projId);
+                long done = items.stream().filter(w -> "Done".equalsIgnoreCase(nv(w.getStatus()))).count();
+                long total = items.size();
+                yield total + " item(s) in project — " + done + " done (" +
+                    (total == 0 ? 0 : Math.round(done * 100.0 / total)) + "% complete).";
+            }
+            default -> { // dashboard
+                List<WorkItem> allItems = scopedItems(workspaceId);
+                long open = allItems.stream().filter(w -> !"Done".equalsIgnoreCase(nv(w.getStatus()))).count();
+                long doneCount = allItems.size() - open;
+                yield allItems.size() + " item(s) workspace-wide — " + doneCount + " done, " + open + " open.";
+            }
+        };
+    }
+
     // ── Cap N · Smart request routing ─────────────────────────────────────────────
 
     public Map<String, Object> route(String workspaceId, String userId, String text, boolean inContext) {

@@ -1,6 +1,6 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import {
-  Star, X, ArrowUp, CornerDownRight, Reply,
+  Star, X, ArrowUp, CornerDownRight, Reply, Sparkles,
   Upload, Image as ImageIcon, ShieldCheck, ArrowRight,
   ClipboardList, IndentIncrease, IndentDecrease,
 } from 'lucide-react';
@@ -148,6 +148,23 @@ export function WorkItemDetailPanel({
   // activity
   activity, statusDurations, activityEventFilter, setActivityEventFilter, setActivity, reportError,
 }) {
+  // Iteration 10 Cap O — summarize comments (second AI surface)
+  const [commentSummary, setCommentSummary] = useState(null);
+  const [summaryBusy, setSummaryBusy] = useState(false);
+
+  const summarizeComments = () => {
+    if (!selectedItem?.id || !activeWorkspaceId) return;
+    setSummaryBusy(true);
+    setCommentSummary(null);
+    api.send(`/ai/summarize?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, {
+      method: 'POST',
+      body: JSON.stringify({ kind: 'comments', subjectId: selectedItem.id }),
+    })
+      .then(d => setCommentSummary(d.summary || null))
+      .catch(() => {})
+      .finally(() => setSummaryBusy(false));
+  };
+
   return (
     <>
       <button
@@ -447,6 +464,26 @@ export function WorkItemDetailPanel({
           {/* COMMENTS TAB */}
           {detailTab === 'comments' && (
             <div>
+              {/* Iteration 10 Cap O — AI comment summarization */}
+              {comments.length >= 2 && anyCapabilityEnabled(aiCapabilities) && (
+                <div className="mb-3">
+                  {commentSummary ? (
+                    <div className="flex gap-2 rounded-lg border border-brand-navy/20 bg-neutral-50 dark:bg-neutral-800 p-3 text-sm text-neutral-700 dark:text-neutral-200">
+                      <Sparkles aria-hidden="true" className="h-4 w-4 text-brand-navy shrink-0 mt-0.5" />
+                      <p className="flex-1">{commentSummary}</p>
+                      <button onClick={() => setCommentSummary(null)} aria-label="Dismiss summary" className="text-neutral-400 hover:text-neutral-600"><X className="h-3.5 w-3.5" /></button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={summarizeComments}
+                      disabled={summaryBusy}
+                      className="flex items-center gap-1.5 text-xs text-brand-navy hover:underline disabled:opacity-50">
+                      <Sparkles aria-hidden="true" className="h-3.5 w-3.5" />
+                      {summaryBusy ? 'Summarizing…' : 'Summarize comments'}
+                    </button>
+                  )}
+                </div>
+              )}
               {comments.length === 0 && (
                 <p className="text-xs text-neutral-600 text-center py-6">No comments yet. Be the first to comment.</p>
               )}

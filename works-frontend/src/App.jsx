@@ -3162,6 +3162,8 @@ export default function App() {
               bqlFilters={bqlFilters}
               bqlResults={bqlResults}
               workItems={workItems}
+              activeWorkspaceId={activeWorkspaceId}
+              aiCapabilities={aiCapabilities}
               setBqlQuery={setBqlQuery}
               setBqlFilterName={setBqlFilterName}
               setSelectedItem={setSelectedItem}

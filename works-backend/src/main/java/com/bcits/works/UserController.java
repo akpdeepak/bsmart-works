@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -60,7 +61,7 @@ public class UserController {
 
     /** Set the current user's preferred UI language (self-service; no RBAC beyond authentication). */
     @PutMapping("/me/locale")
-    public Map<String, String> setLocale(@RequestBody LocaleRequest req) {
+    public Map<String, String> setLocale(@Valid @RequestBody LocaleRequest req) {
         String uid = authenticatedUser.id();
         String locale = req.locale() == null ? "" : req.locale().trim().toLowerCase();
         if (!SUPPORTED_LOCALES.contains(locale)) {

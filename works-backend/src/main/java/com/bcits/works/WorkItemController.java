@@ -58,18 +58,23 @@ public class WorkItemController {
         "project_id IN (SELECT p.id FROM projects p "
         + "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id WHERE wm.user_id = ?)";
 
-    @Operation(summary = "List work items", description = "Returns all work items visible to the authenticated user (workspace-scoped). Filter by parentId for child items.")
+    @Operation(summary = "List work items", description = "Returns work items visible to the authenticated user (workspace-scoped). Paginated; default page=0 size=50 max=200.")
     @GetMapping
-    public List<WorkItem> getAllWorkItems(@RequestParam(required = false) String parentId) {
+    public List<WorkItem> getAllWorkItems(@RequestParam(required = false) String parentId,
+                                          @RequestParam(defaultValue = "0") int page,
+                                          @RequestParam(defaultValue = "50") int size) {
         String userId = authenticatedUser.id();
+        int limit = Math.min(Math.max(size, 1), 200);
+        int offset = Math.max(page, 0) * limit;
         List<WorkItem> items;
         if (parentId != null) {
             items = jdbc.query("SELECT * FROM work_items WHERE parent_id = ? AND deleted_at IS NULL "
-                + "AND " + MEMBER_PROJECTS + " ORDER BY created_at ASC",
-                this::mapRow, parentId, userId);
+                + "AND " + MEMBER_PROJECTS + " ORDER BY created_at ASC LIMIT ? OFFSET ?",
+                this::mapRow, parentId, userId, limit, offset);
         } else {
             items = jdbc.query("SELECT * FROM work_items WHERE deleted_at IS NULL "
-                + "AND " + MEMBER_PROJECTS + " ORDER BY created_at ASC", this::mapRow, userId);
+                + "AND " + MEMBER_PROJECTS + " ORDER BY created_at ASC LIMIT ? OFFSET ?",
+                this::mapRow, userId, limit, offset);
         }
         attachTagsBatch(items);
         attachStarred(items, userId);
@@ -91,12 +96,15 @@ public class WorkItemController {
         attachStarred(items, userId);
         return items.get(0);
     }
-    public List<WorkItem> getTrash() {
+    public List<WorkItem> getTrash(@RequestParam(defaultValue = "0") int page,
+                                   @RequestParam(defaultValue = "50") int size) {
         String userId = authenticatedUser.id();
+        int limit = Math.min(Math.max(size, 1), 200);
+        int offset = Math.max(page, 0) * limit;
         List<WorkItem> items = jdbc.query(
             "SELECT * FROM work_items WHERE deleted_at IS NOT NULL AND deleted_at > NOW() - INTERVAL '30 days' "
-            + "AND " + MEMBER_PROJECTS + " ORDER BY deleted_at DESC",
-            this::mapRow, userId);
+            + "AND " + MEMBER_PROJECTS + " ORDER BY deleted_at DESC LIMIT ? OFFSET ?",
+            this::mapRow, userId, limit, offset);
         attachTagsBatch(items);
         return items;
     }
@@ -132,11 +140,15 @@ public class WorkItemController {
     }
 
     @GetMapping("/starred")
-    public List<WorkItem> getStarred() {
+    public List<WorkItem> getStarred(@RequestParam(defaultValue = "0") int page,
+                                      @RequestParam(defaultValue = "50") int size) {
         String userId = authenticatedUser.id();
+        int limit = Math.min(Math.max(size, 1), 200);
+        int offset = Math.max(page, 0) * limit;
         List<WorkItem> items = jdbc.query(
-            "SELECT wi.* FROM work_items wi JOIN starred_items si ON si.work_item_id = wi.id WHERE si.user_id = ? AND wi.deleted_at IS NULL ORDER BY si.created_at DESC",
-            this::mapRow, userId);
+            "SELECT wi.* FROM work_items wi JOIN starred_items si ON si.work_item_id = wi.id "
+            + "WHERE si.user_id = ? AND wi.deleted_at IS NULL ORDER BY si.created_at DESC LIMIT ? OFFSET ?",
+            this::mapRow, userId, limit, offset);
         attachTagsBatch(items);
         items.forEach(i -> i.setStarred(true));
         return items;

@@ -75,7 +75,7 @@ public class CustomerAccountController {
     }
 
     @PutMapping("/{id}")
-    public CustomerAccount update(@PathVariable String id, @RequestBody CustomerAccount updated) {
+    public CustomerAccount update(@PathVariable String id, @Valid @RequestBody CustomerAccount updated) {
         String userId = authenticatedUser.id();
         CustomerAccount existing = load(id);
         rbac.require(userId, existing.getWorkspaceId(), "manage_service");

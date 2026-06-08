@@ -44,12 +44,13 @@ class WorkItemTenantScopeTest {
     void getAllWorkItems_confinesResultsToCallersWorkspaces() {
         when(authenticatedUser.id()).thenReturn("USR-1");
         // Empty result short-circuits the tag/star enrichment, isolating the main query.
-        when(jdbc.query(anyString(), any(RowMapper.class), any(Object.class))).thenReturn(List.of());
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object.class), any(Object.class), any(Object.class)))
+                .thenReturn(List.of());
 
-        controller.getAllWorkItems(null);
+        controller.getAllWorkItems(null, 0, 50);
 
         ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
-        verify(jdbc).query(sql.capture(), any(RowMapper.class), any(Object.class));
+        verify(jdbc).query(sql.capture(), any(RowMapper.class), any(Object.class), any(Object.class), any(Object.class));
         assertThat(sql.getValue())
                 .contains("workspace_members")          // joins through the tenant boundary
                 .contains("wm.user_id = ?");            // scoped to the caller

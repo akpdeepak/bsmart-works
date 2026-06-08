@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -47,7 +48,7 @@ public class ConfigSandboxController {
     public record CreateSandboxRequest(String name) { }
 
     @PostMapping
-    public ConfigSandbox create(@RequestParam String workspaceId, @RequestBody CreateSandboxRequest req) {
+    public ConfigSandbox create(@RequestParam String workspaceId, @Valid @RequestBody CreateSandboxRequest req) {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "manage_workspace");
         return sandboxes.create(workspaceId, req.name(), userId);
@@ -57,7 +58,7 @@ public class ConfigSandboxController {
 
     @PutMapping("/{sandboxId}")
     public ConfigSandbox update(@RequestParam String workspaceId, @PathVariable String sandboxId,
-                                @RequestBody UpdateSandboxRequest req) {
+                                @Valid @RequestBody UpdateSandboxRequest req) {
         rbac.require(authenticatedUser.id(), workspaceId, "manage_workspace");
         return sandboxes.update(sandboxId, workspaceId, req.document());
     }

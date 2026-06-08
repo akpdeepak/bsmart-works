@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import jakarta.validation.Valid;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -63,7 +64,7 @@ public class AiController {
     public record PolicyRequest(String scopeType, String capability, String userId, boolean enabled) { }
 
     @PutMapping("/policies")
-    public AiPolicy setPolicy(@RequestParam String workspaceId, @RequestBody PolicyRequest req) {
+    public AiPolicy setPolicy(@RequestParam String workspaceId, @Valid @RequestBody PolicyRequest req) {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "manage_ai");
         String scope = req.scopeType() == null ? "" : req.scopeType().toUpperCase();
@@ -86,7 +87,7 @@ public class AiController {
     public record BudgetRequest(long monthlyCapCents) { }
 
     @PutMapping("/budget")
-    public AiBudget setBudget(@RequestParam String workspaceId, @RequestBody BudgetRequest req) {
+    public AiBudget setBudget(@RequestParam String workspaceId, @Valid @RequestBody BudgetRequest req) {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "manage_ai");
         if (req.monthlyCapCents() < 0) {
@@ -106,7 +107,7 @@ public class AiController {
     public record SettingsRequest(String defaultModelTier, boolean blockPii, boolean blockFinancial) { }
 
     @PutMapping("/settings")
-    public AiWorkspaceSettings setSettings(@RequestParam String workspaceId, @RequestBody SettingsRequest req) {
+    public AiWorkspaceSettings setSettings(@RequestParam String workspaceId, @Valid @RequestBody SettingsRequest req) {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "manage_ai");
         return settingsService.set(workspaceId, req.defaultModelTier(), req.blockPii(), req.blockFinancial());

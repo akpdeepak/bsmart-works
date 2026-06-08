@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,7 +50,7 @@ public class RealtimeController {
                                   Double cursorX, Double cursorY) { }
 
     @PostMapping("/presence")
-    public List<PresenceService.Presence> heartbeat(@RequestBody PresenceRequest req) {
+    public List<PresenceService.Presence> heartbeat(@Valid @RequestBody PresenceRequest req) {
         String userId = authenticatedUser.id();
         rbac.require(userId, req.workspaceId(), "view_items");
         return presence.heartbeat(req.workspaceId(), userId, req.name(), req.location(),

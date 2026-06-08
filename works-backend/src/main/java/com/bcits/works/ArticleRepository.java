@@ -41,6 +41,12 @@ public interface ArticleRepository extends JpaRepository<Article, String> {
                                              @Param("userId") String userId,
                                              Pageable pageable);
 
+    /** Children of a given parent article (workspace-scoped via parent's space). */
+    List<Article> findByParentIdOrderByUpdatedAtDesc(String parentId);
+
+    /** Top-level articles in a space (no parent). */
+    List<Article> findBySpaceIdAndParentIdIsNullOrderByUpdatedAtDesc(String spaceId);
+
     /** Workspace-scoped search (RB-40 §1). */
     @Query(nativeQuery = true,
            value = "SELECT a.* FROM articles a " +

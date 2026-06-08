@@ -17,7 +17,11 @@
   <!-- No tabs for indentation is not enforced (project uses tabs); keep it lenient. -->
   <module name="LineLength">
     <property name="max" value="140"/>
-    <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://"/>
+    <!-- Skip: package/import declarations; URLs; annotation lines (e.g. @Tag, @Operation, @Query
+         whose string attributes cannot be split); lines that are pure string fragments (SQL
+         continuations) starting with a quote; and long single-line comments. -->
+    <property name="ignorePattern"
+              value="^package.*|^import.*|a href|href|http://|https://|^\s*@|^\s*&quot;|^\s*//|^\s*description\s*=|^\s*org\.springframework\."/>
   </module>
 
   <module name="TreeWalker">

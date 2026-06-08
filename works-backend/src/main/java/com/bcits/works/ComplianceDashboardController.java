@@ -124,9 +124,8 @@ public class ComplianceDashboardController {
     }
 
     private String csvCell(Object value) {
-        if (value == null) return ""; {
+        if (value == null) return "";
         String s = value.toString().replace("\"", "\"\"");
-        }
         return '"' + s + '"';
     }
 }

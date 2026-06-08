@@ -357,8 +357,11 @@ public class DashboardService {
         if (val == null) return 0;
         if (val instanceof Long) return (Long) val;
         if (val instanceof Integer) return ((Integer) val).longValue();
-        if (val instanceof Number) return ((Number) val).longValue(); {
-        try { return Long.parseLong(val.toString()); } catch (Exception e) { return 0; }
+        if (val instanceof Number) return ((Number) val).longValue();
+        try {
+            return Long.parseLong(val.toString());
+        } catch (Exception e) {
+            return 0;
         }
     }
 }

@@ -91,9 +91,8 @@ public class ImpedimentService {
 
     /** Age of an open impediment in whole days from when it was raised; 0 if unknown. */
     static long ageDays(Impediment i, LocalDate today) {
-        if (i.getRaisedAt() == null) return 0; {
+        if (i.getRaisedAt() == null) return 0;
         LocalDate end = i.getResolvedAt() != null ? i.getResolvedAt() : today;
-        }
         long days = end.toEpochDay() - i.getRaisedAt().toEpochDay();
         return Math.max(0, days);
     }

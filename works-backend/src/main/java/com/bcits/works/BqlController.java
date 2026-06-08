@@ -93,10 +93,14 @@ public class BqlController {
         List<BqlFilter> shared = filterRepo.findByWorkspaceIdAndIsSharedTrue(workspaceId);
         Set<String> ids = new HashSet<>();
         List<BqlFilter> combined = new ArrayList<>();
-        for (BqlFilter f : mine) { ids.add(f.getId()); combined.add(f); }
-        for (BqlFilter f : shared) { if (!ids.contains(f.getId())) combined.add(f); } {
-        return combined;
+        for (BqlFilter f : mine) {
+            ids.add(f.getId());
+            combined.add(f);
         }
+        for (BqlFilter f : shared) {
+            if (!ids.contains(f.getId())) { combined.add(f); }
+        }
+        return combined;
     }
 
     @PostMapping("/filters")

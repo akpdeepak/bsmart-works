@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -123,14 +122,12 @@ public class AttachmentController {
             @PathVariable String workItemId, @PathVariable Long id) throws IOException {
         List<Map<String, Object>> rows = jdbc.queryForList(
             "SELECT file_name, mime_type, storage_path FROM attachments WHERE id = ? AND work_item_id = ?", id, workItemId);
-        if (rows.isEmpty()) return ResponseEntity.notFound().build(); {
+        if (rows.isEmpty()) return ResponseEntity.notFound().build();
         Map<String, Object> row = rows.get(0);
-        }
         Path filePath = UPLOAD_DIR.resolve((String) row.get("storage_path"));
         org.springframework.core.io.Resource resource = new org.springframework.core.io.FileSystemResource(filePath);
-        if (!resource.exists()) return ResponseEntity.notFound().build(); {
+        if (!resource.exists()) return ResponseEntity.notFound().build();
         String mime = (String) row.get("mime_type");
-        }
         if (mime == null) mime = "application/octet-stream";
         return ResponseEntity.ok()
             .header("Content-Type", mime)

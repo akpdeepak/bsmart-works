@@ -64,9 +64,8 @@ public class MeetingController {
         meeting.setCreatedBy(userId);
         meeting.setCreatedAt(OffsetDateTime.now());
         meeting.setUpdatedAt(OffsetDateTime.now());
-        if (meeting.getAttendees() == null) meeting.setAttendees("[]"); {
+        if (meeting.getAttendees() == null) meeting.setAttendees("[]");
         Meeting saved = meetingRepo.save(meeting);
-        }
         // Auto-create the four structured note sections
         for (String section : new String[]{"AGENDA", "NOTES", "DECISIONS", "ACTIONS"}) {
             MeetingNote note = new MeetingNote();
@@ -102,7 +101,10 @@ public class MeetingController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
-        meetingRepo.findById(id).ifPresent(m -> { m.setDeletedAt(OffsetDateTime.now()); meetingRepo.save(m); });
+        meetingRepo.findById(id).ifPresent(m -> {
+            m.setDeletedAt(OffsetDateTime.now());
+            meetingRepo.save(m);
+        });
         return ResponseEntity.noContent().build();
     }
 

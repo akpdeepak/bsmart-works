@@ -63,7 +63,10 @@ public class PmIssueController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
-        repo.findById(id).ifPresent(i -> { i.setDeletedAt(OffsetDateTime.now()); repo.save(i); });
+        repo.findById(id).ifPresent(i -> {
+            i.setDeletedAt(OffsetDateTime.now());
+            repo.save(i);
+        });
         return ResponseEntity.noContent().build();
     }
 }

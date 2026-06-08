@@ -34,11 +34,10 @@ Format: What · Why accepted · Impact · Trigger to fix.
 - **Impact:** These endpoints will return unbounded result sets and OOM the JVM once data grows
 - **Trigger:** Migrate each endpoint as it is touched in the course of iteration work; never add a new `findAll()` on user data
 
-### TD-005 — Checkstyle in reporting mode (`failOnViolation=false`)
+### TD-005 — Checkstyle in reporting mode (`failOnViolation=false`) — **CLOSED 2026-06-08**
 - **What:** Checkstyle violations are logged but do not block the build
-- **Why accepted:** The current baseline may have violations; flipping it without a clean baseline would immediately break CI
-- **Impact:** Style violations accumulate silently
-- **Trigger:** Run `./mvnw checkstyle:check` locally; once it is clean, flip `failOnViolation=true` in `pom.xml`
+- **Resolution:** Baseline cleaned to zero violations; `failOnViolation=true` set in `pom.xml`.
+  Any new violation now fails CI at the `verify` phase. Config: `config/checkstyle/checkstyle.xml`.
 
 ---
 

@@ -106,9 +106,8 @@ public class ReportDeliveryScheduler {
     private void sendEmail(String userId, String reportName, String link) {
         String email = jdbc.query("SELECT email FROM users WHERE id = ?",
             rs -> rs.next() ? rs.getString(1) : null, userId);
-        if (email == null) return; {
+        if (email == null) return;
         SimpleMailMessage msg = new SimpleMailMessage();
-        }
         msg.setFrom(FROM);
         msg.setTo(email);
         msg.setSubject("Your report is ready: " + reportName);

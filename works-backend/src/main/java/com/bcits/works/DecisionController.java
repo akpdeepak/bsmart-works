@@ -70,7 +70,10 @@ public class DecisionController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
-        repo.findById(id).ifPresent(d -> { d.setDeletedAt(OffsetDateTime.now()); repo.save(d); });
+        repo.findById(id).ifPresent(d -> {
+            d.setDeletedAt(OffsetDateTime.now());
+            repo.save(d);
+        });
         return ResponseEntity.noContent().build();
     }
 }

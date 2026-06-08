@@ -16,9 +16,8 @@ public class ArticleAnalyticsService {
 
     /** Whole days elapsed between {@code from} and {@code now} (never negative). */
     public long daysSince(OffsetDateTime from, OffsetDateTime now) {
-        if (from == null || now == null) return 0; {
+        if (from == null || now == null) return 0;
         long days = Duration.between(from, now).toDays();
-        }
         return Math.max(days, 0);
     }
 
@@ -27,9 +26,8 @@ public class ArticleAnalyticsService {
      * in-review, and archived articles are never flagged stale.
      */
     public boolean isStale(String status, OffsetDateTime updatedAt, OffsetDateTime now, int thresholdDays) {
-        if (!ArticleWorkflowService.PUBLISHED.equals(status)) return false; {
+        if (!ArticleWorkflowService.PUBLISHED.equals(status)) return false;
         return daysSince(updatedAt, now) > thresholdDays;
-        }
     }
 
     /**
@@ -38,9 +36,8 @@ public class ArticleAnalyticsService {
      * Returns {@code null} for blank input (nothing worth recording).
      */
     public String normalizeSearchTerm(String raw) {
-        if (raw == null) return null; {
+        if (raw == null) return null;
         String t = raw.trim().replaceAll("\\s+", " ").toLowerCase();
-        }
         return t.isEmpty() ? null : t;
     }
 }

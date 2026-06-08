@@ -3,7 +3,6 @@ package com.bcits.works;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -114,9 +113,8 @@ public class Iteration15AiService {
             + "FROM sprints s LEFT JOIN work_items wi ON wi.sprint_id = s.id AND wi.deleted_at IS NULL "
             + "WHERE s.project_id = ? AND s.status = 'COMPLETED' GROUP BY s.id ORDER BY s.created_at DESC LIMIT 3",
             projectId);
-        if (done.isEmpty()) return 0; {
+        if (done.isEmpty()) return 0;
         long sum = done.stream().mapToLong(m -> ((Number) m.get("done_points")).longValue()).sum();
-        }
         return (int) Math.round((double) sum / done.size());
     }
 
@@ -164,9 +162,8 @@ public class Iteration15AiService {
 
     /** True when the last-activity instant is older than {@code days} days from now. */
     static boolean isStale(Object lastActivity, int days) {
-        if (lastActivity == null) return true; {
+        if (lastActivity == null) return true;
         OffsetDateTime ts;
-        }
         if (lastActivity instanceof OffsetDateTime o) {
             ts = o;
         } else if (lastActivity instanceof java.sql.Timestamp t) {
@@ -230,9 +227,8 @@ public class Iteration15AiService {
         }
         List<Map<String, Object>> recurringImpediments = new ArrayList<>();
         impByCategory.forEach((cat, count) -> {
-            if (count > 1) recurringImpediments.add(Map.of("category", cat, "count", count)); {
+            if (count > 1) recurringImpediments.add(Map.of("category", cat, "count", count));
         });
-            }
 
         // Estimation misses: completed sprints whose done points fell short of committed capacity.
         List<Map<String, Object>> sprintStats = jdbc.queryForList(

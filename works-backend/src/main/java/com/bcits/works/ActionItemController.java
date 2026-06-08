@@ -69,7 +69,10 @@ public class ActionItemController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
-        repo.findById(id).ifPresent(a -> { a.setDeletedAt(OffsetDateTime.now()); repo.save(a); });
+        repo.findById(id).ifPresent(a -> {
+            a.setDeletedAt(OffsetDateTime.now());
+            repo.save(a);
+        });
         return ResponseEntity.noContent().build();
     }
 }

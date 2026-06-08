@@ -36,9 +36,8 @@ public class EmailService {
     /** Called when a work item is assigned to a user. */
     @Async
     public void sendAssignmentEmail(String recipientUserId, String actorName, String itemKey, String itemTitle) {
-        if (!pref(recipientUserId, "notify_assign")) return; {
+        if (!pref(recipientUserId, "notify_assign")) return;
         send(recipientUserId,
-        }
             "📋 You were assigned " + itemKey,
             actorName + " assigned you to: " + itemTitle + "\n\n" +
             "View item: http://localhost:5173 → search " + itemKey);
@@ -47,9 +46,8 @@ public class EmailService {
     /** Called when a comment is added to an item the user owns or is assigned to. */
     @Async
     public void sendCommentEmail(String recipientUserId, String actorName, String itemKey, String commentSnippet) {
-        if (!pref(recipientUserId, "notify_comment")) return; {
+        if (!pref(recipientUserId, "notify_comment")) return;
         send(recipientUserId,
-        }
             "💬 New comment on " + itemKey,
             actorName + " commented on " + itemKey + ":\n\n\"" + commentSnippet + "\"\n\n" +
             "View item: http://localhost:5173");
@@ -58,9 +56,8 @@ public class EmailService {
     /** Called when a user is @mentioned in a comment. */
     @Async
     public void sendMentionEmail(String recipientUserId, String actorName, String itemKey, String commentSnippet) {
-        if (!pref(recipientUserId, "notify_mention")) return; {
+        if (!pref(recipientUserId, "notify_mention")) return;
         send(recipientUserId,
-        }
             "@ You were mentioned on " + itemKey,
             actorName + " mentioned you in a comment on " + itemKey + ":\n\n\"" + commentSnippet + "\"\n\n" +
             "View item: http://localhost:5173");
@@ -100,9 +97,8 @@ public class EmailService {
         try {
             List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT " + column + " FROM notification_preferences WHERE user_id = ?", userId);
-            if (rows.isEmpty()) return true; // default: notify {
+            if (rows.isEmpty()) return true; // default: notify
             Object val = rows.get(0).get(column);
-            }
             return val == null || Boolean.TRUE.equals(val);
         } catch (Exception e) {
             log.warn("Could not read notification pref {} for {}: {}", column, userId, e.getMessage());

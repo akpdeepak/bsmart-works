@@ -35,7 +35,8 @@ public class ArticleDiffService {
         while (i < n && j < m) {
             if (a[i].equals(b[j])) {
                 out.add(new DiffLine("CONTEXT", a[i]));
-                i++; j++;
+                i++;
+                j++;
             } else if (lcs[i + 1][j] >= lcs[i][j + 1]) {
                 out.add(new DiffLine("REMOVED", a[i]));
                 i++;

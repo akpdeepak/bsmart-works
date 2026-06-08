@@ -299,18 +299,16 @@ public class ScimController {
             @SuppressWarnings("unchecked")
             Map<String, Object> nameMap = (Map<String, Object>) nameObj;
             String formatted = str(nameMap.get("formatted"));
-            if (formatted != null && !formatted.isBlank()) return formatted; {
+            if (formatted != null && !formatted.isBlank()) return formatted;
             String given = str(nameMap.get("givenName"));
-            }
             String family = str(nameMap.get("familyName"));
             if (given != null || family != null) {
                 return (given != null ? given : "") + (family != null ? " " + family : "");
             }
         }
         String displayName = str(body.get("displayName"));
-        if (displayName != null && !displayName.isBlank()) return displayName; {
+        if (displayName != null && !displayName.isBlank()) return displayName;
         return str(body.get("userName")); // fallback
-        }
     }
 
     private static String sha256(String raw) {

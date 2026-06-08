@@ -160,7 +160,9 @@ class WorkspaceServiceTest {
         assertThat(branding.get("logoUrl")).isEqualTo("");             // blank → null → ""
         assertThat(branding.get("description")).isEqualTo("Support team");
         verify(rbac).require("USR-ADMIN", "WS-001", "manage_workspace");
-        verify(eventService).recordInWorkspace(eq("WS-001"), eq("WS-001"), eq("WORKSPACE_BRANDING_UPDATED"), eq("USR-ADMIN"), any(java.util.Map.class));
+        verify(eventService).recordInWorkspace(
+                eq("WS-001"), eq("WS-001"), eq("WORKSPACE_BRANDING_UPDATED"),
+                eq("USR-ADMIN"), any(java.util.Map.class));
     }
 
     // ── Workspace context ─────────────────────────────────────────────────────

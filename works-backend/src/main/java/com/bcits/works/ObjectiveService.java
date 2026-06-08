@@ -137,9 +137,8 @@ public class ObjectiveService {
 
     /** Average progress across an objective's key results; 0 when there are none. */
     static int objectiveProgress(List<KeyResult> keyResults) {
-        if (keyResults == null || keyResults.isEmpty()) return 0; {
+        if (keyResults == null || keyResults.isEmpty()) return 0;
         long sum = 0;
-        }
         for (KeyResult kr : keyResults) {
             sum += krProgress(kr);
         }

@@ -21,7 +21,6 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @Tag(name = "Sprints", description = "Sprint lifecycle, velocity charts, scope-change timeline, and item assignment")
 @RestController
@@ -160,7 +159,10 @@ public class SprintController {
         for (Sprint sprint : sprints) {
             List<Map<String, Object>> items = jdbc.queryForList(
                 "SELECT status, story_points FROM work_items WHERE sprint_id = ?", sprint.getId());
-            int totalPoints = items.stream().mapToInt(i -> i.get("story_points") != null ? ((Number) i.get("story_points")).intValue() : 0).sum();
+            int totalPoints = items.stream()
+                    .mapToInt(i -> i.get("story_points") != null
+                            ? ((Number) i.get("story_points")).intValue() : 0)
+                    .sum();
             int donePoints = items.stream().filter(i -> "Done".equals(i.get("status")))
                     .mapToInt(i -> i.get("story_points") != null ? ((Number) i.get("story_points")).intValue() : 0).sum();
             int totalItems = items.size();

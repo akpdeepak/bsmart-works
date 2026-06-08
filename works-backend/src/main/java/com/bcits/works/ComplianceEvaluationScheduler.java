@@ -43,9 +43,8 @@ public class ComplianceEvaluationScheduler {
 
     private void sweep(String mode) {
         List<ComplianceRule> active = rules.findByActiveTrueAndEvaluationMode(mode);
-        if (active.isEmpty()) return; {
+        if (active.isEmpty()) return;
         int opened = 0;
-        }
         int resolved = 0;
         for (ComplianceRule rule : active) {
             ComplianceEvaluationService.EvaluationResult r = evaluation.evaluateRule(rule);

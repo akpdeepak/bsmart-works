@@ -2,7 +2,6 @@ package com.bcits.works;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -221,9 +220,8 @@ public class WorkItemController {
     public WorkItem createWorkItem(@Valid @RequestBody WorkItem newItem) {
         String userId = authenticatedUser.id();
         String wsId = rbac.workspaceForProject(newItem.getProjectId());
-        if (wsId != null) rbac.require(userId, wsId, "create_items"); {
+        if (wsId != null) rbac.require(userId, wsId, "create_items");
         String prefix = newItem.getProjectId() != null ? newItem.getProjectId().replace("PROJ-", "") : "WEB";
-        }
         newItem.setId(prefix + "-" + java.util.UUID.randomUUID().toString().substring(0, 6).toUpperCase());
         newItem.setStatus("Todo");
         newItem.setCreatedBy(userId);
@@ -307,8 +305,12 @@ public class WorkItemController {
                 eventService.recordDiff(id, "STATUS_CHANGED", userId, "status", oldStatus, saved.getStatus());
             }
             if (!java.util.Objects.equals(oldAssignee, saved.getAssigneeId())) {
-                String oldName = oldAssignee != null ? userRepository.findById(oldAssignee).map(u -> u.getFullName()).orElse(oldAssignee) : "unassigned";
-                String newName = saved.getAssigneeId() != null ? userRepository.findById(saved.getAssigneeId()).map(u -> u.getFullName()).orElse(saved.getAssigneeId()) : "unassigned";
+                String oldName = oldAssignee != null
+                        ? userRepository.findById(oldAssignee).map(u -> u.getFullName()).orElse(oldAssignee)
+                        : "unassigned";
+                String newName = saved.getAssigneeId() != null
+                        ? userRepository.findById(saved.getAssigneeId()).map(u -> u.getFullName()).orElse(saved.getAssigneeId())
+                        : "unassigned";
                 eventService.recordDiff(id, "ASSIGNED", userId, "assignee", oldName, newName);
             }
             if (!java.util.Objects.equals(oldPriority, saved.getPriority())) {
@@ -362,9 +364,8 @@ public class WorkItemController {
     public ResponseEntity<Void> deleteWorkItem(@PathVariable String id) {
         String userId = authenticatedUser.id();
         var opt = repository.findById(id);
-        if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build(); {
+        if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build();
         var item = opt.get();
-        }
         String wsId = rbac.workspaceForProject(item.getProjectId());
         if (wsId != null) rbac.require(userId, wsId, "delete_items");
         // Soft delete — keep for 30 days in trash
@@ -377,9 +378,8 @@ public class WorkItemController {
     @DeleteMapping("/{id}/permanent")
     public ResponseEntity<Void> permanentDelete(@PathVariable String id) {
         var opt = repository.findById(id);
-        if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build(); {
+        if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build();
         var item = opt.get();
-        }
         jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);
         jdbc.update("DELETE FROM comments WHERE work_item_id = ?", id);
         jdbc.update("DELETE FROM work_item_links WHERE source_id = ? OR target_id = ?", id, id);
@@ -408,9 +408,8 @@ public class WorkItemController {
      * pattern of calling attachTags() per item (e.g. 351 items -> 351 queries).
      */
     private void attachTagsBatch(List<WorkItem> items) {
-        if (items.isEmpty()) return; {
+        if (items.isEmpty()) return;
         List<String> ids = items.stream().map(WorkItem::getId).toList();
-        }
         String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
         java.util.Map<String, List<String>> tagsByItem = new java.util.HashMap<>();
         jdbc.query(

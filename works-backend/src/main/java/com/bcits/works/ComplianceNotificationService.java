@@ -87,8 +87,8 @@ public class ComplianceNotificationService {
         for (Target t : targets) {
             switch (t.type() == null ? "" : t.type().toUpperCase()) {
                 case "ITEM_OWNER" -> {
-                    if (assigneeId != null && !assigneeId.isBlank()) userIds.add(assigneeId);
-                    else if (creatorId != null && !creatorId.isBlank()) userIds.add(creatorId);
+                    if (assigneeId != null && !assigneeId.isBlank()) { userIds.add(assigneeId); }
+                    else if (creatorId != null && !creatorId.isBlank()) { userIds.add(creatorId); }
                 }
                 case "PROJECT_ADMIN" -> userIds.addAll(workspaceAdmins(rule.getWorkspaceId()));
                 case "USER" -> { if (t.value() != null && !t.value().isBlank()) userIds.add(t.value()); }

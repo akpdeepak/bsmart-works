@@ -14,7 +14,9 @@ public class FieldDef {
     private String projectId;
     private String name;
     private String fieldKey;
-    private String fieldType; // TEXT | NUMBER | CURRENCY | DATE | SELECT | MULTI_SELECT | USER | URL | CHECKBOX | FILE | JSON | TEXTAREA | EMAIL | PHONE | RATING | PROGRESS
+    // TEXT | NUMBER | CURRENCY | DATE | SELECT | MULTI_SELECT | USER | URL
+    // CHECKBOX | FILE | JSON | TEXTAREA | EMAIL | PHONE | RATING | PROGRESS
+    private String fieldType;
     @Column(columnDefinition = "jsonb") private String config = "{}";
     private Boolean required = false;
     private Integer position = 0;

@@ -70,7 +70,10 @@ public class LessonLearnedController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
-        repo.findById(id).ifPresent(ll -> { ll.setDeletedAt(OffsetDateTime.now()); repo.save(ll); });
+        repo.findById(id).ifPresent(ll -> {
+            ll.setDeletedAt(OffsetDateTime.now());
+            repo.save(ll);
+        });
         return ResponseEntity.noContent().build();
     }
 }

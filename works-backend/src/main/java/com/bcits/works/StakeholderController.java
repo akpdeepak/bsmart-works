@@ -68,7 +68,10 @@ public class StakeholderController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
-        repo.findById(id).ifPresent(s -> { s.setDeletedAt(OffsetDateTime.now()); repo.save(s); });
+        repo.findById(id).ifPresent(s -> {
+            s.setDeletedAt(OffsetDateTime.now());
+            repo.save(s);
+        });
         return ResponseEntity.noContent().build();
     }
 }

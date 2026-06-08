@@ -49,11 +49,24 @@ public class AuditLogService {
         StringBuilder where = new StringBuilder("WHERE workspace_id = ?");
         List<Object> args = new ArrayList<>();
         args.add(workspaceId);
-        if (notBlank(eventType))   { where.append(" AND event_type = ?"); args.add(eventType.trim()); }
-        if (notBlank(actorId))     { where.append(" AND actor_id = ?");   args.add(actorId.trim()); }
-        if (notBlank(aggregateId)) { where.append(" AND aggregate_id = ?"); args.add(aggregateId.trim()); }
-        if (notBlank(search))      { where.append(" AND (payload ILIKE ? OR event_type ILIKE ?)");
-                                     String like = "%" + search.trim() + "%"; args.add(like); args.add(like); }
+        if (notBlank(eventType)) {
+            where.append(" AND event_type = ?");
+            args.add(eventType.trim());
+        }
+        if (notBlank(actorId)) {
+            where.append(" AND actor_id = ?");
+            args.add(actorId.trim());
+        }
+        if (notBlank(aggregateId)) {
+            where.append(" AND aggregate_id = ?");
+            args.add(aggregateId.trim());
+        }
+        if (notBlank(search)) {
+            where.append(" AND (payload ILIKE ? OR event_type ILIKE ?)");
+            String like = "%" + search.trim() + "%";
+            args.add(like);
+            args.add(like);
+        }
 
         Long total = jdbc.queryForObject("SELECT COUNT(*) FROM events " + where, Long.class, args.toArray());
 

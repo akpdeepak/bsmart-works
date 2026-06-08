@@ -355,10 +355,9 @@
 				</executions>
 			</plugin>
 			<!-- Checkstyle: enforces Java style consistency across all contributors and AI tools.
-			     Runs at the `verify` phase (so CI catches it). Shipped in reporting mode
-			     (failOnViolation=false) so it does not break the existing baseline on day one.
-			     Once `./mvnw checkstyle:check` is clean, flip failOnViolation to `true` to make
-			     it block PRs. Config: config/checkstyle/checkstyle.xml -->
+			     Runs at the `verify` phase (so CI catches it). TD-005 (2026-06-08): baseline
+			     is now clean — failOnViolation is true so any new violation blocks CI.
+			     Config: config/checkstyle/checkstyle.xml -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-checkstyle-plugin</artifactId>
@@ -366,7 +365,7 @@
 				<configuration>
 					<configLocation>config/checkstyle/checkstyle.xml</configLocation>
 					<consoleOutput>true</consoleOutput>
-					<failOnViolation>false</failOnViolation>
+					<failOnViolation>true</failOnViolation>
 					<violationSeverity>warning</violationSeverity>
 					<includeTestSourceDirectory>true</includeTestSourceDirectory>
 				</configuration>

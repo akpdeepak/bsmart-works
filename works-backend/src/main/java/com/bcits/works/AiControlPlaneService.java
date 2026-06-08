@@ -30,6 +30,9 @@ public class AiControlPlaneService {
     static final int DEGRADE_AT_PERCENT = 80;
     static final int DISABLE_AT_PERCENT = 100;
     static final long DEFAULT_CAP_CENTS = 10_000L; // $100.00 / month
+    static final int CACHE_TTL_HOURS = 24;
+    static final int USER_RATE_LIMIT = 100;        // AI calls per user per hour
+    static final long USER_RATE_WINDOW_SECONDS = 3600L;
 
     // PII boundary (RB-40 §2): strip obvious personal identifiers before a prompt could leave the
     // server. The offline provider never egresses, but the redaction seam must exist and be tested.
@@ -41,15 +44,17 @@ public class AiControlPlaneService {
     private final AiInvocationRepository invocations;
     private final AiCacheEntryRepository cache;
     private final AiProvider provider;
+    private final RateLimiter rateLimiter;
 
     public AiControlPlaneService(AiPolicyRepository policies, AiBudgetRepository budgets,
                                  AiInvocationRepository invocations, AiCacheEntryRepository cache,
-                                 AiProvider provider) {
+                                 AiProvider provider, RateLimiter rateLimiter) {
         this.policies = policies;
         this.budgets = budgets;
         this.invocations = invocations;
         this.cache = cache;
         this.provider = provider;
+        this.rateLimiter = rateLimiter;
     }
 
     // ── Public value types ─────────────────────────────────────────────────────
@@ -179,10 +184,17 @@ public class AiControlPlaneService {
         AiModelTier tier = degraded ? AiModelTier.HAIKU : AiCapabilities.defaultTier(call.capability());
         String state = degraded ? "DEGRADED" : "ENABLED";
 
-        // Cache lookup (RB-40 §2): serve repeats without re-spending.
+        // Per-user rate limit (RB-40 §2): prevent one user from exhausting workspace AI budget.
+        String rlKey = "ai:" + call.workspaceId() + ":" + call.userId();
+        if (!rateLimiter.allow(rlKey, USER_RATE_LIMIT, USER_RATE_WINDOW_SECONDS)) {
+            record(call, AiModelTier.NONE, 0, 0, 0, false, true, "RATE_LIMITED_USER");
+            return AiOutcome.fallback("RATE_LIMITED_USER");
+        }
+
+        // Cache lookup (RB-40 §2): serve repeats without re-spending. Expired entries are misses.
         String cacheId = cacheId(call);
         AiCacheEntry hit = cacheId == null ? null : cache.findById(cacheId).orElse(null);
-        if (hit != null) {
+        if (hit != null && (hit.getExpiresAt() == null || hit.getExpiresAt().isAfter(OffsetDateTime.now()))) {
             hit.setHits((hit.getHits() == null ? 0 : hit.getHits()) + 1);
             cache.save(hit);
             record(call, AiModelTier.valueOf(safeTier(hit.getModelTier())), 0, 0, 0, true, false, state);
@@ -236,6 +248,7 @@ public class AiControlPlaneService {
         entry.setModelTier(tier.name());
         entry.setHits(0);
         entry.setCreatedAt(OffsetDateTime.now());
+        entry.setExpiresAt(OffsetDateTime.now().plusHours(CACHE_TTL_HOURS));
         cache.save(entry);
     }
 

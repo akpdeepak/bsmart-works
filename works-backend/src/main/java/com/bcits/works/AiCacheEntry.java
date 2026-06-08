@@ -24,6 +24,7 @@ public class AiCacheEntry {
     private String modelTier;
     private Integer hits = 0;
     private OffsetDateTime createdAt;
+    private OffsetDateTime expiresAt;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -41,4 +42,6 @@ public class AiCacheEntry {
     public void setHits(Integer hits) { this.hits = hits; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
+    public OffsetDateTime getExpiresAt() { return expiresAt; }
+    public void setExpiresAt(OffsetDateTime expiresAt) { this.expiresAt = expiresAt; }
 }

@@ -175,7 +175,7 @@ export default function ServiceView({
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {[
                       { label: 'Responses', value: serviceCsat.summary?.count ?? 0 },
-                      { label: 'Average', value: serviceCsat.summary?.average ?? 0 },
+                      { label: 'Average', value: Number(serviceCsat.summary?.average ?? 0).toFixed(1) },
                       { label: '% Satisfied', value: `${serviceCsat.summary?.percentSatisfied ?? 0}%` },
                     ].map(c => (
                       <div key={c.label} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
@@ -184,6 +184,30 @@ export default function ServiceView({
                       </div>
                     ))}
                   </div>
+
+                  {/* Rating distribution */}
+                  {serviceCsat.summary?.distribution && (
+                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Rating distribution</h3>
+                      {[5, 4, 3, 2, 1].map(star => {
+                        const count = serviceCsat.summary.distribution[star] ?? 0;
+                        const total = serviceCsat.summary.count || 1;
+                        const pct = Math.round((count / total) * 100);
+                        return (
+                          <div key={star} className="flex items-center gap-3 py-1">
+                            <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400 w-12 shrink-0 flex items-center gap-0.5">
+                              {star} <Star className="h-3 w-3 text-brand-orange fill-current" aria-hidden="true" />
+                            </span>
+                            <div className="flex-1 h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
+                              <div className="h-full bg-brand-orange rounded-full" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-xs text-neutral-600 dark:text-neutral-400 w-12 text-right">{count} ({pct}%)</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                     <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Recent feedback</h3>
                     {(serviceCsat.responses || []).length === 0

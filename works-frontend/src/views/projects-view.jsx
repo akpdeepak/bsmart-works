@@ -1,15 +1,20 @@
+import { TrendingUp, Activity } from 'lucide-react';
 import { Folder } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 
 // Projects view — extracted from the App.jsx monolith (UX finding A3/H2). Behaviour-preserving:
 // the parent owns the projects + work items and the create/archive handlers and the userName lookup.
+// B20: projectMetrics is a map { [projectId]: { velocity, completionPct, cycleTimeDays } | null }.
+// projectMetricsLoading: true while the backend call is in flight (shows skeletons).
 export default function ProjectsView({
   projects,
   workItems,
   setIsProjectOpen,
   handleArchiveProject,
   userName,
+  projectMetrics = {},
+  projectMetricsLoading = false,
 }) {
   return (
     <div className="p-8 max-w-4xl">
@@ -63,6 +68,38 @@ export default function ProjectsView({
                       <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">{Math.round((done / count) * 100)}% complete</p>
                     </div>
                   )}
+                  {/* B20 — inline metrics strip: velocity, completion%, cycle time (team-level) */}
+                  {projectMetricsLoading ? (
+                    <div className="mt-3 flex gap-3" aria-busy="true" aria-label="Loading metrics">
+                      <div className="animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded h-8 w-24" aria-hidden="true" />
+                      <div className="animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded h-8 w-24" aria-hidden="true" />
+                      <div className="animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded h-8 w-24" aria-hidden="true" />
+                    </div>
+                  ) : projectMetrics[p.id] ? (
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      {projectMetrics[p.id].velocity != null && (
+                        <div className="flex items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400">
+                          <TrendingUp className="h-3.5 w-3.5 text-brand-navy" aria-hidden="true" />
+                          <span className="font-semibold text-neutral-900 dark:text-neutral-100">{projectMetrics[p.id].velocity}</span>
+                          <span>pts / sprint</span>
+                        </div>
+                      )}
+                      {projectMetrics[p.id].completionPct != null && (
+                        <div className="flex items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400">
+                          <Activity className="h-3.5 w-3.5 text-semantic-success" aria-hidden="true" />
+                          <span className="font-semibold text-neutral-900 dark:text-neutral-100">{Math.round(projectMetrics[p.id].completionPct)}%</span>
+                          <span>completion</span>
+                        </div>
+                      )}
+                      {projectMetrics[p.id].cycleTimeDays != null && (
+                        <div className="flex items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400">
+                          <span className="inline-block h-3.5 w-3.5 rounded-full border border-neutral-400 text-center leading-none text-xs font-bold" aria-hidden="true">⏱</span>
+                          <span className="font-semibold text-neutral-900 dark:text-neutral-100">{projectMetrics[p.id].cycleTimeDays.toFixed(1)}d</span>
+                          <span>cycle time</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
               );
             })}

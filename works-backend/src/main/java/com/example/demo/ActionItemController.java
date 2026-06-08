@@ -22,10 +22,12 @@ public class ActionItemController {
     public List<ActionItem> list(@RequestParam(required = false) String projectId,
                                   @RequestParam(required = false) String meetingId,
                                   @RequestParam(required = false) String ownerId) {
-        if (meetingId != null) return repo.findBySourceMeetingIdAndDeletedAtIsNull(meetingId);
-        if (ownerId != null)   return repo.findByOwnerIdAndDeletedAtIsNull(ownerId);
-        if (projectId != null) return repo.findByProjectIdAndDeletedAtIsNull(projectId);
-        return repo.findAll();
+        String userId = authenticatedUser.id();
+        // Every path is workspace-scoped (RB-40 §1) — caller sees only items from their workspaces.
+        if (meetingId != null) return repo.findBySourceMeetingIdScopedToUser(meetingId, userId);
+        if (ownerId != null)   return repo.findByOwnerIdScopedToUser(ownerId, userId);
+        if (projectId != null) return repo.findByProjectIdScopedToUser(projectId, userId);
+        return repo.findAllScopedToUser(userId);
     }
 
     @GetMapping("/{id}")

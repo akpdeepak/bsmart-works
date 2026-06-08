@@ -32,9 +32,11 @@ public class SprintController {
 
     @GetMapping
     public List<Sprint> getSprints(@RequestParam(required = false) String projectId) {
+        String userId = authenticatedUser.id();
+        // Workspace-scoped (RB-40 §1): caller sees only sprints in their workspaces' projects.
         List<Sprint> sprints = projectId != null
-            ? sprintRepository.findByProjectIdOrderByCreatedAtDesc(projectId)
-            : sprintRepository.findAll();
+            ? sprintRepository.findByProjectIdScopedToUser(projectId, userId)
+            : sprintRepository.findAllScopedToUser(userId);
         // Attach actual used story points per sprint
         sprints.forEach(s -> {
             Integer used = jdbc.queryForObject(
@@ -132,7 +134,8 @@ public class SprintController {
     // Multi-sprint velocity chart data
     @GetMapping("/velocity")
     public List<Map<String, Object>> getVelocityChart() {
-        List<Sprint> sprints = sprintRepository.findAll();
+        // Workspace-scoped (RB-40 §1 / B04): caller sees only sprints in their own workspaces.
+        List<Sprint> sprints = sprintRepository.findAllScopedToUser(authenticatedUser.id());
         List<Map<String, Object>> result = new ArrayList<>();
         for (Sprint sprint : sprints) {
             List<Map<String, Object>> items = jdbc.queryForList(

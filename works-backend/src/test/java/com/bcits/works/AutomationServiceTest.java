@@ -34,9 +34,12 @@ class AutomationServiceTest {
     private final EventService events = mock(EventService.class);
     private final WebhookService webhooks = mock(WebhookService.class);
     private final AiControlPlaneService controlPlane = mock(AiControlPlaneService.class);
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc =
+        mock(org.springframework.jdbc.core.JdbcTemplate.class);
+    private final BqlCompiler bqlCompiler = mock(BqlCompiler.class);
 
     private final AutomationService svc = new AutomationService(rules, runs, workItems, projects,
-        comments, events, webhooks, controlPlane);
+        comments, events, webhooks, controlPlane, jdbc, bqlCompiler);
 
     private WorkItem item(String id, String priority, String type, String status) {
         WorkItem w = new WorkItem();
@@ -145,5 +148,41 @@ class AutomationServiceTest {
         when(rules.findById("AUTO-3")).thenReturn(Optional.of(rule));
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> svc.require(WS, "AUTO-3"))
             .isInstanceOf(ApiException.class);
+    }
+
+    // ── BQL-backed condition matcher ───────────────────────────────────────────────
+
+    @Test
+    void conditionMatchesBql_emptyConditionMatchesAll() {
+        assertThat(svc.conditionMatchesBql(item("A", "High", "Bug", "Todo"), "")).isTrue();
+        assertThat(svc.conditionMatchesBql(item("A", "High", "Bug", "Todo"), null)).isTrue();
+    }
+
+    @Test
+    void conditionMatchesBql_delegatesToBqlCompilerAndChecksCount() {
+        WorkItem w = item("WEB-1", "High", "Bug", "Todo");
+        when(bqlCompiler.compile("priority = High", null))
+            .thenReturn(new BqlCompiler.Compiled("priority = ?", List.of("High")));
+        when(jdbc.queryForObject(any(String.class), eq(Long.class), any(Object[].class)))
+            .thenReturn(1L);
+        assertThat(svc.conditionMatchesBql(w, "priority = High")).isTrue();
+    }
+
+    @Test
+    void conditionMatchesBql_returnsFalseWhenCountIsZero() {
+        WorkItem w = item("WEB-1", "High", "Bug", "Todo");
+        when(bqlCompiler.compile("priority = Low", null))
+            .thenReturn(new BqlCompiler.Compiled("priority = ?", List.of("Low")));
+        when(jdbc.queryForObject(any(String.class), eq(Long.class), any(Object[].class)))
+            .thenReturn(0L);
+        assertThat(svc.conditionMatchesBql(w, "priority = Low")).isFalse();
+    }
+
+    @Test
+    void conditionMatchesBql_fallsBackToLegacyOnBqlException() {
+        WorkItem w = item("WEB-1", "High", "Bug", "Todo");
+        when(bqlCompiler.compile(any(), any())).thenThrow(new RuntimeException("parse error"));
+        assertThat(svc.conditionMatchesBql(w, "priority = High")).isTrue();
+        assertThat(svc.conditionMatchesBql(w, "priority = Low")).isFalse();
     }
 }

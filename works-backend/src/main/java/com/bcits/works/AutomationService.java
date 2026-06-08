@@ -2,6 +2,7 @@ package com.bcits.works;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,12 +33,15 @@ public class AutomationService {
     private final EventService events;
     private final WebhookService webhooks;
     private final AiControlPlaneService controlPlane;
+    private final JdbcTemplate jdbc;
+    private final BqlCompiler bqlCompiler;
     private final ObjectMapper json = new ObjectMapper();
 
     public AutomationService(AutomationRuleRepository rules, AutomationRunRepository runs,
                              WorkItemRepository workItems, ProjectRepository projects,
                              CommentRepository comments, EventService events,
-                             WebhookService webhooks, AiControlPlaneService controlPlane) {
+                             WebhookService webhooks, AiControlPlaneService controlPlane,
+                             JdbcTemplate jdbc, BqlCompiler bqlCompiler) {
         this.rules = rules;
         this.runs = runs;
         this.workItems = workItems;
@@ -46,6 +50,8 @@ public class AutomationService {
         this.events = events;
         this.webhooks = webhooks;
         this.controlPlane = controlPlane;
+        this.jdbc = jdbc;
+        this.bqlCompiler = bqlCompiler;
     }
 
     // ── CRUD ─────────────────────────────────────────────────────────────────────
@@ -136,7 +142,7 @@ public class AutomationService {
     public Preview test(String workspaceId, String ruleId) {
         AutomationRule rule = require(workspaceId, ruleId);
         List<WorkItem> matches = scopedItems(workspaceId).stream()
-            .filter(w -> conditionMatches(w, rule.getConditionExpr()))
+            .filter(w -> conditionMatchesBql(w, rule.getConditionExpr()))
             .collect(Collectors.toList());
         List<String> sample = matches.stream().map(WorkItem::getId).limit(20).collect(Collectors.toList());
         recordRun(workspaceId, ruleId, "DRY_RUN", "Test mode preview", matches.size(), true, null);
@@ -149,7 +155,7 @@ public class AutomationService {
     public Preview runNow(String workspaceId, String ruleId, String actorId) {
         AutomationRule rule = require(workspaceId, ruleId);
         List<WorkItem> matches = scopedItems(workspaceId).stream()
-            .filter(w -> conditionMatches(w, rule.getConditionExpr()))
+            .filter(w -> conditionMatchesBql(w, rule.getConditionExpr()))
             .collect(Collectors.toList());
         for (WorkItem item : matches) {
             executeActions(workspaceId, item, rule, actorId);
@@ -169,7 +175,7 @@ public class AutomationService {
             workspaceId, normalizeTrigger(triggerType));
         int fired = 0;
         for (AutomationRule rule : matching) {
-            if (conditionMatches(item, rule.getConditionExpr())) {
+            if (conditionMatchesBql(item, rule.getConditionExpr())) {
                 executeActions(workspaceId, item, rule, actorId);
                 rule.setRunCount((rule.getRunCount() == null ? 0 : rule.getRunCount()) + 1);
                 rule.setLastRunAt(OffsetDateTime.now());
@@ -257,8 +263,32 @@ public class AutomationService {
 
     /**
      * Evaluate a safe field-predicate condition against a work item. Empty condition matches all.
+     * Evaluates an automation condition by compiling it through the unified BQL layer (RB-10 §6)
+     * and executing a workspace-scoped COUNT(*) against the database. Falls back to the legacy
+     * in-memory matcher if BQL compilation or query execution fails.
+     */
+    boolean conditionMatchesBql(WorkItem item, String expr) {
+        if (expr == null || expr.isBlank()) return true;
+        try {
+            BqlCompiler.Compiled c = bqlCompiler.compile(expr, null);
+            if (c.sql().isBlank()) return true;
+            String sql = "SELECT COUNT(*) FROM work_items WHERE id = ? AND deleted_at IS NULL AND (" + c.sql() + ")";
+            List<Object> params = new ArrayList<>();
+            params.add(item.getId());
+            params.addAll(c.params());
+            Long count = jdbc.queryForObject(sql, Long.class, params.toArray());
+            return count != null && count > 0;
+        } catch (Exception e) {
+            return conditionMatches(item, expr);
+        }
+    }
+
+    /**
      * Clauses are AND-combined, each {@code field op value} with op {@code =} or {@code !=}. Supported
      * fields: priority, type, status, assignee/assigneeId. String comparison is case-insensitive.
+     *
+     * <p>This is the legacy fallback. Production callers use {@link #conditionMatchesBql} which
+     * compiles through the unified BQL layer (RB-10 §6).
      */
     static boolean conditionMatches(WorkItem item, String expr) {
         if (expr == null || expr.isBlank()) {

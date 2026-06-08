@@ -5,9 +5,9 @@ import { Avatar } from '@/components/works/atoms/avatar';
 
 // Board view columns definition — shared with App.jsx for sprint board re-use.
 const COLUMNS = [
-  { name: 'Todo',        dot: 'bg-neutral-400',     limitKey: 'todoLimit' },
-  { name: 'In Progress', dot: 'bg-brand-navy-tint',  limitKey: 'inProgressLimit' },
-  { name: 'Done',        dot: 'bg-semantic-success', limitKey: 'doneLimit' },
+  { name: 'Todo',        display: 'TODO',        dot: 'bg-neutral-400',     limitKey: 'todoLimit' },
+  { name: 'In Progress', display: 'IN PROGRESS', dot: 'bg-brand-navy-tint',  limitKey: 'inProgressLimit' },
+  { name: 'Done',        display: 'DONE',        dot: 'bg-semantic-success', limitKey: 'doneLimit' },
 ];
 
 const DENSITY_PAD = { compact: 'p-2', comfortable: 'p-3', spacious: 'p-4' };
@@ -95,7 +95,7 @@ export default function BoardView({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${col.dot}`}></span>
-                      <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{col.name}</h3>
+                      <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{col.display}</h3>
                     </div>
                     <BoardWipBadge count={colItems.length} limit={wipLimit}
                       canEdit={can('manage_projects')} onSet={(next) => setWipLimit(col.limitKey, next)} />

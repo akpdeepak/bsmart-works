@@ -52,11 +52,12 @@ function FieldPalette({ onAdd }) {
         <button
           key={type}
           type="button"
+          aria-label={label}
+          title={label}
           onClick={() => onAdd(type)}
           className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors text-left"
         >
           <Icon aria-hidden="true" className="h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
-          {label}
         </button>
       ))}
     </aside>
@@ -375,18 +376,13 @@ function FieldCard({ field, index, total, isSelected, onSelect, onRemove, onMove
   const Icon = typeInfo?.Icon ?? Type;
 
   return (
-    <div
-      role="option"
-      aria-selected={isSelected}
+    <article
       aria-label={`Field: ${field.label}`}
-      className={`group flex items-center gap-3 bg-white dark:bg-neutral-800 border rounded-xl px-4 py-3 cursor-pointer transition-colors ${
+      className={`group flex items-center gap-3 bg-white dark:bg-neutral-800 border rounded-xl px-4 py-3 transition-colors ${
         isSelected
           ? 'border-brand-navy ring-2 ring-brand-navy/20'
           : 'border-neutral-200 dark:border-neutral-700 hover:border-brand-navy/40'
       }`}
-      onClick={onSelect}
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(); } }}
     >
       {/* Drag handle */}
       <button
@@ -399,12 +395,19 @@ function FieldCard({ field, index, total, isSelected, onSelect, onRemove, onMove
         <GripVertical className="h-4 w-4" aria-hidden="true" />
       </button>
 
-      <Icon aria-hidden="true" className="h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
-
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{field.label}</p>
-        <p className="text-xs text-neutral-500 dark:text-neutral-400">{typeInfo?.label ?? field.type}{field.required ? ' · required' : ''}</p>
-      </div>
+      {/* Clickable label area — selection lives here (article itself is non-interactive) */}
+      <button
+        type="button"
+        aria-label={`Select field ${field.label}`}
+        onClick={onSelect}
+        className="flex items-center gap-2 flex-1 min-w-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
+      >
+        <Icon aria-hidden="true" className="h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{field.label}</p>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">{field.type}{field.required ? ' · required' : ''}</p>
+        </div>
+      </button>
 
       {/* Reorder buttons */}
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
@@ -412,7 +415,7 @@ function FieldCard({ field, index, total, isSelected, onSelect, onRemove, onMove
           type="button"
           aria-label="Move field up"
           disabled={index === 0}
-          onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
+          onClick={onMoveUp}
           className="p-1 text-neutral-400 hover:text-brand-navy disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded transition-colors"
         >
           <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
@@ -421,7 +424,7 @@ function FieldCard({ field, index, total, isSelected, onSelect, onRemove, onMove
           type="button"
           aria-label="Move field down"
           disabled={index === total - 1}
-          onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
+          onClick={onMoveDown}
           className="p-1 text-neutral-400 hover:text-brand-navy disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded transition-colors"
         >
           <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
@@ -430,14 +433,14 @@ function FieldCard({ field, index, total, isSelected, onSelect, onRemove, onMove
         {/* Remove */}
         <button
           type="button"
-          aria-label={`Remove field "${field.label}"`}
-          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          aria-label="Remove field"
+          onClick={onRemove}
           className="p-1 text-neutral-400 hover:text-semantic-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-semantic-danger/40 rounded transition-colors"
         >
           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -624,7 +627,7 @@ export function PortalFormDesigner({ requestTypeId, onClose, onSaved }) {
 
       {loading ? (
         /* Skeleton while schema loads */
-        <div className="flex-1 p-6 space-y-3" aria-busy="true" aria-label="Loading form schema">
+        <div role="region" className="flex-1 p-6 space-y-3" aria-busy="true" aria-label="Loading form schema">
           {[1, 2, 3].map((n) => (
             <Skeleton key={n} className="h-16 w-full rounded-xl" />
           ))}

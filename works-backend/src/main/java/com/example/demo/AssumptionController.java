@@ -20,8 +20,10 @@ public class AssumptionController {
 
     @GetMapping
     public List<Assumption> list(@RequestParam(required = false) String projectId) {
-        if (projectId != null) return repo.findByProjectIdAndDeletedAtIsNull(projectId);
-        return repo.findAll();
+        String userId = authenticatedUser.id();
+        // Workspace-scoped (RB-40 §1): caller sees only assumptions from their workspaces.
+        if (projectId != null) return repo.findByProjectIdScopedToUser(projectId, userId);
+        return repo.findAllScopedToUser(userId);
     }
 
     @GetMapping("/{id}")

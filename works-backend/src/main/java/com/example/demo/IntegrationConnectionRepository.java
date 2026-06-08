@@ -11,6 +11,8 @@ public interface IntegrationConnectionRepository extends JpaRepository<Integrati
 
     List<IntegrationConnection> findByWorkspaceIdOrderByProviderAsc(String workspaceId);
 
+    List<IntegrationConnection> findByWorkspaceIdAndProvider(String workspaceId, String provider);
+
     Optional<IntegrationConnection> findByWorkspaceIdAndProviderAndName(
         String workspaceId, String provider, String name);
 }

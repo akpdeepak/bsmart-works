@@ -100,8 +100,66 @@ Format: What · Why accepted · Impact · Trigger to fix.
 - **Impact:** Admins can author and save extensions and bind them to hooks; the hooks do not yet fire. The UI states this explicitly so it is not mistaken for working behavior.
 - **Trigger:** A dedicated, security-reviewed task — sandbox runtime selection + isolation model + per-extension resource/timeout budgets + tenant-scoped capability allow-list — signed off with Deepak before execution is enabled (CLAUDE.md §5).
 
-### TD-016 — Nav-surface tier catalog is duplicated client + server
-- **What:** Nav visibility is now **server-authoritative**: `/rbac/me` returns a `surfaces` list derived from `NavSurfaces` (backend), and the front-end renders the rail / sub-rail / ⌘K from it. The client's `SURFACE_TIER` map (`works-frontend/src/lib/nav-model.js`) is kept only as a **fallback** for older servers / offline. So the surface→min-tier catalog exists in two places (`NavSurfaces.java` and `nav-model.js`) that must be kept in sync by hand.
+---
+
+## Decisions required — blocked Layer B items (2026-06-07)
+
+The following items from the Layer A validation (Prompt A, 2026-06-07) cannot be unblocked by engineering alone. Each requires an explicit decision from Deepak before work can proceed. All are tracked here so they are not forgotten between sessions.
+
+### TD-016 — Live LLM provider not wired (B17, iterations 10/11)
+- **What:** `AiProvider` seam is fully built and tested with a deterministic offline stub. No real model calls are made. The seam accepts an `AiProviderClient` implementation; swapping in the Anthropic SDK is a one-class change.
+- **Decision needed:** (1) Approve outbound HTTPS egress from the backend to the Anthropic API. (2) Choose the data-residency region (India / EU / US) — this determines which Claude API endpoint is used and must be stated in the workspace's data-residency config before keys are loaded. (3) Confirm which Claude model tiers map to Haiku (cheap/fast) and Sonnet (capable) in the current pricing tier.
+- **Impact until resolved:** Every AI feature uses deterministic fallbacks; no real AI responses.
+- **Trigger:** Decision from Deepak on egress + region → engineer wires `AnthropicAiProviderClient` in one PR.
+
+### TD-017 — Live OAuth for Slack / GitHub / GitLab not wired (B23, iteration 13)
+- **What:** Integration connectors (Slack, GitHub, GitLab, email, calendar) have pluggable seams and their integration types are registered in `IntegrationCatalog`. The OAuth dance, token storage, and live API calls are stubs.
+- **Decision needed:** Register OAuth apps with each provider (Slack API, GitHub OAuth App, GitLab Application) and supply `clientId` / `clientSecret` via Secrets Manager / environment variables. Confirm which scopes are required (least-privilege) for each connector.
+- **Impact until resolved:** Integrations tab shows connectors but cannot complete the OAuth flow.
+- **Trigger:** OAuth app credentials provided → engineer wires live `OAuthClient` per provider.
+
+### TD-018 — Custom domain / DNS white-labeling for customer portal (B14, iteration 9)
+- **What:** The customer portal runs at `/portal` on the main domain. The spec calls for branded custom domains (e.g. `support.bcits.in`) per workspace.
+- **Decision needed:** (1) Choose DNS provider for CNAME/A record automation (Cloudflare, Route 53, etc.). (2) Choose SSL certificate strategy: Let's Encrypt ACME (automated, free) vs. wildcard cert on the hosting layer. (3) Confirm whether custom domains are a paid-tier feature or available to all workspaces.
+- **Impact until resolved:** All customers use the shared domain for the portal.
+- **Trigger:** Decision on DNS provider + SSL strategy → engineer implements `CustomDomainService` + ACME integration.
+
+### TD-019 — Visual portal form designer (B15, iteration 9)
+- **What:** Customer portal request forms are JSON-schema driven (functional, admin-configurable). The spec calls for a drag-and-drop visual form designer. Forms work today; the designer is the UX surface.
+- **Decision needed:** Prioritize for a specific iteration or explicitly accept JSON-schema as the long-term approach. If visual designer is in scope, confirm whether to build it in-house (significant frontend effort) or embed a third-party form builder.
+- **Impact until resolved:** Admins configure forms by editing JSON schema; functional but developer-unfriendly.
+- **Trigger:** Explicit iteration assignment from Deepak.
+
+### TD-020 — Native iOS (Swift) and Android (Kotlin) apps (B28, iteration 18)
+- **What:** The spec lists native iOS and Android apps. The codebase delivers a PWA (progressive web app) with offline support, service worker, and biometric auth — covering all common workflows. Native apps are explicitly out of scope for this repo.
+- **Decision needed:** (1) Confirm PWA-only is acceptable long-term, OR (2) Authorize a separate native-app platform team/repo. Native apps require distinct engineering capacity, App Store/Play Store accounts, and their own CI/CD.
+- **Impact until resolved:** Mobile users access Works via browser PWA — install-to-home-screen works; push via Web Push API works; biometric via WebAuthn works. The gap is native-specific APIs (deep links, system share sheets, Siri/Google Assistant integration).
+- **Trigger:** Platform decision from Deepak.
+
+### TD-021 — P95 / 10× load test not executed (B29, B34, iteration 18 / 20)
+- **What:** `PerformanceMonitor` measures P50/P95/P99 at runtime and the `PERFORMANCE.md` documents the load-test plan against RB-40 §5 targets. No live load test has been executed because there is no live deployment to test against.
+- **Decision needed:** Confirm hosting target and provision a staging environment (`deploy.yml` TODO stubs). Once staging exists, run k6 / Gatling against the P95 budget (page load <800 ms, work-item create <300 ms, search <500 ms, etc.).
+- **Impact until resolved:** Performance compliance is asserted via code review and the in-process PerformanceMonitor; actual P95 figures under realistic load are unknown.
+- **Trigger:** Staging deployment confirmed → run load test scripts in `PERFORMANCE.md`.
+
+### TD-022 — BYOK key rotation design and SOC 2 / ISO 27001 certifications (B31, B32, iteration 19)
+- **What:** BYOK references (per-workspace KMS ARN / key-id) are stored and the right-to-be-forgotten / crypto-shred architecture is implemented per RB-40 §3. The detailed key-rotation, backup-expiry, and replica-propagation mechanics need legal/DPO sign-off. SOC 2 Type 2 and ISO 27001 require an external audit engagement (audit firm, evidence collection period, remediation).
+- **Decision needed:** (1) Legal/DPO review of the crypto-shred design and backup-retention windows. (2) Select an audit firm and timeline for SOC 2 Type 2 + ISO 27001. (3) Confirm whether BYOK is opt-in (per workspace) or mandatory.
+- **Impact until resolved:** Enterprise security posture is architecturally correct but uncertified. BYOK is a stored reference only; actual KMS integration requires AWS credentials and key-management policy.
+- **Trigger:** Legal/DPO availability + audit firm selection from Deepak.
+
+### TD-023 — WebSocket vs SSE for real-time co-presence (B30, iteration 18)
+- **What:** The spec calls for WebSocket-based co-presence. The implementation uses Server-Sent Events (SSE) with a heartbeat + `PresenceService`. SSE is simpler, unidirectional, and works through standard HTTP/2 proxies. WebSocket requires a persistent TCP upgrade and additional proxy configuration.
+- **Decision needed:** Confirm whether SSE is accepted as the long-term protocol, or whether WebSocket is required (e.g. for bidirectional cursor sync or collaborative editing in a future iteration). Switching to WebSocket is an architectural change touching `RealtimeService`, the SSE endpoint, and the frontend `EventSource` client.
+- **Impact until resolved:** Co-presence works correctly via SSE; the only gap is the spec says "WebSocket."
+- **Trigger:** Explicit decision from Deepak — "SSE is fine" closes this; "need WebSocket" opens a planned migration task.
+
+---
+
+## Code debt (cont.)
+
+### TD-024 — Nav-surface tier catalog is duplicated client + server
+- **What:** Nav visibility is **server-authoritative**: `/rbac/me` returns a `surfaces` list derived from `NavSurfaces` (backend), and the front-end renders the rail / sub-rail / ⌘K from it. The client's `SURFACE_TIER` map (`works-frontend/src/lib/nav-model.js`) is kept only as a **fallback** for older servers / offline. So the surface→min-tier catalog exists in two places (`NavSurfaces.java` and `nav-model.js`) that must be kept in sync by hand.
 - **Why accepted:** Shipping the server endpoint closed the "client decides access" gap (the real win). Eliminating the second copy entirely would mean the front-end never has a fallback, or generating one file from the other — neither worth blocking on now. Neither map is a security boundary; `RbacService` still authorises every query/action (RB-10 §2, RB-40 §1).
 - **Impact:** If the two catalogs drift, an old-server/offline fallback could mis-declutter the menu (show/hide a surface the live server would decide differently). Cosmetic, never a breach — the live path uses the server list.
 - **Trigger:** Generate the client fallback from the server catalog (or a shared JSON), or drop the client map once every deployed server returns `surfaces`. Do this when the catalog starts changing often or before external tenants self-serve roles.

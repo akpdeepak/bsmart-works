@@ -20,8 +20,10 @@ public class RiskController {
 
     @GetMapping
     public List<Risk> list(@RequestParam(required = false) String projectId) {
-        if (projectId != null) return riskRepo.findByProjectIdAndDeletedAtIsNull(projectId);
-        return riskRepo.findAll();
+        String userId = authenticatedUser.id();
+        // Workspace-scoped (RB-40 §1): caller sees only risks from their workspaces.
+        if (projectId != null) return riskRepo.findByProjectIdScopedToUser(projectId, userId);
+        return riskRepo.findAllScopedToUser(userId);
     }
 
     @GetMapping("/{id}")

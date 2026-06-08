@@ -45,14 +45,16 @@ public class ArticleController {
     public List<Article> getArticles(@RequestParam(required = false) String spaceId,
                                       @RequestParam(required = false) String query,
                                       @RequestParam(required = false) String search) {
+        String userId = authenticatedUser.id();
         String q = query != null ? query : search;
+        // Every path is workspace-scoped (RB-40 §1): articles scoped through knowledge_spaces.
         if (q != null && !q.isBlank()) {
             recordSearchTerm(q);
-            return articleRepository.findByTitleContainingIgnoreCaseOrderByUpdatedAtDesc(q);
+            return articleRepository.findByTitleScopedToUser(q, userId);
         }
         return spaceId != null
-            ? articleRepository.findBySpaceIdOrderByUpdatedAtDesc(spaceId)
-            : articleRepository.findAll();
+            ? articleRepository.findBySpaceIdScopedToUser(spaceId, userId)
+            : articleRepository.findAllScopedToUser(userId);
     }
 
     // Top search terms typed into the KB — completes iteration-5 article analytics
@@ -160,8 +162,10 @@ public class ArticleController {
     @PostMapping
     public Article createArticle(@Valid @RequestBody Article article) {
         String userId = authenticatedUser.id();
+        validateBlockEditor(article);
         article.setId("ART-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         article.setStatus(article.getStatus() != null ? article.getStatus() : "DRAFT");
+        article.setContentFormat(article.getContentFormat() != null ? article.getContentFormat() : "markdown");
         article.setVersionNumber(1);
         article.setHelpfulVotes(0);
         article.setViewCount(0);
@@ -181,10 +185,15 @@ public class ArticleController {
     @PutMapping("/{id}")
     public Article updateArticle(@PathVariable String id, @Valid @RequestBody Article updated) {
         String userId = authenticatedUser.id();
+        validateBlockEditor(updated);
         return articleRepository.findById(id).map(a -> {
             a.setTitle(updated.getTitle());
             a.setContent(updated.getContent());
             a.setTemplateType(updated.getTemplateType());
+            if (updated.getContentFormat() != null) {
+                a.setContentFormat(updated.getContentFormat());
+            }
+            a.setContentBlocks(updated.getContentBlocks());
             a.setVersionNumber(a.getVersionNumber() + 1);
             a.setUpdatedAt(OffsetDateTime.now());
             Article saved = articleRepository.save(a);
@@ -280,6 +289,18 @@ public class ArticleController {
     public ResponseEntity<Void> deleteArticle(@PathVariable String id) {
         articleRepository.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /** Validate: if content_format=blocks, content_blocks must be present and non-empty. */
+    private void validateBlockEditor(Article article) {
+        if ("blocks".equalsIgnoreCase(article.getContentFormat())) {
+            String blocks = article.getContentBlocks();
+            if (blocks == null || blocks.isBlank() || "[]".equals(blocks.trim())) {
+                throw ApiException.badRequest("BLOCKS_REQUIRED",
+                    "content_blocks must be present and non-empty when content_format is 'blocks'.",
+                    "contentBlocks");
+            }
+        }
     }
 
     private void saveVersion(Article article, String userId) {

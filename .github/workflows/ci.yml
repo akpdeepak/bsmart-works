@@ -190,3 +190,25 @@ jobs:
       # like DemoApplicationTests are not run here, and skip JaCoCo (its gate is the unit job).
       - name: Integration tests (Testcontainers + Flyway)
         run: ./mvnw -B -Djacoco.skip=true test-compile failsafe:integration-test failsafe:verify
+
+  jetbrains-plugin:
+    name: JetBrains plugin (buildPlugin)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/jetbrains-plugin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'   # plugin JVM toolchain targets Java 17 (build.gradle.kts)
+          cache: gradle
+      # Gradle wrapper is not present in the plugin directory, so we invoke gradle via the
+      # wrapper at the repo root level — there is none, so install Gradle directly via the
+      # setup-gradle action.
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+      - name: Build JetBrains plugin
+        run: gradle buildPlugin --no-daemon

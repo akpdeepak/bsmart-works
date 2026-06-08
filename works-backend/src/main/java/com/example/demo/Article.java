@@ -25,6 +25,16 @@ public class Article {
     private OffsetDateTime updatedAt;
     private Boolean portalPublished = false; // iteration 9: surfaced on the customer portal KB
 
+    // B09: block-based editor (iteration 20, Cap I)
+    // content_format: 'markdown' (default) | 'blocks' (JSON block array in content_blocks)
+    @Column(name = "content_format", nullable = false)
+    private String contentFormat = "markdown";
+
+    // Block data when content_format = 'blocks'. Block types: paragraph, heading, code, image,
+    // embed, mermaid, table, divider. Must be non-empty when content_format = 'blocks'.
+    @Column(name = "content_blocks", columnDefinition = "jsonb")
+    private String contentBlocks;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getSpaceId() { return spaceId; }
@@ -61,4 +71,9 @@ public class Article {
     public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
     public Boolean getPortalPublished() { return portalPublished; }
     public void setPortalPublished(Boolean portalPublished) { this.portalPublished = portalPublished; }
+
+    public String getContentFormat() { return contentFormat; }
+    public void setContentFormat(String contentFormat) { this.contentFormat = contentFormat; }
+    public String getContentBlocks() { return contentBlocks; }
+    public void setContentBlocks(String contentBlocks) { this.contentBlocks = contentBlocks; }
 }

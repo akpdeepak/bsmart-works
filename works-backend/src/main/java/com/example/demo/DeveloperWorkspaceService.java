@@ -34,12 +34,14 @@ public class DeveloperWorkspaceService {
     private final CodeLinkRepository codeLinks;
     private final FocusModeService focusMode;
     private final CodeContextService codeContext;
+    private final CalendarSyncService calendarSync;
     private final RbacService rbac;
     private final AiControlPlaneService controlPlane;
 
     public DeveloperWorkspaceService(JdbcTemplate jdbc, PullRequestRepository pullRequests,
                                      PullRequestReviewerRepository reviewers, CodeLinkRepository codeLinks,
                                      FocusModeService focusMode, CodeContextService codeContext,
+                                     CalendarSyncService calendarSync,
                                      RbacService rbac, AiControlPlaneService controlPlane) {
         this.jdbc = jdbc;
         this.pullRequests = pullRequests;
@@ -47,6 +49,7 @@ public class DeveloperWorkspaceService {
         this.codeLinks = codeLinks;
         this.focusMode = focusMode;
         this.codeContext = codeContext;
+        this.calendarSync = calendarSync;
         this.rbac = rbac;
         this.controlPlane = controlPlane;
     }
@@ -339,6 +342,41 @@ public class DeveloperWorkspaceService {
         res.put("summary", out.fallback() ? draft : out.text());
         res.put("meta", aiMeta(out));
         return res;
+    }
+
+    // ── Calendar sync ────────────────────────────────────────────────────────────────
+
+    /**
+     * Return upcoming calendar events for {@code userId} pulled from any active calendar
+     * integration (Google Calendar or Microsoft 365) connected to {@code workspaceId}.
+     *
+     * <p>Empty list when no calendar is connected — the caller is responsible for surfacing a
+     * "connect your calendar" nudge in that case. Workspace-scoped; never crosses tenant boundaries.
+     *
+     * @param workspaceId tenant scope (RB-40 §1)
+     * @param userId      the developer whose calendar is fetched
+     * @param lookaheadDays how many days ahead to look (capped at 30)
+     */
+    public List<CalendarSyncService.CalendarEvent> calendarEvents(
+            String workspaceId, String userId, int lookaheadDays) {
+        rbac.require(userId, workspaceId, "view_items");
+        return calendarSync.syncEvents(workspaceId, userId, lookaheadDays);
+    }
+
+    /**
+     * Convert a calendar event into a bSmart Works "Meeting" work item, record the domain event,
+     * and return the new item's id. Idempotent on the external event id.
+     *
+     * @param workspaceId tenant scope (RB-40 §1)
+     * @param projectId   target project for the new Meeting item
+     * @param userId      the developer creating the item (RBAC + audit)
+     * @param event       the normalised calendar event from {@link #calendarEvents}
+     */
+    public CalendarSyncService.MeetingCreationResult createMeeting(
+            String workspaceId, String projectId, String userId,
+            CalendarSyncService.CalendarEvent event) {
+        rbac.require(userId, workspaceId, "create_items");
+        return calendarSync.createMeetingFromCalendarEvent(workspaceId, projectId, userId, event);
     }
 
     private static String nv(String s) { return s == null ? "" : s; }

@@ -1,5 +1,7 @@
 package com.example.demo;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
@@ -7,6 +9,7 @@ import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * The customer-facing portal API (iteration 9, Cap N + Cap M). Every endpoint resolves the customer
@@ -20,6 +23,8 @@ import java.util.Map;
 @RequestMapping("/api/v1/portal")
 public class CustomerPortalController {
 
+    private static final Logger log = LoggerFactory.getLogger(CustomerPortalController.class);
+
     private final CustomerContext customerContext;
     private final RequestTypeRepository requestTypes;
     private final ServiceRequestRepository requests;
@@ -29,13 +34,17 @@ public class CustomerPortalController {
     private final CustomerAccountRepository accounts;
     private final CustomerSlaTierRepository slaTiers;
     private final EventService eventService;
+    private final WorkItemRepository workItemRepository;
+    private final ProjectRepository projectRepository;
     private final JdbcTemplate jdbc;
 
     public CustomerPortalController(CustomerContext customerContext, RequestTypeRepository requestTypes,
                                     ServiceRequestRepository requests, ServiceRequestService requestService,
                                     CsatResponseRepository csat, CsatService csatService,
                                     CustomerAccountRepository accounts, CustomerSlaTierRepository slaTiers,
-                                    EventService eventService, JdbcTemplate jdbc) {
+                                    EventService eventService,
+                                    WorkItemRepository workItemRepository, ProjectRepository projectRepository,
+                                    JdbcTemplate jdbc) {
         this.customerContext = customerContext;
         this.requestTypes = requestTypes;
         this.requests = requests;
@@ -45,6 +54,8 @@ public class CustomerPortalController {
         this.accounts = accounts;
         this.slaTiers = slaTiers;
         this.eventService = eventService;
+        this.workItemRepository = workItemRepository;
+        this.projectRepository = projectRepository;
         this.jdbc = jdbc;
     }
 
@@ -87,6 +98,10 @@ public class CustomerPortalController {
         ServiceRequest saved = requests.save(requestService.prepareNew(req, type, tier));
         eventService.record(saved.getId(), "SERVICE_REQUEST_SUBMITTED", me.customerUserId(),
                 Map.of("accountId", me.accountId(), "typeKey", safe(saved.getTypeKey())));
+
+        // B16: auto-create a linked internal WorkItem in the workspace's default project (RB-40 §1)
+        autoCreateLinkedWorkItem(saved, me.workspaceId());
+
         return customerView(saved, OffsetDateTime.now());
     }
 
@@ -219,6 +234,46 @@ public class CustomerPortalController {
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * B16: On portal submission, auto-create a linked internal WorkItem (type=SERVICE_REQUEST) in
+     * the workspace's default project (the first project by name, alphabetically). The link is stored
+     * on the ServiceRequest.linkedWorkItemId so agents can navigate to it. Failure is non-fatal —
+     * the customer's submission already succeeded; we log and continue (graceful degradation).
+     */
+    private void autoCreateLinkedWorkItem(ServiceRequest saved, String workspaceId) {
+        try {
+            List<Project> projects = projectRepository.findByWorkspaceId(workspaceId);
+            if (projects.isEmpty()) {
+                log.info("[PORTAL] No projects in workspace {} — skipping auto-WorkItem for {}", workspaceId, saved.getId());
+                return;
+            }
+            // Use the lexicographically first project as the default
+            Project defaultProject = projects.stream()
+                .min(java.util.Comparator.comparing(p -> p.getName() == null ? "" : p.getName()))
+                .get();
+            WorkItem wi = new WorkItem();
+            wi.setId("WI-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+            wi.setProjectId(defaultProject.getId());
+            wi.setType("SERVICE_REQUEST");
+            wi.setTitle("[Portal] " + saved.getSubject());
+            wi.setDescription(saved.getDescription());
+            wi.setPriority(saved.getPriority());
+            wi.setStatus("Todo");
+            wi.setCreatedBy(saved.getSubmittedBy());
+            wi.setCreatedAt(OffsetDateTime.now());
+            WorkItem savedWi = workItemRepository.save(wi);
+            // Link back onto the service request
+            saved.setLinkedWorkItemId(savedWi.getId());
+            requests.save(saved);
+            eventService.recordInWorkspace(workspaceId, savedWi.getId(), "WORK_ITEM_CREATED_FROM_PORTAL",
+                saved.getSubmittedBy(), Map.of("serviceRequestId", saved.getId(), "projectId", defaultProject.getId()));
+            log.info("[PORTAL] Auto-created WorkItem {} linked to service request {}", savedWi.getId(), saved.getId());
+        } catch (Exception ex) {
+            log.warn("[PORTAL] Could not auto-create WorkItem for service request {}: {}", saved.getId(), ex.getMessage());
+        }
+    }
+
     private ServiceRequest loadOwned(String id, String accountId) {
         ServiceRequest req = requests.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Service request", id));

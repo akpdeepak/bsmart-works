@@ -40,6 +40,8 @@ public class ComplianceViolation {
     private String note;
     private Boolean escalated = false;
     private OffsetDateTime escalatedAt;
+    @Column(name = "next_escalation_step")
+    private Integer nextEscalationStep = 0;
     private OffsetDateTime updatedAt;
 
     public String getId() { return id; }
@@ -76,6 +78,8 @@ public class ComplianceViolation {
     public void setEscalated(Boolean escalated) { this.escalated = escalated; }
     public OffsetDateTime getEscalatedAt() { return escalatedAt; }
     public void setEscalatedAt(OffsetDateTime escalatedAt) { this.escalatedAt = escalatedAt; }
+    public Integer getNextEscalationStep() { return nextEscalationStep; }
+    public void setNextEscalationStep(Integer nextEscalationStep) { this.nextEscalationStep = nextEscalationStep; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

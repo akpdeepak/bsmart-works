@@ -38,6 +38,8 @@ public class ComplianceRule {
     private Integer escalateAfterHours;             // NULL = no escalation
     @Column(name = "escalate_to", columnDefinition = "jsonb")
     private String escalateTo = "[]";               // routing targets for escalation
+    @Column(name = "escalation_steps", columnDefinition = "jsonb")
+    private String escalationSteps = "[]";          // multi-step: [{hours,targets:[{type,...}]},...]
     @Column(name = "last_evaluated_at")
     private OffsetDateTime lastEvaluatedAt;
     private String createdBy;
@@ -72,6 +74,8 @@ public class ComplianceRule {
     public void setEscalateAfterHours(Integer escalateAfterHours) { this.escalateAfterHours = escalateAfterHours; }
     public String getEscalateTo() { return escalateTo; }
     public void setEscalateTo(String escalateTo) { this.escalateTo = escalateTo; }
+    public String getEscalationSteps() { return escalationSteps; }
+    public void setEscalationSteps(String escalationSteps) { this.escalationSteps = escalationSteps; }
     public OffsetDateTime getLastEvaluatedAt() { return lastEvaluatedAt; }
     public void setLastEvaluatedAt(OffsetDateTime lastEvaluatedAt) { this.lastEvaluatedAt = lastEvaluatedAt; }
     public String getCreatedBy() { return createdBy; }

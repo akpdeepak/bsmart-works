@@ -55,7 +55,12 @@ public class CrossProjectDependencyController {
 
     @GetMapping("/{id}")
     public CrossProjectDependency getDependency(@PathVariable String id) {
-        return dependencyRepository.findById(id).orElseThrow();
+        CrossProjectDependency dep = dependencyRepository.findById(id).orElseThrow();
+        String wsId = rbac.workspaceForProject(dep.getFromProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("CrossProjectDependency", id);
+        }
+        return dep;
     }
 
     @PostMapping
@@ -75,6 +80,12 @@ public class CrossProjectDependencyController {
     @PutMapping("/{id}")
     public CrossProjectDependency updateDependency(@PathVariable String id, @Valid @RequestBody CrossProjectDependency updated) {
         String userId = authenticatedUser.id();
+        CrossProjectDependency existing = dependencyRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("CrossProjectDependency", id));
+        String wsId = rbac.workspaceForProject(existing.getFromProjectId());
+        if (wsId == null || rbac.getUserTier(userId, wsId) < 1) {
+            throw ApiException.notFound("CrossProjectDependency", id);
+        }
         return dependencyRepository.findById(id).map(d -> {
             d.setTitle(updated.getTitle());
             d.setDescription(updated.getDescription());

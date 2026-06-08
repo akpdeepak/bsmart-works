@@ -21,10 +21,13 @@ public class StakeholderController {
 
     private final StakeholderRepository repo;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
-    public StakeholderController(StakeholderRepository repo, AuthenticatedUser authenticatedUser) {
+    public StakeholderController(StakeholderRepository repo, AuthenticatedUser authenticatedUser,
+                                 RbacService rbac) {
         this.repo = repo;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -37,7 +40,14 @@ public class StakeholderController {
     }
 
     @GetMapping("/{id}")
-    public Stakeholder get(@PathVariable String id) { return repo.findById(id).orElseThrow(); }
+    public Stakeholder get(@PathVariable String id) {
+        Stakeholder s = repo.findById(id).orElseThrow();
+        String wsId = rbac.workspaceForProject(s.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("Stakeholder", id);
+        }
+        return s;
+    }
 
     @PostMapping
     public Stakeholder create(@Valid @RequestBody Stakeholder s) {
@@ -50,6 +60,11 @@ public class StakeholderController {
 
     @PutMapping("/{id}")
     public Stakeholder update(@PathVariable String id, @Valid @RequestBody Stakeholder updated) {
+        Stakeholder existing = repo.findById(id).orElseThrow(() -> ApiException.notFound("Stakeholder", id));
+        String wsId = rbac.workspaceForProject(existing.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("Stakeholder", id);
+        }
         return repo.findById(id).map(s -> {
             s.setName(updated.getName());
             s.setRole(updated.getRole());
@@ -69,6 +84,10 @@ public class StakeholderController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         repo.findById(id).ifPresent(s -> {
+            String wsId = rbac.workspaceForProject(s.getProjectId());
+            if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+                throw ApiException.notFound("Stakeholder", id);
+            }
             s.setDeletedAt(OffsetDateTime.now());
             repo.save(s);
         });

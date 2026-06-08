@@ -23,14 +23,17 @@ public class KnowledgeSpaceController {
     private final ArticleRepository articleRepository;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
     public KnowledgeSpaceController(KnowledgeSpaceRepository knowledgeSpaceRepository,
                                      ArticleRepository articleRepository,
-                                     EventService eventService, AuthenticatedUser authenticatedUser) {
+                                     EventService eventService, AuthenticatedUser authenticatedUser,
+                                     RbacService rbac) {
         this.knowledgeSpaceRepository = knowledgeSpaceRepository;
         this.articleRepository = articleRepository;
         this.eventService = eventService;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -44,7 +47,9 @@ public class KnowledgeSpaceController {
 
     @GetMapping("/{id}")
     public KnowledgeSpace getSpace(@PathVariable String id) {
-        return knowledgeSpaceRepository.findById(id).orElseThrow();
+        KnowledgeSpace space = knowledgeSpaceRepository.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), space.getWorkspaceId(), "view_items");
+        return space;
     }
 
     @GetMapping("/{id}/articles")
@@ -76,6 +81,8 @@ public class KnowledgeSpaceController {
     @PutMapping("/{id}")
     public KnowledgeSpace updateSpace(@PathVariable String id, @Valid @RequestBody KnowledgeSpace updated) {
         String userId = authenticatedUser.id();
+        KnowledgeSpace existing = knowledgeSpaceRepository.findById(id).orElseThrow();
+        rbac.require(userId, existing.getWorkspaceId(), "view_items");
         return knowledgeSpaceRepository.findById(id).map(s -> {
             s.setName(updated.getName());
             s.setDescription(updated.getDescription());
@@ -88,6 +95,8 @@ public class KnowledgeSpaceController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSpace(@PathVariable String id) {
+        KnowledgeSpace existing = knowledgeSpaceRepository.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "view_items");
         knowledgeSpaceRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }

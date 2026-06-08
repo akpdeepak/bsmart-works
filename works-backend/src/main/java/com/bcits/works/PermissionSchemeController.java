@@ -31,19 +31,22 @@ public class PermissionSchemeController {
     private final FieldVisibilityRepository fieldVisRepo;
     private final AuthenticatedUser authenticatedUser;
     private final PermissionSchemeService permissionSchemeService;
+    private final RbacService rbac;
 
     public PermissionSchemeController(PermissionSchemeRepository schemeRepo,
                                        RoleDefRepository roleDefRepo,
                                        RolePermissionRepository rolePermRepo,
                                        FieldVisibilityRepository fieldVisRepo,
                                        AuthenticatedUser authenticatedUser,
-                                       PermissionSchemeService permissionSchemeService) {
+                                       PermissionSchemeService permissionSchemeService,
+                                       RbacService rbac) {
         this.schemeRepo = schemeRepo;
         this.roleDefRepo = roleDefRepo;
         this.rolePermRepo = rolePermRepo;
         this.fieldVisRepo = fieldVisRepo;
         this.authenticatedUser = authenticatedUser;
         this.permissionSchemeService = permissionSchemeService;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -58,6 +61,7 @@ public class PermissionSchemeController {
     @GetMapping("/{id}")
     public Map<String, Object> get(@PathVariable String id) {
         PermissionScheme scheme = schemeRepo.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), scheme.getWorkspaceId(), "view_items");
         List<RoleDef> roles = roleDefRepo.findByPermissionSchemeId(id);
         List<Map<String, Object>> rolesWithPerms = new ArrayList<>();
         for (RoleDef role : roles) {
@@ -82,6 +86,8 @@ public class PermissionSchemeController {
 
     @PutMapping("/{id}")
     public PermissionScheme update(@PathVariable String id, @Valid @RequestBody PermissionScheme updated) {
+        PermissionScheme existing = schemeRepo.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "view_items");
         return schemeRepo.findById(id).map(s -> {
             s.setName(updated.getName());
             s.setDescription(updated.getDescription());
@@ -115,6 +121,8 @@ public class PermissionSchemeController {
 
     @PutMapping("/roles/{id}")
     public RoleDef updateRole(@PathVariable String id, @Valid @RequestBody RoleDef updated) {
+        RoleDef existingRole = roleDefRepo.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), existingRole.getWorkspaceId(), "view_items");
         return roleDefRepo.findById(id).map(r -> {
             r.setName(updated.getName());
             r.setDescription(updated.getDescription());

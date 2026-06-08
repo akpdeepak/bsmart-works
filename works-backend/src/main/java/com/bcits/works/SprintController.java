@@ -185,6 +185,10 @@ public class SprintController {
     @GetMapping("/{id}/report")
     public Map<String, Object> getSprintReport(@PathVariable String id) {
         Sprint sprint = sprintRepository.findById(id).orElseThrow();
+        String wsId = rbac.workspaceForProject(sprint.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("Sprint", id);
+        }
         List<Map<String, Object>> items = jdbc.queryForList(
             "SELECT id, title, status, type, story_points, assignee_id FROM work_items WHERE sprint_id = ?", id);
 

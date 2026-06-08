@@ -65,6 +65,10 @@ class SprintReportTest {
         sprintB.setCapacity(15);
 
         when(authenticatedUser.id()).thenReturn(CALLER);
+        when(rbac.workspaceForProject(PROJECT_A)).thenReturn("WS-A");
+        when(rbac.getUserTier(CALLER, "WS-A")).thenReturn(2);
+        when(rbac.workspaceForProject(PROJECT_B)).thenReturn("WS-B");
+        when(rbac.getUserTier(CALLER, "WS-B")).thenReturn(2);
     }
 
     // ── helper: create a report item row (no null values — Map.of rejects nulls) ──

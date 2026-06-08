@@ -24,13 +24,16 @@ public class ReleaseController {
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
     private final JdbcTemplate jdbc;
+    private final RbacService rbac;
 
     public ReleaseController(ReleaseRepository releaseRepository, EventService eventService,
-                              AuthenticatedUser authenticatedUser, JdbcTemplate jdbc) {
+                              AuthenticatedUser authenticatedUser, JdbcTemplate jdbc,
+                              RbacService rbac) {
         this.releaseRepository = releaseRepository;
         this.eventService = eventService;
         this.authenticatedUser = authenticatedUser;
         this.jdbc = jdbc;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -44,7 +47,12 @@ public class ReleaseController {
 
     @GetMapping("/{id}")
     public Release getRelease(@PathVariable String id) {
-        return releaseRepository.findById(id).orElseThrow();
+        Release release = releaseRepository.findById(id).orElseThrow();
+        String wsId = rbac.workspaceForProject(release.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("Release", id);
+        }
+        return release;
     }
 
     @GetMapping("/{id}/items")
@@ -72,6 +80,11 @@ public class ReleaseController {
     @PutMapping("/{id}")
     public Release updateRelease(@PathVariable String id, @Valid @RequestBody Release updated) {
         String userId = authenticatedUser.id();
+        Release existing = releaseRepository.findById(id).orElseThrow(() -> ApiException.notFound("Release", id));
+        String wsId = rbac.workspaceForProject(existing.getProjectId());
+        if (wsId == null || rbac.getUserTier(userId, wsId) < 1) {
+            throw ApiException.notFound("Release", id);
+        }
         return releaseRepository.findById(id).map(r -> {
             r.setName(updated.getName());
             r.setDescription(updated.getDescription());
@@ -104,6 +117,11 @@ public class ReleaseController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRelease(@PathVariable String id) {
+        Release existing = releaseRepository.findById(id).orElseThrow(() -> ApiException.notFound("Release", id));
+        String wsId = rbac.workspaceForProject(existing.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("Release", id);
+        }
         releaseRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }

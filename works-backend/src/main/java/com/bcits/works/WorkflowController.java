@@ -55,6 +55,10 @@ public class WorkflowController {
     @GetMapping("/{id}")
     public Map<String, Object> get(@PathVariable String id) {
         Workflow wf = workflowRepo.findById(id).orElseThrow();
+        String wsId = wf.getWorkspaceId();
+        if (wsId != null && rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("Workflow", id);
+        }
         List<WorkflowStatus> statuses = statusRepo.findByWorkflowIdOrderByPosition(id);
         List<WorkflowTransition> transitions = transitionRepo.findByWorkflowId(id);
         Map<String, Object> result = new LinkedHashMap<>();

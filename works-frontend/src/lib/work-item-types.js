@@ -1,29 +1,32 @@
 import {
   SquareCheck, BookOpen, Bug, Zap, CornerDownRight, Flame, Ticket, Package,
   ClipboardList, Target, Wrench, Rocket, Shield, Flag, Lightbulb, Star, FileText, Gauge,
+  Layers, GitBranch, AlertTriangle, Headphones,
 } from 'lucide-react';
 
 // Work-item type vocabulary — data + resolution logic, extracted from the App.jsx monolith. Kept
 // separate from the presentational components (work-item-type.jsx) so each file has a single export
 // kind (react-refresh/only-export-components). RB-30 §8 — Lucide icons, never emoji.
 
-// Built-in default types: brand colour + a curated icon key (keys index TYPE_ICON_SET below).
+// Built-in default types: spec-mandated icon map (WRK-BR08) — Epic=layers, Story=book-open,
+// Task=check-square, Bug=bug, Sub-task=git-branch, Incident=alert-triangle, Service Request=headphones.
 export const TYPES = {
   Task:            { color: 'bg-brand-navy-tint',     icon: 'check-square' },
-  Story:           { color: 'bg-semantic-success',    icon: 'book' },
-  Bug:             { color: 'bg-semantic-danger',      icon: 'bug' },
-  Epic:            { color: 'bg-neutral-700',          icon: 'zap' },
-  'Sub-task':      { color: 'bg-neutral-600',          icon: 'corner-down-right' },
-  Incident:        { color: 'bg-semantic-warning',     icon: 'flame' },
-  'Service Request': { color: 'bg-brand-navy',         icon: 'ticket' },
+  Story:           { color: 'bg-semantic-success',    icon: 'book-open' },
+  Bug:             { color: 'bg-semantic-danger',     icon: 'bug' },
+  Epic:            { color: 'bg-neutral-700',         icon: 'layers' },
+  'Sub-task':      { color: 'bg-neutral-600',         icon: 'git-branch' },
+  Incident:        { color: 'bg-semantic-warning',    icon: 'alert-triangle' },
+  'Service Request': { color: 'bg-brand-navy',        icon: 'headphones' },
 };
 
 // Curated Lucide icon set for work-item types. Values are stable string keys persisted on custom
 // types; the built-in TYPES above reference the same keys.
 export const TYPE_ICON_SET = {
-  'check-square': SquareCheck, book: BookOpen, bug: Bug, zap: Zap,
-  'corner-down-right': CornerDownRight, flame: Flame, ticket: Ticket, package: Package,
-  clipboard: ClipboardList, target: Target, wrench: Wrench, rocket: Rocket,
+  'check-square': SquareCheck, 'book-open': BookOpen, bug: Bug, layers: Layers,
+  'git-branch': GitBranch, 'alert-triangle': AlertTriangle, headphones: Headphones,
+  book: BookOpen, zap: Zap, 'corner-down-right': CornerDownRight, flame: Flame, ticket: Ticket,
+  package: Package, clipboard: ClipboardList, target: Target, wrench: Wrench, rocket: Rocket,
   shield: Shield, flag: Flag, lightbulb: Lightbulb, star: Star, file: FileText, gauge: Gauge,
 };
 

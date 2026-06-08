@@ -24,27 +24,35 @@ public class FieldDefController {
     private final FieldDefRepository fieldDefRepo;
     private final WorkItemFieldValueRepository valueRepo;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
     public FieldDefController(FieldDefRepository fieldDefRepo,
                                WorkItemFieldValueRepository valueRepo,
-                               AuthenticatedUser authenticatedUser) {
+                               AuthenticatedUser authenticatedUser,
+                               RbacService rbac) {
         this.fieldDefRepo = fieldDefRepo;
         this.valueRepo = valueRepo;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
     public List<FieldDef> list(@RequestParam(required = false) String projectId,
                                @RequestParam(required = false) String workspaceId) {
-        if (projectId != null) return fieldDefRepo.findByProjectIdOrderByPosition(projectId);
-        if (workspaceId != null) return fieldDefRepo.findByWorkspaceIdOrderByPosition(workspaceId); {
-        return fieldDefRepo.findAll();
+        if (projectId != null) {
+            return fieldDefRepo.findByProjectIdOrderByPosition(projectId);
         }
+        if (workspaceId != null) {
+            return fieldDefRepo.findByWorkspaceIdOrderByPosition(workspaceId);
+        }
+        throw ApiException.badRequest("MISSING_PARAM", "Either projectId or workspaceId is required");
     }
 
     @GetMapping("/{id}")
     public FieldDef get(@PathVariable String id) {
-        return fieldDefRepo.findById(id).orElseThrow();
+        FieldDef fd = fieldDefRepo.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), fd.getWorkspaceId(), "view_items");
+        return fd;
     }
 
     @PostMapping
@@ -58,6 +66,8 @@ public class FieldDefController {
 
     @PutMapping("/{id}")
     public FieldDef update(@PathVariable String id, @Valid @RequestBody FieldDef updated) {
+        FieldDef existing = fieldDefRepo.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "view_items");
         return fieldDefRepo.findById(id).map(fd -> {
             fd.setName(updated.getName());
             fd.setFieldType(updated.getFieldType());
@@ -71,6 +81,8 @@ public class FieldDefController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
+        FieldDef existing = fieldDefRepo.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "view_items");
         fieldDefRepo.deleteById(id);
         return ResponseEntity.noContent().build();
     }

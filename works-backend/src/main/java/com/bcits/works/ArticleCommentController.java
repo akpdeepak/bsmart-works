@@ -23,14 +23,31 @@ public class ArticleCommentController {
     private final UserRepository userRepository;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
+    private final ArticleRepository articleRepository;
+    private final KnowledgeSpaceRepository knowledgeSpaceRepository;
+    private final RbacService rbac;
 
     public ArticleCommentController(ArticleCommentRepository articleCommentRepository,
                                     UserRepository userRepository, EventService eventService,
-                                    AuthenticatedUser authenticatedUser) {
+                                    AuthenticatedUser authenticatedUser,
+                                    ArticleRepository articleRepository,
+                                    KnowledgeSpaceRepository knowledgeSpaceRepository,
+                                    RbacService rbac) {
         this.articleCommentRepository = articleCommentRepository;
         this.userRepository = userRepository;
         this.eventService = eventService;
         this.authenticatedUser = authenticatedUser;
+        this.articleRepository = articleRepository;
+        this.knowledgeSpaceRepository = knowledgeSpaceRepository;
+        this.rbac = rbac;
+    }
+
+    private void requireArticleAccess(String articleId) {
+        Article article = articleRepository.findById(articleId)
+                .orElseThrow(() -> ApiException.notFound("Article", articleId));
+        KnowledgeSpace space = knowledgeSpaceRepository.findById(article.getSpaceId())
+                .orElseThrow(() -> ApiException.notFound("Article", articleId));
+        rbac.require(authenticatedUser.id(), space.getWorkspaceId(), "view_items");
     }
 
     @GetMapping
@@ -62,6 +79,7 @@ public class ArticleCommentController {
     public ArticleComment toggleResolved(@PathVariable String articleId, @PathVariable Long commentId,
                                          @RequestBody(required = false) Map<String, Object> body) {
         String userId = authenticatedUser.id();
+        requireArticleAccess(articleId);
         ArticleComment comment = articleCommentRepository.findById(commentId).orElseThrow();
         boolean resolved = body != null && body.get("resolved") != null
                 ? Boolean.TRUE.equals(body.get("resolved"))
@@ -78,6 +96,7 @@ public class ArticleCommentController {
 
     @DeleteMapping("/{commentId}")
     public ResponseEntity<Void> deleteComment(@PathVariable String articleId, @PathVariable Long commentId) {
+        requireArticleAccess(articleId);
         articleCommentRepository.deleteById(commentId);
         return ResponseEntity.noContent().build();
     }

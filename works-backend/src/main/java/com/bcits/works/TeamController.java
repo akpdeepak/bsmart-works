@@ -25,25 +25,31 @@ public class TeamController {
     private final TeamService teamService;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
     public TeamController(TeamRepository teamRepository, TeamService teamService,
-                          EventService eventService, AuthenticatedUser authenticatedUser) {
+                          EventService eventService, AuthenticatedUser authenticatedUser,
+                          RbacService rbac) {
         this.teamRepository = teamRepository;
         this.teamService = teamService;
         this.eventService = eventService;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
-    public List<Team> list(@RequestParam(required = false) String workspaceId) {
-        return workspaceId != null
-            ? teamRepository.findByWorkspaceIdOrderByNameAsc(workspaceId)
-            : teamRepository.findAll();
+    public List<Team> list(@RequestParam String workspaceId) {
+        if (rbac.getUserTier(authenticatedUser.id(), workspaceId) < 1) {
+            throw ApiException.notFound("Workspace", workspaceId);
+        }
+        return teamRepository.findByWorkspaceIdOrderByNameAsc(workspaceId);
     }
 
     @GetMapping("/{id}")
     public Team get(@PathVariable String id) {
-        return teamRepository.findById(id).orElseThrow();
+        Team team = teamRepository.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), team.getWorkspaceId(), "view_items");
+        return team;
     }
 
     @PostMapping
@@ -56,14 +62,18 @@ public class TeamController {
 
     @PutMapping("/{id}")
     public Team update(@PathVariable String id, @Valid @RequestBody Team updated) {
+        Team existing = teamRepository.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "view_items");
         return teamRepository.findById(id)
-            .map(existing -> teamRepository.save(teamService.applyUpdate(existing, updated)))
+            .map(t -> teamRepository.save(teamService.applyUpdate(t, updated)))
             .orElseThrow();
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         String userId = authenticatedUser.id();
+        Team existing = teamRepository.findById(id).orElseThrow();
+        rbac.require(userId, existing.getWorkspaceId(), "view_items");
         teamRepository.deleteById(id);
         eventService.record(id, "TEAM_DELETED", userId, "{}");
         return ResponseEntity.noContent().build();

@@ -30,16 +30,19 @@ public class CustomDashboardController {
     private final DashboardLayoutService layoutService;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
     public CustomDashboardController(DashboardRepository dashboardRepository,
                                      DashboardWidgetRepository widgetRepository,
                                      DashboardLayoutService layoutService,
-                                     EventService eventService, AuthenticatedUser authenticatedUser) {
+                                     EventService eventService, AuthenticatedUser authenticatedUser,
+                                     RbacService rbac) {
         this.dashboardRepository = dashboardRepository;
         this.widgetRepository = widgetRepository;
         this.layoutService = layoutService;
         this.eventService = eventService;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -53,6 +56,7 @@ public class CustomDashboardController {
     @GetMapping("/{id}")
     public Dashboard get(@PathVariable String id) {
         Dashboard d = dashboardRepository.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), d.getWorkspaceId(), "view_items");
         d.setWidgets(widgetRepository.findByDashboardIdOrderByPositionAsc(id));
         return d;
     }
@@ -74,6 +78,8 @@ public class CustomDashboardController {
 
     @PutMapping("/{id}")
     public Dashboard update(@PathVariable String id, @Valid @RequestBody Dashboard updated) {
+        Dashboard existing = dashboardRepository.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "view_items");
         return dashboardRepository.findById(id).map(d -> {
             d.setName(updated.getName());
             if (updated.getScope() != null) d.setScope(updated.getScope());
@@ -90,6 +96,8 @@ public class CustomDashboardController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         String userId = authenticatedUser.id();
+        Dashboard existing = dashboardRepository.findById(id).orElseThrow();
+        rbac.require(userId, existing.getWorkspaceId(), "view_items");
         dashboardRepository.deleteById(id);
         eventService.record(id, "DASHBOARD_DELETED", userId, "{}");
         return ResponseEntity.noContent().build();
@@ -100,6 +108,7 @@ public class CustomDashboardController {
     public Dashboard share(@PathVariable String id) {
         String userId = authenticatedUser.id();
         Dashboard d = dashboardRepository.findById(id).orElseThrow();
+        rbac.require(userId, d.getWorkspaceId(), "view_items");
         if (d.getShareToken() == null || d.getShareToken().isBlank()) {
             d.setShareToken(java.util.UUID.randomUUID().toString().replace("-", ""));
             d.setUpdatedAt(OffsetDateTime.now());
@@ -114,6 +123,7 @@ public class CustomDashboardController {
     public Dashboard unshare(@PathVariable String id) {
         String userId = authenticatedUser.id();
         Dashboard d = dashboardRepository.findById(id).orElseThrow();
+        rbac.require(userId, d.getWorkspaceId(), "view_items");
         d.setShareToken(null);
         d.setUpdatedAt(OffsetDateTime.now());
         dashboardRepository.save(d);

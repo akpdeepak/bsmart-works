@@ -26,13 +26,16 @@ public class ReportController {
     private final ReportService reportService;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
     public ReportController(ReportRepository reportRepository, ReportService reportService,
-                            EventService eventService, AuthenticatedUser authenticatedUser) {
+                            EventService eventService, AuthenticatedUser authenticatedUser,
+                            RbacService rbac) {
         this.reportRepository = reportRepository;
         this.reportService = reportService;
         this.eventService = eventService;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -50,7 +53,9 @@ public class ReportController {
 
     @GetMapping("/{id}")
     public Report get(@PathVariable String id) {
-        return reportRepository.findById(id).orElseThrow();
+        Report report = reportRepository.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), report.getWorkspaceId(), "view_items");
+        return report;
     }
 
     @PostMapping
@@ -63,14 +68,18 @@ public class ReportController {
 
     @PutMapping("/{id}")
     public Report update(@PathVariable String id, @Valid @RequestBody Report updated) {
+        Report existing = reportRepository.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "view_items");
         return reportRepository.findById(id)
-            .map(existing -> reportRepository.save(reportService.applyUpdate(existing, updated)))
+            .map(r -> reportRepository.save(reportService.applyUpdate(r, updated)))
             .orElseThrow();
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         String userId = authenticatedUser.id();
+        Report existing = reportRepository.findById(id).orElseThrow();
+        rbac.require(userId, existing.getWorkspaceId(), "view_items");
         reportRepository.deleteById(id);
         eventService.record(id, "REPORT_DELETED", userId, "{}");
         return ResponseEntity.noContent().build();

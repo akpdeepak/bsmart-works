@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,6 +30,8 @@ public class ArticleController {
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
     private final JdbcTemplate jdbc;
+    private final KnowledgeSpaceRepository knowledgeSpaceRepository;
+    private final RbacService rbac;
 
     public ArticleController(ArticleRepository articleRepository,
                               ArticleVersionRepository articleVersionRepository,
@@ -37,7 +40,9 @@ public class ArticleController {
                               ArticleAnalyticsService analyticsService,
                               ArticleDiffService diffService,
                               EventService eventService, AuthenticatedUser authenticatedUser,
-                              JdbcTemplate jdbc) {
+                              JdbcTemplate jdbc,
+                              KnowledgeSpaceRepository knowledgeSpaceRepository,
+                              RbacService rbac) {
         this.articleRepository = articleRepository;
         this.articleVersionRepository = articleVersionRepository;
         this.articleCommentRepository = articleCommentRepository;
@@ -47,22 +52,28 @@ public class ArticleController {
         this.eventService = eventService;
         this.authenticatedUser = authenticatedUser;
         this.jdbc = jdbc;
+        this.knowledgeSpaceRepository = knowledgeSpaceRepository;
+        this.rbac = rbac;
     }
 
     @GetMapping
     public List<Article> getArticles(@RequestParam(required = false) String spaceId,
                                       @RequestParam(required = false) String query,
-                                      @RequestParam(required = false) String search) {
+                                      @RequestParam(required = false) String search,
+                                      @RequestParam(defaultValue = "0") int page,
+                                      @RequestParam(defaultValue = "50") int size) {
         String userId = authenticatedUser.id();
         String q = query != null ? query : search;
+        org.springframework.data.domain.Pageable pageable =
+            org.springframework.data.domain.PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 200));
         // Every path is workspace-scoped (RB-40 §1): articles scoped through knowledge_spaces.
         if (q != null && !q.isBlank()) {
             recordSearchTerm(q);
-            return articleRepository.findByTitleScopedToUser(q, userId);
+            return articleRepository.findByTitleScopedToUser(q, userId, pageable).getContent();
         }
         return spaceId != null
-            ? articleRepository.findBySpaceIdScopedToUser(spaceId, userId)
-            : articleRepository.findAllScopedToUser(userId);
+            ? articleRepository.findBySpaceIdScopedToUser(spaceId, userId, pageable).getContent()
+            : articleRepository.findAllScopedToUser(userId, pageable).getContent();
     }
 
     // Top search terms typed into the KB — completes iteration-5 article analytics
@@ -86,6 +97,7 @@ public class ArticleController {
     @GetMapping("/{id}")
     public Article getArticle(@PathVariable String id) {
         Article article = articleRepository.findById(id).orElseThrow();
+        requireArticleAccess(article);
         // increment view count
         jdbc.update("UPDATE articles SET view_count = view_count + 1 WHERE id = ?", id);
         article.setViewCount(article.getViewCount() + 1);
@@ -93,8 +105,12 @@ public class ArticleController {
     }
 
     @GetMapping("/{id}/versions")
-    public List<ArticleVersion> getVersions(@PathVariable String id) {
-        return articleVersionRepository.findByArticleIdOrderByVersionNumberDesc(id);
+    public List<ArticleVersion> getVersions(@PathVariable String id,
+                                            @RequestParam(defaultValue = "0") int page,
+                                            @RequestParam(defaultValue = "50") int size) {
+        int limit = Math.min(Math.max(size, 1), 200);
+        return articleVersionRepository.findByArticleIdOrderByVersionNumberDesc(id,
+            PageRequest.of(Math.max(page, 0), limit)).getContent();
     }
 
     // Line-level diff between two stored versions, for the version "diff view".
@@ -194,6 +210,8 @@ public class ArticleController {
     public Article updateArticle(@PathVariable String id, @Valid @RequestBody Article updated) {
         String userId = authenticatedUser.id();
         validateBlockEditor(updated);
+        Article existingArticle = articleRepository.findById(id).orElseThrow(() -> ApiException.notFound("Article", id));
+        requireArticleAccess(existingArticle);
         return articleRepository.findById(id).map(a -> {
             a.setTitle(updated.getTitle());
             a.setContent(updated.getContent());
@@ -230,6 +248,7 @@ public class ArticleController {
     private Article applyTransition(String id, String action) {
         String userId = authenticatedUser.id();
         Article a = articleRepository.findById(id).orElseThrow();
+        requireArticleAccess(a);
         String newStatus = workflowService.transition(a.getStatus(), action);
         OffsetDateTime now = OffsetDateTime.now();
         a.setStatus(newStatus);
@@ -257,6 +276,7 @@ public class ArticleController {
     private Article setPortalPublished(String id, boolean published) {
         String userId = authenticatedUser.id();
         Article a = articleRepository.findById(id).orElseThrow(() -> ApiException.notFound("Article", id));
+        requireArticleAccess(a);
         if (published && !ArticleWorkflowService.PUBLISHED.equals(a.getStatus())) {
             throw ApiException.badRequest("NOT_PUBLISHED",
                     "Only a published article can be surfaced on the customer portal.");
@@ -295,8 +315,17 @@ public class ArticleController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteArticle(@PathVariable String id) {
+        Article existing = articleRepository.findById(id).orElseThrow(() -> ApiException.notFound("Article", id));
+        requireArticleAccess(existing);
         articleRepository.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /** Verify the caller belongs to the workspace that owns the article's space. Throws notFound if not. */
+    private void requireArticleAccess(Article article) {
+        KnowledgeSpace space = knowledgeSpaceRepository.findById(article.getSpaceId())
+                .orElseThrow(() -> ApiException.notFound("Article", article.getId()));
+        rbac.require(authenticatedUser.id(), space.getWorkspaceId(), "view_items");
     }
 
     /** Validate: if content_format=blocks, content_blocks must be present and non-empty. */

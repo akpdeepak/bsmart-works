@@ -1,8 +1,8 @@
 import { FileText, File as FileIcon, ArrowLeft, Puzzle } from 'lucide-react';
 import { Button } from '@/components/works/button';
-import { EmptyState } from '@/components/works/empty-state';
+import { EmptyState } from '@/components/works/atoms/empty-state';
 import { ExportButtons } from '@/components/works/export-buttons';
-import { Modal } from '@/components/works/modal';
+import { Modal } from '@/components/works/molecules/modal';
 import { ReportSectionCard } from '@/components/works/organisms/report-section-card';
 
 /**

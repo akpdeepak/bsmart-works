@@ -27,7 +27,7 @@ const baseProps = {
 describe('BacklogView', () => {
   it('renders the Backlog heading', () => {
     render(<BacklogView {...baseProps} />);
-    expect(screen.getByRole('heading', { name: /backlog/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^backlog$/i, level: 1 })).toBeInTheDocument();
   });
 
   it('shows 0 items count in subtitle', () => {

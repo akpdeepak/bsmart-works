@@ -11,8 +11,8 @@ import {
   MessageCircle, Archive, RefreshCw, Repeat, Megaphone, ScrollText,
   Calendar, Eye, EyeOff, Building2, Target, Globe, Star, Scale, Clock, Reply,
   X, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronRight, ChevronUp,
-  SquarePen, Upload, IndentIncrease, IndentDecrease, MapPin,
-  Unlock, CornerDownRight, Image as ImageIcon, Flame, Bug,
+  Upload, IndentIncrease, IndentDecrease, MapPin,
+  CornerDownRight, Image as ImageIcon,
   Activity, BellRing, Keyboard,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
@@ -48,15 +48,15 @@ import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
 import { ResetPasswordScreen } from '@/components/works/reset-password-screen';
-import { DonutChart, BarChart } from '@/components/works/molecules';
-import { exportElementToPng, exportElementToPdf, exportRowsToCsv } from '@/lib/export';
+// DonutChart / BarChart moved to dashboard-widget-card.jsx + report-section-card.jsx (TD-003).
+// exportElementToPng / exportElementToPdf / exportRowsToCsv moved to export-buttons.jsx (TD-003).
 import { api } from '@/lib/apiClient';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { isIconComponent, onPressKey } from '@/lib/utils';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { TYPES, TYPE_ICON_SET, TYPE_ICON_KEYS } from '@/lib/work-item-types';
 import { TypeBadge, TypeIcon } from '@/components/works/work-item-type';
-import { PriorityBadge } from '@/components/works/priority-badge';
+// PriorityBadge moved to backlog-view.jsx (TD-003)
 import { StatCard } from '@/components/works/stat-card';
 import { Field } from '@/components/works/field';
 import { Avatar } from '@/components/works/atoms/avatar';
@@ -86,10 +86,12 @@ import BacklogView from '@/views/backlog-view';
 import SprintView from '@/views/sprint-view';
 import DashboardsView from '@/views/dashboards-view';
 import ReportBuilderView from '@/views/reportbuilder-view';
-import {
-  filterItems as filterWidgetItems, statusBreakdown, statusPriorityMatrix,
-  sprintProgress, velocityPoints, SERIES_BG, EXTRA_WIDGET_PRESETS, EXTRA_WIDGET_CATEGORIES,
-} from '@/lib/dashboard-metrics';
+import { DashboardWidgetCard } from '@/components/works/organisms/dashboard-widget-card';
+// DashboardDrillModal extracted to src/components/works/organisms/dashboard-drill-modal.jsx (TD-003).
+// ExportButtons extracted to src/components/works/export-buttons.jsx (TD-003).
+// ReportSectionCard extracted to src/components/works/organisms/report-section-card.jsx (TD-003).
+// Dashboard widget metrics moved to dashboard-widget-card.jsx (TD-003).
+// EXTRA_WIDGET_PRESETS / EXTRA_WIDGET_CATEGORIES moved to dashboards-view.jsx (TD-003).
 
 // One error-presentation contract (findings F1/F2 in docs/UX-CODEBASE-ANALYSIS.md): failures are
 // never swallowed silently. `reportError` is registered with the live toast emitter from inside
@@ -6404,157 +6406,12 @@ function getTimeOfDay() {
 // StatCard, RoleBadge, Field and the onPressKey keyboard helper now live in
 // components/works/{stat-card,role-badge,field}.jsx and lib/utils.js (imported above).
 
-// Iteration 6 — PNG/PDF/CSV export controls for a dashboard or report. PNG/PDF capture
-// the element with id=targetId; CSV uses the supplied flat rows. Heavy libs are
-// lazy-loaded inside the export helpers (CLAUDE.md §4.18).
-function ExportButtons({ targetId, rows, filename, onError }) {
-  const run = async (fn) => { try { await fn(); } catch { if (onError) onError(); } };
-  const cls = 'text-xs px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors';
-  return (
-    <div className="flex items-center gap-1">
-      <span className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mr-0.5">Export</span>
-      <button type="button" className={cls} onClick={() => run(() => exportElementToPdf(document.getElementById(targetId), filename))}>PDF</button>
-      <button type="button" className={cls} onClick={() => run(() => exportRowsToCsv(rows, filename))}>CSV</button>
-      <button type="button" className={cls} onClick={() => run(() => exportElementToPng(document.getElementById(targetId), filename))}>PNG</button>
-    </div>
-  );
-}
+// ExportButtons extracted to src/components/works/export-buttons.jsx (TD-003).
 
-// Count work items grouped by one dimension (status/type/priority), sorted desc.
-// Feeds the PIE and BAR dashboard widgets (iteration 6).
-function aggregateByDimension(items, dimension) {
-  const counts = {};
-  (items || []).forEach(i => {
-    const key = i[dimension] || 'None';
-    counts[key] = (counts[key] || 0) + 1;
-  });
-  return Object.entries(counts)
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => b.value - a.value);
-}
+// aggregateByDimension / filterReportItems moved to lib/dashboard-metrics.js (TD-003).
 
-// Apply a report section's filter to the work-item set (mirrors the dashboard widget filter).
-function filterReportItems(items, filter = {}) {
-  return (items || []).filter(i => {
-    if (filter.open && i.status === 'Done') return false;
-    if (filter.status && i.status !== filter.status) return false;
-    if (filter.priority && i.priority !== filter.priority) return false;
-    if (filter.type && i.type !== filter.type) return false;
-    return true;
-  });
-}
-
-// Iteration 6 — edit controls for a report section's config (chart type/dimension,
-// table limit, open-only filter). Shown only in edit mode.
-function ReportSectionControls({ section, onChange }) {
-  const config = section.config || {};
-  const setConfig = (patch) => onChange({ ...section, config: { ...config, ...patch } });
-  const setFilter = (patch) => setConfig({ filter: { ...(config.filter || {}), ...patch } });
-  return (
-    <div className="flex flex-wrap items-center gap-3 mb-3 p-2 rounded-md bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-700">
-      {section.type === 'chart' && (
-        <>
-          <label className="text-xs text-neutral-600 dark:text-neutral-400 flex items-center gap-1">Chart
-            <select value={config.chartType || 'bar'} onChange={e => setConfig({ chartType: e.target.value })}
-              className="text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-1 py-0.5">
-              <option value="bar">Bar</option>
-              <option value="pie">Pie</option>
-            </select>
-          </label>
-          <label className="text-xs text-neutral-600 dark:text-neutral-400 flex items-center gap-1">Group by
-            <select value={config.dimension || 'status'} onChange={e => setConfig({ dimension: e.target.value })}
-              className="text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-1 py-0.5">
-              <option value="status">Status</option>
-              <option value="type">Type</option>
-              <option value="priority">Priority</option>
-            </select>
-          </label>
-        </>
-      )}
-      {section.type === 'table' && (
-        <label className="text-xs text-neutral-600 dark:text-neutral-400 flex items-center gap-1">Limit
-          <input type="number" min="1" max="100" value={config.limit || 20}
-            onChange={e => setConfig({ limit: Math.max(1, Math.min(100, Number(e.target.value) || 20)) })}
-            className="w-16 text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-1 py-0.5" />
-        </label>
-      )}
-      {section.type !== 'narrative' && (
-        <label className="text-xs text-neutral-600 dark:text-neutral-400 flex items-center gap-1.5">
-          <input type="checkbox" checked={!!(config.filter && config.filter.open)}
-            onChange={e => setFilter({ open: e.target.checked })} />
-          Open items only
-        </label>
-      )}
-    </div>
-  );
-}
-
-// Iteration 6 — renders one section of a custom report from the live work-item set.
-// type: kpi | chart | table | narrative. In edit mode it shows title + config controls.
-function ReportSectionCard({ section, index, total, workItems, editMode, onChange, onMove, onRemove }) {
-  const config = section.config || {};
-  const items = filterReportItems(workItems, config.filter);
-
-  return (
-    <section className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-5">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        {editMode ? (
-          <input value={section.title || ''} onChange={e => onChange({ ...section, title: e.target.value })}
-            aria-label="Section title" placeholder="Section title"
-            className="flex-1 text-sm font-semibold text-neutral-900 dark:text-white bg-transparent border-b border-neutral-200 dark:border-neutral-700 focus-visible:outline-none focus-visible:border-brand-navy" />
-        ) : (
-          <h3 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide">{section.title || section.type}</h3>
-        )}
-        {editMode && (
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <button onClick={() => onMove(-1)} disabled={index === 0} aria-label="Move section up"
-              className="text-xs px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy disabled:opacity-40 disabled:pointer-events-none"><ArrowUp className="h-3.5 w-3.5" aria-hidden="true" /></button>
-            <button onClick={() => onMove(1)} disabled={index === total - 1} aria-label="Move section down"
-              className="text-xs px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy disabled:opacity-40 disabled:pointer-events-none"><ArrowDown className="h-3.5 w-3.5" aria-hidden="true" /></button>
-            <button onClick={onRemove} aria-label="Remove section" className="text-xs text-semantic-danger hover:underline ml-1">Remove</button>
-          </div>
-        )}
-      </div>
-
-      {editMode && <ReportSectionControls section={section} onChange={onChange} />}
-
-      {section.type === 'kpi' && (
-        <p className="text-3xl font-bold text-brand-navy dark:text-white">{items.length}</p>
-      )}
-
-      {section.type === 'chart' && (
-        config.chartType === 'pie'
-          ? <DonutChart data={aggregateByDimension(items, config.dimension || 'status')} />
-          : <BarChart data={aggregateByDimension(items, config.dimension || 'status')} />
-      )}
-
-      {section.type === 'table' && (
-        <div className="divide-y divide-neutral-100 dark:divide-neutral-700/50">
-          {items.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-600">No matching items.</p>}
-          {items.slice(0, config.limit || 20).map(i => (
-            <div key={i.id} className="flex items-center justify-between gap-2 py-1.5">
-              <span className="min-w-0 flex-1 truncate text-sm text-neutral-800 dark:text-neutral-200">{i.title}</span>
-              <span className="flex items-center gap-3 flex-shrink-0">
-                <span className="text-xs text-neutral-600 dark:text-neutral-400">{i.priority || '—'}</span>
-                <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">{i.status}</span>
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {section.type === 'narrative' && (
-        editMode
-          ? <textarea value={config.text || ''} rows={3} placeholder="Write the narrative for this section…"
-              onChange={e => onChange({ ...section, config: { ...config, text: e.target.value } })}
-              className="w-full text-sm text-neutral-800 dark:text-neutral-200 bg-neutral-50 dark:bg-neutral-900 rounded-md border border-neutral-200 dark:border-neutral-700 p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40" />
-          : (config.text
-              ? <p className="text-sm text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">{config.text}</p>
-              : <p className="text-sm text-neutral-600 dark:text-neutral-400">—</p>)
-      )}
-    </section>
-  );
-}
+// ReportSectionControls + ReportSectionCard extracted to
+// src/components/works/organisms/report-section-card.jsx (TD-003).
 
 // Iteration 6 — public, read-only embed of a shared dashboard. Rendered before the auth
 // gate from ?share=<token>; fetches the token-scoped public endpoint and renders the widgets
@@ -6628,219 +6485,9 @@ function PublicDashboardEmbed({ token }) {
   );
 }
 
-// Iteration 6 — renders a single dashboard widget from the live work-item set.
-// Widget data is computed client-side from the config (metric + filter) so the
-// designer is fully functional without a per-widget query endpoint.
-function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove, onResize, onConfigChange, onDrill, onDragStart, onDrop, sprints, velocity, currentUserId }) {
-  let config = {};
-  try { config = JSON.parse(widget.config || '{}'); } catch { config = {}; }
-  const filter = config.filter || {};
-  const items = filterWidgetItems(workItems, filter, { currentUserId });
-  const isChart = widget.widgetType === 'PIE' || widget.widgetType === 'BAR';
-  const dimension = config.dimension || 'status';
-  // When a server scope aggregate is present (TEAM/ORG), it takes precedence over the
-  // client-loaded items; its by-dimension series is already [{ label, value }].
-  const aggKey = 'by' + dimension.charAt(0).toUpperCase() + dimension.slice(1);
-  const chartData = aggregate ? (aggregate[aggKey] || []) : aggregateByDimension(items, dimension);
-  const scorecardCount = aggregate ? (aggregate.total ?? 0) : items.length;
-  const statusSeries = aggregate
-    ? (aggregate.byStatus || [])
-    : Object.entries(items.reduce((acc, i) => { const k = i.status || 'Unknown'; acc[k] = (acc[k] || 0) + 1; return acc; }, {}))
-        .map(([label, value]) => ({ label, value }));
-  const listItems = aggregate ? (aggregate.recent || []) : items;
-  const span = Math.max(1, Math.min(widget.gridW || 4, 12));
-  // Drill needs the underlying item set, which the aggregate doesn't carry — disable it then.
-  const canDrill = !editMode && !!onDrill && !aggregate;
-  const drillBy = (label) => items.filter(i => (i[dimension] || 'None') === label);
+// DashboardWidgetCard extracted to src/components/works/organisms/dashboard-widget-card.jsx (TD-003).
+// Imported at the top of this file; used here by PublicDashboardEmbed.
 
-  return (
-    <div
-      style={{ gridColumn: `span ${span} / span ${span}` }}
-      draggable={editMode}
-      onDragStart={editMode ? onDragStart : undefined}
-      onDragOver={editMode ? (e => e.preventDefault()) : undefined}
-      onDrop={editMode ? onDrop : undefined}
-      className={`bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 ${editMode ? 'cursor-move ring-1 ring-brand-navy/20' : ''}`}>
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide truncate">{widget.title || widget.widgetType}</p>
-        {editMode && (
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {[4, 6, 12].map(w => (
-              <button key={w} onClick={() => onResize(w)} aria-label={`Set width ${w}`}
-                className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${span === w ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy'}`}>
-                {w === 12 ? 'Full' : `${w}`}
-              </button>
-            ))}
-            <button onClick={onRemove} aria-label="Remove widget" className="text-xs text-semantic-danger hover:underline ml-1">Remove</button>
-          </div>
-        )}
-      </div>
-
-      {editMode && isChart && (
-        <div className="flex items-center gap-2 mb-2">
-          <label htmlFor={`dim-${widget.id}`} className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Group by</label>
-          <select id={`dim-${widget.id}`} value={dimension}
-            onChange={e => onConfigChange && onConfigChange({ ...config, dimension: e.target.value })}
-            className="text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
-            <option value="status">Status</option>
-            <option value="type">Type</option>
-            <option value="priority">Priority</option>
-          </select>
-        </div>
-      )}
-
-      {widget.widgetType === 'SCORECARD' && (
-        canDrill ? (
-          <button type="button" onClick={() => onDrill({ title: widget.title || 'Items', items })}
-            className="text-3xl font-bold text-brand-navy dark:text-white rounded hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
-            {scorecardCount}
-          </button>
-        ) : (
-          <p className="text-3xl font-bold text-brand-navy dark:text-white">{scorecardCount}</p>
-        )
-      )}
-
-      {widget.widgetType === 'STATUS_BAR' && (
-        <div className="space-y-1.5 mt-1">
-          {(() => {
-            const entries = statusSeries;
-            const max = Math.max(1, ...entries.map(e => e.value));
-            if (entries.length === 0) return <p className="text-xs text-neutral-600 dark:text-neutral-600">No matching items.</p>;
-            return entries.map(({ label: status, value: count }) => {
-              const row = (
-                <>
-                  <span className="text-xs text-neutral-600 dark:text-neutral-400 w-24 truncate text-left">{status}</span>
-                  <div className="flex-1 h-2 rounded-full bg-neutral-100 dark:bg-neutral-700 overflow-hidden">
-                    <div className="h-full bg-brand-navy-tint rounded-full" style={{ width: `${(count / max) * 100}%` }} />
-                  </div>
-                  <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 w-6 text-right">{count}</span>
-                </>
-              );
-              return canDrill ? (
-                <button key={status} type="button" aria-label={`${status}: ${count} — show items`}
-                  onClick={() => onDrill({ title: `${widget.title || 'Items'} · Status: ${status}`, items: items.filter(i => (i.status || 'Unknown') === status) })}
-                  className="flex w-full items-center gap-2 rounded px-1 -mx-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors">
-                  {row}
-                </button>
-              ) : (
-                <div key={status} className="flex items-center gap-2">{row}</div>
-              );
-            });
-          })()}
-        </div>
-      )}
-
-      {widget.widgetType === 'ITEM_LIST' && (
-        <div className="space-y-1 mt-1">
-          {listItems.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-600">No matching items.</p>}
-          {listItems.slice(0, config.limit || 6).map(i => (
-            <div key={i.id} className="flex items-center justify-between gap-2 py-1 border-b border-neutral-100 dark:border-neutral-700/50 last:border-0">
-              <span className="text-xs text-neutral-700 dark:text-neutral-300 truncate">{i.title}</span>
-              <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400 flex-shrink-0">{i.status}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {widget.widgetType === 'PIE' && (
-        <DonutChart data={chartData}
-          onSelect={canDrill ? (e => onDrill({ title: `${widget.title || 'Items'} · ${dimension}: ${e.label}`, items: drillBy(e.label) })) : undefined} />
-      )}
-
-      {widget.widgetType === 'BAR' && (
-        <BarChart data={chartData}
-          onSelect={canDrill ? (e => onDrill({ title: `${widget.title || 'Items'} · ${dimension}: ${e.label}`, items: drillBy(e.label) })) : undefined} />
-      )}
-
-      {(widget.widgetType === 'SPRINT_HEALTH' || widget.widgetType === 'BURNDOWN') && (() => {
-        const p = sprintProgress(sprints, config.mode || (widget.widgetType === 'BURNDOWN' ? 'burndown' : 'health'));
-        const pct = p.max ? Math.round((p.value / p.max) * 100) : 0;
-        return (
-          <div className="mt-1">
-            <div className="flex items-end justify-between mb-1">
-              <span className="text-3xl font-bold text-brand-navy dark:text-white">{pct}%</span>
-              <span className="text-xs text-neutral-600 dark:text-neutral-400">{p.value}/{p.max || 0} pt · {p.label}</span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-neutral-100 dark:bg-neutral-700 overflow-hidden">
-              <div className="h-full bg-semantic-success rounded-full" style={{ width: `${p.max ? Math.min((p.value / p.max) * 100, 100) : 0}%` }} />
-            </div>
-            <p className="text-xs text-neutral-500 mt-1 truncate">{p.sprint?.name || 'No active sprint'}</p>
-          </div>
-        );
-      })()}
-
-      {widget.widgetType === 'VELOCITY_LINE' && (() => {
-        const points = velocityPoints(velocity);
-        if (points.length === 0) return <p className="text-xs text-neutral-600">No sprint history yet.</p>;
-        const max = Math.max(1, ...points.map(p => p.value));
-        const n = points.length;
-        const path = points.map((p, i) => `${n <= 1 ? 0 : (i / (n - 1)) * 100},${30 - (p.value / max) * 28}`).join(' ');
-        return (
-          <div className="mt-1 text-brand-navy dark:text-brand-amber">
-            <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="w-full h-14" aria-hidden="true">
-              <polyline points={path} fill="none" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-            </svg>
-            <div className="flex justify-between text-xs text-neutral-500 mt-1">
-              <span>{points[0]?.label}</span><span>{points[points.length - 1]?.label}</span>
-            </div>
-          </div>
-        );
-      })()}
-
-      {widget.widgetType === 'CUMULATIVE_FLOW' && (() => {
-        const series = statusBreakdown(items);
-        const total = series.reduce((a, b) => a + b.value, 0) || 1;
-        if (series.length === 0) return <p className="text-xs text-neutral-600">No matching items.</p>;
-        return (
-          <div className="mt-1">
-            <div className="flex w-full h-3 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-700">
-              {series.map((s, idx) => (
-                <div key={s.label} className={SERIES_BG[idx % SERIES_BG.length]} style={{ width: `${(s.value / total) * 100}%` }} title={`${s.label}: ${s.value}`} />
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
-              {series.map((s, idx) => (
-                <span key={s.label} className="flex items-center gap-1 text-xs text-neutral-600 dark:text-neutral-400">
-                  <span className={`w-2 h-2 rounded-full ${SERIES_BG[idx % SERIES_BG.length]}`} />
-                  {s.label} <span className="font-semibold text-neutral-700 dark:text-neutral-300">{s.value}</span>
-                </span>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
-
-      {widget.widgetType === 'MATRIX' && (() => {
-        const m = statusPriorityMatrix(items);
-        return (
-          <div className="mt-1 overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-neutral-500">
-                  <th className="text-left font-semibold py-1 pr-2">Status</th>
-                  {m.cols.map(c => <th key={c} className="text-right font-semibold py-1 px-1">{c}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {m.rows.map(row => (
-                  <tr key={row.label} className="border-t border-neutral-100 dark:border-neutral-700/50">
-                    <td className="py-1 pr-2 text-neutral-700 dark:text-neutral-300 truncate">{row.label}</td>
-                    {row.cells.map((c, idx) => (
-                      <td key={idx} className={`text-right py-1 px-1 ${c > 0 ? 'text-neutral-900 dark:text-neutral-100 font-semibold' : 'text-neutral-600 dark:text-neutral-400'}`}>{c || '—'}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
-      })()}
-    </div>
-  );
-}
-
-// Iteration 6 — drill-down modal: lists the work items behind a clicked widget
-// element. Each row opens that item's detail (no navigation away from the dashboard).
 // B27 — AI-assisted compliance rule suggestion. Sends a natural-language prompt to the AI
 // which returns suggested rules; the user can adopt one directly into the rule builder.
 // Fallback: when AI is off or over budget, the component is not rendered (hidden by the parent).
@@ -6909,42 +6556,7 @@ function AiComplianceSuggestion({ workspaceId, onAdopt, onToast }) {
   );
 }
 
-function DashboardDrillModal({ drill, onClose, onOpenItem }) {
-  const items = drill.items || [];
-  return (
-    <div className="fixed inset-0 bg-neutral-900/50 dark:bg-black/70 flex items-center justify-center z-50 p-4"
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-      onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
-      role="presentation" tabIndex={-1} aria-label={drill.title}>
-      <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-lg border border-neutral-100 dark:border-neutral-700 w-full max-w-md max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-700">
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-neutral-900 dark:text-white truncate">{drill.title}</h2>
-            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{items.length} {items.length === 1 ? 'item' : 'items'}</p>
-          </div>
-          <button onClick={onClose} aria-label="Close"
-            className="flex-shrink-0 ml-2 text-lg leading-none text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
-        <div className="overflow-y-auto p-2">
-          {items.length === 0 ? (
-            <p className="text-xs text-neutral-600 dark:text-neutral-600 p-4 text-center">No matching items.</p>
-          ) : items.map(i => (
-            <button key={i.id} type="button" onClick={() => onOpenItem(i)}
-              className="flex w-full items-center justify-between gap-2 px-3 py-2 rounded-md text-left hover:bg-neutral-50 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors">
-              <span className="min-w-0 flex-1 truncate text-sm text-neutral-800 dark:text-neutral-200">{i.title}</span>
-              <span className="flex items-center gap-2 flex-shrink-0">
-                {i.priority && <span className="text-xs text-neutral-600 dark:text-neutral-400">{i.priority}</span>}
-                <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">{i.status}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+// DashboardDrillModal extracted to src/components/works/organisms/dashboard-drill-modal.jsx (TD-003).
 
 function formatEventType(eventType) {
   const map = {

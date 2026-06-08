@@ -41,7 +41,7 @@ const baseProps = {
 describe('DashboardsView', () => {
   it('renders the heading and empty state with no dashboards', () => {
     render(<DashboardsView {...baseProps} />);
-    expect(screen.getByRole('heading', { name: /dashboards/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^dashboards$/i, level: 1 })).toBeInTheDocument();
     expect(screen.getByText(/no dashboards yet/i)).toBeInTheDocument();
   });
 

@@ -84,6 +84,35 @@ export function velocityPoints(velocity) {
 }
 
 /**
+ * Count work items grouped by one dimension (status/type/priority), sorted desc.
+ * Feeds the PIE and BAR dashboard widgets.
+ */
+export function aggregateByDimension(items, dimension) {
+  const counts = {};
+  (items || []).forEach(i => {
+    const key = i[dimension] || 'None';
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  return Object.entries(counts)
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value);
+}
+
+/**
+ * Apply a report section's filter to the work-item set.
+ * Mirrors the dashboard widget filter for consistency.
+ */
+export function filterReportItems(items, filter = {}) {
+  return (items || []).filter(i => {
+    if (filter.open && i.status === 'Done') return false;
+    if (filter.status && i.status !== filter.status) return false;
+    if (filter.priority && i.priority !== filter.priority) return false;
+    if (filter.type && i.type !== filter.type) return false;
+    return true;
+  });
+}
+
+/**
  * Palette presets that EXTEND the five built-in widgets. Metric entries reuse the
  * existing SCORECARD type with a richer filter; the rest are new widget types
  * rendered by DashboardWidgetCard. Grouped for the categorized palette (Hick's law).

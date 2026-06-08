@@ -1,6 +1,6 @@
 import { Zap, Flame, ArrowUp, Bug, Star, Globe, Lock, Unlock, X } from 'lucide-react';
 import { Button } from '@/components/works/button';
-import { EmptyState } from '@/components/works/empty-state';
+import { EmptyState } from '@/components/works/atoms/empty-state';
 import { SprintBoard } from '@/components/works/organisms/sprint-board';
 import { api } from '@/lib/apiClient';
 

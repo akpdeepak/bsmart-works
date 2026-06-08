@@ -1,6 +1,6 @@
 import { LayoutDashboard, ArrowLeft, Puzzle } from 'lucide-react';
 import { Button } from '@/components/works/button';
-import { EmptyState } from '@/components/works/empty-state';
+import { EmptyState } from '@/components/works/atoms/empty-state';
 import { ExportButtons } from '@/components/works/export-buttons';
 import { DashboardWidgetCard } from '@/components/works/organisms/dashboard-widget-card';
 import { DashboardDrillModal } from '@/components/works/organisms/dashboard-drill-modal';

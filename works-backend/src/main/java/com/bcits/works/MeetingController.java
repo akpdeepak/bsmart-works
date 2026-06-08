@@ -25,15 +25,18 @@ public class MeetingController {
     private final MeetingNoteRepository noteRepo;
     private final ActionItemRepository actionItemRepo;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
     public MeetingController(MeetingRepository meetingRepo,
                               MeetingNoteRepository noteRepo,
                               ActionItemRepository actionItemRepo,
-                              AuthenticatedUser authenticatedUser) {
+                              AuthenticatedUser authenticatedUser,
+                              RbacService rbac) {
         this.meetingRepo = meetingRepo;
         this.noteRepo = noteRepo;
         this.actionItemRepo = actionItemRepo;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -48,6 +51,10 @@ public class MeetingController {
     @GetMapping("/{id}")
     public Map<String, Object> get(@PathVariable String id) {
         Meeting meeting = meetingRepo.findById(id).orElseThrow();
+        String wsId = rbac.workspaceForProject(meeting.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("Meeting", id);
+        }
         List<MeetingNote> notes = noteRepo.findByMeetingId(id);
         List<ActionItem> actions = actionItemRepo.findBySourceMeetingIdAndDeletedAtIsNull(id);
         Map<String, Object> result = new LinkedHashMap<>();
@@ -83,6 +90,11 @@ public class MeetingController {
 
     @PutMapping("/{id}")
     public Meeting update(@PathVariable String id, @Valid @RequestBody Meeting updated) {
+        Meeting existing = meetingRepo.findById(id).orElseThrow(() -> ApiException.notFound("Meeting", id));
+        String wsId = rbac.workspaceForProject(existing.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("Meeting", id);
+        }
         return meetingRepo.findById(id).map(m -> {
             m.setTitle(updated.getTitle());
             m.setMeetingType(updated.getMeetingType());
@@ -102,6 +114,10 @@ public class MeetingController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         meetingRepo.findById(id).ifPresent(m -> {
+            String wsId = rbac.workspaceForProject(m.getProjectId());
+            if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+                throw ApiException.notFound("Meeting", id);
+            }
             m.setDeletedAt(OffsetDateTime.now());
             meetingRepo.save(m);
         });
@@ -118,6 +134,11 @@ public class MeetingController {
     public MeetingNote upsertNote(@PathVariable String id, @PathVariable String section,
                                    @Valid @RequestBody Map<String, String> body) {
         String userId = authenticatedUser.id();
+        Meeting meeting = meetingRepo.findById(id).orElseThrow(() -> ApiException.notFound("Meeting", id));
+        String wsId = rbac.workspaceForProject(meeting.getProjectId());
+        if (wsId == null || rbac.getUserTier(userId, wsId) < 1) {
+            throw ApiException.notFound("Meeting", id);
+        }
         MeetingNote note = noteRepo.findByMeetingIdAndSection(id, section.toUpperCase())
                 .orElseGet(() -> {
                     MeetingNote newNote = new MeetingNote();

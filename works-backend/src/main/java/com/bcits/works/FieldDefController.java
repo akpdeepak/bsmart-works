@@ -24,13 +24,16 @@ public class FieldDefController {
     private final FieldDefRepository fieldDefRepo;
     private final WorkItemFieldValueRepository valueRepo;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
     public FieldDefController(FieldDefRepository fieldDefRepo,
                                WorkItemFieldValueRepository valueRepo,
-                               AuthenticatedUser authenticatedUser) {
+                               AuthenticatedUser authenticatedUser,
+                               RbacService rbac) {
         this.fieldDefRepo = fieldDefRepo;
         this.valueRepo = valueRepo;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -47,7 +50,9 @@ public class FieldDefController {
 
     @GetMapping("/{id}")
     public FieldDef get(@PathVariable String id) {
-        return fieldDefRepo.findById(id).orElseThrow();
+        FieldDef fd = fieldDefRepo.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), fd.getWorkspaceId(), "view_items");
+        return fd;
     }
 
     @PostMapping
@@ -61,6 +66,8 @@ public class FieldDefController {
 
     @PutMapping("/{id}")
     public FieldDef update(@PathVariable String id, @Valid @RequestBody FieldDef updated) {
+        FieldDef existing = fieldDefRepo.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "view_items");
         return fieldDefRepo.findById(id).map(fd -> {
             fd.setName(updated.getName());
             fd.setFieldType(updated.getFieldType());
@@ -74,6 +81,8 @@ public class FieldDefController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
+        FieldDef existing = fieldDefRepo.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "view_items");
         fieldDefRepo.deleteById(id);
         return ResponseEntity.noContent().build();
     }

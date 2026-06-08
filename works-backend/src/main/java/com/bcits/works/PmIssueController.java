@@ -50,7 +50,14 @@ public class PmIssueController {
     }
 
     @GetMapping("/{id}")
-    public PmIssue get(@PathVariable String id) { return repo.findById(id).orElseThrow(); }
+    public PmIssue get(@PathVariable String id) {
+        PmIssue issue = repo.findById(id).orElseThrow();
+        String wsId = rbac.workspaceForProject(issue.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("PmIssue", id);
+        }
+        return issue;
+    }
 
     @PostMapping
     public PmIssue create(@Valid @RequestBody PmIssue issue) {
@@ -63,6 +70,11 @@ public class PmIssueController {
 
     @PutMapping("/{id}")
     public PmIssue update(@PathVariable String id, @Valid @RequestBody PmIssue updated) {
+        PmIssue existing = repo.findById(id).orElseThrow(() -> ApiException.notFound("PmIssue", id));
+        String wsId = rbac.workspaceForProject(existing.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("PmIssue", id);
+        }
         return repo.findById(id).map(i -> {
             i.setTitle(updated.getTitle());
             i.setDescription(updated.getDescription());

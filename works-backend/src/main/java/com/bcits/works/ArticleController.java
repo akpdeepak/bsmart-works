@@ -30,6 +30,8 @@ public class ArticleController {
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
     private final JdbcTemplate jdbc;
+    private final KnowledgeSpaceRepository knowledgeSpaceRepository;
+    private final RbacService rbac;
 
     public ArticleController(ArticleRepository articleRepository,
                               ArticleVersionRepository articleVersionRepository,
@@ -38,7 +40,9 @@ public class ArticleController {
                               ArticleAnalyticsService analyticsService,
                               ArticleDiffService diffService,
                               EventService eventService, AuthenticatedUser authenticatedUser,
-                              JdbcTemplate jdbc) {
+                              JdbcTemplate jdbc,
+                              KnowledgeSpaceRepository knowledgeSpaceRepository,
+                              RbacService rbac) {
         this.articleRepository = articleRepository;
         this.articleVersionRepository = articleVersionRepository;
         this.articleCommentRepository = articleCommentRepository;
@@ -48,6 +52,8 @@ public class ArticleController {
         this.eventService = eventService;
         this.authenticatedUser = authenticatedUser;
         this.jdbc = jdbc;
+        this.knowledgeSpaceRepository = knowledgeSpaceRepository;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -91,6 +97,7 @@ public class ArticleController {
     @GetMapping("/{id}")
     public Article getArticle(@PathVariable String id) {
         Article article = articleRepository.findById(id).orElseThrow();
+        requireArticleAccess(article);
         // increment view count
         jdbc.update("UPDATE articles SET view_count = view_count + 1 WHERE id = ?", id);
         article.setViewCount(article.getViewCount() + 1);
@@ -203,6 +210,8 @@ public class ArticleController {
     public Article updateArticle(@PathVariable String id, @Valid @RequestBody Article updated) {
         String userId = authenticatedUser.id();
         validateBlockEditor(updated);
+        Article existingArticle = articleRepository.findById(id).orElseThrow(() -> ApiException.notFound("Article", id));
+        requireArticleAccess(existingArticle);
         return articleRepository.findById(id).map(a -> {
             a.setTitle(updated.getTitle());
             a.setContent(updated.getContent());
@@ -239,6 +248,7 @@ public class ArticleController {
     private Article applyTransition(String id, String action) {
         String userId = authenticatedUser.id();
         Article a = articleRepository.findById(id).orElseThrow();
+        requireArticleAccess(a);
         String newStatus = workflowService.transition(a.getStatus(), action);
         OffsetDateTime now = OffsetDateTime.now();
         a.setStatus(newStatus);
@@ -266,6 +276,7 @@ public class ArticleController {
     private Article setPortalPublished(String id, boolean published) {
         String userId = authenticatedUser.id();
         Article a = articleRepository.findById(id).orElseThrow(() -> ApiException.notFound("Article", id));
+        requireArticleAccess(a);
         if (published && !ArticleWorkflowService.PUBLISHED.equals(a.getStatus())) {
             throw ApiException.badRequest("NOT_PUBLISHED",
                     "Only a published article can be surfaced on the customer portal.");
@@ -304,8 +315,17 @@ public class ArticleController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteArticle(@PathVariable String id) {
+        Article existing = articleRepository.findById(id).orElseThrow(() -> ApiException.notFound("Article", id));
+        requireArticleAccess(existing);
         articleRepository.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /** Verify the caller belongs to the workspace that owns the article's space. Throws notFound if not. */
+    private void requireArticleAccess(Article article) {
+        KnowledgeSpace space = knowledgeSpaceRepository.findById(article.getSpaceId())
+                .orElseThrow(() -> ApiException.notFound("Article", article.getId()));
+        rbac.require(authenticatedUser.id(), space.getWorkspaceId(), "view_items");
     }
 
     /** Validate: if content_format=blocks, content_blocks must be present and non-empty. */

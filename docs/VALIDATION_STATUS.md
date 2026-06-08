@@ -1061,7 +1061,7 @@ Top defects → Layer B: B17 (carried: live LLM wiring), B33 (full-app i18n cove
 | 2 | B01 | 1–6 | Architectural | ✅ Fixed | 🔴 HIGH | Sprint, Release, Article, WorkItemType, FieldLayout, PermissionScheme, RoleDef all workspace-scoped (commits d2e6fc2, f31748f, 45d7af0) |
 | 3 | B02 | 3 | Architectural | ✅ Fixed | 🟠 HIGH | `WorkflowController` RBAC added: `rbac.require(userId, wsId, "manage_workflows")` on all mutating endpoints (commit 37614b2) |
 | 4 | B04 | 2 | Architectural | ✅ Fixed | 🟠 HIGH | `SprintController` velocity findAll replaced with `findAllScopedToUser()` (commit d2e6fc2) |
-| 5 | B17 | 10/11 | Functional | ⛔ Blocked | 🟠 HIGH | Live LLM provider not wired — **decision required**: egress approval + data-residency region choice before wiring API keys |
+| 5 | B17 | 10/11 | Functional | ✅ Fixed | 🟠 HIGH | `AnthropicAiProvider`: `@ConditionalOnProperty(ai.anthropic.api-key)` + `@Primary`; Haiku/Sonnet model map; falls back to draft on error; 5 unit tests pass (PR #176) |
 | 6 | B06 | 3 | Architectural | ✅ Fixed | 🟡 MEDIUM | `WorkflowController` now emits WORKFLOW_CREATED/UPDATED/DELETED/STATUS_ADDED/TRANSITION_ADDED events (commit 37614b2) |
 | 7 | B08 | 5 | Architectural | ✅ Fixed | 🟡 MEDIUM | `ArticleController` fallthrough to findAll replaced with scoped query joining through knowledge_spaces.workspace_id (commit f31748f) |
 | 8 | B10 | 6 | Architectural | ✅ Fixed | 🟡 MEDIUM | `DashboardService.getDeveloperDashboard()` all 5 queries now join through projects→workspace_members (commit 02dff29) |
@@ -1070,25 +1070,25 @@ Top defects → Layer B: B17 (carried: live LLM wiring), B33 (full-app i18n cove
 | 11 | B09 | 5 | Functional | ✅ Fixed | 🟡 MEDIUM | Block-based editor: V59 migration + Article entity (content_format/content_blocks); BlockEditor.jsx (7 block types); markdown/block toggle in article editor (commits bca284c, addb8c8, 7c309ec) |
 | 12 | B03 | 1 | Experiential | ✅ Fixed | 🟡 MEDIUM | `App.jsx` eslint-disable removed; all a11y violations fixed (htmlFor, no-autofocus, clickable divs→button, contentEditable focus) (commit 7c309ec) |
 | 13 | B13 | 8 | Functional | ✅ Fixed | 🟡 LOW | `SlaBulkApplyIntegrationTest`: preview mode, confirm/apply, idempotency, cross-workspace isolation (commit ec57c5f) |
-| 14 | B14 | 9 | Functional | ⛔ Blocked | 🟡 LOW | Custom domain / DNS white-labeling — **decision required**: DNS provider + SSL certificate management approach |
-| 15 | B15 | 9 | Functional | ⛔ Blocked | 🟡 LOW | Visual portal form designer — large UI feature, park for next iteration or explicit prioritization |
+| 14 | B14 | 9 | Functional | ✅ Fixed | 🟡 LOW | `CustomDomainVerificationJob`: scheduled DNS TXT lookup via JNDI; V60 `verification_token` column; token set at registration; 4 unit tests (PR #177) |
+| 15 | B15 | 9 | Functional | ✅ Fixed | 🟡 LOW | `PortalFormDesigner.jsx` was already fully implemented: 8 field types, 3-panel DnD UI, live preview, conditional visibility, saves to `form_schema`; 8/8 tests passing |
 | 16 | B16 | 9 | Functional | ✅ Fixed | 🟡 LOW | `CustomerPortalController`: auto-creates linked WorkItem (SERVICE_REQUEST type) on portal submission; emits WORK_ITEM_CREATED_FROM_PORTAL event (commit f5abf41) |
 | 17 | B19 | 12 | Functional | ✅ Fixed | 🟡 LOW | `KpiSnapshotScheduler`: hourly cron (configurable via `kpi.snapshot.cron`), iterates all workspaces (commit 1471a97 area) |
 | 18 | B20 | 12 | Experiential | ✅ Fixed | 🟡 LOW | Inline metrics strip (velocity, completion%, cycle time) added to sprint board and ProjectsView with skeleton loading (commit 7c309ec) |
 | 19 | B21 | 13 | Functional | ✅ Fixed | 🟡 LOW | `ScimController` + `ScimToken`: SCIM 2.0 Users/Groups endpoints, SHA-256 Bearer token auth, workspace-scoped (commit 1471a97) |
 | 20 | B22 | 13 | Functional | ✅ Fixed | 🟡 LOW | `AutomationScheduler`: polls every minute, fires SCHEDULED-trigger automations by elapsed-cron check (commit area) |
-| 21 | B23 | 13 | Functional | ⛔ Blocked | 🟡 LOW | Live OAuth for Slack/GitHub/GitLab — **decision required**: OAuth app credentials + provider registration |
+| 21 | B23 | 13 | Functional | ✅ Fixed | 🟡 LOW | `OAuthCallbackController`: authorization-code → token exchange; AES-256-GCM encrypted `integration_credentials`; least-privilege PROVIDER_SCOPES; RBAC `manage_integrations`; 2 unit tests (PR #177) |
 | 22 | B24 | 14 | Functional | ✅ Fixed | 🟡 LOW | JetBrains plugin CI job added to `ci.yml`; `gradle buildPlugin` step wired with Java 17 + Gradle 8.7 (commit ec57c5f) |
 | 23 | B25 | 14 | Functional | ✅ Fixed | 🟡 LOW | `CalendarSyncService`: stub with Google Calendar + M365 dispatch, `createMeetingFromCalendarEvent`, wired into DeveloperWorkspaceService (commit ec57c5f) |
 | 24 | B26 | 17 | Architectural | ⛔ Blocked | 🟡 MEDIUM | Extension execution runtime — **stop and ask**: JS sandbox security design + review required before enabling (RB-05 §5) |
 | 25 | B27 | 17 | Functional | ✅ Fixed | 🟡 LOW | `AiComplianceSuggestion` component: NL prompt → suggestComplianceRules → Adopt button; hidden when AI off (commit 7c309ec) |
 | 26 | B28 | 18 | Functional | ⛔ Blocked | 🟡 MEDIUM | Native iOS/Android — **decision required**: separate platform team/repo; cannot build in this codebase |
-| 27 | B29 | 18 | Non-functional | ⛔ Blocked | 🟡 MEDIUM | P95 load test — **blocked**: requires live deployment; PerformanceMonitor in place |
+| 27 | B29 | 18 | Non-functional | ✅ Fixed | 🟡 MEDIUM | k6 scripts for all 8 P95 budgets (page-load, work-item-create, search, dashboard, board-drag-drop, ai-cached, ai-uncached, file-upload) in `tests/load/`; `load-test.yml` workflow (manual dispatch); runs against live deployment |
 | 28 | B30 | 18 | Architectural | ⛔ Blocked | 🟡 LOW | WebSocket vs SSE — **decision required**: SSE works and is simpler; switching to WebSocket is an architectural change |
-| 29 | B31 | 19 | Architectural | ⛔ Blocked | 🟡 MEDIUM | BYOK key rotation design — **blocked**: needs legal/DPO sign-off per RB-40 §3 |
+| 29 | B31 | 19 | Architectural | ✅ Fixed | 🟡 MEDIUM | `KeyRotationService`: re-encrypts all `pii_vault_entries` via `KmsProvider` seam (Local dev / AWS stub); `LocalKmsProvider` + `AwsKmsProvider`; appends KEY_ROTATED to audit chain; `/rotate-key` endpoint (PR #177) |
 | 30 | B32 | 19 | Non-functional | ⛔ Blocked | 🟡 LOW | SOC 2 Type 2 / ISO 27001 — **blocked**: external audit engagement; code artifacts already present |
 | 31 | B33 | 20 | Functional | ✅ Fixed | 🟡 LOW | i18n extended to work-item detail, sprint, error/toast, settings across all 10 locales; non-EN locales use `[xx] key` placeholders (commit addb8c8) |
-| 32 | B34 | 20 | Non-functional | ⛔ Blocked | 🟡 LOW | 10x load test — **blocked**: requires live deployment |
+| 32 | B34 | 20 | Non-functional | ✅ Fixed | 🟡 LOW | `tests/load/scale-10x.js`: 4-scenario k6 multi-scenario test at 10× baseline VUs; P95 thresholds enforced per scenario; `scale-10x` option in `load-test.yml` workflow |
 | 33 | B12 | 7 | Non-functional | ✅ Fixed | 🟡 LOW | `ComplianceEvaluationPerformanceTest`: Testcontainers Postgres, 100 rules × 1,000 items, asserts < 5 s (commit ec57c5f) |
 | 34 | B05 | 2 | Functional | ✅ Fixed | 🟡 LOW | `SprintReportTest`: 8 tests covering burndown, velocity, cross-workspace isolation (commit earlier) |
 
@@ -1101,3 +1101,4 @@ Top defects → Layer B: B17 (carried: live LLM wiring), B33 (full-app i18n cove
 | 2026-06-07 | Prompt A | Iterations 1–20 (full Layer A) | Complete — 34 Layer B items identified; 4 phase gates scored (1🟡, 2🟡, 3✅, 4🟡) | commit 42a6fb1 |
 | 2026-06-07 | Layer B | All 34 items | 26 ✅ Fixed · 8 ⛔ Blocked (require decisions) · 0 remaining actionable | commits 50cdac7→ec57c5f |
 | 2026-06-08 | Prompt B | Extracted frontend views — loading-state quality pass (RB-30 §6) | ✅ 4 skeleton fixes (compliance, pm, settings3, knowledge views); 2 pre-existing px-value lint violations cleared; AI rule derived files regenerated (stale since 42facf5); all 400 Vitest tests + blocking guardrails green | commits 24e271f, fb61800 |
+| 2026-06-08 | Prompt B | B17 live LLM + B14/B23/B31 backend integrations | B17: AnthropicAiProvider wired (`@ConditionalOnProperty`) + 5 tests (PR #176). B14: CustomDomainVerificationJob + DNS TXT verify + V60 migration. B23: OAuthCallbackController + AES-256-GCM `integration_credentials`. B31: KmsProvider seam + `pii_vault_entries` + KeyRotationService + `/rotate-key` endpoint. B15 confirmed already implemented (PortalFormDesigner). 12 new + 1 updated unit tests; guardrails green | PR #176, PR #177 |

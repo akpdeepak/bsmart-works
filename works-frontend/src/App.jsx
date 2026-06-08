@@ -82,6 +82,10 @@ import SupportInboxView from '@/views/support-inbox-view';
 import { LanguageSwitcher } from '@/components/works/organisms/language-switcher';
 import { BlockEditor } from '@/components/BlockEditor';
 import { PortalFormDesigner } from '@/components/PortalFormDesigner';
+import BacklogView from '@/views/backlog-view';
+import SprintView from '@/views/sprint-view';
+import DashboardsView from '@/views/dashboards-view';
+import ReportBuilderView from '@/views/reportbuilder-view';
 import {
   filterItems as filterWidgetItems, statusBreakdown, statusPriorityMatrix,
   sprintProgress, velocityPoints, SERIES_BG, EXTRA_WIDGET_PRESETS, EXTRA_WIDGET_CATEGORIES,
@@ -2907,290 +2911,70 @@ export default function App() {
             />
           )}
 
-          {/* BACKLOG VIEW */}
+          {/* BACKLOG VIEW — extracted to src/views/backlog-view.jsx (TD-003) */}
           {view === 'backlog' && (
-            <div className="p-6">
-              <div className="flex gap-6">
-                {/* Epic panel (mockup 03) — sticky left rail with per-epic progress */}
-                <aside className="hidden lg:block w-56 flex-shrink-0">
-                  <div className="sticky top-6 rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-800">
-                    <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-neutral-600">Epics</p>
-                    {workItems.filter(i => i.type === 'Epic').length === 0 ? (
-                      <p className="px-1 text-xs text-neutral-600 dark:text-neutral-400">No epics yet.</p>
-                    ) : (
-                      <ul className="space-y-1">
-                        {workItems.filter(i => i.type === 'Epic').map(epic => {
-                          const kids = workItems.filter(i => i.parentId === epic.id);
-                          const done = kids.filter(i => i.status === 'Done').length;
-                          const pct = kids.length ? Math.round((done / kids.length) * 100) : 0;
-                          return (
-                            <li key={epic.id}>
-                              <button type="button" onClick={() => setSelectedItem(epic)}
-                                className="w-full rounded-md px-2 py-1.5 text-left transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
-                                <span className="block truncate text-xs font-medium text-neutral-900 dark:text-neutral-100">{epic.title}</span>
-                                <span className="mt-1 block h-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-700">
-                                  <span className="block h-full rounded-full bg-semantic-success" style={{ width: `${pct}%` }} />
-                                </span>
-                                <span className="mt-0.5 block text-xs text-neutral-600 dark:text-neutral-400">{done}/{kids.length} done · {pct}%</span>
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </div>
-                </aside>
-
-                <div className="min-w-0 flex-1 max-w-5xl">
-              <div className="flex justify-between items-center mb-5">
-                <div>
-                  <h1 className="text-xl font-bold text-brand-navy">Backlog</h1>
-                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{backlogItems.length} items not in any sprint</p>
-                </div>
-                <div className="flex gap-2 items-center">
-                  <label className="flex items-center gap-1.5 cursor-pointer mr-2">
-                    <input type="checkbox" checked={refinementMode} onChange={e => setRefinementMode(e.target.checked)} className="w-3 h-3 accent-brand-navy" />
-                    <span className="text-xs text-neutral-600 font-medium">Refinement mode</span>
-                  </label>
-                  <Button variant="secondary" size="sm" onClick={() => setIsSprintOpen(true)}>+ New Sprint</Button>
-                  <Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>+ Add Item</Button>
-                </div>
-              </div>
-
-              {/* Sprints with capacity bar */}
-              {sprints.map(sprint => {
-                const usedPts = sprint.usedPoints || 0;
-                const capPct = sprint.capacity > 0 ? Math.min(100, Math.round((usedPts / sprint.capacity) * 100)) : 0;
-                const capColor = capPct >= 100 ? 'bg-semantic-danger' : capPct >= 80 ? 'bg-semantic-warning' : 'bg-semantic-success';
-                return (
-                  <div key={sprint.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl mb-4 overflow-hidden">
-                    <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900">
-                      <div className="flex items-center gap-3">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${sprint.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : sprint.status === 'COMPLETED' ? 'bg-neutral-200 text-neutral-600' : 'bg-brand-navy-tint/10 text-brand-navy-tint'}`}>{sprint.status}</span>
-                        <h3 className="font-semibold text-neutral-900">{sprint.name}</h3>
-                        {sprint.goal && <span className="text-xs text-neutral-600 dark:text-neutral-400 italic hidden md:inline">"{sprint.goal}"</span>}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {/* Capacity bar — shows actual committed pts vs capacity */}
-                        {sprint.capacity > 0 && (
-                          <div className="flex items-center gap-2">
-                            <div className="w-24 h-1.5 bg-neutral-200 rounded-full overflow-hidden" title={`${usedPts}/${sprint.capacity} story points`}>
-                              <div className={`h-full rounded-full transition-all ${capColor}`} style={{ width: `${capPct}%` }}></div>
-                            </div>
-                            <span className={`text-xs font-medium ${capPct >= 100 ? 'text-semantic-danger' : capPct >= 80 ? 'text-semantic-warning' : 'text-neutral-600 dark:text-neutral-400'}`}>
-                              {usedPts}/{sprint.capacity}pt
-                            </span>
-                          </div>
-                        )}
-                        {sprint.startDate && <span className="text-xs text-neutral-600 dark:text-neutral-400 hidden md:inline">{sprint.startDate} → {sprint.endDate}</span>}
-                        {sprint.status === 'PLANNING' && <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'ACTIVE')}>Start Sprint</Button>}
-                        {sprint.status === 'ACTIVE' && <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'COMPLETED')}>Complete</Button>}
-                      </div>
-                    </div>
-                    <SprintItemList sprintId={sprint.id} users={users} onMoveToBacklog={(id) => handleMoveToBacklog(id, sprint.id)} onSelect={setSelectedItem} />
-                  </div>
-                );
-              })}
-
-              {/* Backlog items with drag-drop reorder */}
-              <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900">
-                  <h3 className="font-semibold text-neutral-900">Backlog</h3>
-                  <span className="text-xs text-neutral-600 dark:text-neutral-400">{backlogItems.length} items</span>
-                </div>
-                {backlogItems.length === 0
-                  ? <EmptyState icon={FileText} title="Backlog is empty" subtitle="Create work items to add them to the backlog." action={<Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>Add to backlog</Button>} />
-                  : backlogItems.map((item) => (
-                    <div key={item.id}
-                      draggable onDragStart={(e) => handleBacklogDragStart(e, item.id)}
-                      onDragOver={(e) => { e.preventDefault(); setDragOverId(item.id); }}
-                      onDragLeave={() => setDragOverId(null)}
-                      onDrop={(e) => handleBacklogDrop(e, item.id)}
-                      className={`flex items-center gap-3 px-5 py-3 border-b border-neutral-50 dark:border-neutral-700 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-700 group transition-colors ${dragOverId === item.id ? 'border-t-2 border-t-brand-navy bg-brand-navy/5' : ''}`}>
-                      <span className="text-neutral-300 cursor-grab text-xs mr-1">⠿</span>
-                      <TypeBadge type={item.type} compact />
-                      <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
-                      <span role="button" tabIndex={0} onKeyDown={onPressKey} className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => setSelectedItem(item)}>{item.title}</span>
-                      {/* Refinement mode — inline edit */}
-                      {refinementMode ? (
-                        <div className="flex items-center gap-2">
-                          <select value={item.priority || 'MEDIUM'} onChange={e => handleRefinementUpdate(item.id, 'priority', e.target.value)}
-                            className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-300 rounded px-1.5 py-1 focus:outline-none text-neutral-600">
-                            {['LOW','MEDIUM','HIGH','CRITICAL'].map(p => <option key={p} value={p}>{p}</option>)}
-                          </select>
-                          <input type="number" min={0} max={100} value={item.storyPoints || 0}
-                            onChange={e => handleRefinementUpdate(item.id, 'storyPoints', parseInt(e.target.value) || 0)}
-                            className="w-14 text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-300 rounded px-1.5 py-1 focus:outline-none text-center"
-                            placeholder="pts" />
-                        </div>
-                      ) : (
-                        <>
-                          <PriorityBadge priority={item.priority} />
-                          {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
-                        </>
-                      )}
-                      {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}
-                      {sprints.filter(s => s.status !== 'COMPLETED').length > 0 && (
-                        <select className="opacity-0 group-hover:opacity-100 text-xs border border-neutral-200 rounded px-1 py-0.5 text-neutral-600 transition-opacity"
-                          onChange={e => e.target.value && handleMoveToSprint(item.id, e.target.value)} defaultValue="">
-                          <option value="" disabled>→ Sprint</option>
-                          {sprints.filter(s => s.status !== 'COMPLETED').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </select>
-                      )}
-                    </div>
-                  ))
-                }
-              </div>
-                </div>
-              </div>
-            </div>
+            <BacklogView
+              workItems={workItems}
+              backlogItems={backlogItems}
+              sprints={sprints}
+              users={users}
+              refinementMode={refinementMode}
+              dragOverId={dragOverId}
+              setRefinementMode={setRefinementMode}
+              setDragOverId={setDragOverId}
+              setIsCreateOpen={setIsCreateOpen}
+              setIsSprintOpen={setIsSprintOpen}
+              setSelectedItem={setSelectedItem}
+              handleBacklogDragStart={handleBacklogDragStart}
+              handleBacklogDrop={handleBacklogDrop}
+              handleMoveToSprint={handleMoveToSprint}
+              handleMoveToBacklog={handleMoveToBacklog}
+              handleSprintStatusChange={handleSprintStatusChange}
+              handleRefinementUpdate={handleRefinementUpdate}
+              SprintItemList={SprintItemList}
+            />
           )}
 
-          {/* ACTIVE SPRINT VIEW */}
+          {/* ACTIVE SPRINT VIEW — extracted to src/views/sprint-view.jsx (TD-003) */}
           {view === 'sprint' && (
-            <div className="p-6 h-full flex flex-col">
-              {activeSprint ? (
-                <>
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <div className="flex items-center gap-3 mb-0.5">
-                        <h1 className="text-xl font-bold text-brand-navy">{activeSprint.name}</h1>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${activeSprint.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : 'bg-neutral-200 text-neutral-600'}`}>{activeSprint.status}</span>
-                      </div>
-                      {activeSprint.goal && <p className="text-sm text-neutral-600 dark:text-neutral-400 italic">"{activeSprint.goal}"</p>}
-                      {activeSprint.startDate && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{activeSprint.startDate} → {activeSprint.endDate}</p>}
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap justify-end">
-                      <select value={activeSprint.id}
-                        onChange={e => { const s = sprints.find(x => x.id === e.target.value); if (s) { setActiveSprint(s); fetchSprintItems(s.id); fetchSprintMetrics(s, selectedProjectId || 'PROJ-WORKS'); } }}
-                        className="text-sm border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 rounded-md px-2 py-1.5 focus:outline-none">
-                        {sprints.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Capacity bar */}
-                  {activeSprint.capacity > 0 && (
-                    <div className="mb-3 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-4 py-2.5 flex items-center gap-4">
-                      <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium w-20">Capacity</span>
-                      <div className="flex-1 h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
-                        <div className="h-full bg-brand-navy-tint rounded-full transition-all"
-                          style={{ width: `${Math.min(100, (sprintItems.reduce((a, i) => a + (i.storyPoints || 0), 0) / activeSprint.capacity) * 100)}%` }}></div>
-                      </div>
-                      <span className="text-xs text-neutral-600 font-medium w-28 text-right">
-                        {sprintItems.reduce((a, i) => a + (i.storyPoints || 0), 0)} / {activeSprint.capacity} pts
-                      </span>
-                    </div>
-                  )}
-
-                  {/* B20 — Inline metrics strip (velocity, completion%, cycle time) — team-level only */}
-                  <div className="mb-3 flex flex-wrap gap-3">
-                    {sprintMetricsLoading ? (
-                      <>
-                        <div className="animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded-lg h-14 w-36" aria-hidden="true" />
-                        <div className="animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded-lg h-14 w-36" aria-hidden="true" />
-                        <div className="animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded-lg h-14 w-36" aria-hidden="true" />
-                      </>
-                    ) : sprintMetrics ? (
-                      <>
-                        {sprintMetrics.velocity != null && (
-                          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-4 py-2.5 min-w-[9rem]">
-                            <p className="text-xs text-neutral-500 uppercase tracking-wider font-semibold">Velocity</p>
-                            <p className="text-2xl font-bold text-brand-navy">{sprintMetrics.velocity}<span className="text-xs font-normal text-neutral-500 ml-1">pts</span></p>
-                          </div>
-                        )}
-                        {sprintMetrics.completionPct != null && (
-                          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-4 py-2.5 min-w-[9rem]">
-                            <p className="text-xs text-neutral-500 uppercase tracking-wider font-semibold">Completion</p>
-                            <p className="text-2xl font-bold text-semantic-success">{Math.round(sprintMetrics.completionPct)}<span className="text-xs font-normal text-neutral-500 ml-0.5">%</span></p>
-                          </div>
-                        )}
-                        {sprintMetrics.cycleTimeDays != null && (
-                          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-4 py-2.5 min-w-[9rem]">
-                            <p className="text-xs text-neutral-500 uppercase tracking-wider font-semibold">Cycle Time</p>
-                            <p className="text-2xl font-bold text-neutral-700 dark:text-neutral-200">{sprintMetrics.cycleTimeDays.toFixed(1)}<span className="text-xs font-normal text-neutral-500 ml-1">days</span></p>
-                          </div>
-                        )}
-                      </>
-                    ) : null}
-                  </div>
-
-                  {/* Quick filters + Swimlane + Saved filters */}
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    {[
-                      { label: 'All', filter: null },
-                      { label: 'Mine', filter: { type: 'mine' } },
-                      { label: 'Blockers', Icon: Flame, filter: { type: 'blockers' } },
-                      { label: 'High Priority', Icon: ArrowUp, filter: { type: 'priority', value: 'HIGH' } },
-                      { label: 'Bugs', Icon: Bug, filter: { type: 'itemType', value: 'Bug' } },
-                    ].map(f => (
-                      <button key={f.label} onClick={() => setActiveFilter(f.filter)}
-                        className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${JSON.stringify(activeFilter) === JSON.stringify(f.filter) ? 'bg-brand-navy text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'}`}>
-                        {f.Icon && <f.Icon className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />}{f.label}
-                      </button>
-                    ))}
-                    {savedFilters.map(f => (
-                      <div key={f.id} className="flex items-center gap-0.5">
-                        <button onClick={() => setActiveFilter(JSON.parse(f.filterJson))}
-                          className={`text-xs px-2.5 py-1.5 rounded-l-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/10 text-semantic-success' : 'bg-brand-navy/10 text-brand-navy'} hover:opacity-80`}>
-                          {f.shared ? <Globe className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /> : <Star className="inline-block h-3.5 w-3.5 align-text-bottom fill-current" aria-hidden="true" />}{f.name}
-                        </button>
-                        {f.createdBy === currentUser?.id && (
-                          <button onClick={() => {
-                            api.raw(`/saved-filters/${f.id}/share`, { method: 'PUT', headers: headers() })
-                              .then(r => r.json()).then(() => fetchSavedFilters())
-                              .catch(reportError);
-                          }}
-                            title={f.shared ? 'Make private' : 'Share with team'}
-                            className={`text-xs px-1.5 py-1.5 rounded-r-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/20 text-semantic-success hover:bg-semantic-success/30' : 'bg-neutral-100 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200'}`}>
-                            {f.shared ? <Unlock className="h-3.5 w-3.5" aria-hidden="true" /> : <Lock className="h-3.5 w-3.5" aria-hidden="true" />}
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    {activeFilter && (
-                      <div className="flex items-center gap-1 ml-auto">
-                        {!showSaveFilter
-                          ? <button onClick={() => setShowSaveFilter(true)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy">Save filter</button>
-                          : <div className="flex gap-1">
-                              <input type="text" value={saveFilterName} onChange={e => setSaveFilterName(e.target.value)}
-                                placeholder="Filter name" className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 rounded px-2 py-1 focus:outline-none" />
-                              <Button size="sm" variant="secondary" onClick={handleSaveFilter}>Save</Button>
-                              <button onClick={() => setShowSaveFilter(false)} className="text-xs text-neutral-600 dark:text-neutral-400 px-1" aria-label="Cancel"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                            </div>
-                        }
-                      </div>
-                    )}
-                    <select value={swimlaneBy} onChange={e => setSwimlaneBy(e.target.value)}
-                      className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 rounded-md px-2 py-1.5 focus:outline-none text-neutral-600 ml-auto">
-                      <option value="none">No swimlane</option>
-                      <option value="assignee">By Assignee</option>
-                      <option value="type">By Type</option>
-                      <option value="priority">By Priority</option>
-                      <option value="epic">By Epic</option>
-                      <option value="tag">By Tag</option>
-                    </select>
-                  </div>
-
-                  <SprintBoard items={applyFilter(sprintItems)} columns={columns} users={users}
-                    swimlaneBy={swimlaneBy} allItems={workItems} onDragStart={handleDragStart} onDragOver={handleDragOver}
-                    onDrop={(e, status) => {
-                      e.preventDefault();
-                      const itemId = e.dataTransfer.getData('itemId');
-                      const item = sprintItems.find(i => i.id === itemId);
-                      if (!item || item.status === status) return;
-                      setSprintItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
-                      api.raw(`/work-items/${itemId}`, { method: 'PUT', body: JSON.stringify({ ...item, status }) })
-                        .then(r => { if (r.status === 409) { showToast('That item changed elsewhere — refreshing', 'error'); fetchSprints(); } })
-                        .catch(reportError);
-                    }}
-                    onSelect={setSelectedItem} onDelete={handleDelete} density={density} />
-                </>
-              ) : (
-                <EmptyState icon={Zap} title="No sprints yet" subtitle="Create a sprint in the Backlog view to get started."
-                  action={<Button variant="action" onClick={() => { setView('backlog'); fetchBacklog(); fetchSprints(); }}>Go to Backlog</Button>} />
-              )}
-            </div>
+            <SprintView
+              activeSprint={activeSprint}
+              sprints={sprints}
+              sprintItems={sprintItems}
+              sprintMetrics={sprintMetrics}
+              sprintMetricsLoading={sprintMetricsLoading}
+              swimlaneBy={swimlaneBy}
+              activeFilter={activeFilter}
+              savedFilters={savedFilters}
+              showSaveFilter={showSaveFilter}
+              saveFilterName={saveFilterName}
+              density={density}
+              workItems={workItems}
+              users={users}
+              columns={columns}
+              currentUser={currentUser}
+              setActiveSprint={setActiveSprint}
+              setSwimlaneBy={setSwimlaneBy}
+              setActiveFilter={setActiveFilter}
+              setShowSaveFilter={setShowSaveFilter}
+              setSaveFilterName={setSaveFilterName}
+              setSprintItems={setSprintItems}
+              setSelectedItem={setSelectedItem}
+              setView={setView}
+              fetchSprintItems={fetchSprintItems}
+              fetchSprintMetrics={fetchSprintMetrics}
+              fetchBacklog={fetchBacklog}
+              fetchSprints={fetchSprints}
+              fetchSavedFilters={fetchSavedFilters}
+              handleSaveFilter={handleSaveFilter}
+              handleDragStart={handleDragStart}
+              handleDragOver={handleDragOver}
+              handleDelete={handleDelete}
+              applyFilter={applyFilter}
+              showToast={showToast}
+              reportError={reportError}
+              selectedProjectId={selectedProjectId}
+            />
           )}
 
           {/* REPORTS VIEW */}
@@ -4412,304 +4196,75 @@ export default function App() {
           )}
 
           {/* ======================================================
-               ITERATION 6 — CUSTOM DASHBOARDS (designer + persistence)
+               ITERATION 6 — CUSTOM DASHBOARDS — extracted to src/views/dashboards-view.jsx (TD-003)
              ====================================================== */}
           {view === 'dashboards' && (
-            <div className="p-6 overflow-y-auto h-full">
-              {!selectedDashboard ? (
-                <>
-                  <div className="flex items-center justify-between mb-5">
-                    <div>
-                      <h1 className="text-xl font-semibold text-neutral-900 dark:text-white">Dashboards</h1>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">Build your own views — add widgets, arrange the grid, save.</p>
-                    </div>
-                    <Button variant="action" onClick={createDashboard}>New dashboard</Button>
-                  </div>
-                  {customDashboards.length === 0 ? (
-                    <EmptyState icon={LayoutDashboard} title="No dashboards yet"
-                      subtitle="Create a dashboard and drop in widgets to track what matters to you."
-                      action={<Button variant="action" onClick={createDashboard}>New dashboard</Button>} />
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {customDashboards.map(d => (
-                        <div key={d.id} onClick={() => openDashboard(d.id)} role="button" tabIndex={0} onKeyDown={onPressKey}
-                          className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
-                          <div className="flex items-start justify-between">
-                            <LayoutDashboard className="h-6 w-6 text-neutral-600 dark:text-neutral-400" aria-hidden="true" />
-                            <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-700 rounded-full px-2 py-0.5">{d.scope || 'PERSONAL'}</span>
-                          </div>
-                          <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mt-2 truncate">{d.name}</p>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                            {d.updatedAt ? `Updated ${new Date(d.updatedAt).toLocaleDateString()}` : '—'}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between mb-5">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <button onClick={() => setSelectedDashboard(null)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Dashboards</button>
-                      <h1 className="text-xl font-semibold text-neutral-900 dark:text-white truncate">{selectedDashboard.name}</h1>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {!dashboardEditMode && <ExportButtons targetId="dashboard-export-area"
-                        rows={workItems.map(i => ({ ID: i.id, Title: i.title, Type: i.type, Status: i.status, Priority: i.priority, Assignee: i.assigneeId }))}
-                        filename={selectedDashboard.name || 'dashboard'} onError={() => showToast('Export failed — try again', 'error')} />}
-                      {!dashboardEditMode && (
-                        <button onClick={() => mintShare(selectedDashboard.id)}
-                          className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">Share</button>
-                      )}
-                      <Button variant={dashboardEditMode ? 'action' : 'secondary'} onClick={() => setDashboardEditMode(e => !e)}>
-                        {dashboardEditMode ? 'Done' : 'Edit'}
-                      </Button>
-                      <button onClick={() => deleteDashboard(selectedDashboard.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
-                    </div>
-                  </div>
-
-                  {shareInfo && shareInfo.id === selectedDashboard.id && shareInfo.token && (
-                    <div className="flex items-center gap-2 mb-4 p-3 rounded-md bg-semantic-info-surface border border-neutral-200 dark:border-neutral-700">
-                      <span className="text-xs font-semibold text-neutral-700 flex-shrink-0">Public link</span>
-                      <input readOnly aria-label="Public embed link"
-                        value={`${window.location.origin}${window.location.pathname}?share=${shareInfo.token}`}
-                        className="flex-1 min-w-0 text-xs font-mono rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-2 py-1" />
-                      <button onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}${window.location.pathname}?share=${shareInfo.token}`); showToast('Link copied'); }}
-                        className="text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors flex-shrink-0">Copy</button>
-                      <button onClick={() => stopShare(selectedDashboard.id)} className="text-xs text-semantic-danger hover:underline flex-shrink-0">Stop sharing</button>
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap items-center gap-2 mb-4">
-                    <span className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Scope</span>
-                    {['PROJECT', 'TEAM', 'ORG'].map(s => (
-                      <button key={s} type="button"
-                        onClick={() => { setDashboardScope(s); fetchDashboardAggregate(s, dashboardTeamId); }}
-                        className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${dashboardScope === s ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy'}`}>
-                        {s === 'PROJECT' ? 'Project' : s === 'TEAM' ? 'Team' : 'Organization'}
-                      </button>
-                    ))}
-                    {dashboardScope === 'TEAM' && (
-                      <select value={dashboardTeamId || ''} aria-label="Team"
-                        onChange={e => { setDashboardTeamId(e.target.value); fetchDashboardAggregate('TEAM', e.target.value); }}
-                        className="text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-1.5 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
-                        <option value="">Select a team…</option>
-                        {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                      </select>
-                    )}
-                    {dashboardScope !== 'PROJECT' && (
-                      <span className="text-xs text-neutral-600 dark:text-neutral-400">Aggregated across {dashboardScope === 'TEAM' ? "the team's projects" : 'the workspace'}</span>
-                    )}
-                  </div>
-
-                  {dashboardEditMode && (
-                    <div className="mb-4 p-3 rounded-md bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide">Widget library</span>
-                        <span className="text-xs text-neutral-600 dark:text-neutral-400">Drag widgets to reorder</span>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider w-20 flex-shrink-0">Basics</span>
-                          <button onClick={() => addDashboardWidget('SCORECARD', { filter: { open: true } }, 'Open items')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Scorecard</button>
-                          <button onClick={() => addDashboardWidget('STATUS_BAR', {}, 'By status')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Status breakdown</button>
-                          <button onClick={() => addDashboardWidget('ITEM_LIST', { filter: { open: true }, limit: 6 }, 'Open work items')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Item list</button>
-                          <button onClick={() => addDashboardWidget('PIE', { dimension: 'status' }, 'Items by status')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Pie chart</button>
-                          <button onClick={() => addDashboardWidget('BAR', { dimension: 'priority' }, 'Items by priority')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Bar chart</button>
-                        </div>
-                        {EXTRA_WIDGET_CATEGORIES.map(cat => (
-                          <div key={cat} className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider w-20 flex-shrink-0">{cat}</span>
-                            {EXTRA_WIDGET_PRESETS.filter(p => p.category === cat).map(p => (
-                              <button key={p.title} onClick={() => addDashboardWidget(p.type, p.config, p.title, p.w)}
-                                className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">
-                                {p.title}
-                              </button>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {(selectedDashboard.widgets || []).length === 0 ? (
-                    <EmptyState icon={Puzzle} title="Empty dashboard"
-                      subtitle="Turn on Edit and add your first widget to start tracking."
-                      action={<Button variant="action" onClick={() => setDashboardEditMode(true)}>Edit dashboard</Button>} />
-                  ) : (
-                    <div id="dashboard-export-area" className="grid grid-cols-12 gap-4">
-                      {selectedDashboard.widgets.map(w => (
-                        <DashboardWidgetCard key={w.id} widget={w} workItems={workItems} aggregate={dashboardAggregate} editMode={dashboardEditMode}
-                          sprints={sprints} velocity={velocityData} currentUserId={currentUser?.id}
-                          onRemove={() => removeDashboardWidget(w.id)}
-                          onResize={gridW => resizeDashboardWidget(w, gridW)}
-                          onConfigChange={cfg => updateDashboardWidgetConfig(w, cfg)}
-                          onDrill={setDashboardDrill}
-                          onDragStart={() => setDragWidgetId(w.id)}
-                          onDrop={() => reorderDashboardWidgets(w.id)} />
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+            <DashboardsView
+              customDashboards={customDashboards}
+              selectedDashboard={selectedDashboard}
+              dashboardEditMode={dashboardEditMode}
+              dashboardScope={dashboardScope}
+              dashboardTeamId={dashboardTeamId}
+              dashboardAggregate={dashboardAggregate}
+              dashboardDrill={dashboardDrill}
+              shareInfo={shareInfo}
+              teams={teams}
+              workItems={workItems}
+              sprints={sprints}
+              velocityData={velocityData}
+              currentUser={currentUser}
+              createDashboard={createDashboard}
+              openDashboard={openDashboard}
+              deleteDashboard={deleteDashboard}
+              addDashboardWidget={addDashboardWidget}
+              removeDashboardWidget={removeDashboardWidget}
+              resizeDashboardWidget={resizeDashboardWidget}
+              updateDashboardWidgetConfig={updateDashboardWidgetConfig}
+              reorderDashboardWidgets={reorderDashboardWidgets}
+              setDashboardEditMode={setDashboardEditMode}
+              setSelectedDashboard={setSelectedDashboard}
+              setDashboardScope={setDashboardScope}
+              setDashboardTeamId={setDashboardTeamId}
+              setDashboardDrill={setDashboardDrill}
+              setDragWidgetId={setDragWidgetId}
+              fetchDashboardAggregate={fetchDashboardAggregate}
+              mintShare={mintShare}
+              stopShare={stopShare}
+              showToast={showToast}
+            />
           )}
 
-          {view === 'dashboards' && dashboardDrill && (
-            <DashboardDrillModal drill={dashboardDrill} onClose={() => setDashboardDrill(null)}
-              onOpenItem={item => { setSelectedItem(item); setDashboardDrill(null); }} />
-          )}
-
+          {/* REPORT BUILDER — extracted to src/views/reportbuilder-view.jsx (TD-003) */}
           {view === 'reportbuilder' && (
-            <div className="p-6 overflow-y-auto h-full">
-              {!selectedReport ? (
-                <>
-                  <div className="flex items-center justify-between mb-5">
-                    <div>
-                      <h1 className="text-xl font-semibold text-neutral-900 dark:text-white">Report builder</h1>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">Compose full-page reports from sections — KPIs, charts, tables and narrative.</p>
-                    </div>
-                    <Button variant="action" onClick={createBlankReport}>New report</Button>
-                  </div>
-
-                  {reportTemplates.length > 0 && (
-                    <div className="mb-6">
-                      <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mb-3">Start from a template</h2>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {reportTemplates.map(t => (
-                          <div key={t.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 flex flex-col">
-                            <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{t.name}</p>
-                            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5 mb-3 flex-1">{t.description || '—'}</p>
-                            <div><Button variant="secondary" onClick={() => createReportFromTemplate(t)}>Use template</Button></div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mb-3">Your reports</h2>
-                  {reports.length === 0 ? (
-                    <EmptyState icon={FileIcon} title="No reports yet"
-                      subtitle="Create a report from scratch or start from a template above."
-                      action={<Button variant="action" onClick={createBlankReport}>New report</Button>} />
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {reports.map(r => (
-                        <div key={r.id} onClick={() => openReport(r.id)} role="button" tabIndex={0} onKeyDown={onPressKey}
-                          className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
-                          <FileText className="h-6 w-6 text-neutral-600 dark:text-neutral-400" aria-hidden="true" />
-                          <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mt-2 truncate">{r.name}</p>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{r.updatedAt ? `Updated ${new Date(r.updatedAt).toLocaleDateString()}` : '—'}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between mb-5">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <button onClick={() => setSelectedReport(null)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Reports</button>
-                      {reportEditMode ? (
-                        <input value={selectedReport.name || ''} onChange={e => setSelectedReport(r => ({ ...r, name: e.target.value }))}
-                          aria-label="Report name"
-                          className="text-xl font-semibold text-neutral-900 dark:text-white bg-transparent border-b border-neutral-200 dark:border-neutral-700 focus-visible:outline-none focus-visible:border-brand-navy" />
-                      ) : (
-                        <h1 className="text-xl font-semibold text-neutral-900 dark:text-white truncate">{selectedReport.name}</h1>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {!reportEditMode && <ExportButtons targetId="report-export-area"
-                        rows={workItems.map(i => ({ ID: i.id, Title: i.title, Type: i.type, Status: i.status, Priority: i.priority, Assignee: i.assigneeId }))}
-                        filename={selectedReport.name || 'report'} onError={() => showToast('Export failed — try again', 'error')} />}
-                      {!reportEditMode && <Button variant="secondary" onClick={() => openScheduleManager(selectedReport.id)}>Schedule</Button>}
-                      {reportEditMode && <Button variant="action" onClick={() => { saveReport(); setReportEditMode(false); }}>Save</Button>}
-                      <Button variant={reportEditMode ? 'secondary' : 'action'} onClick={() => { if (reportEditMode) { openReport(selectedReport.id); } else { setReportEditMode(true); } }}>{reportEditMode ? 'Cancel' : 'Edit'}</Button>
-                      <button onClick={() => deleteReport(selectedReport.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
-                    </div>
-                  </div>
-
-                  {reportEditMode && (
-                    <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-md bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700">
-                      <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mr-1">Add section</span>
-                      <button onClick={() => addReportSection('kpi')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ KPI</button>
-                      <button onClick={() => addReportSection('chart')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Chart</button>
-                      <button onClick={() => addReportSection('table')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Table</button>
-                      <button onClick={() => addReportSection('narrative')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Narrative</button>
-                    </div>
-                  )}
-
-                  {reportSections.length === 0 ? (
-                    <EmptyState icon={Puzzle} title="Empty report"
-                      subtitle="Turn on Edit and add sections — KPIs, charts, tables, narrative."
-                      action={<Button variant="action" onClick={() => setReportEditMode(true)}>Edit report</Button>} />
-                  ) : (
-                    <div id="report-export-area" className="space-y-4 max-w-4xl">
-                      {reportSections.map((sec, i) => (
-                        <ReportSectionCard key={i} section={sec} index={i} total={reportSections.length}
-                          workItems={workItems} editMode={reportEditMode}
-                          onChange={s => updateReportSection(i, s)}
-                          onMove={delta => moveReportSection(i, delta)}
-                          onRemove={() => removeReportSection(i)} />
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Iteration 6 — scheduled report delivery (Cap J, S04) */}
-          {scheduleManagerOpen && selectedReport && (
-            <Modal title="Scheduled delivery" onClose={() => setScheduleManagerOpen(false)} size="lg" className="max-h-[90vh] overflow-y-auto">
-                <p className="text-xs text-neutral-500 mb-4 truncate">“{selectedReport.name}” — delivered on a cadence to recipients (in-app / email).</p>
-
-                <div className="space-y-2 mb-5">
-                  {reportSchedules.length === 0
-                    ? <p className="text-sm text-neutral-600 text-center py-3">No schedules yet.</p>
-                    : reportSchedules.map(s => (
-                      <div key={s.id} className="flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-neutral-900 dark:text-neutral-100">{s.cadence?.toLowerCase()} · {s.channel?.replace('_', '-').toLowerCase()}</p>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{s.recipients ? `to ${s.recipients}` : 'owner only'}{s.nextRunAt ? ` · next ${new Date(s.nextRunAt).toLocaleDateString()}` : ''}</p>
-                        </div>
-                        <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${s.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500'}`}>{s.active ? 'ACTIVE' : 'PAUSED'}</span>
-                        <button onClick={() => toggleReportSchedule(s)} className="text-xs text-brand-navy hover:underline">{s.active ? 'Pause' : 'Resume'}</button>
-                        <button onClick={() => deleteReportSchedule(s.id)} className="text-xs text-semantic-danger hover:underline">Remove</button>
-                      </div>
-                    ))}
-                </div>
-
-                <div className="border-t border-neutral-200 dark:border-neutral-700 pt-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">Add a schedule</p>
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div>
-                      <label htmlFor="sched-cadence" className="block text-xs text-neutral-500 mb-1">Cadence</label>
-                      <select id="sched-cadence" className="input w-full" value={scheduleForm.cadence} onChange={e => setScheduleForm({ ...scheduleForm, cadence: e.target.value })}>
-                        <option value="DAILY">Daily</option>
-                        <option value="WEEKLY">Weekly</option>
-                        <option value="MONTHLY">Monthly</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="sched-channel" className="block text-xs text-neutral-500 mb-1">Channel</label>
-                      <select id="sched-channel" className="input w-full" value={scheduleForm.channel} onChange={e => setScheduleForm({ ...scheduleForm, channel: e.target.value })}>
-                        <option value="IN_APP">In-app</option>
-                        <option value="EMAIL">Email</option>
-                        <option value="BOTH">Both</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="sched-recipients" className="block text-xs text-neutral-500 mb-1">Recipients (comma-separated user ids — optional; owner always included)</label>
-                    <input id="sched-recipients" className="input w-full" value={scheduleForm.recipients} onChange={e => setScheduleForm({ ...scheduleForm, recipients: e.target.value })} placeholder="USR-123, USR-456" />
-                  </div>
-                  <div className="flex justify-end">
-                    <Button variant="action" onClick={createReportSchedule}>Add schedule</Button>
-                  </div>
-                </div>
-            </Modal>
+            <ReportBuilderView
+              reports={reports}
+              selectedReport={selectedReport}
+              reportEditMode={reportEditMode}
+              reportSections={reportSections}
+              reportTemplates={reportTemplates}
+              scheduleManagerOpen={scheduleManagerOpen}
+              reportSchedules={reportSchedules}
+              scheduleForm={scheduleForm}
+              workItems={workItems}
+              createBlankReport={createBlankReport}
+              createReportFromTemplate={createReportFromTemplate}
+              openReport={openReport}
+              deleteReport={deleteReport}
+              saveReport={saveReport}
+              addReportSection={addReportSection}
+              updateReportSection={updateReportSection}
+              moveReportSection={moveReportSection}
+              removeReportSection={removeReportSection}
+              openScheduleManager={openScheduleManager}
+              toggleReportSchedule={toggleReportSchedule}
+              deleteReportSchedule={deleteReportSchedule}
+              createReportSchedule={createReportSchedule}
+              setSelectedReport={setSelectedReport}
+              setReportEditMode={setReportEditMode}
+              setScheduleManagerOpen={setScheduleManagerOpen}
+              setScheduleForm={setScheduleForm}
+              showToast={showToast}
+            />
           )}
 
           {/* ======================================================
@@ -7578,122 +7133,4 @@ function RichTextEditor({ id, value, onChange, onBlur, placeholder }) {
   );
 }
 
-function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOver, onDrop, onSelect, onDelete, density, allItems = [] }) {
-  const pad = { compact: 'p-2', comfortable: 'p-3', spacious: 'p-4' };
-
-  const getSwimlanes = () => {
-    if (swimlaneBy === 'none') return [{ key: 'all', label: null, items }];
-    if (swimlaneBy === 'assignee') {
-      const keys = [...new Set(items.map(i => i.assigneeId || 'unassigned'))];
-      return keys.map(k => ({ key: k, label: k === 'unassigned' ? 'Unassigned' : users.find(u => u.id === k)?.fullName || k, items: items.filter(i => (i.assigneeId || 'unassigned') === k) }));
-    }
-    if (swimlaneBy === 'type') {
-      const keys = [...new Set(items.map(i => i.type))];
-      return keys.map(k => ({ key: k, label: k, items: items.filter(i => i.type === k) }));
-    }
-    if (swimlaneBy === 'priority') {
-      return ['CRITICAL','HIGH','MEDIUM','LOW'].map(p => ({ key: p, label: p, items: items.filter(i => (i.priority || 'MEDIUM') === p) })).filter(s => s.items.length > 0);
-    }
-    if (swimlaneBy === 'epic') {
-      // Group by parent Epic (or "No Epic" if no parent)
-      const epicMap = {};
-      items.forEach(item => {
-        const epicId = item.parentId || 'no-epic';
-        if (!epicMap[epicId]) epicMap[epicId] = [];
-        epicMap[epicId].push(item);
-      });
-      return Object.entries(epicMap).map(([epicId, epicItems]) => {
-        const epic = allItems.find(i => i.id === epicId && i.type === 'Epic');
-        return {
-          key: epicId,
-          label: epic ? epic.title : epicId === 'no-epic' ? 'No Epic' : epicId,
-          items: epicItems
-        };
-      }).sort((a, b) => {
-        if (a.label === 'No Epic') return 1;
-        if (b.label === 'No Epic') return -1;
-        return a.label.localeCompare(b.label);
-      });
-    }
-    if (swimlaneBy === 'tag') {
-      const tagMap = { 'No Tags': [] };
-      items.forEach(item => {
-        if (!item.tags || item.tags.length === 0) {
-          tagMap['No Tags'].push(item);
-        } else {
-          item.tags.forEach(tag => {
-            if (!tagMap[tag]) tagMap[tag] = [];
-            tagMap[tag].push(item);
-          });
-        }
-      });
-      return Object.entries(tagMap)
-        .filter(([, tagItems]) => tagItems.length > 0)
-        .map(([tag, tagItems]) => ({ key: tag, label: tag, items: tagItems }))
-        .sort((a, b) => {
-          if (a.label === 'No Tags') return 1;
-          if (b.label === 'No Tags') return -1;
-          return a.label.localeCompare(b.label);
-        });
-    }
-    return [{ key: 'all', label: null, items }];
-  };
-
-  return (
-    <div className="flex-1 overflow-auto dark:bg-neutral-900">
-      {getSwimlanes().map(lane => (
-        <div key={lane.key}>
-          {lane.label && (
-            <div className="flex items-center gap-2 mb-2 mt-4 px-1">
-              <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700"></div>
-              <span className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider px-2">{lane.label}</span>
-              <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700"></div>
-            </div>
-          )}
-          <div className="flex gap-4 min-h-40">
-            {columns.map(col => {
-              const colItems = lane.items.filter(i => i.status === col.name);
-              return (
-                <div key={col.name} className="flex-1 min-w-48 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3"
-                  onDragOver={onDragOver} onDrop={(e) => onDrop(e, col.name)}>
-                  {!lane.label && (
-                    <div className="flex items-center justify-between mb-3 px-1">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${col.dot}`}></span>
-                        <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{col.name}</h3>
-                      </div>
-                      <span className="text-xs bg-white dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full shadow-sm">{colItems.length}</span>
-                    </div>
-                  )}
-                  <div className="space-y-2 flex-1">
-                    {colItems.length === 0 && <div className="flex items-center justify-center py-6 border-2 border-dashed border-neutral-200 rounded-lg"><p className="text-xs text-neutral-300">Drop here</p></div>}
-                    {colItems.map(item => (
-                      <div key={item.id} draggable onDragStart={(e) => onDragStart(e, item.id)}
-                        className={`bg-white dark:bg-neutral-700 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-600 cursor-grab hover:shadow-md transition-shadow group ${pad[density]}`}>
-                        <div className="flex items-start justify-between mb-1.5">
-                          <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.id}</span>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => onSelect(item)} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-xs p-0.5" aria-label="Edit"><SquarePen className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                            <button onClick={() => onDelete(item.id)} className="text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label="Delete"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                          </div>
-                        </div>
-                        <button type="button" className="text-sm font-medium text-neutral-900 leading-snug mb-2 cursor-pointer text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => onSelect(item)}>{item.title}</button>
-                        <div className="flex items-center justify-between">
-                          <TypeBadge type={item.type} compact={density === 'compact'} />
-                          <div className="flex items-center gap-1.5">
-                            {(item.storyPoints > 0) && <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">{item.storyPoints}pt</span>}
-                            {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={5} />}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+// SprintBoard extracted to src/components/works/organisms/sprint-board.jsx (TD-003)

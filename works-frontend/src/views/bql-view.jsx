@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Sparkles, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Sparkles, X, BookmarkPlus, Bookmark } from 'lucide-react';
 import { api } from '@/lib/apiClient';
+import { savedViewsClient } from '@/lib/saved-views';
 import { Button } from '@/components/works/button';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
@@ -30,6 +31,9 @@ export default function BqlView({
   const [nlText, setNlText] = useState('');
   const [nlBusy, setNlBusy] = useState(false);
   const [nlMeta, setNlMeta] = useState(null); // { confidence, fallback }
+  const [savedViews, setSavedViews] = useState([]);
+  const [viewName, setViewName] = useState('');
+  const [viewSaving, setViewSaving] = useState(false);
 
   const translateNl = () => {
     if (!nlText.trim() || !activeWorkspaceId) return;
@@ -48,6 +52,27 @@ export default function BqlView({
   };
 
   const aiOn = anyCapabilityEnabled(aiCapabilities);
+
+  useEffect(() => {
+    if (!activeWorkspaceId) return;
+    savedViewsClient.list(activeWorkspaceId).then(r => setSavedViews(Array.isArray(r) ? r : [])).catch(() => {});
+  }, [activeWorkspaceId]);
+
+  const saveView = () => {
+    if (!viewName.trim() || !activeWorkspaceId) return;
+    setViewSaving(true);
+    savedViewsClient.create(activeWorkspaceId, { name: viewName.trim(), bqlFilter: bqlQuery, columnKeys: '[]' })
+      .then(v => { setSavedViews(prev => [...prev, v]); setViewName(''); })
+      .catch(() => {})
+      .finally(() => setViewSaving(false));
+  };
+
+  const deleteView = (id) => {
+    if (!activeWorkspaceId) return;
+    savedViewsClient.delete(activeWorkspaceId, id)
+      .then(() => setSavedViews(prev => prev.filter(v => v.id !== id)))
+      .catch(() => {});
+  };
 
   return (
     <div className="p-8 max-w-5xl">
@@ -114,6 +139,44 @@ export default function BqlView({
           <span className="font-semibold text-neutral-600">Ops:</span> = != {'<'} {'>'} {'<='} {'>='} IN CONTAINS STARTSWITH &nbsp;·&nbsp;
           <span className="font-semibold text-neutral-600">Functions:</span> currentUser() today() now()
         </div>
+      </div>
+
+      {/* Saved views (Cap R) — filter + column config stored as a named view */}
+      <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl px-5 py-3 mb-4">
+        <div className="flex items-center gap-3">
+          <Bookmark aria-hidden="true" className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+          <label htmlFor="view-name" className="sr-only">View name</label>
+          <input
+            id="view-name"
+            className="input flex-1 text-sm"
+            placeholder="View name…"
+            value={viewName}
+            onChange={e => setViewName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') saveView(); }}
+          />
+          <Button variant="secondary" size="sm" leftIcon={<BookmarkPlus aria-hidden="true" className="h-3.5 w-3.5" />}
+            loading={viewSaving} disabled={!viewName.trim()} onClick={saveView}>
+            Save as View
+          </Button>
+        </div>
+        {savedViews.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {savedViews.map(v => (
+              <button key={v.id} onClick={() => { setBqlQuery(v.bqlFilter || ''); runBql(); }}
+                className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5 text-sm hover:border-brand-navy transition-colors group"
+                aria-label={`Load view: ${v.name}`}>
+                <Bookmark aria-hidden="true" className="h-3.5 w-3.5 text-brand-navy flex-shrink-0" />
+                <span className="font-medium text-neutral-900 dark:text-neutral-100">{v.name}</span>
+                {v.isShared && <span className="text-xs text-neutral-500">shared</span>}
+                <button type="button" onClick={e => { e.stopPropagation(); deleteView(v.id); }}
+                  className="text-neutral-300 hover:text-semantic-danger opacity-0 group-hover:opacity-100 transition-opacity ml-0.5"
+                  aria-label={`Remove view ${v.name}`}>
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Saved filters */}

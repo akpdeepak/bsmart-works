@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -71,6 +72,27 @@ public class ApiTokenService {
         return Optional.empty();
     }
 
+    /**
+     * Rotate a token: revoke the current one and issue a fresh token with the same name and scopes.
+     * The new plaintext is returned exactly once.
+     */
+    @Transactional
+    public IssuedToken rotate(String workspaceId, String id, String actorId) {
+        ApiToken t = tokens.findById(id).orElseThrow(() -> ApiException.notFound("API token", id));
+        if (!workspaceId.equals(t.getWorkspaceId())) {
+            throw ApiException.forbidden("Token belongs to a different workspace.");
+        }
+        List<String> scopes;
+        try {
+            scopes = json.readValue(t.getScopes() == null ? "[]" : t.getScopes(), new TypeReference<>() { });
+        } catch (Exception e) {
+            scopes = List.of();
+        }
+        t.setRevoked(true);
+        tokens.save(t);
+        return issue(workspaceId, actorId, t.getName(), scopes);
+    }
+
     @Transactional
     public ApiToken revoke(String workspaceId, String id) {
         ApiToken t = tokens.findById(id).orElseThrow(() -> ApiException.notFound("API token", id));
@@ -82,6 +104,23 @@ public class ApiTokenService {
     }
 
     // ── Pure helpers (unit-testable, RB-10 §7) ───────────────────────────────────
+
+    /**
+     * Returns {@code true} if the token has the named scope or was issued with an empty scope list
+     * (empty list = full-access token, a deliberate convention). Fails closed on malformed JSON.
+     */
+    static boolean hasScope(ApiToken token, String requiredScope) {
+        if (token == null || requiredScope == null) return false;
+        String raw = token.getScopes();
+        if (raw == null || raw.isBlank()) return true;
+        try {
+            List<String> scopes = new ObjectMapper().readValue(raw, new TypeReference<>() { });
+            if (scopes.isEmpty()) return true;
+            return scopes.stream().anyMatch(s -> s.equalsIgnoreCase(requiredScope));
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
     static String prefixOf(String token) {
         if (token == null) {

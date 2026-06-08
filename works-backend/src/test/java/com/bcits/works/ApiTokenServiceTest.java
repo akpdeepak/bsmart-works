@@ -63,4 +63,44 @@ class ApiTokenServiceTest {
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> svc.revoke(WS, "TOK-1"))
             .isInstanceOf(ApiException.class);
     }
+
+    @Test
+    void rotate_revokesOldAndIssuesNewWithSameNameAndScopes() {
+        when(repo.save(any(ApiToken.class))).thenAnswer(i -> i.getArgument(0));
+        ApiTokenService.IssuedToken original = svc.issue(WS, "user-1", "Deploy key", List.of("deploy"));
+        ApiToken originalToken = original.token();
+        originalToken.setId("TOK-OLD");
+        when(repo.findById("TOK-OLD")).thenReturn(Optional.of(originalToken));
+
+        ApiTokenService.IssuedToken rotated = svc.rotate(WS, "TOK-OLD", "user-1");
+
+        assertThat(originalToken.getRevoked()).isTrue();
+        assertThat(rotated.plaintext()).startsWith("wtk_").isNotEqualTo(original.plaintext());
+        assertThat(rotated.token().getName()).isEqualTo("Deploy key");
+        assertThat(rotated.token().getScopes()).contains("deploy");
+    }
+
+    @Test
+    void rotate_rejectsCrossWorkspace() {
+        ApiToken t = new ApiToken();
+        t.setId("TOK-2");
+        t.setWorkspaceId("other-ws");
+        when(repo.findById("TOK-2")).thenReturn(Optional.of(t));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> svc.rotate(WS, "TOK-2", "user-1"))
+            .isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void hasScope_detectsScopePresenceAndEmptyListMeansFullAccess() {
+        ApiToken fullAccess = new ApiToken();
+        fullAccess.setScopes("[]");
+        assertThat(ApiTokenService.hasScope(fullAccess, "read")).isTrue();
+
+        ApiToken scoped = new ApiToken();
+        scoped.setScopes("[\"read\",\"deploy\"]");
+        assertThat(ApiTokenService.hasScope(scoped, "read")).isTrue();
+        assertThat(ApiTokenService.hasScope(scoped, "write")).isFalse();
+
+        assertThat(ApiTokenService.hasScope(null, "read")).isFalse();
+    }
 }

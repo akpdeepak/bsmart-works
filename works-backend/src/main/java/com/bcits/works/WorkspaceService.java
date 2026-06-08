@@ -154,6 +154,20 @@ public class WorkspaceService {
         return m;
     }
 
+    // ── Sandbox / test mode (Cap D, iteration 14) ────────────────────────────────
+
+    @Transactional
+    public Workspace setSandboxMode(String callerId, String workspaceId, boolean enabled) {
+        rbac.require(callerId, workspaceId, "manage_workspace");
+        Workspace w = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> ApiException.notFound("Workspace", workspaceId));
+        w.setSandboxMode(enabled);
+        workspaceRepository.save(w);
+        eventService.recordInWorkspace(workspaceId, workspaceId, "SANDBOX_MODE_CHANGED", callerId,
+                Map.of("workspaceId", workspaceId, "sandboxMode", enabled));
+        return w;
+    }
+
     // ── Project members (workspace-scoped) ────────────────────────────────────
 
     public List<Map<String, Object>> getProjectMembers(String callerId, String workspaceId, String projectId) {

@@ -3,8 +3,13 @@ package com.bcits.works;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Outbound webhook behaviour (iteration 13, Cap Q): deterministic HMAC signing, event-type matching,
@@ -61,5 +66,28 @@ class WebhookServiceTest {
         assertThat(d.getAttempts()).isEqualTo(5);
         assertThat(d.getStatus()).isEqualTo("DEAD_LETTER");
         assertThat(d.getResponseCode()).isEqualTo(503);
+    }
+
+    @Test
+    void rotateSecret_generatesNewSecretAndRejectsCrossWorkspace() {
+        WebhookSubscription sub = new WebhookSubscription();
+        sub.setId("WHS-1");
+        sub.setWorkspaceId("ws-1");
+        sub.setSecret("old-secret");
+        when(subs.findById("WHS-1")).thenReturn(Optional.of(sub));
+        when(subs.save(any(WebhookSubscription.class))).thenAnswer(i -> i.getArgument(0));
+
+        WebhookService.RotatedSecret result = svc.rotateSecret("ws-1", "WHS-1");
+
+        assertThat(result.newSecret()).startsWith("whsec_").isNotEqualTo("old-secret");
+        assertThat(result.subscription().getSecret()).isEqualTo(result.newSecret());
+
+        // cross-workspace rejection
+        WebhookSubscription foreign = new WebhookSubscription();
+        foreign.setId("WHS-2");
+        foreign.setWorkspaceId("other-ws");
+        when(subs.findById("WHS-2")).thenReturn(Optional.of(foreign));
+        assertThatThrownBy(() -> svc.rotateSecret("ws-1", "WHS-2"))
+            .isInstanceOf(ApiException.class);
     }
 }

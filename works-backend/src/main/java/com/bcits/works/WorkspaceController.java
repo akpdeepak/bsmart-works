@@ -74,6 +74,12 @@ public class WorkspaceController {
                 payload.get("primaryColor"), payload.get("logoUrl"), payload.get("description"));
     }
 
+    @PutMapping("/{id}/sandbox-mode")
+    public Workspace setSandboxMode(@PathVariable String id, @RequestBody Map<String, Boolean> payload) {
+        return workspaceService.setSandboxMode(authenticatedUser.id(), id,
+            Boolean.TRUE.equals(payload.get("enabled")));
+    }
+
     @GetMapping("/{wsId}/projects/{projectId}/members")
     public List<Map<String, Object>> getProjectMembers(@PathVariable String wsId,
                                                        @PathVariable String projectId) {

@@ -173,10 +173,11 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   Cap X + Admin Operations Center Cap Y), **17** (Universal Customization Engine Cap R), **18**
   (Mobile + Real-time + Performance Cap S), **19** (Enterprise Security + Compliance Certifications
   Cap T), and the Compliance/Service iterations (7–9).
-- **Flyway high-water mark:** **V58** (`V58__user_locale_and_perf_indexes.sql`; note: V16 was
-  skipped, V23 does not exist; V50–V53 are iterations 16/17/19/18's migrations; V54–V57 are
-  iteration 20's advanced-AI / marketplace / knowledge / customer-chat migrations).
-- **Next migration:** **`V59__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+- **Flyway high-water mark:** **V60** (`V60__custom_domains.sql`; note: V16 was skipped, V23
+  does not exist; V50–V53 are iterations 16/17/19/18's migrations; V54–V57 are iteration 20's
+  advanced-AI / marketplace / knowledge / customer-chat migrations; V58 = user locale + perf
+  indexes; V59 = block-editor columns + SCIM stub; V60 = custom domain schema).
+- **Next migration:** **`V61__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

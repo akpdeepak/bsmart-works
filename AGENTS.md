@@ -489,7 +489,7 @@ discipline, anchored by Stage 0 and the PR template.
 | Package | `com.bcits.works` (flat) | TD-001 rename complete; sub-package split is a separate planned task |
 
 **Do not "fix" the stack to match the spec inside a feature PR.** Closing a spec-vs-code gap
-(TS migration, sub-package split) is a planned migration with its own issue and PR (§3.7 of
+(package rename, TS migration) is a planned migration with its own issue and PR (§3.7 of
 ENGINEERING-PRINCIPLES). Build to the code that exists.
 
 ---

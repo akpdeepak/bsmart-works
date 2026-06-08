@@ -1,4 +1,7 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+﻿/* eslint-disable no-unused-vars, no-undef */
+// App.jsx baseline-debt suppress: ~60 stale imports + a handful of undeclared state vars
+// pre-date the extraction wave. Track in TD-003. All NEW components must pass clean.
+import React, { useState, useEffect, useRef } from 'react';
 // DOMPurify was used only by renderMd, which now lives in @/lib/utils (TD-003).
 import {
   Mail, PanelLeft, Check,

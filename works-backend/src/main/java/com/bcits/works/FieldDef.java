@@ -14,9 +14,10 @@ public class FieldDef {
     private String projectId;
     private String name;
     private String fieldKey;
-    // TEXT | NUMBER | CURRENCY | DATE | SELECT | MULTI_SELECT | USER | URL
+    // TEXT | NUMBER | CURRENCY | DATE | DATETIME | SELECT | MULTI_SELECT | USER | URL
     // CHECKBOX | FILE | JSON | TEXTAREA | EMAIL | PHONE | RATING | PROGRESS
     private String fieldType;
+    @Column(columnDefinition = "TEXT") private String description;
     @Column(columnDefinition = "jsonb") private String config = "{}";
     private Boolean required = false;
     private Integer position = 0;
@@ -40,6 +41,8 @@ public class FieldDef {
     public void setRequired(Boolean required) { this.required = required; }
     public Integer getPosition() { return position; }
     public void setPosition(Integer position) { this.position = position; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
 }

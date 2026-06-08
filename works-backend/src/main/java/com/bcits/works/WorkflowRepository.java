@@ -9,6 +9,7 @@ public interface WorkflowRepository extends JpaRepository<Workflow, String> {
     List<Workflow> findByWorkspaceId(String workspaceId);
     List<Workflow> findByProjectId(String projectId);
     List<Workflow> findByWorkspaceIdAndProjectId(String workspaceId, String projectId);
+    List<Workflow> findByWorkspaceIdAndItemType(String workspaceId, String itemType);
 
     /** Workspace-scoped fallback (RB-40 §1): workflows visible only in the caller's workspaces. */
     @Query(nativeQuery = true,

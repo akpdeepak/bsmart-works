@@ -34,12 +34,14 @@ public class WorkItemController {
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
     private final DodChecklistService dodChecklists;
+    private final WorkflowRuleEngine workflowRules;
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
                               JdbcTemplate jdbc, NotificationRepository notificationRepository,
                               UserRepository userRepository, EmailService emailService,
                               NotificationBatchService batchService, AuthenticatedUser authenticatedUser,
-                              RbacService rbac, DodChecklistService dodChecklists) {
+                              RbacService rbac, DodChecklistService dodChecklists,
+                              WorkflowRuleEngine workflowRules) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
@@ -50,6 +52,7 @@ public class WorkItemController {
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
         this.dodChecklists = dodChecklists;
+        this.workflowRules = workflowRules;
     }
 
     // Tenant-isolation predicate (RB-40 §1): an item is visible only when its project lives in a
@@ -283,6 +286,11 @@ public class WorkItemController {
                     && !DodChecklistService.isDoneStatus(oldStatus)) {
                 dodChecklists.assertResolvable(id, userId);
             }
+            // Workflow rule engine (Cap C, Iteration 3): evaluate transition conditions and
+            // validators before persisting the new status. Post-functions run after save.
+            if (!java.util.Objects.equals(oldStatus, updatedItem.getStatus())) {
+                workflowRules.enforceTransitionRules(id, oldStatus, updatedItem.getStatus(), userId, wsId);
+            }
             String oldAssignee = existing.getAssigneeId();
             String oldPriority = existing.getPriority();
             String oldTitle = existing.getTitle();
@@ -310,6 +318,11 @@ public class WorkItemController {
             if (updatedItem.getTags() != null) {
                 jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);
                 saveTags(id, updatedItem.getTags());
+            }
+
+            // Workflow post-functions execute after the item is saved (best-effort; Cap C).
+            if (!java.util.Objects.equals(oldStatus, saved.getStatus())) {
+                workflowRules.executePostFunctions(id, oldStatus, saved.getStatus(), userId, wsId);
             }
 
             // Record field-level diffs

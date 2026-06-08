@@ -8,8 +8,8 @@ import {
   SlidersHorizontal, Settings, Trash2, Code, Crown, ShieldHalf,
   CheckCircle2, AlertCircle, Heart, AlertTriangle, Puzzle, Link, Lock,
   File as FileIcon, Folder, Lightbulb, Users, Shield, Ban, Construction,
-  MessageCircle, Archive, RefreshCw, Repeat, Megaphone, ScrollText,
-  Calendar, Eye, EyeOff, Building2, Target, Globe, Star, Scale, Clock, Reply,
+  MessageCircle, RefreshCw, Repeat, Megaphone,
+  Calendar, Eye, EyeOff, Target, Globe, Star, Scale, Clock, Reply,
   X, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronRight, ChevronUp,
   Upload, IndentIncrease, IndentDecrease, MapPin,
   CornerDownRight, Image as ImageIcon,
@@ -81,11 +81,13 @@ import KnowledgeTemplatesView from '@/views/knowledge-templates-view';
 import SupportInboxView from '@/views/support-inbox-view';
 import { LanguageSwitcher } from '@/components/works/organisms/language-switcher';
 import { BlockEditor } from '@/components/BlockEditor';
-import { PortalFormDesigner } from '@/components/PortalFormDesigner';
+// PortalFormDesigner moved to service-view.jsx (TD-003).
 import BacklogView from '@/views/backlog-view';
 import SprintView from '@/views/sprint-view';
 import DashboardsView from '@/views/dashboards-view';
 import ReportBuilderView from '@/views/reportbuilder-view';
+import ComplianceView from '@/views/compliance-view';
+import ServiceView from '@/views/service-view';
 import { DashboardWidgetCard } from '@/components/works/organisms/dashboard-widget-card';
 // DashboardDrillModal extracted to src/components/works/organisms/dashboard-drill-modal.jsx (TD-003).
 // ExportButtons extracted to src/components/works/export-buttons.jsx (TD-003).
@@ -1445,19 +1447,7 @@ export default function App() {
     api.raw(`/work-items/${itemId}/status-durations`).then(r => r.json())
       .then(d => setStatusDurations(Array.isArray(d) ? d : [])).catch(reportError);
   }
-  const severityClass = {
-    CRITICAL: 'bg-semantic-danger text-white',
-    HIGH:     'bg-brand-orange text-white',
-    MEDIUM:   'bg-semantic-warning text-white',
-    LOW:      'bg-brand-navy-tint text-white',
-    INFO:     'bg-neutral-200 text-neutral-700',
-  };
-  const vStatusClass = {
-    OPEN:         'bg-semantic-danger text-white',
-    ACKNOWLEDGED: 'bg-semantic-warning text-white',
-    RESOLVED:     'bg-semantic-success text-white',
-    WONT_FIX:     'bg-neutral-300 text-neutral-700',
-  };
+  // severityClass / vStatusClass moved to compliance-view.jsx (TD-003).
   // eslint-disable-next-line no-unused-vars
   function humanDuration(seconds) {
     if (seconds == null) return '—';
@@ -5056,501 +5046,74 @@ export default function App() {
               fetchStakeholders={fetchStakeholders}
             />
           )}
+          {/* COMPLIANCE — extracted to src/views/compliance-view.jsx (TD-003) */}
           {view === 'compliance' && (
-            <div className="flex flex-col h-full overflow-hidden">
-              {/* Header + tabs */}
-              <div className="px-6 pt-5 border-b border-neutral-200 dark:border-neutral-700">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Compliance</h1>
-                    <p className="text-sm text-neutral-500">Native rules engine — define what compliance means, catch drift in hours not quarters.</p>
-                  </div>
-                  {complianceTab === 'rules' && can('manage_compliance') && (
-                    <Button variant="action" onClick={newRuleBuilder}>New Rule</Button>
-                  )}
-                </div>
-                <div className="flex gap-1">
-                  {[
-                    { key: 'dashboard',  label: 'Dashboard',  load: () => fetchComplianceDashboard() },
-                    { key: 'rules',      label: 'Rules',      load: () => { fetchComplianceRules(); fetchComplianceTemplates(); } },
-                    { key: 'violations', label: 'Violations', load: () => fetchComplianceViolations() },
-                    { key: 'audit',      label: 'Audit log',  load: () => fetchComplianceAudit() },
-                  ].map(t => (
-                    <button key={t.key} onClick={() => { setComplianceTab(t.key); t.load(); }}
-                      className={`text-sm font-medium px-3 py-2 border-b-2 transition-colors ${complianceTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-6">
-                {/* ── DASHBOARD ── */}
-                {complianceTab === 'dashboard' && (
-                  !complianceDashboard ? <EmptyState icon={Shield} title="Loading compliance posture…" subtitle="Severity, trend and the rules × projects heatmap appear here." />
-                  : (
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {[
-                          { label: 'Active rules',  value: complianceDashboard.totals?.activeRules ?? 0,           tone: 'text-brand-navy' },
-                          { label: 'Open',          value: complianceDashboard.totals?.openViolations ?? 0,        tone: 'text-semantic-danger' },
-                          { label: 'Acknowledged',  value: complianceDashboard.totals?.acknowledgedViolations ?? 0, tone: 'text-semantic-warning' },
-                          { label: 'Resolved',      value: complianceDashboard.totals?.resolvedViolations ?? 0,    tone: 'text-semantic-success' },
-                        ].map(c => (
-                          <div key={c.label} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
-                            <p className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 font-semibold">{c.label}</p>
-                            <p className={`text-3xl font-bold mt-1 ${c.tone}`}>{c.value}</p>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Open by severity</h3>
-                          {(complianceDashboard.severityBreakdown || []).length === 0
-                            ? <p className="text-sm text-neutral-600 dark:text-neutral-400 py-4 text-center">No active violations. Clean posture.</p>
-                            : (complianceDashboard.severityBreakdown || []).map(s => (
-                              <div key={s.severity} className="flex items-center gap-3 py-1.5">
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[s.severity] || severityClass.MEDIUM}`}>{s.severity}</span>
-                                <div className="flex-1 h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
-                                  <div className="h-full bg-brand-navy rounded-full" style={{ width: `${Math.min(100, Number(s.count) * 12)}%` }} />
-                                </div>
-                                <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 w-8 text-right">{s.count}</span>
-                              </div>
-                            ))}
-                        </div>
-
-                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Top rules by open violations</h3>
-                          {(complianceDashboard.topRules || []).length === 0
-                            ? <p className="text-sm text-neutral-600 dark:text-neutral-400 py-4 text-center">Nothing flagged.</p>
-                            : (complianceDashboard.topRules || []).map(r => (
-                              <div key={r.rule_id} className="flex items-center justify-between py-1.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                                <span className="text-sm text-neutral-700 dark:text-neutral-200 truncate">{r.rule_name}</span>
-                                <span className="text-sm font-semibold text-semantic-danger ml-2">{r.count}</span>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-
-                      <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">30-day detection trend</h3>
-                        {(complianceDashboard.trend || []).length === 0
-                          ? <p className="text-sm text-neutral-600 dark:text-neutral-400 py-4 text-center">No violations detected in the last 30 days.</p>
-                          : (
-                            <div className="flex items-end gap-1 h-28 mt-3">
-                              {(complianceDashboard.trend || []).map(d => {
-                                const max = Math.max(...complianceDashboard.trend.map(x => Number(x.count)), 1);
-                                return (
-                                  <div key={d.day} className="flex-1 flex flex-col items-center justify-end" title={`${d.day}: ${d.count}`}>
-                                    <div className="w-full bg-brand-navy-tint rounded-t" style={{ height: `${Math.max(4, Number(d.count) * 100 / max)}%` }} />
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                      </div>
-
-                      <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Rules × projects heatmap</h3>
-                        {(complianceDashboard.heatmap || []).length === 0
-                          ? <p className="text-sm text-neutral-600 dark:text-neutral-400 py-4 text-center">No open violations to map.</p>
-                          : (
-                            <table className="w-full text-sm">
-                              <thead><tr className="text-left text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">
-                                <th className="py-1">Rule</th><th className="py-1">Project</th><th className="py-1 text-right">Open</th></tr></thead>
-                              <tbody>
-                                {(complianceDashboard.heatmap || []).map((h, i) => (
-                                  <tr key={i} className="border-t border-neutral-100 dark:border-neutral-700">
-                                    <td className="py-1.5 text-neutral-700 dark:text-neutral-200">{h.rule_name}</td>
-                                    <td className="py-1.5 font-mono text-xs text-neutral-600 dark:text-neutral-400">{h.project_id || '—'}</td>
-                                    <td className="py-1.5 text-right font-semibold text-semantic-danger">{h.count}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          )}
-                      </div>
-                    </div>
-                  )
-                )}
-
-                {/* ── RULES ── */}
-                {complianceTab === 'rules' && (
-                  <div className="space-y-6">
-                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Your rules ({complianceRules.length})</h3>
-                      {complianceRules.length === 0
-                        ? <EmptyState icon={ClipboardList} title="No rules yet" subtitle="Create a rule or start from a seeded template below." action={can('manage_compliance') ? <Button variant="action" onClick={newRuleBuilder}>New Rule</Button> : null} />
-                        : complianceRules.map(r => (
-                          <div key={r.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                            <span className={`text-xs font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[r.severity] || severityClass.MEDIUM}`}>{r.severity}</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{r.name}</p>
-                              <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate font-mono">{r.scopeBql ? `${r.scopeBql} ⟶ ` : ''}{r.assertionBql}</p>
-                            </div>
-                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${r.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500'}`}>{r.active ? 'ACTIVE' : 'INACTIVE'}</span>
-                            {can('manage_compliance') && <>
-                              <button onClick={() => testRule(r.id)} className="text-xs text-brand-navy hover:underline">Test</button>
-                              {r.active
-                                ? <button onClick={() => evaluateRule(r.id)} className="text-xs text-brand-navy hover:underline">Run</button>
-                                : null}
-                              <button onClick={() => setRuleActive(r.id, !r.active)} className="text-xs text-brand-navy hover:underline">{r.active ? 'Deactivate' : 'Activate'}</button>
-                              <button onClick={() => editRuleBuilder(r)} className="text-xs text-neutral-500 hover:underline">Edit</button>
-                              <button onClick={() => deleteRule(r.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
-                            </>}
-                          </div>
-                        ))}
-                      {ruleTestResult && ruleTestResult.valid && (
-                        <p className="text-xs text-neutral-500 mt-3">Last test: would flag <b>{ruleTestResult.violations}</b> item(s){ruleTestResult.sample?.length ? ` — e.g. ${ruleTestResult.sample.slice(0, 3).map(s => s.id).join(', ')}` : ''}.</p>
-                      )}
-                    </div>
-
-                    {/* B27 — AI compliance rule suggestion (hidden when AI is off; RB-40 §2) */}
-                    {anyCapabilityEnabled(aiCapabilities) && can('manage_compliance') && (
-                      <AiComplianceSuggestion
-                        workspaceId={activeWorkspaceId}
-                        onAdopt={rule => { setRuleBuilder({ ...rule, id: null }); }}
-                        onToast={showToast}
-                      />
-                    )}
-
-                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">Seeded template library</h3>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3">Opinionated defaults — clone one, test it, then activate.</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {complianceTemplates.map(t => (
-                          <div key={t.id} className="flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
-                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${severityClass[t.severity] || severityClass.MEDIUM}`}>{t.severity}</span>
-                            <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-200 truncate" title={t.description}>{t.name}</span>
-                            {can('manage_compliance') && <button onClick={() => cloneTemplate(t.id)} className="text-xs text-brand-navy hover:underline">+ Add</button>}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── VIOLATIONS ── */}
-                {complianceTab === 'violations' && (
-                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <select value={violationFilter} onChange={e => { setViolationFilter(e.target.value); fetchComplianceViolations(e.target.value); }} className="input text-xs py-1">
-                          <option value="">All statuses</option>
-                          <option value="OPEN">Open</option>
-                          <option value="ACKNOWLEDGED">Acknowledged</option>
-                          <option value="RESOLVED">Resolved</option>
-                          <option value="WONT_FIX">Won't fix</option>
-                        </select>
-                        <span className="text-xs text-neutral-600 dark:text-neutral-400">{complianceViolations.length} violation(s)</span>
-                      </div>
-                      {can('manage_compliance') && selectedViolations.length > 0 && (
-                        <Button variant="secondary" onClick={bulkAcknowledge}>Acknowledge {selectedViolations.length}</Button>
-                      )}
-                    </div>
-                    {complianceViolations.length === 0
-                      ? <EmptyState icon={CheckCircle2} title="No violations" subtitle="Nothing is breaching the active rules for this filter." />
-                      : complianceViolations.map(v => (
-                        <div key={v.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                          {can('manage_compliance') && (v.status === 'OPEN' || v.status === 'ACKNOWLEDGED') && (
-                            <input type="checkbox" checked={selectedViolations.includes(v.id)} onChange={() => toggleViolationSelect(v.id)} />
-                          )}
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[v.severity] || severityClass.MEDIUM}`}>{v.severity}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-neutral-900 dark:text-neutral-100 truncate">{v.workItemTitle || v.workItemId}</p>
-                            <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{v.workItemId}</p>
-                          </div>
-                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${vStatusClass[v.status] || ''}`}>{v.status}{v.escalated ? <ArrowUp className="inline-block h-3 w-3 align-text-bottom" aria-label="Escalated" /> : ''}</span>
-                          {can('manage_compliance') && (v.status === 'OPEN' || v.status === 'ACKNOWLEDGED') && <>
-                            {v.status === 'OPEN' && <button onClick={() => actOnViolation(v.id, 'acknowledge')} className="text-xs text-brand-navy hover:underline">Ack</button>}
-                            <button onClick={() => actOnViolation(v.id, 'resolve')} className="text-xs text-semantic-success hover:underline">Resolve</button>
-                            <button onClick={() => actOnViolation(v.id, 'wont-fix')} className="text-xs text-neutral-500 hover:underline">Won't fix</button>
-                          </>}
-                        </div>
-                      ))}
-                  </div>
-                )}
-
-                {/* ── AUDIT LOG ── */}
-                {complianceTab === 'audit' && (
-                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Append-only audit log</h3>
-                      <Button variant="secondary" onClick={exportComplianceAudit}>Export CSV</Button>
-                    </div>
-                    {complianceAudit.length === 0
-                      ? <EmptyState icon={ScrollText} title="No audit entries yet" subtitle="Rule changes, violations, acknowledgements and resolutions are recorded here." />
-                      : (
-                        <table className="w-full text-sm">
-                          <thead><tr className="text-left text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">
-                            <th className="py-1">When</th><th className="py-1">Event</th><th className="py-1">Subject</th><th className="py-1">Actor</th></tr></thead>
-                          <tbody>
-                            {complianceAudit.map((e, i) => (
-                              <tr key={i} className="border-t border-neutral-100 dark:border-neutral-700">
-                                <td className="py-1.5 text-neutral-600 dark:text-neutral-400 whitespace-nowrap">{e.occurred_at ? new Date(e.occurred_at).toLocaleString() : '—'}</td>
-                                <td className="py-1.5 text-neutral-700 dark:text-neutral-200">{(e.event_type || '').replace(/^COMPLIANCE_/, '').replaceAll('_', ' ').toLowerCase()}</td>
-                                <td className="py-1.5 font-mono text-xs text-neutral-600 dark:text-neutral-400">{e.aggregate_id}</td>
-                                <td className="py-1.5 text-neutral-500">{e.actor_id}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      )}
-                  </div>
-                )}
-              </div>
-
-              {/* Rule builder (test-before-activate) */}
-              {ruleBuilder && (
-                <Modal title={ruleBuilder.id ? 'Edit rule' : 'New compliance rule'} onClose={() => setRuleBuilder(null)} size="xl" className="max-h-[90vh] overflow-y-auto">
-                    <div className="space-y-3">
-                      <div>
-                        <label htmlFor="rule-name" className="block text-xs font-medium text-neutral-500 mb-1">Name</label>
-                        <input id="rule-name" className="input w-full" value={ruleBuilder.name} onChange={e => setRuleBuilder({ ...ruleBuilder, name: e.target.value })} placeholder="Stories need acceptance criteria before In Progress" />
-                      </div>
-                      <div>
-                        <label htmlFor="rule-desc" className="block text-xs font-medium text-neutral-500 mb-1">Description</label>
-                        <input id="rule-desc" className="input w-full" value={ruleBuilder.description} onChange={e => setRuleBuilder({ ...ruleBuilder, description: e.target.value })} />
-                      </div>
-                      <div>
-                        <label htmlFor="rule-scope-bql" className="block text-xs font-medium text-neutral-500 mb-1">Scope (BQL) — which items the rule applies to</label>
-                        <input id="rule-scope-bql" className="input w-full font-mono text-sm" value={ruleBuilder.scopeBql} onChange={e => setRuleBuilder({ ...ruleBuilder, scopeBql: e.target.value })} placeholder="type = Story AND status = In Progress" />
-                      </div>
-                      <div>
-                        <label htmlFor="rule-assertion-bql" className="block text-xs font-medium text-neutral-500 mb-1">Assertion (BQL) — what scoped items must satisfy</label>
-                        <input id="rule-assertion-bql" className="input w-full font-mono text-sm" value={ruleBuilder.assertionBql} onChange={e => setRuleBuilder({ ...ruleBuilder, assertionBql: e.target.value })} placeholder="acceptance_criteria != ''" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label htmlFor="rule-severity" className="block text-xs font-medium text-neutral-500 mb-1">Severity</label>
-                          <select id="rule-severity" className="input w-full" value={ruleBuilder.severity} onChange={e => setRuleBuilder({ ...ruleBuilder, severity: e.target.value })}>
-                            {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].map(s => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label htmlFor="rule-eval-mode" className="block text-xs font-medium text-neutral-500 mb-1">Evaluation</label>
-                          <select id="rule-eval-mode" className="input w-full" value={ruleBuilder.evaluationMode} onChange={e => setRuleBuilder({ ...ruleBuilder, evaluationMode: e.target.value })}>
-                            <option value="CONTINUOUS">Continuous</option>
-                            <option value="SCHEDULED">Scheduled</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div>
-                        <span className="block text-xs font-medium text-neutral-500 mb-1">Notify</span>
-                        <div className="flex gap-4 text-sm text-neutral-700 dark:text-neutral-200">
-                          <label className="flex items-center gap-2"><input type="checkbox" checked={ruleBuilder.notifyOwner} onChange={e => setRuleBuilder({ ...ruleBuilder, notifyOwner: e.target.checked })} /> Item owner</label>
-                          <label className="flex items-center gap-2"><input type="checkbox" checked={ruleBuilder.notifyAdmin} onChange={e => setRuleBuilder({ ...ruleBuilder, notifyAdmin: e.target.checked })} /> Project admins</label>
-                        </div>
-                      </div>
-                      <div>
-                        <label htmlFor="rule-escalate-hours" className="block text-xs font-medium text-neutral-500 mb-1">Escalate if unacknowledged after (hours) — optional</label>
-                        <input id="rule-escalate-hours" type="number" min="0" className="input w-full" value={ruleBuilder.escalateAfterHours} onChange={e => setRuleBuilder({ ...ruleBuilder, escalateAfterHours: e.target.value })} placeholder="e.g. 24" />
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2 mt-5">
-                      <Button variant="secondary" onClick={() => setRuleBuilder(null)}>Cancel</Button>
-                      <Button variant="action" onClick={saveRule}>{ruleBuilder.id ? 'Save rule' : 'Create rule (inactive)'}</Button>
-                    </div>
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-3">New rules are created inactive — test them, then activate from the rules list.</p>
-                </Modal>
-              )}
-            </div>
+            <ComplianceView
+              complianceTab={complianceTab}
+              complianceDashboard={complianceDashboard}
+              complianceRules={complianceRules}
+              complianceTemplates={complianceTemplates}
+              complianceViolations={complianceViolations}
+              complianceAudit={complianceAudit}
+              ruleBuilder={ruleBuilder}
+              ruleTestResult={ruleTestResult}
+              violationFilter={violationFilter}
+              selectedViolations={selectedViolations}
+              activeWorkspaceId={activeWorkspaceId}
+              aiCapabilities={aiCapabilities}
+              can={can}
+              AiComplianceSuggestion={AiComplianceSuggestion}
+              setComplianceTab={setComplianceTab}
+              setRuleBuilder={setRuleBuilder}
+              setViolationFilter={setViolationFilter}
+              newRuleBuilder={newRuleBuilder}
+              saveRule={saveRule}
+              testRule={testRule}
+              evaluateRule={evaluateRule}
+              setRuleActive={setRuleActive}
+              editRuleBuilder={editRuleBuilder}
+              deleteRule={deleteRule}
+              cloneTemplate={cloneTemplate}
+              fetchComplianceDashboard={fetchComplianceDashboard}
+              fetchComplianceRules={fetchComplianceRules}
+              fetchComplianceTemplates={fetchComplianceTemplates}
+              fetchComplianceViolations={fetchComplianceViolations}
+              fetchComplianceAudit={fetchComplianceAudit}
+              actOnViolation={actOnViolation}
+              bulkAcknowledge={bulkAcknowledge}
+              toggleViolationSelect={toggleViolationSelect}
+              exportComplianceAudit={exportComplianceAudit}
+              showToast={showToast}
+              anyCapabilityEnabled={anyCapabilityEnabled}
+            />
           )}
-
+\n          {/* SERVICE DESK — extracted to src/views/service-view.jsx (TD-003) */}
           {view === 'service' && (
-            <div className="flex flex-col h-full overflow-hidden">
-              <div className="px-6 pt-5 border-b border-neutral-200 dark:border-neutral-700">
-                <div className="mb-3">
-                  <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Service Desk</h1>
-                  <p className="text-sm text-neutral-500">Customer requests, agent queues, SLAs and satisfaction — the external face of Works.</p>
-                </div>
-                <div className="flex gap-1">
-                  {[
-                    { key: 'queues', label: 'Queues', load: () => fetchServiceRequests(serviceQueue) },
-                    { key: 'customers', label: 'Customers', load: () => fetchServiceCustomers() },
-                    { key: 'types', label: 'Request types', load: () => fetchServiceTypes() },
-                    { key: 'slas', label: 'SLA tiers', load: () => fetchServiceTiers() },
-                    { key: 'csat', label: 'CSAT', load: () => fetchServiceCsat() },
-                  ].map(t => (
-                    <button key={t.key} onClick={() => { setServiceTab(t.key); t.load(); }}
-                      className={`text-sm font-medium px-3 py-2 border-b-2 transition-colors ${serviceTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700'}`}>{t.label}</button>
-                  ))}
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto p-6">
-                {serviceTab === 'queues' && (
-                  <div className="space-y-4">
-                    <div className="flex gap-2">
-                      {['open', 'mine', 'unassigned', 'high'].map(q => (
-                        <button key={q} onClick={() => { setServiceQueue(q); fetchServiceRequests(q); }}
-                          className={`text-xs font-medium px-3 py-1.5 rounded-md border ${serviceQueue === q ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white dark:bg-neutral-800 text-neutral-600 border-neutral-200 dark:border-neutral-700'}`}>
-                          {q === 'open' ? 'All open' : q === 'mine' ? 'Mine' : q === 'unassigned' ? 'Unassigned' : 'High priority'}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      {serviceRequests.length === 0
-                        ? <EmptyState icon={Headset} title="Queue is clear" subtitle="No requests match this queue right now." />
-                        : serviceRequests.map(({ request: r, sla }) => (
-                          <div key={r.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                            <span className="text-xs font-bold px-2 py-0.5 rounded w-16 text-center bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200">{r.priority}</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{r.subject}</p>
-                              <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{r.typeKey} · {r.id}{r.assigneeId ? ` · ${r.assigneeId}` : ' · unassigned'}</p>
-                            </div>
-                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${sla.breached ? 'bg-semantic-danger text-white' : sla.state === 'AT_RISK' ? 'bg-semantic-warning text-white' : sla.state === 'NONE' ? 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200' : 'bg-semantic-success text-white'}`}>{sla.state === 'NONE' ? 'No SLA' : sla.state}</span>
-                            <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200">{(r.status || '').replace('_', ' ')}</span>
-                            {can('work_service') && (
-                              <>
-                                {!r.assigneeId && <button onClick={() => assignServiceRequest(r.id)} className="text-xs text-brand-navy hover:underline">Pick up</button>}
-                                {r.status !== 'RESOLVED' && r.status !== 'CLOSED' && <button onClick={() => transitionServiceRequest(r.id, 'RESOLVED')} className="text-xs text-semantic-success hover:underline">Resolve</button>}
-                                {r.status === 'RESOLVED' && <button onClick={() => transitionServiceRequest(r.id, 'CLOSED')} className="text-xs text-neutral-500 hover:underline">Close</button>}
-                              </>
-                            )}
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {serviceTab === 'customers' && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Customer accounts ({serviceCustomers.length})</h3>
-                      {can('manage_service') && <Button variant="action" onClick={() => setNewCustomer({ name: '', tier: 'SILVER', primaryColor: '', subdomain: '' })}>New customer</Button>}
-                    </div>
-                    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                      {serviceCustomers.length === 0
-                        ? <EmptyState icon={Building2} title="No customers yet" subtitle="Add a customer organization to start serving them through the portal." />
-                        : serviceCustomers.map(c => (
-                          <div key={c.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{c.name}</p>
-                              <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{c.subdomain ? `${c.subdomain} · ` : ''}{c.id}</p>
-                            </div>
-                            <span className="text-xs font-bold px-2 py-0.5 rounded bg-brand-navy text-white">{c.tier}</span>
-                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${c.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 text-neutral-600'}`}>{c.active ? 'ACTIVE' : 'INACTIVE'}</span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {serviceTab === 'types' && (
-                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                    {serviceTypes.length === 0
-                      ? <EmptyState icon={Archive} title="No request types" subtitle="Incident, Change and Service types power the portal forms." />
-                      : serviceTypes.map(t => (
-                        <div key={t.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{t.name}</p>
-                            <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{t.typeKey} · default {t.defaultPriority}</p>
-                          </div>
-                          {t.isSystem && <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200">SYSTEM</span>}
-                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${t.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 text-neutral-600'}`}>{t.active ? 'ACTIVE' : 'INACTIVE'}</span>
-                          {can('manage_service') && (
-                            <Button variant="secondary" size="sm" onClick={() => setFormDesignerTypeId(t.id)}>
-                              Design Form
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                  </div>
-                )}
-
-                {/* B15 — Portal Form Designer slide-over (opened from the Request types tab) */}
-                {formDesignerTypeId && (
-                  <div role="dialog" aria-label="Portal form designer" aria-modal="true"
-                    className="fixed inset-0 z-modal flex">
-                    <button type="button" aria-label="Close designer" onClick={() => setFormDesignerTypeId(null)}
-                      className="absolute inset-0 bg-neutral-900/40 focus-visible:outline-none" />
-                    <div className="relative ml-auto w-full max-w-5xl h-full bg-white dark:bg-neutral-900 shadow-xl flex flex-col">
-                      <PortalFormDesigner
-                        requestTypeId={formDesignerTypeId}
-                        onClose={() => setFormDesignerTypeId(null)}
-                        onSaved={() => { showToast('Form saved'); fetchServiceTypes(); }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {serviceTab === 'slas' && (
-                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                    {serviceTiers.length === 0
-                      ? <EmptyState icon={Timer} title="No SLA tiers" subtitle="Define response and resolution targets per customer tier." />
-                      : serviceTiers.map(t => (
-                        <div key={t.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                          <span className="text-xs font-bold px-2 py-0.5 rounded w-20 text-center bg-brand-navy text-white">{t.tier}</span>
-                          <div className="flex-1 text-sm text-neutral-700 dark:text-neutral-200">
-                            Respond in {t.responseMinutes}m · Resolve in {t.resolutionMinutes}m
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
-
-                {serviceTab === 'csat' && (
-                  <div className="space-y-4">
-                    {!serviceCsat ? <EmptyState icon={Star} title="No CSAT yet" subtitle="Ratings appear here once customers rate resolved requests." />
-                      : (
-                        <>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            {[
-                              { label: 'Responses', value: serviceCsat.summary?.count ?? 0 },
-                              { label: 'Average', value: serviceCsat.summary?.average ?? 0 },
-                              { label: '% Satisfied', value: `${serviceCsat.summary?.percentSatisfied ?? 0}%` },
-                            ].map(c => (
-                              <div key={c.label} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
-                                <p className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 font-semibold">{c.label}</p>
-                                <p className="text-3xl font-bold mt-1 text-brand-navy">{c.value}</p>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                            <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Recent feedback</h3>
-                            {(serviceCsat.responses || []).length === 0
-                              ? <p className="text-sm text-neutral-500">No comments yet.</p>
-                              : serviceCsat.responses.slice(0, 10).map(r => (
-                                <div key={r.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                                  <span className="text-brand-orange text-sm inline-flex items-center" aria-label={`Rated ${r.rating} of 5`}>{Array.from({ length: 5 }).map((_, si) => <Star key={si} className={`h-3.5 w-3.5 ${si < r.rating ? 'fill-current' : ''}`} aria-hidden="true" />)}</span>
-                                  <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-200 truncate">{r.comment || '—'}</span>
-                                </div>
-                              ))}
-                          </div>
-                        </>
-                      )}
-                  </div>
-                )}
-              </div>
-
-              {newCustomer && (
-                <Modal title="New customer" onClose={() => setNewCustomer(null)} size="lg">
-                    <div className="space-y-3">
-                      <div>
-                        <label htmlFor="cust-name" className="block text-xs font-medium text-neutral-500 mb-1">Name</label>
-                        <input id="cust-name" className="input w-full" value={newCustomer.name} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label htmlFor="cust-tier" className="block text-xs font-medium text-neutral-500 mb-1">Tier</label>
-                          <select id="cust-tier" className="input w-full" value={newCustomer.tier} onChange={e => setNewCustomer({ ...newCustomer, tier: e.target.value })}>
-                            {['PLATINUM', 'GOLD', 'SILVER'].map(s => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label htmlFor="cust-subdomain" className="block text-xs font-medium text-neutral-500 mb-1">Subdomain</label>
-                          <input id="cust-subdomain" className="input w-full" value={newCustomer.subdomain} onChange={e => setNewCustomer({ ...newCustomer, subdomain: e.target.value })} />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2 mt-5">
-                      <Button variant="secondary" onClick={() => setNewCustomer(null)}>Cancel</Button>
-                      <Button variant="action" onClick={createServiceCustomer}>Create customer</Button>
-                    </div>
-                </Modal>
-              )}
-            </div>
+            <ServiceView
+              serviceTab={serviceTab}
+              serviceQueue={serviceQueue}
+              serviceRequests={serviceRequests}
+              serviceCustomers={serviceCustomers}
+              serviceTypes={serviceTypes}
+              serviceTiers={serviceTiers}
+              serviceCsat={serviceCsat}
+              newCustomer={newCustomer}
+              formDesignerTypeId={formDesignerTypeId}
+              can={can}
+              setServiceTab={setServiceTab}
+              setServiceQueue={setServiceQueue}
+              setNewCustomer={setNewCustomer}
+              setFormDesignerTypeId={setFormDesignerTypeId}
+              fetchServiceRequests={fetchServiceRequests}
+              fetchServiceCustomers={fetchServiceCustomers}
+              fetchServiceTypes={fetchServiceTypes}
+              fetchServiceTiers={fetchServiceTiers}
+              fetchServiceCsat={fetchServiceCsat}
+              assignServiceRequest={assignServiceRequest}
+              transitionServiceRequest={transitionServiceRequest}
+              createServiceCustomer={createServiceCustomer}
+              showToast={showToast}
+            />
           )}
 
         </div>

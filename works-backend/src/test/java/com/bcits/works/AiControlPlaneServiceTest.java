@@ -29,9 +29,10 @@ class AiControlPlaneServiceTest {
     private final AiInvocationRepository invocations = mock(AiInvocationRepository.class);
     private final AiCacheEntryRepository cache = mock(AiCacheEntryRepository.class);
     private final AiProvider provider = mock(AiProvider.class);
+    private final RateLimiter rateLimiter = new RateLimiter();
 
     private final AiControlPlaneService cp =
-        new AiControlPlaneService(policies, budgets, invocations, cache, provider);
+        new AiControlPlaneService(policies, budgets, invocations, cache, provider, rateLimiter);
 
     private static final String WS = "ws-1";
     private static final String USER = "user-1";
@@ -227,6 +228,43 @@ class AiControlPlaneServiceTest {
         cp.invoke(call("new-key", true));
 
         verify(cache).save(any(AiCacheEntry.class));
+    }
+
+    @Test
+    void invoke_expiredCacheEntryTreatedAsMiss() {
+        noPolicies();
+        emptyBudget();
+        AiCacheEntry stale = new AiCacheEntry();
+        stale.setResponse("old answer");
+        stale.setModelTier("SONNET");
+        stale.setHits(1);
+        stale.setExpiresAt(java.time.OffsetDateTime.now().minusHours(1));  // expired
+        when(cache.findById(anyString())).thenReturn(Optional.of(stale));
+        when(provider.complete(any())).thenReturn(new AiProvider.AiResult("new answer", AiModelTier.SONNET, 10, 10));
+
+        var outcome = cp.invoke(call("stale-key", true));
+
+        assertThat(outcome.cacheHit()).isFalse();
+        assertThat(outcome.text()).isEqualTo("new answer");
+        verify(provider).complete(any());
+    }
+
+    @Test
+    void invoke_userRateLimitExceededReturnsFallback() {
+        noPolicies();
+        emptyBudget();
+        // Exhaust the per-user rate limit by driving the real RateLimiter past the threshold.
+        String rlKey = "ai:" + WS + ":" + USER;
+        for (int i = 0; i < AiControlPlaneService.USER_RATE_LIMIT; i++) {
+            rateLimiter.allow(rlKey, AiControlPlaneService.USER_RATE_LIMIT, AiControlPlaneService.USER_RATE_WINDOW_SECONDS);
+        }
+
+        var outcome = cp.invoke(call(null, true));
+
+        assertThat(outcome.fallback()).isTrue();
+        assertThat(outcome.policyState()).isEqualTo("RATE_LIMITED_USER");
+        verify(provider, never()).complete(any());
+        verify(invocations).save(any(AiInvocation.class));  // rate-limited invocations are still audited
     }
 
     // ── policy / budget management ────────────────────────────────────────────────

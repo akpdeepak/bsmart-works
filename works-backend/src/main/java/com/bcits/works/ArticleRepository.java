@@ -10,7 +10,9 @@ import java.util.List;
 
 public interface ArticleRepository extends JpaRepository<Article, String> {
     List<Article> findBySpaceIdOrderByUpdatedAtDesc(String spaceId);
+    Page<Article> findBySpaceIdOrderByUpdatedAtDesc(String spaceId, Pageable pageable);
     List<Article> findBySpaceIdAndStatusOrderByUpdatedAtDesc(String spaceId, String status);
+    Page<Article> findBySpaceIdAndStatusOrderByUpdatedAtDesc(String spaceId, String status, Pageable pageable);
     List<Article> findByTitleContainingIgnoreCaseOrderByUpdatedAtDesc(String query);
 
     /** Workspace-scoped full list (RB-40 §1): articles whose space belongs to the caller's workspaces. */

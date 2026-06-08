@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -8,6 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 
@@ -34,8 +36,12 @@ public class ArticleCommentController {
     }
 
     @GetMapping
-    public List<ArticleComment> getComments(@PathVariable String articleId) {
-        List<ArticleComment> all = articleCommentRepository.findByArticleIdOrderByCreatedAtAsc(articleId);
+    public List<ArticleComment> getComments(@PathVariable String articleId,
+                                             @RequestParam(defaultValue = "0") int page,
+                                             @RequestParam(defaultValue = "50") int size) {
+        int limit = Math.min(Math.max(size, 1), 200);
+        List<ArticleComment> all = articleCommentRepository.findByArticleIdOrderByCreatedAtAsc(
+                articleId, PageRequest.of(Math.max(page, 0), limit)).getContent();
         all.forEach(c -> userRepository.findById(c.getAuthorId() == null ? "" : c.getAuthorId())
                 .ifPresent(u -> c.setAuthorName(u.getFullName())));
         return all;

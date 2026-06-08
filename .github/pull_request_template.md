@@ -15,7 +15,7 @@
 - [ ] Schema changes are a Flyway migration (next sequential `V{n}__snake_case.sql` — Orchestrator §6), plural table names
 - [ ] RBAC checks are in the service layer via `RbacService`, not in controllers
 - [ ] Errors use the standard `{ code, message, field? }` shape via `@ControllerAdvice`
-- [ ] New code is in `com.example.demo` (no new top-level packages without a rename plan)
+- [ ] New code is in `com.bcits.works` (package rename TD-001 complete)
 - [ ] Logging uses SLF4J `Logger` — no `System.out.println`
 - [ ] AI features have a documented deterministic fallback
 - [ ] Any PR touching auth, CORS, RBAC, JWT, or file upload is labelled `security-review`

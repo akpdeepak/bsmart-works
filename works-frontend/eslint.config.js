@@ -1,3 +1,6 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from "eslint-plugin-storybook";
+
 import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
@@ -94,22 +97,15 @@ const worksA11yRules = {
 // no works-*), and (b) scripts/guardrails.sh (no gray-*, arbitrary-value checks). Revisit if
 // the plugin ships an ESLint-10-compatible build.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  vitestTestConfig,
-  {
-    files: ['**/*.{js,jsx}'],
-    extends: [
-      js.configs.recommended,
-      reactHooks.configs.flat.recommended,
-      reactRefresh.configs.vite,
-    ],
-    languageOptions: {
-      globals: globals.browser,
-      parserOptions: { ecmaFeatures: { jsx: true } },
-    },
+export default defineConfig([globalIgnores(['dist']), vitestTestConfig, {
+  files: ['**/*.{js,jsx}'],
+  extends: [
+    js.configs.recommended,
+    reactHooks.configs.flat.recommended,
+    reactRefresh.configs.vite,
+  ],
+  languageOptions: {
+    globals: globals.browser,
+    parserOptions: { ecmaFeatures: { jsx: true } },
   },
-  worksA11yRules,
-  worksArchRules,
-  worksArbitraryValueRule,
-])
+}, worksA11yRules, worksArchRules, worksArbitraryValueRule, ...storybook.configs["flat/recommended"]])

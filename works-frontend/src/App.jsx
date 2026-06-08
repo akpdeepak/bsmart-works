@@ -26,7 +26,7 @@ import { PerformancePanel } from '@/components/works/organisms/performance-panel
 import { AiSettingsPanel } from '@/components/works/organisms/ai-settings-panel';
 import { WorkItemStatusTimeline } from '@/components/works/organisms/work-item-status-timeline';
 import { AcceptanceCriteria } from '@/components/works/organisms/acceptance-criteria';
-import { BoardWipBadge } from '@/components/works/organisms/board-wip-badge';
+// BoardWipBadge moved to board-view.jsx (TD-003)
 import { AutomationsPanel } from '@/components/works/organisms/automations-panel';
 import { IntegrationsPanel } from '@/components/works/organisms/integrations-panel';
 import { SecurityCenter } from '@/components/works/organisms/security-center';
@@ -61,6 +61,7 @@ import { StatCard } from '@/components/works/stat-card';
 import { Field } from '@/components/works/field';
 import { Avatar } from '@/components/works/atoms/avatar';
 import DashboardView from '@/views/dashboard-view';
+import BoardView from '@/views/board-view';
 import WorkspaceView from '@/views/workspace-view';
 import PoWorkspaceView from '@/views/po-workspace-view';
 import LeadershipConsoleView from '@/views/leadership-console-view';
@@ -80,6 +81,7 @@ import KnowledgeTemplatesView from '@/views/knowledge-templates-view';
 import SupportInboxView from '@/views/support-inbox-view';
 import { LanguageSwitcher } from '@/components/works/organisms/language-switcher';
 import { BlockEditor } from '@/components/BlockEditor';
+import { PortalFormDesigner } from '@/components/PortalFormDesigner';
 import {
   filterItems as filterWidgetItems, statusBreakdown, statusPriorityMatrix,
   sprintProgress, velocityPoints, SERIES_BG, EXTRA_WIDGET_PRESETS, EXTRA_WIDGET_CATEGORIES,
@@ -1395,6 +1397,8 @@ export default function App() {
   const [serviceTiers, setServiceTiers] = useState([]);
   const [serviceCsat, setServiceCsat] = useState(null);
   const [newCustomer, setNewCustomer] = useState(null);
+  // B15 — form designer: ID of the request type currently being designed (null = closed)
+  const [formDesignerTypeId, setFormDesignerTypeId] = useState(null);
   function fetchServiceRequests(q = serviceQueue) {
     api.raw(`/service/requests?workspaceId=${activeWorkspaceId}&queue=${q}`).then(r => r.json())
       .then(d => setServiceRequests(Array.isArray(d) ? d : [])).catch(reportError);
@@ -2298,7 +2302,7 @@ export default function App() {
     { name: 'Done',        dot: 'bg-semantic-success', limitKey: 'doneLimit' },
   ];
 
-  const densityPad = { compact: 'p-2', comfortable: 'p-3', spacious: 'p-4' };
+  // densityPad moved to board-view.jsx (TD-003)
   const userName = u => users.find(x => x.id === u)?.fullName || '';
   const myItems  = workItems.filter(i => i.assigneeId === currentUser?.id);
 
@@ -2813,124 +2817,27 @@ export default function App() {
             />
           )}
 
-          {/* BOARD */}
+          {/* BOARD — extracted to src/views/board-view.jsx (TD-003) */}
           {view === 'board' && (
-            <div className="p-6 h-full flex flex-col">
-              <div className="flex justify-between items-center mb-5">
-                <div>
-                  <h1 className="text-xl font-bold text-brand-navy">Board</h1>
-                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{workItems.length} items total</p>
-                </div>
-                {/* Density toggle */}
-                <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1">
-                  {['compact', 'comfortable', 'spacious'].map(d => (
-                    <button key={d} onClick={() => setDensity(d)}
-                      className={`px-3 py-1 rounded-md text-xs font-medium transition-colors capitalize ${density === d ? 'bg-white dark:bg-neutral-700 shadow-sm text-brand-navy' : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
-                      {d}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {loading ? (
-                  /* Skeleton, never a spinner (Constitution Part 4). */
-                  <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
-                    {columns.map(col => (
-                      <div key={col.name} className="flex-1 min-w-56 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3">
-                        <div className="flex items-center justify-between mb-3 px-1">
-                          <div className="h-3 w-20 bg-neutral-200 rounded animate-pulse"></div>
-                          <div className="h-5 w-6 bg-white rounded-full animate-pulse"></div>
-                        </div>
-                        {[1,2,3].map(n => (
-                          <div key={n} className="bg-white rounded-lg p-3 mb-2 border border-neutral-200">
-                            <div className="h-2 w-16 bg-neutral-100 rounded animate-pulse mb-2"></div>
-                            <div className="h-3 w-full bg-neutral-100 rounded animate-pulse mb-1"></div>
-                            <div className="h-3 w-3/4 bg-neutral-100 rounded animate-pulse mb-3"></div>
-                            <div className="flex justify-between">
-                              <div className="h-4 w-14 bg-neutral-100 rounded animate-pulse"></div>
-                              <div className="h-5 w-5 bg-neutral-100 rounded-full animate-pulse"></div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
-                    {columns.map(col => {
-                      const colItems = workItems.filter(i => i.status === col.name);
-                      const wipLimit = wipLimits[col.limitKey] ?? null;
-                      const overWip = wipLimit != null && colItems.length > wipLimit;
-                      return (
-                        <div key={col.name}
-                          className={`flex-1 min-w-56 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3 ${overWip ? 'ring-1 ring-semantic-danger/40' : ''}`}
-                          onDragOver={handleDragOver}
-                          onDrop={(e) => handleDrop(e, col.name)}>
-                          <div className="mb-3 px-1">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className={`w-2 h-2 rounded-full ${col.dot}`}></span>
-                                <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{col.name}</h3>
-                              </div>
-                              <BoardWipBadge count={colItems.length} limit={wipLimit}
-                                canEdit={can('manage_projects')} onSet={(next) => setWipLimit(col.limitKey, next)} />
-                            </div>
-                            {overWip && <p className="mt-1 text-xs font-medium text-semantic-danger">Over WIP limit</p>}
-                          </div>
-                          <div className="space-y-2 flex-1">
-                            {colItems.length === 0 && (
-                              <div className="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed border-neutral-200 rounded-lg">
-                                <p className="text-xs text-neutral-600 dark:text-neutral-400">Drop items here</p>
-                              </div>
-                            )}
-                            {colItems.map(item => (
-                              <div key={item.id} draggable
-                                onDragStart={(e) => handleDragStart(e, item.id)}
-                                className={`bg-white dark:bg-neutral-700 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-600 cursor-grab hover:shadow-md transition-shadow group ${densityPad[density]} ${item.starred ? 'border-brand-orange/40' : ''}`}>
-                                <div className="flex items-start justify-between mb-1.5">
-                                  <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.id}</span>
-                                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => toggleStar(item)} title={item.starred ? 'Unstar' : 'Star'}
-                                      className={`text-xs p-0.5 transition-colors ${item.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}`}><Star className={`h-3.5 w-3.5 ${item.starred ? 'fill-current' : ''}`} aria-hidden="true" /></button>
-                                    <button onClick={() => setSelectedItem(item)} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-xs p-0.5" aria-label="Edit work item"><SquarePen className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                                    <button onClick={() => handleDelete(item.id)} className="text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label="Delete work item"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                                  </div>
-                                </div>
-                                <button type="button" className="text-sm font-medium text-neutral-900 leading-snug mb-2 cursor-pointer text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
-                                  onClick={() => setSelectedItem(item)}>{item.title}</button>
-                                {density !== 'compact' && item.description && (
-                                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2 line-clamp-2">{item.description}</p>
-                                )}
-                                <div className="flex items-center justify-between">
-                                  <TypeBadge type={item.type} compact={density === 'compact'} />
-                                  <div className="flex items-center gap-1.5">
-                                    {item.dueDate && <span className="text-xs text-semantic-warning font-medium">{item.dueDate}</span>}
-                                    {item.assigneeId && <Avatar name={userName(item.assigneeId)} size={5} />}
-                                  </div>
-                                </div>
-                                {density !== 'compact' && item.tags && item.tags.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mt-2">
-                                    {item.tags.map(t => (
-                                      <span key={t} className="text-xs bg-neutral-100 dark:bg-neutral-600 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{t}</span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                          {/* Add item shortcut */}
-                          <button onClick={() => { setNewItem(p => ({ ...p, status: col.name })); setIsCreateOpen(true); }}
-                            className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-700 rounded-lg transition-colors">
-                            <span>+</span> Add item
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )
-              }
-            </div>
+            <BoardView
+              workItems={workItems}
+              loading={loading}
+              density={density}
+              wipLimits={wipLimits}
+              setDensity={setDensity}
+              setIsCreateOpen={setIsCreateOpen}
+              setNewItem={setNewItem}
+              setSelectedItem={setSelectedItem}
+              handleDragStart={handleDragStart}
+              handleDragOver={handleDragOver}
+              handleDrop={handleDrop}
+              handleDelete={handleDelete}
+              toggleStar={toggleStar}
+              setWipLimit={setWipLimit}
+              can={can}
+              userName={userName}
+            />
           )}
-
           {/* PROJECTS */}
           {view === 'projects' && (
             <ProjectsView
@@ -5985,8 +5892,29 @@ export default function App() {
                           </div>
                           {t.isSystem && <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200">SYSTEM</span>}
                           <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${t.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 text-neutral-600'}`}>{t.active ? 'ACTIVE' : 'INACTIVE'}</span>
+                          {can('manage_service') && (
+                            <Button variant="secondary" size="sm" onClick={() => setFormDesignerTypeId(t.id)}>
+                              Design Form
+                            </Button>
+                          )}
                         </div>
                       ))}
+                  </div>
+                )}
+
+                {/* B15 — Portal Form Designer slide-over (opened from the Request types tab) */}
+                {formDesignerTypeId && (
+                  <div role="dialog" aria-label="Portal form designer" aria-modal="true"
+                    className="fixed inset-0 z-modal flex">
+                    <button type="button" aria-label="Close designer" onClick={() => setFormDesignerTypeId(null)}
+                      className="absolute inset-0 bg-neutral-900/40 focus-visible:outline-none" />
+                    <div className="relative ml-auto w-full max-w-5xl h-full bg-white dark:bg-neutral-900 shadow-xl flex flex-col">
+                      <PortalFormDesigner
+                        requestTypeId={formDesignerTypeId}
+                        onClose={() => setFormDesignerTypeId(null)}
+                        onSaved={() => { showToast('Form saved'); fetchServiceTypes(); }}
+                      />
+                    </div>
                   </div>
                 )}
 

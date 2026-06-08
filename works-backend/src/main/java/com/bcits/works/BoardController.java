@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -39,7 +40,7 @@ public class BoardController {
     public record WipLimitsRequest(Integer todoLimit, Integer inProgressLimit, Integer doneLimit) { }
 
     @PutMapping("/wip-limits")
-    public BoardWipLimit setWipLimits(@RequestParam String workspaceId, @RequestBody WipLimitsRequest req) {
+    public BoardWipLimit setWipLimits(@RequestParam String workspaceId, @Valid @RequestBody WipLimitsRequest req) {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "manage_projects");
         return wipLimits.set(workspaceId, req.todoLimit(), req.inProgressLimit(), req.doneLimit());

@@ -72,7 +72,7 @@ public class RequestTypeController {
     }
 
     @PutMapping("/{id}")
-    public RequestType update(@PathVariable String id, @RequestBody RequestType updated) {
+    public RequestType update(@PathVariable String id, @Valid @RequestBody RequestType updated) {
         String userId = authenticatedUser.id();
         RequestType existing = load(id);
         rbac.require(userId, existing.getWorkspaceId(), "manage_service");

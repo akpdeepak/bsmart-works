@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import jakarta.validation.Valid;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -53,7 +54,7 @@ public class AutomationController {
     }
 
     @PostMapping
-    public AutomationRule create(@RequestParam String workspaceId, @RequestBody AutomationRule rule) {
+    public AutomationRule create(@RequestParam String workspaceId, @Valid @RequestBody AutomationRule rule) {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "manage_automations");
         return automation.create(workspaceId, userId, rule);
@@ -61,7 +62,7 @@ public class AutomationController {
 
     @PutMapping("/{id}")
     public AutomationRule update(@RequestParam String workspaceId, @PathVariable String id,
-                                @RequestBody AutomationRule rule) {
+                                @Valid @RequestBody AutomationRule rule) {
         rbac.require(authenticatedUser.id(), workspaceId, "manage_automations");
         return automation.update(workspaceId, id, rule);
     }

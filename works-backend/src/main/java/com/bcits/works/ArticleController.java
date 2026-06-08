@@ -104,6 +104,14 @@ public class ArticleController {
         return article;
     }
 
+    /** Returns direct children of an article, for hierarchical navigation. */
+    @GetMapping("/{id}/children")
+    public List<Article> getChildren(@PathVariable String id) {
+        Article parent = articleRepository.findById(id).orElseThrow();
+        requireArticleAccess(parent);
+        return articleRepository.findByParentIdOrderByUpdatedAtDesc(id);
+    }
+
     @GetMapping("/{id}/versions")
     public List<ArticleVersion> getVersions(@PathVariable String id,
                                             @RequestParam(defaultValue = "0") int page,

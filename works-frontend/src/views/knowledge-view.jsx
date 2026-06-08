@@ -55,6 +55,8 @@ export default function KnowledgeView({
   deleteArticleComment,
   openArticlePanel,
   rejectArticle,
+  articleChildren = [],
+  fetchArticleChildren,
 }) {
   return (
     <div className="flex h-full overflow-hidden">
@@ -120,7 +122,7 @@ export default function KnowledgeView({
                 ) : (
                   <div className="space-y-2">
                     {knowledgeSearchResults.map(art => (
-                      <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); }} role="button" tabIndex={0} onKeyDown={onPressKey}
+                      <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); fetchArticleChildren?.(art.id); }} role="button" tabIndex={0} onKeyDown={onPressKey}
                         className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
@@ -160,7 +162,7 @@ export default function KnowledgeView({
                 ) : (
                   <div className="space-y-2">
                     {knowledgeArticles.map(art => (
-                      <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); }} role="button" tabIndex={0} onKeyDown={onPressKey}
+                      <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); fetchArticleChildren?.(art.id); }} role="button" tabIndex={0} onKeyDown={onPressKey}
                         className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
@@ -310,6 +312,27 @@ export default function KnowledgeView({
                   </div>
                 )}
               </div>
+
+              {/* Sub-articles (hierarchy) */}
+              {!editingArticle && articleChildren.length > 0 && (
+                <div className="px-6 pb-4 border-t border-neutral-100 dark:border-neutral-700 pt-4">
+                  <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Folder className="h-3.5 w-3.5" aria-hidden="true" />
+                    Sub-articles ({articleChildren.length})
+                  </h3>
+                  <div className="space-y-1">
+                    {articleChildren.map(child => (
+                      <button key={child.id}
+                        onClick={() => { setSelectedArticle(child); setEditingArticle(false); setArticlePanel(null); fetchArticleChildren?.(child.id); }}
+                        className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 text-sm text-brand-navy dark:text-blue-300 hover:underline">
+                        <FileText className="h-3.5 w-3.5 flex-shrink-0 text-neutral-400" aria-hidden="true" />
+                        <span className="truncate">{child.title}</span>
+                        <span className={`ml-auto text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${child.status === 'PUBLISHED' ? 'bg-semantic-success/10 text-semantic-success' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{child.status || 'DRAFT'}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Contextual side panel — history / comments / analytics */}
               {articlePanel === 'history' && (

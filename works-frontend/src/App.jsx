@@ -386,6 +386,7 @@ export default function App() {
   const [articlePanel, setArticlePanel] = useState(null); // 'history' | 'comments' | 'analytics' | null
   const [articleContentFormat, setArticleContentFormat] = useState('markdown'); // 'markdown' | 'blocks'
   const [articleComments, setArticleComments] = useState([]);
+  const [articleChildren, setArticleChildren] = useState([]);
   const [newArticleComment, setNewArticleComment] = useState('');
   const [articleAnalytics, setArticleAnalytics] = useState(null);
 
@@ -1775,6 +1776,11 @@ export default function App() {
   function fetchArticleAnalytics(articleId) {
     api.raw(`/articles/${articleId}/analytics`)
       .then(r => r.json()).then(d => setArticleAnalytics(d)).catch(() => setArticleAnalytics(null));
+  }
+
+  function fetchArticleChildren(articleId) {
+    api.raw(`/articles/${articleId}/children`)
+      .then(r => r.json()).then(d => setArticleChildren(Array.isArray(d) ? d : [])).catch(() => setArticleChildren([]));
   }
 
   function openArticlePanel(panel) {
@@ -3356,6 +3362,8 @@ export default function App() {
               deleteArticleComment={deleteArticleComment}
               openArticlePanel={openArticlePanel}
               rejectArticle={rejectArticle}
+              articleChildren={articleChildren}
+              fetchArticleChildren={fetchArticleChildren}
             />
           )}
 

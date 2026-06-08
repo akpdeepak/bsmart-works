@@ -49,9 +49,9 @@ describe('ComplianceView', () => {
     expect(screen.getByRole('heading', { name: /^compliance$/i, level: 1 })).toBeInTheDocument();
   });
 
-  it('shows empty compliance posture state on dashboard tab', () => {
-    render(<ComplianceView {...baseProps} />);
-    expect(screen.getByText(/loading compliance posture/i)).toBeInTheDocument();
+  it('shows skeleton loading state on dashboard tab when data is null', () => {
+    const { container } = render(<ComplianceView {...baseProps} />);
+    expect(container.querySelector('[aria-busy="true"][aria-label="Loading compliance dashboard"]')).toBeTruthy();
   });
 
   it('renders tab buttons', () => {

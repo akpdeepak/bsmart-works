@@ -10,11 +10,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Last completed** | Layer B — full defect remediation run (2026-06-07) |
+| **Last completed** | Prompt B — loading-state skeleton pass on extracted frontend views (2026-06-08) |
 | **Next action** | Decisions required on 8 flagged items (see queue); then re-run Prompt A for regression check |
 | **Next iteration** | n/a |
 | **Phase gate status** | Gate 1 (it.6): ✅ RESOLVED · Gate 2 (it.9): ✅ RESOLVED · Gate 3 (it.12): ✅ PASS · Gate 4 (it.18): 🟡 CONDITIONAL (P95 load test needs live deploy) |
-| **Updated** | 2026-06-07 |
+| **Updated** | 2026-06-08 |
 
 ---
 
@@ -1100,3 +1100,4 @@ Top defects → Layer B: B17 (carried: live LLM wiring), B33 (full-app i18n cove
 |------|--------|-----------------|---------|-------------|
 | 2026-06-07 | Prompt A | Iterations 1–20 (full Layer A) | Complete — 34 Layer B items identified; 4 phase gates scored (1🟡, 2🟡, 3✅, 4🟡) | commit 42a6fb1 |
 | 2026-06-07 | Layer B | All 34 items | 26 ✅ Fixed · 8 ⛔ Blocked (require decisions) · 0 remaining actionable | commits 50cdac7→ec57c5f |
+| 2026-06-08 | Prompt B | Extracted frontend views — loading-state quality pass (RB-30 §6) | ✅ 4 skeleton fixes (compliance, pm, settings3, knowledge views); 2 pre-existing px-value lint violations cleared; AI rule derived files regenerated (stale since 42facf5); all 400 Vitest tests + blocking guardrails green | commits 24e271f, fb61800 |

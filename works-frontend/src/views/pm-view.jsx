@@ -171,7 +171,16 @@ export default function PmView({
               </div>
             </div>
           )}
-          {pmTab === 'raid' && !raidDashboard && <div className="text-center py-12 text-neutral-600 dark:text-neutral-400">Loading RAID dashboard...</div>}
+          {pmTab === 'raid' && !raidDashboard && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse" aria-busy="true" aria-label="Loading RAID dashboard">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                  <div className="h-3 w-16 bg-neutral-100 dark:bg-neutral-700 rounded mb-2" />
+                  <div className="h-7 w-10 bg-neutral-100 dark:bg-neutral-700 rounded" />
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* RISKS */}
           {pmTab === 'risks' && (
@@ -280,7 +289,7 @@ export default function PmView({
                     <div key={section} className="bg-white border border-neutral-200 rounded-xl p-4">
                       <p className="text-xs font-bold text-neutral-600 uppercase tracking-wider mb-2">{section}</p>
                       <textarea
-                        className="w-full text-sm text-neutral-900 dark:text-neutral-100 border-none outline-none resize-none min-h-[100px] bg-transparent"
+                        className="w-full text-sm text-neutral-900 dark:text-neutral-100 border-none outline-none resize-none min-h-24 bg-transparent"
                         placeholder={`Enter ${section.toLowerCase()}...`}
                         defaultValue={note?.content || ''}
                         onBlur={e => {

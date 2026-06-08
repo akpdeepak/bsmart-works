@@ -5,4 +5,5 @@ import java.util.List;
 
 public interface PmIssueRepository extends JpaRepository<PmIssue, String> {
     List<PmIssue> findByProjectIdAndDeletedAtIsNull(String projectId);
+    List<PmIssue> findByWorkspaceIdAndDeletedAtIsNull(String workspaceId);
 }

@@ -4,6 +4,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -22,15 +23,23 @@ public class UserController {
 
     private final UserRepository userRepository;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
-    public UserController(UserRepository userRepository, AuthenticatedUser authenticatedUser) {
+    public UserController(UserRepository userRepository, AuthenticatedUser authenticatedUser, RbacService rbac) {
         this.userRepository = userRepository;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
+    /** Returns only users who are members of the given workspace (RB-40 §1). */
     @GetMapping
-    public List<Map<String, String>> getAllUsers() {
-        return userRepository.findAll().stream().map(u -> Map.of(
+    public List<Map<String, String>> getAllUsers(@RequestParam String workspaceId) {
+        String callerId = authenticatedUser.id();
+        // 404 hides both missing workspace and membership check failure (RB-40 §1)
+        if (rbac.getUserTier(callerId, workspaceId) < 1) {
+            throw ApiException.notFound("Workspace", workspaceId);
+        }
+        return userRepository.findByWorkspaceId(workspaceId).stream().map(u -> Map.of(
                 "id", u.getId(),
                 "fullName", u.getFullName(),
                 "email", u.getEmail()

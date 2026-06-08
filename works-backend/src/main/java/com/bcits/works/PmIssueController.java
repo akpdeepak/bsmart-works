@@ -21,17 +21,32 @@ public class PmIssueController {
 
     private final PmIssueRepository repo;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
-    public PmIssueController(PmIssueRepository repo, AuthenticatedUser authenticatedUser) {
+    public PmIssueController(PmIssueRepository repo, AuthenticatedUser authenticatedUser, RbacService rbac) {
         this.repo = repo;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
-    public List<PmIssue> list(@RequestParam(required = false) String projectId) {
-        if (projectId != null) return repo.findByProjectIdAndDeletedAtIsNull(projectId); {
-        return repo.findAll();
+    public List<PmIssue> list(@RequestParam(required = false) String projectId,
+                              @RequestParam(required = false) String workspaceId) {
+        String callerId = authenticatedUser.id();
+        if (projectId != null) {
+            String wsId = rbac.workspaceForProject(projectId);
+            if (wsId == null || rbac.getUserTier(callerId, wsId) < 1) {
+                throw ApiException.notFound("Project", projectId);
+            }
+            return repo.findByProjectIdAndDeletedAtIsNull(projectId);
         }
+        if (workspaceId != null) {
+            if (rbac.getUserTier(callerId, workspaceId) < 1) {
+                throw ApiException.notFound("Workspace", workspaceId);
+            }
+            return repo.findByWorkspaceIdAndDeletedAtIsNull(workspaceId);
+        }
+        throw ApiException.badRequest("MISSING_PARAM", "Either projectId or workspaceId is required");
     }
 
     @GetMapping("/{id}")

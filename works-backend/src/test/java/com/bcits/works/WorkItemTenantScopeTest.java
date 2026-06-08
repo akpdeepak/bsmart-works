@@ -34,10 +34,11 @@ class WorkItemTenantScopeTest {
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
     private final DodChecklistService dodChecklists = mock(DodChecklistService.class);
+    private final WorkflowRuleEngine workflowRules = mock(WorkflowRuleEngine.class);
 
     private final WorkItemController controller = new WorkItemController(
             repository, eventService, jdbc, notificationRepository, userRepository, emailService,
-            batchService, authenticatedUser, rbac, dodChecklists);
+            batchService, authenticatedUser, rbac, dodChecklists, workflowRules);
 
     @Test
     @SuppressWarnings("unchecked")

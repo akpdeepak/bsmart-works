@@ -32,9 +32,11 @@ class FieldDefControllerAccessTest {
     private final WorkItemFieldValueRepository valueRepo = mock(WorkItemFieldValueRepository.class);
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc =
+            mock(org.springframework.jdbc.core.JdbcTemplate.class);
 
     private final FieldDefController controller =
-            new FieldDefController(fieldDefRepo, valueRepo, authenticatedUser, rbac);
+            new FieldDefController(fieldDefRepo, valueRepo, authenticatedUser, rbac, jdbc);
 
     FieldDefControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

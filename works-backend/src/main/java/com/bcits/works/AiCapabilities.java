@@ -4,15 +4,19 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The registry of iteration-11 AI capabilities (RB-40 §2 — one orchestration layer means one place
- * that knows what AI surfaces exist). Each capability declares its default model tier (RB-40 §2
- * model tiering: cheap/fast for intent + classification, capable for generation) and a one-line
- * description of its deterministic fallback — the mandatory answer to "what happens when AI is off,
- * over budget, or unavailable?" (no fallback documented = it does not ship).
+ * The registry of AI capabilities across all iterations (RB-40 §2 — one orchestration layer means
+ * one place that knows what AI surfaces exist). Each capability declares its default model tier
+ * (RB-40 §2 model tiering: cheap/fast for intent + classification, capable for generation) and a
+ * one-line description of its deterministic fallback — the mandatory answer to "what happens when AI
+ * is off, over budget, or unavailable?" (no fallback documented = it does not ship).
  */
 public final class AiCapabilities {
 
     private AiCapabilities() { }
+
+    // ── Iteration 10 (Cap O/Z) — first two AI surfaces + control plane ────────────
+    public static final String NL_TO_BQL          = "nl_to_bql";          // Cap O iter-10 — natural-language → BQL preview
+    public static final String SUMMARIZATION      = "summarization";      // Cap O iter-10 — comment/sprint/dashboard summarization
 
     public static final String COMMAND_BAR        = "command_bar";        // Cap P — conversational command bar + multi-action plans
     public static final String TRIAGE             = "triage";             // Cap O — smart triage on incoming items
@@ -48,6 +52,12 @@ public final class AiCapabilities {
     public record Descriptor(String id, String label, AiModelTier defaultTier, String fallback) { }
 
     private static final List<Descriptor> ALL = List.of(
+        new Descriptor(NL_TO_BQL, "Natural language → BQL", AiModelTier.HAIKU,
+            "Falls back to a deterministic keyword-to-BQL parser that maps common intent patterns "
+            + "(status, priority, assignee, date) to BQL clauses — the visual BQL builder pre-fills them."),
+        new Descriptor(SUMMARIZATION, "Content summarization", AiModelTier.SONNET,
+            "Falls back to a deterministic extract: comment count + most-recent text for threads; "
+            + "completed/total counts + velocity for sprints; widget list for dashboards."),
         new Descriptor(COMMAND_BAR, "Conversational command bar", AiModelTier.HAIKU,
             "Falls back to the manual create/edit forms and the visual BQL builder — the parsed fields pre-fill them."),
         new Descriptor(TRIAGE, "Smart triage", AiModelTier.HAIKU,

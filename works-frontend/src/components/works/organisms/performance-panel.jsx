@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck, Lock, Sparkles } from 'lucide-react';
+import { ShieldCheck, Lock, Sparkles, TrendingUp, TrendingDown, Minus, Brain } from 'lucide-react';
 import { kpiClient } from '@/lib/kpi';
 import { api } from '@/lib/apiClient';
 import { Badge } from '@/components/works/atoms/badge';
+import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
+import { Button } from '@/components/works/button';
 
 // Organism — the iteration-12 Performance surface (Cap L). Layered metrics with a prominent layer
 // switcher and a privacy banner. Individual/Manager/Org need no entity id; Team and Project pick an
@@ -26,11 +28,27 @@ const PRIVACY_NOTE = {
   ORG: 'Organization metrics are fully aggregated.',
 };
 
+const STATUS_META = {
+  ON_TRACK: { label: 'On track', icon: TrendingUp, tone: 'text-semantic-success', bg: 'bg-semantic-success/10' },
+  AT_RISK: { label: 'At risk', icon: Minus, tone: 'text-semantic-warning', bg: 'bg-semantic-warning/10' },
+  OFF_TRACK: { label: 'Off track', icon: TrendingDown, tone: 'text-semantic-danger', bg: 'bg-semantic-danger/10' },
+};
+
 function MetricCard({ metric }) {
+  const sm = metric.status ? STATUS_META[metric.status] : null;
+  const StatusIcon = sm?.icon;
   return (
     <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
-      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-600">{metric.label}</p>
-      <p className="mt-1 text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+      <div className="flex items-start justify-between gap-1 mb-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-600">{metric.label}</p>
+        {sm && (
+          <span className={`flex items-center gap-0.5 rounded px-1.5 py-0.5 text-xs font-semibold ${sm.tone} ${sm.bg}`} aria-label={sm.label}>
+            {StatusIcon && <StatusIcon aria-hidden="true" className="h-3 w-3" />}
+            {sm.label}
+          </span>
+        )}
+      </div>
+      <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
         {metric.value}
         {metric.unit === 'percent' && '%'}
       </p>
@@ -41,7 +59,7 @@ function MetricCard({ metric }) {
   );
 }
 
-function LayerView({ layer }) {
+function LayerView({ layer, aiOn, anomalyBusy, anomalyResult, onExplainAnomaly }) {
   if (!layer) return null;
   return (
     <div>
@@ -57,7 +75,26 @@ function LayerView({ layer }) {
       {layer.metrics?.length ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {layer.metrics.map((m) => (
-            <MetricCard key={m.key} metric={m} />
+            <div key={m.key}>
+              <MetricCard metric={m} />
+              {aiOn && (
+                <div className="mt-1">
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    leftIcon={<Brain aria-hidden="true" className="h-3 w-3" />}
+                    loading={anomalyBusy === m.key}
+                    onClick={() => onExplainAnomaly(m.key, [m.value])}
+                    aria-label={`Explain ${m.label} anomaly`}
+                  >
+                    Explain
+                  </Button>
+                  {anomalyResult[m.key] && (
+                    <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">{anomalyResult[m.key]}</p>
+                  )}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       ) : (
@@ -68,7 +105,7 @@ function LayerView({ layer }) {
   );
 }
 
-export function PerformancePanel({ workspaceId }) {
+export function PerformancePanel({ workspaceId, aiCapabilities = [] }) {
   const [layer, setLayer] = useState('INDIVIDUAL');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -78,6 +115,19 @@ export function PerformancePanel({ workspaceId }) {
   const [projects, setProjects] = useState(null);
   const [teamId, setTeamId] = useState('');
   const [projectId, setProjectId] = useState('');
+  const [anomalyBusy, setAnomalyBusy] = useState(null); // metricKey currently explaining
+  const [anomalyResult, setAnomalyResult] = useState({}); // metricKey → explanation text
+
+  const aiOn = anyCapabilityEnabled(aiCapabilities);
+
+  const explainAnomaly = (metricKey, values) => {
+    if (!workspaceId || !values?.length) return;
+    setAnomalyBusy(metricKey);
+    aiClient.explainAnomaly(workspaceId, metricKey, values)
+      .then((r) => setAnomalyResult((prev) => ({ ...prev, [metricKey]: r?.explanation || r?.text || 'No explanation returned.' })))
+      .catch(() => setAnomalyResult((prev) => ({ ...prev, [metricKey]: 'Could not explain anomaly.' })))
+      .finally(() => setAnomalyBusy(null));
+  };
 
   // Load the team + project lists once per workspace so the Team/Project selectors have options and a
   // default. setState only in the async continuation (react-hooks/set-state-in-effect).
@@ -206,14 +256,16 @@ export function PerformancePanel({ workspaceId }) {
         <div className="rounded-lg bg-semantic-danger-surface p-4 text-sm text-semantic-danger">{error}</div>
       )}
 
-      {!loading && !error && data?.single && <LayerView layer={data.single} />}
+      {!loading && !error && data?.single && (
+        <LayerView layer={data.single} aiOn={aiOn} anomalyBusy={anomalyBusy} anomalyResult={anomalyResult} onExplainAnomaly={explainAnomaly} />
+      )}
       {!loading && !error && data?.many && (
         <div className="space-y-6">
           {data.many.length === 0 && (
             <p className="text-sm text-neutral-600">No teams yet. Create a team to see manager-level rollups.</p>
           )}
           {data.many.map((l) => (
-            <LayerView key={l.scopeId || l.label} layer={l} />
+            <LayerView key={l.scopeId || l.label} layer={l} aiOn={aiOn} anomalyBusy={anomalyBusy} anomalyResult={anomalyResult} onExplainAnomaly={explainAnomaly} />
           ))}
         </div>
       )}

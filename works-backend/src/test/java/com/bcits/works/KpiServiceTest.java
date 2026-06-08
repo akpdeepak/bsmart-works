@@ -35,9 +35,15 @@ class KpiServiceTest {
     private final MetricSnapshotRepository snapshots = mock(MetricSnapshotRepository.class);
     private final MetricShareRepository shares = mock(MetricShareRepository.class);
     private final AiControlPlaneService controlPlane = mock(AiControlPlaneService.class);
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc =
+        mock(org.springframework.jdbc.core.JdbcTemplate.class);
+    private final BqlCompiler bqlCompiler = mock(BqlCompiler.class);
 
     private final KpiService kpi = new KpiService(workItems, projects, teams, definitions,
-        snapshots, shares, controlPlane);
+        snapshots, shares, controlPlane, jdbc, bqlCompiler);
+
+    // By default, return an empty definitions list so applyTargetsAndCustomMetrics is a no-op.
+    { when(definitions.findByWorkspaceIdOrderByNameAsc(WS)).thenReturn(List.of()); }
 
     private WorkItem item(String id, String assignee, String status, Integer points, String type) {
         WorkItem w = new WorkItem();
@@ -178,6 +184,54 @@ class KpiServiceTest {
         List<Double> hours = List.of(10.0, 50.0, 100.0, 400.0);
         List<Integer> buckets = KpiService.bucketize(hours, new int[]{24, 72, 168, 336});
         assertThat(buckets).containsExactly(1, 1, 1, 0, 1);
+    }
+
+    // ── tenant isolation: /distribution project scope (RB-40 §1) ───────────────────
+
+    // ── KPI evaluation status (iter-12 gap fix) ───────────────────────────────────────
+
+    @Test
+    void evaluateStatus_higherIsBetter_computesBands() {
+        assertThat(KpiService.evaluateStatus(100.0, 100.0, true)).isEqualTo("ON_TRACK");
+        assertThat(KpiService.evaluateStatus(80.0, 100.0, true)).isEqualTo("AT_RISK");
+        assertThat(KpiService.evaluateStatus(50.0, 100.0, true)).isEqualTo("OFF_TRACK");
+    }
+
+    @Test
+    void evaluateStatus_lowerIsBetter_computesBands() {
+        assertThat(KpiService.evaluateStatus(2.0, 2.0, false)).isEqualTo("ON_TRACK");
+        assertThat(KpiService.evaluateStatus(2.5, 2.0, false)).isEqualTo("AT_RISK");  // 20% over
+        assertThat(KpiService.evaluateStatus(5.0, 2.0, false)).isEqualTo("OFF_TRACK"); // 150% over
+    }
+
+    @Test
+    void evaluateStatus_nullTarget_returnsNull() {
+        assertThat(KpiService.evaluateStatus(50.0, null, true)).isNull();
+        assertThat(KpiService.evaluateStatus(50.0, 0.0, true)).isNull();
+    }
+
+    @Test
+    void personal_appliesTargetStatusWhenDefinitionHasTarget() {
+        MetricDefinition def = new MetricDefinition();
+        def.setMetricKey(MetricCatalog.THROUGHPUT);
+        def.setTarget(5.0);
+        def.setHigherIsBetter(true);
+        when(definitions.findByWorkspaceIdOrderByNameAsc(WS)).thenReturn(List.of(def));
+        when(projects.findByWorkspaceId(WS)).thenReturn(List.of(project()));
+        // 8 done items out of 10 — throughput = 8 ≥ target 5 → ON_TRACK
+        when(workItems.findByProjectId("PROJ-1")).thenReturn(List.of(
+            item("A-1", ME, "Done", 3, "Story"), item("A-2", ME, "Done", 2, "Bug"),
+            item("A-3", ME, "Done", 1, "Story"), item("A-4", ME, "Done", 2, "Story"),
+            item("A-5", ME, "Done", 1, "Bug"), item("A-6", ME, "Done", 1, "Task"),
+            item("A-7", ME, "Done", 1, "Story"), item("A-8", ME, "Done", 1, "Story"),
+            item("A-9", ME, "In Progress", 2, "Story"), item("A-10", ME, "Todo", 1, "Story")));
+
+        KpiService.Layer layer = kpi.personal(WS, ME, null);
+
+        layer.metrics().stream()
+            .filter(m -> m.key().equals(MetricCatalog.THROUGHPUT))
+            .findFirst()
+            .ifPresent(m -> assertThat(m.status()).isEqualTo("ON_TRACK"));
     }
 
     // ── tenant isolation: /distribution project scope (RB-40 §1) ───────────────────

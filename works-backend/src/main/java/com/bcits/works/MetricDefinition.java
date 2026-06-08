@@ -32,6 +32,9 @@ public class MetricDefinition {
     private String scopeLevel = "TEAM";     // TEAM | PROJECT | ORG (never INDIVIDUAL)
     private Boolean higherIsBetter = true;
     private Boolean builtIn = false;
+    private Double target;           // optional numeric target; drives ON_TRACK/AT_RISK/OFF_TRACK evaluation
+    @Column(columnDefinition = "TEXT")
+    private String bqlFormula;       // optional BQL expression (unification layer: one query language, RB-10 §6)
     private String createdBy;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
@@ -58,6 +61,10 @@ public class MetricDefinition {
     public void setHigherIsBetter(Boolean higherIsBetter) { this.higherIsBetter = higherIsBetter; }
     public Boolean getBuiltIn() { return builtIn; }
     public void setBuiltIn(Boolean builtIn) { this.builtIn = builtIn; }
+    public Double getTarget() { return target; }
+    public void setTarget(Double target) { this.target = target; }
+    public String getBqlFormula() { return bqlFormula; }
+    public void setBqlFormula(String bqlFormula) { this.bqlFormula = bqlFormula; }
     public String getCreatedBy() { return createdBy; }
     public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
     public OffsetDateTime getCreatedAt() { return createdAt; }

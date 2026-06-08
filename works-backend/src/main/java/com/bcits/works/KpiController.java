@@ -120,6 +120,16 @@ public class KpiController {
 
     public record NarrativeRequest(String teamId, Boolean aiInContext) { }
 
+    /** Snapshot history for trend charts (spec: BQL-compiled metrics are time-series, RB-10 §6). */
+    @GetMapping("/history")
+    public List<MetricSnapshot> history(@RequestParam String workspaceId,
+                                        @RequestParam String metricKey,
+                                        @RequestParam(defaultValue = "ORG") String scopeLevel,
+                                        @RequestParam(required = false) String scopeId) {
+        rbac.require(authenticatedUser.id(), workspaceId, "view_team_metrics");
+        return kpi.history(workspaceId, metricKey, scopeLevel, scopeId);
+    }
+
     // ── Voluntary individual sharing ────────────────────────────────────────────────
 
     @GetMapping("/shares")

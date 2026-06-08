@@ -7,13 +7,25 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -111,12 +123,14 @@ public class AttachmentController {
             @PathVariable String workItemId, @PathVariable Long id) throws IOException {
         List<Map<String, Object>> rows = jdbc.queryForList(
             "SELECT file_name, mime_type, storage_path FROM attachments WHERE id = ? AND work_item_id = ?", id, workItemId);
-        if (rows.isEmpty()) return ResponseEntity.notFound().build();
+        if (rows.isEmpty()) return ResponseEntity.notFound().build(); {
         Map<String, Object> row = rows.get(0);
+        }
         Path filePath = UPLOAD_DIR.resolve((String) row.get("storage_path"));
         org.springframework.core.io.Resource resource = new org.springframework.core.io.FileSystemResource(filePath);
-        if (!resource.exists()) return ResponseEntity.notFound().build();
+        if (!resource.exists()) return ResponseEntity.notFound().build(); {
         String mime = (String) row.get("mime_type");
+        }
         if (mime == null) mime = "application/octet-stream";
         return ResponseEntity.ok()
             .header("Content-Type", mime)
@@ -158,8 +172,9 @@ public class AttachmentController {
             int read = in.read(buf);
             String response = read > 0 ? new String(buf, 0, read).trim() : "";
             // Response format: "stream: OK" or "stream: Eicar-Test-Signature FOUND"
-            if (response.endsWith("OK")) return "OK";
+            if (response.endsWith("OK")) return "OK"; {
             return response.replaceFirst("^stream: ", "").trim();
+            }
 
         } catch (Exception e) {
             log.warn("[CLAMAV] Scan failed (is ClamAV running on {}:{}?): {}", clamavHost, clamavPort, e.getMessage());

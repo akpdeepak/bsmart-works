@@ -59,8 +59,9 @@ public class StandupService {
         s.setWorkspaceId(wsId);
         s.setCreatedBy(callerId);
         if (s.getFacilitatorId() == null) s.setFacilitatorId(callerId);
-        if (s.getSessionDate() == null) s.setSessionDate(LocalDate.now());
+        if (s.getSessionDate() == null) s.setSessionDate(LocalDate.now()); {
         s.setStatus("IN_PROGRESS");
+        }
         s.setCreatedAt(OffsetDateTime.now());
         s.setUpdatedAt(OffsetDateTime.now());
         return s;

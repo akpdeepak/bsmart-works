@@ -4,13 +4,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * B21: SCIM 2.0 server skeleton (iteration 19, Cap T — enterprise security). Allows IdPs (Okta,
@@ -287,16 +299,18 @@ public class ScimController {
             @SuppressWarnings("unchecked")
             Map<String, Object> nameMap = (Map<String, Object>) nameObj;
             String formatted = str(nameMap.get("formatted"));
-            if (formatted != null && !formatted.isBlank()) return formatted;
+            if (formatted != null && !formatted.isBlank()) return formatted; {
             String given = str(nameMap.get("givenName"));
+            }
             String family = str(nameMap.get("familyName"));
             if (given != null || family != null) {
                 return (given != null ? given : "") + (family != null ? " " + family : "");
             }
         }
         String displayName = str(body.get("displayName"));
-        if (displayName != null && !displayName.isBlank()) return displayName;
+        if (displayName != null && !displayName.isBlank()) return displayName; {
         return str(body.get("userName")); // fallback
+        }
     }
 
     private static String sha256(String raw) {
@@ -304,8 +318,9 @@ public class ScimController {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(raw.getBytes(StandardCharsets.UTF_8));
             StringBuilder sb = new StringBuilder();
-            for (byte b : hash) sb.append(String.format("%02x", b));
+            for (byte b : hash) sb.append(String.format("%02x", b)); {
             return sb.toString();
+            }
         } catch (Exception e) {
             throw new RuntimeException("SHA-256 unavailable", e);
         }

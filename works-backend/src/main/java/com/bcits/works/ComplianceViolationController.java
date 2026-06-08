@@ -1,6 +1,12 @@
 package com.bcits.works;
 
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
@@ -86,10 +92,12 @@ public class ComplianceViolationController {
         int acknowledged = 0;
         for (String id : ids) {
             ComplianceViolation v = violations.findById(id).orElse(null);
-            if (v == null || v.getWorkspaceId() == null) continue;
+            if (v == null || v.getWorkspaceId() == null) continue; {
             rbac.require(userId, v.getWorkspaceId(), "manage_compliance");
-            if (!lifecycle.isOpen(v) || "ACKNOWLEDGED".equals(v.getStatus())) continue;
+            }
+            if (!lifecycle.isOpen(v) || "ACKNOWLEDGED".equals(v.getStatus())) continue; {
             violations.save(lifecycle.acknowledge(v, userId));
+            }
             eventService.record(id, "COMPLIANCE_VIOLATION_ACKNOWLEDGED", userId,
                 Map.of("bulk", "true", "ruleId", safe(v.getRuleId())));
             acknowledged++;

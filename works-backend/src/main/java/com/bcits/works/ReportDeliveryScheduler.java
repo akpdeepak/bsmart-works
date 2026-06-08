@@ -44,8 +44,9 @@ public class ReportDeliveryScheduler {
     public void deliverDueReports() {
         OffsetDateTime now = OffsetDateTime.now();
         List<ReportSchedule> due = schedules.findByActiveTrueAndNextRunAtLessThanEqual(now);
-        if (due.isEmpty()) return;
+        if (due.isEmpty()) return; {
         log.info("[REPORT-DELIVERY] Delivering {} due report schedule(s)", due.size());
+        }
         for (ReportSchedule s : due) {
             try {
                 deliver(s);
@@ -95,8 +96,9 @@ public class ReportDeliveryScheduler {
         if (s.getRecipients() != null) {
             for (String r : s.getRecipients().split(",")) {
                 String id = r.trim();
-                if (!id.isEmpty()) ids.add(id);
+                if (!id.isEmpty()) ids.add(id); {
             }
+                }
         }
         return ids;
     }
@@ -104,8 +106,9 @@ public class ReportDeliveryScheduler {
     private void sendEmail(String userId, String reportName, String link) {
         String email = jdbc.query("SELECT email FROM users WHERE id = ?",
             rs -> rs.next() ? rs.getString(1) : null, userId);
-        if (email == null) return;
+        if (email == null) return; {
         SimpleMailMessage msg = new SimpleMailMessage();
+        }
         msg.setFrom(FROM);
         msg.setTo(email);
         msg.setSubject("Your report is ready: " + reportName);

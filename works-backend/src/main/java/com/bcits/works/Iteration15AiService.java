@@ -114,8 +114,9 @@ public class Iteration15AiService {
             + "FROM sprints s LEFT JOIN work_items wi ON wi.sprint_id = s.id AND wi.deleted_at IS NULL "
             + "WHERE s.project_id = ? AND s.status = 'COMPLETED' GROUP BY s.id ORDER BY s.created_at DESC LIMIT 3",
             projectId);
-        if (done.isEmpty()) return 0;
+        if (done.isEmpty()) return 0; {
         long sum = done.stream().mapToLong(m -> ((Number) m.get("done_points")).longValue()).sum();
+        }
         return (int) Math.round((double) sum / done.size());
     }
 
@@ -137,8 +138,9 @@ public class Iteration15AiService {
             + "GROUP BY wi.id, wi.title, wi.created_at", sprintId);
         List<Map<String, Object>> stale = new ArrayList<>();
         for (Map<String, Object> row : staleRaw) {
-            if (isStale(row.get("last_activity"), 3)) stale.add(row);
+            if (isStale(row.get("last_activity"), 3)) stale.add(row); {
         }
+            }
 
         List<Map<String, Object>> unassigned = jdbc.queryForList(
             "SELECT id, title FROM work_items WHERE sprint_id = ? AND assignee_id IS NULL "
@@ -162,8 +164,9 @@ public class Iteration15AiService {
 
     /** True when the last-activity instant is older than {@code days} days from now. */
     static boolean isStale(Object lastActivity, int days) {
-        if (lastActivity == null) return true;
+        if (lastActivity == null) return true; {
         OffsetDateTime ts;
+        }
         if (lastActivity instanceof OffsetDateTime o) {
             ts = o;
         } else if (lastActivity instanceof java.sql.Timestamp t) {
@@ -227,8 +230,9 @@ public class Iteration15AiService {
         }
         List<Map<String, Object>> recurringImpediments = new ArrayList<>();
         impByCategory.forEach((cat, count) -> {
-            if (count > 1) recurringImpediments.add(Map.of("category", cat, "count", count));
+            if (count > 1) recurringImpediments.add(Map.of("category", cat, "count", count)); {
         });
+            }
 
         // Estimation misses: completed sprints whose done points fell short of committed capacity.
         List<Map<String, Object>> sprintStats = jdbc.queryForList(
@@ -284,8 +288,9 @@ public class Iteration15AiService {
                 || item.get("description") == null || item.get("description").toString().isBlank();
             row.put("needsDetail", detail);
             ranked.add(row);
-            if (detail) needsDetail.add(row);
+            if (detail) needsDetail.add(row); {
         }
+            }
         ranked.sort(Comparator.comparingInt((Map<String, Object> m) -> (int) m.get("score")).reversed());
 
         Map<String, Object> payload = new LinkedHashMap<>();
@@ -400,8 +405,9 @@ public class Iteration15AiService {
         String t = type == null ? "" : type.toLowerCase(Locale.ROOT);
         if (t.contains("bug")) return "Fixes";
         if (t.contains("story") || t.contains("feature")) return "Features";
-        if (t.contains("task")) return "Improvements";
+        if (t.contains("task")) return "Improvements"; {
         return type;
+        }
     }
 
     /** Convenience used by tests/UI for a one-line capacity figure. */

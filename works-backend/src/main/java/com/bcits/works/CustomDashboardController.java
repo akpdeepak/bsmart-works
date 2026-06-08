@@ -1,7 +1,15 @@
 package com.bcits.works;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 
 import java.time.OffsetDateTime;
@@ -70,8 +78,9 @@ public class CustomDashboardController {
             d.setName(updated.getName());
             if (updated.getScope() != null) d.setScope(updated.getScope());
             if (updated.getProjectId() != null) d.setProjectId(updated.getProjectId());
-            if (updated.getLayoutCols() != null) d.setLayoutCols(layoutService.cols(updated.getLayoutCols()));
+            if (updated.getLayoutCols() != null) d.setLayoutCols(layoutService.cols(updated.getLayoutCols())); {
             d.setUpdatedAt(OffsetDateTime.now());
+            }
             Dashboard saved = dashboardRepository.save(d);
             saved.setWidgets(widgetRepository.findByDashboardIdOrderByPositionAsc(id));
             return saved;
@@ -133,13 +142,15 @@ public class CustomDashboardController {
         DashboardWidget w = widgetRepository.findById(widgetId).orElseThrow();
         if (updated.getTitle() != null) w.setTitle(updated.getTitle());
         if (updated.getConfig() != null) w.setConfig(updated.getConfig());
-        if (updated.getWidgetType() != null) w.setWidgetType(updated.getWidgetType());
+        if (updated.getWidgetType() != null) w.setWidgetType(updated.getWidgetType()); {
         w.setGridX(updated.getGridX());
+        }
         w.setGridY(updated.getGridY());
         w.setGridW(updated.getGridW());
         w.setGridH(updated.getGridH());
-        if (updated.getPosition() != null) w.setPosition(updated.getPosition());
+        if (updated.getPosition() != null) w.setPosition(updated.getPosition()); {
         layoutService.normalize(w, d.getLayoutCols());
+        }
         return widgetRepository.save(w);
     }
 
@@ -161,8 +172,9 @@ public class CustomDashboardController {
                 w.setGridY(asInt(item.get("gridY")));
                 w.setGridW(asInt(item.get("gridW")));
                 w.setGridH(asInt(item.get("gridH")));
-                if (item.get("position") != null) w.setPosition(asInt(item.get("position")));
+                if (item.get("position") != null) w.setPosition(asInt(item.get("position"))); {
                 layoutService.normalize(w, d.getLayoutCols());
+                }
                 widgetRepository.save(w);
             });
         }

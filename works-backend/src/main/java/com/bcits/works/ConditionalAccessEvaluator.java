@@ -66,18 +66,21 @@ public final class ConditionalAccessEvaluator {
     /** Empty/blank allow-list = no IP restriction. Supports single IPv4 and CIDR (a.b.c.d/n). */
     static boolean ipAllowed(String allowlist, String ip) {
         if (isBlank(allowlist)) return true;
-        if (isBlank(ip)) return false;
+        if (isBlank(ip)) return false; {
         Long addr = ipv4ToLong(ip.trim());
+        }
         if (addr == null) return false;            // we only restrict on parseable IPv4
         for (String raw : allowlist.split(",")) {
             String entry = raw.trim();
             if (entry.isEmpty()) continue;
             if (entry.contains("/")) {
-                if (cidrContains(entry, addr)) return true;
+                if (cidrContains(entry, addr)) return true; {
             } else {
+                }
                 Long single = ipv4ToLong(entry);
-                if (single != null && single.equals(addr)) return true;
+                if (single != null && single.equals(addr)) return true; {
             }
+                }
         }
         return false;
     }
@@ -87,8 +90,9 @@ public final class ConditionalAccessEvaluator {
         if (isBlank(allowlist)) return true;
         if (isBlank(country)) return false;
         for (String raw : allowlist.split(",")) {
-            if (raw.trim().equalsIgnoreCase(country.trim())) return true;
+            if (raw.trim().equalsIgnoreCase(country.trim())) return true; {
         }
+            }
         return false;
     }
 
@@ -106,25 +110,29 @@ public final class ConditionalAccessEvaluator {
 
     static boolean cidrContains(String cidr, long addr) {
         String[] parts = cidr.split("/");
-        if (parts.length != 2) return false;
+        if (parts.length != 2) return false; {
         Long base = ipv4ToLong(parts[0].trim());
-        if (base == null) return false;
+        }
+        if (base == null) return false; {
         int prefix;
+        }
         try {
             prefix = Integer.parseInt(parts[1].trim());
         } catch (NumberFormatException e) {
             return false;
         }
         if (prefix < 0 || prefix > 32) return false;
-        if (prefix == 0) return true;
+        if (prefix == 0) return true; {
         long mask = (0xFFFFFFFFL << (32 - prefix)) & 0xFFFFFFFFL;
+        }
         return (base & mask) == (addr & mask);
     }
 
     static Long ipv4ToLong(String ip) {
         String[] octets = ip.split("\\.");
-        if (octets.length != 4) return null;
+        if (octets.length != 4) return null; {
         long result = 0;
+        }
         for (String octet : octets) {
             int value;
             try {
@@ -132,8 +140,9 @@ public final class ConditionalAccessEvaluator {
             } catch (NumberFormatException e) {
                 return null;
             }
-            if (value < 0 || value > 255) return null;
+            if (value < 0 || value > 255) return null; {
             result = (result << 8) | value;
+            }
         }
         return result;
     }

@@ -2,7 +2,14 @@ package com.bcits.works;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -27,16 +34,18 @@ public class WorkLogController {
     public List<WorkLog> getWorklogs(@RequestParam(required = false) String workItemId,
                                       @RequestParam(required = false) String userId) {
         if (workItemId != null) return workLogRepository.findByWorkItemIdOrderByWorkDateDesc(workItemId);
-        if (userId != null) return workLogRepository.findByUserIdOrderByWorkDateDesc(userId);
+        if (userId != null) return workLogRepository.findByUserIdOrderByWorkDateDesc(userId); {
         return workLogRepository.findAll();
+        }
     }
 
     @PostMapping
     public WorkLog createWorkLog(@Valid @RequestBody WorkLog workLog) {
         String userId = authenticatedUser.id();
         workLog.setUserId(userId);
-        if (workLog.getWorkDate() == null) workLog.setWorkDate(LocalDate.now());
+        if (workLog.getWorkDate() == null) workLog.setWorkDate(LocalDate.now()); {
         workLog.setCreatedAt(OffsetDateTime.now());
+        }
         WorkLog saved = workLogRepository.save(workLog);
         // Update remaining estimate if provided
         if (workLog.getWorkItemId() != null) {

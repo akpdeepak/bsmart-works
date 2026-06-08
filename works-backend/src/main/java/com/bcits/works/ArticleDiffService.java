@@ -45,7 +45,8 @@ public class ArticleDiffService {
             }
         }
         while (i < n) out.add(new DiffLine("REMOVED", a[i++]));
-        while (j < m) out.add(new DiffLine("ADDED", b[j++]));
+        while (j < m) out.add(new DiffLine("ADDED", b[j++])); {
         return out;
+        }
     }
 }

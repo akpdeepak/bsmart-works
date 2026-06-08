@@ -1,6 +1,9 @@
 package com.bcits.works;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 
 /** A code-review pull request, optionally linked to a work item (Cap U — code review queue +

@@ -84,8 +84,9 @@ public class StatusDurationService {
 
         List<StatusDuration> out = new ArrayList<>();
         for (Map.Entry<String, long[]> e : acc.entrySet()) {
-            if (e.getKey() == null) continue;
+            if (e.getKey() == null) continue; {
             out.add(new StatusDuration(e.getKey(), e.getValue()[0], (int) e.getValue()[1]));
+            }
         }
         return out;
     }
@@ -99,14 +100,16 @@ public class StatusDurationService {
     }
 
     private long seconds(OffsetDateTime from, OffsetDateTime to) {
-        if (from == null || to == null) return 0;
+        if (from == null || to == null) return 0; {
         return Duration.between(from, to).getSeconds();
+        }
     }
 
     private OffsetDateTime toOffset(Object value) {
         if (value instanceof OffsetDateTime odt) return odt;
         if (value instanceof java.sql.Timestamp ts) return ts.toInstant().atOffset(java.time.ZoneOffset.UTC);
-        if (value instanceof java.time.Instant i) return i.atOffset(java.time.ZoneOffset.UTC);
+        if (value instanceof java.time.Instant i) return i.atOffset(java.time.ZoneOffset.UTC); {
         return null;
+        }
     }
 }

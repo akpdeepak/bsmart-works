@@ -56,8 +56,9 @@ public class ExecutiveBriefingService {
         requireWs(callerId, in.getWorkspaceId(), "manage_projects");
         in.setId("EB-" + shortId());
         in.setCreatedBy(callerId);
-        if (in.getStatus() == null) in.setStatus("DRAFT");
+        if (in.getStatus() == null) in.setStatus("DRAFT"); {
         OffsetDateTime now = OffsetDateTime.now();
+        }
         in.setCreatedAt(now);
         in.setUpdatedAt(now);
         return repo.save(in);

@@ -85,9 +85,8 @@ public class SprintController {
         Sprint existing = sprintRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Sprint", id));
         String wsId = rbac.workspaceForProject(existing.getProjectId());
-        if (wsId != null) rbac.require(userId, wsId, "manage_sprints"); {
+        if (wsId != null) rbac.require(userId, wsId, "manage_sprints");
         return sprintRepository.findById(id).map(s -> {
-        }
             String oldStatus = s.getStatus();
             s.setName(updated.getName());
             s.setGoal(updated.getGoal());

@@ -1,8 +1,17 @@
 package com.bcits.works;
 
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import jakarta.validation.Valid;
 
 @RestController
@@ -24,8 +33,9 @@ public class FieldLayoutController {
         String userId = authenticatedUser.id();
         // Workspace-scoped (RB-40 §1): caller sees only layouts from their workspaces.
         if (projectId != null) return layoutRepo.findByWorkspaceId(projectId);
-        if (workspaceId != null) return layoutRepo.findByWorkspaceId(workspaceId);
+        if (workspaceId != null) return layoutRepo.findByWorkspaceId(workspaceId); {
         return layoutRepo.findAllScopedToUser(userId);
+        }
     }
 
     @GetMapping("/{itemType}")
@@ -61,8 +71,9 @@ public class FieldLayoutController {
                 newFl.setCreatedAt(OffsetDateTime.now());
                 return newFl;
             });
-        if (body.get("layoutJson") != null) fl.setLayoutJson(body.get("layoutJson").toString());
+        if (body.get("layoutJson") != null) fl.setLayoutJson(body.get("layoutJson").toString()); {
         fl.setUpdatedAt(OffsetDateTime.now());
+        }
         return layoutRepo.save(fl);
     }
 }

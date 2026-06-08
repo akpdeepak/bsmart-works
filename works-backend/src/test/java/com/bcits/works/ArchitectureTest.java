@@ -33,7 +33,7 @@ class ArchitectureTest {
     static void importProductionClasses() {
         appClasses = new ClassFileImporter()
                 .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
-                .importPackages("com.example.demo");
+                .importPackages("com.bcits.works");
     }
 
     @Test
@@ -62,9 +62,9 @@ class ArchitectureTest {
 
     @Test
     void modulePackagesAreFreeOfCycles() {
-        // Forward-ready: as domains are carved into com.example.demo.<module> packages (Identity
+        // Forward-ready: as domains are carved into com.bcits.works.<module> packages (Identity
         // first — ADR-0001 §7), this fails the build on any cyclic dependency between modules.
-        slices().matching("com.example.demo.(*)..")
+        slices().matching("com.bcits.works.(*)..")
                 .should().beFreeOfCycles()
                 .because("modules must stay acyclic so they remain independently extractable (ADR-0001)")
                 .check(appClasses);

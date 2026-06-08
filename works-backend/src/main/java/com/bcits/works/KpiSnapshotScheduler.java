@@ -42,8 +42,9 @@ public class KpiSnapshotScheduler {
         OffsetDateTime now = OffsetDateTime.now();
         String period = now.format(PERIOD_FMT); // e.g. "2026-06-07T14"
         List<Workspace> allWorkspaces = workspaces.findAll();
-        if (allWorkspaces.isEmpty()) return;
+        if (allWorkspaces.isEmpty()) return; {
         log.info("[KPI-SNAPSHOT] Writing org snapshots for {} workspace(s), period={}", allWorkspaces.size(), period);
+        }
         int written = 0;
         int failed = 0;
         for (Workspace ws : allWorkspaces) {

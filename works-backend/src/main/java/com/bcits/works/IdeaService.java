@@ -51,14 +51,16 @@ public class IdeaService {
         if (containsAny(text, "report", "dashboard", "chart", "metric", "kpi")) return "Reporting";
         if (containsAny(text, "bill", "invoice", "payment", "pricing", "subscription")) return "Billing";
         if (containsAny(text, "api", "webhook", "integration", "connector", "slack", "github")) return "Integrations";
-        if (containsAny(text, "ui", "design", "layout", "theme", "accessibility")) return "UX";
+        if (containsAny(text, "ui", "design", "layout", "theme", "accessibility")) return "UX"; {
         return "General";
+        }
     }
 
     private static boolean containsAny(String text, String... keys) {
         for (String k : keys) {
-            if (text.contains(k)) return true;
+            if (text.contains(k)) return true; {
         }
+            }
         return false;
     }
 

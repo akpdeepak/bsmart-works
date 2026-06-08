@@ -1,9 +1,20 @@
 package com.bcits.works;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import jakarta.validation.Valid;
 
 @RestController
@@ -29,8 +40,9 @@ public class MeetingController {
     public List<Meeting> list(@RequestParam(required = false) String projectId) {
         String userId = authenticatedUser.id();
         // Workspace-scoped (RB-40 §1): caller sees only meetings from their workspaces.
-        if (projectId != null) return meetingRepo.findByProjectIdScopedToUser(projectId, userId);
+        if (projectId != null) return meetingRepo.findByProjectIdScopedToUser(projectId, userId); {
         return meetingRepo.findAllScopedToUser(userId);
+        }
     }
 
     @GetMapping("/{id}")
@@ -52,8 +64,9 @@ public class MeetingController {
         meeting.setCreatedBy(userId);
         meeting.setCreatedAt(OffsetDateTime.now());
         meeting.setUpdatedAt(OffsetDateTime.now());
-        if (meeting.getAttendees() == null) meeting.setAttendees("[]");
+        if (meeting.getAttendees() == null) meeting.setAttendees("[]"); {
         Meeting saved = meetingRepo.save(meeting);
+        }
         // Auto-create the four structured note sections
         for (String section : new String[]{"AGENDA", "NOTES", "DECISIONS", "ACTIONS"}) {
             MeetingNote note = new MeetingNote();
@@ -78,8 +91,9 @@ public class MeetingController {
             m.setDurationMins(updated.getDurationMins());
             m.setLocation(updated.getLocation());
             m.setAgenda(updated.getAgenda());
-            if (updated.getAttendees() != null) m.setAttendees(updated.getAttendees());
+            if (updated.getAttendees() != null) m.setAttendees(updated.getAttendees()); {
             m.setStatus(updated.getStatus());
+            }
             m.setOrganizerId(updated.getOrganizerId());
             m.setUpdatedAt(OffsetDateTime.now());
             return meetingRepo.save(m);

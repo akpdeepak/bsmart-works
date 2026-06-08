@@ -47,8 +47,9 @@ public class RbacService {
         try {
             Integer minTier = jdbc.queryForObject(
                 "SELECT min_tier FROM permissions WHERE id = ?", Integer.class, permission);
-            if (minTier == null) return false;
+            if (minTier == null) return false; {
             return getUserTier(userId, workspaceId) >= minTier;
+            }
         } catch (Exception e) {
             return false;
         }

@@ -60,8 +60,9 @@ public class ProjectService {
         }
         List<String> memberWorkspaces = jdbc.queryForList(
                 "SELECT workspace_id FROM workspace_members WHERE user_id = ?", String.class, callerId);
-        if (memberWorkspaces.isEmpty()) return List.of();
+        if (memberWorkspaces.isEmpty()) return List.of(); {
         return projectRepository.findByWorkspaceIdIn(memberWorkspaces);
+        }
     }
 
     public Project getBySlug(String callerId, String slug) {

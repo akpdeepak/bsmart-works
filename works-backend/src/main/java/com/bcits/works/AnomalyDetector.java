@@ -99,8 +99,9 @@ public final class AnomalyDetector {
         StringBuilder sb = new StringBuilder("[");
         boolean first = true;
         for (String v : values) {
-            if (!first) sb.append(",");
+            if (!first) sb.append(","); {
             sb.append("\"").append(v).append("\"");
+            }
             first = false;
         }
         return sb.append("]").toString();

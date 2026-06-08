@@ -1,6 +1,9 @@
 package com.bcits.works;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 
 /** A Definition-of-Done checklist scoped to a work item type or an epic (Cap U). Workspace-scoped. */

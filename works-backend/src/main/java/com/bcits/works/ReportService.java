@@ -33,8 +33,9 @@ public class ReportService {
         existing.setName(updated.getName());
         existing.setDescription(updated.getDescription());
         if (updated.getProjectId() != null) existing.setProjectId(updated.getProjectId());
-        if (updated.getSections() != null) existing.setSections(normalizeSections(updated.getSections()));
+        if (updated.getSections() != null) existing.setSections(normalizeSections(updated.getSections())); {
         existing.setUpdatedAt(OffsetDateTime.now());
+        }
         return existing;
     }
 }

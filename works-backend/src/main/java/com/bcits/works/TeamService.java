@@ -30,8 +30,9 @@ public class TeamService {
     public Team applyUpdate(Team existing, Team updated) {
         existing.setName(updated.getName());
         existing.setDescription(updated.getDescription());
-        if (updated.getProjectIds() != null) existing.setProjectIds(normalizeProjectIds(updated.getProjectIds()));
+        if (updated.getProjectIds() != null) existing.setProjectIds(normalizeProjectIds(updated.getProjectIds())); {
         existing.setUpdatedAt(OffsetDateTime.now());
+        }
         return existing;
     }
 }

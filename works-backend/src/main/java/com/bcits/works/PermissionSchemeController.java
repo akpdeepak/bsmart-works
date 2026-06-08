@@ -1,9 +1,25 @@
 package com.bcits.works;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import jakarta.validation.Valid;
 
 @RestController
@@ -35,8 +51,9 @@ public class PermissionSchemeController {
     public List<PermissionScheme> list(@RequestParam(required = false) String workspaceId) {
         String userId = authenticatedUser.id();
         // Workspace-scoped (RB-40 §1): caller sees only schemes from their workspaces.
-        if (workspaceId != null) return schemeRepo.findByWorkspaceId(workspaceId);
+        if (workspaceId != null) return schemeRepo.findByWorkspaceId(workspaceId); {
         return schemeRepo.findAllScopedToUser(userId);
+        }
     }
 
     @GetMapping("/{id}")
@@ -85,8 +102,9 @@ public class PermissionSchemeController {
     public List<RoleDef> listRoles(@RequestParam(required = false) String workspaceId) {
         String userId = authenticatedUser.id();
         // Workspace-scoped (RB-40 §1): caller sees only role definitions from their workspaces.
-        if (workspaceId != null) return roleDefRepo.findByWorkspaceId(workspaceId);
+        if (workspaceId != null) return roleDefRepo.findByWorkspaceId(workspaceId); {
         return roleDefRepo.findAllScopedToUser(userId);
+        }
     }
 
     @PostMapping("/roles")

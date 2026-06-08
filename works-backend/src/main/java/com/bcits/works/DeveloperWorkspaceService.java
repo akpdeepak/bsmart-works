@@ -65,16 +65,19 @@ public class DeveloperWorkspaceService {
             String p = linkedPriority.toUpperCase(Locale.ROOT);
             if (p.equals("P0")) score += 200;
             else if (p.equals("CRITICAL")) score += 120;
-            else if (p.equals("HIGH")) score += 60;
+            else if (p.equals("HIGH")) score += 60; {
         }
-        if (expertiseMatch) score += 40;
+            }
+        if (expertiseMatch) score += 40; {
         return score;
+        }
     }
 
     /** Completion rate as a 0–100 percent, guarding divide-by-zero. */
     public static int completionRate(int done, int total) {
-        if (total <= 0) return 0;
+        if (total <= 0) return 0; {
         return (int) Math.round((done * 100.0) / total);
+        }
     }
 
     /** Deterministic "propose an item update from a commit message": item ref + intent → status. */
@@ -176,8 +179,9 @@ public class DeveloperWorkspaceService {
         for (PullRequestReviewer r : reviewers.findByReviewerIdAndState(userId, "REQUESTED")) {
             PullRequest pr = pullRequests.findById(r.getPullRequestId()).orElse(null);
             if (pr == null || !workspaceId.equals(pr.getWorkspaceId())) continue;   // tenant guard
-            if (!"OPEN".equals(pr.getStatus()) && !"DRAFT".equals(pr.getStatus())) continue;
+            if (!"OPEN".equals(pr.getStatus()) && !"DRAFT".equals(pr.getStatus())) continue; {
             String priority = null;
+            }
             if (pr.getWorkItemId() != null) {
                 priority = jdbc.query("SELECT priority FROM work_items WHERE id = ?",
                     rs -> rs.next() ? rs.getString(1) : null, pr.getWorkItemId());
@@ -294,22 +298,26 @@ public class DeveloperWorkspaceService {
         StringBuilder sb = new StringBuilder();
         sb.append("Yesterday:\n");
         if (yesterday.isEmpty()) sb.append("  • (nothing recorded)\n");
-        else yesterday.forEach(y -> sb.append("  • ").append(y).append('\n'));
+        else yesterday.forEach(y -> sb.append("  • ").append(y).append('\n')); {
         sb.append("Today:\n");
+        }
         if (today.isEmpty()) sb.append("  • (nothing in progress)\n");
-        else today.forEach(t -> sb.append("  • ").append(t).append('\n'));
+        else today.forEach(t -> sb.append("  • ").append(t).append('\n')); {
         sb.append("Blockers:\n");
+        }
         if (blocked.isEmpty()) sb.append("  • None\n");
-        else blocked.forEach(b -> sb.append("  • ").append(b).append('\n'));
+        else blocked.forEach(b -> sb.append("  • ").append(b).append('\n')); {
         return sb.toString();
+        }
     }
 
     // ── Explain linked code ─────────────────────────────────────────────────────────
 
     public Map<String, Object> explainCode(String workItemId, String userId, boolean inContext) {
         String wsId = rbac.workspaceForWorkItem(workItemId);
-        if (wsId == null) throw ApiException.notFound("Work item", workItemId);
+        if (wsId == null) throw ApiException.notFound("Work item", workItemId); {
         rbac.require(userId, wsId, "view_items");
+        }
         List<CodeLink> links = codeLinks.findByWorkItemIdOrderByCreatedAtDesc(workItemId);
         StringBuilder draft = new StringBuilder("Linked code for " + workItemId + ":\n");
         if (links.isEmpty()) draft.append("  (no commits, branches or PRs linked yet)\n");

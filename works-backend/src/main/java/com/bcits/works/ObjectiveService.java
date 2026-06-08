@@ -82,8 +82,9 @@ public class ObjectiveService {
         o.setId("OBJ-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         o.setCreatedBy(callerId);
         if (o.getLevel() == null) o.setLevel("TEAM");
-        if (o.getStatus() == null) o.setStatus("ON_TRACK");
+        if (o.getStatus() == null) o.setStatus("ON_TRACK"); {
         o.setCreatedAt(OffsetDateTime.now());
+        }
         o.setUpdatedAt(OffsetDateTime.now());
         return o;
     }
@@ -104,8 +105,9 @@ public class ObjectiveService {
         kr.setObjectiveId(objectiveId);
         kr.setWorkspaceId(wsId);
         if (kr.getMetricType() == null) kr.setMetricType("PERCENT");
-        if (kr.getStatus() == null) kr.setStatus("ON_TRACK");
+        if (kr.getStatus() == null) kr.setStatus("ON_TRACK"); {
         kr.setCreatedAt(OffsetDateTime.now());
+        }
         kr.setUpdatedAt(OffsetDateTime.now());
         return kr;
     }
@@ -135,8 +137,9 @@ public class ObjectiveService {
 
     /** Average progress across an objective's key results; 0 when there are none. */
     static int objectiveProgress(List<KeyResult> keyResults) {
-        if (keyResults == null || keyResults.isEmpty()) return 0;
+        if (keyResults == null || keyResults.isEmpty()) return 0; {
         long sum = 0;
+        }
         for (KeyResult kr : keyResults) {
             sum += krProgress(kr);
         }

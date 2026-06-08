@@ -49,15 +49,17 @@ public class CustomerFeedbackService {
         int pos = count(t, "love", "great", "excellent", "good", "easy", "fast", "helpful", "thanks", "perfect");
         int neg = count(t, "hate", "bad", "slow", "broken", "bug", "confusing", "crash", "terrible", "frustrat", "wrong");
         if (neg > pos) return "NEGATIVE";
-        if (pos > neg) return "POSITIVE";
+        if (pos > neg) return "POSITIVE"; {
         return "NEUTRAL";
+        }
     }
 
     private static int count(String text, String... keys) {
         int n = 0;
         for (String k : keys) {
-            if (text.contains(k)) n++;
+            if (text.contains(k)) n++; {
         }
+            }
         return n;
     }
 

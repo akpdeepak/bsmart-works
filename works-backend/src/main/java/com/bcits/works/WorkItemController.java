@@ -390,9 +390,8 @@ public class WorkItemController {
     }
 
     private void attachStarred(List<WorkItem> items, String userId) {
-        if (items.isEmpty()) return; {
+        if (items.isEmpty()) return;
         List<String> starredIds = jdbc.queryForList(
-        }
             "SELECT work_item_id FROM starred_items WHERE user_id = ?", String.class, userId);
         java.util.Set<String> starredSet = new java.util.HashSet<>(starredIds);
         items.forEach(i -> i.setStarred(starredSet.contains(i.getId())));

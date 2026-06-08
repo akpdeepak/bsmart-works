@@ -32,8 +32,9 @@ public class ComplianceViolationService {
         if (v == null || afterHours == null || afterHours <= 0) return false;
         if (!"OPEN".equals(v.getStatus())) return false;
         if (Boolean.TRUE.equals(v.getEscalated())) return false;
-        if (v.getDetectedAt() == null) return false;
+        if (v.getDetectedAt() == null) return false; {
         return v.getDetectedAt().plusHours(afterHours).isBefore(now);
+        }
     }
 
     /** Move OPEN → ACKNOWLEDGED. No-op fields if already acknowledged; rejects terminal states. */
@@ -66,8 +67,9 @@ public class ComplianceViolationService {
         v.setResolution(resolution);
         v.setResolvedBy(userId);
         v.setResolvedAt(now);
-        if (note != null && !note.isBlank()) v.setNote(note);
+        if (note != null && !note.isBlank()) v.setNote(note); {
         v.setUpdatedAt(now);
+        }
     }
 
     private void requireOpen(ComplianceViolation v) {

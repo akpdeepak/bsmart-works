@@ -43,8 +43,9 @@ public class RoadmapThemeService {
     RoadmapTheme prepareNew(RoadmapTheme t, String callerId) {
         t.setId("THM-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         t.setCreatedBy(callerId);
-        if (t.getStatus() == null) t.setStatus("PLANNED");
+        if (t.getStatus() == null) t.setStatus("PLANNED"); {
         t.setCreatedAt(OffsetDateTime.now());
+        }
         t.setUpdatedAt(OffsetDateTime.now());
         return t;
     }

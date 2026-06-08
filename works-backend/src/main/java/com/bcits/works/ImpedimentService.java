@@ -63,8 +63,9 @@ public class ImpedimentService {
         if (i.getRaisedBy() == null) i.setRaisedBy(callerId);
         if (i.getRaisedAt() == null) i.setRaisedAt(LocalDate.now());
         if (i.getStatus() == null) i.setStatus("OPEN");
-        if (i.getSeverity() == null) i.setSeverity("MEDIUM");
+        if (i.getSeverity() == null) i.setSeverity("MEDIUM"); {
         i.setCreatedAt(OffsetDateTime.now());
+        }
         i.setUpdatedAt(OffsetDateTime.now());
         return i;
     }
@@ -90,8 +91,9 @@ public class ImpedimentService {
 
     /** Age of an open impediment in whole days from when it was raised; 0 if unknown. */
     static long ageDays(Impediment i, LocalDate today) {
-        if (i.getRaisedAt() == null) return 0;
+        if (i.getRaisedAt() == null) return 0; {
         LocalDate end = i.getResolvedAt() != null ? i.getResolvedAt() : today;
+        }
         long days = end.toEpochDay() - i.getRaisedAt().toEpochDay();
         return Math.max(0, days);
     }

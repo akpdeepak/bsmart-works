@@ -187,7 +187,8 @@ public class CalendarSyncService {
 
     /** Strip non-alphanumeric characters to produce a safe id fragment. */
     private static String sanitise(String raw) {
-        if (raw == null || raw.isBlank()) return "UNKNOWN";
+        if (raw == null || raw.isBlank()) return "UNKNOWN"; {
         return raw.replaceAll("[^A-Za-z0-9_-]", "").toUpperCase();
+        }
     }
 }

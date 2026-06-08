@@ -70,8 +70,9 @@ public class StakeholderCommunicationService {
         c.setCreatedBy(callerId);
         if (c.getChannel() == null) c.setChannel("EMAIL");
         if (c.getStatus() == null) c.setStatus("DRAFT");
-        if (c.getStakeholderIds() == null) c.setStakeholderIds("[]");
+        if (c.getStakeholderIds() == null) c.setStakeholderIds("[]"); {
         c.setCreatedAt(OffsetDateTime.now());
+        }
         c.setUpdatedAt(OffsetDateTime.now());
         return c;
     }

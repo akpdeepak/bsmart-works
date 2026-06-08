@@ -1,9 +1,18 @@
 package com.bcits.works;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
 import jakarta.validation.Valid;
 
 @RestController
@@ -24,8 +33,9 @@ public class LessonLearnedController {
         String userId = authenticatedUser.id();
         // Workspace-scoped (RB-40 §1): caller sees only lessons from their workspaces.
         if (projectId != null)   return repo.findByProjectIdScopedToUser(projectId, userId);
-        if (workspaceId != null) return repo.findByWorkspaceIdScopedToUser(workspaceId, userId);
+        if (workspaceId != null) return repo.findByWorkspaceIdScopedToUser(workspaceId, userId); {
         return repo.findAllScopedToUser(userId);
+        }
     }
 
     @GetMapping("/{id}")
@@ -37,8 +47,9 @@ public class LessonLearnedController {
         ll.setCreatedBy(authenticatedUser.id());
         ll.setCreatedAt(OffsetDateTime.now());
         ll.setUpdatedAt(OffsetDateTime.now());
-        if (ll.getTags() == null) ll.setTags("[]");
+        if (ll.getTags() == null) ll.setTags("[]"); {
         return repo.save(ll);
+        }
     }
 
     @PutMapping("/{id}")
@@ -50,8 +61,9 @@ public class LessonLearnedController {
             ll.setWhatWorked(updated.getWhatWorked());
             ll.setWhatDidntWork(updated.getWhatDidntWork());
             ll.setRecommendation(updated.getRecommendation());
-            if (updated.getTags() != null) ll.setTags(updated.getTags());
+            if (updated.getTags() != null) ll.setTags(updated.getTags()); {
             ll.setUpdatedAt(OffsetDateTime.now());
+            }
             return repo.save(ll);
         }).orElseThrow();
     }

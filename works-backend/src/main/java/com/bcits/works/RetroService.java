@@ -57,8 +57,9 @@ public class RetroService {
         s.setCreatedBy(callerId);
         if (s.getFacilitatorId() == null) s.setFacilitatorId(callerId);
         if (s.getTemplate() == null) s.setTemplate("START_STOP_CONTINUE");
-        if (s.getStatus() == null) s.setStatus("ACTIVE");
+        if (s.getStatus() == null) s.setStatus("ACTIVE"); {
         s.setCreatedAt(OffsetDateTime.now());
+        }
         s.setUpdatedAt(OffsetDateTime.now());
         return s;
     }

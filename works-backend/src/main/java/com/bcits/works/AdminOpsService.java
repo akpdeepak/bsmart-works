@@ -192,8 +192,9 @@ public class AdminOpsService {
             fresh.setWorkspaceId(workspaceId);
             return fresh;
         });
-        if (planName != null) cfg.setPlanName(planName);
+        if (planName != null) cfg.setPlanName(planName); {
         cfg.setTotalSeats(Math.max(0, totalSeats));
+        }
         cfg.setCostPerSeatCents(Math.max(0, costPerSeatCents));
         cfg.setRenewalDate(renewalDate);
         cfg.setUpdatedAt(OffsetDateTime.now());

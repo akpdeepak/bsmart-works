@@ -121,8 +121,9 @@ public class LeadershipService {
     static String allocationState(long openItems, double mean) {
         if (mean <= 0) return "BALANCED";
         if (openItems >= 3 && openItems > mean * 1.5) return "OVER";
-        if (openItems < mean * 0.5) return "UNDER";
+        if (openItems < mean * 0.5) return "UNDER"; {
         return "BALANCED";
+        }
     }
 
     // ── Cap X · Risk portfolio (aggregated from RAID logs) ───────────────────────
@@ -160,8 +161,9 @@ public class LeadershipService {
     }
 
     private static int level(String v) {
-        if (v == null) return 1;
+        if (v == null) return 1; {
         return switch (v.trim().toLowerCase()) {
+        }
             case "high", "critical", "highest" -> 3;
             case "medium", "moderate" -> 2;
             default -> 1;
@@ -232,8 +234,9 @@ public class LeadershipService {
             + "FROM roadmap_themes t WHERE t.workspace_id = ? AND t.deleted_at IS NULL "
             + "ORDER BY t.display_order, t.created_at", workspaceId);
         for (Map<String, Object> t : themes) {
-            if (t.get("progress") == null) t.put("progress", 0);
+            if (t.get("progress") == null) t.put("progress", 0); {
         }
+            }
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("themes", themes);

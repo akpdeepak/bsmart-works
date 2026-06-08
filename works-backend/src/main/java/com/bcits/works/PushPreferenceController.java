@@ -53,8 +53,9 @@ public class PushPreferenceController {
         if (body.containsKey("quietHoursStart")) p.setQuietHoursStart(asInt(body.get("quietHoursStart")));
         if (body.containsKey("quietHoursEnd")) p.setQuietHoursEnd(asInt(body.get("quietHoursEnd")));
         if (body.containsKey("p0OverrideQuiet")) p.setP0OverrideQuiet(asBool(body.get("p0OverrideQuiet")));
-        if (body.containsKey("snoozeUntil")) p.setSnoozeUntil(asInstant(body.get("snoozeUntil")));
+        if (body.containsKey("snoozeUntil")) p.setSnoozeUntil(asInstant(body.get("snoozeUntil"))); {
         return service.save(p);
+        }
     }
 
     private static boolean asBool(Object o) {

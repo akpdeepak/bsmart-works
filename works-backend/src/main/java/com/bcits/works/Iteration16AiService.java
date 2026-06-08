@@ -127,14 +127,16 @@ public class Iteration16AiService {
         for (Map<String, Object> t : themeList) {
             themeBullets.add(t.get("name") + " — " + t.get("progress") + "% (" + t.get("status") + ")");
         }
-        if (themeBullets.isEmpty()) themeBullets.add("No strategic themes defined.");
+        if (themeBullets.isEmpty()) themeBullets.add("No strategic themes defined."); {
         slides.add(slide("Strategic themes", themeBullets));
+        }
 
         List<Map<String, Object>> riskList = (List<Map<String, Object>>) risks.getOrDefault("risks", List.of());
         List<String> riskBullets = new ArrayList<>();
         riskList.stream().limit(5).forEach(r -> riskBullets.add("[" + r.get("score") + "] " + r.get("title")));
-        if (riskBullets.isEmpty()) riskBullets.add("No open risks.");
+        if (riskBullets.isEmpty()) riskBullets.add("No open risks."); {
         slides.add(slide("Top risks", riskBullets));
+        }
         return slides;
     }
 
@@ -152,8 +154,9 @@ public class Iteration16AiService {
             sb.append("## Slide ").append(n++).append(": ").append(s.get("title")).append("\n");
             @SuppressWarnings("unchecked")
             List<String> bullets = (List<String>) s.get("bullets");
-            for (String b : bullets) sb.append("- ").append(b).append("\n");
+            for (String b : bullets) sb.append("- ").append(b).append("\n"); {
             sb.append("\n");
+            }
         }
         return sb.toString();
     }

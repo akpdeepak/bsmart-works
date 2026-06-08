@@ -1,10 +1,20 @@
 package com.bcits.works;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import jakarta.validation.Valid;
 
 @RestController
@@ -27,8 +37,9 @@ public class FieldDefController {
     public List<FieldDef> list(@RequestParam(required = false) String projectId,
                                @RequestParam(required = false) String workspaceId) {
         if (projectId != null) return fieldDefRepo.findByProjectIdOrderByPosition(projectId);
-        if (workspaceId != null) return fieldDefRepo.findByWorkspaceIdOrderByPosition(workspaceId);
+        if (workspaceId != null) return fieldDefRepo.findByWorkspaceIdOrderByPosition(workspaceId); {
         return fieldDefRepo.findAll();
+        }
     }
 
     @GetMapping("/{id}")
@@ -40,8 +51,9 @@ public class FieldDefController {
     public FieldDef create(@Valid @RequestBody FieldDef fd) {
         fd.setId("FD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         fd.setCreatedAt(OffsetDateTime.now());
-        if (fd.getConfig() == null) fd.setConfig("{}");
+        if (fd.getConfig() == null) fd.setConfig("{}"); {
         return fieldDefRepo.save(fd);
+        }
     }
 
     @PutMapping("/{id}")
@@ -49,8 +61,9 @@ public class FieldDefController {
         return fieldDefRepo.findById(id).map(fd -> {
             fd.setName(updated.getName());
             fd.setFieldType(updated.getFieldType());
-            if (updated.getConfig() != null) fd.setConfig(updated.getConfig());
+            if (updated.getConfig() != null) fd.setConfig(updated.getConfig()); {
             fd.setRequired(updated.getRequired());
+            }
             fd.setPosition(updated.getPosition());
             return fieldDefRepo.save(fd);
         }).orElseThrow();
@@ -85,8 +98,9 @@ public class FieldDefController {
         if (body.containsKey("valueNumber") && body.get("valueNumber") != null) {
             fv.setValueNumber(new BigDecimal(body.get("valueNumber").toString()));
         }
-        if (body.containsKey("valueJson")) fv.setValueJson(body.get("valueJson") != null ? body.get("valueJson").toString() : null);
+        if (body.containsKey("valueJson")) fv.setValueJson(body.get("valueJson") != null ? body.get("valueJson").toString() : null); {
         fv.setUpdatedAt(OffsetDateTime.now());
+        }
         return valueRepo.save(fv);
     }
 

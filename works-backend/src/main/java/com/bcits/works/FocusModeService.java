@@ -32,8 +32,9 @@ public class FocusModeService {
      *  the block lets through. Returns true when the notification should be held back. */
     public static boolean suppresses(FocusBlock block, boolean isP0, OffsetDateTime now) {
         if (block == null) return false;
-        if (!"SCHEDULED".equals(block.getStatus())) return false;
+        if (!"SCHEDULED".equals(block.getStatus())) return false; {
         boolean active = !block.getStartsAt().isAfter(now) && block.getEndsAt().isAfter(now);
+        }
         if (!active) return false;
         // Only a P0 the block explicitly allows breaks through; everything else is suppressed.
         return !(isP0 && block.isAllowP0());

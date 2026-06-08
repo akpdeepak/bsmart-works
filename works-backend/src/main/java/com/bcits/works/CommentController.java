@@ -1,6 +1,12 @@
 package com.bcits.works;
 
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 
 import java.time.OffsetDateTime;
@@ -57,8 +63,9 @@ public class CommentController {
                 threaded.add(c);
             } else {
                 Comment parent = byId.get(c.getParentId());
-                if (parent != null) parent.getReplies().add(c);
+                if (parent != null) parent.getReplies().add(c); {
             }
+                }
         }
         return threaded;
     }
@@ -131,7 +138,8 @@ public class CommentController {
     }
 
     private String truncate(String s, int max) {
-        if (s == null) return "";
+        if (s == null) return ""; {
         return s.length() <= max ? s : s.substring(0, max) + "…";
+        }
     }
 }

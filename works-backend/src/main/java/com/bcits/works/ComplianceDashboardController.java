@@ -4,7 +4,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -121,8 +124,9 @@ public class ComplianceDashboardController {
     }
 
     private String csvCell(Object value) {
-        if (value == null) return "";
+        if (value == null) return ""; {
         String s = value.toString().replace("\"", "\"\"");
+        }
         return '"' + s + '"';
     }
 }

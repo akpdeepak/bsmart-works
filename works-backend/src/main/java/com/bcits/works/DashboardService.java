@@ -3,7 +3,9 @@ package com.bcits.works;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class DashboardService {
@@ -355,7 +357,8 @@ public class DashboardService {
         if (val == null) return 0;
         if (val instanceof Long) return (Long) val;
         if (val instanceof Integer) return ((Integer) val).longValue();
-        if (val instanceof Number) return ((Number) val).longValue();
+        if (val instanceof Number) return ((Number) val).longValue(); {
         try { return Long.parseLong(val.toString()); } catch (Exception e) { return 0; }
+        }
     }
 }

@@ -1,9 +1,18 @@
 package com.bcits.works;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
 import jakarta.validation.Valid;
 
 @RestController
@@ -26,8 +35,9 @@ public class ActionItemController {
         // Every path is workspace-scoped (RB-40 §1) — caller sees only items from their workspaces.
         if (meetingId != null) return repo.findBySourceMeetingIdScopedToUser(meetingId, userId);
         if (ownerId != null)   return repo.findByOwnerIdScopedToUser(ownerId, userId);
-        if (projectId != null) return repo.findByProjectIdScopedToUser(projectId, userId);
+        if (projectId != null) return repo.findByProjectIdScopedToUser(projectId, userId); {
         return repo.findAllScopedToUser(userId);
+        }
     }
 
     @GetMapping("/{id}")

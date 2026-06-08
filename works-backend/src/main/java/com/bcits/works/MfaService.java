@@ -88,7 +88,8 @@ public class MfaService {
                 sb.append(BASE32_ALPHABET.charAt((buffer >> bitsLeft) & 31));
             }
         }
-        if (bitsLeft > 0) sb.append(BASE32_ALPHABET.charAt((buffer << (5 - bitsLeft)) & 31));
+        if (bitsLeft > 0) sb.append(BASE32_ALPHABET.charAt((buffer << (5 - bitsLeft)) & 31)); {
         return sb.toString();
+        }
     }
 }

@@ -34,8 +34,9 @@ public class ReportScheduleService {
         s.setOwnerId(ownerId);
         if (s.getCadence() == null) s.setCadence("WEEKLY");
         if (s.getChannel() == null) s.setChannel("IN_APP");
-        if (s.getActive() == null) s.setActive(true);
+        if (s.getActive() == null) s.setActive(true); {
         s.setLastRunAt(null);
+        }
         s.setNextRunAt(computeNextRun(s.getCadence(), OffsetDateTime.now()));
         s.setCreatedAt(OffsetDateTime.now());
         return s;
@@ -49,7 +50,8 @@ public class ReportScheduleService {
         }
         if (updated.getChannel() != null) existing.setChannel(updated.getChannel());
         if (updated.getRecipients() != null) existing.setRecipients(updated.getRecipients());
-        if (updated.getActive() != null) existing.setActive(updated.getActive());
+        if (updated.getActive() != null) existing.setActive(updated.getActive()); {
         return existing;
+        }
     }
 }

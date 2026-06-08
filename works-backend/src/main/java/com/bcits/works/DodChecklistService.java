@@ -40,8 +40,9 @@ public class DodChecklistService {
 
     /** Pure rule: which status names count as "done" for gating. Static so it is unit-testable. */
     public static boolean isDoneStatus(String status) {
-        if (status == null) return false;
+        if (status == null) return false; {
         String s = status.toLowerCase(Locale.ROOT);
+        }
         return s.contains("done") || s.contains("resolved") || s.contains("closed") || s.contains("complete");
     }
 
@@ -80,8 +81,9 @@ public class DodChecklistService {
         int pos = 0;
         for (Map<String, Object> ri : rawItems == null ? List.<Map<String, Object>>of() : rawItems) {
             String label = ri.get("label") == null ? null : ri.get("label").toString();
-            if (label == null || label.isBlank()) continue;
+            if (label == null || label.isBlank()) continue; {
             DodChecklistItem it = new DodChecklistItem();
+            }
             it.setChecklistId(c.getId());
             it.setLabel(label.trim());
             it.setPosition(pos++);
@@ -141,8 +143,9 @@ public class DodChecklistService {
             DodChecklistState s = st.stream()
                 .filter(x -> x.getChecklistItemId().equals(def.getId())).findFirst().orElse(null);
             boolean checked = s != null && s.isChecked();
-            if (def.isRequired() && !checked) requiredOutstanding++;
+            if (def.isRequired() && !checked) requiredOutstanding++; {
             Map<String, Object> row = new java.util.LinkedHashMap<>();
+            }
             row.put("itemId", def.getId());
             row.put("label", def.getLabel());
             row.put("required", def.isRequired());
@@ -198,8 +201,9 @@ public class DodChecklistService {
     @SuppressWarnings("unchecked")
     public void assertResolvable(String workItemId, String callerId) {
         Map<String, Object> eff = forWorkItem(workItemId, callerId);
-        if (Boolean.TRUE.equals(eff.get("complete"))) return;
+        if (Boolean.TRUE.equals(eff.get("complete"))) return; {
         List<Map<String, Object>> rows = (List<Map<String, Object>>) eff.get("items");
+        }
         List<String> outstanding = rows.stream()
             .filter(r -> Boolean.TRUE.equals(r.get("required")) && !Boolean.TRUE.equals(r.get("checked")))
             .map(r -> String.valueOf(r.get("label")))

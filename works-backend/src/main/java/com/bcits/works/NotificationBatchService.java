@@ -32,12 +32,14 @@ public class NotificationBatchService {
     private final NotificationRepository notificationRepository;
     private final JdbcTemplate jdbc;
     private final FocusModeService focusMode;
+    private final PushDeliveryService pushDelivery;
 
     public NotificationBatchService(NotificationRepository notificationRepository, JdbcTemplate jdbc,
-                                    FocusModeService focusMode) {
+                                    FocusModeService focusMode, PushDeliveryService pushDelivery) {
         this.notificationRepository = notificationRepository;
         this.jdbc = jdbc;
         this.focusMode = focusMode;
+        this.pushDelivery = pushDelivery;
     }
 
     /**
@@ -74,6 +76,15 @@ public class NotificationBatchService {
         n.setRead(false);
         n.setCreatedAt(OffsetDateTime.now());
         notificationRepository.save(n);
+        // Best-effort push delivery — failures are logged, never propagated (audit/business write always wins).
+        try {
+            String eventType = PushDeliveryService.inferEventType(type);
+            if (eventType != null) {
+                pushDelivery.dispatchForUser(userId, eventType, type, message, p0 ? "P0" : null);
+            }
+        } catch (Exception ex) {
+            log.warn("[PUSH] Best-effort push dispatch failed for user={} type={}: {}", userId, type, ex.getMessage());
+        }
         return true;
     }
 }

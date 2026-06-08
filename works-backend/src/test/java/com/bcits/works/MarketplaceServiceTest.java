@@ -107,4 +107,34 @@ class MarketplaceServiceTest {
         assertThat(result).containsExactly(l);
         verify(listings).findByStatusOrderByNameAsc("PUBLISHED");
     }
+
+    @Test
+    void uninstall_happyPath_deletesExtensionAndRecordsEvent() {
+        InstalledExtension ext = new InstalledExtension();
+        ext.setId("EXT-001");
+        ext.setWorkspaceId(WS);
+        ext.setListingId("MKT-1");
+        when(installs.findByWorkspaceIdAndId(WS, "EXT-001")).thenReturn(Optional.of(ext));
+
+        service.uninstall(WS, USER, "EXT-001");
+
+        verify(installs).delete(ext);
+        verify(events).recordInWorkspace(eq(WS), eq("EXT-001"), eq("EXTENSION_UNINSTALLED"), eq(USER), any());
+    }
+
+    @Test
+    void updateListing_rejectsForeignWorkspaceOwner() {
+        // A workspace that does not own the listing must not be able to edit it.
+        MarketplaceListing l = publishedListing();
+        l.setPublisherWorkspaceId(FOREIGN_WS);
+        when(listings.findById("MKT-1")).thenReturn(Optional.of(l));
+
+        MarketplaceService.ListingInput input = new MarketplaceService.ListingInput(
+            "slack-notifier", "Slack Notifier", null, null, null, null, null, null, "PUBLISHED");
+
+        assertThatThrownBy(() -> service.updateListing(WS, USER, "MKT-1", input))
+            .isInstanceOf(ApiException.class)
+            .satisfies(e -> assertThat(((ApiException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+        verify(listings, never()).save(any());
+    }
 }

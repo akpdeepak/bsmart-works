@@ -368,7 +368,14 @@ export default function KnowledgeView({
                 <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
                   <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Analytics</h3>
                   {!articleAnalytics ? (
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400">Loading…</p>
+                    <div className="space-y-2 animate-pulse" aria-busy="true" aria-label="Loading article analytics">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="flex justify-between">
+                          <div className="h-3 w-16 bg-neutral-200 dark:bg-neutral-700 rounded" />
+                          <div className="h-3 w-6 bg-neutral-200 dark:bg-neutral-700 rounded" />
+                        </div>
+                      ))}
+                    </div>
                   ) : (
                     <div className="space-y-2">
                       {[

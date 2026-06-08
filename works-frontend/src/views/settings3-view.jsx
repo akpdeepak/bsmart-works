@@ -493,7 +493,17 @@ export default function Settings3View({
           )}
 
           {!permMatrix
-            ? <div className="text-center py-12 text-neutral-600 dark:text-neutral-400">Loading permissions matrix...</div>
+            ? (
+              <div className="animate-pulse space-y-3" aria-busy="true" aria-label="Loading permissions matrix">
+                <div className="h-4 w-40 bg-neutral-100 dark:bg-neutral-700 rounded" />
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex gap-3">
+                    <div className="h-3 w-24 bg-neutral-100 dark:bg-neutral-700 rounded" />
+                    {[...Array(6)].map((_, j) => <div key={j} className="h-3 w-8 bg-neutral-100 dark:bg-neutral-700 rounded" />)}
+                  </div>
+                ))}
+              </div>
+            )
             : (
               <>
                 {/* System roles legend */}
@@ -576,7 +586,7 @@ export default function Settings3View({
                 </div>
                 <div>
                   <span className="text-xs font-semibold text-neutral-600 uppercase tracking-wider block mb-1" id="new-type-icon-label">Icon</span>
-                  <div className="flex flex-wrap gap-1 max-w-[240px]" role="group" aria-labelledby="new-type-icon-label">
+                  <div className="flex flex-wrap gap-1 max-w-60" role="group" aria-labelledby="new-type-icon-label">
                     {TYPE_ICON_KEYS.map(key => {
                       const Ic = TYPE_ICON_SET[key];
                       const sel = newTypeForm.icon === key;

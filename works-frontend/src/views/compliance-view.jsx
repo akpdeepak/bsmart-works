@@ -1,4 +1,4 @@
-import { Shield, ClipboardList, CheckCircle2, ScrollText, ArrowUp } from 'lucide-react';
+import { ClipboardList, CheckCircle2, ScrollText, ArrowUp } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { Modal } from '@/components/works/molecules/modal';
@@ -93,7 +93,26 @@ export default function ComplianceView({
       <div className="flex-1 overflow-y-auto p-6">
         {/* ── DASHBOARD ── */}
         {complianceTab === 'dashboard' && (
-          !complianceDashboard ? <EmptyState icon={Shield} title="Loading compliance posture…" subtitle="Severity, trend and the rules × projects heatmap appear here." />
+          !complianceDashboard ? (
+            <div aria-busy="true" aria-label="Loading compliance dashboard">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 animate-pulse">
+                    <div className="h-3 w-20 bg-neutral-100 dark:bg-neutral-700 rounded mb-2" />
+                    <div className="h-8 w-12 bg-neutral-100 dark:bg-neutral-700 rounded" />
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {[...Array(2)].map((_, i) => (
+                  <div key={i} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 animate-pulse space-y-2">
+                    <div className="h-4 w-32 bg-neutral-100 dark:bg-neutral-700 rounded mb-3" />
+                    {[...Array(3)].map((_, j) => <div key={j} className="h-3 bg-neutral-100 dark:bg-neutral-700 rounded" />)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
           : (
             <div className="space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

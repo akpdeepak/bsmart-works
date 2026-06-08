@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -52,17 +53,21 @@ public class ArticleController {
     @GetMapping
     public List<Article> getArticles(@RequestParam(required = false) String spaceId,
                                       @RequestParam(required = false) String query,
-                                      @RequestParam(required = false) String search) {
+                                      @RequestParam(required = false) String search,
+                                      @RequestParam(defaultValue = "0") int page,
+                                      @RequestParam(defaultValue = "50") int size) {
         String userId = authenticatedUser.id();
         String q = query != null ? query : search;
+        org.springframework.data.domain.Pageable pageable =
+            org.springframework.data.domain.PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 200));
         // Every path is workspace-scoped (RB-40 §1): articles scoped through knowledge_spaces.
         if (q != null && !q.isBlank()) {
             recordSearchTerm(q);
-            return articleRepository.findByTitleScopedToUser(q, userId);
+            return articleRepository.findByTitleScopedToUser(q, userId, pageable).getContent();
         }
         return spaceId != null
-            ? articleRepository.findBySpaceIdScopedToUser(spaceId, userId)
-            : articleRepository.findAllScopedToUser(userId);
+            ? articleRepository.findBySpaceIdScopedToUser(spaceId, userId, pageable).getContent()
+            : articleRepository.findAllScopedToUser(userId, pageable).getContent();
     }
 
     // Top search terms typed into the KB — completes iteration-5 article analytics
@@ -93,8 +98,12 @@ public class ArticleController {
     }
 
     @GetMapping("/{id}/versions")
-    public List<ArticleVersion> getVersions(@PathVariable String id) {
-        return articleVersionRepository.findByArticleIdOrderByVersionNumberDesc(id);
+    public List<ArticleVersion> getVersions(@PathVariable String id,
+                                            @RequestParam(defaultValue = "0") int page,
+                                            @RequestParam(defaultValue = "50") int size) {
+        int limit = Math.min(Math.max(size, 1), 200);
+        return articleVersionRepository.findByArticleIdOrderByVersionNumberDesc(id,
+            PageRequest.of(Math.max(page, 0), limit)).getContent();
     }
 
     // Line-level diff between two stored versions, for the version "diff view".

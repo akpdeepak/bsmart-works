@@ -62,11 +62,16 @@ public class AttachmentController {
     }
 
     @GetMapping
-    public List<Map<String, Object>> getAttachments(@PathVariable String workItemId) {
+    public List<Map<String, Object>> getAttachments(@PathVariable String workItemId,
+                                                    @RequestParam(defaultValue = "0") int page,
+                                                    @RequestParam(defaultValue = "50") int size) {
+        int limit = Math.min(Math.max(size, 1), 200);
+        int offset = Math.max(page, 0) * limit;
         return jdbc.queryForList(
             "SELECT a.id, a.file_name, a.file_size, a.mime_type, a.created_at, u.full_name as uploaded_by_name " +
             "FROM attachments a LEFT JOIN users u ON u.id = a.uploaded_by " +
-            "WHERE a.work_item_id = ? ORDER BY a.created_at DESC", workItemId);
+            "WHERE a.work_item_id = ? ORDER BY a.created_at DESC LIMIT ? OFFSET ?",
+            workItemId, limit, offset);
     }
 
     @PostMapping

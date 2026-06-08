@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import jakarta.validation.Valid;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,7 +40,7 @@ public class WebhookController {
     }
 
     @PostMapping
-    public WebhookSubscription create(@RequestParam String workspaceId, @RequestBody WebhookSubscription sub) {
+    public WebhookSubscription create(@RequestParam String workspaceId, @Valid @RequestBody WebhookSubscription sub) {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "manage_integrations");
         return webhooks.create(workspaceId, userId, sub);

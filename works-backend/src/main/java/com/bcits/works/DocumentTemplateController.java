@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -57,14 +58,14 @@ public class DocumentTemplateController {
     }
 
     @PostMapping
-    public DocumentTemplate create(@RequestParam String workspaceId, @RequestBody DocumentTemplate body) {
+    public DocumentTemplate create(@RequestParam String workspaceId, @Valid @RequestBody DocumentTemplate body) {
         String userId = require(workspaceId, "manage_projects");
         return service.create(workspaceId, userId, body);
     }
 
     @PutMapping("/{id}")
     public DocumentTemplate update(@RequestParam String workspaceId, @PathVariable String id,
-                                   @RequestBody DocumentTemplate body) {
+                                   @Valid @RequestBody DocumentTemplate body) {
         String userId = require(workspaceId, "manage_projects");
         return service.update(workspaceId, userId, id, body);
     }

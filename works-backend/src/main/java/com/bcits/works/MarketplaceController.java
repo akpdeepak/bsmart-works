@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -52,7 +53,7 @@ public class MarketplaceController {
 
     @PostMapping("/listings")
     public MarketplaceListing publish(@RequestParam String workspaceId,
-                                      @RequestBody MarketplaceService.ListingInput req) {
+                                      @Valid @RequestBody MarketplaceService.ListingInput req) {
         String userId = requireWorkspace(workspaceId);
         rbac.require(userId, workspaceId, "manage_integrations");
         return marketplace.publish(workspaceId, userId, req);
@@ -60,7 +61,7 @@ public class MarketplaceController {
 
     @PutMapping("/listings/{id}")
     public MarketplaceListing updateListing(@RequestParam String workspaceId, @PathVariable String id,
-                                            @RequestBody MarketplaceService.ListingInput req) {
+                                            @Valid @RequestBody MarketplaceService.ListingInput req) {
         String userId = requireWorkspace(workspaceId);
         rbac.require(userId, workspaceId, "manage_integrations");
         return marketplace.updateListing(workspaceId, userId, id, req);
@@ -77,7 +78,7 @@ public class MarketplaceController {
     public record InstallRequest(String listingId, List<String> grantedScopes) { }
 
     @PostMapping("/install")
-    public InstalledExtension install(@RequestParam String workspaceId, @RequestBody InstallRequest req) {
+    public InstalledExtension install(@RequestParam String workspaceId, @Valid @RequestBody InstallRequest req) {
         String userId = requireWorkspace(workspaceId);
         rbac.require(userId, workspaceId, "manage_integrations");
         if (req == null || req.listingId() == null || req.listingId().isBlank()) {
@@ -90,7 +91,7 @@ public class MarketplaceController {
 
     @PutMapping("/installed/{id}/enabled")
     public InstalledExtension setEnabled(@RequestParam String workspaceId, @PathVariable String id,
-                                         @RequestBody EnabledRequest req) {
+                                         @Valid @RequestBody EnabledRequest req) {
         String userId = requireWorkspace(workspaceId);
         rbac.require(userId, workspaceId, "manage_integrations");
         boolean enabled = req != null && Boolean.TRUE.equals(req.enabled());

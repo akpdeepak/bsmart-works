@@ -25,20 +25,24 @@ public class TeamController {
     private final TeamService teamService;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
     public TeamController(TeamRepository teamRepository, TeamService teamService,
-                          EventService eventService, AuthenticatedUser authenticatedUser) {
+                          EventService eventService, AuthenticatedUser authenticatedUser,
+                          RbacService rbac) {
         this.teamRepository = teamRepository;
         this.teamService = teamService;
         this.eventService = eventService;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
-    public List<Team> list(@RequestParam(required = false) String workspaceId) {
-        return workspaceId != null
-            ? teamRepository.findByWorkspaceIdOrderByNameAsc(workspaceId)
-            : teamRepository.findAll();
+    public List<Team> list(@RequestParam String workspaceId) {
+        if (rbac.getUserTier(authenticatedUser.id(), workspaceId) < 1) {
+            throw ApiException.notFound("Workspace", workspaceId);
+        }
+        return teamRepository.findByWorkspaceIdOrderByNameAsc(workspaceId);
     }
 
     @GetMapping("/{id}")

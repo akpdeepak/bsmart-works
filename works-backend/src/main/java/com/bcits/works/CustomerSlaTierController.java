@@ -70,7 +70,7 @@ public class CustomerSlaTierController {
     }
 
     @PutMapping("/{id}")
-    public CustomerSlaTier update(@PathVariable String id, @RequestBody CustomerSlaTier updated) {
+    public CustomerSlaTier update(@PathVariable String id, @Valid @RequestBody CustomerSlaTier updated) {
         String userId = authenticatedUser.id();
         CustomerSlaTier existing = tiers.findById(id)
                 .orElseThrow(() -> ApiException.notFound("SLA tier", id));

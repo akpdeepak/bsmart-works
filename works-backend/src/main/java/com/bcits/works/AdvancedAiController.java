@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -78,14 +79,14 @@ public class AdvancedAiController {
     public record AssistantRequest(String name, String description, String persona, Boolean enabled) { }
 
     @PostMapping("/assistants")
-    public AiAssistant createAssistant(@RequestParam String workspaceId, @RequestBody AssistantRequest req) {
+    public AiAssistant createAssistant(@RequestParam String workspaceId, @Valid @RequestBody AssistantRequest req) {
         String userId = requireManageAi(workspaceId);
         return assistants.create(workspaceId, userId, req.name(), req.description(), req.persona());
     }
 
     @PutMapping("/assistants/{id}")
     public AiAssistant updateAssistant(@RequestParam String workspaceId, @PathVariable String id,
-                                       @RequestBody AssistantRequest req) {
+                                       @Valid @RequestBody AssistantRequest req) {
         String userId = requireManageAi(workspaceId);
         return assistants.update(workspaceId, userId, id, req.name(), req.description(), req.persona(), req.enabled());
     }
@@ -100,7 +101,7 @@ public class AdvancedAiController {
 
     @PostMapping("/assistants/{id}/chat")
     public AiAssistantService.ChatReply chat(@RequestParam String workspaceId, @PathVariable String id,
-                                             @RequestBody ChatRequest req) {
+                                             @Valid @RequestBody ChatRequest req) {
         String userId = requireMember(workspaceId);
         boolean inContext = req.aiInContext() == null || req.aiInContext();
         return assistants.chat(workspaceId, userId, id, req.message(), inContext);
@@ -123,7 +124,7 @@ public class AdvancedAiController {
     public record AgentRunRequest(String goal) { }
 
     @PostMapping("/agents/run")
-    public AiAgentService.RunView runAgent(@RequestParam String workspaceId, @RequestBody AgentRunRequest req) {
+    public AiAgentService.RunView runAgent(@RequestParam String workspaceId, @Valid @RequestBody AgentRunRequest req) {
         String userId = requireMember(workspaceId);
         return agents.run(workspaceId, userId, req.goal());
     }
@@ -139,7 +140,7 @@ public class AdvancedAiController {
     public record MemoryRequest(String assistantId, String kind, String key, String value) { }
 
     @PostMapping("/memory")
-    public AiMemory remember(@RequestParam String workspaceId, @RequestBody MemoryRequest req) {
+    public AiMemory remember(@RequestParam String workspaceId, @Valid @RequestBody MemoryRequest req) {
         String userId = requireMember(workspaceId);
         return memory.remember(workspaceId, userId, req.assistantId(), req.kind(), req.key(), req.value());
     }
@@ -162,7 +163,7 @@ public class AdvancedAiController {
 
     @PostMapping("/conversational-dashboards/compile")
     public ConversationalDashboardService.CompiledSpec compile(@RequestParam String workspaceId,
-                                                               @RequestBody CompileRequest req) {
+                                                               @Valid @RequestBody CompileRequest req) {
         String userId = requireMember(workspaceId);
         boolean inContext = req.aiInContext() == null || req.aiInContext();
         return dashboards.compile(workspaceId, userId, req.prompt(), inContext);
@@ -172,7 +173,7 @@ public class AdvancedAiController {
 
     @PostMapping("/conversational-dashboards")
     public ConversationalDashboard saveDashboard(@RequestParam String workspaceId,
-                                                 @RequestBody SaveDashboardRequest req) {
+                                                 @Valid @RequestBody SaveDashboardRequest req) {
         String userId = requireMember(workspaceId);
         return dashboards.save(workspaceId, userId, req.title(), req.prompt());
     }

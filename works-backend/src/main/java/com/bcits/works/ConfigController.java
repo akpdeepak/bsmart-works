@@ -1,6 +1,7 @@
 package com.bcits.works;
 
 import java.util.List;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -48,7 +49,7 @@ public class ConfigController {
     public record UpdateRequest(String document, String summary) { }
 
     @PutMapping("/settings")
-    public WorkspaceConfig updateSettings(@RequestParam String workspaceId, @RequestBody UpdateRequest req) {
+    public WorkspaceConfig updateSettings(@RequestParam String workspaceId, @Valid @RequestBody UpdateRequest req) {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "manage_workspace");
         int tier = rbac.getUserTier(userId, workspaceId);
@@ -81,7 +82,7 @@ public class ConfigController {
     public record RollbackRequest(int version) { }
 
     @PostMapping("/rollback")
-    public WorkspaceConfig rollback(@RequestParam String workspaceId, @RequestBody RollbackRequest req) {
+    public WorkspaceConfig rollback(@RequestParam String workspaceId, @Valid @RequestBody RollbackRequest req) {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "manage_workspace");
         int tier = rbac.getUserTier(userId, workspaceId);
@@ -92,7 +93,7 @@ public class ConfigController {
 
     @PostMapping("/impact")
     public ConfigImpactService.ImpactReport impact(@RequestParam String workspaceId,
-                                                   @RequestBody UpdateRequest req) {
+                                                   @Valid @RequestBody UpdateRequest req) {
         rbac.require(authenticatedUser.id(), workspaceId, "manage_workspace");
         return impact.analyze(workspaceId, req.document());
     }
@@ -113,7 +114,7 @@ public class ConfigController {
     public record ImportRequest(String content, String format, String summary) { }
 
     @PostMapping("/import")
-    public WorkspaceConfig importConfig(@RequestParam String workspaceId, @RequestBody ImportRequest req) {
+    public WorkspaceConfig importConfig(@RequestParam String workspaceId, @Valid @RequestBody ImportRequest req) {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "manage_workspace");
         int tier = rbac.getUserTier(userId, workspaceId);

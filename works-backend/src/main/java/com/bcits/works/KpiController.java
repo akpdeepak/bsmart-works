@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -53,7 +54,7 @@ public class KpiController {
 
     @PostMapping("/definitions")
     public MetricDefinition createDefinition(@RequestParam String workspaceId,
-                                             @RequestBody MetricDefinition def) {
+                                             @Valid @RequestBody MetricDefinition def) {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "manage_metrics");
         return kpi.createDefinition(workspaceId, userId, def);
@@ -110,7 +111,7 @@ public class KpiController {
     }
 
     @PostMapping("/narrative")
-    public KpiService.Narrative narrative(@RequestParam String workspaceId, @RequestBody NarrativeRequest req) {
+    public KpiService.Narrative narrative(@RequestParam String workspaceId, @Valid @RequestBody NarrativeRequest req) {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "view_team_metrics");
         boolean inContext = req == null || req.aiInContext() == null || req.aiInContext();
@@ -131,7 +132,7 @@ public class KpiController {
     public record ShareRequest(String viewerUserId) { }
 
     @PostMapping("/shares")
-    public MetricShare share(@RequestParam String workspaceId, @RequestBody ShareRequest req) {
+    public MetricShare share(@RequestParam String workspaceId, @Valid @RequestBody ShareRequest req) {
         String caller = authenticatedUser.id();
         rbac.require(caller, workspaceId, "view_items");
         if (req == null || req.viewerUserId() == null || req.viewerUserId().isBlank()) {

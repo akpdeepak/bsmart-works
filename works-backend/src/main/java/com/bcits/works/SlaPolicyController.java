@@ -119,7 +119,7 @@ public class SlaPolicyController {
     // ── Targets ────────────────────────────────────────────────────────────────
 
     @PutMapping("/{id}/targets")
-    public List<SlaTarget> replaceTargets(@PathVariable String id, @RequestBody List<SlaTarget> incoming) {
+    public List<SlaTarget> replaceTargets(@PathVariable String id, @Valid @RequestBody List<SlaTarget> incoming) {
         String userId = authenticatedUser.id();
         SlaPolicy policy = load(id);
         rbac.require(userId, policy.getWorkspaceId(), "manage_sla");
@@ -142,7 +142,7 @@ public class SlaPolicyController {
 
     @PutMapping("/{id}/escalations")
     public List<SlaEscalation> replaceEscalations(@PathVariable String id,
-                                                  @RequestBody List<SlaEscalation> incoming) {
+                                                  @Valid @RequestBody List<SlaEscalation> incoming) {
         String userId = authenticatedUser.id();
         SlaPolicy policy = load(id);
         rbac.require(userId, policy.getWorkspaceId(), "manage_sla");

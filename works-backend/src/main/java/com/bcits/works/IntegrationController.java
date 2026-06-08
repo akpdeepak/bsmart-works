@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -46,7 +47,7 @@ public class IntegrationController {
     public record ConnectRequest(String provider, String name, String config) { }
 
     @PostMapping("/connect")
-    public IntegrationConnection connect(@RequestParam String workspaceId, @RequestBody ConnectRequest req) {
+    public IntegrationConnection connect(@RequestParam String workspaceId, @Valid @RequestBody ConnectRequest req) {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "manage_integrations");
         return integrations.connect(workspaceId, userId,
@@ -69,7 +70,7 @@ public class IntegrationController {
 
     /** Email connector inbound: a message becomes a work item. */
     @PostMapping("/email/inbound")
-    public WorkItem inboundEmail(@RequestParam String workspaceId, @RequestBody InboundEmailRequest req) {
+    public WorkItem inboundEmail(@RequestParam String workspaceId, @Valid @RequestBody InboundEmailRequest req) {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "create_items");
         return integrations.ingestInboundEmail(workspaceId, userId,

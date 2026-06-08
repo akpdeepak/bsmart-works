@@ -1,6 +1,7 @@
 package com.bcits.works;
 
 import java.util.List;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,7 +42,7 @@ public class ConfigTemplateController {
     public record SaveTemplateRequest(String name, String description, boolean shareable) { }
 
     @PostMapping
-    public ConfigTemplate save(@RequestParam String workspaceId, @RequestBody SaveTemplateRequest req) {
+    public ConfigTemplate save(@RequestParam String workspaceId, @Valid @RequestBody SaveTemplateRequest req) {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "manage_workspace");
         return templates.saveCurrentAsTemplate(workspaceId, req.name(), req.description(),

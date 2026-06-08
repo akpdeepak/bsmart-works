@@ -195,6 +195,76 @@ export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, on
         );
       })()}
 
+      {widget.widgetType === 'VELOCITY_CHART' && (() => {
+        const points = velocityPoints(velocity);
+        if (points.length === 0) return <p className="text-xs text-neutral-600 dark:text-neutral-400">No sprint history yet.</p>;
+        return <BarChart data={points.map(p => ({ label: p.label, value: p.value }))} />;
+      })()}
+
+      {widget.widgetType === 'CYCLE_TIME' && (() => {
+        const DONE = ['done','closed','resolved','complete','completed'];
+        const doneItems = items.filter(i => DONE.includes((i.status || '').toLowerCase()));
+        if (doneItems.length === 0) return <p className="text-xs text-neutral-600 dark:text-neutral-400">No completed items.</p>;
+        const avgDays = doneItems.reduce((sum, i) => {
+          const ms = new Date(i.updatedAt) - new Date(i.createdAt);
+          return sum + Math.max(0, ms / 86400000);
+        }, 0) / doneItems.length;
+        return (
+          <div className="mt-1">
+            <p className="text-3xl font-bold text-brand-navy dark:text-white">{avgDays.toFixed(1)}</p>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400">avg days · {doneItems.length} completed items</p>
+          </div>
+        );
+      })()}
+
+      {widget.widgetType === 'THROUGHPUT' && (() => {
+        const DONE = ['done','closed','resolved','complete','completed'];
+        const count = aggregate?.throughput ?? items.filter(i => DONE.includes((i.status || '').toLowerCase())).length;
+        return (
+          <div className="mt-1">
+            <p className="text-3xl font-bold text-brand-navy dark:text-white">{count}</p>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400">completed items</p>
+          </div>
+        );
+      })()}
+
+      {widget.widgetType === 'AI_USAGE' && (() => {
+        const usage = aggregate?.aiUsage;
+        if (!usage) return <p className="text-xs text-neutral-600 dark:text-neutral-400">AI usage data is available at workspace scope.</p>;
+        return (
+          <div className="mt-1 space-y-1.5">
+            {[
+              { label: 'Calls', value: usage.calls ?? '—' },
+              { label: 'Tokens', value: usage.tokens != null ? `${(usage.tokens / 1000).toFixed(1)}k` : '—' },
+              { label: 'Budget used', value: usage.budgetPct != null ? `${usage.budgetPct}%` : '—' },
+            ].map(m => (
+              <div key={m.label} className="flex items-center justify-between text-xs">
+                <span className="text-neutral-600 dark:text-neutral-400">{m.label}</span>
+                <span className="font-semibold text-neutral-900 dark:text-neutral-100">{m.value}</span>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
+      {widget.widgetType === 'SLA_HEALTH' && (() => {
+        const sla = aggregate?.slaHealth;
+        if (!sla) return <p className="text-xs text-neutral-600 dark:text-neutral-400">SLA data is available at workspace scope.</p>;
+        const pct = sla.compliancePct ?? 0;
+        const barColor = pct >= 95 ? 'bg-semantic-success' : pct >= 80 ? 'bg-semantic-warning' : 'bg-semantic-danger';
+        return (
+          <div className="mt-1">
+            <div className="flex items-end justify-between mb-1">
+              <span className="text-3xl font-bold text-brand-navy dark:text-white">{pct}%</span>
+              <span className="text-xs text-neutral-600 dark:text-neutral-400">{sla.breached ?? 0} breached</span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-neutral-100 dark:bg-neutral-700 overflow-hidden">
+              <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+            </div>
+          </div>
+        );
+      })()}
+
       {widget.widgetType === 'MATRIX' && (() => {
         const m = statusPriorityMatrix(items);
         return (

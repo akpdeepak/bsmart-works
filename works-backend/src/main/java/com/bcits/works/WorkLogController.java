@@ -33,10 +33,13 @@ public class WorkLogController {
     @GetMapping
     public List<WorkLog> getWorklogs(@RequestParam(required = false) String workItemId,
                                       @RequestParam(required = false) String userId) {
-        if (workItemId != null) return workLogRepository.findByWorkItemIdOrderByWorkDateDesc(workItemId);
-        if (userId != null) return workLogRepository.findByUserIdOrderByWorkDateDesc(userId); {
-        return workLogRepository.findAll();
+        if (workItemId != null) {
+            return workLogRepository.findByWorkItemIdOrderByWorkDateDesc(workItemId);
         }
+        if (userId != null) {
+            return workLogRepository.findByUserIdOrderByWorkDateDesc(userId);
+        }
+        throw ApiException.badRequest("MISSING_PARAM", "Either workItemId or userId is required");
     }
 
     @PostMapping

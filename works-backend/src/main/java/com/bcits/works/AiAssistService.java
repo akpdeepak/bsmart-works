@@ -243,7 +243,7 @@ public class AiAssistService {
                 String wsId = rbac.workspaceForProject(w.getProjectId());
                 requireSameWorkspace(workspaceId, wsId);
                 rbac.require(userId, workspaceId, "edit_any_item");
-                String assigneeId = resolveUser(str(params.get("assigneeName")), str(params.get("email")));
+                String assigneeId = resolveUser(str(params.get("assigneeName")), str(params.get("email")), workspaceId);
                 w.setAssigneeId(assigneeId);
                 workItems.save(w);
                 events.recordDiff(id, "ASSIGNED", userId, "assignee", null, assigneeId);
@@ -642,17 +642,16 @@ public class AiAssistService {
         return scopedItems(workspaceId).stream().limit(limit).map(WorkItem::getId).collect(Collectors.toList());
     }
 
-    private String resolveUser(String name, String email) {
+    private String resolveUser(String name, String email, String workspaceId) {
         if (email != null && !email.isBlank()) {
             return users.findByEmail(email).map(User::getId).orElse(null);
         }
         if (name == null || name.isBlank()) {
             return null;
         }
-        String n = name.trim().toLowerCase(Locale.ROOT);
-        return users.findAll().stream()
-            .filter(u -> nv(u.getFullName()).toLowerCase(Locale.ROOT).contains(n))
-            .map(User::getId).findFirst().orElse(null);
+        // Scoped to workspace members only — prevents cross-tenant user resolution (RB-40 §1)
+        return users.findByWorkspaceIdAndFullNameContaining(workspaceId, name.trim())
+            .stream().map(User::getId).findFirst().orElse(null);
     }
 
     private void requireSameWorkspace(String expected, String actual) {

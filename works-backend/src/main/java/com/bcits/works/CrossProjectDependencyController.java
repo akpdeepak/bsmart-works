@@ -21,19 +21,36 @@ public class CrossProjectDependencyController {
     private final CrossProjectDependencyRepository dependencyRepository;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
     public CrossProjectDependencyController(CrossProjectDependencyRepository dependencyRepository,
-                                            EventService eventService, AuthenticatedUser authenticatedUser) {
+                                            EventService eventService, AuthenticatedUser authenticatedUser,
+                                            RbacService rbac) {
         this.dependencyRepository = dependencyRepository;
         this.eventService = eventService;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
-    public List<CrossProjectDependency> getDependencies(@RequestParam(required = false) String projectId) {
-        return projectId != null
-            ? dependencyRepository.findByFromProjectIdOrderByCreatedAtDesc(projectId)
-            : dependencyRepository.findAll();
+    public List<CrossProjectDependency> getDependencies(
+            @RequestParam(required = false) String projectId,
+            @RequestParam(required = false) String workspaceId) {
+        String callerId = authenticatedUser.id();
+        if (projectId != null) {
+            String wsId = rbac.workspaceForProject(projectId);
+            if (wsId == null || rbac.getUserTier(callerId, wsId) < 1) {
+                throw ApiException.notFound("Project", projectId);
+            }
+            return dependencyRepository.findByFromProjectIdOrderByCreatedAtDesc(projectId);
+        }
+        if (workspaceId != null) {
+            if (rbac.getUserTier(callerId, workspaceId) < 1) {
+                throw ApiException.notFound("Workspace", workspaceId);
+            }
+            return dependencyRepository.findByWorkspaceId(workspaceId);
+        }
+        throw ApiException.badRequest("MISSING_PARAM", "Either projectId or workspaceId is required");
     }
 
     @GetMapping("/{id}")

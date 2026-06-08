@@ -102,11 +102,11 @@ public class CommentController {
             Matcher m = p.matcher(body);
             while (m.find()) {
                 String mention = m.group(1).toLowerCase();
-                userRepository.findAll().stream()
+                // Scoped to workspace members only — prevents cross-tenant mention leakage (RB-40 §1)
+                userRepository.findByWorkspaceId(wsId).stream()
                     .filter(u -> u.getFullName().toLowerCase().replace(" ", "").contains(mention)
                             || u.getEmail().toLowerCase().contains(mention))
                     .filter(u -> !u.getId().equals(userId))
-                    .filter(u -> rbac.getUserTier(u.getId(), wsId) >= 1)   // must share the workspace
                     .forEach(u -> {
                         Notification n = new Notification();
                         n.setUserId(u.getId());

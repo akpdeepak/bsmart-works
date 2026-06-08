@@ -36,10 +36,13 @@ public class FieldDefController {
     @GetMapping
     public List<FieldDef> list(@RequestParam(required = false) String projectId,
                                @RequestParam(required = false) String workspaceId) {
-        if (projectId != null) return fieldDefRepo.findByProjectIdOrderByPosition(projectId);
-        if (workspaceId != null) return fieldDefRepo.findByWorkspaceIdOrderByPosition(workspaceId); {
-        return fieldDefRepo.findAll();
+        if (projectId != null) {
+            return fieldDefRepo.findByProjectIdOrderByPosition(projectId);
         }
+        if (workspaceId != null) {
+            return fieldDefRepo.findByWorkspaceIdOrderByPosition(workspaceId);
+        }
+        throw ApiException.badRequest("MISSING_PARAM", "Either projectId or workspaceId is required");
     }
 
     @GetMapping("/{id}")

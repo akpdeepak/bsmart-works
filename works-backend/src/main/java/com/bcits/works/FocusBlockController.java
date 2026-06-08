@@ -58,9 +58,8 @@ public class FocusBlockController {
     }
 
     private static OffsetDateTime parseTime(Object v, String field) {
-        if (v == null) throw ApiException.badRequest("MISSING_FIELD", field + " is required.", field); {
+        if (v == null) throw ApiException.badRequest("MISSING_FIELD", field + " is required.", field);
         try {
-        }
             return OffsetDateTime.parse(v.toString());
         } catch (Exception e) {
             throw ApiException.badRequest("INVALID_TIME", field + " must be an ISO-8601 timestamp.", field);

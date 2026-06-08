@@ -7,11 +7,10 @@ Format: What · Why accepted · Impact · Trigger to fix.
 
 ## Architecture debt
 
-### TD-001 — Flat package structure (`com.example.demo`)
-- **What:** All Java classes are in a single flat package instead of `com.bcits.works.<feature>`
-- **Why accepted:** Renaming is a large mechanical change that touches every file; deferred to avoid noise during early iterations
-- **Impact:** Hard to navigate as the codebase grows; no package-level access control
-- **Trigger:** Before inviting external contributors, or when the class count exceeds ~200
+### TD-001 — Flat package structure (`com.bcits.works`) — **CLOSED 2026-06-08**
+- **What:** All Java classes were in `com.example.demo`; renamed to `com.bcits.works` (flat)
+- **Resolved:** Package rename completed in PR on branch `claude/prompt-a-U1rt5`
+- **Remaining:** Sub-package split into `com.bcits.works.<feature>` is a separate future task
 
 ### TD-002 — JavaScript instead of TypeScript
 - **What:** Frontend is JSX/JS; the spec calls for TypeScript

@@ -10,9 +10,9 @@
 ## 1. Context
 
 bSmart Works ships today as a single Spring Boot deployable. Despite the "modular monolith" label,
-the backend is effectively a **flat monolith**: 159 of 164 Java files live in one `com.example.demo`
-package with no enforced domain boundaries (only a `dto` sub-package). So "microservice-ready" is, as
-of iteration 6, an aspiration the code does not back.
+the backend is effectively a **flat monolith**: all Java files live in one `com.bcits.works`
+package (renamed from `com.example.demo` in TD-001, 2026-06-08) with no enforced domain boundaries
+(only a `dto` sub-package). So "microservice-ready" is, as of iteration 6, an aspiration the code does not back.
 
 The product owner wants individual capabilities (e.g. Identity, Knowledge, AI orchestration) to be
 **reusable as standalone services in other applications**, and wants the system to be **API- and

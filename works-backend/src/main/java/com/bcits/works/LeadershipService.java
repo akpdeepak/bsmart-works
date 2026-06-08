@@ -161,9 +161,8 @@ public class LeadershipService {
     }
 
     private static int level(String v) {
-        if (v == null) return 1; {
+        if (v == null) return 1;
         return switch (v.trim().toLowerCase()) {
-        }
             case "high", "critical", "highest" -> 3;
             case "medium", "moderate" -> 2;
             default -> 1;

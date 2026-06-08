@@ -131,8 +131,9 @@ Don't add Kafka, a search cluster, or a new language until scale actually demand
 
 ### 3.7 Match reality, migrate deliberately
 The spec describes a target (`com.bcits.works.*`, TypeScript, Gradle); the code is the present
-(`com.example.demo`, JavaScript, Maven). Build to the code that exists. Closing a spec-vs-code
-gap is its own planned migration with its own PR — never a drive-by change inside a feature.
+(`com.bcits.works` flat — TD-001 rename complete 2026-06-08, JavaScript, Maven). Build to the
+code that exists. Closing a spec-vs-code gap is its own planned migration with its own PR —
+never a drive-by change inside a feature.
 
 ---
 

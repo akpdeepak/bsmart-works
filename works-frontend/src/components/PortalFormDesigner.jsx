@@ -462,9 +462,8 @@ export function PortalFormDesigner({ requestTypeId, onClose, onSaved }) {
   const [dragIdx, setDragIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
 
-  // Load existing schema on mount.
+  // Load existing schema on mount. `loading` is initialised to true so no setState needed here.
   useEffect(() => {
-    setLoading(true);
     api.send(`/service/request-types/${requestTypeId}`)
       .then((data) => {
         const raw = data.formSchema ?? data.form_schema;

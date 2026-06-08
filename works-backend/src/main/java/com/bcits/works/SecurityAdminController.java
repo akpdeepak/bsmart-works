@@ -28,6 +28,7 @@ public class SecurityAdminController {
     private final ConditionalAccessService conditionalAccess;
     private final AnomalyDetectionService anomalies;
     private final AuditStreamService streams;
+    private final KeyRotationService keyRotation;
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
 
@@ -35,8 +36,10 @@ public class SecurityAdminController {
                                    ConditionalAccessService conditionalAccess,
                                    AnomalyDetectionService anomalies,
                                    AuditStreamService streams,
+                                   KeyRotationService keyRotation,
                                    AuthenticatedUser authenticatedUser, RbacService rbac) {
         this.settings = settings;
+        this.keyRotation = keyRotation;
         this.conditionalAccess = conditionalAccess;
         this.anomalies = anomalies;
         this.streams = streams;
@@ -128,6 +131,15 @@ public class SecurityAdminController {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "manage_security");
         return anomalies.resolve(workspaceId, userId, id, dismiss);
+    }
+
+    // ── BYOK key rotation (B31) ───────────────────────────────────────────────────────────────
+
+    @PostMapping("/rotate-key")
+    public KeyRotationService.RotationResult rotateKey(@RequestParam String workspaceId) {
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "manage_security");
+        return keyRotation.rotate(workspaceId, userId);
     }
 
     // ── SIEM streaming ────────────────────────────────────────────────────────────────────────

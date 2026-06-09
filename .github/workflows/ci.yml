@@ -210,6 +210,72 @@ jobs:
       - name: Integration tests (Testcontainers + Flyway)
         run: ./mvnw -B -Djacoco.skip=true test-compile failsafe:integration-test failsafe:verify
 
+  backend-smoke-boot:
+    name: Backend (smoke boot — real app + ddl-auto=validate)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: works-backend
+    # Starts the ACTUAL packaged application against a real Postgres with the production config
+    # (Flyway migrations + spring.jpa.hibernate.ddl-auto=validate) and asserts it reaches
+    # "Started ... in N seconds". The Testcontainers integration jobs run a test ApplicationContext
+    # and never exercise a full validated boot, so two whole classes of defect reach main green:
+    #   1. entity<->schema drift  — a JPA @Column with no backing Flyway migration (validate aborts)
+    #   2. bean-wiring / DI failures — a constructor dependency with no registered bean
+    # This job is the gate that catches both before merge.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: bcits_admin
+          POSTGRES_PASSWORD: works_secure_pass
+          POSTGRES_DB: works_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bcits_admin -d works_db"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Build application jar
+        run: ./mvnw -B -DskipTests -Djacoco.skip=true package
+      - name: Boot the app against a real DB and assert startup
+        run: |
+          JAR="$(find target -maxdepth 1 -name '*.jar' ! -name '*.original' | head -1)"
+          echo "Booting $JAR (Flyway + ddl-auto=validate) against Postgres…"
+          java -jar "$JAR" \
+            --server.port=8080 \
+            --app.attachments.virus-scan-enabled=false \
+            > boot.log 2>&1 &
+          APP_PID=$!
+          for i in $(seq 1 90); do
+            if grep -q "Started .* in .* seconds" boot.log; then
+              echo "✅ Application booted cleanly against a real database."
+              kill "$APP_PID" 2>/dev/null || true
+              exit 0
+            fi
+            if grep -qE "APPLICATION FAILED TO START|Schema-validation:|FlywayException|UnsatisfiedDependencyException|Error creating bean" boot.log; then
+              echo "❌ Boot failed — see log:"; tail -n 120 boot.log
+              kill "$APP_PID" 2>/dev/null || true
+              exit 1
+            fi
+            if ! kill -0 "$APP_PID" 2>/dev/null; then
+              echo "❌ App process exited before startup completed:"; tail -n 120 boot.log
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "❌ Timed out waiting for startup:"; tail -n 120 boot.log
+          kill "$APP_PID" 2>/dev/null || true
+          exit 1
+
   integration-tests:
     name: Backend (integration — @Tag("integration") suite + workspace isolation)
     runs-on: ubuntu-latest

@@ -77,6 +77,10 @@ export default {
         'out-quint': 'cubic-bezier(0.22, 1, 0.36, 1)',
         spring:      'cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
+      // Reading-column max-width (RB-30 §4). Use max-w-reading for detail/document content.
+      maxWidth: {
+        reading: '880px',
+      },
       // Layout dimensions as tokens — so the three-zone shell never needs banned arbitrary
       // px values (w-[360px]). Matches CLAUDE.md §4.6. Use w-sidebar / w-panel etc.
       width: {

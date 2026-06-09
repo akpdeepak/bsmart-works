@@ -85,12 +85,16 @@ public class CustomDomainService {
         });
 
         OffsetDateTime now = OffsetDateTime.now();
+        String id = UUID.randomUUID().toString();
         CustomDomain cd = new CustomDomain();
-        cd.setId(UUID.randomUUID().toString());
+        cd.setId(id);
         cd.setWorkspaceId(workspaceId);
         cd.setDomain(domain.toLowerCase());
         cd.setStatus("PENDING");
         cd.setSslStatus("PENDING");
+        // Stable verification token derived from the domain id (no secrets needed; the token
+        // proves DNS control, not identity). Strip hyphens from the UUID to get 32 hex chars.
+        cd.setVerificationToken(id.replace("-", ""));
         cd.setCreatedBy(createdBy);
         cd.setCreatedAt(now);
         cd.setUpdatedAt(now);

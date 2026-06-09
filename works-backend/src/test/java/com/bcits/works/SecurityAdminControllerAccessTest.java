@@ -33,10 +33,11 @@ class SecurityAdminControllerAccessTest {
     private final ConditionalAccessService conditionalAccess = mock(ConditionalAccessService.class);
     private final AnomalyDetectionService anomalies = mock(AnomalyDetectionService.class);
     private final AuditStreamService streams = mock(AuditStreamService.class);
+    private final KeyRotationService keyRotation = mock(KeyRotationService.class);
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
     private final SecurityAdminController controller = new SecurityAdminController(
-            settings, conditionalAccess, anomalies, streams, authenticatedUser, rbac);
+            settings, conditionalAccess, anomalies, streams, keyRotation, authenticatedUser, rbac);
 
     SecurityAdminControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

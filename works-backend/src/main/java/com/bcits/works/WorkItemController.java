@@ -34,6 +34,7 @@ public class WorkItemController {
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
     private final DodChecklistService dodChecklists;
+    private final ExtensionExecutionService extensions;
     private final WorkflowRuleEngine workflowRules;
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
@@ -41,6 +42,7 @@ public class WorkItemController {
                               UserRepository userRepository, EmailService emailService,
                               NotificationBatchService batchService, AuthenticatedUser authenticatedUser,
                               RbacService rbac, DodChecklistService dodChecklists,
+                              ExtensionExecutionService extensions,
                               WorkflowRuleEngine workflowRules) {
         this.repository = repository;
         this.eventService = eventService;
@@ -52,6 +54,7 @@ public class WorkItemController {
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
         this.dodChecklists = dodChecklists;
+        this.extensions = extensions;
         this.workflowRules = workflowRules;
     }
 
@@ -243,6 +246,13 @@ public class WorkItemController {
         newItem.setCreatedAt(OffsetDateTime.now());
         if (newItem.getProjectId() == null) newItem.setProjectId("PROJ-001");
 
+        // Extension hook: work_item.before_create — may enrich fields or reject (B26).
+        ExtensionExecutionService.ExtensionResult extResult =
+                extensions.beforeWorkItemCreate(wsId, newItem, userId);
+        if (extResult.rejected()) {
+            throw ApiException.badRequest("EXTENSION_REJECTED", extResult.rejectionMessage());
+        }
+
         WorkItem saved = repository.save(newItem);
 
         if (newItem.getTags() != null) {
@@ -328,6 +338,9 @@ public class WorkItemController {
             // Record field-level diffs
             if (!java.util.Objects.equals(oldStatus, saved.getStatus())) {
                 eventService.recordDiff(id, "STATUS_CHANGED", userId, "status", oldStatus, saved.getStatus());
+                // Extension hook: work_item.after_status_change — may emit events or notify (B26).
+                String wId = rbac.workspaceForProject(saved.getProjectId());
+                extensions.afterStatusChange(wId, saved, oldStatus, userId);
             }
             if (!java.util.Objects.equals(oldAssignee, saved.getAssigneeId())) {
                 String oldName = oldAssignee != null

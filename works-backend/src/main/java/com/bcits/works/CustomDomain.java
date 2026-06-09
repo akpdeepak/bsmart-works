@@ -33,6 +33,10 @@ public class CustomDomain {
     @Column(nullable = false)
     private String status = "PENDING";
 
+    /** DNS TXT record value for verification — set at registration, never changes. */
+    @Column(name = "verification_token")
+    private String verificationToken;
+
     @Column(name = "verified_at")
     private OffsetDateTime verifiedAt;
 
@@ -63,6 +67,9 @@ public class CustomDomain {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getVerificationToken() { return verificationToken; }
+    public void setVerificationToken(String verificationToken) { this.verificationToken = verificationToken; }
 
     public OffsetDateTime getVerifiedAt() { return verifiedAt; }
     public void setVerifiedAt(OffsetDateTime verifiedAt) { this.verifiedAt = verifiedAt; }

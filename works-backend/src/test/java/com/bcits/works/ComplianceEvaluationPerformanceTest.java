@@ -76,9 +76,9 @@ class ComplianceEvaluationPerformanceTest {
 
         // Project (child of workspace)
         jdbc.update(
-            "INSERT INTO projects(id, workspace_id, name, key_prefix, created_at, updated_at) "
-            + "VALUES (?, ?, ?, ?, ?, ?)",
-            PROJ_ID, WS_ID, "Perf Project", "PERF",
+            "INSERT INTO projects(id, workspace_id, name, key_prefix, slug, created_at, updated_at) "
+            + "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            PROJ_ID, WS_ID, "Perf Project", "PERF", "perf",
             OffsetDateTime.now(), OffsetDateTime.now());
 
         // 1 000 work items — half with a description, half without (so ~50% fail assertion BQL)
@@ -161,9 +161,9 @@ class ComplianceEvaluationPerformanceTest {
             + "VALUES (?, ?, ?, ?, ?)",
             ws2, "Other WS", "other-ws", now, now);
         jdbc.update(
-            "INSERT INTO projects(id, workspace_id, name, key_prefix, created_at, updated_at) "
-            + "VALUES (?, ?, ?, ?, ?, ?)",
-            proj2, ws2, "Other Project", "OTH", now, now);
+            "INSERT INTO projects(id, workspace_id, name, key_prefix, slug, created_at, updated_at) "
+            + "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            proj2, ws2, "Other Project", "OTH", "oth", now, now);
         // Add 100 work items with NO description in WS2
         for (int i = 0; i < 100; i++) {
             jdbc.update(

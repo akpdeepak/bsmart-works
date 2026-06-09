@@ -109,7 +109,7 @@ class ComplianceEvaluationPerformanceTest {
                 + "  id, workspace_id, name, assertion_bql, scope_bql, severity,"
                 + "  active, is_template, evaluation_mode, notify_to, escalate_to,"
                 + "  created_by, created_at, updated_at"
-                + ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                + ") VALUES (?,?,?,?,?,?,?,?,?,?::jsonb,?::jsonb,?,?,?)",
                 ruleId, WS_ID, "Perf Rule " + i,
                 "description != ''",   // assertion: description must be present
                 "",                    // no scope filter — all items

@@ -83,6 +83,12 @@ class SlaBulkApplyIntegrationTest {
 
         OffsetDateTime now = OffsetDateTime.now();
 
+        // Seed test user (ON CONFLICT DO NOTHING — may already exist from a prior run).
+        jdbc.update(
+            "INSERT INTO users(id, email, password_hash, full_name) VALUES (?,?,?,?)"
+            + " ON CONFLICT DO NOTHING",
+            "USR-SLA", "sla-test@bcits.test", "placeholder", "SLA Test User");
+
         // Workspace + project
         jdbc.update(
             "INSERT INTO workspaces(id, name, slug, created_at) VALUES (?,?,?,?)",
@@ -252,6 +258,11 @@ class SlaBulkApplyIntegrationTest {
         jdbc.update("DELETE FROM work_items    WHERE project_id   = ?", proj2);
         jdbc.update("DELETE FROM projects      WHERE id           = ?", proj2);
         jdbc.update("DELETE FROM workspaces    WHERE id           = ?", ws2);
+
+        jdbc.update(
+            "INSERT INTO users(id, email, password_hash, full_name) VALUES (?,?,?,?)"
+            + " ON CONFLICT DO NOTHING",
+            "USR-OTH", "oth-test@bcits.test", "placeholder", "OTH Test User");
 
         jdbc.update(
             "INSERT INTO workspaces(id, name, slug, created_at) VALUES (?,?,?,?)",

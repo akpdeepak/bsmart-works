@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ArrowLeft, Check, Package } from 'lucide-react';
+import { ArrowLeft, Check, Package, Paperclip } from 'lucide-react';
 import { Modal } from '@/components/works/molecules/modal';
 import { Button } from '@/components/works/button';
 import { Field } from '@/components/works/field';
@@ -263,9 +263,12 @@ function FormField({ field, value, onChange, users, workItems }) {
   return null;
 }
 
+const RAID_TYPES = ['RISK', 'ISSUE', 'ASSUMPTION', 'DEPENDENCY'];
+
 function FormStep({ typeKey, formData, onChange, onBack, onSubmit, projects, users, workItems, error }) {
   const typeDef = TYPES_BY_KEY[typeKey];
   const schema = getEffectiveSchema(typeKey);
+  const isRaid = RAID_TYPES.includes(typeKey);
 
   // Split fields into two columns for readability (text/select → 2-col grid;
   // textarea → always full width)
@@ -307,19 +310,54 @@ function FormStep({ typeKey, formData, onChange, onBack, onSubmit, projects, use
         </div>
       )}
 
-      {/* Project selector — always shown */}
-      <Field label="Project">
-        <select
-          value={formData.projectId ?? ''}
-          onChange={e => onChange('projectId', e.target.value)}
-          className="input"
-        >
-          <option value="">— select project —</option>
-          {(projects ?? []).map(p => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-      </Field>
+      {/* Container / product / team selector — type-aware
+           INCIDENT        → Affected Product (required, no team)
+           IT_SR           → Related Product only (optional, no team)
+           HR_SR           → nothing (no team, no product)
+           RAID types      → Affected Team (optional, fills projectId)
+           Delivery types  → Team (required)                              */}
+      {typeKey === 'INCIDENT' ? (
+        <Field label="Affected Product *">
+          <select
+            value={formData.productId ?? ''}
+            onChange={e => onChange('productId', e.target.value)}
+            className="input"
+            required
+          >
+            <option value="">— select product —</option>
+            {(workItems ?? []).filter(i => i.type === 'PRODUCT').map(p => (
+              <option key={p.id} value={p.id}>{p.title}</option>
+            ))}
+          </select>
+        </Field>
+      ) : typeKey === 'IT_SERVICE_REQUEST' ? (
+        <Field label="Related Product">
+          <select
+            value={formData.productId ?? ''}
+            onChange={e => onChange('productId', e.target.value)}
+            className="input"
+          >
+            <option value="">— none —</option>
+            {(workItems ?? []).filter(i => i.type === 'PRODUCT').map(p => (
+              <option key={p.id} value={p.id}>{p.title}</option>
+            ))}
+          </select>
+        </Field>
+      ) : typeKey !== 'HR_SERVICE_REQUEST' && (
+        <Field label={isRaid ? 'Affected Team' : 'Team *'}>
+          <select
+            value={formData.projectId ?? ''}
+            onChange={e => onChange('projectId', e.target.value)}
+            className="input"
+            required={!isRaid}
+          >
+            <option value="">— select team —</option>
+            {(projects ?? []).map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </Field>
+      )}
 
       {/* Two-column grid for compact fields */}
       <div className="grid grid-cols-2 gap-3">
@@ -350,6 +388,31 @@ function FormStep({ typeKey, formData, onChange, onBack, onSubmit, projects, use
           workItems={workItems}
         />
       ))}
+
+      {/* Attachments — universal across all types */}
+      <div>
+        <p className="mb-1 text-xs font-medium text-neutral-600">Attachments</p>
+        <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-neutral-300 p-3 text-sm text-neutral-500 transition-colors duration-fast hover:border-brand-navy hover:text-brand-navy">
+          <Paperclip aria-hidden="true" className="h-4 w-4 shrink-0" />
+          <span>Click to attach files</span>
+          <input
+            type="file"
+            multiple
+            className="sr-only"
+            onChange={e => onChange('attachments', Array.from(e.target.files))}
+          />
+        </label>
+        {Array.isArray(formData.attachments) && formData.attachments.length > 0 && (
+          <ul className="mt-2 space-y-1">
+            {formData.attachments.map((f, i) => (
+              <li key={i} className="flex items-center gap-2 text-xs text-neutral-600">
+                <Paperclip aria-hidden="true" className="h-3 w-3 shrink-0" />
+                {f.name}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <div className="flex justify-end gap-3 pt-2">
         <Button variant="ghost" onClick={onBack}>Back</Button>

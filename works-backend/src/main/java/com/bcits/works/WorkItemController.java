@@ -272,6 +272,7 @@ public class WorkItemController {
         try { w.setClosureNotes(rs.getString("closure_notes")); } catch (Exception ignored) {}
         try { w.setStakeholderUpdate(rs.getString("stakeholder_update")); } catch (Exception ignored) {}
         try { w.setSlaBreachFlag(rs.getBoolean("sla_breach_flag")); } catch (Exception ignored) {}
+        try { w.setProductId(rs.getString("product_id")); } catch (Exception ignored) {}
         return w;
     }
 
@@ -433,6 +434,7 @@ public class WorkItemController {
             existing.setImpactIfDelayed(updatedItem.getImpactIfDelayed());
             existing.setExpectedResolutionDate(updatedItem.getExpectedResolutionDate());
             existing.setBusinessJustification(updatedItem.getBusinessJustification());
+            existing.setProductId(updatedItem.getProductId());
             existing.setAffectedSystem(updatedItem.getAffectedSystem());
             existing.setBusinessService(updatedItem.getBusinessService());
             existing.setResolutionSummary(updatedItem.getResolutionSummary());

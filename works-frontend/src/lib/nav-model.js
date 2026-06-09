@@ -83,7 +83,7 @@ export const MODES = [
     { id: 'backlog',   label: 'Backlog',        Icon: ListTodo },
     { id: 'sprint',    label: 'Active Sprint',  Icon: Zap },
     { id: 'releases',  label: 'Releases',       Icon: Rocket },
-    { id: 'projects',  label: 'Projects',       Icon: FolderKanban },
+    { id: 'projects',  label: 'Teams',           Icon: FolderKanban },
     { id: 'pm',        label: 'PM Artifacts',   Icon: ClipboardList },
   ] },
   { id: 'insight', label: 'Insight', Icon: BarChart2, surfaces: [

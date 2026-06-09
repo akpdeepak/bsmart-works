@@ -72,8 +72,12 @@ public class ExtensionExecutionService {
         EMIT_EVENT;
 
         static boolean contains(String name) {
-            try { valueOf(name.toUpperCase(Locale.ROOT)); return true; }
-            catch (IllegalArgumentException e) { return false; }
+            try {
+                valueOf(name.toUpperCase(Locale.ROOT));
+                return true;
+            } catch (IllegalArgumentException e) {
+                return false;
+            }
         }
     }
 
@@ -186,6 +190,7 @@ public class ExtensionExecutionService {
                     events.recordInWorkspace(workspaceId, item.getId(), eventType,
                             actorId, Map.of("extensionId", extId, "point", point));
                 }
+                default -> { /* all AllowedAction enum cases handled above */ }
             }
 
             auditExecution(workspaceId, actorId, extId, act.name(), point);
@@ -210,6 +215,7 @@ public class ExtensionExecutionService {
             case "description" -> item.setDescription(value);
             // "labels" — stored as tags via a separate table; mutation is a no-op here
             // and must be handled by the caller (future iteration).
+            default -> { }
         }
     }
 

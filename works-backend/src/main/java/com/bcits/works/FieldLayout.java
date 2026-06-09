@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 @Entity
 @Table(name = "field_layout")
@@ -13,6 +14,7 @@ public class FieldLayout {
     private String workspaceId;
     private String projectId;
     private String itemType;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb") private String layoutJson = "[]";
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;

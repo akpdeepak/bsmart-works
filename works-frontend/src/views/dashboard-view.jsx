@@ -604,7 +604,6 @@ function ExecutiveToday({ data, currentUser, setView }) {
   const openIssues = raidSummary.find(r => r.type === 'issues')?.open ?? 0;
 
   const healthColor = health >= 70 ? 'text-semantic-success' : health >= 40 ? 'text-semantic-warning' : 'text-semantic-danger';
-  const healthStroke = health >= 70 ? 'stroke-semantic-success' : health >= 40 ? 'stroke-semantic-warning' : 'stroke-semantic-danger';
 
   const RAID_CFG = [
     { type: 'risks',        label: 'Risks',        textColor: 'text-semantic-danger',  bgColor: 'bg-semantic-danger/10' },

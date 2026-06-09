@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * A custom report (iteration 6) — a named, ordered list of sections rendered as a
@@ -23,6 +24,7 @@ public class Report {
     private String name;
     private String description;
     private String projectId;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb")
     private String sections = "[]";
     private Boolean isTemplate = false;

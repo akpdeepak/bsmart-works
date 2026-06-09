@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 @Entity
 @Table(name = "dashboard_widgets")
@@ -19,6 +20,7 @@ public class DashboardWidget {
     @NotBlank
     private String widgetType;
     private String title;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb")
     private String config = "{}";
     @Column(name = "grid_x")

@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 @Entity
 @Table(name = "field_def")
@@ -18,6 +19,7 @@ public class FieldDef {
     // CHECKBOX | FILE | JSON | TEXTAREA | EMAIL | PHONE | RATING | PROGRESS
     private String fieldType;
     @Column(columnDefinition = "TEXT") private String description;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb") private String config = "{}";
     private Boolean required = false;
     private Integer position = 0;

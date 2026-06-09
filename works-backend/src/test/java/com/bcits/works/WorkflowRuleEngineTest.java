@@ -5,12 +5,14 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for WorkflowRuleEngine — verifies conditions, validators, and post-functions.
@@ -185,9 +187,11 @@ class WorkflowRuleEngineTest {
         when(workflowRepo.findByWorkspaceIdAndItemType(WS_ID, "Task")).thenReturn(List.of(wf));
 
         WorkflowStatus statusA = new WorkflowStatus();
-        statusA.setId(STATUS_A); statusA.setName("Open");
+        statusA.setId(STATUS_A);
+        statusA.setName("Open");
         WorkflowStatus statusB = new WorkflowStatus();
-        statusB.setId(STATUS_B); statusB.setName("Done");
+        statusB.setId(STATUS_B);
+        statusB.setName("Done");
         when(statusRepo.findByWorkflowIdOrderByPosition(WF_ID)).thenReturn(List.of(statusA, statusB));
 
         WorkflowTransition trans = new WorkflowTransition();

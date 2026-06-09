@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 @Entity
 @Table(name = "work_item_field_value")
@@ -15,6 +16,7 @@ public class WorkItemFieldValue {
     private String fieldDefId;
     @Column(columnDefinition = "TEXT") private String valueText;
     private BigDecimal valueNumber;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb") private String valueJson;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;

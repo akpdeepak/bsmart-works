@@ -12,6 +12,13 @@ regexes = [
     # Dev-only customer-portal seed BCrypt hash (iteration 9 V43 seed) — not a real credential.
     '''\$2a\$10\$nIXd2ULNak3UIBYere4e2uV81feYYTautemSSEO7q5BX3\.j5eotK6''',
 ]
+commits = [
+    # backend.log accidentally committed on 2026-05-31 (*.log is now gitignored).
+    # Contains two Spring-Boot auto-generated dev passwords (ephemeral, expired on app restart)
+    # and one email-verification token for smoketest@bcits.com (expired). Not real credentials.
+    "4764cd79664cf7d7200e537787e51637dcc893e0",
+    "6b4899da9f30c502a101733c0a31250a08b9585c",
+]
 
 [extend]
 # Use the default ruleset as the base

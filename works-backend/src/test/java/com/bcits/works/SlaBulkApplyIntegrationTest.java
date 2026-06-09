@@ -83,13 +83,19 @@ class SlaBulkApplyIntegrationTest {
 
         OffsetDateTime now = OffsetDateTime.now();
 
+        // Seed test user (ON CONFLICT DO NOTHING — may already exist from a prior run).
+        jdbc.update(
+            "INSERT INTO users(id, email, password_hash, full_name) VALUES (?,?,?,?)"
+            + " ON CONFLICT DO NOTHING",
+            "USR-SLA", "sla-test@bcits.test", "placeholder", "SLA Test User");
+
         // Workspace + project
         jdbc.update(
-            "INSERT INTO workspaces(id, name, slug, created_at, updated_at) VALUES (?,?,?,?,?)",
-            WS_ID, "SLA Test WS", "sla-ws-1", now, now);
+            "INSERT INTO workspaces(id, name, slug, created_at) VALUES (?,?,?,?)",
+            WS_ID, "SLA Test WS", "sla-ws-1", now);
         jdbc.update(
-            "INSERT INTO projects(id, workspace_id, name, key_prefix, created_at, updated_at) VALUES (?,?,?,?,?,?)",
-            PROJ_ID, WS_ID, "SLA Project", "SLA", now, now);
+            "INSERT INTO projects(id, workspace_id, name, key_prefix, slug, created_at) VALUES (?,?,?,?,?,?)",
+            PROJ_ID, WS_ID, "SLA Project", "SLA", "sla", now);
 
         // N_ITEMS work items — all status="Todo" so no start/stop triggers block clock creation.
         for (int i = 0; i < N_ITEMS; i++) {
@@ -111,9 +117,9 @@ class SlaBulkApplyIntegrationTest {
         // One target: RESOLUTION within TARGET_MINUTES (no start/stop status so the clock starts immediately).
         jdbc.update(
             "INSERT INTO sla_targets("
-            + "  id, policy_id, workspace_id, metric, target_minutes, pause_statuses, sort_order"
-            + ") VALUES (?,?,?,?,?,?,?)",
-            TGT_ID, POL_ID, WS_ID, "RESOLUTION", TARGET_MINUTES, "[]", 0);
+            + "  id, policy_id, workspace_id, metric, target_minutes, sort_order"
+            + ") VALUES (?,?,?,?,?,?)",
+            TGT_ID, POL_ID, WS_ID, "RESOLUTION", TARGET_MINUTES, 0);
     }
 
     // ── 1 · Preview mode ─────────────────────────────────────────────────────────
@@ -254,11 +260,16 @@ class SlaBulkApplyIntegrationTest {
         jdbc.update("DELETE FROM workspaces    WHERE id           = ?", ws2);
 
         jdbc.update(
-            "INSERT INTO workspaces(id, name, slug, created_at, updated_at) VALUES (?,?,?,?,?)",
-            ws2, "Other WS", "other-ws", now, now);
+            "INSERT INTO users(id, email, password_hash, full_name) VALUES (?,?,?,?)"
+            + " ON CONFLICT DO NOTHING",
+            "USR-OTH", "oth-test@bcits.test", "placeholder", "OTH Test User");
+
         jdbc.update(
-            "INSERT INTO projects(id, workspace_id, name, key_prefix, created_at, updated_at) VALUES (?,?,?,?,?,?)",
-            proj2, ws2, "Other Project", "OTH", now, now);
+            "INSERT INTO workspaces(id, name, slug, created_at) VALUES (?,?,?,?)",
+            ws2, "Other WS", "other-ws", now);
+        jdbc.update(
+            "INSERT INTO projects(id, workspace_id, name, key_prefix, slug, created_at) VALUES (?,?,?,?,?,?)",
+            proj2, ws2, "Other Project", "OTH", "oth", now);
         for (int i = 0; i < 10; i++) {
             jdbc.update(
                 "INSERT INTO work_items("

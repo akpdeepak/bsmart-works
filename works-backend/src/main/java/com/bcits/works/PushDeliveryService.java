@@ -62,8 +62,11 @@ public class PushDeliveryService {
         DeliveryResult best = DeliveryResult.SKIPPED;
         for (PushSubscription sub : subs) {
             DeliveryResult r = deliver(sub, title, body);
-            if (r == DeliveryResult.DELIVERED) best = DeliveryResult.DELIVERED;
-            else if (r == DeliveryResult.FAILED && best != DeliveryResult.DELIVERED) best = DeliveryResult.FAILED;
+            if (r == DeliveryResult.DELIVERED) {
+                best = DeliveryResult.DELIVERED;
+            } else if (r == DeliveryResult.FAILED && best != DeliveryResult.DELIVERED) {
+                best = DeliveryResult.FAILED;
+            }
         }
         return best;
     }

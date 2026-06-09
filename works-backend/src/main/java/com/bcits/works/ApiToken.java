@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * A public-API token (iteration 13, Cap Q) — the bearer/OAuth foundation for the documented REST
@@ -23,6 +24,7 @@ public class ApiToken {
     private String name;
     private String tokenPrefix;
     private String tokenHash;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb")
     private String scopes = "[]";
     private String createdBy;

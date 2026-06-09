@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 @Entity
 @Table(name = "meeting")
@@ -18,6 +19,7 @@ public class Meeting {
     private Integer durationMins;
     private String location;
     @Column(columnDefinition = "TEXT") private String agenda;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb") private String attendees = "[]";
     private String status = "SCHEDULED"; // SCHEDULED | IN_PROGRESS | COMPLETED | CANCELLED
     private String organizerId;

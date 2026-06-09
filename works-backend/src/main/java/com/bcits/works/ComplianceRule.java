@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * A compliance rule (iteration 7, Cap K). Scopes work items via {@code scopeBql} and
@@ -28,6 +29,7 @@ public class ComplianceRule {
     @Column(name = "assertion_bql", columnDefinition = "TEXT")
     private String assertionBql;
     private String severity = "MEDIUM";
+    @ColumnTransformer(write = "?::jsonb")
     @Column(name = "notify_to", columnDefinition = "jsonb")
     private String notifyTo = "[]";
     private Boolean active = false;
@@ -36,8 +38,10 @@ public class ComplianceRule {
     private String evaluationMode = "CONTINUOUS";   // CONTINUOUS | SCHEDULED
     @Column(name = "escalate_after_hours")
     private Integer escalateAfterHours;             // NULL = no escalation
+    @ColumnTransformer(write = "?::jsonb")
     @Column(name = "escalate_to", columnDefinition = "jsonb")
     private String escalateTo = "[]";               // routing targets for escalation
+    @ColumnTransformer(write = "?::jsonb")
     @Column(name = "escalation_steps", columnDefinition = "jsonb")
     private String escalationSteps = "[]";          // multi-step: [{hours,targets:[{type,...}]},...]
     @Column(name = "last_evaluated_at")

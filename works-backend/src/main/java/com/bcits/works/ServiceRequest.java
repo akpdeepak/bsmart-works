@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * A customer-filed service request (iteration 9, Cap N) — the external face of an internal
@@ -28,6 +29,7 @@ public class ServiceRequest {
     @NotBlank
     private String subject;
     private String description;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(name = "form_data", columnDefinition = "jsonb")
     private String formData = "{}";
     private String priority = "MEDIUM";

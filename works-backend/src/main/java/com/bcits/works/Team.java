@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * A team (iteration 6) — a named, configurable set of projects within a workspace.
@@ -19,6 +20,7 @@ public class Team {
     @NotBlank
     private String name;
     private String description;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb")
     private String projectIds = "[]";
     private OffsetDateTime createdAt;

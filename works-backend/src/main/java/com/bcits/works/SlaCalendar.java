@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * A business-hours calendar (iteration 8, Cap M). Defines the working windows against which SLA
@@ -24,8 +25,10 @@ public class SlaCalendar {
     @NotBlank
     private String name;
     private String timezone = "Asia/Kolkata";
+    @ColumnTransformer(write = "?::jsonb")
     @Column(name = "work_week", columnDefinition = "jsonb")
     private String workWeek = "{}";
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb")
     private String holidays = "[]";
     private String createdBy;

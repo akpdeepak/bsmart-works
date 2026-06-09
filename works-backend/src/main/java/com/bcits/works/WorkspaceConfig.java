@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * The live, effective configuration document for a workspace (iteration 17, Cap R — Universal
@@ -22,6 +23,7 @@ public class WorkspaceConfig {
     @Column(name = "workspace_id")
     private String workspaceId;
 
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb")
     private String document = "{}";
 

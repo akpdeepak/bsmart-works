@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * One SLA target within a {@link SlaPolicy} (iteration 8, Cap M): a single business-minute budget
@@ -28,6 +29,7 @@ public class SlaTarget {
     private Integer targetMinutes;
     private String startStatus;
     private String stopStatus;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(name = "pause_statuses", columnDefinition = "jsonb")
     private String pauseStatuses = "[]";
     private Integer sortOrder = 0;

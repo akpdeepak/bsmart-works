@@ -5,6 +5,14 @@ import DashboardView from './dashboard-view';
 const noop = () => {};
 const baseProps = {
   currentUser: { id: 'USR-1', fullName: 'Deepak Pandey' },
+  dashboardRole: 'developer',
+  dashLoading: false,
+  setDashboardRole: noop,
+  fetchDashboard: noop,
+  smDash: null,
+  poDash: null,
+  execDash: null,
+  adminDash: null,
   developerDash: {
     myOpenItemCount: 2,
     myOpenItems: [{ id: 'WRK-1', title: 'Fix login', type: 'Bug', status: 'In Progress', priority: 'HIGH' }],

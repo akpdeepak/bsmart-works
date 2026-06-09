@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * An append-only automation run record (iteration 13, Cap C) — every execution and every dry-run
@@ -21,6 +22,7 @@ public class AutomationRun {
     private String status;          // SUCCESS | FAILED | NOOP | DRY_RUN
     private String triggerSummary;
     private Integer affectedCount = 0;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb")
     private String detail = "{}";
     private Boolean dryRun = false;

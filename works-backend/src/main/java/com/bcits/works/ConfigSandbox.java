@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * A sandbox configuration (iteration 17, Cap R) — a labelled draft document where config changes are
@@ -24,6 +25,7 @@ public class ConfigSandbox {
 
     private String name;
 
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb")
     private String document;
 

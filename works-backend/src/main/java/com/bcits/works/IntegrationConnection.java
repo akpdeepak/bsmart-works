@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * A configured integration (iteration 13, Cap Q / Cap A): Slack, GitHub, GitLab, email, calendar, or
@@ -23,6 +24,7 @@ public class IntegrationConnection {
     private String provider;        // SLACK | GITHUB | GITLAB | EMAIL | CALENDAR | SAML | OIDC | SCIM
     @NotBlank
     private String name;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb")
     private String config = "{}";
     private String status = "CONNECTED";

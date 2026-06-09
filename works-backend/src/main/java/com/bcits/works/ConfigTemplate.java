@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * A reusable configuration template (iteration 17, Cap R). Saving the current config as a template
@@ -29,6 +30,7 @@ public class ConfigTemplate {
 
     private Boolean shareable = false;
 
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb")
     private String document;
 

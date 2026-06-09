@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 @Entity
 @Table(name = "articles")
@@ -35,6 +36,7 @@ public class Article {
 
     // Block data when content_format = 'blocks'. Block types: paragraph, heading, code, image,
     // embed, mermaid, table, divider. Must be non-empty when content_format = 'blocks'.
+    @ColumnTransformer(write = "?::jsonb")
     @Column(name = "content_blocks", columnDefinition = "jsonb")
     private String contentBlocks;
 

@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * Cap W · Stakeholder communication (I15-S14). Targeted release/status messages on the existing
@@ -21,6 +22,7 @@ public class StakeholderCommunication {
     @Column(columnDefinition = "TEXT") private String body;
     private String channel = "EMAIL"; // EMAIL | MEETING | PORTAL | CALL
     private String relatedReleaseId;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb") private String stakeholderIds = "[]";
     private String status = "DRAFT";  // DRAFT | SENT
     private OffsetDateTime sentAt;

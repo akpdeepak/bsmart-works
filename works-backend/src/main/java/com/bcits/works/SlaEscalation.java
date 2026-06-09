@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * An escalation step on a {@link SlaPolicy} (iteration 8, Cap M). Fires when a clock crosses
@@ -24,6 +25,7 @@ public class SlaEscalation {
     private Integer thresholdPercent;
     private Boolean onBreach = false;
     private String action = "NOTIFY";
+    @ColumnTransformer(write = "?::jsonb")
     @Column(name = "action_target", columnDefinition = "jsonb")
     private String actionTarget = "[]";
     private Integer sortOrder = 0;

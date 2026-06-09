@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * One immutable, append-only snapshot of a workspace's configuration (iteration 17, Cap R). Every
@@ -25,6 +26,7 @@ public class ConfigVersion {
     @Column(name = "version_number")
     private Integer versionNumber;
 
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb")
     private String document;
 

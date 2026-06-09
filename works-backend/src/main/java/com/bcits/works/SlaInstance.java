@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * A live SLA clock on a work item, for one {@link SlaTarget} (iteration 8, Cap M). It accrues
@@ -34,6 +35,7 @@ public class SlaInstance {
     private OffsetDateTime dueAt;
     private OffsetDateTime breachedAt;
     private OffsetDateTime completedAt;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(name = "escalated_steps", columnDefinition = "jsonb")
     private String escalatedSteps = "[]";
     private OffsetDateTime createdAt;

@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * An automation rule (iteration 13, Cap C): "When [trigger], if [condition], then [action(s)]".
@@ -24,10 +25,12 @@ public class AutomationRule {
     @Column(columnDefinition = "TEXT")
     private String description;
     private String triggerType;     // ITEM_CREATED | ITEM_UPDATED | STATUS_CHANGED | ITEM_ASSIGNED | SCHEDULED
+    @ColumnTransformer(write = "?::jsonb")
     @Column(name = "trigger_config", columnDefinition = "jsonb")
     private String triggerConfig = "{}";
     @Column(name = "condition_expr", columnDefinition = "TEXT")
     private String conditionExpr = "";
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb")
     private String actions = "[]";
     private Boolean enabled = false;

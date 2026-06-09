@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.ColumnTransformer;
 
 @Entity
 @Table(name = "workflow_transition")
@@ -13,8 +14,11 @@ public class WorkflowTransition {
     private String fromStatus;
     private String toStatus;
     private String name;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb") private String conditions = "[]";
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb") private String validators = "[]";
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb") private String postFunctions = "[]";
 
     public String getId() { return id; }

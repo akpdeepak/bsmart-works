@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 /**
  * A customer request type (iteration 9, Cap N): Incident / Change / Service plus admin-defined
@@ -24,6 +25,7 @@ public class RequestType {
     private String name;
     private String description;
     private String icon;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(name = "form_schema", columnDefinition = "jsonb")
     private String formSchema = "[]";
     private String defaultPriority = "MEDIUM";

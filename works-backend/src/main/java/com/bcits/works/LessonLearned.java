@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 @Entity
 @Table(name = "lesson_learned")
@@ -18,6 +19,7 @@ public class LessonLearned {
     @Column(columnDefinition = "TEXT") private String whatWorked;
     @Column(columnDefinition = "TEXT") private String whatDidntWork;
     @Column(columnDefinition = "TEXT") private String recommendation;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb") private String tags = "[]";
     private String createdBy;
     private OffsetDateTime createdAt;

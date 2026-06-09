@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.ColumnTransformer;
 
 @Entity
 @Table(name = "decision")
@@ -21,6 +22,7 @@ public class Decision {
     private LocalDate decisionDate;
     private String ownerId;
     private String relatedRiskId;
+    @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb") private String links = "[]";
     private String createdBy;
     private OffsetDateTime createdAt;

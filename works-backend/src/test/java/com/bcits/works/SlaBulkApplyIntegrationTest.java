@@ -88,8 +88,8 @@ class SlaBulkApplyIntegrationTest {
             "INSERT INTO workspaces(id, name, slug, created_at) VALUES (?,?,?,?)",
             WS_ID, "SLA Test WS", "sla-ws-1", now);
         jdbc.update(
-            "INSERT INTO projects(id, workspace_id, name, key_prefix, created_at) VALUES (?,?,?,?,?)",
-            PROJ_ID, WS_ID, "SLA Project", "SLA", now);
+            "INSERT INTO projects(id, workspace_id, name, key_prefix, slug, created_at) VALUES (?,?,?,?,?,?)",
+            PROJ_ID, WS_ID, "SLA Project", "SLA", "sla", now);
 
         // N_ITEMS work items — all status="Todo" so no start/stop triggers block clock creation.
         for (int i = 0; i < N_ITEMS; i++) {
@@ -257,8 +257,8 @@ class SlaBulkApplyIntegrationTest {
             "INSERT INTO workspaces(id, name, slug, created_at) VALUES (?,?,?,?)",
             ws2, "Other WS", "other-ws", now);
         jdbc.update(
-            "INSERT INTO projects(id, workspace_id, name, key_prefix, created_at) VALUES (?,?,?,?,?)",
-            proj2, ws2, "Other Project", "OTH", now);
+            "INSERT INTO projects(id, workspace_id, name, key_prefix, slug, created_at) VALUES (?,?,?,?,?,?)",
+            proj2, ws2, "Other Project", "OTH", "oth", now);
         for (int i = 0; i < 10; i++) {
             jdbc.update(
                 "INSERT INTO work_items("

@@ -34,6 +34,8 @@ export default function BqlView({
   const [savedViews, setSavedViews] = useState([]);
   const [viewName, setViewName] = useState('');
   const [viewSaving, setViewSaving] = useState(false);
+  const [pendingViewDelete, setPendingViewDelete] = useState(null);
+  const [pendingFilterDelete, setPendingFilterDelete] = useState(null);
 
   const translateNl = () => {
     if (!nlText.trim() || !activeWorkspaceId) return;
@@ -168,7 +170,7 @@ export default function BqlView({
                 <Bookmark aria-hidden="true" className="h-3.5 w-3.5 text-brand-navy flex-shrink-0" />
                 <span className="font-medium text-neutral-900 dark:text-neutral-100">{v.name}</span>
                 {v.isShared && <span className="text-xs text-neutral-500">shared</span>}
-                <button type="button" onClick={e => { e.stopPropagation(); deleteView(v.id); }}
+                <button type="button" onClick={e => { e.stopPropagation(); setPendingViewDelete(v); }}
                   className="text-neutral-300 hover:text-semantic-danger opacity-0 group-hover:opacity-100 transition-opacity ml-0.5"
                   aria-label={`Remove view ${v.name}`}>
                   <X className="h-3.5 w-3.5" aria-hidden="true" />
@@ -189,7 +191,7 @@ export default function BqlView({
                 className="flex items-center gap-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5 text-sm hover:border-brand-navy transition-colors group">
                 <span className="font-medium text-neutral-900">{f.name}</span>
                 {f.isShared && <span className="text-xs text-neutral-600 dark:text-neutral-400">shared</span>}
-                <button onClick={e => { e.stopPropagation(); api.raw(`/bql/filters/${f.id}`, { method: 'DELETE' }).then(() => fetchBqlFilters()); }}
+                <button onClick={e => { e.stopPropagation(); setPendingFilterDelete(f); }}
                   className="text-neutral-300 hover:text-semantic-danger opacity-0 group-hover:opacity-100 transition-opacity ml-1" aria-label="Remove"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
               </button>
             ))}
@@ -220,6 +222,38 @@ export default function BqlView({
       {bqlResults.length === 0 && bqlQuery && !bqlError && (
         <div className="text-center py-12 text-neutral-600 dark:text-neutral-400">
           <p className="text-sm">No results. Run the query to see results.</p>
+        </div>
+      )}
+
+      {pendingViewDelete && (
+        <div role="dialog" aria-modal="true" aria-labelledby="bql-view-confirm-title"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-xl p-6 max-w-sm w-full border border-neutral-200 dark:border-neutral-700">
+            <h2 id="bql-view-confirm-title" className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-2">Remove view?</h2>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">
+              The saved view <span className="font-medium text-neutral-900 dark:text-neutral-100">"{pendingViewDelete.name}"</span> will be permanently removed.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setPendingViewDelete(null)}>Cancel</Button>
+              <Button variant="danger" onClick={() => { deleteView(pendingViewDelete.id); setPendingViewDelete(null); }}>Remove</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingFilterDelete && (
+        <div role="dialog" aria-modal="true" aria-labelledby="bql-filter-confirm-title"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-xl p-6 max-w-sm w-full border border-neutral-200 dark:border-neutral-700">
+            <h2 id="bql-filter-confirm-title" className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-2">Remove filter?</h2>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">
+              The saved filter <span className="font-medium text-neutral-900 dark:text-neutral-100">"{pendingFilterDelete.name}"</span> will be permanently removed.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setPendingFilterDelete(null)}>Cancel</Button>
+              <Button variant="danger" onClick={() => { api.raw(`/bql/filters/${pendingFilterDelete.id}`, { method: 'DELETE' }).then(() => { fetchBqlFilters(); setPendingFilterDelete(null); }); }}>Remove</Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

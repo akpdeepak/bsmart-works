@@ -15,6 +15,7 @@ export default function MarketplaceView({ workspaceId }) {
   const [error, setError] = useState(null);
   const [pending, setPending] = useState(null); // listing being installed (scope-approval open)
   const [approvedScopes, setApprovedScopes] = useState([]);
+  const [pendingUninstall, setPendingUninstall] = useState(null);
 
   const load = useCallback(async () => {
     if (!workspaceId) return;
@@ -132,7 +133,7 @@ export default function MarketplaceView({ workspaceId }) {
                       <Button variant="secondary" size="sm" onClick={() => toggleEnabled(ext)}>
                         {ext.enabled ? 'Disable' : 'Enable'}
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => uninstall(ext)}
+                      <Button variant="ghost" size="sm" onClick={() => setPendingUninstall({ ext, name: listing ? listing.name : ext.listingId })}
                         leftIcon={<Trash2 className="h-3.5 w-3.5" aria-hidden="true" />}
                         aria-label={`Uninstall ${listing ? listing.name : ext.listingId}`}>
                         Uninstall
@@ -219,6 +220,22 @@ export default function MarketplaceView({ workspaceId }) {
               <Button variant="action" size="sm" onClick={confirmInstall}>
                 Install with {approvedScopes.length} scope{approvedScopes.length !== 1 ? 's' : ''}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingUninstall && (
+        <div role="dialog" aria-modal="true" aria-labelledby="uninstall-confirm-title"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-xl p-6 max-w-sm w-full border border-neutral-200 dark:border-neutral-700">
+            <h2 id="uninstall-confirm-title" className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-2">Uninstall extension?</h2>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">
+              <span className="font-medium text-neutral-900 dark:text-neutral-100">"{pendingUninstall.name}"</span> will be removed from your workspace and all its data will be deleted.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setPendingUninstall(null)}>Cancel</Button>
+              <Button variant="danger" onClick={() => { uninstall(pendingUninstall.ext); setPendingUninstall(null); }}>Uninstall</Button>
             </div>
           </div>
         </div>

@@ -25,7 +25,7 @@ describe('PoWorkspaceView', () => {
   it('switches tabs via the tab bar', () => {
     const setPoTab = vi.fn();
     render(<PoWorkspaceView {...baseProps} setPoTab={setPoTab} />);
-    fireEvent.click(screen.getByRole('button', { name: 'OKRs' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'OKRs' }));
     expect(setPoTab).toHaveBeenCalledWith('okr');
   });
 

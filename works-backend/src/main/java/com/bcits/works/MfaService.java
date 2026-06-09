@@ -37,10 +37,8 @@ public class MfaService {
 
     /** otpauth:// URI for authenticator-app enrollment (QR code). */
     public String otpAuthUri(String email, String base64Secret) {
-        return "otpauth://totp/bSmartWorks:" + email
-                + "?secret=" + base32FromBase64(base64Secret)
-                + "&issuer=bSmartWorks"
-                + "&algorithm=SHA1&digits=6&period=30";
+        return String.format("otpauth://totp/bSmartWorks:%s?secret=%s&issuer=bSmartWorks&algorithm=SHA1&digits=6&period=30",
+                email, base32FromBase64(base64Secret));
     }
 
     /** The base32 secret a user types into their authenticator app. */

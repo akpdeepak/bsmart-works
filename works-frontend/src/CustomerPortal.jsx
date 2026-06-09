@@ -245,7 +245,7 @@ export default function CustomerPortal() {
       .catch((err) => flash(err.message || 'Could not submit rating'));
   };
 
-  const accent = account?.primaryColor || '#0B2F5C';
+  const accent = account?.primaryColor || 'var(--color-brand-navy)';
   const nav = [
     { key: 'home', label: 'Home' },
     { key: 'new', label: 'New request' },

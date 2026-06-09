@@ -122,7 +122,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req, HttpServletRequest http) {
         String email = req.email().toLowerCase().trim();
-        rateLimit("login:" + email + ":" + clientIp(http), LOGIN_MAX, LOGIN_WINDOW_S);
+        rateLimit(String.format("login:%s:%s", email, clientIp(http)), LOGIN_MAX, LOGIN_WINDOW_S);
 
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isEmpty()) {

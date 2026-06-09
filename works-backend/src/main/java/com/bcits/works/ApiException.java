@@ -29,7 +29,7 @@ public class ApiException extends RuntimeException {
     // Convenience factories
     public static ApiException notFound(String entity, String id) {
         return new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND",
-                entity + " not found: " + id);
+                String.format("%s not found: %s", entity, id));
     }
 
     public static ApiException forbidden(String message) {

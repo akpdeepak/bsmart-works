@@ -85,11 +85,11 @@ class SlaBulkApplyIntegrationTest {
 
         // Workspace + project
         jdbc.update(
-            "INSERT INTO workspaces(id, name, slug, created_at, updated_at) VALUES (?,?,?,?,?)",
-            WS_ID, "SLA Test WS", "sla-ws-1", now, now);
+            "INSERT INTO workspaces(id, name, slug, created_at) VALUES (?,?,?,?)",
+            WS_ID, "SLA Test WS", "sla-ws-1", now);
         jdbc.update(
-            "INSERT INTO projects(id, workspace_id, name, key_prefix, created_at, updated_at) VALUES (?,?,?,?,?,?)",
-            PROJ_ID, WS_ID, "SLA Project", "SLA", now, now);
+            "INSERT INTO projects(id, workspace_id, name, key_prefix, created_at) VALUES (?,?,?,?,?)",
+            PROJ_ID, WS_ID, "SLA Project", "SLA", now);
 
         // N_ITEMS work items — all status="Todo" so no start/stop triggers block clock creation.
         for (int i = 0; i < N_ITEMS; i++) {
@@ -254,11 +254,11 @@ class SlaBulkApplyIntegrationTest {
         jdbc.update("DELETE FROM workspaces    WHERE id           = ?", ws2);
 
         jdbc.update(
-            "INSERT INTO workspaces(id, name, slug, created_at, updated_at) VALUES (?,?,?,?,?)",
-            ws2, "Other WS", "other-ws", now, now);
+            "INSERT INTO workspaces(id, name, slug, created_at) VALUES (?,?,?,?)",
+            ws2, "Other WS", "other-ws", now);
         jdbc.update(
-            "INSERT INTO projects(id, workspace_id, name, key_prefix, created_at, updated_at) VALUES (?,?,?,?,?,?)",
-            proj2, ws2, "Other Project", "OTH", now, now);
+            "INSERT INTO projects(id, workspace_id, name, key_prefix, created_at) VALUES (?,?,?,?,?)",
+            proj2, ws2, "Other Project", "OTH", now);
         for (int i = 0; i < 10; i++) {
             jdbc.update(
                 "INSERT INTO work_items("

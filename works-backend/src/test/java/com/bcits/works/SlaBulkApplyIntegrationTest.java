@@ -117,9 +117,9 @@ class SlaBulkApplyIntegrationTest {
         // One target: RESOLUTION within TARGET_MINUTES (no start/stop status so the clock starts immediately).
         jdbc.update(
             "INSERT INTO sla_targets("
-            + "  id, policy_id, workspace_id, metric, target_minutes, pause_statuses, sort_order"
-            + ") VALUES (?,?,?,?,?,?,?)",
-            TGT_ID, POL_ID, WS_ID, "RESOLUTION", TARGET_MINUTES, "[]", 0);
+            + "  id, policy_id, workspace_id, metric, target_minutes, sort_order"
+            + ") VALUES (?,?,?,?,?,?)",
+            TGT_ID, POL_ID, WS_ID, "RESOLUTION", TARGET_MINUTES, 0);
     }
 
     // ── 1 · Preview mode ─────────────────────────────────────────────────────────

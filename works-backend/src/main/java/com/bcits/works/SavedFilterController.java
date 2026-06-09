@@ -25,15 +25,16 @@ public class SavedFilterController {
     }
 
     @GetMapping
-    public List<SavedFilter> getFilters() {
+    public List<SavedFilter> getFilters(@RequestParam String workspaceId) {
         String userId = authenticatedUser.id();
-        return repository.findByWorkspaceIdAndIsSharedOrCreatedBy("WS-001", true, userId);
+        return repository.findByWorkspaceIdAndIsSharedOrCreatedBy(workspaceId, true, userId);
     }
 
     @PostMapping
-    public SavedFilter createFilter(@Valid @RequestBody SavedFilter filter) {
+    public SavedFilter createFilter(@Valid @RequestBody SavedFilter filter,
+                                    @RequestParam String workspaceId) {
         String userId = authenticatedUser.id();
-        filter.setWorkspaceId("WS-001");
+        filter.setWorkspaceId(workspaceId);
         filter.setCreatedBy(userId);
         filter.setCreatedAt(OffsetDateTime.now());
         return repository.save(filter);

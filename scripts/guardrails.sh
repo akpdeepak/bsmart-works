@@ -109,6 +109,27 @@ if [ -d "$BE" ]; then
     "$(grep -RInE '@Transactional' "$BE"/*Controller.java 2>/dev/null || true)"
 fi
 
+# Every @Query that issues a SELECT in a Repository must reference workspace scope (RB-40 §1).
+# Safe tokens: workspace_id, workspace_members, workspaceId, callerId.
+# Scans up to 8 lines per @Query block so multi-line annotations are covered.
+# findById / findBy* derived methods have no @Query annotation and are not checked here;
+# callers must ensure their inputs (e.g. project_id) are pre-validated to the tenant.
+if [ -d "$BE" ]; then
+  _unscoped=""
+  while IFS= read -r _f; do
+    while IFS= read -r _lnum; do
+      _block=$(sed -n "${_lnum},$((${_lnum} + 7))p" "$_f" 2>/dev/null | tr '\n' ' ')
+      if echo "$_block" | grep -qiE '\bSELECT\b'; then
+        if ! echo "$_block" | grep -qiE '(workspace_id|workspace_members|workspaceId|callerId|caller_id)'; then
+          _unscoped="${_unscoped:+${_unscoped}$'\n'}${_f}:${_lnum}"
+        fi
+      fi
+    done < <(grep -n '@Query' "$_f" 2>/dev/null | grep -oE '^[0-9]+')
+  done < <(find "$BE" -name '*Repository.java' 2>/dev/null)
+  check BLOCK "Repository @Query SELECT must reference workspace scope (RB-40 §1)" "$_unscoped"
+  unset _unscoped _f _lnum _block
+fi
+
 # Native JPQL/SQL queries must use bind parameters, never string concatenation (CLAUDE.md §17).
 # WARN (not BLOCK): pre-existing hits in ApiException.java (message concat, not a query) and
 # BqlController.java (JPQL builder debt — TD-004). Flip to BLOCK after remediation.

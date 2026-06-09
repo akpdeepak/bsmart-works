@@ -109,7 +109,7 @@ export const MODES = [
     { id: 'marketplace',     label: 'Marketplace',      Icon: Package },
     { id: 'developerportal', label: 'Developer Portal', Icon: Code2 },
   ] },
-  { id: 'setup', label: 'Set up', Icon: Settings, surfaces: [
+  { id: 'setup', label: 'Settings', Icon: Settings, surfaces: [
     { id: 'workspace',     label: 'Settings',           Icon: Settings },
     { id: 'settings3',     label: 'Workflows & Fields', Icon: SlidersHorizontal },
     { id: 'aicontrol',     label: 'AI Control',         Icon: Sparkles },

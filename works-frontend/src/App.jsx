@@ -86,7 +86,6 @@ import MarketplaceView from '@/views/marketplace-view';
 import DeveloperPortalView from '@/views/developer-portal-view';
 import KnowledgeTemplatesView from '@/views/knowledge-templates-view';
 import SupportInboxView from '@/views/support-inbox-view';
-import { LanguageSwitcher } from '@/components/works/organisms/language-switcher';
 import { BlockEditor } from '@/components/BlockEditor';
 // PortalFormDesigner moved to service-view.jsx (TD-003).
 import BacklogView from '@/views/backlog-view';
@@ -213,6 +212,7 @@ export default function App() {
   const [density, setDensity]           = useState('comfortable');
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false); // off-canvas drawer under md (G1)
+  const [subRailCollapsed, setSubRailCollapsed] = useState(false);
 
   // Dark mode
   const [darkMode, setDarkMode]         = useState(() => localStorage.getItem('bSmartTheme') === 'dark');
@@ -1091,7 +1091,7 @@ export default function App() {
       .then(r => r.json()).then(d => setScopeChanges(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchSavedFilters() {
-    api.raw(`/saved-filters`)
+    api.raw(`/saved-filters?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
       .then(r => r.json()).then(d => setSavedFilters(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
@@ -2186,7 +2186,7 @@ export default function App() {
 
   const handleSaveFilter = () => {
     if (!saveFilterName.trim()) return;
-    api.raw(`/saved-filters`, {
+    api.raw(`/saved-filters?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, {
       method: 'POST',
       body: JSON.stringify({ name: saveFilterName, filterJson: JSON.stringify(activeFilter), isShared: false })
     }).then(r => r.json()).then(f => { setSavedFilters(prev => [...prev, f]); setSaveFilterName(''); setShowSaveFilter(false); });
@@ -2621,7 +2621,7 @@ export default function App() {
               left  = brand + workspace switcher + BQL chip
               center= command-palette intent pill (⌘K)
               right = role lens + Ask AI + create + notifications + account */}
-        <header className="h-14 bg-brand-navy border-b border-white/10 grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-3 md:px-4 flex-shrink-0 relative z-sticky">
+        <header className="h-14 bg-brand-navy border-b border-white/10 grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 md:px-4 flex-shrink-0 relative z-sticky">
           {/* LEFT */}
           <div className="flex items-center gap-2 min-w-0 justify-self-start">
             <button
@@ -2632,9 +2632,14 @@ export default function App() {
               className="md:hidden -ml-1 p-1.5 rounded-md text-white/80 hover:bg-white/10 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
               <PanelLeft aria-hidden="true" className="h-5 w-5" />
             </button>
-            <span className="flex items-center shrink-0 select-none pr-1">
-              <Logo size="sm" variant="reverse" />
-            </span>
+            <button
+              type="button"
+              aria-label="Go to home dashboard"
+              onClick={() => navigate('dashboard')}
+              className="flex items-center shrink-0 select-none p-0.5 rounded-md hover:bg-white/10 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            >
+              <Logo size="lg" variant="reverse" />
+            </button>
 
             {/* Workspace switcher chip */}
             <div className="relative shrink-0" ref={wsRef}>
@@ -2701,13 +2706,13 @@ export default function App() {
             )}
           </div>
 
-          {/* CENTER — command-palette intent pill */}
-          <div className="justify-self-center w-full max-w-lg flex justify-center px-2">
+          {/* CENTER — command-palette intent pill (fills all space between left and right zones) */}
+          <div className="flex justify-center px-2 min-w-0">
             <button
               type="button"
               onClick={() => setPaletteOpen(true)}
               aria-label="Search, create, or ask anything"
-              className="flex items-center gap-2.5 h-9 w-full px-3 rounded-lg bg-white text-left shadow-sm hover:shadow-md transition-shadow duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50">
+              className="flex items-center gap-2.5 h-9 w-full max-w-3xl px-3 rounded-lg bg-white text-left shadow-sm hover:shadow-md transition-shadow duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50">
               <Search aria-hidden="true" className="h-4 w-4 text-neutral-500 shrink-0" />
               <span className="flex-1 truncate text-sm text-neutral-400">Search, create, or ask anything…</span>
               <kbd className="hidden sm:inline text-xs font-mono bg-neutral-100 rounded px-1.5 py-0.5 border border-neutral-200 text-neutral-600">⌘K</kbd>
@@ -2772,7 +2777,6 @@ export default function App() {
                 + Create
               </Button>
             )}
-            <div className="hidden md:flex"><LanguageSwitcher /></div>
             <button onClick={() => { navigate('notifications'); }}
               aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
               className="relative w-9 h-9 rounded-md flex items-center justify-center text-white/80 hover:bg-white/10 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
@@ -2825,6 +2829,8 @@ export default function App() {
               onNavigate={navigate}
               badges={{ myworks: myItems.length, notifications: unreadCount }}
               dots={{ sprint: Boolean(sprints.find(s => s.status === 'ACTIVE')) }}
+              collapsed={subRailCollapsed}
+              onToggleCollapsed={() => setSubRailCollapsed(c => !c)}
             />
           </aside>
 

@@ -1,11 +1,11 @@
-import { Command, Star } from 'lucide-react';
+import { Command, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/works/atoms/badge';
 import { getMode, visibleSurfaces } from '@/lib/nav-model';
 
 // Organism — the white contextual sub-rail (mockup second column). Shows the active mode's title
-// and its surfaces; the current surface gets a brand-orange left accent + navy label. A footer
-// reminds the user the command palette reaches every surface.
+// and its surfaces with icons matching the ModeRail icon set. A collapse toggle narrows the rail
+// to icon-only when the user needs more horizontal real-estate.
 //
 // `badges` / `dots` are optional maps keyed by surface id, so live counts (My Works, Notifications)
 // and the active-sprint dot carry over from the old sidebar. Design: tokens only, all five states,
@@ -13,16 +13,77 @@ import { getMode, visibleSurfaces } from '@/lib/nav-model';
 
 // `primary` (optional) is the set of surface ids that are core to an active role preview; those
 // get a small star so an Admin/Owner previewing a role sees what that role leans on.
-export function SubRail({ activeMode, activeView, activeExtra, onNavigate, visibility, primary, badges = {}, dots = {} }) {
+export function SubRail({ activeMode, activeView, activeExtra, onNavigate, visibility, primary, badges = {}, dots = {}, collapsed, onToggleCollapsed }) {
   const mode = getMode(activeMode);
   const surfaces = visibleSurfaces(activeMode, visibility);
   const primarySet = primary instanceof Set ? primary : new Set(primary || []);
 
+  // ── Collapsed: icon-only narrow strip ─────────────────────────────────────
+  if (collapsed) {
+    return (
+      <div className="flex h-full w-12 shrink-0 flex-col overflow-y-auto border-r border-neutral-200 bg-white py-2 dark:border-neutral-700 dark:bg-neutral-900">
+        <button
+          type="button"
+          aria-label="Expand navigation panel"
+          onClick={onToggleCollapsed}
+          className="flex w-full items-center justify-center py-2 mb-1 text-neutral-400 hover:text-brand-navy transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+        >
+          <ChevronRight aria-hidden="true" className="h-4 w-4" />
+        </button>
+        <nav aria-label={`${mode.label} surfaces`} className="flex flex-col gap-0.5 px-1">
+          {surfaces.map((s) => {
+            const active = activeView === s.id;
+            const Icon = s.Icon;
+            const badge = badges[s.id];
+            return (
+              <button
+                key={s.id}
+                type="button"
+                title={s.label}
+                aria-label={badge != null && badge > 0 ? `${s.label} (${badge > 9 ? '9+' : badge})` : s.label}
+                aria-current={active ? 'page' : undefined}
+                onClick={() => onNavigate?.(s.id)}
+                className={cn(
+                  'relative flex w-full items-center justify-center rounded-md py-2.5 transition-colors duration-fast',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40',
+                  active
+                    ? 'bg-neutral-100 text-brand-navy dark:bg-neutral-800 dark:text-neutral-100'
+                    : 'text-neutral-500 hover:bg-neutral-50 dark:text-neutral-400 dark:hover:bg-neutral-800'
+                )}
+              >
+                {active && (
+                  <span aria-hidden="true" className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-brand-orange" />
+                )}
+                {Icon && <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />}
+                {badge != null && badge > 0 && (
+                  <span className="absolute -top-0.5 right-0.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-brand-orange text-white text-2xs font-bold flex items-center justify-center leading-none">
+                    {badge > 9 ? '9+' : badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+    );
+  }
+
+  // ── Expanded: icons + labels ───────────────────────────────────────────────
   return (
     <div className="flex h-full w-subrail shrink-0 flex-col overflow-y-auto border-r border-neutral-200 bg-white px-2.5 py-3 dark:border-neutral-700 dark:bg-neutral-900">
-      <h2 className="px-2 pb-3 pt-0.5 text-sm font-bold text-brand-navy dark:text-neutral-100">
-        {mode.label}
-      </h2>
+      <div className="flex items-center justify-between px-2 pb-3 pt-0.5">
+        <h2 className="text-sm font-bold text-brand-navy dark:text-neutral-100">
+          {mode.label}
+        </h2>
+        <button
+          type="button"
+          aria-label="Collapse navigation panel"
+          onClick={onToggleCollapsed}
+          className="p-0.5 rounded text-neutral-400 hover:text-brand-navy transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+        >
+          <ChevronLeft aria-hidden="true" className="h-4 w-4" />
+        </button>
+      </div>
 
       {/* Orientation row — when the current view is a lens cockpit / BQL (not pinned to this mode's
           surfaces), show it highlighted so the nav still answers "where am I?". */}
@@ -41,6 +102,7 @@ export function SubRail({ activeMode, activeView, activeExtra, onNavigate, visib
       <nav aria-label={`${mode.label} surfaces`} className="space-y-0.5">
         {surfaces.map((s) => {
           const active = activeView === s.id;
+          const Icon = s.Icon;
           const badge = badges[s.id];
           const dot = dots[s.id];
           return (
@@ -61,6 +123,15 @@ export function SubRail({ activeMode, activeView, activeExtra, onNavigate, visib
                 <span
                   aria-hidden="true"
                   className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-brand-orange"
+                />
+              )}
+              {Icon && (
+                <Icon
+                  aria-hidden="true"
+                  className={cn(
+                    'h-4 w-4 shrink-0',
+                    active ? 'text-brand-navy dark:text-neutral-100' : 'text-neutral-500 dark:text-neutral-400'
+                  )}
                 />
               )}
               <span className="flex-1 truncate">{s.label}</span>

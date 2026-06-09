@@ -3,6 +3,7 @@ import { api } from '@/lib/apiClient';
 import { Button } from '@/components/works/button';
 import { Avatar } from '@/components/works/atoms/avatar';
 import { RoleBadge } from '@/components/works/role-badge';
+import { LanguageSwitcher } from '@/components/works/organisms/language-switcher';
 
 // Workspace Settings view — extracted from the App.jsx monolith (UX finding A3/H2). Behaviour-
 // preserving: the parent owns members/branding/MFA/notification state and all the handlers.
@@ -225,6 +226,13 @@ export default function WorkspaceView({
                     {projectMemberMsg && <p className="text-xs text-semantic-success mt-2">{projectMemberMsg}</p>}
                   </>
                 )}
+              </div>
+
+              {/* Language & Region */}
+              <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 mt-6">
+                <h2 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">Language &amp; Region</h2>
+                <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">Choose your preferred display language</p>
+                <LanguageSwitcher />
               </div>
             </div>
   );

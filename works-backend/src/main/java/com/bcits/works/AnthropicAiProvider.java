@@ -2,7 +2,7 @@ package com.bcits.works;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
@@ -31,7 +31,7 @@ import java.util.Map;
  */
 @Component
 @Primary
-@ConditionalOnProperty(name = "ai.anthropic.api-key")
+@ConditionalOnExpression("!'${ai.anthropic.api-key:}'.trim().isEmpty()")
 public class AnthropicAiProvider implements AiProvider {
 
     static final String HAIKU_MODEL = "claude-haiku-4-5";

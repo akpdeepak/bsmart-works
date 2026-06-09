@@ -16,15 +16,11 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Core React runtime in its own chunk — tiny, long-cached.
-          'vendor-react': ['react', 'react-dom'],
-          // TanStack Query (data fetching) — changes independently of app code.
-          'vendor-query': ['@tanstack/react-query'],
-          // Lucide icon tree — large but stable; isolate so app chunks stay small.
-          'vendor-icons': ['lucide-react'],
-          // Chart library — only loaded when dashboards/performance panels are rendered.
-          'vendor-charts': ['recharts'],
+        manualChunks(id) {
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) return 'vendor-react';
+          if (id.includes('node_modules/@tanstack/react-query')) return 'vendor-query';
+          if (id.includes('node_modules/lucide-react')) return 'vendor-icons';
+          if (id.includes('node_modules/recharts')) return 'vendor-charts';
         },
       },
     },

@@ -90,14 +90,14 @@ export default function ScrumMasterCockpitView({
                         <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{imp.title}</span>
                       </div>
                       {imp.description && <p className="text-xs text-neutral-500 mb-1">{imp.description}</p>}
-                      <p className="text-[11px] text-neutral-600 dark:text-neutral-400">{imp.category || 'Uncategorized'} · raised {imp.raisedAt ? new Date(imp.raisedAt).toLocaleDateString() : '—'}</p>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400">{imp.category || 'Uncategorized'} · raised {imp.raisedAt ? new Date(imp.raisedAt).toLocaleDateString() : '—'}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
                       <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${imp.status === 'RESOLVED' ? 'bg-semantic-success text-white' : imp.status === 'ESCALATED' ? 'bg-semantic-danger text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{imp.status}</span>
                       {imp.status !== 'RESOLVED' && (
                         <div className="flex gap-2">
-                          {imp.status !== 'ESCALATED' && <button onClick={() => updateImpediment(imp, { status: 'ESCALATED', escalated: true })} className="text-[11px] text-semantic-danger hover:underline">Escalate</button>}
-                          <button onClick={() => updateImpediment(imp, { status: 'RESOLVED' })} className="text-[11px] text-brand-navy hover:underline">Resolve</button>
+                          {imp.status !== 'ESCALATED' && <button onClick={() => updateImpediment(imp, { status: 'ESCALATED', escalated: true })} className="text-xs text-semantic-danger hover:underline">Escalate</button>}
+                          <button onClick={() => updateImpediment(imp, { status: 'RESOLVED' })} className="text-xs text-brand-navy hover:underline">Resolve</button>
                         </div>
                       )}
                     </div>
@@ -139,7 +139,7 @@ export default function ScrumMasterCockpitView({
                     </button>))}</div>}
             </div>
           ) : (
-            <div className="max-w-[880px]">
+            <div className="max-w-reading">
               <button onClick={() => setActiveStandup(null)} className="text-xs text-brand-navy hover:underline mb-3"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />All standups</button>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Standup — {activeStandup.session.status}</h3>
@@ -331,8 +331,8 @@ export default function ScrumMasterCockpitView({
                         <div key={n.id} className="bg-neutral-50 dark:bg-neutral-700 rounded-md p-2">
                           <p className="text-xs text-neutral-800 dark:text-neutral-100">{n.content}</p>
                           <div className="flex items-center gap-3 mt-1">
-                            <button onClick={() => voteRetroNote(n.id)} className="text-[11px] text-brand-navy hover:underline" aria-label="Upvote"><ChevronUp className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /> {n.votes}</button>
-                            {!n.convertedActionItemId && <button onClick={() => convertRetroNote(n.id)} className="text-[11px] text-semantic-success hover:underline" aria-label="Convert to action item"><ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" />Action</button>}
+                            <button onClick={() => voteRetroNote(n.id)} className="text-xs text-brand-navy hover:underline" aria-label="Upvote"><ChevronUp className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /> {n.votes}</button>
+                            {!n.convertedActionItemId && <button onClick={() => convertRetroNote(n.id)} className="text-xs text-semantic-success hover:underline" aria-label="Convert to action item"><ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" />Action</button>}
                             {n.convertedActionItemId && <span className="text-xs text-neutral-600 dark:text-neutral-400"><Check className="inline-block h-3 w-3 align-text-bottom" aria-hidden="true" /> action</span>}
                           </div>
                         </div>

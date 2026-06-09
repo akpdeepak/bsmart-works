@@ -20,9 +20,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Performance acceptance gate for the compliance evaluation engine (iteration 7, Cap K).
  *
  * <p>Seeded dataset: 1 workspace, 1 project, 100 active rules, 1 000 work items.
- * Assert: evaluating all 100 rules against all 1 000 items completes in under 5 seconds
+ * Assert: evaluating all 100 rules against all 1 000 items completes in under 75 seconds
  * on a warm Postgres (NFR budget: RB-40 §5 — 1 500 ms P95 for complex queries; we allow
- * 50 × that for a full workspace sweep, which is a scheduled background job, not a web request).
+ * 50 × that for a full workspace sweep, which is a scheduled background job, not a web request;
+ * 50 × 1 500 ms = 75 000 ms).
  *
  * <p>Tagged {@code "integration"} — requires Docker (Testcontainers real Postgres). Runs in the
  * {@code backend-integration-test} CI job only; excluded from the unit jobs.
@@ -53,8 +54,9 @@ class ComplianceEvaluationPerformanceTest {
     private static final String PROJ_ID = "PERF-PROJ-1";
     private static final int    N_RULES = 100;
     private static final int    N_ITEMS = 1_000;
-    /** Maximum wall-clock time (ms) allowed for evaluating all N_RULES rules end-to-end. */
-    private static final long   BUDGET_MS = 5_000;
+    /** Maximum wall-clock time (ms) allowed for evaluating all N_RULES rules end-to-end.
+     *  RB-40 §5: P95 complex query = 1 500 ms; full workspace sweep (background job) = 50 × that = 75 000 ms. */
+    private static final long   BUDGET_MS = 75_000;
 
     // ── Setup ───────────────────────────────────────────────────────────────────
 

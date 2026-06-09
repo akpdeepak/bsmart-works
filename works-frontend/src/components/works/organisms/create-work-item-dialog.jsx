@@ -7,6 +7,12 @@ import { cn } from '@/lib/utils';
 import { ALL_TYPES, CATEGORIES, TYPES_BY_KEY, resolveTypeIcon } from '@/lib/work-item-types';
 import { getEffectiveSchema, defaultFormData } from '@/lib/type-field-schemas';
 
+// Pre-compute icon lookup at module load time so FormStep never creates a component
+// reference during render (avoids react-hooks/static-components lint error).
+const FORM_TYPE_ICONS = Object.fromEntries(
+  Object.entries(TYPES_BY_KEY).map(([key, t]) => [key, resolveTypeIcon(t.icon) ?? Package])
+);
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function typesByCategory(cat) {
@@ -267,6 +273,7 @@ const RAID_TYPES = ['RISK', 'ISSUE', 'ASSUMPTION', 'DEPENDENCY'];
 
 function FormStep({ typeKey, formData, onChange, onBack, onSubmit, projects, users, workItems, error }) {
   const typeDef = TYPES_BY_KEY[typeKey];
+  const Icon = FORM_TYPE_ICONS[typeKey] ?? Package;
   const schema = getEffectiveSchema(typeKey);
   const isRaid = RAID_TYPES.includes(typeKey);
 
@@ -430,23 +437,17 @@ function FormStep({ typeKey, formData, onChange, onBack, onSubmit, projects, use
 }
 
 // ── Main dialog ───────────────────────────────────────────────────────────────
+// Two-layer design: the outer shell renders nothing when closed (so inner state
+// resets automatically on re-open — no useEffect + setState needed).
 
-export function CreateWorkItemDialog({ isOpen, onClose, onSubmit, projects, users, workItems }) {
+function CreateWorkItemDialogInner({ onClose, onSubmit, projects, users, workItems }) {
   const [step, setStep] = React.useState(1);
   const [category, setCategory] = React.useState(null);
   const [typeKey, setTypeKey] = React.useState(null);
   const [formData, setFormData] = React.useState({});
   const [error, setError] = React.useState('');
-
-  // Reset state when dialog is opened/closed.
-  React.useEffect(() => {
-    if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setStep(1); setCategory(null); setTypeKey(null); setFormData({}); setError('');
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
+  // No reset useEffect needed — the outer shell unmounts this component when isOpen
+  // goes false, so all state resets naturally when it remounts on next open.
 
   const handleCategorySelect = cat => {
     setCategory(cat);
@@ -524,4 +525,10 @@ export function CreateWorkItemDialog({ isOpen, onClose, onSubmit, projects, user
       )}
     </Modal>
   );
+}
+
+/** Public export — renders nothing when closed so inner state resets on each open. */
+export function CreateWorkItemDialog({ isOpen, ...rest }) {
+  if (!isOpen) return null;
+  return <CreateWorkItemDialogInner {...rest} />;
 }

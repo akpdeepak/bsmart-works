@@ -246,6 +246,7 @@ public class WorkItemController {
         try { w.setRequestedForId(rs.getString("requested_for_id")); } catch (Exception ignored) {}
         try { var nd = rs.getDate("needed_by_date");
               w.setNeededByDate(nd != null ? nd.toLocalDate() : null); } catch (Exception ignored) {}
+
         try { w.setItemCategory(rs.getString("item_category")); } catch (Exception ignored) {}
         try { w.setSubArea(rs.getString("sub_area")); } catch (Exception ignored) {}
         try { w.setDepartment(rs.getString("department")); } catch (Exception ignored) {}

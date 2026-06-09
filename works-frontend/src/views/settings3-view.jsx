@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useLayoutEffect } from 'react';
 import {
   Settings, Check, Eye, Lock, X, ChevronRight, ArrowRight, LayoutDashboard, FileText,
   GripVertical, ChevronDown, Pencil, EyeOff, Trash2,
@@ -33,6 +33,8 @@ function TypeFieldsTab() {
   const [selectedTypeKey, setSelectedTypeKey] = useState(ALL_TYPES[0]?.typeKey ?? null);
   const [editingKey, setEditingKey]           = useState(null);
   const [editLabel, setEditLabel]             = useState('');
+  const editInputRef = useRef(null);
+  useLayoutEffect(() => { if (editingKey) editInputRef.current?.focus(); }, [editingKey]);
   const [showAddForm, setShowAddForm]         = useState(false);
   const [addForm, setAddForm] = useState({ label: '', type: 'text', required: false, options: '' });
 
@@ -174,7 +176,7 @@ function TypeFieldsTab() {
                   <div className="flex-1 min-w-0">
                     {editingKey === f.key ? (
                       <div className="flex items-center gap-2">
-                        <input value={editLabel}
+                        <input ref={editInputRef} value={editLabel}
                           onChange={e => setEditLabel(e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingKey(null); }}
                           className="text-sm font-medium border-b border-brand-navy outline-none bg-transparent w-40"
@@ -234,14 +236,14 @@ function TypeFieldsTab() {
                 <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">Add custom field</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="sf-field-name" className="block text-xs font-medium text-neutral-600 mb-1">Field name *</label>
-                    <input id="sf-field-name" type="text" value={addForm.label}
+                    <label htmlFor="tf-add-field-name" className="block text-xs font-medium text-neutral-600 mb-1">Field name *</label>
+                    <input id="tf-add-field-name" type="text" value={addForm.label}
                       onChange={e => setAddForm(p => ({ ...p, label: e.target.value }))}
                       className="input text-sm" placeholder="e.g. Customer Name" />
                   </div>
                   <div>
-                    <label htmlFor="sf-field-type" className="block text-xs font-medium text-neutral-600 mb-1">Field type *</label>
-                    <select id="sf-field-type" value={addForm.type}
+                    <label htmlFor="tf-add-field-type" className="block text-xs font-medium text-neutral-600 mb-1">Field type *</label>
+                    <select id="tf-add-field-type" value={addForm.type}
                       onChange={e => setAddForm(p => ({ ...p, type: e.target.value }))}
                       className="input text-sm">
                       <option value="text">Text</option>
@@ -256,8 +258,8 @@ function TypeFieldsTab() {
                 </div>
                 {addForm.type === 'select' && (
                   <div>
-                    <label htmlFor="sf-field-opts" className="block text-xs font-medium text-neutral-600 mb-1">Options (comma-separated) *</label>
-                    <input id="sf-field-opts" type="text" value={addForm.options}
+                    <label htmlFor="tf-add-field-options" className="block text-xs font-medium text-neutral-600 mb-1">Options (comma-separated) *</label>
+                    <input id="tf-add-field-options" type="text" value={addForm.options}
                       onChange={e => setAddForm(p => ({ ...p, options: e.target.value }))}
                       className="input text-sm" placeholder="e.g. Option A, Option B, Option C" />
                   </div>

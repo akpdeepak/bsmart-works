@@ -36,7 +36,7 @@ const NAV_SECTIONS = [
     { id: 'backlog',  label: 'Backlog',       icon: ListTodo, i18nKey: 'nav.backlog' },
     { id: 'sprint',   label: 'Active Sprint', icon: Zap, i18nKey: 'nav.sprint' },
     { id: 'releases', label: 'Releases',      icon: Rocket },
-    { id: 'projects', label: 'Projects',      icon: FolderKanban },
+    { id: 'projects', label: 'Teams',          icon: FolderKanban },
   ] },
   { id: 'insights', label: 'Insights', items: [
     { id: 'reports',       label: 'Reports',        icon: BarChart2, i18nKey: 'nav.reports' },

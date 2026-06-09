@@ -338,6 +338,128 @@ export function WorkItemDetailPanel({
               />
             </div>
 
+            {/* TYPE-SPECIFIC FIELDS */}
+            {(() => {
+              const t = (selectedItem.type || '').toUpperCase();
+              const TYPE_SPECIFIC = new Set(['BUG','RISK','ISSUE','ASSUMPTION','DEPENDENCY','INCIDENT','HR_SERVICE_REQUEST','IT_SERVICE_REQUEST']);
+              if (!TYPE_SPECIFIC.has(t)) return null;
+
+              const upd = patch => { const u = { ...selectedItem, ...patch }; setSelectedItem(u); handleUpdateItem(u); };
+              const tf = (label, field, rows = 2) => (
+                <div className="col-span-2">
+                  <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">{label}</label>
+                  <textarea rows={rows} className="input resize-none"
+                    value={selectedItem[field] || ''}
+                    onChange={e => setSelectedItem({ ...selectedItem, [field]: e.target.value })}
+                    onBlur={e => { const u = { ...selectedItem, [field]: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }} />
+                </div>
+              );
+              const sf = (label, field, opts) => (
+                <div>
+                  <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">{label}</label>
+                  <select className="input" value={selectedItem[field] || ''} onChange={e => upd({ [field]: e.target.value || null })}>
+                    <option value="">— select —</option>
+                    {opts.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+              );
+              const nf = (label, field, placeholder = '') => (
+                <div>
+                  <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">{label}</label>
+                  <input type="text" className="input" placeholder={placeholder}
+                    value={selectedItem[field] || ''}
+                    onChange={e => setSelectedItem({ ...selectedItem, [field]: e.target.value })}
+                    onBlur={e => { const u = { ...selectedItem, [field]: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }} />
+                </div>
+              );
+              const df = (label, field) => (
+                <div>
+                  <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">{label}</label>
+                  <input type="date" className="input" value={selectedItem[field] || ''} onChange={e => upd({ [field]: e.target.value || null })} />
+                </div>
+              );
+              const uf = (label, field) => (
+                <div>
+                  <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">{label}</label>
+                  <select className="input" value={selectedItem[field] || ''} onChange={e => upd({ [field]: e.target.value || null })}>
+                    <option value="">— unassigned —</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
+                  </select>
+                </div>
+              );
+
+              const sectionLabel = { BUG: 'Bug Details', RISK: 'Risk Details', ISSUE: 'Issue Details',
+                ASSUMPTION: 'Assumption Details', DEPENDENCY: 'Dependency Details',
+                INCIDENT: 'Incident Details', HR_SERVICE_REQUEST: 'HR Service Request Details',
+                IT_SERVICE_REQUEST: 'IT Service Request Details' }[t];
+
+              return (
+                <div className="border-t border-neutral-100 dark:border-neutral-800 pt-4">
+                  <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">{sectionLabel}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {t === 'BUG' && <>
+                      {uf('Reporter', 'reporterId')}
+                      {sf('Severity', 'severity', ['Critical','High','Medium','Low'])}
+                      {sf('Environment', 'environmentDetail', ['Development','Staging','UAT','Production'])}
+                      {sf('Regression Risk', 'regressionRisk', ['Yes','No','Not Assessed'])}
+                      {tf('Steps to Reproduce', 'stepsToReproduce', 3)}
+                      {tf('Expected Behavior', 'expectedBehavior')}
+                      {tf('Actual Behavior', 'actualBehavior')}
+                      {nf('Affected Version', 'affectedVersion')}
+                      {nf('Fixed In Version', 'fixedInVersion')}
+                    </>}
+                    {t === 'RISK' && <>
+                      {sf('Probability', 'probability', ['High','Medium','Low'])}
+                      {sf('Impact Level', 'impactLevel', ['High','Medium','Low'])}
+                      {selectedItem.riskScore != null && (
+                        <div>
+                          <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Risk Score</label>
+                          <p className="input bg-neutral-50 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-center font-mono font-semibold">{selectedItem.riskScore}</p>
+                        </div>
+                      )}
+                      {tf('Mitigation Plan', 'mitigationPlan', 3)}
+                      {tf('Contingency Plan', 'contingencyPlan')}
+                    </>}
+                    {t === 'ISSUE' && <>
+                      {sf('Impact Level', 'impactLevel', ['High','Medium','Low'])}
+                      {tf('Root Cause', 'rootCause', 3)}
+                      {tf('Resolution Summary', 'resolutionSummary')}
+                    </>}
+                    {t === 'ASSUMPTION' && <>
+                      {tf('Basis / Rationale', 'basisRationale', 3)}
+                      {df('Validation Date', 'validationDate')}
+                      {tf('Risk if Wrong', 'riskIfWrong')}
+                    </>}
+                    {t === 'DEPENDENCY' && <>
+                      {sf('Dependency Type', 'dependencyType', ['Internal','External'])}
+                      {df('Expected Resolution', 'expectedResolutionDate')}
+                      {tf('Impact if Delayed', 'impactIfDelayed')}
+                    </>}
+                    {t === 'INCIDENT' && <>
+                      {uf('Reporter', 'reporterId')}
+                      {sf('Response Speed', 'responseSpeed', ['Immediate','High','Normal','Planned'])}
+                      {sf('Business Impact', 'businessImpact', ['Organisation-wide','Department','Team','Individual'])}
+                      {sf('Severity', 'severity', ['Critical','High','Medium','Low'])}
+                      {nf('Affected Area', 'itemCategory', 'e.g. Billing, Field Ops')}
+                      {nf('Affected System', 'affectedSystem')}
+                      {nf('Responding Team', 'respondingTeam')}
+                      {tf('Root Cause', 'rootCause', 3)}
+                      {tf('Resolution Summary', 'resolutionSummary')}
+                    </>}
+                    {(t === 'HR_SERVICE_REQUEST' || t === 'IT_SERVICE_REQUEST') && <>
+                      {uf('Requested For', 'requestedForId')}
+                      {uf('Approver', 'approverId')}
+                      {t === 'HR_SERVICE_REQUEST' && nf('Department', 'department')}
+                      {t === 'IT_SERVICE_REQUEST' && nf('Affected System', 'affectedSystem')}
+                      {nf('Category', 'itemCategory', 'e.g. Access Request')}
+                      {df('Needed By', 'neededByDate')}
+                      {tf('Business Justification', 'businessJustification')}
+                    </>}
+                  </div>
+                </div>
+              );
+            })()}
+
             {anyCapabilityEnabled(aiCapabilities) && (
               <div className="flex flex-wrap gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
                 <Button

@@ -1,6 +1,27 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
+/* Tailwind v4 — custom theme tokens (extend.width + extend.zIndex from tailwind.config.js).
+   @config loads v3-compat plugins/presets but does NOT auto-generate extend.width utilities;
+   those must be declared here via @theme so v4 registers the CSS custom properties. */
+@theme {
+  --width-panel:               360px;
+  --width-sidebar:             240px;
+  --width-sidebar-collapsed:   48px;
+  --width-rail:                72px;
+  --width-subrail:             208px;
+  --width-reading:             880px;
+}
+
+/* Tailwind v4: @theme defines vars but does NOT auto-generate w-* utilities for --width-*
+   (only --spacing-* / --color-* etc. are auto-mapped). Declare each utility explicitly. */
+@utility w-panel               { width: var(--width-panel); }
+@utility w-sidebar             { width: var(--width-sidebar); }
+@utility w-sidebar-collapsed   { width: var(--width-sidebar-collapsed); }
+@utility w-rail                { width: var(--width-rail); }
+@utility w-subrail             { width: var(--width-subrail); }
+@utility max-w-reading         { max-width: var(--width-reading); }
+
 @layer base {
   * { box-sizing: border-box; }
   body {

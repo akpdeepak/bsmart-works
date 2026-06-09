@@ -13,7 +13,7 @@ import {
   Shield, Construction,
   MessageCircle, RefreshCw, Repeat, Megaphone,
   Eye, EyeOff, Target, Star, Clock, Reply,
-  X, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronUp,
+  X, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronDown, ChevronUp,
   Upload, IndentIncrease, IndentDecrease,
   CornerDownRight, Image as ImageIcon,
   Activity, BellRing, Keyboard,
@@ -60,7 +60,8 @@ import { api } from '@/lib/apiClient';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { isIconComponent, onPressKey, renderMd } from '@/lib/utils';
 import { EmptyState } from '@/components/works/atoms/empty-state';
-import { TYPES, TYPE_ICON_SET, TYPE_ICON_KEYS } from '@/lib/work-item-types';
+import { TYPES, TYPE_ICON_SET, TYPE_ICON_KEYS, ALL_TYPES, TYPES_BY_KEY, MOVABLE_TYPES } from '@/lib/work-item-types';
+import { CreateWorkItemDialog } from '@/components/works/organisms/create-work-item-dialog';
 import { BRAND_NAVY, BRAND_ORANGE, NEUTRAL_600 } from '@/lib/brand-tokens';
 import { TypeBadge, TypeIcon } from '@/components/works/work-item-type';
 // PriorityBadge moved to backlog-view.jsx (TD-003)
@@ -221,6 +222,8 @@ export default function App() {
   // RBAC
   const [userRole, setUserRole]         = useState({ role: 'MEMBER', tier: 2, permissions: [], surfaces: null });
   const [roleLoaded, setRoleLoaded]     = useState(false);
+  const [lens, setLens]                 = useState(null); // active role-preview lens id (Admin/Owner only)
+  const [lensOpen, setLensOpen]         = useState(false);
   const can = (perm) => userRole.permissions.includes(perm) || userRole.tier >= 4;
 
   // My Works sub-tab
@@ -250,8 +253,9 @@ export default function App() {
   // Workspace switcher dropdown + multi-workspace tenant context (I01-S02).
   // The active workspace is client-held and server-validated on every request (membership is the
   // isolation guarantee — JWT stays identity-only). Persisted so a reload keeps the same tenant.
-  const [, setWsOpen]                    = useState(false);
+  const [wsOpen, setWsOpen]              = useState(false);
   const wsRef                           = useRef(null);
+  const lensRef                         = useRef(null);
   const [workspaces, setWorkspaces]     = useState([]);
   const [wsLoading, setWsLoading]       = useState(false);
   const [wsError, setWsError]           = useState(false);
@@ -711,7 +715,7 @@ export default function App() {
     Promise.all([
       api.raw(`/work-items`).then(r => r.json()),
       api.raw(`/projects`).then(r => r.json()),
-      api.raw(`/users`).then(r => r.json()),
+      api.raw(`/users?workspaceId=${encodeURIComponent(activeWorkspaceId)}`).then(r => r.json()),
     ]).then(([items, projs, usrs]) => {
       setWorkItems(Array.isArray(items) ? items : []);
       setProjects(Array.isArray(projs) ? projs : []);
@@ -906,28 +910,36 @@ export default function App() {
   };
 
   // WORK ITEMS
-  const handleCreate = () => {
-    if (!newItem.title || newItem.title.length < 3) { setCreateError('Title must be at least 3 characters.'); return; }
-    setCreateError('');
-    const tags = newItem.tags ? newItem.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
-    const projectId = newItem.projectId || (projects.length > 0 ? projects[0].id : 'PROJ-WORKS');
+  const handleCreate = (formData) => {
+    if (!formData.title || formData.title.length < 3) { showToast('Title must be at least 3 characters', 'error'); return; }
+    const projectId = formData.projectId || (projects.length > 0 ? projects[0].id : 'PROJ-WORKS');
     api.send(`/work-items`, {
       method: 'POST',
       body: JSON.stringify({
-        ...newItem,
-        tags,
-        dueDate: newItem.dueDate || null,
-        assigneeId: newItem.assigneeId || null,
-        parentId: newItem.parentId || null,
+        ...formData,
+        dueDate: formData.dueDate || null,
+        startDate: formData.startDate || null,
+        assigneeId: formData.assigneeId || null,
+        parentId: formData.parentId || null,
         projectId,
-        priority: newItem.priority || 'MEDIUM',
+        priority: formData.priority || 'MEDIUM',
       })
     }).then(saved => {
       setWorkItems(prev => [...prev, saved]);
-      setNewItem({ title: '', type: 'Task', description: '', assigneeId: '', dueDate: '', tags: '', priority: 'MEDIUM', parentId: '', projectId: '' });
       setIsCreateOpen(false);
-      showToast('Work item created');
-    }).catch(err => setCreateError(err.message));
+      showToast(`${saved.autoId ? saved.autoId + ' — ' : ''}${saved.title} created`);
+    }).catch(err => showToast(err.message, 'error'));
+  };
+
+  const handleMoveItem = (itemId, newParentId) => {
+    api.send(`/work-items/${itemId}/parent`, {
+      method: 'PATCH',
+      body: JSON.stringify({ newParentId }),
+    }).then(saved => {
+      setWorkItems(prev => prev.map(i => i.id === saved.id ? saved : i));
+      if (selectedItem?.id === saved.id) setSelectedItem(saved);
+      showToast('Item moved');
+    }).catch(err => showToast(err.message, 'error'));
   };
 
   const handleDelete = (id) => {
@@ -1031,7 +1043,7 @@ export default function App() {
         setProjects(prev => [...prev, p]);
         setNewProject({ name: '', keyPrefix: '', description: '' });
         setIsProjectOpen(false);
-        showToast('Project created');
+        showToast('Team created');
       }).catch(err => setCreateError(err.message));
   };
 
@@ -3825,88 +3837,39 @@ export default function App() {
         </Modal>
       )}
 
-      {/* CREATE WORK ITEM MODAL */}
-      {isCreateOpen && (
-        <Modal title="New Work Item" onClose={() => { setIsCreateOpen(false); setCreateError(''); }}>
-          {createError && <div className="text-semantic-danger bg-semantic-danger-surface p-2 text-sm rounded mb-3">{createError}</div>}
-          <div className="space-y-3">
-            <Field label="Title *">
-              <input type="text" value={newItem.title} onChange={e => setNewItem({ ...newItem, title: e.target.value })}
-                className="input" placeholder="What needs to be done?" />
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Type">
-                <select value={newItem.type} onChange={e => setNewItem({ ...newItem, type: e.target.value })} className="input">
-                  {Object.keys(TYPES).map(t => <option key={t}>{t}</option>)}
-                </select>
-              </Field>
-              <Field label="Priority">
-                <select value={newItem.priority} onChange={e => setNewItem({ ...newItem, priority: e.target.value })} className="input">
-                  {['CRITICAL','HIGH','MEDIUM','LOW'].map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </Field>
-              <Field label="Assignee">
-                <select value={newItem.assigneeId} onChange={e => setNewItem({ ...newItem, assigneeId: e.target.value })} className="input">
-                  <option value="">Unassigned</option>
-                  {users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
-                </select>
-              </Field>
-              <Field label="Project">
-                <select value={newItem.projectId} onChange={e => setNewItem({ ...newItem, projectId: e.target.value })} className="input">
-                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </Field>
-            </div>
-            <Field label="Parent Item (optional)">
-              <select value={newItem.parentId} onChange={e => setNewItem({ ...newItem, parentId: e.target.value })} className="input">
-                <option value="">No parent</option>
-                {workItems.filter(i => i.type === 'Epic' || i.type === 'Story').map(i => (
-                  <option key={i.id} value={i.id}>{i.id} — {i.title}</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Due Date">
-              <input type="date" value={newItem.dueDate} onChange={e => setNewItem({ ...newItem, dueDate: e.target.value })} className="input" />
-            </Field>
-            <Field label="Tags (comma separated)">
-              <input type="text" value={newItem.tags} onChange={e => setNewItem({ ...newItem, tags: e.target.value })}
-                className="input" placeholder="frontend, urgent" />
-            </Field>
-            <Field label="Description">
-              <textarea rows={3} value={newItem.description} onChange={e => setNewItem({ ...newItem, description: e.target.value })}
-                className="input resize-none" placeholder="Optional description... (supports **bold**, *italic*, - bullets)" />
-            </Field>
-          </div>
-          <div className="flex justify-end gap-3 mt-5">
-            <Button variant="ghost" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-            <Button variant="action" onClick={handleCreate}>Create Item</Button>
-          </div>
-        </Modal>
-      )}
+      {/* CREATE WORK ITEM DIALOG — 3-step: Category → Type → Form */}
+      <CreateWorkItemDialog
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSubmit={handleCreate}
+        projects={projects}
+        users={users}
+        workItems={workItems}
+      />
 
-      {/* CREATE PROJECT MODAL */}
+      {/* CREATE TEAM MODAL */}
       {isProjectOpen && (
-        <Modal title="New Project" onClose={() => { setIsProjectOpen(false); setCreateError(''); }}>
+        <Modal title="New Team" onClose={() => { setIsProjectOpen(false); setCreateError(''); }}>
           {createError && <div className="text-semantic-danger bg-semantic-danger-surface p-2 text-sm rounded mb-3">{createError}</div>}
           <div className="space-y-3">
-            <Field label="Project Name *">
+            <Field label="Team Name *">
               <input type="text" value={newProject.name} onChange={e => setNewProject({ ...newProject, name: e.target.value })}
-                className="input" placeholder="e.g. WEB Portal" />
+                className="input" placeholder="e.g. Platform Team" />
             </Field>
-            <Field label="Key Prefix *">
+            <Field label="Team Key *">
               <input type="text" maxLength={5} value={newProject.keyPrefix}
                 onChange={e => setNewProject({ ...newProject, keyPrefix: e.target.value.toUpperCase() })}
-                className="input" placeholder="e.g. WEB" />
-              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">3–5 uppercase letters used as item prefix (e.g. WEB-1234)</p>
+                className="input" placeholder="e.g. PLAT" />
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">2–5 uppercase letters — identifies this team (e.g. PLAT)</p>
             </Field>
             <Field label="Description">
               <textarea rows={2} value={newProject.description} onChange={e => setNewProject({ ...newProject, description: e.target.value })}
-                className="input resize-none" placeholder="What is this project about?" />
+                className="input resize-none" placeholder="What does this team work on?" />
             </Field>
           </div>
           <div className="flex justify-end gap-3 mt-5">
             <Button variant="ghost" onClick={() => setIsProjectOpen(false)}>Cancel</Button>
-            <Button variant="action" onClick={handleCreateProject}>Create Project</Button>
+            <Button variant="action" onClick={handleCreateProject}>Create Team</Button>
           </div>
         </Modal>
       )}

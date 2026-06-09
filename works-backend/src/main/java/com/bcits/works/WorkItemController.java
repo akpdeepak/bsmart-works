@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -15,9 +16,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Tag(name = "Work Items", description = "CRUD, search, backlog ordering, and trash management for work items")
 @RestController
@@ -210,6 +213,7 @@ public class WorkItemController {
     private WorkItem mapRow(java.sql.ResultSet rs, int row) throws java.sql.SQLException {
         WorkItem w = new WorkItem();
         w.setId(rs.getString("id"));
+        w.setAutoId(rs.getString("auto_id"));
         w.setTitle(rs.getString("title"));
         w.setStatus(rs.getString("status"));
         w.setType(rs.getString("type"));
@@ -218,9 +222,54 @@ public class WorkItemController {
         w.setStoryPoints(rs.getObject("story_points") != null ? rs.getInt("story_points") : 0);
         w.setPriority(rs.getString("priority"));
         w.setDueDate(rs.getDate("due_date") != null ? rs.getDate("due_date").toLocalDate() : null);
+        w.setStartDate(rs.getDate("start_date") != null ? rs.getDate("start_date").toLocalDate() : null);
         w.setProjectId(rs.getString("project_id"));
         w.setParentId(rs.getString("parent_id"));
         w.setAcceptanceCriteria(rs.getString("acceptance_criteria"));
+        w.setVersion(rs.getObject("version") != null ? rs.getInt("version") : 0);
+        w.setDescription(rs.getString("description"));
+        // Type-specific fields (nullable; absent on old rows before V68)
+        try { w.setReporterId(rs.getString("reporter_id")); } catch (Exception ignored) {}
+        try { w.setSeverity(rs.getString("severity")); } catch (Exception ignored) {}
+        try { w.setEnvironmentDetail(rs.getString("environment_detail")); } catch (Exception ignored) {}
+        try { w.setBusinessImpact(rs.getString("business_impact")); } catch (Exception ignored) {}
+        try { w.setResponseSpeed(rs.getString("response_speed")); } catch (Exception ignored) {}
+        try { w.setRespondingTeam(rs.getString("responding_team")); } catch (Exception ignored) {}
+        try { w.setResolutionType(rs.getString("resolution_type")); } catch (Exception ignored) {}
+        try { w.setRootCause(rs.getString("root_cause")); } catch (Exception ignored) {}
+        try { w.setProbability(rs.getString("probability")); } catch (Exception ignored) {}
+        try { w.setImpactLevel(rs.getString("impact_level")); } catch (Exception ignored) {}
+        try { w.setRiskScore(rs.getObject("risk_score") != null ? rs.getShort("risk_score") : null); } catch (Exception ignored) {}
+        try { w.setDependencyType(rs.getString("dependency_type")); } catch (Exception ignored) {}
+        try { w.setSourceItemId(rs.getString("source_item_id")); } catch (Exception ignored) {}
+        try { w.setTargetItemId(rs.getString("target_item_id")); } catch (Exception ignored) {}
+        try { w.setApproverId(rs.getString("approver_id")); } catch (Exception ignored) {}
+        try { w.setRequestedForId(rs.getString("requested_for_id")); } catch (Exception ignored) {}
+        try { w.setNeededByDate(rs.getDate("needed_by_date") != null ? rs.getDate("needed_by_date").toLocalDate() : null); } catch (Exception ignored) {}
+        try { w.setItemCategory(rs.getString("item_category")); } catch (Exception ignored) {}
+        try { w.setSubArea(rs.getString("sub_area")); } catch (Exception ignored) {}
+        try { w.setDepartment(rs.getString("department")); } catch (Exception ignored) {}
+        try { w.setRegressionRisk(rs.getString("regression_risk")); } catch (Exception ignored) {}
+        try { w.setStepsToReproduce(rs.getString("steps_to_reproduce")); } catch (Exception ignored) {}
+        try { w.setExpectedBehavior(rs.getString("expected_behavior")); } catch (Exception ignored) {}
+        try { w.setActualBehavior(rs.getString("actual_behavior")); } catch (Exception ignored) {}
+        try { w.setAffectedVersion(rs.getString("affected_version")); } catch (Exception ignored) {}
+        try { w.setFixedInVersion(rs.getString("fixed_in_version")); } catch (Exception ignored) {}
+        try { w.setFixDescription(rs.getString("fix_description")); } catch (Exception ignored) {}
+        try { w.setMitigationPlan(rs.getString("mitigation_plan")); } catch (Exception ignored) {}
+        try { w.setContingencyPlan(rs.getString("contingency_plan")); } catch (Exception ignored) {}
+        try { w.setBasisRationale(rs.getString("basis_rationale")); } catch (Exception ignored) {}
+        try { w.setValidationDate(rs.getDate("validation_date") != null ? rs.getDate("validation_date").toLocalDate() : null); } catch (Exception ignored) {}
+        try { w.setRiskIfWrong(rs.getString("risk_if_wrong")); } catch (Exception ignored) {}
+        try { w.setImpactIfDelayed(rs.getString("impact_if_delayed")); } catch (Exception ignored) {}
+        try { w.setExpectedResolutionDate(rs.getDate("expected_resolution_date") != null ? rs.getDate("expected_resolution_date").toLocalDate() : null); } catch (Exception ignored) {}
+        try { w.setBusinessJustification(rs.getString("business_justification")); } catch (Exception ignored) {}
+        try { w.setAffectedSystem(rs.getString("affected_system")); } catch (Exception ignored) {}
+        try { w.setBusinessService(rs.getString("business_service")); } catch (Exception ignored) {}
+        try { w.setResolutionSummary(rs.getString("resolution_summary")); } catch (Exception ignored) {}
+        try { w.setClosureNotes(rs.getString("closure_notes")); } catch (Exception ignored) {}
+        try { w.setStakeholderUpdate(rs.getString("stakeholder_update")); } catch (Exception ignored) {}
+        try { w.setSlaBreachFlag(rs.getBoolean("sla_breach_flag")); } catch (Exception ignored) {}
         return w;
     }
 
@@ -239,9 +288,27 @@ public class WorkItemController {
         String userId = authenticatedUser.id();
         String wsId = rbac.workspaceForProject(newItem.getProjectId());
         if (wsId != null) rbac.require(userId, wsId, "create_items");
+
+        // Parent-child hierarchy enforcement (DefaultWorkItemTypes.VALID_CHILDREN)
+        if (newItem.getParentId() != null) {
+            validateParentType(newItem.getParentId(), newItem.getType());
+        }
+
         String prefix = newItem.getProjectId() != null ? newItem.getProjectId().replace("PROJ-", "") : "WEB";
         newItem.setId(prefix + "-" + java.util.UUID.randomUUID().toString().substring(0, 6).toUpperCase());
-        newItem.setStatus("Todo");
+
+        // Generate human-readable auto-ID (EP-0001, INC-0042, …)
+        String effectiveWsId = wsId != null ? wsId : "default";
+        String autoIdPrefix = DefaultWorkItemTypes.prefixFor(newItem.getType());
+        Long counter = jdbc.queryForObject(
+            "INSERT INTO work_item_counters (workspace_id, type_key, next_val) VALUES (?, ?, 1) "
+            + "ON CONFLICT (workspace_id, type_key) DO UPDATE "
+            + "  SET next_val = work_item_counters.next_val + 1 "
+            + "RETURNING next_val",
+            Long.class, effectiveWsId, newItem.getType().toUpperCase());
+        newItem.setAutoId(autoIdPrefix + "-" + String.format("%04d", counter));
+
+        newItem.setStatus(defaultStatusFor(newItem.getType()));
         newItem.setCreatedBy(userId);
         newItem.setCreatedAt(OffsetDateTime.now());
         if (newItem.getProjectId() == null) newItem.setProjectId("PROJ-001");
@@ -310,6 +377,12 @@ public class WorkItemController {
             String oldDescription = existing.getDescription();
             List<String> oldTags = jdbc.queryForList("SELECT tag FROM tags WHERE work_item_id = ? ORDER BY tag", String.class, id);
 
+            // Validate parent type if parentId changed
+            if (updatedItem.getParentId() != null
+                    && !updatedItem.getParentId().equals(existing.getParentId())) {
+                validateParentType(updatedItem.getParentId(), updatedItem.getType());
+            }
+
             existing.setTitle(updatedItem.getTitle());
             existing.setStatus(updatedItem.getStatus());
             existing.setType(updatedItem.getType());
@@ -317,10 +390,54 @@ public class WorkItemController {
             existing.setAcceptanceCriteria(updatedItem.getAcceptanceCriteria());
             existing.setAssigneeId(updatedItem.getAssigneeId());
             existing.setDueDate(updatedItem.getDueDate());
+            existing.setStartDate(updatedItem.getStartDate());
             existing.setSprintId(updatedItem.getSprintId());
             existing.setStoryPoints(updatedItem.getStoryPoints());
             existing.setPriority(updatedItem.getPriority());
             existing.setParentId(updatedItem.getParentId());
+            // Type-specific fields
+            existing.setReporterId(updatedItem.getReporterId());
+            existing.setSeverity(updatedItem.getSeverity());
+            existing.setEnvironmentDetail(updatedItem.getEnvironmentDetail());
+            existing.setBusinessImpact(updatedItem.getBusinessImpact());
+            existing.setResponseSpeed(updatedItem.getResponseSpeed());
+            existing.setRespondingTeam(updatedItem.getRespondingTeam());
+            existing.setResolutionType(updatedItem.getResolutionType());
+            existing.setRootCause(updatedItem.getRootCause());
+            existing.setProbability(updatedItem.getProbability());
+            existing.setImpactLevel(updatedItem.getImpactLevel());
+            existing.setRiskScore(updatedItem.getRiskScore());
+            existing.setDependencyType(updatedItem.getDependencyType());
+            existing.setSourceItemId(updatedItem.getSourceItemId());
+            existing.setTargetItemId(updatedItem.getTargetItemId());
+            existing.setApproverId(updatedItem.getApproverId());
+            existing.setRequestedForId(updatedItem.getRequestedForId());
+            existing.setNeededByDate(updatedItem.getNeededByDate());
+            existing.setItemCategory(updatedItem.getItemCategory());
+            existing.setSubArea(updatedItem.getSubArea());
+            existing.setDepartment(updatedItem.getDepartment());
+            existing.setRegressionRisk(updatedItem.getRegressionRisk());
+            existing.setStepsToReproduce(updatedItem.getStepsToReproduce());
+            existing.setExpectedBehavior(updatedItem.getExpectedBehavior());
+            existing.setActualBehavior(updatedItem.getActualBehavior());
+            existing.setAffectedVersion(updatedItem.getAffectedVersion());
+            existing.setFixedInVersion(updatedItem.getFixedInVersion());
+            existing.setFixDescription(updatedItem.getFixDescription());
+            existing.setMitigationPlan(updatedItem.getMitigationPlan());
+            existing.setContingencyPlan(updatedItem.getContingencyPlan());
+            existing.setBasisRationale(updatedItem.getBasisRationale());
+            existing.setValidationDate(updatedItem.getValidationDate());
+            existing.setRiskIfWrong(updatedItem.getRiskIfWrong());
+            existing.setImpactIfDelayed(updatedItem.getImpactIfDelayed());
+            existing.setExpectedResolutionDate(updatedItem.getExpectedResolutionDate());
+            existing.setBusinessJustification(updatedItem.getBusinessJustification());
+            existing.setAffectedSystem(updatedItem.getAffectedSystem());
+            existing.setBusinessService(updatedItem.getBusinessService());
+            existing.setResolutionSummary(updatedItem.getResolutionSummary());
+            existing.setClosureNotes(updatedItem.getClosureNotes());
+            existing.setStakeholderUpdate(updatedItem.getStakeholderUpdate());
+            existing.setSlaTarget(updatedItem.getSlaTarget());
+            existing.setSlaBreachFlag(updatedItem.getSlaBreachFlag());
             existing.setVersion(ConcurrencyGuard.nextVersion(existing.getVersion()));
 
             WorkItem saved = repository.save(existing);
@@ -425,6 +542,67 @@ public class WorkItemController {
         jdbc.update("DELETE FROM starred_items WHERE work_item_id = ?", id);
         repository.delete(item);
         return ResponseEntity.<Void>noContent().build();
+    }
+
+    @Operation(summary = "Move work item to a new parent",
+               description = "Reassigns the parent of a Story, Bug, Task, or Activity. "
+                   + "Validates that the target parent type is allowed by the hierarchy rules.")
+    @PatchMapping("/{id}/parent")
+    public WorkItem moveParent(@PathVariable String id, @RequestBody Map<String, String> body) {
+        String userId = authenticatedUser.id();
+        String newParentId = body.get("newParentId");
+        WorkItem item = repository.findById(id)
+            .orElseThrow(() -> ApiException.notFound("Work item", id));
+        String wsId = rbac.workspaceForProject(item.getProjectId());
+        if (wsId != null && !rbac.canEdit(userId, wsId, item.getCreatedBy(), item.getAssigneeId())) {
+            throw ApiException.forbidden("You do not have permission to move this work item.");
+        }
+        if (!DefaultWorkItemTypes.MOVABLE_TYPES.contains(item.getType())) {
+            throw ApiException.badRequest("NOT_MOVABLE",
+                item.getType() + " items cannot be moved to a new parent.");
+        }
+        if (newParentId != null) {
+            validateParentType(newParentId, item.getType());
+        }
+        String oldParentId = item.getParentId();
+        item.setParentId(newParentId);
+        item.setVersion(ConcurrencyGuard.nextVersion(item.getVersion()));
+        WorkItem saved = repository.save(item);
+        eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "parentId",
+            oldParentId != null ? oldParentId : "none",
+            newParentId != null ? newParentId : "none");
+        attachTags(saved);
+        return saved;
+    }
+
+    /** Enforces the parent→child type hierarchy. Throws 422 if the parent type does not allow childType. */
+    private void validateParentType(String parentId, String childType) {
+        List<WorkItem> parents = jdbc.query(
+            "SELECT * FROM work_items WHERE id = ? AND deleted_at IS NULL AND " + MEMBER_PROJECTS,
+            this::mapRow, parentId, authenticatedUser.id());
+        if (parents.isEmpty()) throw ApiException.notFound("Parent work item", parentId);
+        String parentType = parents.get(0).getType();
+        Set<String> allowed = DefaultWorkItemTypes.VALID_CHILDREN.getOrDefault(parentType, Set.of());
+        if (!allowed.contains(childType)) {
+            throw ApiException.badRequest("INVALID_PARENT_TYPE",
+                "A " + childType + " cannot be a child of " + parentType + ". "
+                + "Allowed children: " + allowed);
+        }
+    }
+
+    /** Returns the appropriate default status for a work-item type. */
+    private String defaultStatusFor(String typeKey) {
+        if (typeKey == null) return "Todo";
+        return switch (typeKey.toUpperCase()) {
+            case "RISK"                           -> "Open";
+            case "ISSUE"                          -> "Open";
+            case "ASSUMPTION"                     -> "Active";
+            case "DEPENDENCY"                     -> "Pending";
+            case "INCIDENT"                       -> "New";
+            case "HR_SERVICE_REQUEST",
+                 "IT_SERVICE_REQUEST"             -> "Draft";
+            default                               -> "Todo";
+        };
     }
 
     private void attachStarred(List<WorkItem> items, String userId) {

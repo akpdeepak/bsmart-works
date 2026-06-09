@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -17,6 +18,11 @@ public class WorkItemTypeConfig {
     private String color;
     private Boolean isCustom = true;
     private OffsetDateTime createdAt;
+    /** DELIVERY | RAID | SERVICE */
+    private String typeCategory = "DELIVERY";
+    private String autoIdPrefix;
+    @Column(columnDefinition = "jsonb")
+    private String validParentTypes;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -36,4 +42,10 @@ public class WorkItemTypeConfig {
     public void setIsCustom(Boolean isCustom) { this.isCustom = isCustom; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
+    public String getTypeCategory() { return typeCategory; }
+    public void setTypeCategory(String typeCategory) { this.typeCategory = typeCategory; }
+    public String getAutoIdPrefix() { return autoIdPrefix; }
+    public void setAutoIdPrefix(String autoIdPrefix) { this.autoIdPrefix = autoIdPrefix; }
+    public String getValidParentTypes() { return validParentTypes; }
+    public void setValidParentTypes(String validParentTypes) { this.validParentTypes = validParentTypes; }
 }

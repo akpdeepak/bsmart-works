@@ -7,6 +7,14 @@ on:
     branches: [main]
   pull_request:
 
+# Cancel superseded runs for the same branch/PR. When several commits (or several agents)
+# push in quick succession, only the newest commit runs the full 14-job suite; older in-flight
+# runs are cancelled instead of stacking. This is the highest-leverage reduction in private-repo
+# Actions-minute consumption and is what keeps the repo inside the free monthly allotment.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

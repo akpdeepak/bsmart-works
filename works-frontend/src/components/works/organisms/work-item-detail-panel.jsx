@@ -130,7 +130,7 @@ export function WorkItemDetailPanel({
   // tabs
   detailTab, setDetailTab,
   // details tab
-  tagInput, setTagInput, workItems, itemChildren, users,
+  tagInput, setTagInput, workItems, itemChildren, users, sprints = [],
   // ai
   aiCapabilities, aiLoading, aiAction, activeWorkspaceId,
   // custom fields
@@ -266,6 +266,20 @@ export function WorkItemDetailPanel({
                   className="input" />
               </div>
             </div>
+
+            {sprints.length > 0 && (
+              <div>
+                <label htmlFor="detail-sprint" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Sprint</label>
+                <select id="detail-sprint" value={selectedItem.sprintId || ''}
+                  onChange={e => { const u = { ...selectedItem, sprintId: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
+                  className="input">
+                  <option value="">Backlog (no sprint)</option>
+                  {sprints.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}{s.status === 'ACTIVE' ? ' (Active)' : ''}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div>
               <label htmlFor="detail-parent-id" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Parent Item</label>

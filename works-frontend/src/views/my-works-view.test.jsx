@@ -31,7 +31,7 @@ describe('MyWorksView', () => {
   it('switches tab when a sub-tab is clicked', () => {
     const setMyWorksTab = vi.fn();
     render(<MyWorksView {...baseProps} setMyWorksTab={setMyWorksTab} />);
-    fireEvent.click(screen.getByRole('button', { name: /Starred/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /Starred/ }));
     expect(setMyWorksTab).toHaveBeenCalledWith('starred');
   });
 });

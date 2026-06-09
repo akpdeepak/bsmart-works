@@ -3613,6 +3613,7 @@ export default function App() {
           workItems={workItems}
           itemChildren={itemChildren}
           users={users}
+          sprints={sprints}
           aiCapabilities={aiCapabilities}
           aiLoading={aiLoading}
           aiAction={aiAction}

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   AlertTriangle, Lightbulb, AlertCircle, Link, Scale, Calendar, CheckCircle2,
   Users, BookOpen, Globe, Target, Heart, Clock, ArrowLeft, Ban, X, MapPin,
@@ -66,6 +67,8 @@ export default function PmView({
   showToast,
   api,
 }) {
+  const [confirmItem, setConfirmItem] = useState(null);
+
   return (
     <div className="p-6 max-w-6xl">
       <div className="flex items-center justify-between mb-4">
@@ -89,7 +92,7 @@ export default function PmView({
       ) : (
         <>
           {/* Sub-tabs */}
-          <div className="flex gap-1 mb-5 border-b border-neutral-200 dark:border-neutral-700 overflow-x-auto">
+          <div role="tablist" aria-label="Project sections" className="flex gap-1 mb-5 border-b border-neutral-200 dark:border-neutral-700 overflow-x-auto">
             {[
               { key: 'raid',         Icon: Target,       label: 'RAID Dashboard' },
               { key: 'risks',        Icon: AlertTriangle, label: `Risks (${risks.length})` },
@@ -103,7 +106,8 @@ export default function PmView({
               { key: 'lessons',      Icon: BookOpen,     label: `Lessons (${lessonsLearned.length})` },
               { key: 'cross-deps',   Icon: Globe,        label: `Cross-Project (${crossProjectDeps.length})` },
             ].map(t => (
-              <button key={t.key} onClick={() => { setPmTab(t.key); if (t.key === 'cross-deps') fetchCrossProjectDeps(); }}
+              <button key={t.key} role="tab" aria-selected={pmTab === t.key}
+                onClick={() => { setPmTab(t.key); if (t.key === 'cross-deps') fetchCrossProjectDeps(); }}
                 className={`text-xs font-medium px-3 py-2 border-b-2 whitespace-nowrap transition-colors ${pmTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
                 {t.Icon && <t.Icon className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />}{t.label}
               </button>
@@ -265,7 +269,7 @@ export default function PmView({
                             {m.scheduledAt && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1"><Calendar className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{new Date(m.scheduledAt).toLocaleString()}{m.durationMins ? ` · ${m.durationMins}min` : ''}</p>}
                             {m.location && <p className="text-xs text-neutral-600 dark:text-neutral-400"><MapPin className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{m.location}</p>}
                           </div>
-                          <button onClick={e => { e.stopPropagation(); pmDelete('meeting', m.id); }} className="text-neutral-300 hover:text-semantic-danger text-xs ml-3" aria-label="Delete meeting"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                          <button onClick={e => { e.stopPropagation(); setConfirmItem({ label: m.title, action: () => pmDelete('meeting', m.id) }); }} className="text-neutral-300 hover:text-semantic-danger text-xs ml-3" aria-label="Delete meeting"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                         </div>
                       </button>
                     ))}
@@ -430,7 +434,7 @@ export default function PmView({
                             </span>
                           </td>
                           <td className="px-4 py-3">
-                            <button onClick={() => api.send(`/cross-project-dependencies/${dep.id}`, { method: 'DELETE' }).then(() => { showToast('Deleted'); fetchCrossProjectDeps(); }).catch(reportError)}
+                            <button onClick={() => setConfirmItem({ label: dep.title, action: () => api.send(`/cross-project-dependencies/${dep.id}`, { method: 'DELETE' }).then(() => { showToast('Deleted'); fetchCrossProjectDeps(); }).catch(reportError) })}
                               className="text-xs text-semantic-danger hover:underline">Delete</button>
                           </td>
                         </tr>
@@ -618,6 +622,22 @@ export default function PmView({
               <Button variant="secondary" onClick={() => { setPmFormOpen(null); setPmForm({}); }}>Cancel</Button>
             </div>
         </Modal>
+      )}
+
+      {confirmItem && (
+        <div role="dialog" aria-modal="true" aria-labelledby="pm-confirm-title"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-xl p-6 max-w-sm w-full border border-neutral-200 dark:border-neutral-700">
+            <h2 id="pm-confirm-title" className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-2">Delete item?</h2>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">
+              <span className="font-medium text-neutral-900 dark:text-neutral-100">"{confirmItem.label}"</span> will be permanently deleted.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setConfirmItem(null)}>Cancel</Button>
+              <Button variant="danger" onClick={() => { confirmItem.action(); setConfirmItem(null); }}>Delete</Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

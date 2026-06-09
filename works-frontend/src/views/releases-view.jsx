@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Rocket } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -5,9 +6,6 @@ import { TypeBadge } from '@/components/works/work-item-type';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 
-// Releases view — extracted from the App.jsx monolith (UX finding A3/H2). Behaviour-preserving:
-// the parent owns release data + mutations; this renders the two-pane list/detail. A11y nudge
-// (finding D3): the previously placeholder-only search box and project filter now carry aria-labels.
 export default function ReleasesView({
   releases,
   releaseSearch,
@@ -27,7 +25,23 @@ export default function ReleasesView({
   addItemToRelease,
   onPressKey,
 }) {
+  const [confirmAction, setConfirmAction] = useState(null);
+
   return (
+    <>
+    {confirmAction && (
+      <div role="dialog" aria-modal="true" aria-labelledby="release-confirm-title"
+        className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 p-4">
+        <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-xl p-6 max-w-sm w-full border border-neutral-200 dark:border-neutral-700">
+          <h2 id="release-confirm-title" className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-2">{confirmAction.title}</h2>
+          <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">{confirmAction.message}</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setConfirmAction(null)}>Cancel</Button>
+            <Button variant="danger" onClick={() => { confirmAction.action(); setConfirmAction(null); }}>{confirmAction.confirmLabel}</Button>
+          </div>
+        </div>
+      </div>
+    )}
     <div className="flex h-full overflow-hidden">
       <div className="w-72 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col">
         <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
@@ -76,7 +90,7 @@ export default function ReleasesView({
               <div className="flex gap-2 items-center">
                 {selectedRelease.status !== 'RELEASED' && <Button variant="action" onClick={() => updateRelease(selectedRelease.id, { ...selectedRelease, status: 'RELEASED' })}>Mark Released</Button>}
                 {selectedRelease.status === 'PLANNED' && <Button variant="secondary" onClick={() => updateRelease(selectedRelease.id, { ...selectedRelease, status: 'IN_PROGRESS' })}>Start</Button>}
-                <button onClick={() => deleteRelease(selectedRelease.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
+                <button onClick={() => setConfirmAction({ title: 'Delete release?', message: `"${selectedRelease.name}" and all its data will be permanently deleted.`, confirmLabel: 'Delete release', action: () => deleteRelease(selectedRelease.id) })} className="text-xs text-semantic-danger hover:underline">Delete</button>
               </div>
             </div>
             {releaseItems.length > 0 && (
@@ -99,7 +113,7 @@ export default function ReleasesView({
                     <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.id}</span>
                     <span role="button" tabIndex={0} onKeyDown={onPressKey} className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate cursor-pointer hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => setSelectedItem(item)}>{item.title}</span>
                     <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
-                    <button onClick={() => removeItemFromRelease(selectedRelease.id, item.id)} className="text-xs text-semantic-danger hover:underline">Remove</button>
+                    <button onClick={() => setConfirmAction({ title: 'Remove item?', message: `"${item.title}" will be unlinked from this release.`, confirmLabel: 'Remove', action: () => removeItemFromRelease(selectedRelease.id, item.id) })} className="text-xs text-semantic-danger hover:underline">Remove</button>
                   </div>
                 ))
               }
@@ -121,5 +135,6 @@ export default function ReleasesView({
         )}
       </div>
     </div>
+    </>
   );
 }

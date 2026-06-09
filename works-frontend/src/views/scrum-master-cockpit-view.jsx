@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Construction, MessageCircle, ArrowLeft, AlertTriangle, LayoutDashboard,
   TrendingUp, Zap, CheckCircle2, ClipboardList, RefreshCw,
@@ -48,6 +49,8 @@ export default function ScrumMasterCockpitView({
   setReviewSprintId, runReviewPrep, runPatterns,
   showToast, aiAction,
 }) {
+  const [confirmComplete, setConfirmComplete] = useState(false);
+
   return (
     <div className="flex flex-col h-full overflow-y-auto p-6 max-w-7xl mx-auto w-full">
       <div className="flex items-center justify-between mb-5">
@@ -67,9 +70,9 @@ export default function ScrumMasterCockpitView({
         <Button variant="secondary" onClick={() => setSmTab('retro')}>Run retro</Button>
       </div>
 
-      <div className="flex flex-wrap gap-1 border-b border-neutral-200 dark:border-neutral-700 mb-5">
+      <div role="tablist" aria-label="Cockpit sections" className="flex flex-wrap gap-1 border-b border-neutral-200 dark:border-neutral-700 mb-5">
         {[['impediments', 'Impediments'], ['standup', 'Standup'], ['risk', 'Risk panel'], ['planning', 'Planning'], ['retro', 'Retro'], ['review', 'Review prep'], ['patterns', 'Patterns']].map(([k, label]) => (
-          <button key={k} onClick={() => setSmTab(k)}
+          <button key={k} role="tab" aria-selected={smTab === k} onClick={() => setSmTab(k)}
             className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${smTab === k ? 'border-brand-navy text-brand-navy dark:text-white' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'}`}>
             {label}
           </button>
@@ -320,7 +323,7 @@ export default function ScrumMasterCockpitView({
               <button onClick={() => setActiveRetro(null)} className="text-xs text-brand-navy hover:underline mb-3"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />All retros</button>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">{activeRetro.session.title}</h3>
-                {activeRetro.session.status !== 'COMPLETED' && <Button variant="secondary" onClick={() => { api.send(`/retros/${activeRetro.session.id}/complete`, { method: 'POST' }).then(() => openRetro(activeRetro.session.id)); }}>Complete</Button>}
+                {activeRetro.session.status !== 'COMPLETED' && <Button variant="secondary" onClick={() => setConfirmComplete(true)}>Complete retro</Button>}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {RETRO_COLUMNS[activeRetro.session.template].map(col => (
@@ -408,6 +411,21 @@ export default function ScrumMasterCockpitView({
                 </div>
               </div>
             )}
+        </div>
+      )}
+      {confirmComplete && activeRetro?.session && (
+        <div role="dialog" aria-modal="true" aria-labelledby="retro-confirm-title"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-xl p-6 max-w-sm w-full border border-neutral-200 dark:border-neutral-700">
+            <h2 id="retro-confirm-title" className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-2">Complete retro?</h2>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">
+              Marking <span className="font-medium text-neutral-900 dark:text-neutral-100">"{activeRetro.session.title}"</span> as complete locks it for editing.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setConfirmComplete(false)}>Cancel</Button>
+              <Button variant="action" onClick={() => { api.send(`/retros/${activeRetro.session.id}/complete`, { method: 'POST' }).then(() => { openRetro(activeRetro.session.id); setConfirmComplete(false); }); }}>Complete retro</Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

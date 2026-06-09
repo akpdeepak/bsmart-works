@@ -66,6 +66,12 @@ class ComplianceEvaluationPerformanceTest {
         jdbc.update("DELETE FROM work_items            WHERE project_id   = ?", PROJ_ID);
         jdbc.update("DELETE FROM projects              WHERE id           = ?", PROJ_ID);
         jdbc.update("DELETE FROM workspaces            WHERE id           = ?", WS_ID);
+        jdbc.update("DELETE FROM users                 WHERE id           = ?", "USR-PERF");
+
+        // Seed user (required FK for work_items.created_by and compliance_rules.created_by)
+        jdbc.update(
+            "INSERT INTO users(id, email, password_hash, full_name) VALUES (?,?,?,?)",
+            "USR-PERF", "perf@test.invalid", "x", "Perf User");
 
         // Workspace
         jdbc.update(
@@ -155,7 +161,11 @@ class ComplianceEvaluationPerformanceTest {
         jdbc.update("DELETE FROM work_items WHERE project_id = ?", proj2);
         jdbc.update("DELETE FROM projects WHERE id = ?", proj2);
         jdbc.update("DELETE FROM workspaces WHERE id = ?", ws2);
+        jdbc.update("DELETE FROM users WHERE id = ?", "USR-OTH");
 
+        jdbc.update(
+            "INSERT INTO users(id, email, password_hash, full_name) VALUES (?,?,?,?)",
+            "USR-OTH", "oth@test.invalid", "x", "Other User");
         jdbc.update(
             "INSERT INTO workspaces(id, name, slug, created_at, updated_at) "
             + "VALUES (?, ?, ?, ?, ?)",
@@ -190,5 +200,6 @@ class ComplianceEvaluationPerformanceTest {
         jdbc.update("DELETE FROM work_items WHERE project_id = ?", proj2);
         jdbc.update("DELETE FROM projects WHERE id = ?", proj2);
         jdbc.update("DELETE FROM workspaces WHERE id = ?", ws2);
+        jdbc.update("DELETE FROM users WHERE id = ?", "USR-OTH");
     }
 }

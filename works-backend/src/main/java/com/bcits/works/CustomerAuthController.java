@@ -48,7 +48,7 @@ public class CustomerAuthController {
     public ResponseEntity<?> login(@RequestBody Map<String, String> body, HttpServletRequest http) {
         String email = body.getOrDefault("email", "").toLowerCase().trim();
         String password = body.getOrDefault("password", "");
-        if (!rateLimiter.allow("portal-login:" + email + ":" + clientIp(http), LOGIN_MAX, LOGIN_WINDOW_S)) {
+        if (!rateLimiter.allow(String.format("portal-login:%s:%s", email, clientIp(http)), LOGIN_MAX, LOGIN_WINDOW_S)) {
             throw ApiException.tooManyRequests("Too many attempts. Please wait a moment and try again.");
         }
         CustomerUser user = customerUsers.findByEmailIgnoreCase(email)

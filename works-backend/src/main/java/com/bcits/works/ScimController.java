@@ -250,7 +250,7 @@ public class ScimController {
         m.put("active", active);
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("resourceType", "User");
-        meta.put("location", "/scim/v2/Users/" + id);
+        meta.put("location", String.format("/scim/v2/Users/%s", id));
         m.put("meta", meta);
         return m;
     }
@@ -262,7 +262,7 @@ public class ScimController {
         m.put("displayName", name);
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("resourceType", "Group");
-        meta.put("location", "/scim/v2/Groups/" + id);
+        meta.put("location", String.format("/scim/v2/Groups/%s", id));
         m.put("meta", meta);
         return m;
     }

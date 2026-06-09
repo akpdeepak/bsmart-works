@@ -61,6 +61,7 @@ import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { isIconComponent, onPressKey, renderMd } from '@/lib/utils';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { TYPES, TYPE_ICON_SET, TYPE_ICON_KEYS } from '@/lib/work-item-types';
+import { BRAND_NAVY, BRAND_ORANGE, NEUTRAL_600 } from '@/lib/brand-tokens';
 import { TypeBadge, TypeIcon } from '@/components/works/work-item-type';
 // PriorityBadge moved to backlog-view.jsx (TD-003)
 import { StatCard } from '@/components/works/stat-card';
@@ -219,6 +220,7 @@ export default function App() {
 
   // RBAC
   const [userRole, setUserRole]         = useState({ role: 'MEMBER', tier: 2, permissions: [], surfaces: null });
+  const [roleLoaded, setRoleLoaded]     = useState(false);
   const can = (perm) => userRole.permissions.includes(perm) || userRole.tier >= 4;
 
   // My Works sub-tab
@@ -272,7 +274,7 @@ export default function App() {
   // Iter 3 — settings UI state
   const [expandedWorkflowId, setExpandedWorkflowId] = useState(null);
   const [workflowDetail, setWorkflowDetail]         = useState(null); // { statuses, transitions }
-  const [newStatusForm, setNewStatusForm]           = useState({ name: '', color: '#0B2F5C', category: 'IN_PROGRESS' });
+  const [newStatusForm, setNewStatusForm]           = useState({ name: '', color: BRAND_NAVY, category: 'IN_PROGRESS' });
   const [newTransitionForm, setNewTransitionForm]   = useState({ name: '', fromStatus: '', toStatus: '' });
   const [showFieldForm, setShowFieldForm]           = useState(false);
   const [newFieldForm, setNewFieldForm]             = useState({ name: '', fieldType: 'TEXT', required: false, description: '' });
@@ -436,12 +438,12 @@ export default function App() {
   const [replyingTo, setReplyingTo]     = useState(null);   // comment being replied to
   const [replyBody, setReplyBody]       = useState('');
   const [trashItems, setTrashItems]     = useState([]);
-  const [, setBranding]                 = useState({ primaryColor: '#E94E1B', logoUrl: '', description: '' });
+  const [, setBranding]                 = useState({ primaryColor: BRAND_ORANGE, logoUrl: '', description: '' });
   const [projectMembers, setProjectMembers] = useState([]);
   const [projectMemberEmail, setProjectMemberEmail] = useState('');
   const [projectMemberMsg, setProjectMemberMsg] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState(null);
-  const [brandingColor, setBrandingColor] = useState('#E94E1B');
+  const [brandingColor, setBrandingColor] = useState(BRAND_ORANGE);
   const [brandingDesc, setBrandingDesc]  = useState('');
 
   // AI Control Plane — capabilities loaded once per workspace; drives hide/show of AI buttons (RB-40 §2).
@@ -1491,10 +1493,10 @@ export default function App() {
     api.raw(`/workspaces/${activeWorkspaceId}/branding`)
       .then(r => r.json()).then(d => {
         setBranding(d);
-        setBrandingColor(d.primaryColor || '#E94E1B');
+        setBrandingColor(d.primaryColor || BRAND_ORANGE);
         setBrandingDesc(d.description || '');
         // Apply brand color as CSS variable
-        document.documentElement.style.setProperty('--brand-action', d.primaryColor || '#E94E1B');
+        document.documentElement.style.setProperty('--brand-action', d.primaryColor || BRAND_ORANGE);
       }).catch(reportError);
   }
 
@@ -1541,7 +1543,7 @@ export default function App() {
   function addStatus(wfId) {
     if (!newStatusForm.name.trim()) return;
     api.raw(`/workflows/${wfId}/statuses`, { method: 'POST', body: JSON.stringify(newStatusForm) })
-      .then(r => r.json()).then(() => { loadWorkflowDetail(wfId); setNewStatusForm({ name: '', color: '#0B2F5C', category: 'IN_PROGRESS' }); }).catch(reportError);
+      .then(r => r.json()).then(() => { loadWorkflowDetail(wfId); setNewStatusForm({ name: '', color: BRAND_NAVY, category: 'IN_PROGRESS' }); }).catch(reportError);
   }
   function deleteStatus(wfId, statusId) {
     api.raw(`/workflows/${wfId}/statuses/${statusId}`, { method: 'DELETE' })
@@ -1564,7 +1566,7 @@ export default function App() {
   function createWorkItemType() {
     if (!newTypeForm.label.trim()) return;
     const typeKey = newTypeForm.typeKey || newTypeForm.label.toUpperCase().replace(/\s+/g,'_');
-    api.raw(`/work-item-types`, { method: 'POST', body: JSON.stringify({ ...newTypeForm, typeKey, color: '#6b7280', workspaceId: activeWorkspaceId }) })
+    api.raw(`/work-item-types`, { method: 'POST', body: JSON.stringify({ ...newTypeForm, typeKey, color: NEUTRAL_600, workspaceId: activeWorkspaceId }) })
       .then(r => r.json()).then(() => { fetchWorkItemTypes(); setShowTypeForm(false); setNewTypeForm({ label: '', typeKey: '', icon: 'package' }); }).catch(reportError);
   }
   function createRole() {
@@ -2782,7 +2784,7 @@ export default function App() {
               className="relative w-9 h-9 rounded-md flex items-center justify-center text-white/80 hover:bg-white/10 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
               <Bell aria-hidden="true" className="h-5 w-5" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-brand-orange text-white text-xs font-bold flex items-center justify-center">
+                <span className="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-brand-orange text-white text-xs font-bold flex items-center justify-center">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}

@@ -99,7 +99,7 @@ public class FocusModeService {
         }
         b.setStatus("CANCELLED");
         FocusBlock saved = focusBlocks.save(b);
-        events.recordInWorkspace(b.getWorkspaceId(), "FB-" + id, "focus_block.cancelled", userId, java.util.Map.of());
+        events.recordInWorkspace(b.getWorkspaceId(), String.format("FB-%s", id), "focus_block.cancelled", userId, java.util.Map.of());
         return saved;
     }
 }

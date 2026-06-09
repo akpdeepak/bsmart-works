@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/works/atoms/empty-state';
 import { TypeBadge, TypeIcon } from '@/components/works/work-item-type';
 import { TYPES, TYPE_ICON_SET, TYPE_ICON_KEYS } from '@/lib/work-item-types';
 import { onPressKey } from '@/lib/utils';
+import { BRAND_NAVY } from '@/lib/brand-tokens';
 
 /**
  * Settings3View — workspace configuration: workflows, custom fields, field layout,
@@ -186,7 +187,7 @@ export default function Settings3View({
                                       }}
                                       className="flex items-center gap-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5 cursor-grab active:cursor-grabbing select-none">
                                       <GripVertical className="h-3.5 w-3.5 text-neutral-300 flex-shrink-0" aria-hidden="true" />
-                                      <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: s.color || '#0B2F5C' }}></span>
+                                      <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: s.color || BRAND_NAVY }}></span>
                                       <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{s.name}</span>
                                       <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${catColor[s.category] || 'bg-neutral-100 text-neutral-600'}`}>{s.category}</span>
                                       {s.isInitial && <span className="text-xs text-brand-amber font-bold">INITIAL</span>}

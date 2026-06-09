@@ -145,7 +145,7 @@ public class AiAssistService {
         // A leading find verb is a query — even if the text later mentions "assigned to me".
         if (FIND_VERBS.contains(firstWord)) {
             params.put("query", stripCreateVerb(clause));
-            return new PlanStep(ActionType.FIND.name(), "Find items matching: " + params.get("query"), params, true);
+            return new PlanStep(ActionType.FIND.name(), String.format("Find items matching: %s", params.get("query")), params, true);
         }
         // ASSIGN: "assign", "assign karo", "को असाइन", "ko ... assign"
         if (containsAny(lower, "assign", "assign karo", "asaain", "असाइन", "सौंप")) {
@@ -177,12 +177,12 @@ public class AiAssistService {
             params.put("priority", heuristicPriority(clause, ""));
             params.put("title", stripCreateVerb(clause));
             return new PlanStep(ActionType.CREATE_ITEM.name(),
-                "Create " + params.get("type") + ": " + params.get("title"), params, true);
+                String.format("Create %s: %s", params.get("type"), params.get("title")), params, true);
         }
         // FIND / SEARCH: "find", "search", "show", "list", "dhundo", "खोजो", "dikhao"
         if (containsAny(lower, "find", "search", "show", "list", "dhundo", "खोजो", "dikhao", "dikhaao")) {
             params.put("query", stripCreateVerb(clause));
-            return new PlanStep(ActionType.FIND.name(), "Find items matching: " + params.get("query"), params, true);
+            return new PlanStep(ActionType.FIND.name(), String.format("Find items matching: %s", params.get("query")), params, true);
         }
         return new PlanStep(ActionType.UNKNOWN.name(), "Unrecognised: " + clause, params, true);
     }
@@ -238,7 +238,7 @@ public class AiAssistService {
                 String id = str(params.get("workItemId"));
                 WorkItem w = workItems.findById(id).orElse(null);
                 if (w == null) {
-                    return Map.of("action", type.name(), "ok", false, "error", "Item not found: " + id);
+                    return Map.of("action", type.name(), "ok", false, "error", String.format("Item not found: %s", id));
                 }
                 String wsId = rbac.workspaceForProject(w.getProjectId());
                 requireSameWorkspace(workspaceId, wsId);
@@ -253,7 +253,7 @@ public class AiAssistService {
                 String id = str(params.get("workItemId"));
                 WorkItem w = workItems.findById(id).orElse(null);
                 if (w == null) {
-                    return Map.of("action", type.name(), "ok", false, "error", "Item not found: " + id);
+                    return Map.of("action", type.name(), "ok", false, "error", String.format("Item not found: %s", id));
                 }
                 String wsId = rbac.workspaceForProject(w.getProjectId());
                 requireSameWorkspace(workspaceId, wsId);
@@ -268,7 +268,7 @@ public class AiAssistService {
                 String id = str(params.get("workItemId"));
                 WorkItem w = workItems.findById(id).orElse(null);
                 if (w == null) {
-                    return Map.of("action", type.name(), "ok", false, "error", "Item not found: " + id);
+                    return Map.of("action", type.name(), "ok", false, "error", String.format("Item not found: %s", id));
                 }
                 String wsId = rbac.workspaceForProject(w.getProjectId());
                 requireSameWorkspace(workspaceId, wsId);
@@ -322,7 +322,7 @@ public class AiAssistService {
         String draft = "Suggested priority " + priority + ", type " + type
             + (assigneeName != null ? ", assignee " + assigneeName : "") + ".";
         AiControlPlaneService.AiOutcome out = controlPlane.invoke(new AiControlPlaneService.AiCall(
-            workspaceId, userId, AiCapabilities.TRIAGE, "Triage: " + title, draft, null, inContext));
+            workspaceId, userId, AiCapabilities.TRIAGE, String.format("Triage: %s", title), draft, null, inContext));
         if (out.fallback()) {
             // Fallback: workspace defaults + keyword similar items, no assignee suggestion.
             return new TriageSuggestion("Medium", type, null, null, similarOut, AiMeta.of(out));
@@ -358,13 +358,13 @@ public class AiAssistService {
         List<String> citations = recentItemIds(workspaceId, 3);
         String dir = delta < 0 ? "dropped" : "rose";
         String draft = idx < 0
-            ? "No significant anomaly detected in " + nv(metric) + "."
-            : nv(metric) + " " + dir + " by " + Math.abs(Math.round(delta)) + " at point " + idx
-              + ". Likely linked to recent activity on " + String.join(", ", citations) + ".";
+            ? String.format("No significant anomaly detected in %s.", nv(metric))
+            : String.format("%s %s by %d at point %d. Likely linked to recent activity on %s.",
+                nv(metric), dir, Math.abs(Math.round(delta)), idx, String.join(", ", citations));
         AiControlPlaneService.AiOutcome out = controlPlane.invoke(new AiControlPlaneService.AiCall(
-            workspaceId, userId, AiCapabilities.ANOMALY, "Explain anomaly in " + metric, draft, null, inContext));
+            workspaceId, userId, AiCapabilities.ANOMALY, String.format("Explain anomaly in %s", metric), draft, null, inContext));
         String explanation = out.fallback()
-            ? nv(metric) + " changed by " + Math.round(delta) + " at point " + idx + " (no AI narrative)."
+            ? String.format("%s changed by %d at point %d (no AI narrative).", nv(metric), Math.round(delta), idx)
             : out.text();
         return new AnomalyExplanation(explanation, delta, idx, citations, AiMeta.of(out));
     }

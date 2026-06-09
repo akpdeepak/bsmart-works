@@ -1,4 +1,5 @@
 import { KeyRound } from 'lucide-react';
+import { BRAND_ORANGE } from '@/lib/brand-tokens';
 import { api } from '@/lib/apiClient';
 import { Button } from '@/components/works/button';
 import { Avatar } from '@/components/works/atoms/avatar';
@@ -174,7 +175,7 @@ export default function WorkspaceView({
                           className="w-10 h-10 rounded-lg border border-neutral-200 cursor-pointer" />
                         <input type="text" aria-label="Primary accent colour hex value" value={brandingColor}
                           onChange={e => setBrandingColor(e.target.value)}
-                          className="input w-32 font-mono text-sm" placeholder="#E94E1B" />
+                          className="input w-32 font-mono text-sm" placeholder={BRAND_ORANGE} />
                         <div className="w-8 h-8 rounded-lg flex-shrink-0" style={{ backgroundColor: brandingColor }}></div>
                         <span className="text-xs text-neutral-600 dark:text-neutral-400">Used for action buttons and accents</span>
                       </div>

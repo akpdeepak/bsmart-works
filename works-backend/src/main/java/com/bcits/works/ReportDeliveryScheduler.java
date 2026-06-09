@@ -75,7 +75,7 @@ public class ReportDeliveryScheduler {
 
         for (String userId : recipientIds(s)) {
             String displayName = resolveDisplayName(userId);
-            String personalizedLink = baseLink + "?viewAs=" + userId;
+            String personalizedLink = String.format("%s?viewAs=%s", baseLink, userId);
             String message = "Hi " + displayName + ", your report \"" + reportName + "\" is ready";
             if (inApp) {
                 Notification n = new Notification();

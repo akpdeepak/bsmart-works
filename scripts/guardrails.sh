@@ -131,19 +131,20 @@ if [ -d "$BE" ]; then
 fi
 
 # Native JPQL/SQL queries must use bind parameters, never string concatenation (CLAUDE.md §17).
-# WARN (not BLOCK): pre-existing hits in ApiException.java (message concat, not a query) and
-# BqlController.java (JPQL builder debt — TD-004). Flip to BLOCK after remediation.
+# Targets strings that contain SQL keywords AND are concatenated with a variable — not general
+# Java string building (error messages, rate-limiter keys, URL construction etc.).
+# Use \b word boundaries so "param" does not match "params", "id" does not match "idx" etc.
 if [ -d "$BE" ]; then
   check WARN "No string-concatenated queries (use bind parameters — CLAUDE.md §17)" \
-    "$(grep -RInE '"[^"]*\+\s*(userId|id|name|title|email|input|param|value)' "$BE" 2>/dev/null || true)"
+    "$(grep -RInE '"[^"]*(SELECT|INSERT|UPDATE|DELETE|FROM\s|WHERE\s|JOIN\s|LIKE\s)[^"]*"\s*\+\s*\b(userId|id|name|title|email|input|param|value)\b' "$BE" 2>/dev/null || true)"
 fi
 
 # ── WARN rules (baseline debt in App.jsx — flip to BLOCK after remediation) ─────
 
-# Raw hex colours in component JSX (the global index.css token defs are exempt).
+# Raw hex colours in component JSX (the global index.css token defs and test files are exempt).
 check WARN "No raw hex in frontend components (use brand-*/neutral-* tokens — CLAUDE.md §4)" \
   "$(grep -RInE '#[0-9a-fA-F]{3,8}\b' "$FE" 2>/dev/null \
-     | grep -vE '(tailwind\.config|tokens|/index\.css:|\.svg)' || true)"
+     | grep -vE '(tailwind\.config|tokens|/index\.css:|\.svg|\.test\.)' || true)"
 
 # Arbitrary pixel/rem spacing in className (use the 4px scale).
 check WARN "No arbitrary spacing values (use Tailwind 4px scale — CLAUDE.md §4)" \

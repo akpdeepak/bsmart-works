@@ -23,6 +23,9 @@ public class Workspace {
 
     private String description;
 
+    @Column(name = "sandbox_mode")
+    private boolean sandboxMode = false;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getName() { return name; }
@@ -35,4 +38,6 @@ public class Workspace {
     public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public boolean isSandboxMode() { return sandboxMode; }
+    public void setSandboxMode(boolean sandboxMode) { this.sandboxMode = sandboxMode; }
 }

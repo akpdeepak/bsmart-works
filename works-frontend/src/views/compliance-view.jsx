@@ -1,4 +1,5 @@
-import { ClipboardList, CheckCircle2, ScrollText, ArrowUp } from 'lucide-react';
+import { useState } from 'react';
+import { ClipboardList, CheckCircle2, ScrollText, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { Modal } from '@/components/works/molecules/modal';
@@ -20,7 +21,6 @@ const vStatusClass = {
 
 /**
  * ComplianceView — rules engine, violations, and audit log.
- *
  * Extracted from App.jsx (TD-003). All state lives in App; this component is a
  * pure rendering shell that accepts handlers as props.
  */
@@ -39,6 +39,7 @@ export default function ComplianceView({
   aiCapabilities,
   can,
   AiComplianceSuggestion,
+  projects = [],
   setComplianceTab,
   setRuleBuilder,
   setViolationFilter,
@@ -58,10 +59,20 @@ export default function ComplianceView({
   actOnViolation,
   bulkAcknowledge,
   toggleViolationSelect,
+  selectAllViolations,
   exportComplianceAudit,
   showToast,
   anyCapabilityEnabled,
 }) {
+  // Gap 1 — per-violation resolution notes form
+  const [resolveForm, setResolveForm] = useState(null); // { id, action } | null
+
+  const selectableViolations = complianceViolations
+    .filter(v => v.status === 'OPEN' || v.status === 'ACKNOWLEDGED')
+    .map(v => v.id);
+  const allSelected = selectableViolations.length > 0 &&
+    selectableViolations.every(id => selectedViolations.includes(id));
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header + tabs */}
@@ -176,6 +187,7 @@ export default function ComplianceView({
                   )}
               </div>
 
+              {/* Gap 6 — heatmap rows are clickable: drill into violations tab filtered by rule */}
               <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                 <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Rules × projects heatmap</h3>
                 {(complianceDashboard.heatmap || []).length === 0
@@ -186,7 +198,11 @@ export default function ComplianceView({
                         <th className="py-1">Rule</th><th className="py-1">Project</th><th className="py-1 text-right">Open</th></tr></thead>
                       <tbody>
                         {(complianceDashboard.heatmap || []).map((h, i) => (
-                          <tr key={i} className="border-t border-neutral-100 dark:border-neutral-700">
+                          <tr key={i}
+                            className="border-t border-neutral-100 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700/50 cursor-pointer"
+                            onClick={() => { setComplianceTab('violations'); setViolationFilter('OPEN'); fetchComplianceViolations('OPEN'); }}
+                            role="button"
+                            aria-label={`View violations for ${h.rule_name}`}>
                             <td className="py-1.5 text-neutral-700 dark:text-neutral-200">{h.rule_name}</td>
                             <td className="py-1.5 font-mono text-xs text-neutral-600 dark:text-neutral-400">{h.project_id || '—'}</td>
                             <td className="py-1.5 text-right font-semibold text-semantic-danger">{h.count}</td>
@@ -261,12 +277,21 @@ export default function ComplianceView({
           <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
+                {/* Gap 7 — select all checkbox */}
+                {can('manage_compliance') && selectableViolations.length > 0 && (
+                  <input
+                    type="checkbox"
+                    aria-label="Select all violations"
+                    checked={allSelected}
+                    onChange={() => selectAllViolations(allSelected ? [] : selectableViolations)}
+                  />
+                )}
                 <select value={violationFilter} onChange={e => { setViolationFilter(e.target.value); fetchComplianceViolations(e.target.value); }} className="input text-xs py-1">
                   <option value="">All statuses</option>
                   <option value="OPEN">Open</option>
                   <option value="ACKNOWLEDGED">Acknowledged</option>
                   <option value="RESOLVED">Resolved</option>
-                  <option value="WONT_FIX">Won't fix</option>
+                  <option value="WONT_FIX">Won&apos;t fix</option>
                 </select>
                 <span className="text-xs text-neutral-600 dark:text-neutral-400">{complianceViolations.length} violation(s)</span>
               </div>
@@ -279,7 +304,7 @@ export default function ComplianceView({
               : complianceViolations.map(v => (
                 <div key={v.id} className="flex items-center gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                   {can('manage_compliance') && (v.status === 'OPEN' || v.status === 'ACKNOWLEDGED') && (
-                    <input type="checkbox" checked={selectedViolations.includes(v.id)} onChange={() => toggleViolationSelect(v.id)} />
+                    <input type="checkbox" checked={selectedViolations.includes(v.id)} onChange={() => toggleViolationSelect(v.id)} aria-label={`Select violation ${v.id}`} />
                   )}
                   <span className={`text-xs font-bold px-2 py-0.5 rounded w-20 text-center ${severityClass[v.severity] || severityClass.MEDIUM}`}>{v.severity}</span>
                   <div className="flex-1 min-w-0">
@@ -289,8 +314,9 @@ export default function ComplianceView({
                   <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${vStatusClass[v.status] || ''}`}>{v.status}{v.escalated ? <ArrowUp className="inline-block h-3 w-3 align-text-bottom" aria-label="Escalated" /> : ''}</span>
                   {can('manage_compliance') && (v.status === 'OPEN' || v.status === 'ACKNOWLEDGED') && <>
                     {v.status === 'OPEN' && <button onClick={() => actOnViolation(v.id, 'acknowledge')} className="text-xs text-brand-navy hover:underline">Ack</button>}
-                    <button onClick={() => actOnViolation(v.id, 'resolve')} className="text-xs text-semantic-success hover:underline">Resolve</button>
-                    <button onClick={() => actOnViolation(v.id, 'wont-fix')} className="text-xs text-neutral-500 hover:underline">Won't fix</button>
+                    {/* Gap 1 — resolution notes before acting */}
+                    <button onClick={() => setResolveForm({ id: v.id, action: 'resolve' })} className="text-xs text-semantic-success hover:underline">Resolve</button>
+                    <button onClick={() => setResolveForm({ id: v.id, action: 'wont-fix' })} className="text-xs text-neutral-500 hover:underline">Won&apos;t fix</button>
                   </>}
                 </div>
               ))}
@@ -326,60 +352,185 @@ export default function ComplianceView({
         )}
       </div>
 
+      {/* Gap 1 — Resolution notes modal */}
+      {resolveForm && (
+        <ResolveModal
+          action={resolveForm.action}
+          onConfirm={note => { actOnViolation(resolveForm.id, resolveForm.action, note); setResolveForm(null); }}
+          onClose={() => setResolveForm(null)}
+        />
+      )}
+
       {/* Rule builder (test-before-activate) */}
       {ruleBuilder && (
-        <Modal title={ruleBuilder.id ? 'Edit rule' : 'New compliance rule'} onClose={() => setRuleBuilder(null)} size="xl" className="max-h-[90vh] overflow-y-auto">
-            <div className="space-y-3">
-              <div>
-                <label htmlFor="rule-name" className="block text-xs font-medium text-neutral-500 mb-1">Name</label>
-                <input id="rule-name" className="input w-full" value={ruleBuilder.name} onChange={e => setRuleBuilder({ ...ruleBuilder, name: e.target.value })} placeholder="Stories need acceptance criteria before In Progress" />
-              </div>
-              <div>
-                <label htmlFor="rule-desc" className="block text-xs font-medium text-neutral-500 mb-1">Description</label>
-                <input id="rule-desc" className="input w-full" value={ruleBuilder.description} onChange={e => setRuleBuilder({ ...ruleBuilder, description: e.target.value })} />
-              </div>
-              <div>
-                <label htmlFor="rule-scope-bql" className="block text-xs font-medium text-neutral-500 mb-1">Scope (BQL) — which items the rule applies to</label>
-                <input id="rule-scope-bql" className="input w-full font-mono text-sm" value={ruleBuilder.scopeBql} onChange={e => setRuleBuilder({ ...ruleBuilder, scopeBql: e.target.value })} placeholder="type = Story AND status = In Progress" />
-              </div>
-              <div>
-                <label htmlFor="rule-assertion-bql" className="block text-xs font-medium text-neutral-500 mb-1">Assertion (BQL) — what scoped items must satisfy</label>
-                <input id="rule-assertion-bql" className="input w-full font-mono text-sm" value={ruleBuilder.assertionBql} onChange={e => setRuleBuilder({ ...ruleBuilder, assertionBql: e.target.value })} placeholder="acceptance_criteria != ''" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="rule-severity" className="block text-xs font-medium text-neutral-500 mb-1">Severity</label>
-                  <select id="rule-severity" className="input w-full" value={ruleBuilder.severity} onChange={e => setRuleBuilder({ ...ruleBuilder, severity: e.target.value })}>
-                    {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="rule-eval-mode" className="block text-xs font-medium text-neutral-500 mb-1">Evaluation</label>
-                  <select id="rule-eval-mode" className="input w-full" value={ruleBuilder.evaluationMode} onChange={e => setRuleBuilder({ ...ruleBuilder, evaluationMode: e.target.value })}>
-                    <option value="CONTINUOUS">Continuous</option>
-                    <option value="SCHEDULED">Scheduled</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <span className="block text-xs font-medium text-neutral-500 mb-1">Notify</span>
-                <div className="flex gap-4 text-sm text-neutral-700 dark:text-neutral-200">
-                  <label className="flex items-center gap-2"><input type="checkbox" checked={ruleBuilder.notifyOwner} onChange={e => setRuleBuilder({ ...ruleBuilder, notifyOwner: e.target.checked })} /> Item owner</label>
-                  <label className="flex items-center gap-2"><input type="checkbox" checked={ruleBuilder.notifyAdmin} onChange={e => setRuleBuilder({ ...ruleBuilder, notifyAdmin: e.target.checked })} /> Project admins</label>
-                </div>
-              </div>
-              <div>
-                <label htmlFor="rule-escalate-hours" className="block text-xs font-medium text-neutral-500 mb-1">Escalate if unacknowledged after (hours) — optional</label>
-                <input id="rule-escalate-hours" type="number" min="0" className="input w-full" value={ruleBuilder.escalateAfterHours} onChange={e => setRuleBuilder({ ...ruleBuilder, escalateAfterHours: e.target.value })} placeholder="e.g. 24" />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 mt-5">
-              <Button variant="secondary" onClick={() => setRuleBuilder(null)}>Cancel</Button>
-              <Button variant="action" onClick={saveRule}>{ruleBuilder.id ? 'Save rule' : 'Create rule (inactive)'}</Button>
-            </div>
-            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-3">New rules are created inactive — test them, then activate from the rules list.</p>
-        </Modal>
+        <RuleBuilderModal
+          ruleBuilder={ruleBuilder}
+          setRuleBuilder={setRuleBuilder}
+          projects={projects}
+          saveRule={saveRule}
+        />
       )}
     </div>
+  );
+}
+
+function ResolveModal({ action, onConfirm, onClose }) {
+  const [note, setNote] = useState('');
+  const label = action === 'resolve' ? 'Resolve' : "Won't fix";
+  return (
+    <Modal title={label} onClose={onClose}>
+      <div className="space-y-3">
+        <div>
+          <label htmlFor="resolve-note" className="block text-xs font-medium text-neutral-500 mb-1">
+            Resolution note <span className="text-neutral-400">(optional)</span>
+          </label>
+          <textarea
+            id="resolve-note"
+            className="input w-full h-24 resize-none"
+            placeholder="Describe how this was resolved or why it won't be fixed…"
+            value={note}
+            onChange={e => setNote(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 mt-4">
+        <Button variant="secondary" onClick={onClose}>Cancel</Button>
+        <Button variant="action" onClick={() => onConfirm(note.trim() || undefined)}>{label}</Button>
+      </div>
+    </Modal>
+  );
+}
+
+function RuleBuilderModal({ ruleBuilder, setRuleBuilder, projects, saveRule }) {
+  return (
+    <Modal title={ruleBuilder.id ? 'Edit rule' : 'New compliance rule'} onClose={() => setRuleBuilder(null)} size="xl" className="max-h-[90vh] overflow-y-auto">
+      <div className="space-y-3">
+        <div>
+          <label htmlFor="rule-name" className="block text-xs font-medium text-neutral-500 mb-1">Name</label>
+          <input id="rule-name" className="input w-full" value={ruleBuilder.name} onChange={e => setRuleBuilder({ ...ruleBuilder, name: e.target.value })} placeholder="Stories need acceptance criteria before In Progress" />
+        </div>
+        <div>
+          <label htmlFor="rule-desc" className="block text-xs font-medium text-neutral-500 mb-1">Description</label>
+          <input id="rule-desc" className="input w-full" value={ruleBuilder.description} onChange={e => setRuleBuilder({ ...ruleBuilder, description: e.target.value })} />
+        </div>
+        {/* Gap 3 — project-scoped rules */}
+        {projects.length > 0 && (
+          <div>
+            <label htmlFor="rule-project" className="block text-xs font-medium text-neutral-500 mb-1">Project scope <span className="text-neutral-400">(optional — leave blank to apply workspace-wide)</span></label>
+            <select id="rule-project" className="input w-full" value={ruleBuilder.projectId} onChange={e => setRuleBuilder({ ...ruleBuilder, projectId: e.target.value })}>
+              <option value="">All projects</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+        )}
+        <div>
+          <label htmlFor="rule-scope-bql" className="block text-xs font-medium text-neutral-500 mb-1">Scope (BQL) — which items the rule applies to</label>
+          <input id="rule-scope-bql" className="input w-full font-mono text-sm" value={ruleBuilder.scopeBql} onChange={e => setRuleBuilder({ ...ruleBuilder, scopeBql: e.target.value })} placeholder="type = Story AND status = In Progress" />
+        </div>
+        <div>
+          <label htmlFor="rule-assertion-bql" className="block text-xs font-medium text-neutral-500 mb-1">Assertion (BQL) — what scoped items must satisfy</label>
+          <input id="rule-assertion-bql" className="input w-full font-mono text-sm" value={ruleBuilder.assertionBql} onChange={e => setRuleBuilder({ ...ruleBuilder, assertionBql: e.target.value })} placeholder="acceptance_criteria != ''" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="rule-severity" className="block text-xs font-medium text-neutral-500 mb-1">Severity</label>
+            <select id="rule-severity" className="input w-full" value={ruleBuilder.severity} onChange={e => setRuleBuilder({ ...ruleBuilder, severity: e.target.value })}>
+              {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="rule-eval-mode" className="block text-xs font-medium text-neutral-500 mb-1">Evaluation</label>
+            <select id="rule-eval-mode" className="input w-full" value={ruleBuilder.evaluationMode} onChange={e => setRuleBuilder({ ...ruleBuilder, evaluationMode: e.target.value })}>
+              <option value="CONTINUOUS">Continuous</option>
+              <option value="SCHEDULED">Scheduled</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Gap 2 — extended notification routing: USER / EMAIL / SLACK */}
+        <div>
+          <span className="block text-xs font-medium text-neutral-500 mb-1">Notify</span>
+          <div className="flex gap-4 text-sm text-neutral-700 dark:text-neutral-200 mb-2">
+            <label className="flex items-center gap-2"><input type="checkbox" checked={ruleBuilder.notifyOwner} onChange={e => setRuleBuilder({ ...ruleBuilder, notifyOwner: e.target.checked })} /> Item owner</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={ruleBuilder.notifyAdmin} onChange={e => setRuleBuilder({ ...ruleBuilder, notifyAdmin: e.target.checked })} /> Project admins</label>
+          </div>
+          <div className="grid grid-cols-1 gap-2">
+            <div>
+              <label htmlFor="rule-notify-users" className="block text-xs text-neutral-400 mb-0.5">User IDs (comma-separated)</label>
+              <input id="rule-notify-users" className="input w-full text-sm" value={ruleBuilder.notifyUsers} onChange={e => setRuleBuilder({ ...ruleBuilder, notifyUsers: e.target.value })} placeholder="user-123, user-456" />
+            </div>
+            <div>
+              <label htmlFor="rule-notify-emails" className="block text-xs text-neutral-400 mb-0.5">Email addresses (comma-separated)</label>
+              <input id="rule-notify-emails" className="input w-full text-sm" value={ruleBuilder.notifyEmails} onChange={e => setRuleBuilder({ ...ruleBuilder, notifyEmails: e.target.value })} placeholder="eng@example.com, ops@example.com" />
+            </div>
+            <div>
+              <label htmlFor="rule-notify-slack" className="block text-xs text-neutral-400 mb-0.5">Slack channels (comma-separated)</label>
+              <input id="rule-notify-slack" className="input w-full text-sm" value={ruleBuilder.notifySlack} onChange={e => setRuleBuilder({ ...ruleBuilder, notifySlack: e.target.value })} placeholder="#compliance-alerts, #eng-ops" />
+            </div>
+          </div>
+        </div>
+
+        {/* Gap 5 — multi-step escalation builder */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="block text-xs font-medium text-neutral-500">Escalation steps</span>
+            <button
+              type="button"
+              className="flex items-center gap-1 text-xs text-brand-navy hover:underline"
+              onClick={() => setRuleBuilder({ ...ruleBuilder, escalationSteps: [...(ruleBuilder.escalationSteps || []), { hours: 24, targets: [{ type: 'ITEM_OWNER' }] }] })}>
+              <Plus aria-hidden="true" className="h-3 w-3" /> Add step
+            </button>
+          </div>
+          {(ruleBuilder.escalationSteps || []).length === 0
+            ? <p className="text-xs text-neutral-400 py-1">No steps — add a step to enable multi-step escalation, or use the single-step field below.</p>
+            : (ruleBuilder.escalationSteps || []).map((step, idx) => (
+              <div key={idx} className="flex items-center gap-2 py-1.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                <span className="text-xs text-neutral-500 w-16 shrink-0">Step {idx + 1}</span>
+                <div className="flex items-center gap-1">
+                  <label htmlFor={`step-hours-${idx}`} className="sr-only">Hours until step {idx + 1}</label>
+                  <input
+                    id={`step-hours-${idx}`}
+                    type="number" min="1" className="input w-20 text-sm py-1"
+                    value={step.hours}
+                    onChange={e => {
+                      const updated = ruleBuilder.escalationSteps.map((s, i) => i === idx ? { ...s, hours: Number(e.target.value) } : s);
+                      setRuleBuilder({ ...ruleBuilder, escalationSteps: updated });
+                    }} />
+                  <span className="text-xs text-neutral-500">h →</span>
+                </div>
+                <select
+                  aria-label={`Step ${idx + 1} target type`}
+                  className="input text-sm py-1 flex-1"
+                  value={(step.targets?.[0]?.type) || 'ITEM_OWNER'}
+                  onChange={e => {
+                    const updated = ruleBuilder.escalationSteps.map((s, i) => i === idx ? { ...s, targets: [{ type: e.target.value }] } : s);
+                    setRuleBuilder({ ...ruleBuilder, escalationSteps: updated });
+                  }}>
+                  <option value="ITEM_OWNER">Item owner</option>
+                  <option value="PROJECT_ADMIN">Project admin</option>
+                  <option value="WORKSPACE_ADMIN">Workspace admin</option>
+                </select>
+                <button
+                  type="button"
+                  aria-label={`Remove step ${idx + 1}`}
+                  onClick={() => setRuleBuilder({ ...ruleBuilder, escalationSteps: ruleBuilder.escalationSteps.filter((_, i) => i !== idx) })}>
+                  <Trash2 aria-hidden="true" className="h-3.5 w-3.5 text-semantic-danger" />
+                </button>
+              </div>
+            ))}
+          <p className="text-xs text-neutral-400 mt-1">Steps fire in order. A violation is marked fully escalated only when all steps have fired.</p>
+        </div>
+
+        <div>
+          <label htmlFor="rule-escalate-hours" className="block text-xs font-medium text-neutral-500 mb-1">Single-step escalation — escalate if unacknowledged after (hours) <span className="text-neutral-400">— ignored when steps are defined above</span></label>
+          <input id="rule-escalate-hours" type="number" min="0" className="input w-full" value={ruleBuilder.escalateAfterHours} onChange={e => setRuleBuilder({ ...ruleBuilder, escalateAfterHours: e.target.value })} placeholder="e.g. 24" />
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 mt-5">
+        <Button variant="secondary" onClick={() => setRuleBuilder(null)}>Cancel</Button>
+        <Button variant="action" onClick={saveRule}>{ruleBuilder.id ? 'Save rule' : 'Create rule (inactive)'}</Button>
+      </div>
+      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-3">New rules are created inactive — test them, then activate from the rules list.</p>
+    </Modal>
   );
 }

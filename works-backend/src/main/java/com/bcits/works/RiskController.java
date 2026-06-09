@@ -21,10 +21,13 @@ public class RiskController {
 
     private final RiskRepository riskRepo;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
-    public RiskController(RiskRepository riskRepo, AuthenticatedUser authenticatedUser) {
+    public RiskController(RiskRepository riskRepo, AuthenticatedUser authenticatedUser,
+                          RbacService rbac) {
         this.riskRepo = riskRepo;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -38,7 +41,12 @@ public class RiskController {
 
     @GetMapping("/{id}")
     public Risk get(@PathVariable String id) {
-        return riskRepo.findById(id).orElseThrow();
+        Risk risk = riskRepo.findById(id).orElseThrow();
+        String wsId = rbac.workspaceForProject(risk.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("Risk", id);
+        }
+        return risk;
     }
 
     @PostMapping
@@ -52,6 +60,11 @@ public class RiskController {
 
     @PutMapping("/{id}")
     public Risk update(@PathVariable String id, @Valid @RequestBody Risk updated) {
+        Risk existing = riskRepo.findById(id).orElseThrow(() -> ApiException.notFound("Risk", id));
+        String wsId = rbac.workspaceForProject(existing.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("Risk", id);
+        }
         return riskRepo.findById(id).map(r -> {
             r.setTitle(updated.getTitle());
             r.setDescription(updated.getDescription());
@@ -72,6 +85,10 @@ public class RiskController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         riskRepo.findById(id).ifPresent(r -> {
+            String wsId = rbac.workspaceForProject(r.getProjectId());
+            if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+                throw ApiException.notFound("Risk", id);
+            }
             r.setDeletedAt(OffsetDateTime.now());
             riskRepo.save(r);
         });

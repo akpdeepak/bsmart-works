@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Last completed** | Prompt B — all 34 Layer B items resolved (2026-06-08) |
+| **Last completed** | Prompt B — all 34 Layer B items resolved (2026-06-09) |
 | **Next action** | **All 34/34 Layer B items ✅ Fixed.** Remaining work is operational: run load-test workflow against live deploy, engage audit firms for SOC 2 + ISO 27001, commission mobile repos when mobile team is funded. |
 | **Next iteration** | n/a — iteration 20 complete, all Layer B gaps resolved |
 | **Phase gate status** | Gate 1 (it.6): ✅ PASS · Gate 2 (it.9): ✅ PASS · Gate 3 (it.12): ✅ PASS · Gate 4 (it.18): 🟡 CONDITIONAL (k6 scripts ready; run `load-test.yml` workflow against live deploy to confirm P95 targets) |
@@ -1102,4 +1102,4 @@ Top defects → Layer B: B17 (carried: live LLM wiring), B33 (full-app i18n cove
 | 2026-06-07 | Layer B | All 34 items | 26 ✅ Fixed · 8 ⛔ Blocked (require decisions) · 0 remaining actionable | commits 50cdac7→ec57c5f |
 | 2026-06-08 | Prompt B | Extracted frontend views — loading-state quality pass (RB-30 §6) | ✅ 4 skeleton fixes (compliance, pm, settings3, knowledge views); 2 pre-existing px-value lint violations cleared; AI rule derived files regenerated (stale since 42facf5); all 400 Vitest tests + blocking guardrails green | commits 24e271f, fb61800 |
 | 2026-06-08 | Prompt B | B17 live LLM + B14/B23/B31 backend integrations | B17: AnthropicAiProvider wired (`@ConditionalOnProperty`) + 5 tests (PR #176). B14: CustomDomainVerificationJob + DNS TXT verify + V60 migration. B23: OAuthCallbackController + AES-256-GCM `integration_credentials`. B31: KmsProvider seam + `pii_vault_entries` + KeyRotationService + `/rotate-key` endpoint. B15 confirmed already implemented (PortalFormDesigner). 12 new + 1 updated unit tests; guardrails green | PR #176, PR #177 |
-| 2026-06-08 | Prompt B | B26/B28/B30/B32 — final 4 blocked items | B26: `ExtensionExecutionService` declarative engine (server-owned action allow-list; no arbitrary code; SET_FIELD/REJECT/SEND_NOTIFICATION/EMIT_EVENT; wired into WorkItemController before_create + after_status_change; 7 unit tests). B28: PWA-permanent decision (TD-020 CLOSED). B30: SSE-permanent decision (TD-023 CLOSED). B32: `docs/compliance/SOC2-CONTROLS.md` + `docs/compliance/ISO27001-CONTROLS.md` (full control mapping, audit-ready). **All 34/34 Layer B items ✅ Fixed.** | PR #180 |
+| 2026-06-09 | Prompt B | B26/B28/B30/B32 — final 4 blocked items | B26: `ExtensionExecutionService` declarative engine (server-owned action allow-list; no arbitrary code; SET_FIELD/REJECT/SEND_NOTIFICATION/EMIT_EVENT; wired into WorkItemController before_create + after_status_change; 7 unit tests). B28: PWA-permanent decision (TD-020 CLOSED). B30: SSE-permanent decision (TD-023 CLOSED). B32: `docs/compliance/SOC2-CONTROLS.md` + `docs/compliance/ISO27001-CONTROLS.md` (full control mapping, audit-ready). **All 34/34 Layer B items ✅ Fixed.** | PR #195 |

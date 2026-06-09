@@ -510,6 +510,9 @@ export default function PmView({
                 <Field label="Mitigation Plan">
                   <textarea className="input" rows={2} placeholder="How will you mitigate this risk?" value={pmForm.mitigationPlan || ''} onChange={e => setPmForm(p => ({ ...p, mitigationPlan: e.target.value }))} />
                 </Field>
+                <Field label="Contingency Plan">
+                  <textarea className="input" rows={2} placeholder="What will you do if the risk occurs?" value={pmForm.contingencyPlan || ''} onChange={e => setPmForm(p => ({ ...p, contingencyPlan: e.target.value }))} />
+                </Field>
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
                   <Field label="Review Date"><input type="date" className="input" value={pmForm.reviewDate || ''} onChange={e => setPmForm(p => ({ ...p, reviewDate: e.target.value || null }))} /></Field>
@@ -519,9 +522,14 @@ export default function PmView({
               {pmFormOpen === 'assumption' && <>
                 <Field label="Rationale"><textarea className="input" rows={2} placeholder="Why was this assumption made?" value={pmForm.rationale || ''} onChange={e => setPmForm(p => ({ ...p, rationale: e.target.value }))} /></Field>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
+                  <Field label="Validation Status">
+                    <select className="input" value={pmForm.validationStatus || 'UNVALIDATED'} onChange={e => setPmForm(p => ({ ...p, validationStatus: e.target.value }))}>
+                      {['UNVALIDATED','VALIDATED','INVALIDATED'].map(v => <option key={v}>{v}</option>)}
+                    </select>
+                  </Field>
                   <Field label="Expiry Date"><input type="date" className="input" value={pmForm.expiryDate || ''} onChange={e => setPmForm(p => ({ ...p, expiryDate: e.target.value || null }))} /></Field>
                 </div>
+                <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
               </>}
 
               {pmFormOpen === 'issue' && <>
@@ -530,6 +538,7 @@ export default function PmView({
                   <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
                 </div>
                 <Field label="Impact"><textarea className="input" rows={2} placeholder="Impact of this issue..." value={pmForm.impact || ''} onChange={e => setPmForm(p => ({ ...p, impact: e.target.value }))} /></Field>
+                <Field label="Resolution Path"><textarea className="input" rows={2} placeholder="How will this issue be resolved?" value={pmForm.resolutionPath || ''} onChange={e => setPmForm(p => ({ ...p, resolutionPath: e.target.value }))} /></Field>
               </>}
 
               {pmFormOpen === 'dependency' && <>
@@ -541,6 +550,7 @@ export default function PmView({
                   <Field label="Deadline"><input type="date" className="input" value={pmForm.deadline || ''} onChange={e => setPmForm(p => ({ ...p, deadline: e.target.value || null }))} /></Field>
                   <Field label="Status"><select className="input" value={pmForm.status || 'PENDING'} onChange={e => setPmForm(p => ({ ...p, status: e.target.value }))}>{['PENDING','IN_PROGRESS','RESOLVED','BLOCKED'].map(v => <option key={v}>{v}</option>)}</select></Field>
                 </div>
+                <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
                 <label className="flex items-center gap-2 text-sm text-neutral-700"><input type="checkbox" checked={!!pmForm.isBlocker} onChange={e => setPmForm(p => ({ ...p, isBlocker: e.target.checked }))} /> <span>This is a blocker</span></label>
               </>}
 
@@ -551,6 +561,18 @@ export default function PmView({
                   <Field label="Owner"><select className="input" value={pmForm.ownerId || ''} onChange={e => setPmForm(p => ({ ...p, ownerId: e.target.value || null }))}><option value="">Unassigned</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}</select></Field>
                   <Field label="Decision Date"><input type="date" className="input" value={pmForm.decisionDate || ''} onChange={e => setPmForm(p => ({ ...p, decisionDate: e.target.value || null }))} /></Field>
                 </div>
+                <Field label="Related Risk">
+                  <select className="input" value={pmForm.relatedRiskId || ''} onChange={e => setPmForm(p => ({ ...p, relatedRiskId: e.target.value || null }))}>
+                    <option value="">None</option>
+                    {risks.map(r => <option key={r.id} value={r.id}>{r.title}</option>)}
+                  </select>
+                </Field>
+                <Field label="Links (one per line)" hint="Paste relevant URLs, one per line">
+                  <textarea className="input" rows={2} placeholder="https://..." value={(pmForm.linksText) || ''} onChange={e => {
+                    const lines = e.target.value.split('\n').map(l => l.trim()).filter(Boolean);
+                    setPmForm(p => ({ ...p, linksText: e.target.value, links: JSON.stringify(lines) }));
+                  }} />
+                </Field>
               </>}
 
               {pmFormOpen === 'meeting' && <>

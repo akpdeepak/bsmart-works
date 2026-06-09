@@ -21,10 +21,13 @@ public class AssumptionController {
 
     private final AssumptionRepository repo;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
-    public AssumptionController(AssumptionRepository repo, AuthenticatedUser authenticatedUser) {
+    public AssumptionController(AssumptionRepository repo, AuthenticatedUser authenticatedUser,
+                                RbacService rbac) {
         this.repo = repo;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -37,7 +40,14 @@ public class AssumptionController {
     }
 
     @GetMapping("/{id}")
-    public Assumption get(@PathVariable String id) { return repo.findById(id).orElseThrow(); }
+    public Assumption get(@PathVariable String id) {
+        Assumption item = repo.findById(id).orElseThrow();
+        String wsId = rbac.workspaceForProject(item.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("Assumption", id);
+        }
+        return item;
+    }
 
     @PostMapping
     public Assumption create(@Valid @RequestBody Assumption a) {
@@ -50,6 +60,11 @@ public class AssumptionController {
 
     @PutMapping("/{id}")
     public Assumption update(@PathVariable String id, @Valid @RequestBody Assumption updated) {
+        Assumption existing = repo.findById(id).orElseThrow(() -> ApiException.notFound("Assumption", id));
+        String wsId = rbac.workspaceForProject(existing.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("Assumption", id);
+        }
         return repo.findById(id).map(a -> {
             a.setTitle(updated.getTitle());
             a.setDescription(updated.getDescription());
@@ -65,6 +80,10 @@ public class AssumptionController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         repo.findById(id).ifPresent(a -> {
+            String wsId = rbac.workspaceForProject(a.getProjectId());
+            if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+                throw ApiException.notFound("Assumption", id);
+            }
             a.setDeletedAt(OffsetDateTime.now());
             repo.save(a);
         });

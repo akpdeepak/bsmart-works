@@ -69,23 +69,37 @@ public class ReportDeliveryScheduler {
         String channel = s.getChannel() == null ? "IN_APP" : s.getChannel().toUpperCase();
         boolean inApp = !"EMAIL".equals(channel);
         boolean email = "EMAIL".equals(channel) || "BOTH".equals(channel);
-        String message = "Report \"" + reportName + "\" is ready";
-        String link = "/reports/" + s.getReportId();
+        // Per-recipient personalized link includes viewAs so the frontend can scope
+        // the report to the recipient's own data (RB-40 §1 / spec Cap J).
+        String baseLink = "/reports/" + s.getReportId();
 
         for (String userId : recipientIds(s)) {
+            String displayName = resolveDisplayName(userId);
+            String personalizedLink = baseLink + "?viewAs=" + userId;
+            String message = "Hi " + displayName + ", your report \"" + reportName + "\" is ready";
             if (inApp) {
                 Notification n = new Notification();
                 n.setUserId(userId);
                 n.setType("REPORT_DELIVERED");
                 n.setMessage(message);
-                n.setLink(link);
+                n.setLink(personalizedLink);
                 n.setRead(false);
                 n.setCreatedAt(OffsetDateTime.now());
                 notifications.save(n);
             }
             if (email) {
-                sendEmail(userId, reportName, link);
+                sendPersonalizedEmail(userId, displayName, reportName, personalizedLink);
             }
+        }
+    }
+
+    private String resolveDisplayName(String userId) {
+        try {
+            String name = jdbc.query("SELECT full_name FROM users WHERE id = ?",
+                rs -> rs.next() ? rs.getString(1) : null, userId);
+            return name != null && !name.isBlank() ? name.split("\\s+")[0] : "there";
+        } catch (Exception e) {
+            return "there";
         }
     }
 
@@ -103,7 +117,7 @@ public class ReportDeliveryScheduler {
         return ids;
     }
 
-    private void sendEmail(String userId, String reportName, String link) {
+    private void sendPersonalizedEmail(String userId, String displayName, String reportName, String link) {
         String email = jdbc.query("SELECT email FROM users WHERE id = ?",
             rs -> rs.next() ? rs.getString(1) : null, userId);
         if (email == null) return;
@@ -111,7 +125,11 @@ public class ReportDeliveryScheduler {
         msg.setFrom(FROM);
         msg.setTo(email);
         msg.setSubject("Your report is ready: " + reportName);
-        msg.setText("The report \"" + reportName + "\" is ready.\n\nOpen it in bSmart Works: " + link);
+        msg.setText("Hi " + displayName + ",\n\nYour report \"" + reportName + "\" is ready to view.\n\n"
+            + "Open it in bSmart Works: " + link + "\n\n"
+            + "This view is scoped to your data. If you need a different view, "
+            + "visit the report and adjust the scope from the toolbar.\n\n"
+            + "— bSmart Works");
         try {
             mailSender.send(msg);
         } catch (RuntimeException ex) {

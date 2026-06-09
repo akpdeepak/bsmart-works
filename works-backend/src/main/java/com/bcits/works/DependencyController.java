@@ -21,10 +21,13 @@ public class DependencyController {
 
     private final DependencyRepository repo;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
-    public DependencyController(DependencyRepository repo, AuthenticatedUser authenticatedUser) {
+    public DependencyController(DependencyRepository repo, AuthenticatedUser authenticatedUser,
+                                RbacService rbac) {
         this.repo = repo;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -37,7 +40,14 @@ public class DependencyController {
     }
 
     @GetMapping("/{id}")
-    public Dependency get(@PathVariable String id) { return repo.findById(id).orElseThrow(); }
+    public Dependency get(@PathVariable String id) {
+        Dependency dep = repo.findById(id).orElseThrow();
+        String wsId = rbac.workspaceForProject(dep.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("Dependency", id);
+        }
+        return dep;
+    }
 
     @PostMapping
     public Dependency create(@Valid @RequestBody Dependency dep) {
@@ -50,6 +60,11 @@ public class DependencyController {
 
     @PutMapping("/{id}")
     public Dependency update(@PathVariable String id, @Valid @RequestBody Dependency updated) {
+        Dependency existing = repo.findById(id).orElseThrow(() -> ApiException.notFound("Dependency", id));
+        String wsId = rbac.workspaceForProject(existing.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("Dependency", id);
+        }
         return repo.findById(id).map(d -> {
             d.setTitle(updated.getTitle());
             d.setDescription(updated.getDescription());
@@ -68,6 +83,10 @@ public class DependencyController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         repo.findById(id).ifPresent(d -> {
+            String wsId = rbac.workspaceForProject(d.getProjectId());
+            if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+                throw ApiException.notFound("Dependency", id);
+            }
             d.setDeletedAt(OffsetDateTime.now());
             repo.save(d);
         });

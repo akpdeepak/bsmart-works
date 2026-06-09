@@ -1,6 +1,7 @@
 package com.bcits.works;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,11 +39,14 @@ public class KpiService {
     private final MetricSnapshotRepository snapshots;
     private final MetricShareRepository shares;
     private final AiControlPlaneService controlPlane;
+    private final JdbcTemplate jdbc;
+    private final BqlCompiler bqlCompiler;
     private final ObjectMapper json = new ObjectMapper();
 
     public KpiService(WorkItemRepository workItems, ProjectRepository projects, TeamRepository teams,
                       MetricDefinitionRepository definitions, MetricSnapshotRepository snapshots,
-                      MetricShareRepository shares, AiControlPlaneService controlPlane) {
+                      MetricShareRepository shares, AiControlPlaneService controlPlane,
+                      JdbcTemplate jdbc, BqlCompiler bqlCompiler) {
         this.workItems = workItems;
         this.projects = projects;
         this.teams = teams;
@@ -50,12 +54,15 @@ public class KpiService {
         this.snapshots = snapshots;
         this.shares = shares;
         this.controlPlane = controlPlane;
+        this.jdbc = jdbc;
+        this.bqlCompiler = bqlCompiler;
     }
 
     // ── Public value types ───────────────────────────────────────────────────────
 
+    /** {@code status} is ON_TRACK / AT_RISK / OFF_TRACK when a numeric target is set; null otherwise. */
     public record MetricValue(String key, String label, double value, String unit,
-                              boolean higherIsBetter, int sampleSize) { }
+                              boolean higherIsBetter, int sampleSize, String status) { }
 
     public record Layer(String scopeLevel, String scopeId, String label, List<MetricValue> metrics,
                         String privacyNote) { }
@@ -79,7 +86,8 @@ public class KpiService {
         String note = target.equals(requesterId)
             ? "Private — visible only to you unless you choose to share."
             : "Shared with you voluntarily by the owner.";
-        return new Layer("INDIVIDUAL", target, "Personal", metrics, note);
+        return applyTargetsAndCustomMetrics(workspaceId,
+            new Layer("INDIVIDUAL", target, "Personal", metrics, note));
     }
 
     static List<MetricValue> personalMetrics(List<WorkItem> items) {
@@ -98,8 +106,9 @@ public class KpiService {
             .filter(x -> x.getId().equals(teamId)).findFirst()
             .orElseThrow(() -> ApiException.notFound("Team", teamId));
         List<WorkItem> items = teamItems(workspaceId, t);
-        return new Layer("TEAM", teamId, t.getName(), aggregateMetrics(items),
-            "Aggregated — no individual breakdown (privacy by design).");
+        return applyTargetsAndCustomMetrics(workspaceId,
+            new Layer("TEAM", teamId, t.getName(), aggregateMetrics(items),
+                "Aggregated — no individual breakdown (privacy by design.)"));
     }
 
     public Layer project(String workspaceId, String projectId) {
@@ -107,8 +116,9 @@ public class KpiService {
             .filter(x -> x.getId().equals(projectId)).findFirst()
             .orElseThrow(() -> ApiException.notFound("Project", projectId));
         List<WorkItem> items = workItems.findByProjectId(projectId);
-        return new Layer("PROJECT", projectId, p.getName(), aggregateMetrics(items),
-            "Aggregated across the project's contributing teams.");
+        return applyTargetsAndCustomMetrics(workspaceId,
+            new Layer("PROJECT", projectId, p.getName(), aggregateMetrics(items),
+                "Aggregated across the project's contributing teams."));
     }
 
     /** Manager view: aggregated metrics per team. Deliberately accepts no user id — there is no API
@@ -122,8 +132,9 @@ public class KpiService {
 
     public Layer org(String workspaceId) {
         List<WorkItem> items = scopedItems(workspaceId);
-        return new Layer("ORG", null, "Organization", aggregateMetrics(items),
-            "Organization-wide rollup — fully aggregated.");
+        return applyTargetsAndCustomMetrics(workspaceId,
+            new Layer("ORG", null, "Organization", aggregateMetrics(items),
+                "Organization-wide rollup — fully aggregated."));
     }
 
     static List<MetricValue> aggregateMetrics(List<WorkItem> items) {
@@ -388,7 +399,64 @@ public class KpiService {
     private static MetricValue metric(String key, double value, int sampleSize) {
         MetricCatalog.Metric m = MetricCatalog.get(key);
         return new MetricValue(key, m == null ? key : m.label(), MetricFormula.round1(value),
-            m == null ? "" : m.unit(), m != null && m.higherIsBetter(), sampleSize);
+            m == null ? "" : m.unit(), m != null && m.higherIsBetter(), sampleSize, null);
+    }
+
+    /** Evaluates ON_TRACK / AT_RISK / OFF_TRACK against a numeric target (RB-10 §6 KPI evaluation). */
+    static String evaluateStatus(double actual, Double target, boolean higherIsBetter) {
+        if (target == null || target <= 0) return null;
+        double denom = higherIsBetter ? target : Math.max(actual, 0.001);
+        double numer = higherIsBetter ? actual : target;
+        double ratio = numer / denom;
+        if (ratio >= 1.0) return "ON_TRACK";
+        if (ratio >= 0.75) return "AT_RISK";
+        return "OFF_TRACK";
+    }
+
+    /**
+     * Applies workspace-level targets to produce ON_TRACK/AT_RISK/OFF_TRACK status on each metric,
+     * and appends any custom BQL-formula metrics defined for this workspace (RB-10 §6).
+     */
+    private Layer applyTargetsAndCustomMetrics(String workspaceId, Layer layer) {
+        List<MetricDefinition> defs = definitions.findByWorkspaceIdOrderByNameAsc(workspaceId);
+        Map<String, MetricDefinition> defsByKey = defs.stream()
+            .collect(Collectors.toMap(MetricDefinition::getMetricKey, d -> d, (a, b) -> a));
+
+        // Re-evaluate status for catalog metrics that have a target set.
+        List<MetricValue> updated = layer.metrics().stream().map(mv -> {
+            MetricDefinition def = defsByKey.get(mv.key());
+            if (def == null || def.getTarget() == null) return mv;
+            String status = evaluateStatus(mv.value(), def.getTarget(), mv.higherIsBetter());
+            return new MetricValue(mv.key(), mv.label(), mv.value(), mv.unit(),
+                mv.higherIsBetter(), mv.sampleSize(), status);
+        }).collect(Collectors.toList());
+
+        // Append custom metrics with bqlFormula (unification layer: BQL in KPI definitions, RB-10 §6).
+        List<MetricValue> custom = new ArrayList<>();
+        for (MetricDefinition def : defs) {
+            if (def.getBqlFormula() == null || def.getBqlFormula().isBlank()) continue;
+            if (defsByKey.containsKey(def.getMetricKey()) && updated.stream().anyMatch(m -> m.key().equals(def.getMetricKey()))) continue;
+            try {
+                BqlCompiler.Compiled compiled = bqlCompiler.compile(def.getBqlFormula(), null);
+                String countSql = "SELECT COUNT(*) FROM work_items WHERE workspace_id = ? AND deleted_at IS NULL"
+                    + (compiled.sql().isBlank() ? "" : " AND (" + compiled.sql() + ")");
+                List<Object> params = new ArrayList<>();
+                params.add(workspaceId);
+                params.addAll(compiled.params());
+                long count = jdbc.queryForObject(countSql, Long.class, params.toArray());
+                boolean hib = Boolean.TRUE.equals(def.getHigherIsBetter());
+                String status = evaluateStatus(count, def.getTarget(), hib);
+                custom.add(new MetricValue(def.getMetricKey(), def.getName(), count,
+                    def.getUnit() == null ? "count" : def.getUnit(), hib, (int) count, status));
+            } catch (Exception ignored) {
+                // If the formula is malformed, skip rather than fail the whole layer.
+            }
+        }
+        if (!custom.isEmpty()) {
+            updated = new ArrayList<>(updated);
+            updated.addAll(custom);
+        }
+        return new Layer(layer.scopeLevel(), layer.scopeId(), layer.label(), updated, layer.privacyNote());
     }
 
     // ── workspace-scoped data access (RB-40 §1) ────────────────────────────────────

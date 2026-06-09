@@ -21,10 +21,13 @@ public class LessonLearnedController {
 
     private final LessonLearnedRepository repo;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
-    public LessonLearnedController(LessonLearnedRepository repo, AuthenticatedUser authenticatedUser) {
+    public LessonLearnedController(LessonLearnedRepository repo, AuthenticatedUser authenticatedUser,
+                                   RbacService rbac) {
         this.repo = repo;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -39,7 +42,14 @@ public class LessonLearnedController {
     }
 
     @GetMapping("/{id}")
-    public LessonLearned get(@PathVariable String id) { return repo.findById(id).orElseThrow(); }
+    public LessonLearned get(@PathVariable String id) {
+        LessonLearned ll = repo.findById(id).orElseThrow();
+        String wsId = rbac.workspaceForProject(ll.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("LessonLearned", id);
+        }
+        return ll;
+    }
 
     @PostMapping
     public LessonLearned create(@Valid @RequestBody LessonLearned ll) {
@@ -54,6 +64,11 @@ public class LessonLearnedController {
 
     @PutMapping("/{id}")
     public LessonLearned update(@PathVariable String id, @Valid @RequestBody LessonLearned updated) {
+        LessonLearned existing = repo.findById(id).orElseThrow(() -> ApiException.notFound("LessonLearned", id));
+        String wsId = rbac.workspaceForProject(existing.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("LessonLearned", id);
+        }
         return repo.findById(id).map(ll -> {
             ll.setTitle(updated.getTitle());
             ll.setDescription(updated.getDescription());
@@ -71,6 +86,10 @@ public class LessonLearnedController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         repo.findById(id).ifPresent(ll -> {
+            String wsId = rbac.workspaceForProject(ll.getProjectId());
+            if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+                throw ApiException.notFound("LessonLearned", id);
+            }
             ll.setDeletedAt(OffsetDateTime.now());
             repo.save(ll);
         });

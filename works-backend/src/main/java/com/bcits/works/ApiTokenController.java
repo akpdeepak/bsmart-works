@@ -54,4 +54,14 @@ public class ApiTokenController {
         rbac.require(authenticatedUser.id(), workspaceId, "manage_api_tokens");
         return apiTokens.revoke(workspaceId, id);
     }
+
+    /** Rotates a token: revokes the current one and issues a new token with the same name and scopes. */
+    @PostMapping("/{id}/rotate")
+    public Map<String, Object> rotate(@RequestParam String workspaceId, @PathVariable String id) {
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "manage_api_tokens");
+        ApiTokenService.IssuedToken issued = apiTokens.rotate(workspaceId, id, userId);
+        return Map.of("token", issued.token(), "plaintext", issued.plaintext(),
+            "notice", "Copy this token now — it will not be shown again.");
+    }
 }

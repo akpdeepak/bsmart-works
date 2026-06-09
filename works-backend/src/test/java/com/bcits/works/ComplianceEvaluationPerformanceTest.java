@@ -75,6 +75,11 @@ class ComplianceEvaluationPerformanceTest {
             "INSERT INTO users(id, email, password_hash, full_name) VALUES (?,?,?,?)",
             "USR-PERF", "perf@test.invalid", "x", "Perf User");
 
+        // User (work items reference created_by → users FK)
+        jdbc.update(
+            "INSERT INTO users(id, email, password_hash, full_name) VALUES (?,?,?,?) ON CONFLICT DO NOTHING",
+            "USR-PERF", "perf-test@bcits.test", "placeholder", "Perf Test User");
+
         // Workspace
         jdbc.update(
             "INSERT INTO workspaces(id, name, slug, created_at, updated_at) "
@@ -176,6 +181,9 @@ class ComplianceEvaluationPerformanceTest {
             "INSERT INTO projects(id, workspace_id, name, key_prefix, slug, created_at, updated_at) "
             + "VALUES (?, ?, ?, ?, ?, ?, ?)",
             proj2, ws2, "Other Project", "OTH", "perf-proj-2", now, now);
+        jdbc.update(
+            "INSERT INTO users(id, email, password_hash, full_name) VALUES (?,?,?,?) ON CONFLICT DO NOTHING",
+            "USR-OTH", "oth-test@bcits.test", "placeholder", "OTH Test User");
         // Add 100 work items with NO description in WS2
         for (int i = 0; i < 100; i++) {
             jdbc.update(

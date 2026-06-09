@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FileText, FilePlus2, Sparkles, AlertCircle } from 'lucide-react';
+import { FileText, FilePlus2, Sparkles, AlertCircle, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { Field } from '@/components/works/field';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -7,14 +7,20 @@ import { templatesClient, extractionClient } from '@/lib/knowledge-advanced';
 
 // Advanced Knowledge — Document templates + AI structured-data extraction (iteration-20 Cap I).
 // Self-fetching like DeveloperWorkspace: the parent supplies workspaceId + an optional toast handler.
-// The library lists/creates workspace-scoped templates; the extraction panel turns free-form text into
-// a fields table, badged with the AI Control Plane verdict (RB-40 §2 — "AI" vs "Offline" fallback).
+// The library lists/creates/edits/deletes workspace-scoped templates; the extraction panel turns
+// free-form text into a fields table, badged with the AI Control Plane verdict (RB-40 §2).
 export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onToast }) {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [form, setForm] = useState({ name: '', category: '', description: '', body: '' });
   const [creating, setCreating] = useState(false);
+
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', category: '', description: '', body: '' });
+  const [saving, setSaving] = useState(false);
 
   const [text, setText] = useState('');
   const [extraction, setExtraction] = useState(null);
@@ -32,8 +38,6 @@ export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onT
       .finally(() => setLoading(false));
   }, [workspaceId]);
 
-  // Initial load synchronises external (server) state into React — the documented exception to
-  // react-hooks/set-state-in-effect (matches sla-view / integrations-panel).
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
@@ -49,6 +53,36 @@ export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onT
       .catch((e) => notify(e.message || 'Could not create template.', 'error'))
       .finally(() => setCreating(false));
   }, [workspaceId, form, notify]);
+
+  const openEdit = useCallback((t) => {
+    setEditingTemplate(t);
+    setEditForm({ name: t.name, category: t.category || '', description: t.description || '', body: t.body || '' });
+  }, []);
+
+  const saveEdit = useCallback(() => {
+    if (!editForm.name.trim()) { notify('A template name is required.', 'error'); return; }
+    setSaving(true);
+    templatesClient.update(workspaceId, editingTemplate.id, editForm)
+      .then((updated) => {
+        setTemplates((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+        setEditingTemplate(null);
+        notify('Template updated.', 'success');
+      })
+      .catch((e) => notify(e.message || 'Could not update template.', 'error'))
+      .finally(() => setSaving(false));
+  }, [workspaceId, editingTemplate, editForm, notify]);
+
+  const deleteTemplate = useCallback((id) => {
+    setDeleting(true);
+    templatesClient.remove(workspaceId, id)
+      .then(() => {
+        setTemplates((prev) => prev.filter((t) => t.id !== id));
+        setDeleteConfirm(null);
+        notify('Template deleted.', 'success');
+      })
+      .catch((e) => { notify(e.message || 'Could not delete template.', 'error'); setDeleteConfirm(null); })
+      .finally(() => setDeleting(false));
+  }, [workspaceId, notify]);
 
   const runExtract = useCallback(() => {
     if (!text.trim()) { notify('Enter some text to extract from.', 'error'); return; }
@@ -67,6 +101,61 @@ export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onT
           Reusable document templates and AI structured-data extraction.
         </p>
       </div>
+
+      {/* Delete confirm dialog */}
+      {deleteConfirm && (
+        <div role="dialog" aria-modal="true" aria-labelledby="tpl-delete-title"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl border border-neutral-200 dark:border-neutral-700">
+            <h2 id="tpl-delete-title" className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+              Delete template?
+            </h2>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">
+              This template will be permanently deleted and cannot be recovered.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button variant="secondary" size="sm" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+              <Button variant="danger" size="sm" loading={deleting} onClick={() => deleteTemplate(deleteConfirm)}>
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit modal */}
+      {editingTemplate && (
+        <div role="dialog" aria-modal="true" aria-labelledby="tpl-edit-title"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-xl border border-neutral-200 dark:border-neutral-700">
+            <h2 id="tpl-edit-title" className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-4">
+              Edit template
+            </h2>
+            <div className="space-y-3">
+              <Field label="Name">
+                <input className="input w-full text-sm" value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+              </Field>
+              <Field label="Category">
+                <input className="input w-full text-sm" value={editForm.category}
+                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value })} />
+              </Field>
+              <Field label="Description">
+                <input className="input w-full text-sm" value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
+              </Field>
+              <Field label="Body (markdown)">
+                <textarea className="input w-full text-sm font-mono" rows={5} value={editForm.body}
+                  onChange={(e) => setEditForm({ ...editForm, body: e.target.value })} />
+              </Field>
+            </div>
+            <div className="flex gap-3 justify-end mt-5">
+              <Button variant="secondary" size="sm" onClick={() => setEditingTemplate(null)}>Cancel</Button>
+              <Button variant="primary" size="sm" loading={saving} onClick={saveEdit}>Save changes</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ── Templates library ── */}
@@ -103,9 +192,19 @@ export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onT
                       </div>
                       {t.description && <p className="text-xs text-neutral-500 mt-1">{t.description}</p>}
                     </div>
-                    {onUseTemplate && (
-                      <Button variant="secondary" size="sm" onClick={() => onUseTemplate(t)}>Use template</Button>
-                    )}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button onClick={() => openEdit(t)} aria-label={`Edit ${t.name}`}
+                        className="p-1 text-neutral-400 hover:text-brand-navy rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
+                        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                      <button onClick={() => setDeleteConfirm(t.id)} aria-label={`Delete ${t.name}`}
+                        className="p-1 text-neutral-400 hover:text-semantic-danger rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                      {onUseTemplate && (
+                        <Button variant="secondary" size="sm" onClick={() => onUseTemplate(t)}>Use template</Button>
+                      )}
+                    </div>
                   </div>
                 </li>
               ))}
@@ -186,7 +285,6 @@ export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onT
   );
 }
 
-// Renders the extracted fields map as a simple two-column table; arrays/objects are flattened to text.
 function FieldsTable({ fields }) {
   const entries = Object.entries(fields || {});
   if (entries.length === 0) {

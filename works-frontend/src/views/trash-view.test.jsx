@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import TrashView from './trash-view';
 
 const noop = () => {};
@@ -34,10 +34,21 @@ describe('TrashView', () => {
     expect(restoreFromTrash).toHaveBeenCalledWith('WRK-9');
   });
 
-  it('permanently deletes an item by id', () => {
+  it('permanently deletes an item by id after confirm dialog', () => {
+    const permanentDelete = vi.fn();
+    render(<TrashView {...baseProps} permanentDelete={permanentDelete} trashItems={[{ id: 'WRK-9', title: 'X', type: 'Task' }]} />);
+    // Step 1: trigger opens the confirm dialog
+    fireEvent.click(screen.getByRole('button', { name: 'Delete permanently' }));
+    // Step 2: confirm via the dialog's danger button (dialog element is role="dialog")
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete permanently' }));
+    expect(permanentDelete).toHaveBeenCalledWith('WRK-9');
+  });
+
+  it('cancel in the confirm dialog does not delete', () => {
     const permanentDelete = vi.fn();
     render(<TrashView {...baseProps} permanentDelete={permanentDelete} trashItems={[{ id: 'WRK-9', title: 'X', type: 'Task' }]} />);
     fireEvent.click(screen.getByRole('button', { name: 'Delete permanently' }));
-    expect(permanentDelete).toHaveBeenCalledWith('WRK-9');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(permanentDelete).not.toHaveBeenCalled();
   });
 });

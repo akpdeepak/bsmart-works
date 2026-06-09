@@ -1,18 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Bot, Sparkles, MessageSquare, Play, Send, AlertCircle, Workflow } from 'lucide-react';
+import { Bot, Sparkles, MessageSquare, Play, Send, AlertCircle, Workflow, Brain, X } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { Field } from '@/components/works/field';
 import { Badge } from '@/components/works/atoms/badge';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { Skeleton } from '@/components/works/atoms/skeleton';
 import {
-  assistantsClient, agentsClient, conversationalDashboardsClient, aiVerdictLabel,
+  assistantsClient, agentsClient, memoryClient, conversationalDashboardsClient, aiVerdictLabel,
 } from '@/lib/advanced-ai';
 
-// AI Studio — iteration-20 advanced AI (Cap O). Three surfaces over the AI Control Plane:
+// AI Studio — iteration-20 advanced AI (Cap O). Four surfaces over the AI Control Plane:
 //   • Assistants — chat with a workspace persona; it remembers context across turns (AI memory).
 //   • Agents     — give a multi-step goal; it plans + runs steps and shows an audited result.
 //   • Ask        — natural-language → dashboard widget spec (conversational dashboards).
+//   • Memory     — view, add and remove the persistent context the AI assistants recall.
 // Self-fetching: the parent supplies the active workspaceId (+ an optional toast handler). Every
 // reply is badged with the control-plane verdict (AI vs Offline fallback) so the UI is honest.
 export default function AiStudioView({ workspaceId, onToast }) {
@@ -21,8 +22,9 @@ export default function AiStudioView({ workspaceId, onToast }) {
 
   const TABS = [
     { id: 'assistants', label: 'Assistants', icon: Bot },
-    { id: 'agents', label: 'Agents', icon: Workflow },
-    { id: 'ask', label: 'Ask', icon: Sparkles },
+    { id: 'agents',     label: 'Agents',     icon: Workflow },
+    { id: 'ask',        label: 'Ask',         icon: Sparkles },
+    { id: 'memory',     label: 'Memory',      icon: Brain },
   ];
 
   return (
@@ -54,6 +56,7 @@ export default function AiStudioView({ workspaceId, onToast }) {
         {tab === 'assistants' && <AssistantsPanel workspaceId={workspaceId} notify={notify} />}
         {tab === 'agents' && <AgentsPanel workspaceId={workspaceId} notify={notify} />}
         {tab === 'ask' && <AskPanel workspaceId={workspaceId} notify={notify} />}
+        {tab === 'memory' && <MemoryPanel workspaceId={workspaceId} notify={notify} />}
       </div>
     </div>
   );
@@ -312,6 +315,95 @@ function AskPanel({ workspaceId, notify }) {
           </dl>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── AI Memory ──────────────────────────────────────────────────────────────────
+function MemoryPanel({ workspaceId, notify }) {
+  const [memories, setMemories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [form, setForm] = useState({ key: '', value: '' });
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(() => {
+    if (!workspaceId) { setLoading(false); return; }
+    setLoading(true);
+    setError(null);
+    memoryClient.list(workspaceId)
+      .then((data) => setMemories(Array.isArray(data) ? data : []))
+      .catch((e) => setError(e.message || 'Could not load memory.'))
+      .finally(() => setLoading(false));
+  }, [workspaceId]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { load(); }, [load]);
+
+  const remember = () => {
+    if (!form.key.trim() || !form.value.trim()) { notify('Key and value are required.', 'error'); return; }
+    setSaving(true);
+    memoryClient.remember(workspaceId, form)
+      .then((mem) => { setMemories((prev) => [...prev, mem]); setForm({ key: '', value: '' }); notify('Remembered.', 'success'); })
+      .catch((e) => notify(e.message || 'Could not save memory.', 'error'))
+      .finally(() => setSaving(false));
+  };
+
+  const forget = (id) => {
+    memoryClient.forget(workspaceId, id)
+      .then(() => { setMemories((prev) => prev.filter((m) => m.id !== id)); notify('Forgotten.', 'success'); })
+      .catch((e) => notify(e.message || 'Could not forget.', 'error'));
+  };
+
+  if (loading) return <div className="space-y-3"><Skeleton className="h-10 w-full" /><Skeleton className="h-32 w-full" /></div>;
+  if (error) return (
+    <div role="alert" className="flex items-center gap-2 text-sm text-semantic-danger">
+      <AlertCircle className="h-4 w-4" aria-hidden="true" />{error}
+    </div>
+  );
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 h-full">
+      <div className="min-h-0 overflow-y-auto">
+        <h3 className="text-sm font-semibold mb-3">Stored context</h3>
+        {memories.length === 0 ? (
+          <EmptyState icon={Brain} title="No context stored"
+            subtitle="Use the Remember form to add facts the AI assistants should recall across conversations." />
+        ) : (
+          <ul className="space-y-2" aria-label="AI memory entries">
+            {memories.map((m) => (
+              <li key={m.id}
+                className="flex items-start gap-3 rounded-lg border border-neutral-200 dark:border-neutral-700 p-3">
+                <div className="flex-1 min-w-0">
+                  <span className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">{m.key}</span>
+                  <span className="block text-sm text-neutral-900 dark:text-neutral-100 mt-0.5">{m.value}</span>
+                </div>
+                <button type="button" onClick={() => forget(m.id)} aria-label={`Forget ${m.key}`}
+                  className="flex-shrink-0 p-0.5 text-neutral-400 hover:text-semantic-danger transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded">
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4 h-fit">
+        <h3 className="text-sm font-semibold mb-3">Remember</h3>
+        <div className="space-y-3">
+          <Field label="Key">
+            <input value={form.key} onChange={(e) => setForm((f) => ({ ...f, key: e.target.value }))}
+              placeholder="e.g. project-code-prefix"
+              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:border-neutral-600 dark:bg-neutral-900" />
+          </Field>
+          <Field label="Value">
+            <textarea value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))} rows={3}
+              placeholder="e.g. WRK"
+              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:border-neutral-600 dark:bg-neutral-900" />
+          </Field>
+          <Button type="button" size="sm" onClick={remember} loading={saving} fullWidth>Remember</Button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -13,7 +13,7 @@
 > *what* to do, *why*, *when*, and *how* — and binds each action to the check that enforces it.
 > It does not restate the rules; it **routes** to the rule book that owns them.
 >
-> Version 1.0 · last verified 2026-06-01 · owner: Deepak Pandey
+> Version 1.0 · last verified 2026-06-09 · owner: Deepak Pandey
 
 ---
 
@@ -124,7 +124,7 @@ to make the gate non-optional; the checks do the enforcing.
 | WCAG 2.1 AA | `eslint-plugin-jsx-a11y` | save · pre-commit · CI |
 | RBAC in service (not controller); Flyway-only; package layout | `scripts/guardrails.sh` | pre-commit · CI |
 | **Every repository query workspace-scoped** | **`guardrails.sh` tenant-scope check — TO BE ADDED (RB-40)** | pre-commit · CI |
-| Java style | Checkstyle (currently reporting-mode; flip `failOnViolation=true` once baseline clean) | `./mvnw verify` · CI |
+| Java style | Checkstyle (`failOnViolation=true`; baseline clean as of 2026-06-08 — TD-005 closed) | `./mvnw verify` · CI |
 | Backend behavior + coverage | JUnit 5 + JaCoCo gate | CI |
 | Frontend behavior | Vitest + React Testing Library | pre-commit · CI |
 | AI-tool rule files never drift from source | `scripts/generate-ai-rules.mjs --check` | pre-commit · CI |
@@ -205,7 +205,7 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
 > source wins, for every kind of content. It exists so that Claude Code, Codex, Copilot,
 > Cursor, and Windsurf all resolve conflicts the *same* way, every time.
 >
-> Version 1.0 · last verified 2026-06-01 · owner: Deepak Pandey
+> Version 1.0 · last verified 2026-06-09 · owner: Deepak Pandey
 
 ---
 

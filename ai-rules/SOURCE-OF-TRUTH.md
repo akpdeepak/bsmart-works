@@ -4,7 +4,7 @@
 > source wins, for every kind of content. It exists so that Claude Code, Codex, Copilot,
 > Cursor, and Windsurf all resolve conflicts the *same* way, every time.
 >
-> Version 1.0 · last verified 2026-06-01 · owner: Deepak Pandey
+> Version 1.0 · last verified 2026-06-09 · owner: Deepak Pandey
 
 ---
 

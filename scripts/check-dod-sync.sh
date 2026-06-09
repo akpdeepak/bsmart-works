@@ -6,8 +6,8 @@
 
 set -euo pipefail
 
-CLAUDE_VER=$(grep -oP '(?<=dod-version: )[^\s<>]+' CLAUDE.md | head -1)
-TEMPLATE_VER=$(grep -oP '(?<=dod-version: )[^\s<>]+' .github/pull_request_template.md | head -1)
+CLAUDE_VER=$(grep -o 'dod-version: [^[:space:]<>]*' CLAUDE.md | head -1 | sed 's/dod-version: //')
+TEMPLATE_VER=$(grep -o 'dod-version: [^[:space:]<>]*' .github/pull_request_template.md | head -1 | sed 's/dod-version: //')
 
 if [ -z "$CLAUDE_VER" ]; then
   echo "BLOCK: no dod-version tag found in CLAUDE.md" >&2

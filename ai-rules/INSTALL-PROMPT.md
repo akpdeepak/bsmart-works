@@ -1,5 +1,9 @@
 # Claude Code — install prompt
 
+> **Status: already applied.** This prompt was used to bootstrap the `ai-rules/` system into this repo.
+> The generator is live, per-tool files are generated, and CI enforces sync via `--check`.
+> This file is kept as a historical record — do not re-run it.
+
 Prerequisite: the `ai-rules/` folder (including `generate-ai-rules.mjs`) is committed to the repo.
 Then paste the prompt below into Claude Code, run from the repo root.
 

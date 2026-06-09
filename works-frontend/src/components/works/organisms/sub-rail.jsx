@@ -56,7 +56,7 @@ export function SubRail({ activeMode, activeView, activeExtra, onNavigate, visib
                 )}
                 {Icon && <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />}
                 {badge != null && badge > 0 && (
-                  <span className="absolute -top-0.5 right-0.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-brand-orange text-white text-2xs font-bold flex items-center justify-center leading-none">
+                  <span className="absolute -top-0.5 right-0.5 min-w-3.5 h-3.5 px-0.5 rounded-full bg-brand-orange text-white text-2xs font-bold flex items-center justify-center leading-none">
                     {badge > 9 ? '9+' : badge}
                   </span>
                 )}

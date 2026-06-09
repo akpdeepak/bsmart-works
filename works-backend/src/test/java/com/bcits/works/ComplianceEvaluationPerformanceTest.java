@@ -122,7 +122,7 @@ class ComplianceEvaluationPerformanceTest {
                 "",                    // no scope filter — all items
                 "MEDIUM",
                 true, false, "CONTINUOUS",
-                "[]", "[]",
+                "[]", "[]",            // jsonb empty arrays
                 "USR-PERF", now, now);
         }
     }

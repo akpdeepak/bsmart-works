@@ -464,7 +464,9 @@ function IntegrationsTab({ workspaceId, data, onChanged, notify }) {
 function AccessTab({ workspaceId, data, onChanged, notify }) {
   const [active, setActive] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [confirmDeactivateId, setConfirmDeactivateId] = useState(null);
   const reviews = data?.reviews || [];
+  const pendingDeactivate = active?.members?.find((m) => m.id === confirmDeactivateId);
 
   async function start() {
     setBusy(true);
@@ -485,6 +487,26 @@ function AccessTab({ workspaceId, data, onChanged, notify }) {
   }
 
   return (
+    <>
+      {confirmDeactivateId && (
+        <div role="dialog" aria-modal="true" aria-labelledby="deactivate-confirm-title"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl border border-neutral-200 dark:border-neutral-700">
+            <h2 id="deactivate-confirm-title" className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+              Deactivate user?
+            </h2>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">
+              <strong>{pendingDeactivate?.full_name ?? 'This user'}</strong> will lose access immediately and cannot log in until reactivated.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button variant="secondary" size="sm" onClick={() => setConfirmDeactivateId(null)}>Cancel</Button>
+              <Button variant="danger" size="sm" onClick={() => { deactivate(confirmDeactivateId); setConfirmDeactivateId(null); }}>
+                Deactivate
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     <div className="space-y-6">
       <Card
         title="Access review"
@@ -503,7 +525,7 @@ function AccessTab({ workspaceId, data, onChanged, notify }) {
                     {m.full_name} <span className="text-xs text-neutral-500">· last active {m.last_activity ? smartDate(m.last_activity) : 'never'}</span>
                   </span>
                   {m.inactive && m.is_active ? (
-                    <Button size="sm" variant="danger" onClick={() => deactivate(m.id)}>Deactivate</Button>
+                    <Button size="sm" variant="danger" onClick={() => setConfirmDeactivateId(m.id)}>Deactivate</Button>
                   ) : (
                     <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${m.is_active ? 'bg-semantic-success text-white' : 'bg-neutral-300 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200'}`}>{m.is_active ? 'Active' : 'Inactive'}</span>
                   )}
@@ -529,6 +551,7 @@ function AccessTab({ workspaceId, data, onChanged, notify }) {
         )}
       </Card>
     </div>
+    </>
   );
 }
 

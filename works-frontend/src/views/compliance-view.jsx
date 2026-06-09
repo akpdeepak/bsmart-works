@@ -66,6 +66,8 @@ export default function ComplianceView({
 }) {
   // Gap 1 — per-violation resolution notes form
   const [resolveForm, setResolveForm] = useState(null); // { id, action } | null
+  const [confirmDeleteRuleId, setConfirmDeleteRuleId] = useState(null);
+  const pendingRule = complianceRules.find((r) => r.id === confirmDeleteRuleId);
 
   const selectableViolations = complianceViolations
     .filter(v => v.status === 'OPEN' || v.status === 'ACKNOWLEDGED')
@@ -74,6 +76,26 @@ export default function ComplianceView({
     selectableViolations.every(id => selectedViolations.includes(id));
 
   return (
+    <>
+      {confirmDeleteRuleId && (
+        <div role="dialog" aria-modal="true" aria-labelledby="delete-rule-title"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl border border-neutral-200 dark:border-neutral-700">
+            <h2 id="delete-rule-title" className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+              Delete compliance rule?
+            </h2>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">
+              <strong>{pendingRule?.name ?? 'This rule'}</strong> will be permanently deleted. Existing violations will remain.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button variant="secondary" size="sm" onClick={() => setConfirmDeleteRuleId(null)}>Cancel</Button>
+              <Button variant="danger" size="sm" onClick={() => { deleteRule(confirmDeleteRuleId); setConfirmDeleteRuleId(null); }}>
+                Delete rule
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header + tabs */}
       <div className="px-6 pt-5 border-b border-neutral-200 dark:border-neutral-700">
@@ -238,7 +260,7 @@ export default function ComplianceView({
                         : null}
                       <button onClick={() => setRuleActive(r.id, !r.active)} className="text-xs text-brand-navy hover:underline">{r.active ? 'Deactivate' : 'Activate'}</button>
                       <button onClick={() => editRuleBuilder(r)} className="text-xs text-neutral-500 hover:underline">Edit</button>
-                      <button onClick={() => deleteRule(r.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
+                      <button onClick={() => setConfirmDeleteRuleId(r.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
                     </>}
                   </div>
                 ))}
@@ -371,6 +393,7 @@ export default function ComplianceView({
         />
       )}
     </div>
+    </>
   );
 }
 

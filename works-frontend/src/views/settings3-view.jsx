@@ -78,12 +78,46 @@ export default function Settings3View({
   const [expandedTransId, setExpandedTransId] = useState(null);
   // "Add rule" form state (one active form at a time per section).
   const [addRuleForm, setAddRuleForm] = useState({ transId: null, section: null, type: '', fieldKey: '', value: '', tier: 3 });
+  // Confirm-before-delete — one dialog covers workflow, field, and type deletions.
+  const [confirmDelete, setConfirmDelete] = useState(null); // { entity, name, action: 'workflow'|'field'|'type', id }
 
   // Helper: get the display order for a given item type's layout.
   const getLayoutOrder = (itemType) =>
     layoutOrders[itemType] ?? fieldDefs.map(fd => fd.id);
 
+  const handleConfirmDelete = () => {
+    if (!confirmDelete) return;
+    const { action, id } = confirmDelete;
+    const done = () => setConfirmDelete(null);
+    if (action === 'workflow') {
+      api.raw(`/workflows/${id}`, { method: 'DELETE' })
+        .then(() => { fetchWorkflows(); if (expandedWorkflowId === id) setExpandedWorkflowId(null); done(); });
+    } else if (action === 'field') {
+      api.raw(`/field-defs/${id}`, { method: 'DELETE' }).then(() => { fetchFieldDefs(); done(); });
+    } else if (action === 'type') {
+      api.raw(`/work-item-types/${id}`, { method: 'DELETE' }).then(() => { fetchWorkItemTypes(); done(); });
+    }
+  };
+
   return (
+    <>
+      {confirmDelete && (
+        <div role="dialog" aria-modal="true" aria-labelledby="s3-delete-title"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl border border-neutral-200 dark:border-neutral-700">
+            <h2 id="s3-delete-title" className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+              Delete {confirmDelete.entity}?
+            </h2>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">
+              <strong>{confirmDelete.name}</strong> will be permanently deleted and cannot be recovered.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(null)}>Cancel</Button>
+              <Button variant="danger" size="sm" onClick={handleConfirmDelete}>Delete</Button>
+            </div>
+          </div>
+        </div>
+      )}
     <div className="p-8 max-w-5xl">
       <h1 className="text-2xl font-bold text-brand-navy dark:text-white mb-1">Workflows &amp; Fields</h1>
       <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">Configure workflows, custom fields, permissions, and work item types</p>
@@ -149,7 +183,7 @@ export default function Settings3View({
                         </div>
                         <div className="flex gap-3 items-center" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()} role="none">
                           <span className="font-mono text-xs text-neutral-300">{wf.id}</span>
-                          <button onClick={() => api.raw(`/workflows/${wf.id}`, { method: 'DELETE' }).then(() => { fetchWorkflows(); if (expandedWorkflowId === wf.id) setExpandedWorkflowId(null); })}
+                          <button onClick={() => setConfirmDelete({ entity: 'workflow', name: wf.name, action: 'workflow', id: wf.id })}
                             className="text-xs text-semantic-danger hover:underline">Delete</button>
                         </div>
                       </div>
@@ -492,7 +526,7 @@ export default function Settings3View({
                         <td className="px-4 py-3 font-mono text-xs text-neutral-600 dark:text-neutral-400">{fd.fieldKey}</td>
                         <td className="px-4 py-3"><span className={`text-xs font-semibold ${fd.required ? 'text-semantic-danger' : 'text-neutral-300'}`}>{fd.required ? <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" aria-hidden="true" />Required</span> : 'Optional'}</span></td>
                         <td className="px-4 py-3">
-                          <button onClick={() => api.raw(`/field-defs/${fd.id}`, { method: 'DELETE' }).then(() => fetchFieldDefs())}
+                          <button onClick={() => setConfirmDelete({ entity: 'field', name: fd.name, action: 'field', id: fd.id })}
                             className="text-xs text-semantic-danger hover:underline">Delete</button>
                         </td>
                       </tr>
@@ -834,7 +868,7 @@ export default function Settings3View({
                         <p className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">{t.label}</p>
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono truncate">{t.typeKey}</p>
                       </div>
-                      <button onClick={() => api.raw(`/work-item-types/${t.id}`, { method: 'DELETE' }).then(() => fetchWorkItemTypes())}
+                      <button onClick={() => setConfirmDelete({ entity: 'item type', name: t.label, action: 'type', id: t.id })}
                         className="opacity-0 group-hover:opacity-100 text-semantic-danger text-xs transition-opacity absolute top-2 right-2" aria-label="Remove"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                     </div>
                   ))}
@@ -848,5 +882,6 @@ export default function Settings3View({
         </div>
       )}
     </div>
+    </>
   );
 }

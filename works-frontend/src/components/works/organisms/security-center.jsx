@@ -102,6 +102,8 @@ export function SecurityCenter({ workspaceId, can, onToast }) {
   const [dataReqs, setDataReqs] = useState([]);
   const [passkeys, setPasskeys] = useState([]);
   const [busy, setBusy] = useState(null);
+  const [confirmPasskeyId, setConfirmPasskeyId] = useState(null);
+  const [pendingRegion, setPendingRegion] = useState(null);
 
   const load = useCallback((ref) => {
     if (!workspaceId) return;
@@ -229,7 +231,51 @@ export function SecurityCenter({ workspaceId, can, onToast }) {
     );
   }
 
+  const confirmingPasskey = passkeys.find((p) => p.id === confirmPasskeyId);
+  const confirmingRegion = REGIONS.find((r) => r.id === pendingRegion);
+
   return (
+    <>
+      {confirmPasskeyId && (
+        <div role="dialog" aria-modal="true" aria-labelledby="passkey-remove-title"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl border border-neutral-200 dark:border-neutral-700">
+            <h2 id="passkey-remove-title" className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+              Remove passkey?
+            </h2>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">
+              <strong>{confirmingPasskey?.label ?? 'This passkey'}</strong> will be removed. You can no longer use it to sign in.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button variant="secondary" size="sm" onClick={() => setConfirmPasskeyId(null)}>Cancel</Button>
+              <Button variant="danger" size="sm" disabled={busy === confirmPasskeyId}
+                onClick={() => { removePasskey(confirmPasskeyId); setConfirmPasskeyId(null); }}>
+                Remove passkey
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingRegion && (
+        <div role="dialog" aria-modal="true" aria-labelledby="region-change-title"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl border border-neutral-200 dark:border-neutral-700">
+            <h2 id="region-change-title" className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+              Change data residency region?
+            </h2>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">
+              Moving workspace data to <strong>{confirmingRegion?.label ?? pendingRegion}</strong> is an irreversible operation. Proceed only if legally required.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button variant="secondary" size="sm" onClick={() => setPendingRegion(null)}>Cancel</Button>
+              <Button variant="danger" size="sm" onClick={() => { saveSettings({ dataResidencyRegion: pendingRegion }); setPendingRegion(null); }}>
+                Change region
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     <div className="p-6 overflow-y-auto h-full max-w-7xl">
       <div className="flex items-start justify-between gap-3 mb-5">
         <div>
@@ -441,7 +487,7 @@ export function SecurityCenter({ workspaceId, can, onToast }) {
                 <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">Residency region</span>
                 <select
                   value={settings?.dataResidencyRegion || 'IN'} disabled={!isAdmin || busy === 'settings'}
-                  onChange={(e) => saveSettings({ dataResidencyRegion: e.target.value })}
+                  onChange={(e) => { if (e.target.value !== (settings?.dataResidencyRegion || 'IN')) setPendingRegion(e.target.value); }}
                   className="mt-1 block w-full max-w-sm rounded-md border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 disabled:opacity-50"
                 >
                   {REGIONS.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
@@ -556,7 +602,7 @@ export function SecurityCenter({ workspaceId, can, onToast }) {
                         </p>
                       </div>
                     </div>
-                    <Button variant="ghost" onClick={() => removePasskey(p.id)} disabled={busy === p.id} aria-label={`Remove ${p.label}`}>
+                    <Button variant="ghost" onClick={() => setConfirmPasskeyId(p.id)} disabled={busy === p.id} aria-label={`Remove ${p.label}`}>
                       <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </li>
@@ -570,5 +616,6 @@ export function SecurityCenter({ workspaceId, can, onToast }) {
         </Card>
       )}
     </div>
+    </>
   );
 }

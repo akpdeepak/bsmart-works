@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { KeyRound } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { Button } from '@/components/works/button';
@@ -15,7 +16,30 @@ export default function WorkspaceView({
   handleMfaEnroll, handleMfaConfirm, saveBranding, fetchProjectMembers,
   addProjectMember, can, showToast,
 }) {
+  const [confirmMemberId, setConfirmMemberId] = useState(null);
+  const pendingMember = workspaceMembers.find((m) => m.id === confirmMemberId);
+
   return (
+    <>
+      {confirmMemberId && (
+        <div role="dialog" aria-modal="true" aria-labelledby="remove-member-title"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl border border-neutral-200 dark:border-neutral-700">
+            <h2 id="remove-member-title" className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+              Remove member?
+            </h2>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">
+              {pendingMember?.fullName ?? 'This member'} will lose access to the workspace immediately.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button variant="secondary" size="sm" onClick={() => setConfirmMemberId(null)}>Cancel</Button>
+              <Button variant="danger" size="sm" onClick={() => { handleRemoveMember(confirmMemberId); setConfirmMemberId(null); }}>
+                Remove
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
             <div className="p-8 max-w-3xl">
               <h1 className="text-2xl font-bold text-brand-navy mb-1">Workspace Settings</h1>
               <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-6">BCITS Master Workspace</p>
@@ -34,7 +58,7 @@ export default function WorkspaceView({
                         </div>
                         <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full">{m.role}</span>
                         {m.id !== currentUser.id && (
-                          <button onClick={() => handleRemoveMember(m.id)}
+                          <button onClick={() => setConfirmMemberId(m.id)}
                             className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger transition-colors">Remove</button>
                         )}
                       </div>
@@ -227,5 +251,6 @@ export default function WorkspaceView({
                 )}
               </div>
             </div>
+    </>
   );
 }

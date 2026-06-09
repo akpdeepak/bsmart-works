@@ -87,7 +87,7 @@ export default function Settings3View({
 
   const handleConfirmDelete = () => {
     if (!confirmDelete) return;
-    const { action, id } = confirmDelete;
+    const { action, id, workflowId } = confirmDelete;
     const done = () => setConfirmDelete(null);
     if (action === 'workflow') {
       api.raw(`/workflows/${id}`, { method: 'DELETE' })
@@ -96,6 +96,12 @@ export default function Settings3View({
       api.raw(`/field-defs/${id}`, { method: 'DELETE' }).then(() => { fetchFieldDefs(); done(); });
     } else if (action === 'type') {
       api.raw(`/work-item-types/${id}`, { method: 'DELETE' }).then(() => { fetchWorkItemTypes(); done(); });
+    } else if (action === 'status') {
+      deleteStatus(workflowId, id);
+      done();
+    } else if (action === 'transition') {
+      deleteTransition(workflowId, id);
+      done();
     }
   };
 
@@ -123,7 +129,7 @@ export default function Settings3View({
       <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">Configure workflows, custom fields, permissions, and work item types</p>
 
       {/* Sub-tabs */}
-      <div className="flex gap-1 mb-6 border-b border-neutral-200 dark:border-neutral-700">
+      <div role="tablist" aria-label="Settings sections" className="flex gap-1 mb-6 border-b border-neutral-200 dark:border-neutral-700">
         {[
           { key: 'workflows',   label: 'Workflows' },
           { key: 'fields',      label: 'Custom Fields' },
@@ -132,7 +138,7 @@ export default function Settings3View({
           { key: 'permissions', label: 'Permissions' },
           { key: 'types',       label: 'Item Types' },
         ].map(t => (
-          <button key={t.key} onClick={() => {
+          <button key={t.key} role="tab" aria-selected={settings3Tab === t.key} onClick={() => {
             setSettings3Tab(t.key);
             if (t.key === 'permissions') fetchPermMatrix();
             if (t.key === 'layout') { fetchFieldDefs(); fetchFieldLayouts(); }
@@ -224,7 +230,7 @@ export default function Settings3View({
                                       <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{s.name}</span>
                                       <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${catColor[s.category] || 'bg-neutral-100 text-neutral-600'}`}>{s.category}</span>
                                       {s.isInitial && <span className="text-xs text-brand-amber font-bold">INITIAL</span>}
-                                      <button onClick={() => deleteStatus(wf.id, s.id)} className="text-neutral-300 hover:text-semantic-danger ml-1 text-xs" aria-label="Delete status"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                                      <button onClick={() => setConfirmDelete({ entity: 'status', name: s.name, action: 'status', id: s.id, workflowId: wf.id })} className="text-neutral-300 hover:text-semantic-danger ml-1 text-xs" aria-label="Delete status"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                                     </div>
                                   ))}
                                 </div>
@@ -291,7 +297,7 @@ export default function Settings3View({
                                               <span className="hidden sm:inline">Rules</span>
                                               <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isExpTrans ? 'rotate-180' : ''}`} aria-hidden="true" />
                                             </button>
-                                            <button onClick={() => deleteTransition(wf.id, t.id)} className="text-neutral-300 hover:text-semantic-danger text-xs" aria-label="Delete transition"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                                            <button onClick={() => setConfirmDelete({ entity: 'transition', name: t.name, action: 'transition', id: t.id, workflowId: wf.id })} className="text-neutral-300 hover:text-semantic-danger text-xs" aria-label="Delete transition"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                                           </div>
                                           {isExpTrans && (
                                             <div className="px-3 pb-3 border-t border-neutral-100 dark:border-neutral-600 space-y-3 pt-2">

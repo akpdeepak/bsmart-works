@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -58,6 +59,8 @@ export default function KnowledgeView({
   articleChildren = [],
   fetchArticleChildren,
 }) {
+  const [confirmAction, setConfirmAction] = useState(null);
+
   return (
     <div className="flex h-full overflow-hidden">
       {/* Left sidebar — spaces */}
@@ -149,7 +152,7 @@ export default function KnowledgeView({
                   </div>
                   <div className="flex items-center gap-2">
                     {selectedSpace && can('manage_projects') && (
-                      <button onClick={() => deleteKnowledgeSpace(selectedSpace.id)} className="text-xs text-semantic-danger hover:underline">Delete Space</button>
+                      <button onClick={() => setConfirmAction({ title: 'Delete space?', message: `"${selectedSpace.name}" and all its articles will be permanently deleted.`, confirmLabel: 'Delete space', action: () => deleteKnowledgeSpace(selectedSpace.id) })} className="text-xs text-semantic-danger hover:underline">Delete Space</button>
                     )}
                     {selectedSpace && (
                       <Button variant="action" onClick={() => { setIsArticleFormOpen(true); setArticleForm({ title: '', content: '', templateType: 'KB', status: 'DRAFT' }); }}>+ New Article</Button>
@@ -238,7 +241,7 @@ export default function KnowledgeView({
                 <Button variant="secondary" onClick={() => setEditingArticle(e => !e)}>
                   {editingArticle ? 'View' : 'Edit'}
                 </Button>
-                <button onClick={() => deleteArticle(selectedArticle.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
+                <button onClick={() => setConfirmAction({ title: 'Delete article?', message: `"${selectedArticle.title}" will be permanently deleted.`, confirmLabel: 'Delete article', action: () => deleteArticle(selectedArticle.id) })} className="text-xs text-semantic-danger hover:underline">Delete</button>
               </div>
             </div>
 
@@ -373,7 +376,7 @@ export default function KnowledgeView({
                         <div className="flex items-center gap-3 mt-1.5">
                           <button onClick={() => toggleArticleComment(selectedArticle.id, c.id, !c.resolved)}
                             className="text-xs text-brand-navy hover:underline">{c.resolved ? 'Reopen' : 'Resolve'}</button>
-                          <button onClick={() => deleteArticleComment(selectedArticle.id, c.id)}
+                          <button onClick={() => setConfirmAction({ title: 'Delete comment?', message: 'This comment will be permanently deleted.', confirmLabel: 'Delete comment', action: () => deleteArticleComment(selectedArticle.id, c.id) })}
                             className="text-xs text-semantic-danger hover:underline">Delete</button>
                         </div>
                       </div>
@@ -428,6 +431,20 @@ export default function KnowledgeView({
           </div>
         )}
       </div>
+
+      {confirmAction && (
+        <div role="dialog" aria-modal="true" aria-labelledby="kb-confirm-title"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-xl p-6 max-w-sm w-full border border-neutral-200 dark:border-neutral-700">
+            <h2 id="kb-confirm-title" className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-2">{confirmAction.title}</h2>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">{confirmAction.message}</p>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setConfirmAction(null)}>Cancel</Button>
+              <Button variant="danger" onClick={() => { confirmAction.action(); setConfirmAction(null); }}>{confirmAction.confirmLabel}</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

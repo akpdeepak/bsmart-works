@@ -71,8 +71,8 @@ describe('Settings3View', () => {
 
   it('renders sub-tab buttons', () => {
     render(<Settings3View {...baseProps} />);
-    expect(screen.getByRole('button', { name: /^workflows$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^custom fields$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^item types$/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^workflows$/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^custom fields$/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^item types$/i })).toBeInTheDocument();
   });
 });

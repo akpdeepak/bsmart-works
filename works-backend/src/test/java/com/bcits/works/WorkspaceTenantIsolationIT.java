@@ -101,8 +101,8 @@ class WorkspaceTenantIsolationIT {
             "INSERT INTO workspace_members(workspace_id, user_id, system_role) VALUES (?,?,?)",
             WS_A, USER_A, "MEMBER");
         jdbc.update(
-            "INSERT INTO projects(id, workspace_id, name, key_prefix, created_at) VALUES (?,?,?,?,?)",
-            PROJ_A, WS_A, "Isolation Project A", "ISOA", now);
+            "INSERT INTO projects(id, workspace_id, name, key_prefix, slug, created_at) VALUES (?,?,?,?,?,?)",
+            PROJ_A, WS_A, "Isolation Project A", "ISOA", "isoa", now);
 
         // Seed 3 items in workspace A
         for (int i = 1; i <= 3; i++) {
@@ -122,8 +122,8 @@ class WorkspaceTenantIsolationIT {
             "INSERT INTO workspace_members(workspace_id, user_id, system_role) VALUES (?,?,?)",
             WS_B, USER_B, "MEMBER");
         jdbc.update(
-            "INSERT INTO projects(id, workspace_id, name, key_prefix, created_at) VALUES (?,?,?,?,?)",
-            PROJ_B, WS_B, "Isolation Project B", "ISOB", now);
+            "INSERT INTO projects(id, workspace_id, name, key_prefix, slug, created_at) VALUES (?,?,?,?,?,?)",
+            PROJ_B, WS_B, "Isolation Project B", "ISOB", "isob", now);
 
         // Seed 5 items in workspace B
         for (int i = 1; i <= 5; i++) {

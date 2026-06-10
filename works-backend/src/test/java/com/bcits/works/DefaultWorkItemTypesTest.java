@@ -10,8 +10,9 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Pins the 7 MVP built-in WorkItem types (I01-S06, Cap B) and enforces on-brand colours — the
- * single source of truth shared with the frontend (RB-30 unification, Part-6 palette).
+ * Pins the 16 built-in WorkItem types (17-type taxonomy, iteration 20 Cap S) and enforces on-brand
+ * colours — the single source of truth shared with the frontend (RB-30 unification, Part-6 palette).
+ * Three categories: DELIVERY (9 types), RAID (4 types), SERVICE (3 types).
  */
 @Tag("unit")
 class DefaultWorkItemTypesTest {
@@ -21,12 +22,18 @@ class DefaultWorkItemTypesTest {
         "#0B2F5C", "#1E4D8C", "#E94E1B", "#0E7C5E", "#B97A00", "#C0392B", "#475569", "#334155");
 
     @Test
-    void shipsExactlyTheSevenSpecTypes() {
+    void shipsExactlyTheExpectedTypes() {
         Set<String> keys = DefaultWorkItemTypes.ALL.stream()
                 .map(t -> (String) t.get("typeKey")).collect(Collectors.toSet());
         assertThat(keys).containsExactlyInAnyOrder(
-                "EPIC", "STORY", "TASK", "BUG", "SUBTASK", "INCIDENT", "SERVICE_REQUEST");
-        assertThat(DefaultWorkItemTypes.ALL).hasSize(7);
+                // DELIVERY
+                "CAPABILITY", "PRODUCT", "INITIATIVE", "THEME",
+                "EPIC", "STORY", "BUG", "TASK", "ACTIVITY",
+                // RAID
+                "RISK", "ISSUE", "ASSUMPTION", "DEPENDENCY",
+                // SERVICE
+                "INCIDENT", "HR_SERVICE_REQUEST", "IT_SERVICE_REQUEST");
+        assertThat(DefaultWorkItemTypes.ALL).hasSize(16);
     }
 
     @Test

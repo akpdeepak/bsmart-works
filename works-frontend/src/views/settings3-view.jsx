@@ -114,7 +114,7 @@ function TypeFieldsTab() {
   };
 
   return (
-    <div className="flex gap-6 min-h-[520px]">
+    <div className="flex gap-6" style={{ minHeight: '520px' }}>
       {/* Left — type list */}
       <div className="w-52 flex-shrink-0 space-y-5">
         {Object.entries(CATEGORIES).map(([catKey, cat]) => (
@@ -174,7 +174,7 @@ function TypeFieldsTab() {
                   <div className="flex-1 min-w-0">
                     {editingKey === f.key ? (
                       <div className="flex items-center gap-2">
-                        <input autoFocus value={editLabel}
+                        <input value={editLabel}
                           onChange={e => setEditLabel(e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingKey(null); }}
                           className="text-sm font-medium border-b border-brand-navy outline-none bg-transparent w-40"
@@ -234,14 +234,14 @@ function TypeFieldsTab() {
                 <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">Add custom field</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-neutral-600 mb-1">Field name *</label>
-                    <input type="text" value={addForm.label}
+                    <label htmlFor="sf-field-name" className="block text-xs font-medium text-neutral-600 mb-1">Field name *</label>
+                    <input id="sf-field-name" type="text" value={addForm.label}
                       onChange={e => setAddForm(p => ({ ...p, label: e.target.value }))}
                       className="input text-sm" placeholder="e.g. Customer Name" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-neutral-600 mb-1">Field type *</label>
-                    <select value={addForm.type}
+                    <label htmlFor="sf-field-type" className="block text-xs font-medium text-neutral-600 mb-1">Field type *</label>
+                    <select id="sf-field-type" value={addForm.type}
                       onChange={e => setAddForm(p => ({ ...p, type: e.target.value }))}
                       className="input text-sm">
                       <option value="text">Text</option>
@@ -256,8 +256,8 @@ function TypeFieldsTab() {
                 </div>
                 {addForm.type === 'select' && (
                   <div>
-                    <label className="block text-xs font-medium text-neutral-600 mb-1">Options (comma-separated) *</label>
-                    <input type="text" value={addForm.options}
+                    <label htmlFor="sf-field-opts" className="block text-xs font-medium text-neutral-600 mb-1">Options (comma-separated) *</label>
+                    <input id="sf-field-opts" type="text" value={addForm.options}
                       onChange={e => setAddForm(p => ({ ...p, options: e.target.value }))}
                       className="input text-sm" placeholder="e.g. Option A, Option B, Option C" />
                   </div>

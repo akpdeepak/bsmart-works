@@ -71,6 +71,15 @@ public class DashboardService {
             userId);
         result.put("weeklyMinutes", weekHours.isEmpty() ? 0 : weekHours.get(0).get("total_minutes"));
 
+        // Minutes per day (today + previous 6) — the daily time bars read this rather
+        // than re-aggregating recentWorklogs, whose LIMIT 10 would undercount busy weeks.
+        List<Map<String, Object>> dailyMinutes = jdbc.queryForList(
+            "SELECT work_date, COALESCE(SUM(time_spent_minutes), 0) as minutes " +
+            "FROM worklogs WHERE user_id = ? AND work_date >= CURRENT_DATE - INTERVAL '6 days' " +
+            "GROUP BY work_date ORDER BY work_date",
+            userId);
+        result.put("dailyMinutes", dailyMinutes);
+
         // My blockers (items linked BLOCKED_BY) — workspace-scoped (B10).
         List<Map<String, Object>> blockers = jdbc.queryForList(
             "SELECT wi.id, wi.title, wi.status, wil.link_type, wb.title as blocking_title " +

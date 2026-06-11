@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -245,7 +244,8 @@ public class WorkItemController {
         try { w.setTargetItemId(rs.getString("target_item_id")); } catch (Exception ignored) {}
         try { w.setApproverId(rs.getString("approver_id")); } catch (Exception ignored) {}
         try { w.setRequestedForId(rs.getString("requested_for_id")); } catch (Exception ignored) {}
-        try { w.setNeededByDate(rs.getDate("needed_by_date") != null ? rs.getDate("needed_by_date").toLocalDate() : null); } catch (Exception ignored) {}
+        try { var nd = rs.getDate("needed_by_date");
+              w.setNeededByDate(nd != null ? nd.toLocalDate() : null); } catch (Exception ignored) {}
         try { w.setItemCategory(rs.getString("item_category")); } catch (Exception ignored) {}
         try { w.setSubArea(rs.getString("sub_area")); } catch (Exception ignored) {}
         try { w.setDepartment(rs.getString("department")); } catch (Exception ignored) {}
@@ -259,10 +259,12 @@ public class WorkItemController {
         try { w.setMitigationPlan(rs.getString("mitigation_plan")); } catch (Exception ignored) {}
         try { w.setContingencyPlan(rs.getString("contingency_plan")); } catch (Exception ignored) {}
         try { w.setBasisRationale(rs.getString("basis_rationale")); } catch (Exception ignored) {}
-        try { w.setValidationDate(rs.getDate("validation_date") != null ? rs.getDate("validation_date").toLocalDate() : null); } catch (Exception ignored) {}
+        try { var vd = rs.getDate("validation_date");
+              w.setValidationDate(vd != null ? vd.toLocalDate() : null); } catch (Exception ignored) {}
         try { w.setRiskIfWrong(rs.getString("risk_if_wrong")); } catch (Exception ignored) {}
         try { w.setImpactIfDelayed(rs.getString("impact_if_delayed")); } catch (Exception ignored) {}
-        try { w.setExpectedResolutionDate(rs.getDate("expected_resolution_date") != null ? rs.getDate("expected_resolution_date").toLocalDate() : null); } catch (Exception ignored) {}
+        try { var erd = rs.getDate("expected_resolution_date");
+              w.setExpectedResolutionDate(erd != null ? erd.toLocalDate() : null); } catch (Exception ignored) {}
         try { w.setBusinessJustification(rs.getString("business_justification")); } catch (Exception ignored) {}
         try { w.setAffectedSystem(rs.getString("affected_system")); } catch (Exception ignored) {}
         try { w.setBusinessService(rs.getString("business_service")); } catch (Exception ignored) {}

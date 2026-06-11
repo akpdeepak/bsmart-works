@@ -188,16 +188,20 @@ export const TYPE_ICON_SET = {
   star: Star,                   file: FileText,            gauge: Gauge,
   users: Users,                 lock: Lock,                tag: Tag,
   briefcase: Briefcase,
-};
-
-export const LEGACY_TYPE_ICON = {
-  '✓': 'check-square', '📖': 'book-open', '🐛': 'bug', '⚡': 'zap',
-  '↳': 'corner-down-right', '🔥': 'flame', '🎫': 'ticket', '📦': 'package',
-  '📋': 'clipboard', '🎯': 'target', '🔧': 'wrench', '🚀': 'rocket',
-  '🛡': 'shield', '🚩': 'flag', '💡': 'lightbulb', '⭐': 'star',
+  // Legacy aliases for backward-compat with old stored icon values
+  book: BookOpen,
 };
 
 export const TYPE_ICON_KEYS = Object.keys(TYPE_ICON_SET);
+
+// Backward-compat map for emoji values stored in old data (pre-17-type taxonomy).
+// '🎫' (Service Request) remapped to 'headphones'; 'ticket' removed from TYPE_ICON_SET.
+export const LEGACY_TYPE_ICON = {
+  '✓': 'check-square', '📖': 'book-open', '🐛': 'bug', '⚡': 'zap',
+  '↳': 'corner-down-right', '🔥': 'flame', '🎫': 'headphones', '📦': 'package',
+  '📋': 'clipboard', '🎯': 'target', '🔧': 'wrench', '🚀': 'rocket',
+  '🛡': 'shield', '🚩': 'flag', '💡': 'lightbulb', '⭐': 'star',
+};
 
 export function resolveTypeIcon(value) {
   if (!value) return Package;

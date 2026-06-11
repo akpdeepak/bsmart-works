@@ -4,21 +4,30 @@ import { TYPES, TYPE_ICON_SET, LEGACY_TYPE_ICON, resolveTypeIcon } from './work-
 // Pins the spec-mandated concept→icon map (WRK-BR08) so icon drift is caught by CI.
 describe('work-item-types', () => {
   describe('TYPES — spec-mandated icon mapping (WRK-BR08)', () => {
-    it('ships exactly the 7 MVP built-in types', () => {
+    it('ships exactly the 16 built-in types (17-type taxonomy)', () => {
       expect(Object.keys(TYPES)).toEqual(
-        expect.arrayContaining(['Task', 'Story', 'Bug', 'Epic', 'Sub-task', 'Incident', 'Service Request'])
+        expect.arrayContaining([
+          // DELIVERY
+          'Capability', 'Product', 'Initiative', 'Theme',
+          'Epic', 'Story', 'Bug', 'Task', 'Activity',
+          // RAID
+          'Risk', 'Issue', 'Assumption', 'Dependency',
+          // SERVICE
+          'Incident', 'HR Service Request', 'IT Service Request',
+        ])
       );
-      expect(Object.keys(TYPES)).toHaveLength(7);
+      expect(Object.keys(TYPES)).toHaveLength(16);
     });
 
     it('uses the locked concept→icon map from the spec', () => {
-      expect(TYPES.Epic.icon).toBe('layers');
+      expect(TYPES.Epic.icon).toBe('zap');
       expect(TYPES.Story.icon).toBe('book-open');
       expect(TYPES.Task.icon).toBe('check-square');
       expect(TYPES.Bug.icon).toBe('bug');
-      expect(TYPES['Sub-task'].icon).toBe('git-branch');
-      expect(TYPES.Incident.icon).toBe('alert-triangle');
-      expect(TYPES['Service Request'].icon).toBe('headphones');
+      expect(TYPES.Activity.icon).toBe('corner-down-right');
+      expect(TYPES.Incident.icon).toBe('shield');
+      expect(TYPES['HR Service Request'].icon).toBe('users');
+      expect(TYPES['IT Service Request'].icon).toBe('wrench');
     });
 
     it('uses brand-palette token classes, not raw hex', () => {

@@ -61,7 +61,7 @@ public final class DefaultWorkItemTypes {
 
         Map.of("typeKey", "PRODUCT",
                "label", "Product",             "icon", "package",
-               "color", "#2C6FAC",             "isCustom", false,
+               "color", "#334155",             "isCustom", false,
                "category", "DELIVERY",         "autoIdPrefix", "PRD",
                "validParents", List.of("CAPABILITY"),
                "description", "A BCITS product — rolls up to a Capability"),

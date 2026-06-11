@@ -413,7 +413,7 @@ export function WorkItemDetailPanel({
                       {sf('Impact Level', 'impactLevel', ['High','Medium','Low'])}
                       {selectedItem.riskScore != null && (
                         <div>
-                          <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Risk Score</label>
+                          <span className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Risk Score</span>
                           <p className="input bg-neutral-50 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-center font-mono font-semibold">{selectedItem.riskScore}</p>
                         </div>
                       )}

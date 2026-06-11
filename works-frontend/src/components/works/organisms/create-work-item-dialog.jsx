@@ -265,7 +265,6 @@ function FormField({ field, value, onChange, users, workItems }) {
 
 function FormStep({ typeKey, formData, onChange, onBack, onSubmit, projects, users, workItems, error }) {
   const typeDef = TYPES_BY_KEY[typeKey];
-  const Icon = resolveTypeIcon(typeDef?.icon) ?? Package;
   const schema = getEffectiveSchema(typeKey);
 
   // Split fields into two columns for readability (text/select → 2-col grid;
@@ -296,7 +295,7 @@ function FormStep({ typeKey, formData, onChange, onBack, onSubmit, projects, use
           'flex h-7 w-7 items-center justify-center rounded-md text-white',
           typeDef?.color ?? 'bg-neutral-600'
         )}>
-          <Icon aria-hidden="true" className="h-3.5 w-3.5" />
+          {React.createElement(resolveTypeIcon(typeDef?.icon) ?? Package, { 'aria-hidden': 'true', className: 'h-3.5 w-3.5' })}
         </span>
         <span className="font-semibold text-neutral-900">{typeDef?.label}</span>
         <span className="ml-auto text-xs text-neutral-400">{typeDef?.autoIdPrefix}-XXXX</span>
@@ -376,14 +375,11 @@ export function CreateWorkItemDialog({ isOpen, onClose, onSubmit, projects, user
   const [formData, setFormData] = React.useState({});
   const [error, setError] = React.useState('');
 
-  // Reset state when dialog is opened/closed
+  // Reset state when dialog is opened/closed.
   React.useEffect(() => {
     if (isOpen) {
-      setStep(1);
-      setCategory(null);
-      setTypeKey(null);
-      setFormData({});
-      setError('');
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStep(1); setCategory(null); setTypeKey(null); setFormData({}); setError('');
     }
   }, [isOpen]);
 

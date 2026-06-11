@@ -14,8 +14,8 @@ const baseProps = {
 describe('ProjectsView', () => {
   it('shows the empty state with a create CTA', () => {
     render(<ProjectsView {...baseProps} />);
-    expect(screen.getByText('No projects yet')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create first project' })).toBeInTheDocument();
+    expect(screen.getByText('No teams yet')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create first team' })).toBeInTheDocument();
   });
 
   it('renders a project card with its item progress', () => {
@@ -37,7 +37,7 @@ describe('ProjectsView', () => {
   it('opens the new-project flow from the header button', () => {
     const setIsProjectOpen = vi.fn();
     render(<ProjectsView {...baseProps} setIsProjectOpen={setIsProjectOpen} />);
-    fireEvent.click(screen.getByRole('button', { name: '+ New Project' }));
+    fireEvent.click(screen.getByRole('button', { name: '+ New Team' }));
     expect(setIsProjectOpen).toHaveBeenCalledWith(true);
   });
 });

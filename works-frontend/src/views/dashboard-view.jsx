@@ -6,6 +6,12 @@ import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { onPressKey } from '@/lib/utils';
 import { TIER } from '@/lib/nav-model';
+import { DonutChart, BarChart, SegmentBar, DayBars, PairedBars } from '@/components/works/molecules';
+import { aggregateByDimension } from '@/lib/dashboard-metrics';
+import {
+  dueBuckets, dailyHours, velocityPairs, timeboxProgress,
+  activeMemberCount, utilizationSeries,
+} from '@/lib/today-metrics';
 import {
   Pin, Zap, Timer, Ban, ArrowRight, TrendingUp, Users, ShieldCheck,
   AlertTriangle, Package, BarChart2, Activity, Target, Clock,
@@ -65,6 +71,30 @@ function MiniBar({ value, max, color = 'bg-brand-navy' }) {
 
 function Empty({ msg }) {
   return <p className="py-8 text-center text-sm text-neutral-500 dark:text-neutral-400">{msg}</p>;
+}
+
+// Due-pressure tiles — the developer's "what do I attack first" radar. The whole
+// tile is a button into My Works (RB-30 §5: all five interaction states).
+const DUE_CFG = [
+  { key: 'overdue',  label: 'Overdue',         text: 'text-semantic-danger',  bg: 'bg-semantic-danger/10' },
+  { key: 'dueToday', label: 'Due today',       text: 'text-semantic-warning', bg: 'bg-semantic-warning/10' },
+  { key: 'dueWeek',  label: 'This week',       text: 'text-brand-navy dark:text-neutral-100', bg: 'bg-brand-navy/10 dark:bg-neutral-700' },
+  { key: 'later',    label: 'Later / no date', text: 'text-neutral-700 dark:text-neutral-300', bg: 'bg-neutral-100 dark:bg-neutral-700' },
+];
+
+function DueBucketTiles({ buckets, onSelect }) {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {DUE_CFG.map(cfg => (
+        <button key={cfg.key} type="button" onClick={onSelect}
+          aria-label={`${cfg.label}: ${buckets[cfg.key]} item${buckets[cfg.key] === 1 ? '' : 's'} — open My Works`}
+          className={`rounded-lg p-3 text-left transition-colors duration-fast hover:ring-1 hover:ring-brand-navy-tint/40 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${cfg.bg}`}>
+          <p className={`text-2xl font-bold ${cfg.text}`}>{buckets[cfg.key]}</p>
+          <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{cfg.label}</p>
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function TodayHeader({ greeting, firstName, rolePill, subtitle, cta, onCta }) {
@@ -186,6 +216,22 @@ function DeveloperToday({ data, workItems, currentUser, setView, setSelectedItem
         <StatCard label="In active sprint" value={data?.mySprintItems?.length ?? 0} sub={sprint?.name || 'No active sprint'} color="text-semantic-success" icon={Zap} onClick={() => setView('sprint')} />
         <StatCard label="Hours this week" value={`${hours}h`} sub="Time logged (7 days)" color="text-semantic-warning" icon={Timer} />
         <StatCard label="Blockers" value={blockers.length} sub="Items blocked on me" color={blockers.length > 0 ? 'text-semantic-danger' : 'text-neutral-600 dark:text-neutral-400'} icon={Ban} />
+      </div>
+
+      {/* Day planner — due pressure, queue composition, the week's rhythm */}
+      <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <TodayCard title="Due radar" icon={Clock} iconColor="text-semantic-danger"
+          action={() => setView('myworks')} actionLabel="Plan my day">
+          <DueBucketTiles buckets={dueBuckets(myItems)} onSelect={() => setView('myworks')} />
+        </TodayCard>
+        <TodayCard title="Queue mix" icon={Layers} iconColor="text-brand-navy">
+          <SegmentBar data={aggregateByDimension(myItems, 'status')} />
+          <p className="mt-3 text-xs text-neutral-500">My open items by status</p>
+        </TodayCard>
+        <TodayCard title="My week" icon={Timer} iconColor="text-semantic-warning">
+          <DayBars data={dailyHours(data?.dailyMinutes)} unit="h" />
+          <p className="mt-3 text-xs text-neutral-500">{hours}h logged · last 7 days</p>
+        </TodayCard>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -318,7 +364,7 @@ function ScrumMasterToday({ data, currentUser, setView }) {
 
   const lastSprint = velocity[velocity.length - 1];
   const velocityDone = lastSprint?.done_points ?? 0;
-  const velocityMax = Math.max(...velocity.map(v => v.total_points || 0), 1);
+  const timebox = timeboxProgress(activeSprint);
 
   const sprintStroke = sprintPct >= 70 ? 'stroke-semantic-success' : sprintPct >= 40 ? 'stroke-semantic-warning' : 'stroke-semantic-danger';
   const sprintColor  = sprintPct >= 70 ? 'text-semantic-success'  : sprintPct >= 40 ? 'text-semantic-warning'  : 'text-semantic-danger';
@@ -400,6 +446,26 @@ function ScrumMasterToday({ data, currentUser, setView }) {
               </div>
             </div>
           ) : <Empty msg="No active sprint." />}
+          {timebox && (
+            <div className="mt-4 space-y-2 border-t border-neutral-100 pt-4 dark:border-neutral-700">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-neutral-600 dark:text-neutral-400">Time elapsed</span>
+                <span className="font-semibold text-neutral-900 dark:text-neutral-100">{timebox.timePct}%</span>
+              </div>
+              <MiniBar value={timebox.timePct} max={100} color="bg-neutral-400" />
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-neutral-600 dark:text-neutral-400">Scope done</span>
+                <span className="font-semibold text-neutral-900 dark:text-neutral-100">{timebox.scopePct}%</span>
+              </div>
+              <MiniBar value={timebox.scopePct} max={100}
+                color={timebox.drift >= 0 ? 'bg-semantic-success' : 'bg-semantic-warning'} />
+              <p className="pt-1 text-xs text-neutral-500">
+                {timebox.daysLeft}d left · {timebox.drift >= 0
+                  ? `${timebox.drift}% ahead of the clock`
+                  : `${-timebox.drift}% behind the clock`}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -408,19 +474,12 @@ function ScrumMasterToday({ data, currentUser, setView }) {
           {velocity.length === 0
             ? <Empty msg="No sprint history yet." />
             : (
-              <div className="space-y-3">
-                {velocity.slice(-6).map((v, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <span className="w-24 flex-shrink-0 truncate text-xs text-neutral-500">{v.name || `Sprint ${i + 1}`}</span>
-                    <div className="flex-1">
-                      <MiniBar value={v.done_points || 0} max={velocityMax} color="bg-brand-navy" />
-                    </div>
-                    <span className="w-12 flex-shrink-0 text-right text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                      {v.done_points ?? 0}pt
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <>
+                <PairedBars data={velocityPairs(velocity)} aLabel="Committed" bLabel="Delivered" />
+                <p className="mt-3 text-xs text-neutral-500">
+                  Story points · last {Math.min(velocity.length, 6)} sprint{velocity.length === 1 ? '' : 's'}
+                </p>
+              </>
             )}
         </TodayCard>
 
@@ -428,17 +487,10 @@ function ScrumMasterToday({ data, currentUser, setView }) {
           {capacity.length === 0
             ? <Empty msg="No capacity data this sprint." />
             : (
-              <div className="space-y-2.5">
-                {capacity.slice(0, 7).map(m => {
-                  const hrs = Math.round((m.logged_minutes || 0) / 60 * 10) / 10;
-                  return (
-                    <div key={m.id} className="flex items-center gap-2">
-                      <span className="flex-1 truncate text-sm text-neutral-800 dark:text-neutral-200">{m.full_name}</span>
-                      <span className="flex-shrink-0 text-xs font-semibold text-neutral-600 dark:text-neutral-400">{hrs}h</span>
-                    </div>
-                  );
-                })}
-              </div>
+              <>
+                <BarChart data={utilizationSeries(capacity, 7)} />
+                <p className="mt-3 text-xs text-neutral-500">Hours logged · last 14 days</p>
+              </>
             )}
         </TodayCard>
       </div>
@@ -457,7 +509,8 @@ function ProductOwnerToday({ data, currentUser, setView }) {
   const allReleases = data?.releases || [];
   const ungroomed = data?.ungroomedItems || [];
   const ungroomedCount = data?.ungroomedCount ?? ungroomed.length;
-  const priorityDist = data?.priorityDist || [];
+  // The API key is priorityDistribution; keep the old key as a fallback.
+  const priorityDist = data?.priorityDistribution || data?.priorityDist || [];
   const backlogByType = data?.backlogByType || [];
   const featureStats = data?.featureStats || { total: 0, done: 0 };
   const featurePct = featureStats.total > 0 ? Math.round(featureStats.done * 100 / featureStats.total) : 0;
@@ -546,6 +599,30 @@ function ProductOwnerToday({ data, currentUser, setView }) {
                 <p className="pt-1 text-xs text-neutral-500">{totalBacklog} total items</p>
               </div>
             )}
+        </TodayCard>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+        <TodayCard title="Backlog composition" icon={Layers} iconColor="text-brand-navy"
+          action={() => setView('backlog')}>
+          <DonutChart data={backlogByType.map(t => ({ label: t.type || 'None', value: Number(t.count) || 0 }))} />
+          <p className="mt-3 text-xs text-neutral-500">Open items by type</p>
+        </TodayCard>
+        <TodayCard title="Feature completion" icon={CheckCircle2} iconColor="text-semantic-success">
+          <div className="flex items-center gap-5">
+            <HealthRing pct={featurePct} size={84}
+              stroke={featurePct >= 80 ? 'stroke-semantic-success' : 'stroke-brand-navy'} label="done" />
+            <div>
+              <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                {featureStats.done ?? 0} of {featureStats.total ?? 0} stories done
+              </p>
+              <p className="mt-1 text-xs text-neutral-500">Across the whole backlog</p>
+              <button type="button" onClick={() => setView('reports')}
+                className="mt-2 text-xs font-medium text-brand-navy hover:underline focus-visible:outline-none">
+                View reports →
+              </button>
+            </div>
+          </div>
         </TodayCard>
       </div>
 
@@ -666,7 +743,7 @@ function ExecutiveToday({ data, currentUser, setView }) {
           )}
       </TodayCard>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* RAID pulse */}
         <TodayCard title="RAID pulse" icon={AlertTriangle} iconColor="text-semantic-warning">
           <div className="grid grid-cols-2 gap-3">
@@ -702,6 +779,18 @@ function ExecutiveToday({ data, currentUser, setView }) {
                   );
                 })}
               </div>
+            )}
+        </TodayCard>
+
+        {/* Team utilization */}
+        <TodayCard title="Team utilization" icon={Users} iconColor="text-brand-navy">
+          {teamUtil.length === 0
+            ? <Empty msg="No time logged in the last 30 days." />
+            : (
+              <>
+                <BarChart data={utilizationSeries(teamUtil, 8)} />
+                <p className="mt-3 text-xs text-neutral-500">Hours logged · last 30 days</p>
+              </>
             )}
         </TodayCard>
       </div>
@@ -766,7 +855,9 @@ function AdminToday({ data, currentUser, setView }) {
         subtitle={subtitle} cta="Manage members" onCta={() => setView('workspace')} />
 
       <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Members" value={memberCount} sub="In this workspace" color="text-brand-navy" icon={Users} onClick={() => setView('workspace')} />
+        <StatCard label="Members" value={memberCount}
+          sub={`${activeMemberCount(data?.members)} active this week`}
+          color="text-brand-navy" icon={Users} onClick={() => setView('workspace')} />
         <StatCard label="MFA adoption" value={`${mfaPct}%`} sub={`${mfa.mfa_enabled}/${mfa.total} enabled`} color={mfaColor} icon={ShieldCheck} />
         <StatCard label="Events this week" value={totalEvents} sub="Platform activity" color="text-neutral-600 dark:text-neutral-400" icon={Activity} />
         <StatCard label="Audit entries" value={auditLog.length} sub="Recent role changes" color={auditLog.length > 0 ? 'text-semantic-warning' : 'text-neutral-600 dark:text-neutral-400'} icon={AlertTriangle} onClick={() => setView('security')} />
@@ -813,14 +904,7 @@ function AdminToday({ data, currentUser, setView }) {
           {roleDist.length > 0 && (
             <div className="rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
               <h3 className="mb-3 font-semibold text-neutral-900 dark:text-neutral-100">Role distribution</h3>
-              <div className="space-y-1.5">
-                {roleDist.map(r => (
-                  <div key={r.role} className="flex items-center justify-between text-sm">
-                    <span className="text-neutral-700 dark:text-neutral-300">{r.role}</span>
-                    <span className="font-semibold text-neutral-900 dark:text-neutral-100">{r.count}</span>
-                  </div>
-                ))}
-              </div>
+              <DonutChart data={roleDist.map(r => ({ label: r.role || '—', value: Number(r.count) || 0 }))} />
             </div>
           )}
         </div>

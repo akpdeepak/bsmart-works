@@ -19,3 +19,6 @@
 
 export { DonutChart } from './donut-chart';
 export { BarChart } from './bar-chart';
+export { SegmentBar } from './segment-bar';
+export { DayBars } from './day-bars';
+export { PairedBars } from './paired-bars';

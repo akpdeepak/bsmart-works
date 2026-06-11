@@ -318,6 +318,7 @@ export default function App() {
   const [dashLoading, setDashLoading]           = useState(false);
   // Configurable Today — the effective layout ({ role, source, widgets }) for the active role.
   const [todayLayout, setTodayLayout]           = useState(null);
+  const [widgetMetrics, setWidgetMetrics]       = useState([]); // curated metric catalogue (slice 5)
 
   // Iteration 6 — Releases
   const [releases, setReleases]                 = useState([]);
@@ -1869,9 +1870,33 @@ export default function App() {
       .catch(() => showToast('Failed to reset layout', 'error'));
   }
 
+  // ── Data-widget executor (slice 5) — metric / guided / BQL, one workspace-scoped path ───────
+  function fetchWidgetMetrics() {
+    if (!activeWorkspaceId) return;
+    api.raw(`/widget-data/metrics?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
+      .then(r => (r.ok ? r.json() : []))
+      .then(d => setWidgetMetrics(Array.isArray(d) ? d : []))
+      .catch(() => setWidgetMetrics([]));
+  }
+
+  // Batch-resolve a map of { widgetId → WidgetSource } → [{ id, data, error }] (one round trip).
+  function fetchWidgetData(items) {
+    return api.send(`/widget-data/batch`, {
+      method: 'POST', body: JSON.stringify({ workspaceId: activeWorkspaceId, items }),
+    });
+  }
+
+  // Resolve a single source for the picker's live preview → { shape, value|series|rows }.
+  function previewWidgetData(source) {
+    return api.send(`/widget-data/preview`, {
+      method: 'POST', body: JSON.stringify({ workspaceId: activeWorkspaceId, source }),
+    });
+  }
+
   function fetchDashboard(role) {
     setDashLoading(true);
     fetchTodayLayout(role); // load the role's effective Today layout alongside its data
+    if (!widgetMetrics.length) fetchWidgetMetrics(); // metric catalogue (once)
     const wsId = activeWorkspaceId;
     const uid = currentUser?.id;
     let url;
@@ -2914,6 +2939,9 @@ export default function App() {
               todayLayout={todayLayout}
               saveTodayLayout={saveTodayLayout}
               resetTodayLayout={resetTodayLayout}
+              fetchWidgetData={fetchWidgetData}
+              previewWidgetData={previewWidgetData}
+              widgetMetrics={widgetMetrics}
             />
           )}
 

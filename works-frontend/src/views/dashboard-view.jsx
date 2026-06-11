@@ -312,7 +312,7 @@ function TodaySurface({ header, registry, ctx, layout, builtinLayout, edit }) {
         <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
           {!editing && edit.source !== 'builtin' && (
             <span className="mr-auto rounded-full bg-brand-navy/10 px-2.5 py-0.5 text-2xs font-semibold uppercase tracking-wide text-brand-navy dark:bg-neutral-700 dark:text-neutral-200">
-              Personalized
+              {edit.source === 'workspace' ? 'Team default' : 'Personalized'}
             </span>
           )}
           {!editing ? (
@@ -331,9 +331,16 @@ function TodaySurface({ header, registry, ctx, layout, builtinLayout, edit }) {
                 className={`${tbtn} border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400`}>
                 Cancel
               </button>
+              {edit.canTemplate && (
+                <button type="button" onClick={edit.saveTemplate}
+                  title="Apply this layout to everyone in the workspace who hasn't personalized their own"
+                  className={`${tbtn} border-brand-navy bg-white text-brand-navy hover:bg-brand-navy/10 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200`}>
+                  <Users className="h-3.5 w-3.5" aria-hidden="true" />Set as team default
+                </button>
+              )}
               <button type="button" onClick={edit.save}
                 className={`${tbtn} border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-tint`}>
-                <Check className="h-3.5 w-3.5" aria-hidden="true" />Save
+                <Check className="h-3.5 w-3.5" aria-hidden="true" />Save for me
               </button>
             </>
           )}
@@ -1200,6 +1207,7 @@ export default function DashboardView({
   todayLayout,
   saveTodayLayout,
   resetTodayLayout,
+  saveTodayTemplate,
   fetchWidgetData,
   previewWidgetData,
   widgetMetrics,
@@ -1257,6 +1265,10 @@ export default function DashboardView({
     cancel: () => setEditing(false),
     save: () => { saveTodayLayout?.(dashboardRole, draft); setEditing(false); },
     reset: () => { resetTodayLayout?.(dashboardRole); setEditing(false); },
+    // Admin/Owner only: set the workspace-wide default for this role (slice 6). Visibility gate
+    // only — the server re-checks manage_workspace (RB-40 §1).
+    canTemplate: (userRole?.tier ?? 0) >= TIER.ADMIN,
+    saveTemplate: () => { saveTodayTemplate?.(dashboardRole, draft); setEditing(false); },
     add: (w) => setDraft((d) => [...d, { ...w, config: { ...w.config } }]),
     remove: (i) => setDraft((d) => d.filter((_, j) => j !== i)),
     moveUp: (i) => setDraft((d) => swap(d, i, i - 1)),

@@ -344,6 +344,14 @@
 						<include>**/*IntegrationTest.java</include>
 						<include>**/*IT.java</include>
 					</includes>
+					<systemPropertyVariables>
+						<!-- docker-java (under Testcontainers 1.20.x) defaults to Docker API 1.32,
+						     which engines ≥ 29 reject (min 1.40) with an opaque 400. Pin a version
+						     every supported engine speaks: CI runners (Docker 26/27) and current
+						     Docker Desktop both accept 1.44. Drop when Testcontainers is bumped to
+						     a docker-java that negotiates. -->
+						<api.version>1.44</api.version>
+					</systemPropertyVariables>
 				</configuration>
 				<executions>
 					<execution>

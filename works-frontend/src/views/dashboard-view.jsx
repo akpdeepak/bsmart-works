@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/works/button';
 import { StatCard } from '@/components/works/stat-card';
 import { TypeBadge } from '@/components/works/work-item-type';
@@ -9,6 +9,7 @@ import { TIER } from '@/lib/nav-model';
 import { DonutChart, BarChart, SegmentBar, DayBars, PairedBars } from '@/components/works/molecules';
 import { TodayCanvas } from '@/components/works/organisms/today-canvas';
 import { aggregateByDimension } from '@/lib/dashboard-metrics';
+import { builtinTodayLayout, widgetsToLayout, nextSpan } from '@/lib/today-layouts';
 import {
   dueBuckets, dailyHours, velocityPairs, timeboxProgress,
   activeMemberCount, utilizationSeries,
@@ -16,7 +17,7 @@ import {
 import {
   Pin, Zap, Timer, Ban, ArrowRight, TrendingUp, Users, ShieldCheck,
   AlertTriangle, Package, BarChart2, Activity, Target, Clock,
-  CheckCircle2, Layers, AlertCircle,
+  CheckCircle2, Layers, AlertCircle, Pencil, Check, RotateCcw, Plus,
 } from 'lucide-react';
 
 // ── Shared atoms ──────────────────────────────────────────────────────────────
@@ -179,6 +180,92 @@ function TodaySkeleton() {
   );
 }
 
+// ── Today surface — header + edit toolbar + canvas ─────────────────────────────
+// Wraps every role's Today: renders the fixed header, the customize/edit controls, and the
+// TodayCanvas. Editing happens on a draft layout owned by DashboardView (so Save/Cancel span the
+// toolbar); this component only presents it. Built-in default ⇄ personalized is shown as a pill.
+
+// Friendly label for a widget in the "Add" menu — stat widgets name their KPI; others title-case.
+function widgetLabel(w) {
+  if (w.type === 'stat') return `KPI · ${w.config?.k ?? 'metric'}`;
+  return w.type.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function AddWidgetMenu({ addable, onAdd }) {
+  const [open, setOpen] = useState(false);
+  if (!addable.length) return null;
+  return (
+    <div className="relative">
+      <button type="button" onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu" aria-expanded={open}
+        className="flex items-center gap-1 rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:border-brand-navy hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+        <Plus className="h-3.5 w-3.5" aria-hidden="true" />Add widget
+      </button>
+      {open && (
+        <div role="menu"
+          className="absolute right-0 z-dropdown mt-1 max-h-64 w-56 overflow-auto rounded-lg border border-neutral-200 bg-white py-1 shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
+          {addable.map((w) => (
+            <button key={w.id} type="button" role="menuitem"
+              onClick={() => { onAdd(w); setOpen(false); }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-neutral-700 hover:bg-neutral-100 focus-visible:outline-none focus-visible:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700">
+              <Plus className="h-3.5 w-3.5 flex-shrink-0 text-neutral-400" aria-hidden="true" />
+              {widgetLabel(w)}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TodaySurface({ header, registry, ctx, layout, builtinLayout, edit }) {
+  const editing = edit?.editing;
+  const shown = editing ? edit.draft : layout;
+  const addable = editing ? builtinLayout.filter((b) => !edit.draft.some((d) => d.id === b.id)) : [];
+  const tbtn = 'flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40';
+
+  return (
+    <>
+      <TodayHeader {...header} />
+      {edit && (
+        <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+          {!editing && edit.source !== 'builtin' && (
+            <span className="mr-auto rounded-full bg-brand-navy/10 px-2.5 py-0.5 text-2xs font-semibold uppercase tracking-wide text-brand-navy dark:bg-neutral-700 dark:text-neutral-200">
+              Personalized
+            </span>
+          )}
+          {!editing ? (
+            <button type="button" onClick={edit.start}
+              className={`${tbtn} border-neutral-200 bg-white text-neutral-700 hover:border-brand-navy hover:text-brand-navy dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300`}>
+              <Pencil className="h-3.5 w-3.5" aria-hidden="true" />Customize
+            </button>
+          ) : (
+            <>
+              <AddWidgetMenu addable={addable} onAdd={edit.add} />
+              <button type="button" onClick={edit.reset}
+                className={`${tbtn} border-neutral-200 bg-white text-neutral-600 hover:border-semantic-danger hover:text-semantic-danger dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400`}>
+                <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />Reset to default
+              </button>
+              <button type="button" onClick={edit.cancel}
+                className={`${tbtn} border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400`}>
+                Cancel
+              </button>
+              <button type="button" onClick={edit.save}
+                className={`${tbtn} border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-tint`}>
+                <Check className="h-3.5 w-3.5" aria-hidden="true" />Save
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      <TodayCanvas
+        layout={shown} registry={registry} ctx={ctx} editMode={editing}
+        onMoveUp={edit?.moveUp} onMoveDown={edit?.moveDown}
+        onCycleSpan={edit?.cycleSpan} onRemove={edit?.remove} />
+    </>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // DEVELOPER
 // Focus: "What should I work on today?" — personal queue, sprint health, blockers
@@ -324,23 +411,7 @@ const DEVELOPER_REGISTRY = {
   ),
 };
 
-// Built-in Developer layout — the default widget arrangement (spans on a 12-col grid; spanSm keeps
-// the stat cards 2-up on mobile). This is the shape a saved layout (slice 4) replaces.
-const DEVELOPER_LAYOUT = [
-  { id: 'd-stat-open', type: 'stat', span: 3, spanSm: 6, config: { k: 'open' } },
-  { id: 'd-stat-sprint', type: 'stat', span: 3, spanSm: 6, config: { k: 'sprint' } },
-  { id: 'd-stat-hours', type: 'stat', span: 3, spanSm: 6, config: { k: 'hours' } },
-  { id: 'd-stat-blockers', type: 'stat', span: 3, spanSm: 6, config: { k: 'blockers' } },
-  { id: 'd-due-radar', type: 'due-radar', span: 4 },
-  { id: 'd-queue-mix', type: 'queue-mix', span: 4 },
-  { id: 'd-my-week', type: 'my-week', span: 4 },
-  { id: 'd-focus-queue', type: 'focus-queue', span: 8 },
-  { id: 'd-sprint-ring', type: 'sprint-ring', span: 4 },
-  { id: 'd-blockers', type: 'blockers', span: 6 },
-  { id: 'd-timelogs', type: 'time-logs', span: 6 },
-];
-
-function DeveloperToday({ data, workItems, currentUser, setView, setSelectedItem, setIsCreateOpen, setIsWorklogOpen, selectedItem, showToast }) {
+function DeveloperToday({ data, workItems, currentUser, setView, setSelectedItem, setIsCreateOpen, setIsWorklogOpen, selectedItem, showToast, layout, builtinLayout, edit }) {
   const firstName = currentUser?.fullName?.split(' ')[0] || 'there';
   const myItems = data?.myOpenItems
     ?? workItems.filter(i => i.assigneeId === currentUser?.id && i.status !== 'Done');
@@ -368,12 +439,13 @@ function DeveloperToday({ data, workItems, currentUser, setView, setSelectedItem
   };
 
   return (
-    <>
-      <TodayHeader greeting={getGreeting()} firstName={firstName}
-        subtitle={`${openCount} item${openCount === 1 ? '' : 's'} assigned to you${blockers.length ? ` · ${blockers.length} blocked` : ''}`}
-        cta="+ Create work item" onCta={() => setIsCreateOpen(true)} />
-      <TodayCanvas layout={DEVELOPER_LAYOUT} registry={DEVELOPER_REGISTRY} ctx={ctx} />
-    </>
+    <TodaySurface
+      header={{
+        greeting: getGreeting(), firstName,
+        subtitle: `${openCount} item${openCount === 1 ? '' : 's'} assigned to you${blockers.length ? ` · ${blockers.length} blocked` : ''}`,
+        cta: '+ Create work item', onCta: () => setIsCreateOpen(true),
+      }}
+      registry={DEVELOPER_REGISTRY} ctx={ctx} layout={layout} builtinLayout={builtinLayout} edit={edit} />
   );
 }
 
@@ -505,18 +577,7 @@ const SCRUM_MASTER_REGISTRY = {
   ),
 };
 
-const SCRUM_MASTER_LAYOUT = [
-  { id: 'sm-stat-health', type: 'stat', span: 3, spanSm: 6, config: { k: 'health' } },
-  { id: 'sm-stat-risk', type: 'stat', span: 3, spanSm: 6, config: { k: 'risk' } },
-  { id: 'sm-stat-scope', type: 'stat', span: 3, spanSm: 6, config: { k: 'scope' } },
-  { id: 'sm-stat-velocity', type: 'stat', span: 3, spanSm: 6, config: { k: 'velocity' } },
-  { id: 'sm-high-risk', type: 'high-risk', span: 8 },
-  { id: 'sm-sprint-health', type: 'sprint-health', span: 4 },
-  { id: 'sm-velocity', type: 'velocity', span: 6 },
-  { id: 'sm-capacity', type: 'capacity', span: 6 },
-];
-
-function ScrumMasterToday({ data, currentUser, setView }) {
+function ScrumMasterToday({ data, currentUser, setView, layout, builtinLayout, edit }) {
   const firstName = currentUser?.fullName?.split(' ')[0] || 'there';
   const sprints = data?.activeSprints || [];
   const activeSprint = sprints[0];
@@ -546,11 +607,9 @@ function ScrumMasterToday({ data, currentUser, setView }) {
   };
 
   return (
-    <>
-      <TodayHeader greeting={getGreeting()} firstName={firstName} rolePill="Scrum Master"
-        subtitle={subtitle} cta="View sprint" onCta={() => setView('sprint')} />
-      <TodayCanvas layout={SCRUM_MASTER_LAYOUT} registry={SCRUM_MASTER_REGISTRY} ctx={ctx} />
-    </>
+    <TodaySurface
+      header={{ greeting: getGreeting(), firstName, rolePill: 'Scrum Master', subtitle, cta: 'View sprint', onCta: () => setView('sprint') }}
+      registry={SCRUM_MASTER_REGISTRY} ctx={ctx} layout={layout} builtinLayout={builtinLayout} edit={edit} />
   );
 }
 
@@ -697,19 +756,7 @@ const PRODUCT_OWNER_REGISTRY = {
   ),
 };
 
-// Base PO layout; the ungroomed widget is appended only when there are ungroomed items.
-const PRODUCT_OWNER_BASE_LAYOUT = [
-  { id: 'po-stat-ungroomed', type: 'stat', span: 3, spanSm: 6, config: { k: 'ungroomed' } },
-  { id: 'po-stat-releases', type: 'stat', span: 3, spanSm: 6, config: { k: 'releases' } },
-  { id: 'po-stat-features', type: 'stat', span: 3, spanSm: 6, config: { k: 'features' } },
-  { id: 'po-stat-backlog', type: 'stat', span: 3, spanSm: 6, config: { k: 'backlog' } },
-  { id: 'po-upcoming', type: 'upcoming-releases', span: 8 },
-  { id: 'po-backlog-health', type: 'backlog-health', span: 4 },
-  { id: 'po-composition', type: 'backlog-composition', span: 6 },
-  { id: 'po-feature-completion', type: 'feature-completion', span: 6 },
-];
-
-function ProductOwnerToday({ data, currentUser, setView }) {
+function ProductOwnerToday({ data, currentUser, setView, layout, builtinLayout, edit }) {
   const firstName = currentUser?.fullName?.split(' ')[0] || 'there';
   const upcoming = data?.upcomingReleases || [];
   const allReleases = data?.releases || [];
@@ -733,16 +780,11 @@ function ProductOwnerToday({ data, currentUser, setView }) {
     upcoming, allReleases, ungroomed, ungroomedCount, priorityDist, backlogByType,
     featureStats, featurePct, totalBacklog, maxPri, setView,
   };
-  const layout = ungroomed.length > 0
-    ? [...PRODUCT_OWNER_BASE_LAYOUT, { id: 'po-ungroomed', type: 'ungroomed', span: 12 }]
-    : PRODUCT_OWNER_BASE_LAYOUT;
 
   return (
-    <>
-      <TodayHeader greeting={getGreeting()} firstName={firstName} rolePill="Product Owner"
-        subtitle={subtitle} cta="View backlog" onCta={() => setView('backlog')} />
-      <TodayCanvas layout={layout} registry={PRODUCT_OWNER_REGISTRY} ctx={ctx} />
-    </>
+    <TodaySurface
+      header={{ greeting: getGreeting(), firstName, rolePill: 'Product Owner', subtitle, cta: 'View backlog', onCta: () => setView('backlog') }}
+      registry={PRODUCT_OWNER_REGISTRY} ctx={ctx} layout={layout} builtinLayout={builtinLayout} edit={edit} />
   );
 }
 
@@ -881,18 +923,7 @@ const EXECUTIVE_REGISTRY = {
   ),
 };
 
-const EXECUTIVE_BASE_LAYOUT = [
-  { id: 'ex-stat-health', type: 'stat', span: 3, spanSm: 6, config: { k: 'health' } },
-  { id: 'ex-stat-overdue', type: 'stat', span: 3, spanSm: 6, config: { k: 'overdue' } },
-  { id: 'ex-stat-risks', type: 'stat', span: 3, spanSm: 6, config: { k: 'risks' } },
-  { id: 'ex-stat-util', type: 'stat', span: 3, spanSm: 6, config: { k: 'util' } },
-  { id: 'ex-portfolio', type: 'project-portfolio', span: 12 },
-  { id: 'ex-raid', type: 'raid-pulse', span: 4 },
-  { id: 'ex-release', type: 'release-schedule', span: 4 },
-  { id: 'ex-util', type: 'team-utilization', span: 4 },
-];
-
-function ExecutiveToday({ data, currentUser, setView }) {
+function ExecutiveToday({ data, currentUser, setView, layout, builtinLayout, edit }) {
   const firstName = currentUser?.fullName?.split(' ')[0] || 'there';
   const portfolio = data?.projectPortfolio || [];
   const raidSummary = data?.raidSummary || [];
@@ -916,16 +947,11 @@ function ExecutiveToday({ data, currentUser, setView }) {
     health, healthColor, overdueActions, openRisks, openIssues, teamUtil,
     portfolio, raidSummary, releaseSchedule, setView,
   };
-  const layout = overdueActions.length > 0
-    ? [...EXECUTIVE_BASE_LAYOUT, { id: 'ex-overdue', type: 'overdue-actions', span: 12 }]
-    : EXECUTIVE_BASE_LAYOUT;
 
   return (
-    <>
-      <TodayHeader greeting={getGreeting()} firstName={firstName} rolePill="Leadership"
-        subtitle={subtitle} cta="View portfolio" onCta={() => setView('projects')} />
-      <TodayCanvas layout={layout} registry={EXECUTIVE_REGISTRY} ctx={ctx} />
-    </>
+    <TodaySurface
+      header={{ greeting: getGreeting(), firstName, rolePill: 'Leadership', subtitle, cta: 'View portfolio', onCta: () => setView('projects') }}
+      registry={EXECUTIVE_REGISTRY} ctx={ctx} layout={layout} builtinLayout={builtinLayout} edit={edit} />
   );
 }
 
@@ -1030,17 +1056,7 @@ const ADMIN_REGISTRY = {
   ),
 };
 
-const ADMIN_LAYOUT = [
-  { id: 'ad-stat-members', type: 'stat', span: 3, spanSm: 6, config: { k: 'members' } },
-  { id: 'ad-stat-mfa', type: 'stat', span: 3, spanSm: 6, config: { k: 'mfa' } },
-  { id: 'ad-stat-events', type: 'stat', span: 3, spanSm: 6, config: { k: 'events' } },
-  { id: 'ad-stat-audit', type: 'stat', span: 3, spanSm: 6, config: { k: 'audit' } },
-  { id: 'ad-activity', type: 'activity', span: 8 },
-  { id: 'ad-security-roles', type: 'security-roles', span: 4 },
-  { id: 'ad-audit-log', type: 'audit-log', span: 12 },
-];
-
-function AdminToday({ data, currentUser, setView }) {
+function AdminToday({ data, currentUser, setView, layout, builtinLayout, edit }) {
   const firstName = currentUser?.fullName?.split(' ')[0] || 'there';
   const memberCount = data?.memberCount ?? 0;
   const mfa = data?.mfaStats || { total: 0, mfa_enabled: 0 };
@@ -1066,11 +1082,9 @@ function AdminToday({ data, currentUser, setView }) {
   };
 
   return (
-    <>
-      <TodayHeader greeting={getGreeting()} firstName={firstName} rolePill="Admin"
-        subtitle={subtitle} cta="Manage members" onCta={() => setView('workspace')} />
-      <TodayCanvas layout={ADMIN_LAYOUT} registry={ADMIN_REGISTRY} ctx={ctx} />
-    </>
+    <TodaySurface
+      header={{ greeting: getGreeting(), firstName, rolePill: 'Admin', subtitle, cta: 'Manage members', onCta: () => setView('workspace') }}
+      registry={ADMIN_REGISTRY} ctx={ctx} layout={layout} builtinLayout={builtinLayout} edit={edit} />
   );
 }
 
@@ -1097,6 +1111,9 @@ export default function DashboardView({
   setSelectedItem,
   setIsWorklogOpen,
   showToast,
+  todayLayout,
+  saveTodayLayout,
+  resetTodayLayout,
 }) {
   // Resolve the data for the active role and auto-fetch if not yet loaded
   const DATA_MAP = {
@@ -1107,6 +1124,16 @@ export default function DashboardView({
     'admin':         adminDash,
   };
   const activeData = DATA_MAP[dashboardRole] ?? null;
+
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState([]);
+  // A draft is per-role; leaving a role exits edit mode. Reset during render (not in an effect)
+  // using the previous-value idiom so the role's own data and draft never get out of sync.
+  const [prevRole, setPrevRole] = useState(dashboardRole);
+  if (prevRole !== dashboardRole) {
+    setPrevRole(dashboardRole);
+    setEditing(false);
+  }
 
   useEffect(() => {
     if (!activeData && !dashLoading) {
@@ -1119,7 +1146,39 @@ export default function DashboardView({
     fetchDashboard(role);
   };
 
-  const sharedProps = { currentUser, setView, setIsCreateOpen, setSelectedItem, setIsWorklogOpen, selectedItem, showToast, workItems };
+  // Effective layout: the saved personal/workspace layout for THIS role, else the built-in default.
+  const savedForRole = todayLayout?.role === dashboardRole ? todayLayout : null;
+  const savedLayout = savedForRole?.widgets ? widgetsToLayout(savedForRole.widgets) : null;
+  const builtin = builtinTodayLayout(dashboardRole, activeData);
+  const resolved = savedLayout ?? builtin;
+
+  const clone = (l) => l.map((w) => ({ ...w, config: { ...w.config } }));
+  const swap = (l, i, j) => {
+    if (j < 0 || j >= l.length) return l;
+    const c = [...l];
+    [c[i], c[j]] = [c[j], c[i]];
+    return c;
+  };
+
+  const edit = {
+    editing,
+    source: savedForRole?.source || 'builtin',
+    draft,
+    start: () => { setDraft(clone(resolved)); setEditing(true); },
+    cancel: () => setEditing(false),
+    save: () => { saveTodayLayout?.(dashboardRole, draft); setEditing(false); },
+    reset: () => { resetTodayLayout?.(dashboardRole); setEditing(false); },
+    add: (w) => setDraft((d) => [...d, { ...w, config: { ...w.config } }]),
+    remove: (i) => setDraft((d) => d.filter((_, j) => j !== i)),
+    moveUp: (i) => setDraft((d) => swap(d, i, i - 1)),
+    moveDown: (i) => setDraft((d) => swap(d, i, i + 1)),
+    cycleSpan: (i) => setDraft((d) => d.map((w, j) => (j === i ? { ...w, span: nextSpan(w.span || 12) } : w))),
+  };
+
+  const sharedProps = {
+    currentUser, setView, setIsCreateOpen, setSelectedItem, setIsWorklogOpen, selectedItem,
+    showToast, workItems, layout: resolved, builtinLayout: builtin, edit,
+  };
 
   return (
     <div className="p-6 max-w-7xl">

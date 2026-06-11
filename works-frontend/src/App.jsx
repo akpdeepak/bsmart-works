@@ -57,6 +57,7 @@ import { ResetPasswordScreen } from '@/components/works/reset-password-screen';
 // DonutChart / BarChart moved to dashboard-widget-card.jsx + report-section-card.jsx (TD-003).
 // exportElementToPng / exportElementToPdf / exportRowsToCsv moved to export-buttons.jsx (TD-003).
 import { api } from '@/lib/apiClient';
+import { layoutToWidgets } from '@/lib/today-layouts';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { isIconComponent, onPressKey, renderMd } from '@/lib/utils';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -315,6 +316,8 @@ export default function App() {
   const [execDash, setExecDash]                 = useState(null);
   const [adminDash, setAdminDash]               = useState(null);
   const [dashLoading, setDashLoading]           = useState(false);
+  // Configurable Today — the effective layout ({ role, source, widgets }) for the active role.
+  const [todayLayout, setTodayLayout]           = useState(null);
 
   // Iteration 6 — Releases
   const [releases, setReleases]                 = useState([]);
@@ -1836,8 +1839,39 @@ export default function App() {
 
   // ── Iteration 6 — Dashboards ─────────────────────────────────────────────────
 
+  // ── Configurable Today — per-role layouts (slice 4) ──────────────────────────
+  // Effective layout resolves personal → workspace template → built-in server-side; a null/empty
+  // dashboard means "use the built-in default" (the frontend owns those constants).
+  function fetchTodayLayout(role) {
+    const wsId = activeWorkspaceId;
+    if (!wsId || !role) return;
+    api.raw(`/today-layouts/effective?workspaceId=${encodeURIComponent(wsId)}&role=${encodeURIComponent(role)}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => {
+        const widgets = d?.dashboard?.widgets?.length ? d.dashboard.widgets : null;
+        setTodayLayout({ role, source: d?.source || 'builtin', widgets });
+      })
+      .catch(() => setTodayLayout({ role, source: 'builtin', widgets: null }));
+  }
+
+  function saveTodayLayout(role, layout) {
+    api.send(`/today-layouts/personal`, {
+      method: 'PUT',
+      body: JSON.stringify({ workspaceId: activeWorkspaceId, role, widgets: layoutToWidgets(layout) }),
+    })
+      .then(() => { showToast('Today layout saved'); fetchTodayLayout(role); })
+      .catch(() => showToast('Failed to save layout', 'error'));
+  }
+
+  function resetTodayLayout(role) {
+    api.raw(`/today-layouts/personal?workspaceId=${encodeURIComponent(activeWorkspaceId)}&role=${encodeURIComponent(role)}`, { method: 'DELETE' })
+      .then(() => { showToast('Reset to default'); fetchTodayLayout(role); })
+      .catch(() => showToast('Failed to reset layout', 'error'));
+  }
+
   function fetchDashboard(role) {
     setDashLoading(true);
+    fetchTodayLayout(role); // load the role's effective Today layout alongside its data
     const wsId = activeWorkspaceId;
     const uid = currentUser?.id;
     let url;
@@ -2877,6 +2911,9 @@ export default function App() {
               fetchBacklog={fetchBacklog}
               fetchSprints={fetchSprints}
               fetchMembers={fetchMembers}
+              todayLayout={todayLayout}
+              saveTodayLayout={saveTodayLayout}
+              resetTodayLayout={resetTodayLayout}
             />
           )}
 

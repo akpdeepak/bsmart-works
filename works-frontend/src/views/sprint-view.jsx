@@ -123,7 +123,7 @@ export default function SprintView({
               { label: 'Mine', filter: { type: 'mine' } },
               { label: 'Blockers', Icon: Flame, filter: { type: 'blockers' } },
               { label: 'High Priority', Icon: ArrowUp, filter: { type: 'priority', value: 'HIGH' } },
-              { label: 'Bugs', Icon: Bug, filter: { type: 'itemType', value: 'Bug' } },
+              { label: 'Bugs', Icon: Bug, filter: { type: 'itemType', value: 'BUG' } },
             ].map(f => (
               <button key={f.label} onClick={() => setActiveFilter(f.filter)}
                 className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${JSON.stringify(activeFilter) === JSON.stringify(f.filter) ? 'bg-brand-navy text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'}`}>

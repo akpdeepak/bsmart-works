@@ -29,7 +29,9 @@ export function filterItems(items, filter = {}, ctx = {}) {
     if (filter.unassigned && i.assigneeId) return false;
     if (filter.status && i.status !== filter.status) return false;
     if (filter.priority && i.priority !== filter.priority) return false;
-    if (filter.type && i.type !== filter.type) return false;
+    // Type compares case-insensitively: V68 uppercased work_items.type, but widget
+    // configs saved before the redesign still carry 'Bug'/'Story'-style values.
+    if (filter.type && String(i.type || '').toUpperCase() !== String(filter.type).toUpperCase()) return false;
     if (filter.highPriority && !HIGH_PRIORITIES.includes(String(i.priority || '').toUpperCase())) return false;
     if (filter.blocked && i.status !== 'Blocked') return false;
     if (filter.overdue) {
@@ -107,7 +109,9 @@ export function filterReportItems(items, filter = {}) {
     if (filter.open && i.status === 'Done') return false;
     if (filter.status && i.status !== filter.status) return false;
     if (filter.priority && i.priority !== filter.priority) return false;
-    if (filter.type && i.type !== filter.type) return false;
+    // Case-insensitive for the same reason as filterItems: legacy saved report
+    // sections predate the V68 uppercase type taxonomy.
+    if (filter.type && String(i.type || '').toUpperCase() !== String(filter.type).toUpperCase()) return false;
     return true;
   });
 }
@@ -128,8 +132,8 @@ export const EXTRA_WIDGET_PRESETS = [
   { category: 'Metrics', type: 'SCORECARD', title: 'High priority',  config: { filter: { highPriority: true } } },
   { category: 'Metrics', type: 'SCORECARD', title: 'Blocked',        config: { filter: { blocked: true } } },
   { category: 'Metrics', type: 'SCORECARD', title: 'Completed',      config: { filter: { done: true } } },
-  { category: 'Metrics', type: 'SCORECARD', title: 'Bugs',           config: { filter: { type: 'Bug' } } },
-  { category: 'Metrics', type: 'SCORECARD', title: 'Stories',        config: { filter: { type: 'Story' } } },
+  { category: 'Metrics', type: 'SCORECARD', title: 'Bugs',           config: { filter: { type: 'BUG' } } },
+  { category: 'Metrics', type: 'SCORECARD', title: 'Stories',        config: { filter: { type: 'STORY' } } },
   // Distribution — config-driven PIE/BAR/STATUS_BAR/ITEM_LIST over a dimension
   { category: 'Distribution', type: 'PIE',        title: 'Status (pie)',     config: { dimension: 'status' } },
   { category: 'Distribution', type: 'BAR',        title: 'Priority (bar)',   config: { dimension: 'priority' } },

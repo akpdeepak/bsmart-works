@@ -31,9 +31,10 @@ class AiAssistServiceTest {
 
     @Test
     void detectType_and_detectStatus() {
-        assertThat(AiAssistService.detectType("login crash bug")).isEqualTo("Bug");
-        assertThat(AiAssistService.detectType("as a user i want")).isEqualTo("Story");
-        assertThat(AiAssistService.detectType("plain task")).isEqualTo("Task");
+        // Canonical uppercase keys (V68 type redesign) — these are persisted on create.
+        assertThat(AiAssistService.detectType("login crash bug")).isEqualTo("BUG");
+        assertThat(AiAssistService.detectType("as a user i want")).isEqualTo("STORY");
+        assertThat(AiAssistService.detectType("plain task")).isEqualTo("TASK");
         assertThat(AiAssistService.detectStatus("move to in progress")).isEqualTo("In Progress");
         assertThat(AiAssistService.detectStatus("mark done")).isEqualTo("Done");
         assertThat(AiAssistService.detectStatus("nothing here")).isNull();
@@ -64,7 +65,7 @@ class AiAssistServiceTest {
     void parseSteps_createExtractsEmailAndType() {
         var steps = AiAssistService.parseSteps("Create bug: portal login fails, email priya@bcits.com");
         assertThat(steps.get(0).action()).isEqualTo(AiAssistService.ActionType.CREATE_ITEM.name());
-        assertThat(steps.get(0).params()).containsEntry("type", "Bug");
+        assertThat(steps.get(0).params()).containsEntry("type", "BUG");
     }
 
     @Test
@@ -257,7 +258,7 @@ class AiAssistServiceTest {
     @Test
     void deterministicNlToBql_mapsBugTypeKeyword() {
         String bql = AiAssistService.deterministicNlToBql("find bugs");
-        assertThat(bql).contains("type").contains("Bug");
+        assertThat(bql).contains("type").contains("BUG");
     }
 
     @Test

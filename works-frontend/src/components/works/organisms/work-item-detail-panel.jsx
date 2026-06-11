@@ -273,7 +273,7 @@ export function WorkItemDetailPanel({
                 onChange={e => { const u = { ...selectedItem, parentId: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
                 className="input">
                 <option value="">No parent</option>
-                {workItems.filter(i => i.id !== selectedItem.id && (i.type === 'Epic' || i.type === 'Story')).map(i => (
+                {workItems.filter(i => i.id !== selectedItem.id && (i.type === 'EPIC' || i.type === 'STORY')).map(i => (
                   <option key={i.id} value={i.id}>{i.id} — {i.title}</option>
                 ))}
               </select>

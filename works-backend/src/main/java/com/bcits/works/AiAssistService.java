@@ -493,7 +493,7 @@ public class AiAssistService {
         }
         // Type
         String type = detectType(lower);
-        if (!"Task".equals(type) || containsAny(lower, "task")) {
+        if (!"TASK".equals(type) || containsAny(lower, "task")) {
             clauses.add("type = \"" + type + "\"");
         }
         // Assignee
@@ -605,20 +605,24 @@ public class AiAssistService {
         return "Medium";
     }
 
+    // Returns canonical type keys — uppercase since the V68 work-item type redesign.
+    // These flow into created items (CREATE_ITEM), triage suggestions, and BQL
+    // type clauses, so mixed-case here would write or query values the DB no
+    // longer contains. (Statuses stayed mixed-case; detectStatus is unchanged.)
     static String detectType(String lower) {
         if (containsAny(lower, "bug", "defect", "error", "crash")) {
-            return "Bug";
+            return "BUG";
         }
         if (containsAny(lower, "story", "feature", "as a user")) {
-            return "Story";
+            return "STORY";
         }
         if (containsAny(lower, "epic")) {
-            return "Epic";
+            return "EPIC";
         }
         if (containsAny(lower, "incident", "outage")) {
-            return "Incident";
+            return "INCIDENT";
         }
-        return "Task";
+        return "TASK";
     }
 
     static String detectStatus(String lower) {

@@ -206,10 +206,11 @@ public class DashboardService {
             "ORDER BY CASE priority WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 ELSE 4 END");
         result.put("priorityDistribution", priorityDist);
 
-        // Feature completion rate
+        // Feature completion rate — types are uppercase since the V68 work-item type
+        // redesign; UPPER() also matches any pre-redesign 'Story' rows.
         List<Map<String, Object>> featureStats = jdbc.queryForList(
             "SELECT COUNT(*) as total, SUM(CASE WHEN status = 'Done' THEN 1 ELSE 0 END) as done " +
-            "FROM work_items WHERE type = 'Story' AND deleted_at IS NULL");
+            "FROM work_items WHERE UPPER(type) = 'STORY' AND deleted_at IS NULL");
         result.put("featureStats", featureStats.isEmpty() ? null : featureStats.get(0));
 
         // Ungroomed backlog (items without sprint, not Done)

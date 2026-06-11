@@ -31,7 +31,7 @@ export function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, on
         epicMap[epicId].push(item);
       });
       return Object.entries(epicMap).map(([epicId, epicItems]) => {
-        const epic = allItems.find(i => i.id === epicId && i.type === 'Epic');
+        const epic = allItems.find(i => i.id === epicId && i.type === 'EPIC');
         return {
           key: epicId,
           label: epic ? epic.title : epicId === 'no-epic' ? 'No Epic' : epicId,

@@ -2211,7 +2211,7 @@ export default function App() {
     if (activeFilter.type === 'mine') return items.filter(i => i.assigneeId === currentUser.id);
     if (activeFilter.type === 'priority') return items.filter(i => i.priority === activeFilter.value);
     if (activeFilter.type === 'itemType') return items.filter(i => i.type === activeFilter.value);
-    if (activeFilter.type === 'blockers') return items.filter(i => i.priority === 'CRITICAL' || i.type === 'Incident');
+    if (activeFilter.type === 'blockers') return items.filter(i => i.priority === 'CRITICAL' || i.type === 'INCIDENT');
     return items;
   };
 

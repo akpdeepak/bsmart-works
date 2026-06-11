@@ -42,11 +42,11 @@ export default function BacklogView({
         <aside className="hidden lg:block w-56 flex-shrink-0">
           <div className="sticky top-6 rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-800">
             <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-neutral-600">Epics</p>
-            {workItems.filter(i => i.type === 'Epic').length === 0 ? (
+            {workItems.filter(i => i.type === 'EPIC').length === 0 ? (
               <p className="px-1 text-xs text-neutral-600 dark:text-neutral-400">No epics yet.</p>
             ) : (
               <ul className="space-y-1">
-                {workItems.filter(i => i.type === 'Epic').map(epic => {
+                {workItems.filter(i => i.type === 'EPIC').map(epic => {
                   const kids = workItems.filter(i => i.parentId === epic.id);
                   const done = kids.filter(i => i.status === 'Done').length;
                   const pct = kids.length ? Math.round((done / kids.length) * 100) : 0;

@@ -4,11 +4,12 @@ import {
   sprintProgress, velocityPoints, EXTRA_WIDGET_PRESETS, EXTRA_WIDGET_CATEGORIES,
 } from './dashboard-metrics';
 
+// Types mirror the live DB taxonomy — uppercase since the V68 redesign.
 const items = [
-  { id: '1', status: 'Done',        priority: 'HIGH',     type: 'Bug',   assigneeId: 'u1', dueDate: '2026-01-01' },
-  { id: '2', status: 'In Progress', priority: 'CRITICAL', type: 'Story', assigneeId: 'u1', dueDate: '2026-01-01' },
-  { id: '3', status: 'To Do',       priority: 'LOW',      type: 'Task',  assigneeId: 'u2' },
-  { id: '4', status: 'Blocked',     priority: 'MEDIUM',   type: 'Bug',   assigneeId: null },
+  { id: '1', status: 'Done',        priority: 'HIGH',     type: 'BUG',   assigneeId: 'u1', dueDate: '2026-01-01' },
+  { id: '2', status: 'In Progress', priority: 'CRITICAL', type: 'STORY', assigneeId: 'u1', dueDate: '2026-01-01' },
+  { id: '3', status: 'To Do',       priority: 'LOW',      type: 'TASK',  assigneeId: 'u2' },
+  { id: '4', status: 'Blocked',     priority: 'MEDIUM',   type: 'BUG',   assigneeId: null },
 ];
 const ctx = { currentUserId: 'u1', today: '2026-06-01' };
 
@@ -27,6 +28,13 @@ describe('filterItems', () => {
   });
   it('blocked matches Blocked status', () => {
     expect(filterItems(items, { blocked: true }, ctx).map(i => i.id)).toEqual(['4']);
+  });
+  it('type matches the uppercase taxonomy', () => {
+    expect(filterItems(items, { type: 'BUG' }, ctx).map(i => i.id)).toEqual(['1', '4']);
+  });
+  it('type tolerates legacy mixed-case saved configs (pre-V68)', () => {
+    expect(filterItems(items, { type: 'Bug' }, ctx).map(i => i.id)).toEqual(['1', '4']);
+    expect(filterItems(items, { type: 'Story' }, ctx).map(i => i.id)).toEqual(['2']);
   });
   it('overdue: past due and not Done', () => {
     expect(filterItems(items, { overdue: true }, ctx).map(i => i.id)).toEqual(['2']);
@@ -95,6 +103,12 @@ describe('presets', () => {
       expect(EXTRA_WIDGET_CATEGORIES).toContain(p.category);
       expect(p.type).toBeTruthy();
       expect(p.title).toBeTruthy();
+    });
+  });
+  it('preset type filters use the uppercase taxonomy (post-V68)', () => {
+    EXTRA_WIDGET_PRESETS.forEach(p => {
+      const t = p.config?.filter?.type;
+      if (t) expect(t).toBe(t.toUpperCase());
     });
   });
 });

@@ -169,15 +169,16 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   Cap X + Admin Operations Center Cap Y), **17** (Universal Customization Engine Cap R), **18**
   (Mobile + Real-time + Performance Cap S), **19** (Enterprise Security + Compliance Certifications
   Cap T), and the Compliance/Service iterations (7–9).
-- **Flyway high-water mark:** **V69** (`V69__add_updated_at_to_workspaces_and_projects.sql`; note: V16 was
+- **Flyway high-water mark:** **V70** (`V70__today_surface_layouts.sql`; note: V16 was
   skipped, V23 does not exist; V50–V53 are iterations 16/17/19/18's migrations; V54–V57 are
   iteration 20's advanced-AI / marketplace / knowledge / customer-chat migrations; V58 = user locale
   + perf indexes; V59 = block-editor + SCIM; V60 = custom domains; V61–V65 = compliance escalation,
   AI cache/rate-limits, KPI formula, sandbox mode, saved views; V66 = field_def.description fix
   (boot unblock); V67 = OAuth credentials + AES-256 encryption + PII vault; V68 = work-item type
   redesign (17-type taxonomy, auto-IDs, hierarchy); V69 = updated_at on workspaces + projects,
-  unblocks WorkspaceTenantIsolationIT + ComplianceEvaluationPerformanceTest).
-- **Next migration:** **`V70__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+  unblocks WorkspaceTenantIsolationIT + ComplianceEvaluationPerformanceTest; V70 = surface/role_key
+  on dashboards — per-role configurable Today layouts).
+- **Next migration:** **`V71__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

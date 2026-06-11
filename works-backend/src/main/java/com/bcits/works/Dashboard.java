@@ -16,6 +16,8 @@ public class Dashboard {
     @NotBlank
     private String name;
     private String scope;       // PERSONAL | TEAM | PROJECT | ORG
+    private String surface;     // CANVAS (user-built dashboards) | TODAY (role-scoped Today layouts)
+    private String roleKey;     // TODAY only: developer | scrum-master | product-owner | executive | admin
     private String projectId;
     private Integer layoutCols;
     private OffsetDateTime createdAt;
@@ -35,6 +37,10 @@ public class Dashboard {
     public void setName(String name) { this.name = name; }
     public String getScope() { return scope; }
     public void setScope(String scope) { this.scope = scope; }
+    public String getSurface() { return surface; }
+    public void setSurface(String surface) { this.surface = surface; }
+    public String getRoleKey() { return roleKey; }
+    public void setRoleKey(String roleKey) { this.roleKey = roleKey; }
     public String getProjectId() { return projectId; }
     public void setProjectId(String projectId) { this.projectId = projectId; }
     public Integer getLayoutCols() { return layoutCols; }

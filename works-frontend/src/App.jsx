@@ -1870,6 +1870,17 @@ export default function App() {
       .catch(() => showToast('Failed to reset layout', 'error'));
   }
 
+  // Save the workspace-wide default for a role (ADMIN+; enforced server-side). Applies to every
+  // member who hasn't personalized their own Today for that role.
+  function saveTodayTemplate(role, layout) {
+    api.send(`/today-layouts/workspace-template`, {
+      method: 'PUT',
+      body: JSON.stringify({ workspaceId: activeWorkspaceId, role, widgets: layoutToWidgets(layout) }),
+    })
+      .then(() => { showToast(`Saved as the team default for ${role}`); fetchTodayLayout(role); })
+      .catch((e) => showToast(e?.status === 403 ? 'Only admins can set the team default' : 'Failed to save team default', 'error'));
+  }
+
   // ── Data-widget executor (slice 5) — metric / guided / BQL, one workspace-scoped path ───────
   function fetchWidgetMetrics() {
     if (!activeWorkspaceId) return;
@@ -2939,6 +2950,7 @@ export default function App() {
               todayLayout={todayLayout}
               saveTodayLayout={saveTodayLayout}
               resetTodayLayout={resetTodayLayout}
+              saveTodayTemplate={saveTodayTemplate}
               fetchWidgetData={fetchWidgetData}
               previewWidgetData={previewWidgetData}
               widgetMetrics={widgetMetrics}

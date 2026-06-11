@@ -7,6 +7,7 @@ import { statusToCategory } from '@/components/works/status';
 import { onPressKey } from '@/lib/utils';
 import { TIER } from '@/lib/nav-model';
 import { DonutChart, BarChart, SegmentBar, DayBars, PairedBars } from '@/components/works/molecules';
+import { TodayCanvas } from '@/components/works/organisms/today-canvas';
 import { aggregateByDimension } from '@/lib/dashboard-metrics';
 import {
   dueBuckets, dailyHours, velocityPairs, timeboxProgress,
@@ -183,6 +184,162 @@ function TodaySkeleton() {
 // Focus: "What should I work on today?" — personal queue, sprint health, blockers
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// Built-in Developer widget registry: type → renderer (ctx, widget) => JSX. Each reproduces the
+// card it replaced 1:1; the canvas positions them per DEVELOPER_LAYOUT. From slice 4 a saved
+// layout reorders/removes these entries; the renderers stay the same.
+const DEVELOPER_REGISTRY = {
+  stat: (ctx, w) => {
+    switch (w.config?.k) {
+      case 'open':
+        return <StatCard label="Open work items" value={ctx.openCount} sub="Assigned to me" color="text-brand-navy" icon={Pin} onClick={() => ctx.setView('myworks')} />;
+      case 'sprint':
+        return <StatCard label="In active sprint" value={ctx.data?.mySprintItems?.length ?? 0} sub={ctx.sprint?.name || 'No active sprint'} color="text-semantic-success" icon={Zap} onClick={() => ctx.setView('sprint')} />;
+      case 'hours':
+        return <StatCard label="Hours this week" value={`${ctx.hours}h`} sub="Time logged (7 days)" color="text-semantic-warning" icon={Timer} />;
+      default:
+        return <StatCard label="Blockers" value={ctx.blockers.length} sub="Items blocked on me" color={ctx.blockers.length > 0 ? 'text-semantic-danger' : 'text-neutral-600 dark:text-neutral-400'} icon={Ban} />;
+    }
+  },
+  'due-radar': (ctx) => (
+    <TodayCard title="Due radar" icon={Clock} iconColor="text-semantic-danger"
+      action={() => ctx.setView('myworks')} actionLabel="Plan my day">
+      <DueBucketTiles buckets={dueBuckets(ctx.myItems)} onSelect={() => ctx.setView('myworks')} />
+    </TodayCard>
+  ),
+  'queue-mix': (ctx) => (
+    <TodayCard title="Queue mix" icon={Layers} iconColor="text-brand-navy">
+      <SegmentBar data={aggregateByDimension(ctx.myItems, 'status')} />
+      <p className="mt-3 text-xs text-neutral-500">My open items by status</p>
+    </TodayCard>
+  ),
+  'my-week': (ctx) => (
+    <TodayCard title="My week" icon={Timer} iconColor="text-semantic-warning">
+      <DayBars data={dailyHours(ctx.data?.dailyMinutes)} unit="h" />
+      <p className="mt-3 text-xs text-neutral-500">{ctx.hours}h logged · last 7 days</p>
+    </TodayCard>
+  ),
+  'focus-queue': (ctx) => (
+    <TodayCard title="Focus queue" icon={Target} iconColor="text-brand-orange"
+      action={() => ctx.setView('myworks')} actionLabel="View all" className="overflow-hidden">
+      {ctx.prioritized.length === 0
+        ? <Empty msg="All caught up — nothing needs your attention." />
+        : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-neutral-100 bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
+                <th scope="col" className="px-5 py-2">Item</th>
+                <th scope="col" className="px-3 py-2">Status</th>
+                <th scope="col" className="hidden px-3 py-2 sm:table-cell">Priority</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+              {ctx.prioritized.slice(0, 8).map(item => {
+                const overdue = item.due_date && new Date(item.due_date) < new Date();
+                return (
+                  <tr key={item.id} role="button" tabIndex={0}
+                    onClick={() => ctx.setSelectedItem(item)} onKeyDown={onPressKey}
+                    className="cursor-pointer hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40 dark:hover:bg-neutral-700">
+                    <td className="px-5 py-2.5">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <TypeBadge type={item.type} compact />
+                        <span className="flex-shrink-0 font-mono text-xs text-neutral-400">{item.id}</span>
+                        <span className="truncate text-neutral-900 dark:text-neutral-100">{item.title}</span>
+                        {overdue && (
+                          <span className="flex-shrink-0 rounded-full bg-semantic-danger/10 px-1.5 py-0.5 text-2xs font-bold uppercase text-semantic-danger">Overdue</span>
+                        )}
+                        {item.sprint_id && !overdue && (
+                          <span className="flex-shrink-0 rounded-full bg-semantic-success/10 px-1.5 py-0.5 text-2xs font-semibold text-semantic-success">Sprint</span>
+                        )}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
+                    </td>
+                    <td className="hidden px-3 py-2.5 sm:table-cell">
+                      <span className="text-xs text-neutral-600 dark:text-neutral-300">{item.priority || '—'}</span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+    </TodayCard>
+  ),
+  'sprint-ring': (ctx) => (
+    <div className="rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
+      <h3 className="mb-4 flex items-center gap-2 font-semibold text-neutral-900 dark:text-neutral-100">
+        <Zap className="h-4 w-4 text-semantic-success" aria-hidden="true" />Active sprint
+      </h3>
+      {ctx.sprint ? (
+        <div className="flex flex-col items-center gap-3 text-center">
+          <HealthRing pct={ctx.sprintPct} size={84} stroke="stroke-semantic-success" label="done" />
+          <div>
+            <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{ctx.sprint.name}</p>
+            {ctx.sprint.goal && (
+              <p className="mt-1 line-clamp-2 text-xs italic text-neutral-500">&ldquo;{ctx.sprint.goal}&rdquo;</p>
+            )}
+            <p className="mt-1.5 text-xs text-neutral-600 dark:text-neutral-400">
+              {ctx.sprint.done_items}/{ctx.sprint.total_items} items · {ctx.sprint.done_points}/{ctx.sprint.total_points}pt
+            </p>
+            <button type="button" onClick={() => ctx.setView('sprint')}
+              className="mt-3 text-xs font-medium text-brand-navy hover:underline focus-visible:outline-none">
+              View sprint board →
+            </button>
+          </div>
+        </div>
+      ) : <Empty msg="No active sprint." />}
+    </div>
+  ),
+  blockers: (ctx) => (
+    <TodayCard title="Blockers" icon={Ban} iconColor="text-semantic-danger">
+      {ctx.blockers.length === 0
+        ? <Empty msg="No blockers — you're clear." />
+        : ctx.blockers.map(b => (
+          <div key={b.id} className="border-b border-neutral-100 py-2.5 last:border-0 dark:border-neutral-700">
+            <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{b.title}</p>
+            <p className="mt-0.5 text-xs text-semantic-danger">Blocked by: {b.blocking_title}</p>
+          </div>
+        ))}
+    </TodayCard>
+  ),
+  'time-logs': (ctx) => (
+    <TodayCard title="My time logs" icon={Timer} iconColor="text-semantic-warning"
+      action={() => ctx.selectedItem ? ctx.setIsWorklogOpen(true) : ctx.showToast('Open a work item first', 'error')}
+      actionLabel="+ Log time">
+      {ctx.worklogs.length === 0
+        ? <Empty msg="No time logged this week." />
+        : ctx.worklogs.slice(0, 5).map(wl => (
+          <div key={wl.id} className="flex items-center gap-2 border-b border-neutral-100 py-2 last:border-0 dark:border-neutral-700">
+            <span className="w-10 flex-shrink-0 text-xs font-bold text-brand-navy">
+              {Math.round((wl.time_spent_minutes || 0) / 60 * 10) / 10}h
+            </span>
+            <span className="flex-1 truncate text-xs text-neutral-900 dark:text-neutral-100">
+              {wl.work_item_title || wl.work_item_id}
+            </span>
+            <span className="text-xs text-neutral-500">{wl.work_date}</span>
+          </div>
+        ))}
+    </TodayCard>
+  ),
+};
+
+// Built-in Developer layout — the default widget arrangement (spans on a 12-col grid; spanSm keeps
+// the stat cards 2-up on mobile). This is the shape a saved layout (slice 4) replaces.
+const DEVELOPER_LAYOUT = [
+  { id: 'd-stat-open', type: 'stat', span: 3, spanSm: 6, config: { k: 'open' } },
+  { id: 'd-stat-sprint', type: 'stat', span: 3, spanSm: 6, config: { k: 'sprint' } },
+  { id: 'd-stat-hours', type: 'stat', span: 3, spanSm: 6, config: { k: 'hours' } },
+  { id: 'd-stat-blockers', type: 'stat', span: 3, spanSm: 6, config: { k: 'blockers' } },
+  { id: 'd-due-radar', type: 'due-radar', span: 4 },
+  { id: 'd-queue-mix', type: 'queue-mix', span: 4 },
+  { id: 'd-my-week', type: 'my-week', span: 4 },
+  { id: 'd-focus-queue', type: 'focus-queue', span: 8 },
+  { id: 'd-sprint-ring', type: 'sprint-ring', span: 4 },
+  { id: 'd-blockers', type: 'blockers', span: 6 },
+  { id: 'd-timelogs', type: 'time-logs', span: 6 },
+];
+
 function DeveloperToday({ data, workItems, currentUser, setView, setSelectedItem, setIsCreateOpen, setIsWorklogOpen, selectedItem, showToast }) {
   const firstName = currentUser?.fullName?.split(' ')[0] || 'there';
   const myItems = data?.myOpenItems
@@ -205,143 +362,17 @@ function DeveloperToday({ data, workItems, currentUser, setView, setSelectedItem
     return (PORD[a.priority] ?? 9) - (PORD[b.priority] ?? 9);
   });
 
+  const ctx = {
+    data, myItems, openCount, sprint, sprintPct, blockers, hours, worklogs, prioritized,
+    currentUser, setView, setSelectedItem, setIsWorklogOpen, selectedItem, showToast,
+  };
+
   return (
     <>
       <TodayHeader greeting={getGreeting()} firstName={firstName}
         subtitle={`${openCount} item${openCount === 1 ? '' : 's'} assigned to you${blockers.length ? ` · ${blockers.length} blocked` : ''}`}
         cta="+ Create work item" onCta={() => setIsCreateOpen(true)} />
-
-      <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Open work items" value={openCount} sub="Assigned to me" color="text-brand-navy" icon={Pin} onClick={() => setView('myworks')} />
-        <StatCard label="In active sprint" value={data?.mySprintItems?.length ?? 0} sub={sprint?.name || 'No active sprint'} color="text-semantic-success" icon={Zap} onClick={() => setView('sprint')} />
-        <StatCard label="Hours this week" value={`${hours}h`} sub="Time logged (7 days)" color="text-semantic-warning" icon={Timer} />
-        <StatCard label="Blockers" value={blockers.length} sub="Items blocked on me" color={blockers.length > 0 ? 'text-semantic-danger' : 'text-neutral-600 dark:text-neutral-400'} icon={Ban} />
-      </div>
-
-      {/* Day planner — due pressure, queue composition, the week's rhythm */}
-      <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-        <TodayCard title="Due radar" icon={Clock} iconColor="text-semantic-danger"
-          action={() => setView('myworks')} actionLabel="Plan my day">
-          <DueBucketTiles buckets={dueBuckets(myItems)} onSelect={() => setView('myworks')} />
-        </TodayCard>
-        <TodayCard title="Queue mix" icon={Layers} iconColor="text-brand-navy">
-          <SegmentBar data={aggregateByDimension(myItems, 'status')} />
-          <p className="mt-3 text-xs text-neutral-500">My open items by status</p>
-        </TodayCard>
-        <TodayCard title="My week" icon={Timer} iconColor="text-semantic-warning">
-          <DayBars data={dailyHours(data?.dailyMinutes)} unit="h" />
-          <p className="mt-3 text-xs text-neutral-500">{hours}h logged · last 7 days</p>
-        </TodayCard>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Focus queue — sprint-sorted personal queue */}
-        <TodayCard title="Focus queue" icon={Target} iconColor="text-brand-orange"
-          action={() => setView('myworks')} actionLabel="View all"
-          className="overflow-hidden lg:col-span-2">
-          {prioritized.length === 0
-            ? <Empty msg="All caught up — nothing needs your attention." />
-            : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-neutral-100 bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
-                    <th scope="col" className="px-5 py-2">Item</th>
-                    <th scope="col" className="px-3 py-2">Status</th>
-                    <th scope="col" className="hidden px-3 py-2 sm:table-cell">Priority</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                  {prioritized.slice(0, 8).map(item => {
-                    const overdue = item.due_date && new Date(item.due_date) < new Date();
-                    return (
-                      <tr key={item.id} role="button" tabIndex={0}
-                        onClick={() => setSelectedItem(item)} onKeyDown={onPressKey}
-                        className="cursor-pointer hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40 dark:hover:bg-neutral-700">
-                        <td className="px-5 py-2.5">
-                          <span className="flex min-w-0 items-center gap-2">
-                            <TypeBadge type={item.type} compact />
-                            <span className="flex-shrink-0 font-mono text-xs text-neutral-400">{item.id}</span>
-                            <span className="truncate text-neutral-900 dark:text-neutral-100">{item.title}</span>
-                            {overdue && (
-                              <span className="flex-shrink-0 rounded-full bg-semantic-danger/10 px-1.5 py-0.5 text-2xs font-bold uppercase text-semantic-danger">Overdue</span>
-                            )}
-                            {item.sprint_id && !overdue && (
-                              <span className="flex-shrink-0 rounded-full bg-semantic-success/10 px-1.5 py-0.5 text-2xs font-semibold text-semantic-success">Sprint</span>
-                            )}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
-                        </td>
-                        <td className="hidden px-3 py-2.5 sm:table-cell">
-                          <span className="text-xs text-neutral-600 dark:text-neutral-300">{item.priority || '—'}</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-        </TodayCard>
-
-        {/* Active sprint ring */}
-        <div className="flex flex-col gap-5">
-          <div className="rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
-            <h3 className="mb-4 flex items-center gap-2 font-semibold text-neutral-900 dark:text-neutral-100">
-              <Zap className="h-4 w-4 text-semantic-success" aria-hidden="true" />Active sprint
-            </h3>
-            {sprint ? (
-              <div className="flex flex-col items-center gap-3 text-center">
-                <HealthRing pct={sprintPct} size={84} stroke="stroke-semantic-success" label="done" />
-                <div>
-                  <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{sprint.name}</p>
-                  {sprint.goal && (
-                    <p className="mt-1 line-clamp-2 text-xs italic text-neutral-500">&ldquo;{sprint.goal}&rdquo;</p>
-                  )}
-                  <p className="mt-1.5 text-xs text-neutral-600 dark:text-neutral-400">
-                    {sprint.done_items}/{sprint.total_items} items · {sprint.done_points}/{sprint.total_points}pt
-                  </p>
-                  <button type="button" onClick={() => setView('sprint')}
-                    className="mt-3 text-xs font-medium text-brand-navy hover:underline focus-visible:outline-none">
-                    View sprint board →
-                  </button>
-                </div>
-              </div>
-            ) : <Empty msg="No active sprint." />}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-        <TodayCard title="Blockers" icon={Ban} iconColor="text-semantic-danger">
-          {blockers.length === 0
-            ? <Empty msg="No blockers — you're clear." />
-            : blockers.map(b => (
-              <div key={b.id} className="border-b border-neutral-100 py-2.5 last:border-0 dark:border-neutral-700">
-                <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{b.title}</p>
-                <p className="mt-0.5 text-xs text-semantic-danger">Blocked by: {b.blocking_title}</p>
-              </div>
-            ))}
-        </TodayCard>
-
-        <TodayCard title="My time logs" icon={Timer} iconColor="text-semantic-warning"
-          action={() => selectedItem ? setIsWorklogOpen(true) : showToast('Open a work item first', 'error')}
-          actionLabel="+ Log time">
-          {worklogs.length === 0
-            ? <Empty msg="No time logged this week." />
-            : worklogs.slice(0, 5).map(wl => (
-              <div key={wl.id} className="flex items-center gap-2 border-b border-neutral-100 py-2 last:border-0 dark:border-neutral-700">
-                <span className="w-10 flex-shrink-0 text-xs font-bold text-brand-navy">
-                  {Math.round((wl.time_spent_minutes || 0) / 60 * 10) / 10}h
-                </span>
-                <span className="flex-1 truncate text-xs text-neutral-900 dark:text-neutral-100">
-                  {wl.work_item_title || wl.work_item_id}
-                </span>
-                <span className="text-xs text-neutral-500">{wl.work_date}</span>
-              </div>
-            ))}
-        </TodayCard>
-      </div>
+      <TodayCanvas layout={DEVELOPER_LAYOUT} registry={DEVELOPER_REGISTRY} ctx={ctx} />
     </>
   );
 }

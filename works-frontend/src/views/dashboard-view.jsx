@@ -382,6 +382,140 @@ function DeveloperToday({ data, workItems, currentUser, setView, setSelectedItem
 // Focus: "Is the sprint healthy?" — risk items, velocity, team capacity
 // ═══════════════════════════════════════════════════════════════════════════════
 
+const SCRUM_MASTER_REGISTRY = {
+  stat: (ctx, w) => {
+    switch (w.config?.k) {
+      case 'health':
+        return <StatCard label="Sprint health" value={`${ctx.sprintPct}%`} sub={ctx.activeSprint?.name || 'No sprint'} color={ctx.sprintColor} icon={TrendingUp} onClick={() => ctx.setView('sprint')} />;
+      case 'risk':
+        return <StatCard label="High-risk items" value={ctx.highRisk.length} sub="CRITICAL/HIGH, not done" color={ctx.highRisk.length > 0 ? 'text-semantic-danger' : 'text-neutral-600 dark:text-neutral-400'} icon={AlertTriangle} />;
+      case 'scope':
+        return <StatCard label="Scope changes" value={ctx.scopeChanges.length} sub="This sprint" color={ctx.scopeChanges.length > 2 ? 'text-semantic-warning' : 'text-neutral-600 dark:text-neutral-400'} icon={Activity} />;
+      default:
+        return <StatCard label="Velocity" value={`${ctx.velocityDone}pt`} sub="Last sprint" color="text-brand-navy" icon={Zap} />;
+    }
+  },
+  'high-risk': (ctx) => (
+    <TodayCard title="High-risk items" icon={AlertTriangle} iconColor="text-semantic-danger"
+      action={() => ctx.setView('board')} className="overflow-hidden">
+      {ctx.highRisk.length === 0
+        ? <Empty msg="No high-risk items — sprint looks healthy." />
+        : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-neutral-100 bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
+                <th scope="col" className="px-5 py-2">Item</th>
+                <th scope="col" className="px-3 py-2">Status</th>
+                <th scope="col" className="hidden px-3 py-2 sm:table-cell">Assignee</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+              {ctx.highRisk.slice(0, 8).map(item => (
+                <tr key={item.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
+                  <td className="px-5 py-2.5">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <TypeBadge type={item.type} compact />
+                      <span className="truncate text-neutral-900 dark:text-neutral-100">{item.title}</span>
+                      <span className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-bold uppercase ${
+                        item.priority === 'CRITICAL'
+                          ? 'bg-semantic-danger/10 text-semantic-danger'
+                          : 'bg-semantic-warning/10 text-semantic-warning'
+                      }`}>{item.priority}</span>
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
+                  </td>
+                  <td className="hidden px-3 py-2.5 text-xs text-neutral-600 sm:table-cell dark:text-neutral-400">
+                    {item.assignee_name || '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+    </TodayCard>
+  ),
+  'sprint-health': (ctx) => (
+    <div className="rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
+      <h3 className="mb-4 flex items-center gap-2 font-semibold text-neutral-900 dark:text-neutral-100">
+        <Zap className="h-4 w-4 text-semantic-success" aria-hidden="true" />Sprint health
+      </h3>
+      {ctx.activeSprint ? (
+        <div className="flex flex-col items-center gap-3 text-center">
+          <HealthRing pct={ctx.sprintPct} size={84} stroke={ctx.sprintStroke} label="done" />
+          <div>
+            <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{ctx.activeSprint.name}</p>
+            {ctx.activeSprint.goal && (
+              <p className="mt-1 line-clamp-2 text-xs italic text-neutral-500">&ldquo;{ctx.activeSprint.goal}&rdquo;</p>
+            )}
+            <p className="mt-1.5 text-xs text-neutral-600 dark:text-neutral-400">
+              {ctx.activeSprint.done_items}/{ctx.activeSprint.total_items} items · {ctx.activeSprint.done_points}/{ctx.activeSprint.total_points}pt
+            </p>
+          </div>
+        </div>
+      ) : <Empty msg="No active sprint." />}
+      {ctx.timebox && (
+        <div className="mt-4 space-y-2 border-t border-neutral-100 pt-4 dark:border-neutral-700">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-neutral-600 dark:text-neutral-400">Time elapsed</span>
+            <span className="font-semibold text-neutral-900 dark:text-neutral-100">{ctx.timebox.timePct}%</span>
+          </div>
+          <MiniBar value={ctx.timebox.timePct} max={100} color="bg-neutral-400" />
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-neutral-600 dark:text-neutral-400">Scope done</span>
+            <span className="font-semibold text-neutral-900 dark:text-neutral-100">{ctx.timebox.scopePct}%</span>
+          </div>
+          <MiniBar value={ctx.timebox.scopePct} max={100}
+            color={ctx.timebox.drift >= 0 ? 'bg-semantic-success' : 'bg-semantic-warning'} />
+          <p className="pt-1 text-xs text-neutral-500">
+            {ctx.timebox.daysLeft}d left · {ctx.timebox.drift >= 0
+              ? `${ctx.timebox.drift}% ahead of the clock`
+              : `${-ctx.timebox.drift}% behind the clock`}
+          </p>
+        </div>
+      )}
+    </div>
+  ),
+  velocity: (ctx) => (
+    <TodayCard title="Velocity trend" icon={TrendingUp} iconColor="text-brand-navy">
+      {ctx.velocity.length === 0
+        ? <Empty msg="No sprint history yet." />
+        : (
+          <>
+            <PairedBars data={velocityPairs(ctx.velocity)} aLabel="Committed" bLabel="Delivered" />
+            <p className="mt-3 text-xs text-neutral-500">
+              Story points · last {Math.min(ctx.velocity.length, 6)} sprint{ctx.velocity.length === 1 ? '' : 's'}
+            </p>
+          </>
+        )}
+    </TodayCard>
+  ),
+  capacity: (ctx) => (
+    <TodayCard title="Team capacity" icon={Users} iconColor="text-brand-navy">
+      {ctx.capacity.length === 0
+        ? <Empty msg="No capacity data this sprint." />
+        : (
+          <>
+            <BarChart data={utilizationSeries(ctx.capacity, 7)} />
+            <p className="mt-3 text-xs text-neutral-500">Hours logged · last 14 days</p>
+          </>
+        )}
+    </TodayCard>
+  ),
+};
+
+const SCRUM_MASTER_LAYOUT = [
+  { id: 'sm-stat-health', type: 'stat', span: 3, spanSm: 6, config: { k: 'health' } },
+  { id: 'sm-stat-risk', type: 'stat', span: 3, spanSm: 6, config: { k: 'risk' } },
+  { id: 'sm-stat-scope', type: 'stat', span: 3, spanSm: 6, config: { k: 'scope' } },
+  { id: 'sm-stat-velocity', type: 'stat', span: 3, spanSm: 6, config: { k: 'velocity' } },
+  { id: 'sm-high-risk', type: 'high-risk', span: 8 },
+  { id: 'sm-sprint-health', type: 'sprint-health', span: 4 },
+  { id: 'sm-velocity', type: 'velocity', span: 6 },
+  { id: 'sm-capacity', type: 'capacity', span: 6 },
+];
+
 function ScrumMasterToday({ data, currentUser, setView }) {
   const firstName = currentUser?.fullName?.split(' ')[0] || 'there';
   const sprints = data?.activeSprints || [];
@@ -406,125 +540,16 @@ function ScrumMasterToday({ data, currentUser, setView }) {
     scopeChanges.length ? `${scopeChanges.length} scope change${scopeChanges.length !== 1 ? 's' : ''}` : null,
   ].filter(Boolean).join(' · ');
 
+  const ctx = {
+    sprintPct, sprintColor, sprintStroke, activeSprint, highRisk, velocity, capacity,
+    scopeChanges, velocityDone, timebox, setView,
+  };
+
   return (
     <>
       <TodayHeader greeting={getGreeting()} firstName={firstName} rolePill="Scrum Master"
         subtitle={subtitle} cta="View sprint" onCta={() => setView('sprint')} />
-
-      <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Sprint health" value={`${sprintPct}%`} sub={activeSprint?.name || 'No sprint'} color={sprintColor} icon={TrendingUp} onClick={() => setView('sprint')} />
-        <StatCard label="High-risk items" value={highRisk.length} sub="CRITICAL/HIGH, not done" color={highRisk.length > 0 ? 'text-semantic-danger' : 'text-neutral-600 dark:text-neutral-400'} icon={AlertTriangle} />
-        <StatCard label="Scope changes" value={scopeChanges.length} sub="This sprint" color={scopeChanges.length > 2 ? 'text-semantic-warning' : 'text-neutral-600 dark:text-neutral-400'} icon={Activity} />
-        <StatCard label="Velocity" value={`${velocityDone}pt`} sub="Last sprint" color="text-brand-navy" icon={Zap} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <TodayCard title="High-risk items" icon={AlertTriangle} iconColor="text-semantic-danger"
-          action={() => setView('board')} className="overflow-hidden lg:col-span-2">
-          {highRisk.length === 0
-            ? <Empty msg="No high-risk items — sprint looks healthy." />
-            : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-neutral-100 bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
-                    <th scope="col" className="px-5 py-2">Item</th>
-                    <th scope="col" className="px-3 py-2">Status</th>
-                    <th scope="col" className="hidden px-3 py-2 sm:table-cell">Assignee</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                  {highRisk.slice(0, 8).map(item => (
-                    <tr key={item.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
-                      <td className="px-5 py-2.5">
-                        <span className="flex min-w-0 items-center gap-2">
-                          <TypeBadge type={item.type} compact />
-                          <span className="truncate text-neutral-900 dark:text-neutral-100">{item.title}</span>
-                          <span className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-bold uppercase ${
-                            item.priority === 'CRITICAL'
-                              ? 'bg-semantic-danger/10 text-semantic-danger'
-                              : 'bg-semantic-warning/10 text-semantic-warning'
-                          }`}>{item.priority}</span>
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
-                      </td>
-                      <td className="hidden px-3 py-2.5 text-xs text-neutral-600 sm:table-cell dark:text-neutral-400">
-                        {item.assignee_name || '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-        </TodayCard>
-
-        <div className="rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
-          <h3 className="mb-4 flex items-center gap-2 font-semibold text-neutral-900 dark:text-neutral-100">
-            <Zap className="h-4 w-4 text-semantic-success" aria-hidden="true" />Sprint health
-          </h3>
-          {activeSprint ? (
-            <div className="flex flex-col items-center gap-3 text-center">
-              <HealthRing pct={sprintPct} size={84} stroke={sprintStroke} label="done" />
-              <div>
-                <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{activeSprint.name}</p>
-                {activeSprint.goal && (
-                  <p className="mt-1 line-clamp-2 text-xs italic text-neutral-500">&ldquo;{activeSprint.goal}&rdquo;</p>
-                )}
-                <p className="mt-1.5 text-xs text-neutral-600 dark:text-neutral-400">
-                  {activeSprint.done_items}/{activeSprint.total_items} items · {activeSprint.done_points}/{activeSprint.total_points}pt
-                </p>
-              </div>
-            </div>
-          ) : <Empty msg="No active sprint." />}
-          {timebox && (
-            <div className="mt-4 space-y-2 border-t border-neutral-100 pt-4 dark:border-neutral-700">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-neutral-600 dark:text-neutral-400">Time elapsed</span>
-                <span className="font-semibold text-neutral-900 dark:text-neutral-100">{timebox.timePct}%</span>
-              </div>
-              <MiniBar value={timebox.timePct} max={100} color="bg-neutral-400" />
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-neutral-600 dark:text-neutral-400">Scope done</span>
-                <span className="font-semibold text-neutral-900 dark:text-neutral-100">{timebox.scopePct}%</span>
-              </div>
-              <MiniBar value={timebox.scopePct} max={100}
-                color={timebox.drift >= 0 ? 'bg-semantic-success' : 'bg-semantic-warning'} />
-              <p className="pt-1 text-xs text-neutral-500">
-                {timebox.daysLeft}d left · {timebox.drift >= 0
-                  ? `${timebox.drift}% ahead of the clock`
-                  : `${-timebox.drift}% behind the clock`}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-        <TodayCard title="Velocity trend" icon={TrendingUp} iconColor="text-brand-navy">
-          {velocity.length === 0
-            ? <Empty msg="No sprint history yet." />
-            : (
-              <>
-                <PairedBars data={velocityPairs(velocity)} aLabel="Committed" bLabel="Delivered" />
-                <p className="mt-3 text-xs text-neutral-500">
-                  Story points · last {Math.min(velocity.length, 6)} sprint{velocity.length === 1 ? '' : 's'}
-                </p>
-              </>
-            )}
-        </TodayCard>
-
-        <TodayCard title="Team capacity" icon={Users} iconColor="text-brand-navy">
-          {capacity.length === 0
-            ? <Empty msg="No capacity data this sprint." />
-            : (
-              <>
-                <BarChart data={utilizationSeries(capacity, 7)} />
-                <p className="mt-3 text-xs text-neutral-500">Hours logged · last 14 days</p>
-              </>
-            )}
-        </TodayCard>
-      </div>
+      <TodayCanvas layout={SCRUM_MASTER_LAYOUT} registry={SCRUM_MASTER_REGISTRY} ctx={ctx} />
     </>
   );
 }
@@ -533,6 +558,156 @@ function ScrumMasterToday({ data, currentUser, setView }) {
 // PRODUCT OWNER
 // Focus: "What's the backlog and release state?" — grooming, release radar, features
 // ═══════════════════════════════════════════════════════════════════════════════
+
+const PCOLOR = { CRITICAL: 'bg-semantic-danger', HIGH: 'bg-semantic-warning', MEDIUM: 'bg-brand-navy', LOW: 'bg-neutral-400' };
+
+const PRODUCT_OWNER_REGISTRY = {
+  stat: (ctx, w) => {
+    switch (w.config?.k) {
+      case 'ungroomed':
+        return <StatCard label="Ungroomed items" value={ctx.ungroomedCount} sub="No sprint assigned"
+          color={ctx.ungroomedCount > 10 ? 'text-semantic-danger' : ctx.ungroomedCount > 5 ? 'text-semantic-warning' : 'text-neutral-600 dark:text-neutral-400'}
+          icon={Layers} onClick={() => ctx.setView('backlog')} />;
+      case 'releases':
+        return <StatCard label="Upcoming releases" value={ctx.upcoming.length} sub="Next 3 months" color="text-brand-navy" icon={Package} onClick={() => ctx.setView('releases')} />;
+      case 'features':
+        return <StatCard label="Features done" value={`${ctx.featurePct}%`} sub={`${ctx.featureStats.done}/${ctx.featureStats.total} stories`}
+          color={ctx.featurePct >= 80 ? 'text-semantic-success' : 'text-brand-navy'} icon={CheckCircle2} />;
+      default:
+        return <StatCard label="Backlog size" value={ctx.totalBacklog} sub="Total open items" color="text-neutral-600 dark:text-neutral-400" icon={BarChart2} onClick={() => ctx.setView('backlog')} />;
+    }
+  },
+  'upcoming-releases': (ctx) => (
+    <TodayCard title="Upcoming releases" icon={Package} iconColor="text-brand-navy"
+      action={() => ctx.setView('releases')}>
+      {ctx.upcoming.length === 0
+        ? <Empty msg="No upcoming releases in the next 3 months." />
+        : (
+          <div className="space-y-4">
+            {ctx.upcoming.map(r => {
+              const rel = ctx.allReleases.find(x => x.id === r.id) || r;
+              const pct = (rel.total_items ?? 0) > 0 ? Math.round((rel.done_items || 0) * 100 / rel.total_items) : 0;
+              const daysLeft = r.release_date
+                ? Math.ceil((new Date(r.release_date) - new Date()) / 86400000)
+                : null;
+              return (
+                <div key={r.id}>
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{r.name}</span>
+                      <span className="ml-2 text-xs text-neutral-500">{r.version}</span>
+                    </div>
+                    <div className="flex flex-shrink-0 items-center gap-2">
+                      {daysLeft !== null && (
+                        <span className={`text-xs font-medium ${daysLeft <= 7 ? 'text-semantic-danger' : daysLeft <= 30 ? 'text-semantic-warning' : 'text-neutral-500'}`}>
+                          {daysLeft <= 0 ? 'Due today' : `${daysLeft}d left`}
+                        </span>
+                      )}
+                      <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{pct}%</span>
+                    </div>
+                  </div>
+                  <MiniBar value={pct} max={100}
+                    color={pct >= 80 ? 'bg-semantic-success' : pct >= 50 ? 'bg-brand-navy' : 'bg-brand-orange'} />
+                  <p className="mt-1 text-xs text-neutral-500">
+                    {rel.done_items ?? 0}/{rel.total_items ?? '?'} items
+                    {r.release_date ? ` · ${r.release_date}` : ''}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+    </TodayCard>
+  ),
+  'backlog-health': (ctx) => (
+    <TodayCard title="Backlog health" icon={BarChart2} iconColor="text-brand-navy">
+      {ctx.priorityDist.length === 0
+        ? <Empty msg="No backlog data." />
+        : (
+          <div className="space-y-3">
+            {ctx.priorityDist.map(p => (
+              <div key={p.priority}>
+                <div className="mb-1 flex items-center justify-between text-xs">
+                  <span className="font-medium text-neutral-700 dark:text-neutral-300">{p.priority}</span>
+                  <span className="text-neutral-500">{p.count}</span>
+                </div>
+                <MiniBar value={p.count || 0} max={ctx.maxPri} color={PCOLOR[p.priority] || 'bg-neutral-400'} />
+              </div>
+            ))}
+            <p className="pt-1 text-xs text-neutral-500">{ctx.totalBacklog} total items</p>
+          </div>
+        )}
+    </TodayCard>
+  ),
+  'backlog-composition': (ctx) => (
+    <TodayCard title="Backlog composition" icon={Layers} iconColor="text-brand-navy"
+      action={() => ctx.setView('backlog')}>
+      <DonutChart data={ctx.backlogByType.map(t => ({ label: t.type || 'None', value: Number(t.count) || 0 }))} />
+      <p className="mt-3 text-xs text-neutral-500">Open items by type</p>
+    </TodayCard>
+  ),
+  'feature-completion': (ctx) => (
+    <TodayCard title="Feature completion" icon={CheckCircle2} iconColor="text-semantic-success">
+      <div className="flex items-center gap-5">
+        <HealthRing pct={ctx.featurePct} size={84}
+          stroke={ctx.featurePct >= 80 ? 'stroke-semantic-success' : 'stroke-brand-navy'} label="done" />
+        <div>
+          <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+            {ctx.featureStats.done ?? 0} of {ctx.featureStats.total ?? 0} stories done
+          </p>
+          <p className="mt-1 text-xs text-neutral-500">Across the whole backlog</p>
+          <button type="button" onClick={() => ctx.setView('reports')}
+            className="mt-2 text-xs font-medium text-brand-navy hover:underline focus-visible:outline-none">
+            View reports →
+          </button>
+        </div>
+      </div>
+    </TodayCard>
+  ),
+  ungroomed: (ctx) => (
+    <TodayCard
+      title={`Ungroomed items${ctx.ungroomedCount > ctx.ungroomed.length ? ` (${ctx.ungroomedCount})` : ''}`}
+      icon={AlertCircle} iconColor="text-semantic-warning"
+      action={() => ctx.setView('backlog')} actionLabel="Groom backlog"
+      className="overflow-hidden">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-neutral-100 bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
+            <th scope="col" className="px-5 py-2">Item</th>
+            <th scope="col" className="px-3 py-2">Priority</th>
+            <th scope="col" className="hidden px-3 py-2 sm:table-cell">Points</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+          {ctx.ungroomed.slice(0, 6).map(item => (
+            <tr key={item.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
+              <td className="px-5 py-2.5">
+                <span className="flex min-w-0 items-center gap-2">
+                  <TypeBadge type={item.type} compact />
+                  <span className="truncate text-neutral-900 dark:text-neutral-100">{item.title}</span>
+                </span>
+              </td>
+              <td className="px-3 py-2.5 text-xs text-neutral-600 dark:text-neutral-400">{item.priority || '—'}</td>
+              <td className="hidden px-3 py-2.5 text-xs text-neutral-600 sm:table-cell dark:text-neutral-400">{item.story_points ?? '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </TodayCard>
+  ),
+};
+
+// Base PO layout; the ungroomed widget is appended only when there are ungroomed items.
+const PRODUCT_OWNER_BASE_LAYOUT = [
+  { id: 'po-stat-ungroomed', type: 'stat', span: 3, spanSm: 6, config: { k: 'ungroomed' } },
+  { id: 'po-stat-releases', type: 'stat', span: 3, spanSm: 6, config: { k: 'releases' } },
+  { id: 'po-stat-features', type: 'stat', span: 3, spanSm: 6, config: { k: 'features' } },
+  { id: 'po-stat-backlog', type: 'stat', span: 3, spanSm: 6, config: { k: 'backlog' } },
+  { id: 'po-upcoming', type: 'upcoming-releases', span: 8 },
+  { id: 'po-backlog-health', type: 'backlog-health', span: 4 },
+  { id: 'po-composition', type: 'backlog-composition', span: 6 },
+  { id: 'po-feature-completion', type: 'feature-completion', span: 6 },
+];
 
 function ProductOwnerToday({ data, currentUser, setView }) {
   const firstName = currentUser?.fullName?.split(' ')[0] || 'there';
@@ -548,148 +723,25 @@ function ProductOwnerToday({ data, currentUser, setView }) {
   const totalBacklog = backlogByType.reduce((s, x) => s + (x.count || 0), 0);
   const maxPri = Math.max(...priorityDist.map(p => p.count || 0), 1);
 
-  const PCOLOR = { CRITICAL: 'bg-semantic-danger', HIGH: 'bg-semantic-warning', MEDIUM: 'bg-brand-navy', LOW: 'bg-neutral-400' };
-
   const subtitle = [
     `${ungroomedCount} ungroomed item${ungroomedCount !== 1 ? 's' : ''}`,
     upcoming.length ? `${upcoming.length} upcoming release${upcoming.length !== 1 ? 's' : ''}` : null,
     `${featurePct}% features done`,
   ].filter(Boolean).join(' · ');
 
+  const ctx = {
+    upcoming, allReleases, ungroomed, ungroomedCount, priorityDist, backlogByType,
+    featureStats, featurePct, totalBacklog, maxPri, setView,
+  };
+  const layout = ungroomed.length > 0
+    ? [...PRODUCT_OWNER_BASE_LAYOUT, { id: 'po-ungroomed', type: 'ungroomed', span: 12 }]
+    : PRODUCT_OWNER_BASE_LAYOUT;
+
   return (
     <>
       <TodayHeader greeting={getGreeting()} firstName={firstName} rolePill="Product Owner"
         subtitle={subtitle} cta="View backlog" onCta={() => setView('backlog')} />
-
-      <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Ungroomed items" value={ungroomedCount} sub="No sprint assigned"
-          color={ungroomedCount > 10 ? 'text-semantic-danger' : ungroomedCount > 5 ? 'text-semantic-warning' : 'text-neutral-600 dark:text-neutral-400'}
-          icon={Layers} onClick={() => setView('backlog')} />
-        <StatCard label="Upcoming releases" value={upcoming.length} sub="Next 3 months" color="text-brand-navy" icon={Package} onClick={() => setView('releases')} />
-        <StatCard label="Features done" value={`${featurePct}%`} sub={`${featureStats.done}/${featureStats.total} stories`}
-          color={featurePct >= 80 ? 'text-semantic-success' : 'text-brand-navy'} icon={CheckCircle2} />
-        <StatCard label="Backlog size" value={totalBacklog} sub="Total open items" color="text-neutral-600 dark:text-neutral-400" icon={BarChart2} onClick={() => setView('backlog')} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <TodayCard title="Upcoming releases" icon={Package} iconColor="text-brand-navy"
-          action={() => setView('releases')} className="lg:col-span-2">
-          {upcoming.length === 0
-            ? <Empty msg="No upcoming releases in the next 3 months." />
-            : (
-              <div className="space-y-4">
-                {upcoming.map(r => {
-                  const rel = allReleases.find(x => x.id === r.id) || r;
-                  const pct = (rel.total_items ?? 0) > 0 ? Math.round((rel.done_items || 0) * 100 / rel.total_items) : 0;
-                  const daysLeft = r.release_date
-                    ? Math.ceil((new Date(r.release_date) - new Date()) / 86400000)
-                    : null;
-                  return (
-                    <div key={r.id}>
-                      <div className="mb-1.5 flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{r.name}</span>
-                          <span className="ml-2 text-xs text-neutral-500">{r.version}</span>
-                        </div>
-                        <div className="flex flex-shrink-0 items-center gap-2">
-                          {daysLeft !== null && (
-                            <span className={`text-xs font-medium ${daysLeft <= 7 ? 'text-semantic-danger' : daysLeft <= 30 ? 'text-semantic-warning' : 'text-neutral-500'}`}>
-                              {daysLeft <= 0 ? 'Due today' : `${daysLeft}d left`}
-                            </span>
-                          )}
-                          <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{pct}%</span>
-                        </div>
-                      </div>
-                      <MiniBar value={pct} max={100}
-                        color={pct >= 80 ? 'bg-semantic-success' : pct >= 50 ? 'bg-brand-navy' : 'bg-brand-orange'} />
-                      <p className="mt-1 text-xs text-neutral-500">
-                        {rel.done_items ?? 0}/{rel.total_items ?? '?'} items
-                        {r.release_date ? ` · ${r.release_date}` : ''}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-        </TodayCard>
-
-        <TodayCard title="Backlog health" icon={BarChart2} iconColor="text-brand-navy">
-          {priorityDist.length === 0
-            ? <Empty msg="No backlog data." />
-            : (
-              <div className="space-y-3">
-                {priorityDist.map(p => (
-                  <div key={p.priority}>
-                    <div className="mb-1 flex items-center justify-between text-xs">
-                      <span className="font-medium text-neutral-700 dark:text-neutral-300">{p.priority}</span>
-                      <span className="text-neutral-500">{p.count}</span>
-                    </div>
-                    <MiniBar value={p.count || 0} max={maxPri} color={PCOLOR[p.priority] || 'bg-neutral-400'} />
-                  </div>
-                ))}
-                <p className="pt-1 text-xs text-neutral-500">{totalBacklog} total items</p>
-              </div>
-            )}
-        </TodayCard>
-      </div>
-
-      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-        <TodayCard title="Backlog composition" icon={Layers} iconColor="text-brand-navy"
-          action={() => setView('backlog')}>
-          <DonutChart data={backlogByType.map(t => ({ label: t.type || 'None', value: Number(t.count) || 0 }))} />
-          <p className="mt-3 text-xs text-neutral-500">Open items by type</p>
-        </TodayCard>
-        <TodayCard title="Feature completion" icon={CheckCircle2} iconColor="text-semantic-success">
-          <div className="flex items-center gap-5">
-            <HealthRing pct={featurePct} size={84}
-              stroke={featurePct >= 80 ? 'stroke-semantic-success' : 'stroke-brand-navy'} label="done" />
-            <div>
-              <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                {featureStats.done ?? 0} of {featureStats.total ?? 0} stories done
-              </p>
-              <p className="mt-1 text-xs text-neutral-500">Across the whole backlog</p>
-              <button type="button" onClick={() => setView('reports')}
-                className="mt-2 text-xs font-medium text-brand-navy hover:underline focus-visible:outline-none">
-                View reports →
-              </button>
-            </div>
-          </div>
-        </TodayCard>
-      </div>
-
-      {ungroomed.length > 0 && (
-        <div className="mt-6">
-          <TodayCard
-            title={`Ungroomed items${ungroomedCount > ungroomed.length ? ` (${ungroomedCount})` : ''}`}
-            icon={AlertCircle} iconColor="text-semantic-warning"
-            action={() => setView('backlog')} actionLabel="Groom backlog"
-            className="overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-neutral-100 bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
-                  <th scope="col" className="px-5 py-2">Item</th>
-                  <th scope="col" className="px-3 py-2">Priority</th>
-                  <th scope="col" className="hidden px-3 py-2 sm:table-cell">Points</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                {ungroomed.slice(0, 6).map(item => (
-                  <tr key={item.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
-                    <td className="px-5 py-2.5">
-                      <span className="flex min-w-0 items-center gap-2">
-                        <TypeBadge type={item.type} compact />
-                        <span className="truncate text-neutral-900 dark:text-neutral-100">{item.title}</span>
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-xs text-neutral-600 dark:text-neutral-400">{item.priority || '—'}</td>
-                    <td className="hidden px-3 py-2.5 text-xs text-neutral-600 sm:table-cell dark:text-neutral-400">{item.story_points ?? '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TodayCard>
-        </div>
-      )}
+      <TodayCanvas layout={layout} registry={PRODUCT_OWNER_REGISTRY} ctx={ctx} />
     </>
   );
 }
@@ -698,6 +750,147 @@ function ProductOwnerToday({ data, currentUser, setView }) {
 // EXECUTIVE / LEADERSHIP
 // Focus: "Is the portfolio on track?" — project health, RAID, release schedule
 // ═══════════════════════════════════════════════════════════════════════════════
+
+const EXECUTIVE_RAID_CFG = [
+  { type: 'risks',        label: 'Risks',        textColor: 'text-semantic-danger',  bgColor: 'bg-semantic-danger/10' },
+  { type: 'issues',       label: 'Issues',       textColor: 'text-semantic-warning', bgColor: 'bg-semantic-warning/10' },
+  { type: 'actions',      label: 'Actions',      textColor: 'text-brand-navy',       bgColor: 'bg-brand-navy/10' },
+  { type: 'dependencies', label: 'Dependencies', textColor: 'text-neutral-700 dark:text-neutral-300', bgColor: 'bg-neutral-100 dark:bg-neutral-700' },
+];
+
+const EXECUTIVE_REGISTRY = {
+  stat: (ctx, w) => {
+    switch (w.config?.k) {
+      case 'health':
+        return <StatCard label="Portfolio health" value={`${ctx.health}%`} sub="Items done across projects" color={ctx.healthColor} icon={TrendingUp} />;
+      case 'overdue':
+        return <StatCard label="Overdue actions" value={ctx.overdueActions.length} sub="From RAID tracker"
+          color={ctx.overdueActions.length > 0 ? 'text-semantic-danger' : 'text-neutral-600 dark:text-neutral-400'} icon={Clock} />;
+      case 'risks':
+        return <StatCard label="Open risks/issues" value={ctx.openRisks + ctx.openIssues} sub={`${ctx.openRisks} risks · ${ctx.openIssues} issues`}
+          color={(ctx.openRisks + ctx.openIssues) > 5 ? 'text-semantic-danger' : 'text-semantic-warning'} icon={AlertTriangle} />;
+      default:
+        return <StatCard label="Team utilization" value={ctx.teamUtil.length} sub="Active members (30d)" color="text-brand-navy" icon={Users} />;
+    }
+  },
+  'project-portfolio': (ctx) => (
+    <TodayCard title="Project portfolio" icon={Target} iconColor="text-brand-navy" action={() => ctx.setView('projects')}>
+      {ctx.portfolio.length === 0
+        ? <Empty msg="No projects found." />
+        : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {ctx.portfolio.map(p => {
+              const pct = p.total_items > 0 ? Math.round(p.done_items * 100 / p.total_items) : 0;
+              const riskLevel = p.high_priority_open > 3 ? 'danger' : p.high_priority_open > 0 ? 'warning' : 'ok';
+              const pctColor = pct >= 80 ? 'bg-semantic-success' : pct >= 50 ? 'bg-brand-navy' : 'bg-brand-orange';
+              return (
+                <div key={p.id} className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-700">
+                  <div className="mb-2 flex items-start justify-between gap-1">
+                    <p className="line-clamp-1 text-sm font-semibold text-neutral-900 dark:text-neutral-100">{p.name}</p>
+                    <span className={`flex-shrink-0 text-sm font-bold ${riskLevel === 'danger' ? 'text-semantic-danger' : riskLevel === 'warning' ? 'text-semantic-warning' : 'text-semantic-success'}`}>
+                      {pct}%
+                    </span>
+                  </div>
+                  <MiniBar value={pct} max={100} color={pctColor} />
+                  <div className="mt-2 flex items-center justify-between text-xs text-neutral-500">
+                    <span>{p.done_items}/{p.total_items} items</span>
+                    {p.high_priority_open > 0 && (
+                      <span className={riskLevel === 'danger' ? 'text-semantic-danger' : 'text-semantic-warning'}>
+                        {p.high_priority_open} high-risk
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+    </TodayCard>
+  ),
+  'raid-pulse': (ctx) => (
+    <TodayCard title="RAID pulse" icon={AlertTriangle} iconColor="text-semantic-warning">
+      <div className="grid grid-cols-2 gap-3">
+        {EXECUTIVE_RAID_CFG.map(cfg => {
+          const item = ctx.raidSummary.find(r => r.type === cfg.type);
+          return (
+            <div key={cfg.type} className={`rounded-lg p-3 ${cfg.bgColor}`}>
+              <p className={`text-2xl font-bold ${cfg.textColor}`}>{item?.open ?? 0}</p>
+              <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{cfg.label}</p>
+              <p className="text-xs text-neutral-500">of {item?.total ?? 0} total</p>
+            </div>
+          );
+        })}
+      </div>
+    </TodayCard>
+  ),
+  'release-schedule': (ctx) => (
+    <TodayCard title="Release schedule" icon={Package} iconColor="text-brand-navy" action={() => ctx.setView('releases')}>
+      {ctx.releaseSchedule.length === 0
+        ? <Empty msg="No upcoming releases." />
+        : (
+          <div className="space-y-3">
+            {ctx.releaseSchedule.slice(0, 4).map(r => {
+              const pct = r.total_items > 0 ? Math.round(r.done_items * 100 / r.total_items) : 0;
+              return (
+                <div key={r.id}>
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <span className="truncate text-sm font-medium text-neutral-800 dark:text-neutral-200">{r.name}</span>
+                    <span className="flex-shrink-0 text-xs text-neutral-500">{r.release_date || 'TBD'}</span>
+                  </div>
+                  <MiniBar value={pct} max={100} color={pct >= 80 ? 'bg-semantic-success' : 'bg-brand-navy'} />
+                </div>
+              );
+            })}
+          </div>
+        )}
+    </TodayCard>
+  ),
+  'team-utilization': (ctx) => (
+    <TodayCard title="Team utilization" icon={Users} iconColor="text-brand-navy">
+      {ctx.teamUtil.length === 0
+        ? <Empty msg="No time logged in the last 30 days." />
+        : (
+          <>
+            <BarChart data={utilizationSeries(ctx.teamUtil, 8)} />
+            <p className="mt-3 text-xs text-neutral-500">Hours logged · last 30 days</p>
+          </>
+        )}
+    </TodayCard>
+  ),
+  'overdue-actions': (ctx) => (
+    <TodayCard title={`Overdue actions (${ctx.overdueActions.length})`} icon={Clock} iconColor="text-semantic-danger" className="overflow-hidden">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-neutral-100 bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
+            <th scope="col" className="px-5 py-2">Action</th>
+            <th scope="col" className="px-3 py-2">Due</th>
+            <th scope="col" className="hidden px-3 py-2 sm:table-cell">Owner</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+          {ctx.overdueActions.slice(0, 5).map(a => (
+            <tr key={a.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
+              <td className="max-w-xs truncate px-5 py-2.5 font-medium text-neutral-900 dark:text-neutral-100">{a.title}</td>
+              <td className="px-3 py-2.5 text-xs text-semantic-danger">{a.due_date}</td>
+              <td className="hidden px-3 py-2.5 text-xs text-neutral-600 sm:table-cell dark:text-neutral-400">{a.owner_name || '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </TodayCard>
+  ),
+};
+
+const EXECUTIVE_BASE_LAYOUT = [
+  { id: 'ex-stat-health', type: 'stat', span: 3, spanSm: 6, config: { k: 'health' } },
+  { id: 'ex-stat-overdue', type: 'stat', span: 3, spanSm: 6, config: { k: 'overdue' } },
+  { id: 'ex-stat-risks', type: 'stat', span: 3, spanSm: 6, config: { k: 'risks' } },
+  { id: 'ex-stat-util', type: 'stat', span: 3, spanSm: 6, config: { k: 'util' } },
+  { id: 'ex-portfolio', type: 'project-portfolio', span: 12 },
+  { id: 'ex-raid', type: 'raid-pulse', span: 4 },
+  { id: 'ex-release', type: 'release-schedule', span: 4 },
+  { id: 'ex-util', type: 'team-utilization', span: 4 },
+];
 
 function ExecutiveToday({ data, currentUser, setView }) {
   const firstName = currentUser?.fullName?.split(' ')[0] || 'there';
@@ -713,144 +906,25 @@ function ExecutiveToday({ data, currentUser, setView }) {
 
   const healthColor = health >= 70 ? 'text-semantic-success' : health >= 40 ? 'text-semantic-warning' : 'text-semantic-danger';
 
-  const RAID_CFG = [
-    { type: 'risks',        label: 'Risks',        textColor: 'text-semantic-danger',  bgColor: 'bg-semantic-danger/10' },
-    { type: 'issues',       label: 'Issues',       textColor: 'text-semantic-warning', bgColor: 'bg-semantic-warning/10' },
-    { type: 'actions',      label: 'Actions',      textColor: 'text-brand-navy',       bgColor: 'bg-brand-navy/10' },
-    { type: 'dependencies', label: 'Dependencies', textColor: 'text-neutral-700 dark:text-neutral-300', bgColor: 'bg-neutral-100 dark:bg-neutral-700' },
-  ];
-
   const subtitle = [
     `Portfolio at ${health}%`,
     overdueActions.length ? `${overdueActions.length} overdue action${overdueActions.length !== 1 ? 's' : ''}` : null,
     (openRisks + openIssues) > 0 ? `${openRisks + openIssues} open risks/issues` : null,
   ].filter(Boolean).join(' · ');
 
+  const ctx = {
+    health, healthColor, overdueActions, openRisks, openIssues, teamUtil,
+    portfolio, raidSummary, releaseSchedule, setView,
+  };
+  const layout = overdueActions.length > 0
+    ? [...EXECUTIVE_BASE_LAYOUT, { id: 'ex-overdue', type: 'overdue-actions', span: 12 }]
+    : EXECUTIVE_BASE_LAYOUT;
+
   return (
     <>
       <TodayHeader greeting={getGreeting()} firstName={firstName} rolePill="Leadership"
         subtitle={subtitle} cta="View portfolio" onCta={() => setView('projects')} />
-
-      <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Portfolio health" value={`${health}%`} sub="Items done across projects" color={healthColor} icon={TrendingUp} />
-        <StatCard label="Overdue actions" value={overdueActions.length} sub="From RAID tracker"
-          color={overdueActions.length > 0 ? 'text-semantic-danger' : 'text-neutral-600 dark:text-neutral-400'} icon={Clock} />
-        <StatCard label="Open risks/issues" value={openRisks + openIssues} sub={`${openRisks} risks · ${openIssues} issues`}
-          color={(openRisks + openIssues) > 5 ? 'text-semantic-danger' : 'text-semantic-warning'} icon={AlertTriangle} />
-        <StatCard label="Team utilization" value={teamUtil.length} sub="Active members (30d)" color="text-brand-navy" icon={Users} />
-      </div>
-
-      {/* Portfolio grid */}
-      <TodayCard title="Project portfolio" icon={Target} iconColor="text-brand-navy" action={() => setView('projects')}>
-        {portfolio.length === 0
-          ? <Empty msg="No projects found." />
-          : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {portfolio.map(p => {
-                const pct = p.total_items > 0 ? Math.round(p.done_items * 100 / p.total_items) : 0;
-                const riskLevel = p.high_priority_open > 3 ? 'danger' : p.high_priority_open > 0 ? 'warning' : 'ok';
-                const pctColor = pct >= 80 ? 'bg-semantic-success' : pct >= 50 ? 'bg-brand-navy' : 'bg-brand-orange';
-                return (
-                  <div key={p.id} className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-700">
-                    <div className="mb-2 flex items-start justify-between gap-1">
-                      <p className="line-clamp-1 text-sm font-semibold text-neutral-900 dark:text-neutral-100">{p.name}</p>
-                      <span className={`flex-shrink-0 text-sm font-bold ${riskLevel === 'danger' ? 'text-semantic-danger' : riskLevel === 'warning' ? 'text-semantic-warning' : 'text-semantic-success'}`}>
-                        {pct}%
-                      </span>
-                    </div>
-                    <MiniBar value={pct} max={100} color={pctColor} />
-                    <div className="mt-2 flex items-center justify-between text-xs text-neutral-500">
-                      <span>{p.done_items}/{p.total_items} items</span>
-                      {p.high_priority_open > 0 && (
-                        <span className={riskLevel === 'danger' ? 'text-semantic-danger' : 'text-semantic-warning'}>
-                          {p.high_priority_open} high-risk
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-      </TodayCard>
-
-      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* RAID pulse */}
-        <TodayCard title="RAID pulse" icon={AlertTriangle} iconColor="text-semantic-warning">
-          <div className="grid grid-cols-2 gap-3">
-            {RAID_CFG.map(cfg => {
-              const item = raidSummary.find(r => r.type === cfg.type);
-              return (
-                <div key={cfg.type} className={`rounded-lg p-3 ${cfg.bgColor}`}>
-                  <p className={`text-2xl font-bold ${cfg.textColor}`}>{item?.open ?? 0}</p>
-                  <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{cfg.label}</p>
-                  <p className="text-xs text-neutral-500">of {item?.total ?? 0} total</p>
-                </div>
-              );
-            })}
-          </div>
-        </TodayCard>
-
-        {/* Release schedule */}
-        <TodayCard title="Release schedule" icon={Package} iconColor="text-brand-navy" action={() => setView('releases')}>
-          {releaseSchedule.length === 0
-            ? <Empty msg="No upcoming releases." />
-            : (
-              <div className="space-y-3">
-                {releaseSchedule.slice(0, 4).map(r => {
-                  const pct = r.total_items > 0 ? Math.round(r.done_items * 100 / r.total_items) : 0;
-                  return (
-                    <div key={r.id}>
-                      <div className="mb-1 flex items-center justify-between gap-2">
-                        <span className="truncate text-sm font-medium text-neutral-800 dark:text-neutral-200">{r.name}</span>
-                        <span className="flex-shrink-0 text-xs text-neutral-500">{r.release_date || 'TBD'}</span>
-                      </div>
-                      <MiniBar value={pct} max={100} color={pct >= 80 ? 'bg-semantic-success' : 'bg-brand-navy'} />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-        </TodayCard>
-
-        {/* Team utilization */}
-        <TodayCard title="Team utilization" icon={Users} iconColor="text-brand-navy">
-          {teamUtil.length === 0
-            ? <Empty msg="No time logged in the last 30 days." />
-            : (
-              <>
-                <BarChart data={utilizationSeries(teamUtil, 8)} />
-                <p className="mt-3 text-xs text-neutral-500">Hours logged · last 30 days</p>
-              </>
-            )}
-        </TodayCard>
-      </div>
-
-      {/* Overdue actions */}
-      {overdueActions.length > 0 && (
-        <div className="mt-6">
-          <TodayCard title={`Overdue actions (${overdueActions.length})`} icon={Clock} iconColor="text-semantic-danger" className="overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-neutral-100 bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
-                  <th scope="col" className="px-5 py-2">Action</th>
-                  <th scope="col" className="px-3 py-2">Due</th>
-                  <th scope="col" className="hidden px-3 py-2 sm:table-cell">Owner</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                {overdueActions.slice(0, 5).map(a => (
-                  <tr key={a.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
-                    <td className="max-w-xs truncate px-5 py-2.5 font-medium text-neutral-900 dark:text-neutral-100">{a.title}</td>
-                    <td className="px-3 py-2.5 text-xs text-semantic-danger">{a.due_date}</td>
-                    <td className="hidden px-3 py-2.5 text-xs text-neutral-600 sm:table-cell dark:text-neutral-400">{a.owner_name || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TodayCard>
-        </div>
-      )}
+      <TodayCanvas layout={layout} registry={EXECUTIVE_REGISTRY} ctx={ctx} />
     </>
   );
 }
@@ -859,6 +933,112 @@ function ExecutiveToday({ data, currentUser, setView }) {
 // ADMIN
 // Focus: "Is the platform healthy?" — member activity, security posture, audit
 // ═══════════════════════════════════════════════════════════════════════════════
+
+const ADMIN_REGISTRY = {
+  stat: (ctx, w) => {
+    switch (w.config?.k) {
+      case 'members':
+        return <StatCard label="Members" value={ctx.memberCount}
+          sub={`${activeMemberCount(ctx.data?.members)} active this week`}
+          color="text-brand-navy" icon={Users} onClick={() => ctx.setView('workspace')} />;
+      case 'mfa':
+        return <StatCard label="MFA adoption" value={`${ctx.mfaPct}%`} sub={`${ctx.mfa.mfa_enabled}/${ctx.mfa.total} enabled`} color={ctx.mfaColor} icon={ShieldCheck} />;
+      case 'events':
+        return <StatCard label="Events this week" value={ctx.totalEvents} sub="Platform activity" color="text-neutral-600 dark:text-neutral-400" icon={Activity} />;
+      default:
+        return <StatCard label="Audit entries" value={ctx.auditLog.length} sub="Recent role changes" color={ctx.auditLog.length > 0 ? 'text-semantic-warning' : 'text-neutral-600 dark:text-neutral-400'} icon={AlertTriangle} onClick={() => ctx.setView('security')} />;
+    }
+  },
+  activity: (ctx) => (
+    <TodayCard title="Activity this week" icon={Activity} iconColor="text-brand-navy">
+      {ctx.activityStats.length === 0
+        ? <Empty msg="No platform activity recorded this week." />
+        : (
+          <div className="space-y-3">
+            {ctx.activityStats.slice(0, 8).map((e, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <span className="w-44 flex-shrink-0 truncate text-xs text-neutral-600 dark:text-neutral-400">{e.event_type}</span>
+                <div className="flex-1">
+                  <MiniBar value={e.count || 0} max={ctx.maxEvents} color="bg-brand-navy" />
+                </div>
+                <span className="w-8 flex-shrink-0 text-right text-xs font-semibold text-neutral-700 dark:text-neutral-300">{e.count}</span>
+              </div>
+            ))}
+          </div>
+        )}
+    </TodayCard>
+  ),
+  // Security posture + role distribution stacked — kept as one widget so the tall activity card
+  // sits beside both (a flat grid can't otherwise reproduce the stacked right column).
+  'security-roles': (ctx) => (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
+        <h3 className="mb-3 flex items-center gap-2 font-semibold text-neutral-900 dark:text-neutral-100">
+          <ShieldCheck className="h-4 w-4 text-semantic-success" aria-hidden="true" />Security posture
+        </h3>
+        <div className="flex items-center gap-4">
+          <HealthRing pct={ctx.mfaPct} size={72} stroke={ctx.mfaStroke} label="MFA" />
+          <div>
+            <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">MFA adoption</p>
+            <p className="text-xs text-neutral-500">{ctx.mfa.mfa_enabled} of {ctx.mfa.total} users</p>
+            {ctx.mfaPct < 80 && (
+              <p className="mt-1 text-xs text-semantic-danger">Below 80% target</p>
+            )}
+          </div>
+        </div>
+      </div>
+      {ctx.roleDist.length > 0 && (
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
+          <h3 className="mb-3 font-semibold text-neutral-900 dark:text-neutral-100">Role distribution</h3>
+          <DonutChart data={ctx.roleDist.map(r => ({ label: r.role || '—', value: Number(r.count) || 0 }))} />
+        </div>
+      )}
+    </div>
+  ),
+  'audit-log': (ctx) => (
+    <TodayCard title="Recent audit log" icon={AlertTriangle} iconColor="text-semantic-warning"
+      action={() => ctx.setView('security')} className="overflow-hidden">
+      {ctx.auditLog.length === 0
+        ? <Empty msg="No recent role changes." />
+        : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-neutral-100 bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
+                <th scope="col" className="px-5 py-2">Member</th>
+                <th scope="col" className="px-3 py-2">Change</th>
+                <th scope="col" className="hidden px-3 py-2 sm:table-cell">By</th>
+                <th scope="col" className="hidden px-3 py-2 md:table-cell">When</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+              {ctx.auditLog.slice(0, 6).map(a => (
+                <tr key={a.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
+                  <td className="px-5 py-2.5 font-medium text-neutral-900 dark:text-neutral-100">{a.target_name}</td>
+                  <td className="px-3 py-2.5 text-xs">
+                    <span className="text-semantic-warning">{a.old_role}</span>
+                    <span className="mx-1 text-neutral-400">→</span>
+                    <span className="text-semantic-success">{a.new_role}</span>
+                  </td>
+                  <td className="hidden px-3 py-2.5 text-xs text-neutral-500 sm:table-cell">{a.actor_name}</td>
+                  <td className="hidden px-3 py-2.5 text-xs text-neutral-500 md:table-cell">{a.changed_at?.slice(0, 10)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+    </TodayCard>
+  ),
+};
+
+const ADMIN_LAYOUT = [
+  { id: 'ad-stat-members', type: 'stat', span: 3, spanSm: 6, config: { k: 'members' } },
+  { id: 'ad-stat-mfa', type: 'stat', span: 3, spanSm: 6, config: { k: 'mfa' } },
+  { id: 'ad-stat-events', type: 'stat', span: 3, spanSm: 6, config: { k: 'events' } },
+  { id: 'ad-stat-audit', type: 'stat', span: 3, spanSm: 6, config: { k: 'audit' } },
+  { id: 'ad-activity', type: 'activity', span: 8 },
+  { id: 'ad-security-roles', type: 'security-roles', span: 4 },
+  { id: 'ad-audit-log', type: 'audit-log', span: 12 },
+];
 
 function AdminToday({ data, currentUser, setView }) {
   const firstName = currentUser?.fullName?.split(' ')[0] || 'there';
@@ -880,100 +1060,16 @@ function AdminToday({ data, currentUser, setView }) {
     `${totalEvents} events this week`,
   ].join(' · ');
 
+  const ctx = {
+    data, memberCount, mfa, mfaPct, mfaStroke, mfaColor, totalEvents,
+    activityStats, auditLog, roleDist, maxEvents, setView,
+  };
+
   return (
     <>
       <TodayHeader greeting={getGreeting()} firstName={firstName} rolePill="Admin"
         subtitle={subtitle} cta="Manage members" onCta={() => setView('workspace')} />
-
-      <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Members" value={memberCount}
-          sub={`${activeMemberCount(data?.members)} active this week`}
-          color="text-brand-navy" icon={Users} onClick={() => setView('workspace')} />
-        <StatCard label="MFA adoption" value={`${mfaPct}%`} sub={`${mfa.mfa_enabled}/${mfa.total} enabled`} color={mfaColor} icon={ShieldCheck} />
-        <StatCard label="Events this week" value={totalEvents} sub="Platform activity" color="text-neutral-600 dark:text-neutral-400" icon={Activity} />
-        <StatCard label="Audit entries" value={auditLog.length} sub="Recent role changes" color={auditLog.length > 0 ? 'text-semantic-warning' : 'text-neutral-600 dark:text-neutral-400'} icon={AlertTriangle} onClick={() => setView('security')} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <TodayCard title="Activity this week" icon={Activity} iconColor="text-brand-navy" className="lg:col-span-2">
-          {activityStats.length === 0
-            ? <Empty msg="No platform activity recorded this week." />
-            : (
-              <div className="space-y-3">
-                {activityStats.slice(0, 8).map((e, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <span className="w-44 flex-shrink-0 truncate text-xs text-neutral-600 dark:text-neutral-400">{e.event_type}</span>
-                    <div className="flex-1">
-                      <MiniBar value={e.count || 0} max={maxEvents} color="bg-brand-navy" />
-                    </div>
-                    <span className="w-8 flex-shrink-0 text-right text-xs font-semibold text-neutral-700 dark:text-neutral-300">{e.count}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-        </TodayCard>
-
-        <div className="space-y-4">
-          {/* MFA security posture */}
-          <div className="rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
-            <h3 className="mb-3 flex items-center gap-2 font-semibold text-neutral-900 dark:text-neutral-100">
-              <ShieldCheck className="h-4 w-4 text-semantic-success" aria-hidden="true" />Security posture
-            </h3>
-            <div className="flex items-center gap-4">
-              <HealthRing pct={mfaPct} size={72} stroke={mfaStroke} label="MFA" />
-              <div>
-                <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">MFA adoption</p>
-                <p className="text-xs text-neutral-500">{mfa.mfa_enabled} of {mfa.total} users</p>
-                {mfaPct < 80 && (
-                  <p className="mt-1 text-xs text-semantic-danger">Below 80% target</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Role distribution */}
-          {roleDist.length > 0 && (
-            <div className="rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
-              <h3 className="mb-3 font-semibold text-neutral-900 dark:text-neutral-100">Role distribution</h3>
-              <DonutChart data={roleDist.map(r => ({ label: r.role || '—', value: Number(r.count) || 0 }))} />
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-6">
-        <TodayCard title="Recent audit log" icon={AlertTriangle} iconColor="text-semantic-warning"
-          action={() => setView('security')} className="overflow-hidden">
-          {auditLog.length === 0
-            ? <Empty msg="No recent role changes." />
-            : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-neutral-100 bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
-                    <th scope="col" className="px-5 py-2">Member</th>
-                    <th scope="col" className="px-3 py-2">Change</th>
-                    <th scope="col" className="hidden px-3 py-2 sm:table-cell">By</th>
-                    <th scope="col" className="hidden px-3 py-2 md:table-cell">When</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                  {auditLog.slice(0, 6).map(a => (
-                    <tr key={a.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700">
-                      <td className="px-5 py-2.5 font-medium text-neutral-900 dark:text-neutral-100">{a.target_name}</td>
-                      <td className="px-3 py-2.5 text-xs">
-                        <span className="text-semantic-warning">{a.old_role}</span>
-                        <span className="mx-1 text-neutral-400">→</span>
-                        <span className="text-semantic-success">{a.new_role}</span>
-                      </td>
-                      <td className="hidden px-3 py-2.5 text-xs text-neutral-500 sm:table-cell">{a.actor_name}</td>
-                      <td className="hidden px-3 py-2.5 text-xs text-neutral-500 md:table-cell">{a.changed_at?.slice(0, 10)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-        </TodayCard>
-      </div>
+      <TodayCanvas layout={ADMIN_LAYOUT} registry={ADMIN_REGISTRY} ctx={ctx} />
     </>
   );
 }

@@ -14,7 +14,6 @@ import { LapseBadge } from '@/components/works/atoms/lapse-badge';
 import { computeLapse, lapseProgress } from '@/lib/status-lapse';
 import { WorkItemStatusTimeline } from '@/components/works/organisms/work-item-status-timeline';
 import { AcceptanceCriteria } from '@/components/works/organisms/acceptance-criteria';
-import { TYPES } from '@/lib/work-item-types';
 import { api } from '@/lib/apiClient';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { renderMd, onPressKey } from '@/lib/utils';
@@ -306,12 +305,10 @@ export function WorkItemDetailPanel({
             <div className="space-y-3">
               <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Properties</p>
               <div>
-                <label htmlFor="detail-type" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Type</label>
-                <select id="detail-type" value={selectedItem.type}
-                  onChange={e => { const u = { ...selectedItem, type: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }}
-                  className="input">
-                  {Object.keys(TYPES).map(t => <option key={t}>{t}</option>)}
-                </select>
+                <span className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Type</span>
+                <div className="flex items-center gap-1.5" title="Type can't be changed after creation — its fields vary by type">
+                  <TypeBadge type={selectedItem.type} />
+                </div>
               </div>
               <div>
                 <label htmlFor="detail-priority" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Priority</label>
@@ -325,6 +322,15 @@ export function WorkItemDetailPanel({
                 <label htmlFor="detail-assignee" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Assignee</label>
                 <select id="detail-assignee" value={selectedItem.assigneeId || ''}
                   onChange={e => { const u = { ...selectedItem, assigneeId: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
+                  className="input">
+                  <option value="">Unassigned</option>
+                  {users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="detail-reporter" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Reporter</label>
+                <select id="detail-reporter" value={selectedItem.reporterId || ''}
+                  onChange={e => { const u = { ...selectedItem, reporterId: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
                   className="input">
                   <option value="">Unassigned</option>
                   {users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
@@ -463,7 +469,6 @@ export function WorkItemDetailPanel({
                   <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">{sectionLabel}</p>
                   <div className="grid grid-cols-2 gap-3">
                     {t === 'BUG' && <>
-                      {uf('Reporter', 'reporterId')}
                       {sf('Severity', 'severity', ['Critical','High','Medium','Low'])}
                       {sf('Environment', 'environmentDetail', ['Development','Staging','UAT','Production'])}
                       {sf('Regression Risk', 'regressionRisk', ['Yes','No','Not Assessed'])}
@@ -501,7 +506,6 @@ export function WorkItemDetailPanel({
                       {tf('Impact if Delayed', 'impactIfDelayed')}
                     </>}
                     {t === 'INCIDENT' && <>
-                      {uf('Reporter', 'reporterId')}
                       {sf('Response Speed', 'responseSpeed', ['Immediate','High','Normal','Planned'])}
                       {sf('Business Impact', 'businessImpact', ['Organisation-wide','Department','Team','Individual'])}
                       {sf('Severity', 'severity', ['Critical','High','Medium','Low'])}

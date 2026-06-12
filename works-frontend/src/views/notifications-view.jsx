@@ -1,11 +1,13 @@
 import { Bell, Check } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { Skeleton, ListSkeleton } from '@/components/works/atoms/skeleton';
 
 // Notifications view — extracted from the App.jsx monolith (UX finding A3/H2). Behaviour-preserving:
 // the parent still owns the notifications data and fetchers; this module renders them and triggers
 // the same mark-read calls. Lint-clean (no eslint-disable) so a11y/token rules apply.
 export default function NotificationsView({
+  loading = false,
   notifications,
   unreadCount,
   currentUser,
@@ -13,6 +15,15 @@ export default function NotificationsView({
   fetchUnreadCount,
   setUnreadCount,
 }) {
+  if (loading && notifications.length === 0) {
+    return (
+      <div className="p-8 max-w-2xl">
+        <Skeleton className="h-7 w-36 mb-6" />
+        <ListSkeleton rows={5} />
+      </div>
+    );
+  }
+
   return (
     <div className="p-8 max-w-2xl">
       <div className="flex justify-between items-center mb-6">

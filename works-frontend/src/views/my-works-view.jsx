@@ -3,6 +3,7 @@ import { Star, User, AtSign, ClipboardList, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { Skeleton, ListSkeleton } from '@/components/works/atoms/skeleton';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
@@ -120,6 +121,7 @@ function WorkRow({ item, onSelect, onPressKey, starred = false, compact = false,
 
 // My Works view — personal workspace showing a user's assigned, starred, mentioned, and active items.
 export default function MyWorksView({
+  loading = false,
   myItems,
   workItems,
   notifications,
@@ -133,6 +135,15 @@ export default function MyWorksView({
   statusResolver,
 }) {
   const [sort, setSort] = useState(CONFIG.assignedSortDefault);
+
+  if (loading && workItems.length === 0) {
+    return (
+      <div className="p-6">
+        <Skeleton className="h-7 w-44 mb-6" />
+        <ListSkeleton rows={6} />
+      </div>
+    );
+  }
   const iv = cardPrefs?.isVisible ?? (() => true);
 
   // Compute tab data once to avoid repeated inline .filter() calls in JSX.

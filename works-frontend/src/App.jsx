@@ -3023,6 +3023,7 @@ export default function App() {
           {/* MY WORKS */}
           {view === 'myworks' && (
             <MyWorksView
+              loading={loading}
               myItems={myItems}
               workItems={workItems}
               notifications={notifications}
@@ -3123,6 +3124,7 @@ export default function App() {
 
           {view === 'notifications' && (
             <NotificationsView
+              loading={loading}
               notifications={notifications}
               unreadCount={unreadCount}
               currentUser={currentUser}
@@ -3135,6 +3137,7 @@ export default function App() {
           {/* BACKLOG VIEW — extracted to src/views/backlog-view.jsx (TD-003) */}
           {view === 'backlog' && (
             <BacklogView
+              loading={loading}
               workItems={workItems}
               backlogItems={backlogItems}
               sprints={sprints}
@@ -3429,6 +3432,7 @@ export default function App() {
           {/* TRASH VIEW */}
           {view === 'trash' && (
             <TrashView
+              loading={loading}
               trashItems={trashItems}
               restoreFromTrash={restoreFromTrash}
               permanentDelete={permanentDelete}

@@ -49,6 +49,7 @@ export default function SprintView({
   selectedProjectId,
   cardPrefs,
   customFieldDefs = [],
+  statusResolver,
 }) {
   return (
     <div className="p-6 h-full flex flex-col">
@@ -180,18 +181,23 @@ export default function SprintView({
 
           <SprintBoard items={applyFilter(sprintItems)} columns={columns} users={users}
             swimlaneBy={swimlaneBy} allItems={workItems} onDragStart={handleDragStart} onDragOver={handleDragOver}
-            onDrop={(e, status) => {
+            onDrop={(e, dropCategory) => {
               e.preventDefault();
               const itemId = e.dataTransfer.getData('itemId');
               const item = sprintItems.find(i => i.id === itemId);
-              if (!item || item.status === status) return;
+              if (!item) return;
+              // SprintBoard passes a board category; resolve it to a concrete status for this type.
+              const fallback = { todo: 'Todo', in_progress: 'In Progress', done: 'Done' };
+              const status = statusResolver?.firstStatusOfCategory(item.type, dropCategory)
+                || fallback[dropCategory] || dropCategory;
+              if (item.status === status) return;
               setSprintItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
               api.send(`/work-items/${itemId}`, { method: 'PUT', body: { ...item, status } })
                 .then(r => { if (r && r.status === 409) { showToast('That item changed elsewhere — refreshing', 'error'); fetchSprints(); } })
                 .catch(reportError);
             }}
             onSelect={setSelectedItem} onDelete={handleDelete} density={density}
-            cardPrefs={cardPrefs} customFieldDefs={customFieldDefs} />
+            cardPrefs={cardPrefs} customFieldDefs={customFieldDefs} statusResolver={statusResolver} />
         </>
       ) : (
         <EmptyState icon={Zap} title="No sprints yet" subtitle="Create a sprint in the Backlog view to get started."

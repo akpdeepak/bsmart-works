@@ -6,12 +6,16 @@ import { CardFieldsPopover } from '@/components/works/organisms/card-fields-popo
 import { PriorityBadge } from '@/components/works/priority-badge';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
+import { LapseBadge } from '@/components/works/atoms/lapse-badge';
+import { computeLapse } from '@/lib/status-lapse';
 import { cn } from '@/lib/utils';
 
+// Columns are the three fixed categories; items land by their status's category (resolved per
+// type), so custom statuses (Triaged, On Hold, …) appear in the right column.
 const COLUMNS = [
-  { name: 'Todo',        display: 'TODO',        dot: 'bg-neutral-400',     limitKey: 'todoLimit' },
-  { name: 'In Progress', display: 'IN PROGRESS', dot: 'bg-brand-navy-tint',  limitKey: 'inProgressLimit' },
-  { name: 'Done',        display: 'DONE',        dot: 'bg-semantic-success', limitKey: 'doneLimit' },
+  { key: 'todo',        display: 'TO DO',       dot: 'bg-neutral-400',     limitKey: 'todoLimit' },
+  { key: 'in_progress', display: 'IN PROGRESS', dot: 'bg-brand-navy-tint',  limitKey: 'inProgressLimit' },
+  { key: 'done',        display: 'DONE',        dot: 'bg-semantic-success', limitKey: 'doneLimit' },
 ];
 
 const DENSITY_PAD = { compact: 'p-2', comfortable: 'p-3', spacious: 'p-4' };
@@ -48,10 +52,15 @@ export default function BoardView({
   customFieldDefs = [],
   onCustomFieldCreated,
   workspaceId,
+  statusResolver,
 }) {
   const columns = COLUMNS;
   const densityPad = DENSITY_PAD;
   const iv = cardPrefs?.isVisible ?? (() => true);
+  // Resolve an item's board category (per-type status config; legacy-safe fallback).
+  const catOf = (item) => statusResolver
+    ? statusResolver.categoryOf(item.type, item.status)
+    : statusToCategory(item.status);
 
   return (
     <div className="p-6 h-full flex flex-col">
@@ -85,7 +94,7 @@ export default function BoardView({
       {loading ? (
         <div className="flex gap-4 flex-1 overflow-x-auto pb-4" aria-busy="true" aria-label="Loading board">
           {columns.map(col => (
-            <div key={col.name} className="flex-1 min-w-56 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3">
+            <div key={col.key} className="flex-1 min-w-56 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3">
               <div className="flex items-center justify-between mb-3 px-1">
                 <div className="h-3 w-20 bg-neutral-200 rounded animate-pulse"></div>
                 <div className="h-5 w-6 bg-white rounded-full animate-pulse"></div>
@@ -107,14 +116,14 @@ export default function BoardView({
       ) : (
         <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
           {columns.map(col => {
-            const colItems = workItems.filter(i => i.status === col.name);
+            const colItems = workItems.filter(i => catOf(i) === col.key);
             const wipLimit = wipLimits[col.limitKey] ?? null;
             const overWip = wipLimit != null && colItems.length > wipLimit;
             return (
-              <div key={col.name}
+              <div key={col.key}
                 className={`flex-1 min-w-56 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3 ${overWip ? 'ring-1 ring-semantic-danger/40' : ''}`}
                 onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, col.name)}>
+                onDrop={(e) => handleDrop(e, col.key)}>
                 <div className="mb-3 px-1">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -137,11 +146,13 @@ export default function BoardView({
                     <WorkCard
                       key={item.id}
                       item={item}
+                      category={col.key}
                       density={density}
                       densityPad={densityPad}
                       iv={iv}
                       userName={userName}
                       customFieldDefs={customFieldDefs}
+                      statusResolver={statusResolver}
                       onStar={toggleStar}
                       onEdit={setSelectedItem}
                       onDelete={handleDelete}
@@ -165,9 +176,15 @@ export default function BoardView({
 
 // ── Card sub-component ─────────────────────────────────────────────────────────
 
-function WorkCard({ item, density, densityPad, iv, userName, customFieldDefs, onStar, onEdit, onDelete, onDragStart }) {
+function WorkCard({ item, category, density, densityPad, iv, userName, customFieldDefs, statusResolver, onStar, onEdit, onDelete, onDragStart }) {
   const due = dueDays(item.dueDate);
   const customVisible = customFieldDefs.filter(d => iv(`cfd_${d.id}`) && item.customFields?.[d.id] != null);
+  // Time-in-status lapse — cards surface only the attention states (at risk / breached); the
+  // detail panel shows the full picture. Done items don't carry an active lapse clock.
+  const statusMeta = statusResolver?.metaFor(item.type, item.status) ?? null;
+  const lapse = computeLapse(item.statusChangedAt, statusMeta);
+  const showLapse = category !== 'done' && (lapse.state === 'at_risk' || lapse.state === 'breached');
+  const statusCat = statusResolver ? statusResolver.categoryOf(item.type, item.status) : statusToCategory(item.status);
 
   return (
     <div
@@ -213,7 +230,8 @@ function WorkCard({ item, density, densityPad, iv, userName, customFieldDefs, on
         <TypeBadge type={item.type} compact={density === 'compact'} />
         <div className="flex items-center gap-1.5 flex-wrap justify-end">
           {iv('priority') && item.priority && <PriorityBadge priority={item.priority} />}
-          {iv('status') && <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>}
+          {iv('status') && <StatusBadge category={statusCat}>{item.status}</StatusBadge>}
+          {showLapse && <LapseBadge lapse={lapse} compact />}
           {iv('storyPoints') && item.storyPoints > 0 && (
             <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">{item.storyPoints}pt</span>
           )}

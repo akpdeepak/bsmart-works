@@ -33,6 +33,8 @@ public class WorkItem {
     private String projectId;
     private String createdBy;
     private OffsetDateTime createdAt;
+    /** When the item entered its current status — drives the time-in-status lapse indicator (V74). */
+    private OffsetDateTime statusChangedAt;
     private String sprintId;
     private Integer backlogOrder;
     private Integer storyPoints;
@@ -169,6 +171,8 @@ public class WorkItem {
     public void setCreatedBy(String v) { this.createdBy = v; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime v) { this.createdAt = v; }
+    public OffsetDateTime getStatusChangedAt() { return statusChangedAt; }
+    public void setStatusChangedAt(OffsetDateTime v) { this.statusChangedAt = v; }
     public List<String> getTags() { return tags; }
     public void setTags(List<String> v) { this.tags = v; }
     public String getSprintId() { return sprintId; }

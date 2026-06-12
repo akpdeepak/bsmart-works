@@ -50,6 +50,23 @@ public class StatusConfigService {
         return out;
     }
 
+    /**
+     * The initial status name for a (workspace, type) — the workflow's {@code isInitial} status,
+     * else its first by position. Seeds the type's default workflow if absent. Returns null when
+     * the type has no template (caller falls back to its own default).
+     */
+    @Transactional
+    public String initialStatus(String workspaceId, String typeKey) {
+        if (workspaceId == null || typeKey == null) return null;
+        if (workflowRepo.findByWorkspaceIdAndItemType(workspaceId, typeKey).isEmpty()) seedType(workspaceId, typeKey);
+        Workflow wf = primaryWorkflow(workspaceId, typeKey);
+        if (wf == null) return null;
+        List<WorkflowStatus> statuses = statusRepo.findByWorkflowIdOrderByPosition(wf.getId());
+        return statuses.stream().filter(s -> Boolean.TRUE.equals(s.getIsInitial()))
+            .map(WorkflowStatus::getName).findFirst()
+            .orElse(statuses.isEmpty() ? null : statuses.get(0).getName());
+    }
+
     /** Materialise default workflows for any built-in type that has none in this workspace. */
     @Transactional
     public void ensureSeeded(String workspaceId) {

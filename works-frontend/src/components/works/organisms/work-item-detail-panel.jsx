@@ -10,6 +10,8 @@ import { statusToCategory } from '@/components/works/status';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { Avatar } from '@/components/works/atoms/avatar';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { LapseBadge } from '@/components/works/atoms/lapse-badge';
+import { computeLapse, lapseProgress } from '@/lib/status-lapse';
 import { WorkItemStatusTimeline } from '@/components/works/organisms/work-item-status-timeline';
 import { AcceptanceCriteria } from '@/components/works/organisms/acceptance-criteria';
 import { TYPES } from '@/lib/work-item-types';
@@ -147,6 +149,8 @@ export function WorkItemDetailPanel({
   attachments, fileInputRef, handleUploadFile, handleDeleteAttachment, maxUploadMb,
   // activity
   activity, statusDurations, activityEventFilter, setActivityEventFilter, setActivity, reportError,
+  // per-type status configuration + lapse
+  statusResolver,
 }) {
   // Iteration 10 Cap O — summarize comments (second AI surface)
   const [commentSummary, setCommentSummary] = useState(null);
@@ -164,6 +168,22 @@ export function WorkItemDetailPanel({
       .catch(() => {})
       .finally(() => setSummaryBusy(false));
   };
+
+  // Per-type status resolution + time-in-status lapse (S3/S4).
+  const typeStatuses = statusResolver?.statusesForType?.(selectedItem.type) ?? [];
+  const statusMeta   = statusResolver?.metaFor?.(selectedItem.type, selectedItem.status) ?? null;
+  const statusCat    = statusResolver ? statusResolver.categoryOf(selectedItem.type, selectedItem.status) : statusToCategory(selectedItem.status);
+  const lapse        = computeLapse(selectedItem.statusChangedAt, statusMeta);
+  const isDoneCat    = statusCat === 'done';
+  // Status names to offer in the dropdown — the type's workflow, plus the current value if it's
+  // a legacy status not present in the workflow (so it still displays).
+  const statusOptions = typeStatuses.length
+    ? (typeStatuses.some(s => s.name === selectedItem.status)
+        ? typeStatuses.map(s => s.name)
+        : [selectedItem.status, ...typeStatuses.map(s => s.name)])
+    : ['Todo', 'In Progress', 'Done'].includes(selectedItem.status)
+      ? ['Todo', 'In Progress', 'Done']
+      : [selectedItem.status, 'Todo', 'In Progress', 'Done'];
 
   return (
     <>
@@ -219,13 +239,56 @@ export function WorkItemDetailPanel({
               onChange={e => setSelectedItem({ ...selectedItem, title: e.target.value })}
               onBlur={() => handleUpdateItem(selectedItem)} />
 
+            {/* Status + time-in-status lapse summary (S4/S5) */}
+            <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 p-3 space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                  <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: statusMeta?.color || '#94A3B8' }} aria-hidden="true" />
+                  {selectedItem.status}
+                </span>
+                <StatusBadge category={statusCat}>{statusCat === 'in_progress' ? 'In Progress' : statusCat === 'done' ? 'Done' : 'To Do'}</StatusBadge>
+                {!isDoneCat && <LapseBadge lapse={lapse} />}
+                {isDoneCat && lapse.state !== 'none' && (
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400">Closed · {lapse.elapsedSec >= 0 ? 'in final status' : ''}</span>
+                )}
+              </div>
+
+              {/* Breach-budget progress (only when this status carries a lapse clock) */}
+              {!isDoneCat && lapse.breachSec != null && (
+                <div>
+                  <div className="h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-700 overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${lapse.state === 'breached' ? 'bg-semantic-danger' : lapse.state === 'at_risk' ? 'bg-semantic-warning' : 'bg-semantic-success'}`}
+                      style={{ width: `${Math.round((lapseProgress(lapse) || 0) * 100)}%` }} />
+                  </div>
+                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{Math.round((lapseProgress(lapse) || 0) * 100)}% of breach budget elapsed</p>
+                </div>
+              )}
+
+              {/* Time-in-each-status journey bar (reuses the projection from the event log) */}
+              {statusDurations && statusDurations.length > 0 && (
+                <WorkItemStatusTimeline durations={statusDurations} />
+              )}
+            </div>
+
+            {/* SLA mini-card — surfaces the existing SLA target/breach signal on the detail surface */}
+            {selectedItem.slaTarget && (
+              <div className={`rounded-lg border p-3 ${selectedItem.slaBreachFlag ? 'border-semantic-danger/40 bg-semantic-danger-surface' : 'border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50'}`}>
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs font-semibold uppercase tracking-wide ${selectedItem.slaBreachFlag ? 'text-semantic-danger' : 'text-neutral-600 dark:text-neutral-400'}`}>
+                    {selectedItem.slaBreachFlag ? 'SLA breached' : 'SLA target'}
+                  </span>
+                  <span className="text-xs text-neutral-700 dark:text-neutral-300">{new Date(selectedItem.slaTarget).toLocaleString()}</span>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label htmlFor="detail-status" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Status</label>
                 <select id="detail-status" value={selectedItem.status}
                   onChange={e => { const u = { ...selectedItem, status: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }}
                   className="input">
-                  <option>Todo</option><option>In Progress</option><option>Done</option>
+                  {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <div>

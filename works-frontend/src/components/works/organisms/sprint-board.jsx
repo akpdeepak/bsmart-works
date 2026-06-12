@@ -4,16 +4,21 @@ import { Avatar } from '@/components/works/atoms/avatar';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { PriorityBadge } from '@/components/works/priority-badge';
-import { cn } from '@/lib/utils';
+import { LapseBadge } from '@/components/works/atoms/lapse-badge';
+import { computeLapse } from '@/lib/status-lapse';
 
 /**
  * SprintBoard — kanban board with swimlane support for the sprint view.
  *
  * Extracted from App.jsx (TD-003) so it can be imported independently.
  */
-export function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOver, onDrop, onSelect, onDelete, density, allItems = [], cardPrefs, customFieldDefs = [] }) {
+export function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, onDragOver, onDrop, onSelect, onDelete, density, allItems = [], cardPrefs, customFieldDefs = [], statusResolver }) {
   const pad = { compact: 'p-2', comfortable: 'p-3', spacious: 'p-4' };
   const iv = cardPrefs?.isVisible ?? (() => true);
+  // Group cards into columns by category (per-type status config; legacy-safe), so custom
+  // statuses land in the right column. Columns themselves are matched to a category by name.
+  const colCat = (col) => statusToCategory(col.name);
+  const itemCat = (i) => statusResolver ? statusResolver.categoryOf(i.type, i.status) : statusToCategory(i.status);
 
   const getSwimlanes = () => {
     if (swimlaneBy === 'none') return [{ key: 'all', label: null, items }];
@@ -85,10 +90,10 @@ export function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, on
           )}
           <div className="flex gap-4 min-h-40">
             {columns.map(col => {
-              const colItems = lane.items.filter(i => i.status === col.name);
+              const colItems = lane.items.filter(i => itemCat(i) === colCat(col));
               return (
                 <div key={col.name} className="flex-1 min-w-48 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3"
-                  onDragOver={onDragOver} onDrop={(e) => onDrop(e, col.name)}>
+                  onDragOver={onDragOver} onDrop={(e) => onDrop(e, colCat(col))}>
                   {!lane.label && (
                     <div className="flex items-center justify-between mb-3 px-1">
                       <div className="flex items-center gap-2">
@@ -102,6 +107,8 @@ export function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, on
                     {colItems.length === 0 && <div className="flex items-center justify-center py-6 border-2 border-dashed border-neutral-200 rounded-lg"><p className="text-xs text-neutral-300">Drop here</p></div>}
                     {colItems.map(item => {
                       const customVisible = customFieldDefs.filter(d => iv(`cfd_${d.id}`) && item.customFields?.[d.id] != null);
+                      const lapse = computeLapse(item.statusChangedAt, statusResolver?.metaFor(item.type, item.status) ?? null);
+                      const showLapse = itemCat(item) !== 'done' && (lapse.state === 'at_risk' || lapse.state === 'breached');
                       return (
                         <div key={item.id} draggable onDragStart={(e) => onDragStart(e, item.id)}
                           className={`bg-white dark:bg-neutral-700 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-600 cursor-grab hover:shadow-md transition-shadow group ${pad[density]}`}>
@@ -117,7 +124,8 @@ export function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, on
                             <TypeBadge type={item.type} compact={density === 'compact'} />
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {iv('priority') && item.priority && <PriorityBadge priority={item.priority} />}
-                              {iv('status') && <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>}
+                              {iv('status') && <StatusBadge category={itemCat(item)}>{item.status}</StatusBadge>}
+                              {showLapse && <LapseBadge lapse={lapse} compact />}
                               {iv('storyPoints') && item.storyPoints > 0 && <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">{item.storyPoints}pt</span>}
                               {iv('assignee') && item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={5} />}
                             </div>

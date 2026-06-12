@@ -41,6 +41,7 @@ public class WorkItemController {
     private final DodChecklistService dodChecklists;
     private final ExtensionExecutionService extensions;
     private final WorkflowRuleEngine workflowRules;
+    private final StatusConfigService statusConfig;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
@@ -49,7 +50,8 @@ public class WorkItemController {
                               NotificationBatchService batchService, AuthenticatedUser authenticatedUser,
                               RbacService rbac, DodChecklistService dodChecklists,
                               ExtensionExecutionService extensions,
-                              WorkflowRuleEngine workflowRules) {
+                              WorkflowRuleEngine workflowRules,
+                              StatusConfigService statusConfig) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
@@ -62,6 +64,7 @@ public class WorkItemController {
         this.dodChecklists = dodChecklists;
         this.extensions = extensions;
         this.workflowRules = workflowRules;
+        this.statusConfig = statusConfig;
     }
 
     // Tenant-isolation predicate (RB-40 §1): an item is visible only when its project lives in a
@@ -231,6 +234,10 @@ public class WorkItemController {
         w.setAcceptanceCriteria(rs.getString("acceptance_criteria"));
         w.setVersion(rs.getObject("version") != null ? rs.getInt("version") : 0);
         w.setDescription(rs.getString("description"));
+        try {
+            java.sql.Timestamp sca = rs.getTimestamp("status_changed_at");
+            w.setStatusChangedAt(sca != null ? sca.toInstant().atOffset(java.time.ZoneOffset.UTC) : null);
+        } catch (Exception ignored) {}
         // Type-specific fields (nullable; absent on old rows before V68)
         try { w.setReporterId(rs.getString("reporter_id")); } catch (Exception ignored) {}
         try { w.setSeverity(rs.getString("severity")); } catch (Exception ignored) {}
@@ -330,9 +337,12 @@ public class WorkItemController {
             Long.class, effectiveWsId, newItem.getType().toUpperCase());
         newItem.setAutoId(autoIdPrefix + "-" + String.format("%04d", counter));
 
-        newItem.setStatus(defaultStatusFor(newItem.getType()));
+        // Initial status = the type's workflow initial status (seeded if needed), else legacy default.
+        String initialStatus = statusConfig.initialStatus(effectiveWsId, newItem.getType());
+        newItem.setStatus(initialStatus != null ? initialStatus : defaultStatusFor(newItem.getType()));
         newItem.setCreatedBy(userId);
         newItem.setCreatedAt(OffsetDateTime.now());
+        newItem.setStatusChangedAt(newItem.getCreatedAt());
         if (newItem.getProjectId() == null) newItem.setProjectId("PROJ-001");
 
         // Extension hook: work_item.before_create — may enrich fields or reject (B26).
@@ -408,6 +418,9 @@ public class WorkItemController {
 
             existing.setTitle(updatedItem.getTitle());
             existing.setStatus(updatedItem.getStatus());
+            if (!java.util.Objects.equals(oldStatus, updatedItem.getStatus())) {
+                existing.setStatusChangedAt(OffsetDateTime.now());
+            }
             existing.setType(updatedItem.getType());
             existing.setDescription(updatedItem.getDescription());
             existing.setAcceptanceCriteria(updatedItem.getAcceptanceCriteria());

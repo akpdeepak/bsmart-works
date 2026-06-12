@@ -36,6 +36,7 @@ public final class StatusWorkflowDefaults {
     private static SeedStatus todo(String n, boolean init, Double w, Double b)  { return new SeedStatus(n, "TODO",        GRAY,  "NEUTRAL",  init, w, b); }
     private static SeedStatus wait(String n, Double w, Double b)                { return new SeedStatus(n, "TODO",        AMBER, "NEUTRAL",  false, w, b); }
     private static SeedStatus prog(String n, Double w, Double b)                { return new SeedStatus(n, "IN_PROGRESS", NAVY,  "NEUTRAL",  false, w, b); }
+    private static SeedStatus hold(String n, Double w, Double b)                { return new SeedStatus(n, "IN_PROGRESS", AMBER, "NEUTRAL",  false, w, b); }
     private static SeedStatus review(String n, Double w, Double b)             { return new SeedStatus(n, "IN_PROGRESS", TEAL,  "NEUTRAL",  false, w, b); }
     private static SeedStatus flag(String n, Double w, Double b)                { return new SeedStatus(n, "IN_PROGRESS", FLAME, "NEUTRAL",  false, w, b); }
     private static SeedStatus donePos(String n)                                 { return new SeedStatus(n, "DONE",        TEAL,  "POSITIVE", false, null, null); }
@@ -86,7 +87,7 @@ public final class StatusWorkflowDefaults {
             todo("New", true, 0.25, 0.5),
             wait("Assigned", 0.5, 1.0),
             prog("In Progress", 2.0, 4.0),
-            wait("On Hold", null, null),
+            hold("On Hold", null, null),
             review("Resolved", 1.0, 4.0),
             donePos("Closed"),
             flag("Escalated", 1.0, 2.0)));
@@ -96,7 +97,7 @@ public final class StatusWorkflowDefaults {
             todo("Submitted", true, 0.5, 2.0),
             wait("Pending Approval", 4.0, 24.0),
             prog("In Progress", 8.0, 48.0),
-            wait("Awaiting Info", null, null),
+            hold("Awaiting Info", null, null),
             donePos("Fulfilled"),
             doneNeg("Rejected"),
             doneNeg("Cancelled")));

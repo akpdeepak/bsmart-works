@@ -1,4 +1,4 @@
--- V69: Add product_id column to work_items, normalize legacy type names,
+-- V71: Add product_id column to work_items, normalize legacy type names,
 -- and seed all 16 work item types with realistic DISCOM/utility demo data.
 
 -- 1. product_id column (INCIDENT and IT_SERVICE_REQUEST point to a PRODUCT work item) ────────

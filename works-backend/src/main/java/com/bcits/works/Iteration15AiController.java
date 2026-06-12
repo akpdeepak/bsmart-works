@@ -20,12 +20,14 @@ import java.util.Map;
 public class Iteration15AiController {
 
     private final Iteration15AiService service;
+    private final SprintVarianceService varianceService;
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
 
-    public Iteration15AiController(Iteration15AiService service, AuthenticatedUser authenticatedUser,
-                                   RbacService rbac) {
+    public Iteration15AiController(Iteration15AiService service, SprintVarianceService varianceService,
+                                   AuthenticatedUser authenticatedUser, RbacService rbac) {
         this.service = service;
+        this.varianceService = varianceService;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
     }
@@ -67,6 +69,12 @@ public class Iteration15AiController {
     public Map<String, Object> riskPanel(@RequestParam String workspaceId, @RequestParam String sprintId) {
         String userId = requireMember(workspaceId);
         return service.midSprintRiskPanel(workspaceId, userId, sprintId);
+    }
+
+    @GetMapping("/cockpit/variance")
+    public Map<String, Object> variance(@RequestParam String workspaceId, @RequestParam String sprintId) {
+        String userId = requireMember(workspaceId);
+        return varianceService.variance(workspaceId, userId, sprintId);
     }
 
     @PostMapping("/cockpit/review-prep")

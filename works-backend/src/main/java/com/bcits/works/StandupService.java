@@ -112,11 +112,15 @@ public class StandupService {
     public StandupEntry recordEntry(String callerId, String sessionId, String entryId,
                                     String yesterday, String today, String blockers) {
         StandupSession s = loadForMember(callerId, sessionId);
-        rbac.require(callerId, s.getWorkspaceId(), "manage_sprints");
         StandupEntry e = entries.findById(entryId)
                 .orElseThrow(() -> ApiException.notFound("StandupEntry", entryId));
         if (!sessionId.equals(e.getSessionId())) {
             throw ApiException.notFound("StandupEntry", entryId);
+        }
+        // Async-first standup (My Day): any member may record THEIR OWN entry;
+        // recording someone else's still requires the facilitator permission.
+        if (!callerId.equals(e.getMemberId())) {
+            rbac.require(callerId, s.getWorkspaceId(), "manage_sprints");
         }
         e.setYesterday(yesterday);
         e.setToday(today);

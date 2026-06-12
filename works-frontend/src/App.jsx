@@ -60,6 +60,7 @@ import { api } from '@/lib/apiClient';
 import { layoutToWidgets } from '@/lib/today-layouts';
 import { useCardPrefs } from '@/hooks/useCardPrefs';
 import { buildStatusResolver } from '@/lib/status-config';
+import { buildFieldPrefsResolver, saveTypeFieldPrefs } from '@/lib/type-field-prefs';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { isIconComponent, onPressKey, renderMd } from '@/lib/utils';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -224,6 +225,24 @@ export default function App() {
   // status a work item stores (a string) to its category/color/clock across every surface.
   const [statusConfig, setStatusConfig] = useState([]);
   const statusResolver = useMemo(() => buildStatusResolver(statusConfig), [statusConfig]);
+  // Per-type field preferences — which fields show on the detail surface, per work-item type.
+  const [typeFieldPrefs, setTypeFieldPrefs] = useState([]);
+  const fieldPrefs = useMemo(() => buildFieldPrefsResolver(typeFieldPrefs), [typeFieldPrefs]);
+  // Toggle a field's visibility for a type (bulk-replaces that type's prefs server-side).
+  const handleToggleFieldPref = (typeKey, fieldKey, visible) => {
+    const forType = typeFieldPrefs
+      .filter(p => p.typeKey === typeKey && p.fieldKey !== fieldKey)
+      .map(p => ({ fieldKey: p.fieldKey, visible: p.visible, sortOrder: p.sortOrder }));
+    const next = [...forType, { fieldKey, visible }];
+    saveTypeFieldPrefs(api, activeWorkspaceId, typeKey, next)
+      .then(updated => setTypeFieldPrefs(Array.isArray(updated) ? updated : []))
+      .catch(reportError);
+  };
+  // Bulk-replace a type's field prefs (visibility + order) — used by the Settings field editor.
+  const handleSaveFieldPrefs = (typeKey, prefList) =>
+    saveTypeFieldPrefs(api, activeWorkspaceId, typeKey, prefList)
+      .then(updated => setTypeFieldPrefs(Array.isArray(updated) ? updated : []))
+      .catch(reportError);
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false); // off-canvas drawer under md (G1)
   const [subRailCollapsed, setSubRailCollapsed] = useState(false);
@@ -359,6 +378,13 @@ export default function App() {
   const [reviewResult, setReviewResult]         = useState(null);
   const [patternsResult, setPatternsResult]     = useState(null);
   const [riskSprintId, setRiskSprintId]         = useState('');
+  const [varianceSprintId, setVarianceSprintId] = useState('');
+  const [varianceResult, setVarianceResult]     = useState(null);
+  const [cockpitContext, setCockpitContext]     = useState(null); // { roleKey, tier, canManageSprints, canCreateItems, activeSprint, liveCeremony }
+  const [ceremonies, setCeremonies]             = useState([]);   // [{ session, counts }]
+  const [activeCeremony, setActiveCeremony]     = useState(null); // { session, attendance, counts }
+  const [newCeremony, setNewCeremony]           = useState({ ceremonyType: 'STANDUP', scheduledAt: '' });
+  const [myDay, setMyDay]                       = useState(null); // { myItems, myImpediments, myActions, todayStandup, myStandupEntry }
   const [roadmapThemes, setRoadmapThemes]       = useState([]);
   const [newTheme, setNewTheme]                 = useState({ name: '', status: 'PLANNED', quarter: '', description: '' });
   const [ideas, setIdeas]                       = useState([]);
@@ -448,7 +474,7 @@ export default function App() {
   const [selectedViolations, setSelectedViolations] = useState([]);
   const [ruleBuilder, setRuleBuilder] = useState(null); // the rule being created/edited, or null
   const [ruleTestResult, setRuleTestResult] = useState(null);
-  const EMPTY_STATUS_METRICS = { durations: [], leadSeconds: null, cycleSeconds: null, completed: false, started: false };
+  const EMPTY_STATUS_METRICS = { durations: [], leadSeconds: null, cycleSeconds: null, leadRunning: false, cycleRunning: false };
   const [statusMetrics, setStatusMetrics] = useState(EMPTY_STATUS_METRICS);
   const [deleteUndoItem, setDeleteUndoItem] = useState(null);
   const deleteUndoTimer = useRef(null);
@@ -753,6 +779,10 @@ export default function App() {
     api.send(`/status-config?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
       .then(cfg => setStatusConfig(Array.isArray(cfg) ? cfg : []))
       .catch(() => setStatusConfig([]));
+    // Load per-type field preferences (which detail-surface fields show per type).
+    api.send(`/type-field-prefs?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
+      .then(p => setTypeFieldPrefs(Array.isArray(p) ? p : []))
+      .catch(() => setTypeFieldPrefs([]));
     // Load AI capabilities for this workspace — drives hide/show of AI action buttons (RB-40 §2).
     aiClient.capabilities(activeWorkspaceId).then(caps => {
       setAiCapabilities(Array.isArray(caps) ? caps : []);
@@ -2004,7 +2034,56 @@ export default function App() {
     setView('smcockpit');
     const pid = i15ProjectId || (projects[0] && projects[0].id) || '';
     setI15ProjectId(pid);
-    if (pid) { fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
+    if (pid) { fetchCockpitContext(pid); fetchCeremonies(pid); fetchMyDay(pid); fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
+  }
+  function fetchMyDay(pid) {
+    api.raw(`/cockpit/my-day?projectId=${pid}`).then(r => r.json())
+      .then(d => setMyDay(d && typeof d === 'object' ? d : null)).catch(() => setMyDay(null));
+  }
+  function submitMyStandup() {
+    const sid = myDay?.todayStandup?.id;
+    const eid = myDay?.myStandupEntry?.id;
+    if (!sid || !eid) return;
+    api.send(`/standups/${sid}/entries/${eid}/record`, { method: 'POST', body: JSON.stringify(standupDraft) })
+      .then(() => { setStandupDraft({ yesterday: '', today: '', blockers: '' }); fetchMyDay(i15ProjectId); showToast('Standup update recorded'); })
+      .catch(() => showToast('Failed to record your update', 'error'));
+  }
+  function fetchCockpitContext(pid) {
+    api.raw(`/cockpit/context?projectId=${pid}`).then(r => r.json())
+      .then(d => setCockpitContext(d && d.roleKey ? d : null)).catch(() => setCockpitContext(null));
+  }
+  function fetchCeremonies(pid) {
+    api.raw(`/ceremonies?projectId=${pid}`).then(r => r.json())
+      .then(d => setCeremonies(Array.isArray(d) ? d : [])).catch(() => setCeremonies([]));
+  }
+  function scheduleCeremony() {
+    const memberIds = (workspaceMembers.length ? workspaceMembers : users).map(m => m.id).filter(Boolean);
+    const scheduledAt = newCeremony.scheduledAt ? new Date(newCeremony.scheduledAt).toISOString() : null;
+    api.send(`/ceremonies`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId, ceremonyType: newCeremony.ceremonyType, scheduledAt, sprintId: cockpitContext?.activeSprint?.id || null, memberIds }) })
+      .then(d => { setActiveCeremony(d); setNewCeremony({ ceremonyType: 'STANDUP', scheduledAt: '' }); fetchCeremonies(i15ProjectId); showToast('Ceremony scheduled'); })
+      .catch(() => showToast('Failed to schedule ceremony', 'error'));
+  }
+  function openCeremony(id) {
+    api.raw(`/ceremonies/${id}`).then(r => r.json()).then(d => setActiveCeremony(d)).catch(reportError);
+  }
+  function startCeremony(id) {
+    api.send(`/ceremonies/${id}/start`, { method: 'POST' })
+      .then(d => { setActiveCeremony(d); fetchCeremonies(i15ProjectId); fetchCockpitContext(i15ProjectId); showToast('Ceremony is live'); })
+      .catch(() => showToast('Failed to start ceremony', 'error'));
+  }
+  function joinCeremony(id) {
+    api.send(`/ceremonies/${id}/join`, { method: 'POST' })
+      .then(d => { setActiveCeremony(d); fetchCeremonies(i15ProjectId); showToast('You joined the ceremony'); })
+      .catch(() => showToast('Failed to join — is the ceremony live?', 'error'));
+  }
+  function excuseCeremony(id, userId) {
+    api.send(`/ceremonies/${id}/excuse`, { method: 'POST', body: JSON.stringify({ userId }) })
+      .then(d => setActiveCeremony(d)).catch(() => showToast('Failed to excuse member', 'error'));
+  }
+  function completeCeremony(id) {
+    api.send(`/ceremonies/${id}/complete`, { method: 'POST' })
+      .then(d => { setActiveCeremony(d); fetchCeremonies(i15ProjectId); fetchCockpitContext(i15ProjectId); showToast('Ceremony complete — absentees recorded'); })
+      .catch(() => showToast('Failed to complete ceremony', 'error'));
   }
   function fetchImpediments(pid) {
     api.raw(`/impediments?projectId=${pid}`).then(r => r.json())
@@ -2081,6 +2160,11 @@ export default function App() {
     if (!riskSprintId) { showToast('Select a sprint', 'error'); return; }
     api.raw(`/cockpit/risk-panel?workspaceId=${activeWorkspaceId}&sprintId=${riskSprintId}`).then(r => r.json())
       .then(d => setRiskPanel(d)).catch(() => showToast('Risk panel failed', 'error'));
+  }
+  function runVariance() {
+    if (!varianceSprintId) { showToast('Select a sprint', 'error'); return; }
+    api.raw(`/cockpit/variance?workspaceId=${activeWorkspaceId}&sprintId=${varianceSprintId}`).then(r => r.json())
+      .then(d => setVarianceResult(d)).catch(() => showToast('Variance analysis failed', 'error'));
   }
   function runReviewPrep() {
     if (!reviewSprintId) { showToast('Select a sprint', 'error'); return; }
@@ -3279,6 +3363,9 @@ export default function App() {
           {view === 'settings3' && (
             <Settings3View
               settings3Tab={settings3Tab}
+              fieldPrefs={fieldPrefs}
+              customFieldDefs={customFieldDefs}
+              onSaveFieldPrefs={handleSaveFieldPrefs}
               workflows={workflows}
               expandedWorkflowId={expandedWorkflowId}
               workflowDetail={workflowDetail}
@@ -3598,6 +3685,24 @@ export default function App() {
           {view === 'smcockpit' && (
             <ScrumMasterCockpitView
               i15ProjectId={i15ProjectId}
+              cockpitContext={cockpitContext}
+              ceremonies={ceremonies}
+              activeCeremony={activeCeremony}
+              newCeremony={newCeremony}
+              currentUserId={currentUser?.id}
+              myDay={myDay}
+              fetchMyDay={fetchMyDay}
+              submitMyStandup={submitMyStandup}
+              fetchCockpitContext={fetchCockpitContext}
+              fetchCeremonies={fetchCeremonies}
+              scheduleCeremony={scheduleCeremony}
+              openCeremony={openCeremony}
+              setActiveCeremony={setActiveCeremony}
+              setNewCeremony={setNewCeremony}
+              startCeremony={startCeremony}
+              joinCeremony={joinCeremony}
+              excuseCeremony={excuseCeremony}
+              completeCeremony={completeCeremony}
               smTab={smTab}
               impediments={impediments}
               newImpediment={newImpediment}
@@ -3640,6 +3745,10 @@ export default function App() {
               recordStandup={recordStandup}
               setRiskSprintId={setRiskSprintId}
               runRiskPanel={runRiskPanel}
+              varianceSprintId={varianceSprintId}
+              setVarianceSprintId={setVarianceSprintId}
+              varianceResult={varianceResult}
+              runVariance={runVariance}
               setPlanningTimeOff={setPlanningTimeOff}
               runSprintPlanning={runSprintPlanning}
               setActiveRetro={setActiveRetro}
@@ -3834,6 +3943,8 @@ export default function App() {
           maxUploadMb={MAX_UPLOAD_MB}
           activity={activity}
           statusMetrics={statusMetrics}
+          fieldPrefs={fieldPrefs}
+          onToggleFieldPref={handleToggleFieldPref}
           activityEventFilter={activityEventFilter}
           setActivityEventFilter={setActivityEventFilter}
           setActivity={setActivity}

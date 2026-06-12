@@ -11,6 +11,7 @@ import { onPressKey, cn } from '@/lib/utils';
 import { FIELD_SCHEMAS, loadFieldConfig, saveFieldConfig } from '@/lib/type-field-schemas';
 import { BRAND_NAVY } from '@/lib/brand-tokens';
 import StatusManagementTab from '@/components/works/organisms/status-management-tab';
+import FieldConfigEditor from '@/components/works/organisms/field-config-editor';
 
 // ── Field type display colours (badge behind the type name) ──────────────────
 const FIELD_TYPE_COLORS = {
@@ -303,6 +304,9 @@ function TypeFieldsTab() {
  */
 export default function Settings3View({
   settings3Tab,
+  fieldPrefs,
+  customFieldDefs,
+  onSaveFieldPrefs,
   workflows,
   expandedWorkflowId,
   workflowDetail,
@@ -384,6 +388,7 @@ export default function Settings3View({
           { key: 'permissions', label: 'Permissions' },
           { key: 'types',       label: 'Item Types' },
           { key: 'type-fields', label: 'Fields' },
+          { key: 'detail-fields', label: 'Detail Fields' },
         ].map(t => (
           <button key={t.key} onClick={() => {
             setSettings3Tab(t.key);
@@ -400,6 +405,11 @@ export default function Settings3View({
       {/* STATUS MANAGEMENT TAB */}
       {settings3Tab === 'statuses' && (
         <StatusManagementTab api={api} workspaceId={activeWorkspaceId} showToast={showToast} reportError={reportError} />
+      )}
+
+      {/* DETAIL FIELDS TAB — per-type visibility + order on the work item detail surface */}
+      {settings3Tab === 'detail-fields' && (
+        <FieldConfigEditor fieldPrefs={fieldPrefs} customFieldDefs={customFieldDefs || []} onSave={onSaveFieldPrefs} />
       )}
 
       {/* WORKFLOWS TAB */}
@@ -908,7 +918,7 @@ export default function Settings3View({
                 <select id="vis-visibility" className="input text-sm" value={newFieldVisForm.visibility}
                   onChange={e => setNewFieldVisForm(f => ({ ...f, visibility: e.target.value }))}>
                   <option value="EDITABLE">EDITABLE</option>
-                  <option value="READONLY">READ ONLY</option>
+                  <option value="READ_ONLY">READ ONLY</option>
                   <option value="HIDDEN">HIDDEN</option>
                 </select>
               </div>
@@ -936,7 +946,7 @@ export default function Settings3View({
                       </td>
                       <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">{fv.roleId}</td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded ${fv.visibility === 'HIDDEN' ? 'bg-semantic-danger-surface text-semantic-danger' : fv.visibility === 'READONLY' ? 'bg-semantic-warning-surface text-semantic-warning' : 'bg-semantic-success-surface text-semantic-success'}`}>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded ${fv.visibility === 'HIDDEN' ? 'bg-semantic-danger-surface text-semantic-danger' : fv.visibility === 'READ_ONLY' ? 'bg-semantic-warning-surface text-semantic-warning' : 'bg-semantic-success-surface text-semantic-success'}`}>
                           {fv.visibility}
                         </span>
                       </td>

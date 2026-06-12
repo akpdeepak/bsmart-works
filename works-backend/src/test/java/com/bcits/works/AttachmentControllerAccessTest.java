@@ -86,7 +86,8 @@ class AttachmentControllerAccessTest {
     void getAttachments_member_queriesScopedToWorkItem() {
         controller.getAttachments(ITEM_IN_A, 0, 50);
         verify(jdbc).queryForList(
-            "SELECT a.id, a.file_name, a.file_size, a.mime_type, a.created_at, u.full_name as uploaded_by_name "
+            "SELECT a.id, a.file_name, a.file_size, a.mime_type, a.attachment_type, a.url, a.created_at, "
+            + "u.full_name as uploaded_by_name "
             + "FROM attachments a LEFT JOIN users u ON u.id = a.uploaded_by "
             + "WHERE a.work_item_id = ? ORDER BY a.created_at DESC LIMIT ? OFFSET ?",
             ITEM_IN_A, 50, 0);

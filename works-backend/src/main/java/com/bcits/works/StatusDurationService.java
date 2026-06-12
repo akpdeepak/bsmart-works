@@ -37,12 +37,18 @@ public class StatusDurationService {
     public record StatusDuration(String status, long totalSeconds, int timesEntered) { }
 
     /**
-     * Lead/cycle metrics for a work item. {@code leadSeconds} = created → first DONE-category status
-     * (or → now while not done). {@code cycleSeconds} = first IN_PROGRESS-category status → first DONE
-     * (or → now while running); null when the item has never entered an in-progress status.
+     * Lead/cycle metrics for a work item, by category.
+     * <ul>
+     *   <li>{@code leadSeconds} = cumulative time the item has lived in TODO + IN_PROGRESS categories
+     *       (DONE time is excluded).</li>
+     *   <li>{@code cycleSeconds} = cumulative time in IN_PROGRESS only (TODO and DONE excluded).</li>
+     * </ul>
+     * Both accumulate across reopens — moving Done → In Progress/To Do does not count the Done time
+     * and resumes the clocks. {@code leadRunning}/{@code cycleRunning} say whether each clock is
+     * currently counting (i.e. the current status is non-Done / In Progress).
      */
     public record StatusTimelineMetrics(List<StatusDuration> durations, long leadSeconds,
-                                        Long cycleSeconds, boolean completed, boolean started) { }
+                                        long cycleSeconds, boolean leadRunning, boolean cycleRunning) { }
 
     /** Load a work item's status timeline and project per-status durations. Empty if unknown. */
     public List<StatusDuration> forWorkItem(String workItemId) {
@@ -58,35 +64,36 @@ public class StatusDurationService {
     public StatusTimelineMetrics metricsForWorkItem(String workItemId,
                                                     java.util.function.Function<String, String> categoryOf) {
         Loaded l = load(workItemId);
-        if (l == null) return new StatusTimelineMetrics(List.of(), 0, null, false, false);
+        if (l == null) return new StatusTimelineMetrics(List.of(), 0, 0, false, false);
         return computeMetrics(l.createdAt(), l.currentStatus(), l.changes(), OffsetDateTime.now(), categoryOf);
     }
 
     /**
-     * Pure lead/cycle projection. Lead = createdAt → first DONE (or → now). Cycle = first IN_PROGRESS
-     * → first DONE (or → now); null when no IN_PROGRESS was ever entered. Boundaries are the FIRST
-     * time each category is reached. Unit-tested alongside {@link #compute}.
+     * Pure lead/cycle projection, summed by category from the per-status durations.
+     * Lead = Σ time in TODO + IN_PROGRESS; Cycle = Σ time in IN_PROGRESS. DONE time is excluded from
+     * both, so reopens (Done → In Progress/To Do) automatically resume the clocks and never count the
+     * paused Done period. The current status's running time (up to {@code now}) is already folded into
+     * its duration by {@link #compute}, so both metrics are live. Unit-tested alongside {@code compute}.
      */
     StatusTimelineMetrics computeMetrics(OffsetDateTime createdAt, String currentStatus,
                                          List<StatusChange> changes, OffsetDateTime now,
                                          java.util.function.Function<String, String> categoryOf) {
         List<StatusDuration> durations = compute(createdAt, currentStatus, changes, now);
-        if (createdAt == null) return new StatusTimelineMetrics(durations, 0, null, false, false);
-
-        String initial = (!changes.isEmpty() && changes.get(0).from() != null)
-            ? changes.get(0).from() : currentStatus;
-        OffsetDateTime firstInProgress = "IN_PROGRESS".equals(cat(categoryOf, initial)) ? createdAt : null;
-        OffsetDateTime firstDone = "DONE".equals(cat(categoryOf, initial)) ? createdAt : null;
-        for (StatusChange c : changes) {
-            String category = cat(categoryOf, c.to());
-            if (firstInProgress == null && "IN_PROGRESS".equals(category)) firstInProgress = c.at();
-            if (firstDone == null && "DONE".equals(category)) firstDone = c.at();
+        long lead = 0, cycle = 0;
+        for (StatusDuration d : durations) {
+            String category = cat(categoryOf, d.status());
+            if ("IN_PROGRESS".equals(category)) {
+                cycle += d.totalSeconds();
+                lead += d.totalSeconds();
+            } else if ("TODO".equals(category)) {
+                lead += d.totalSeconds();
+            }
+            // DONE is excluded from both lead and cycle.
         }
-        boolean completed = firstDone != null;
-        boolean started = firstInProgress != null;
-        long leadSeconds = Math.max(0, seconds(createdAt, completed ? firstDone : now));
-        Long cycleSeconds = started ? Math.max(0, seconds(firstInProgress, completed ? firstDone : now)) : null;
-        return new StatusTimelineMetrics(durations, leadSeconds, cycleSeconds, completed, started);
+        String currentCategory = cat(categoryOf, currentStatus);
+        boolean leadRunning = !"DONE".equals(currentCategory);     // lead counts while not Done
+        boolean cycleRunning = "IN_PROGRESS".equals(currentCategory);
+        return new StatusTimelineMetrics(durations, lead, cycle, leadRunning, cycleRunning);
     }
 
     private static String cat(java.util.function.Function<String, String> categoryOf, String status) {

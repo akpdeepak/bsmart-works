@@ -169,6 +169,9 @@ public class WorkflowController {
             s.setColor(updated.getColor());
             s.setPosition(updated.getPosition());
             s.setIsInitial(updated.getIsInitial());
+            s.setWarnHours(updated.getWarnHours());
+            s.setBreachHours(updated.getBreachHours());
+            s.setOutcome(updated.getOutcome());
             return statusRepo.save(s);
         }).orElseThrow();
         return saved;

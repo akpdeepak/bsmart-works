@@ -10,6 +10,7 @@ import { TYPES, TYPE_ICON_SET, TYPE_ICON_KEYS, ALL_TYPES, CATEGORIES, resolveTyp
 import { onPressKey, cn } from '@/lib/utils';
 import { FIELD_SCHEMAS, loadFieldConfig, saveFieldConfig } from '@/lib/type-field-schemas';
 import { BRAND_NAVY } from '@/lib/brand-tokens';
+import StatusManagementTab from '@/components/works/organisms/status-management-tab';
 
 // ── Field type display colours (badge behind the type name) ──────────────────
 const FIELD_TYPE_COLORS = {
@@ -376,6 +377,7 @@ export default function Settings3View({
       <div className="flex gap-1 mb-6 border-b border-neutral-200 dark:border-neutral-700">
         {[
           { key: 'workflows',   label: 'Workflows' },
+          { key: 'statuses',    label: 'Status Management' },
           { key: 'fields',      label: 'Custom Fields' },
           { key: 'layout',      label: 'Field Layout' },
           { key: 'visibility',  label: 'Field Visibility' },
@@ -394,6 +396,11 @@ export default function Settings3View({
           </button>
         ))}
       </div>
+
+      {/* STATUS MANAGEMENT TAB */}
+      {settings3Tab === 'statuses' && (
+        <StatusManagementTab api={api} workspaceId={activeWorkspaceId} showToast={showToast} reportError={reportError} />
+      )}
 
       {/* WORKFLOWS TAB */}
       {settings3Tab === 'workflows' && (

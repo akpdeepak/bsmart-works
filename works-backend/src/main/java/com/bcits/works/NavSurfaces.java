@@ -25,6 +25,7 @@ public final class NavSurfaces {
         MIN_TIER.put("dashboard", 1);
         MIN_TIER.put("myworks", 2);
         MIN_TIER.put("notifications", 2);
+        MIN_TIER.put("account", 1);
         // Deliver
         MIN_TIER.put("smcockpit", 3);
         MIN_TIER.put("board", 1);

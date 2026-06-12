@@ -2326,6 +2326,34 @@ export default function App() {
     api.raw(`/work-items/${selectedItem.id}/links/${linkId}`, { method: 'DELETE', headers: headers() })
       .then(() => setLinks(prev => prev.filter(l => l.id !== linkId)));
   };
+  // Create a typed link to a searched item (BLOCKS / RELATES_TO / DUPLICATES …).
+  const handleCreateLink = (targetId, linkType) => {
+    if (!targetId || !selectedItem) return;
+    api.raw(`/work-items/${selectedItem.id}/links`, { method: 'POST', body: JSON.stringify({ targetId, linkType }) })
+      .then(r => r.json()).then(l => setLinks(prev => [...prev, l])).catch(reportError);
+  };
+
+  // ── Hierarchy (parent/child) — uses the parent-only endpoint (no field clobbering) ──
+  const handleSetParent = (parentId) => {
+    if (!selectedItem) return;
+    api.send(`/work-items/${selectedItem.id}/parent`, { method: 'PUT', body: { parentId: parentId || '' } })
+      .then(saved => { setSelectedItem(saved); setWorkItems(prev => prev.map(i => i.id === saved.id ? { ...i, ...saved } : i)); })
+      .catch(err => showToast(err.message || 'Could not set parent', 'error'));
+  };
+  const handleAddChild = (child) => {
+    if (!selectedItem || !child) return;
+    api.send(`/work-items/${child.id}/parent`, { method: 'PUT', body: { parentId: selectedItem.id } })
+      .then(saved => {
+        setItemChildren(prev => [...prev.filter(c => c.id !== saved.id), saved]);
+        setWorkItems(prev => prev.map(i => i.id === saved.id ? { ...i, ...saved } : i));
+      })
+      .catch(err => showToast(err.message || 'Could not add child', 'error'));
+  };
+  const handleRemoveChild = (childId) => {
+    api.send(`/work-items/${childId}/parent`, { method: 'PUT', body: { parentId: '' } })
+      .then(() => setItemChildren(prev => prev.filter(c => c.id !== childId)))
+      .catch(err => showToast(err.message || 'Could not remove child', 'error'));
+  };
 
   // ATTACHMENTS
   const MAX_UPLOAD_MB = 20; // must match app.attachments.max-size-bytes / 1024 / 1024
@@ -3786,6 +3814,10 @@ export default function App() {
           setNewLink={setNewLink}
           handleDeleteLink={handleDeleteLink}
           handleAddLink={handleAddLink}
+          handleCreateLink={handleCreateLink}
+          handleSetParent={handleSetParent}
+          handleAddChild={handleAddChild}
+          handleRemoveChild={handleRemoveChild}
           attachments={attachments}
           fileInputRef={fileInputRef}
           handleUploadFile={handleUploadFile}

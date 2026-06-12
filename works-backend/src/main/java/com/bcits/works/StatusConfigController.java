@@ -36,8 +36,9 @@ public class StatusConfigController {
     @Operation(summary = "Per-type status configuration for a workspace (seeds defaults on first read)")
     @GetMapping
     public List<StatusConfigService.TypeStatusConfig> get(@RequestParam String workspaceId) {
-        if (rbac.getUserTier(authenticatedUser.id(), workspaceId) < 1)
+        if (rbac.getUserTier(authenticatedUser.id(), workspaceId) < 1) {
             throw ApiException.notFound("Workspace", workspaceId);
+        }
         return statusConfig.readGrouped(workspaceId);
     }
 }

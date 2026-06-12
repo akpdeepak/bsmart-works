@@ -33,7 +33,6 @@ export default function BacklogView({
   // circular extraction (the component has deep App-specific deps).
   SprintItemList,
   cardPrefs,
-  customFieldDefs = [],
 }) {
   const iv = cardPrefs?.isVisible ?? (() => true);
   const onPressKey = (e) => { if (e.key === 'Enter' || e.key === ' ') e.currentTarget.click(); };

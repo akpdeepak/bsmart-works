@@ -60,6 +60,11 @@ const ROLE_LABELS = {
   executive: 'Executive', admin: 'Admin',
 };
 
+const RAISE_LABELS = {
+  IMPEDIMENT: 'Impediment', RISK: 'Risk', DEPENDENCY: 'Dependency',
+  SCOPE_CHANGE: 'Scope change', DECISION_NEEDED: 'Decision needed', ESCALATION: 'Escalation',
+};
+
 const ATTENDANCE_GROUPS = [
   { status: 'JOINED', label: 'Joined' },
   { status: 'EXPECTED', label: 'Not joined yet' },
@@ -330,6 +335,8 @@ export default function ScrumMasterCockpitView({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${imp.severity === 'CRITICAL' ? 'bg-semantic-danger text-white' : imp.severity === 'HIGH' ? 'bg-brand-amber text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300'}`}>{imp.severity}</span>
+                        {imp.raiseType && imp.raiseType !== 'IMPEDIMENT' && <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-brand-navy/10 text-brand-navy dark:bg-neutral-700 dark:text-neutral-200">{RAISE_LABELS[imp.raiseType] || imp.raiseType}</span>}
+                        {imp.slaBreached && <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-semantic-danger text-white" title="Critical and unresolved for more than a day">SLA breach</span>}
                         <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{imp.title}</span>
                       </div>
                       {imp.description && <p className="text-xs text-neutral-500 mb-1">{imp.description}</p>}
@@ -349,8 +356,13 @@ export default function ScrumMasterCockpitView({
               ))}
           </div>
           <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 h-fit">
-            <h3 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mb-3">Raise impediment</h3>
+            <h3 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mb-3">Raise</h3>
             <div className="space-y-3">
+              <Field label="Type">
+                <select className="input w-full text-sm" value={newImpediment.raiseType} onChange={e => setNewImpediment({ ...newImpediment, raiseType: e.target.value })}>
+                  {(cockpitContext?.allowedRaiseTypes || Object.keys(RAISE_LABELS)).map(t => <option key={t} value={t}>{RAISE_LABELS[t] || t}</option>)}
+                </select>
+              </Field>
               <Field label="Title"><input className="input w-full text-sm" value={newImpediment.title} onChange={e => setNewImpediment({ ...newImpediment, title: e.target.value })} placeholder="What is blocked?" /></Field>
               <Field label="Severity">
                 <select className="input w-full text-sm" value={newImpediment.severity} onChange={e => setNewImpediment({ ...newImpediment, severity: e.target.value })}>
@@ -359,7 +371,7 @@ export default function ScrumMasterCockpitView({
               </Field>
               <Field label="Category"><input className="input w-full text-sm" value={newImpediment.category} onChange={e => setNewImpediment({ ...newImpediment, category: e.target.value })} placeholder="e.g. Environment, Dependency" /></Field>
               <Field label="Detail"><textarea className="input w-full text-sm" rows={2} value={newImpediment.description} onChange={e => setNewImpediment({ ...newImpediment, description: e.target.value })} /></Field>
-              <Button variant="action" fullWidth onClick={createImpediment}>Raise impediment</Button>
+              <Button variant="action" fullWidth onClick={createImpediment}>Raise</Button>
             </div>
           </div>
         </div>

@@ -173,7 +173,7 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   Cap X + Admin Operations Center Cap Y), **17** (Universal Customization Engine Cap R), **18**
   (Mobile + Real-time + Performance Cap S), **19** (Enterprise Security + Compliance Certifications
   Cap T), and the Compliance/Service iterations (7–9).
-- **Flyway high-water mark:** **V79** (`V79__type_field_prefs.sql`; note: V16 was
+- **Flyway high-water mark:** **V80** (`V80__impediment_raise_types.sql`; note: V16 was
   skipped, V23 does not exist; V50–V53 are iterations 16/17/19/18's migrations; V54–V57 are
   iteration 20's advanced-AI / marketplace / knowledge / customer-chat migrations; V58 = user locale
   + perf indexes; V59 = block-editor + SCIM; V60 = custom domains; V61–V65 = compliance escalation,
@@ -190,8 +190,10 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   section; V77 = project_team_members — per-project team roles (V70 role_key vocabulary) for the
   role-adaptive Sprint Cockpit; V78 = ceremony_sessions + ceremony_attendees — first-class sprint
   ceremonies with per-member attendance; V79 = type_field_prefs — per-type field visibility on the
-  detail surface).
-- **Next migration:** **`V80__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+  detail surface; V80 =
+  raise_type on impediments — role-filtered cockpit Raise model (impediment/risk/dependency/
+  scope-change/decision-needed/escalation)).
+- **Next migration:** **`V81__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

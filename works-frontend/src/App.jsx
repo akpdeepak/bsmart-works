@@ -362,7 +362,7 @@ export default function App() {
   const [smTab, setSmTab]                       = useState('impediments'); // impediments | standup | risk | planning | retro | review | patterns
   const [poTab, setPoTab]                       = useState('roadmap');     // roadmap | ideas | feedback | okr | releasenotes | stakeholders
   const [impediments, setImpediments]           = useState([]);
-  const [newImpediment, setNewImpediment]       = useState({ title: '', severity: 'MEDIUM', category: '', description: '' });
+  const [newImpediment, setNewImpediment]       = useState({ title: '', raiseType: 'IMPEDIMENT', severity: 'MEDIUM', category: '', description: '' });
   const [standups, setStandups]                 = useState([]);
   const [activeStandup, setActiveStandup]       = useState(null); // { session, entries }
   const [standupDraft, setStandupDraft]         = useState({ yesterday: '', today: '', blockers: '' });
@@ -2091,7 +2091,7 @@ export default function App() {
   function createImpediment() {
     if (!newImpediment.title.trim()) { showToast('Title is required', 'error'); return; }
     api.send(`/impediments`, { method: 'POST', body: JSON.stringify({ ...newImpediment, projectId: i15ProjectId }) })
-      .then(() => { showToast('Impediment raised'); setNewImpediment({ title: '', severity: 'MEDIUM', category: '', description: '' }); fetchImpediments(i15ProjectId); })
+      .then(() => { showToast('Raised'); setNewImpediment({ title: '', raiseType: 'IMPEDIMENT', severity: 'MEDIUM', category: '', description: '' }); fetchImpediments(i15ProjectId); })
       .catch(() => showToast('Failed to raise impediment', 'error'));
   }
   function updateImpediment(imp, patch) {

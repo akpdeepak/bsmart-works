@@ -2,6 +2,7 @@ import {
   Construction, MessageCircle, ArrowLeft, AlertTriangle, LayoutDashboard,
   TrendingUp, Zap, CheckCircle2, ClipboardList, RefreshCw,
   ChevronUp, ArrowRight, Check, Megaphone, Reply, BarChart2, Repeat,
+  CalendarCheck, UserCheck, UserX,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { Field } from '@/components/works/field';
@@ -30,13 +31,51 @@ const RETRO_COLUMNS = {
   ],
 };
 
-// Scrum Master Cockpit — extracted from the App.jsx monolith (Wave 3). Behaviour-preserving:
-// the parent owns all state and handlers; this renders the seven-tab cockpit.
+const CEREMONY_LABELS = {
+  STANDUP: 'Standup',
+  PLANNING: 'Sprint planning',
+  REVIEW: 'Sprint review',
+  RETRO: 'Retrospective',
+  REFINEMENT: 'Backlog refinement',
+};
+
+const TAB_LABELS = {
+  ceremonies: 'Ceremonies', standup: 'Standup', impediments: 'Impediments', risk: 'Risk panel',
+  planning: 'Planning', retro: 'Retro', review: 'Review prep', patterns: 'Patterns',
+};
+
+// One surface, role-shaped: tab order/visibility follows the caller's team role (role_key,
+// shared with the Today surface). Relevance only — every action stays RBAC-gated server-side.
+const ROLE_TABS = {
+  'scrum-master': ['ceremonies', 'standup', 'impediments', 'risk', 'planning', 'retro', 'review', 'patterns'],
+  admin: ['ceremonies', 'standup', 'impediments', 'risk', 'planning', 'retro', 'review', 'patterns'],
+  developer: ['standup', 'impediments', 'retro', 'ceremonies'],
+  'product-owner': ['planning', 'review', 'patterns', 'ceremonies', 'impediments'],
+  executive: ['risk', 'review', 'patterns', 'ceremonies'],
+};
+
+const ROLE_LABELS = {
+  'scrum-master': 'Scrum master', developer: 'Developer', 'product-owner': 'Product owner',
+  executive: 'Executive', admin: 'Admin',
+};
+
+const ATTENDANCE_GROUPS = [
+  { status: 'JOINED', label: 'Joined' },
+  { status: 'EXPECTED', label: 'Not joined yet' },
+  { status: 'ABSENT', label: 'Did not join' },
+  { status: 'EXCUSED', label: 'Excused' },
+];
+
+// Sprint Cockpit — extracted from the App.jsx monolith (Wave 3); now role-adaptive.
+// The parent owns all state and handlers; this renders the tabbed cockpit.
 export default function ScrumMasterCockpitView({
   i15ProjectId, projects, smTab, impediments, newImpediment, activeStandup, standups,
   standupDraft, sprints, riskSprintId, riskPanel, planningTimeOff, planningResult, activeSprint,
   retros, activeRetro, newRetro, retroNoteDraft, reviewSprintId, reviewResult, patternsResult,
   users, aiCapabilities, aiLoading, activeWorkspaceId,
+  cockpitContext, ceremonies, activeCeremony, newCeremony, currentUserId,
+  fetchCockpitContext, fetchCeremonies, scheduleCeremony, openCeremony, setActiveCeremony,
+  setNewCeremony, startCeremony, joinCeremony, excuseCeremony, completeCeremony,
   setI15ProjectId, fetchImpediments, fetchStandups, fetchRetros, fetchSprints, setSmTab,
   updateImpediment, setNewImpediment, createImpediment,
   startStandup, openStandup, setActiveStandup, advanceStandup, completeStandup,
@@ -48,35 +87,160 @@ export default function ScrumMasterCockpitView({
   setReviewSprintId, runReviewPrep, runPatterns,
   showToast, aiAction,
 }) {
+  const roleKey = cockpitContext?.roleKey || 'scrum-master';
+  // Until the context loads, keep the classic full cockpit — the server gates every action anyway.
+  const canManage = cockpitContext ? !!cockpitContext.canManageSprints : true;
+  const visibleTabs = ROLE_TABS[roleKey] || ROLE_TABS['scrum-master'];
+  const tab = visibleTabs.includes(smTab) ? smTab : visibleTabs[0];
+  const liveCeremony = (ceremonies || []).find(c => c.session?.status === 'LIVE');
+
   return (
     <div className="flex flex-col h-full overflow-y-auto p-6 max-w-7xl mx-auto w-full">
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Scrum Master Cockpit</h1>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">Run the sprint — standup, impediments, risk, retro and review in one place.</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Sprint Cockpit</h1>
+            <span className="text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-md bg-brand-navy/10 text-brand-navy dark:bg-neutral-700 dark:text-neutral-200">{ROLE_LABELS[roleKey] || roleKey}</span>
+          </div>
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            {roleKey === 'developer' ? 'Your standup, your blockers, your retro actions — in one place.'
+              : roleKey === 'product-owner' ? 'Planning, review prep and delivery patterns for the sprint.'
+              : roleKey === 'executive' ? 'Sprint health, risk and outcomes at a glance.'
+              : 'Run the sprint — ceremonies, standup, impediments, risk, retro and review in one place.'}
+          </p>
         </div>
-        <select className="input text-sm py-1.5" value={i15ProjectId}
-          onChange={e => { setI15ProjectId(e.target.value); fetchImpediments(e.target.value); fetchStandups(e.target.value); fetchRetros(e.target.value); fetchSprints(e.target.value); }}>
+        <select className="input text-sm py-1.5" value={i15ProjectId} aria-label="Project"
+          onChange={e => { setI15ProjectId(e.target.value); fetchCockpitContext(e.target.value); fetchCeremonies(e.target.value); fetchImpediments(e.target.value); fetchStandups(e.target.value); fetchRetros(e.target.value); fetchSprints(e.target.value); }}>
           {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </div>
 
+      {liveCeremony && (
+        <div className="flex items-center justify-between gap-3 mb-5 rounded-xl border border-brand-navy/30 bg-brand-navy/5 dark:bg-neutral-800 p-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="h-2.5 w-2.5 rounded-full bg-semantic-danger animate-pulse" aria-hidden="true" />
+            <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 truncate">
+              {CEREMONY_LABELS[liveCeremony.session.ceremonyType] || liveCeremony.session.ceremonyType} is live
+            </span>
+            <span className="text-xs text-neutral-600 dark:text-neutral-400">{liveCeremony.counts?.joined ?? 0} joined</span>
+          </div>
+          <div className="flex gap-2 flex-shrink-0">
+            <Button variant="action" onClick={() => joinCeremony(liveCeremony.session.id)}>Join</Button>
+            <Button variant="secondary" onClick={() => { setSmTab('ceremonies'); openCeremony(liveCeremony.session.id); }}>Open</Button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2 mb-5">
-        <Button variant="action" onClick={() => setSmTab('planning')}>Plan sprint</Button>
-        <Button variant="secondary" onClick={() => setSmTab('standup')}>Start standup</Button>
-        <Button variant="secondary" onClick={() => setSmTab('retro')}>Run retro</Button>
+        {canManage && <Button variant="action" onClick={() => setSmTab('planning')}>Plan sprint</Button>}
+        {canManage && <Button variant="secondary" onClick={() => setSmTab('standup')}>Start standup</Button>}
+        {canManage && <Button variant="secondary" onClick={() => setSmTab('retro')}>Run retro</Button>}
+        {canManage && <Button variant="secondary" onClick={() => setSmTab('ceremonies')}>Schedule ceremony</Button>}
+        {!canManage && visibleTabs.includes('impediments') && cockpitContext?.canCreateItems && <Button variant="action" onClick={() => setSmTab('impediments')}>Raise impediment</Button>}
+        {!canManage && visibleTabs.includes('standup') && <Button variant="secondary" onClick={() => setSmTab('standup')}>My standup</Button>}
       </div>
 
       <div className="flex flex-wrap gap-1 border-b border-neutral-200 dark:border-neutral-700 mb-5">
-        {[['impediments', 'Impediments'], ['standup', 'Standup'], ['risk', 'Risk panel'], ['planning', 'Planning'], ['retro', 'Retro'], ['review', 'Review prep'], ['patterns', 'Patterns']].map(([k, label]) => (
+        {visibleTabs.map(k => (
           <button key={k} onClick={() => setSmTab(k)}
-            className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${smTab === k ? 'border-brand-navy text-brand-navy dark:text-white' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'}`}>
-            {label}
+            className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === k ? 'border-brand-navy text-brand-navy dark:text-white' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'}`}>
+            {TAB_LABELS[k]}
           </button>
         ))}
       </div>
 
-      {smTab === 'impediments' && (
+      {tab === 'ceremonies' && (
+        <div>
+          {!activeCeremony ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div className="lg:col-span-2 space-y-2">
+                {(ceremonies || []).length === 0
+                  ? <EmptyState icon={CalendarCheck} title="No ceremonies yet" subtitle="Schedule a standup, planning, review, retro or refinement — attendance is tracked per member." />
+                  : ceremonies.map(c => (
+                    <button key={c.session.id} onClick={() => openCeremony(c.session.id)} className="w-full text-left bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 hover:border-brand-navy/40">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{CEREMONY_LABELS[c.session.ceremonyType] || c.session.ceremonyType}</span>
+                        <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${c.session.status === 'COMPLETED' ? 'bg-semantic-success text-white' : c.session.status === 'LIVE' ? 'bg-semantic-danger text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{c.session.status}</span>
+                      </div>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
+                        {c.session.scheduledAt ? new Date(c.session.scheduledAt).toLocaleString() : 'Unscheduled'}
+                        {' · '}{c.counts?.joined ?? 0} joined{(c.counts?.absent ?? 0) > 0 ? ` · ${c.counts.absent} absent` : ''}
+                      </p>
+                    </button>))}
+              </div>
+              {canManage && (
+                <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 h-fit">
+                  <h3 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mb-3">Schedule ceremony</h3>
+                  <div className="space-y-3">
+                    <Field label="Type">
+                      <select className="input w-full text-sm" value={newCeremony.ceremonyType} onChange={e => setNewCeremony({ ...newCeremony, ceremonyType: e.target.value })}>
+                        {Object.entries(CEREMONY_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="When"><input type="datetime-local" className="input w-full text-sm" value={newCeremony.scheduledAt} onChange={e => setNewCeremony({ ...newCeremony, scheduledAt: e.target.value })} /></Field>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400">All workspace members are expected; attendance is recorded when they join.</p>
+                    <Button variant="action" fullWidth onClick={scheduleCeremony}>Schedule</Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="max-w-reading">
+              <button onClick={() => setActiveCeremony(null)} className="text-xs text-brand-navy hover:underline mb-3"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />All ceremonies</button>
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">{CEREMONY_LABELS[activeCeremony.session.ceremonyType] || activeCeremony.session.ceremonyType} — {activeCeremony.session.status}</h3>
+                <div className="flex gap-2 flex-wrap">
+                  {canManage && activeCeremony.session.status === 'SCHEDULED' && <Button variant="action" onClick={() => startCeremony(activeCeremony.session.id)}>Start</Button>}
+                  {activeCeremony.session.status === 'LIVE' && <Button variant="action" onClick={() => joinCeremony(activeCeremony.session.id)}>Join</Button>}
+                  {canManage && activeCeremony.session.status === 'LIVE' && <Button variant="secondary" onClick={() => completeCeremony(activeCeremony.session.id)}>Complete</Button>}
+                </div>
+              </div>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-4">
+                {activeCeremony.session.scheduledAt ? `Scheduled ${new Date(activeCeremony.session.scheduledAt).toLocaleString()}` : 'Unscheduled'}
+                {activeCeremony.session.startedAt ? ` · started ${new Date(activeCeremony.session.startedAt).toLocaleTimeString()}` : ''}
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {ATTENDANCE_GROUPS.map(group => {
+                  const rows = (activeCeremony.attendance || []).filter(a => a.status === group.status);
+                  if (group.status === 'ABSENT' && rows.length === 0) return null;
+                  return (
+                    <div key={group.status} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        {group.status === 'JOINED'
+                          ? <UserCheck className="h-4 w-4 text-semantic-success" aria-hidden="true" />
+                          : group.status === 'ABSENT'
+                            ? <UserX className="h-4 w-4 text-semantic-danger" aria-hidden="true" />
+                            : <UserX className="h-4 w-4 text-neutral-400" aria-hidden="true" />}
+                        <h4 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{group.label}</h4>
+                        <span className="text-sm font-bold text-brand-navy dark:text-white ml-auto">{rows.length}</span>
+                      </div>
+                      <div className="space-y-1">
+                        {rows.map(a => {
+                          const name = (users.find(u => u.id === a.userId) || {}).fullName || a.userId;
+                          return (
+                            <div key={a.id} className="flex items-center justify-between gap-2 py-0.5">
+                              <span className={`text-xs truncate ${a.userId === currentUserId ? 'font-semibold text-neutral-900 dark:text-neutral-100' : 'text-neutral-700 dark:text-neutral-200'}`}>{name}{a.userId === currentUserId ? ' (you)' : ''}</span>
+                              <span className="flex items-center gap-2 flex-shrink-0">
+                                {a.status === 'JOINED' && a.joinedAt && <span className="text-xs text-neutral-600 dark:text-neutral-400">{new Date(a.joinedAt).toLocaleTimeString()}</span>}
+                                {canManage && a.status === 'EXPECTED' && activeCeremony.session.status !== 'COMPLETED' && (
+                                  <button onClick={() => excuseCeremony(activeCeremony.session.id, a.userId)} className="text-xs text-brand-navy hover:underline">Mark excused</button>
+                                )}
+                              </span>
+                            </div>
+                          );
+                        })}
+                        {rows.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-400">{group.status === 'EXPECTED' ? 'Everyone has responded.' : 'None.'}</p>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'impediments' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-2">
             {impediments.length === 0
@@ -122,13 +286,13 @@ export default function ScrumMasterCockpitView({
         </div>
       )}
 
-      {smTab === 'standup' && (
+      {tab === 'standup' && (
         <div>
           {!activeStandup ? (
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Standups</h3>
-                <Button variant="action" onClick={startStandup}>Start standup</Button>
+                {canManage && <Button variant="action" onClick={startStandup}>Start standup</Button>}
               </div>
               {standups.length === 0
                 ? <EmptyState icon={MessageCircle} title="No standups yet" subtitle="Start a sequential, time-boxed standup — each member's turn is recorded." />
@@ -145,8 +309,8 @@ export default function ScrumMasterCockpitView({
                 <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Standup — {activeStandup.session.status}</h3>
                 {activeStandup.session.status !== 'COMPLETED' && (
                   <div className="flex gap-2 flex-wrap">
-                    <Button variant="secondary" onClick={advanceStandup}>Next member</Button>
-                    <Button variant="action" onClick={completeStandup}>Complete</Button>
+                    {canManage && <Button variant="secondary" onClick={advanceStandup}>Next member</Button>}
+                    {canManage && <Button variant="action" onClick={completeStandup}>Complete</Button>}
                     {anyCapabilityEnabled(aiCapabilities) && (
                       <Button
                         variant="secondary"
@@ -185,7 +349,7 @@ export default function ScrumMasterCockpitView({
                           {e.blockers && <p className="text-semantic-danger"><span className="font-semibold">Blockers:</span> {e.blockers}</p>}
                         </div>
                       )}
-                      {isCurrent && e.status !== 'RECORDED' && activeStandup.session.status !== 'COMPLETED' && (
+                      {canManage && isCurrent && e.status !== 'RECORDED' && activeStandup.session.status !== 'COMPLETED' && (
                         <div className="mt-2 space-y-2">
                           <input className="input w-full text-xs" placeholder="Yesterday" value={standupDraft.yesterday} onChange={ev => setStandupDraft({ ...standupDraft, yesterday: ev.target.value })} />
                           <input className="input w-full text-xs" placeholder="Today" value={standupDraft.today} onChange={ev => setStandupDraft({ ...standupDraft, today: ev.target.value })} />
@@ -202,7 +366,7 @@ export default function ScrumMasterCockpitView({
         </div>
       )}
 
-      {smTab === 'risk' && (
+      {tab === 'risk' && (
         <div>
           <div className="flex items-end gap-2 mb-4">
             <Field label="Sprint">
@@ -233,7 +397,7 @@ export default function ScrumMasterCockpitView({
         </div>
       )}
 
-      {smTab === 'planning' && (
+      {tab === 'planning' && (
         <div>
           <div className="flex items-end gap-2 mb-4 flex-wrap">
             <Field label="Time off (points)"><input type="number" className="input text-sm w-28" value={planningTimeOff} onChange={e => setPlanningTimeOff(e.target.value)} /></Field>
@@ -283,7 +447,7 @@ export default function ScrumMasterCockpitView({
         </div>
       )}
 
-      {smTab === 'retro' && (
+      {tab === 'retro' && (
         <div>
           {!activeRetro ? (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -352,7 +516,7 @@ export default function ScrumMasterCockpitView({
         </div>
       )}
 
-      {smTab === 'review' && (
+      {tab === 'review' && (
         <div>
           <div className="flex items-end gap-2 mb-4">
             <Field label="Sprint">
@@ -382,7 +546,7 @@ export default function ScrumMasterCockpitView({
         </div>
       )}
 
-      {smTab === 'patterns' && (
+      {tab === 'patterns' && (
         <div>
           <Button variant="action" onClick={runPatterns}>Detect patterns</Button>
           {!patternsResult ? <div className="mt-4"><EmptyState icon={Repeat} title="Cross-sprint patterns" subtitle="Recurring impediments, repeated estimation misses, and common scope-creep sources." /></div>

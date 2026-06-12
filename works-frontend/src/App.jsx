@@ -372,6 +372,10 @@ export default function App() {
   const [reviewResult, setReviewResult]         = useState(null);
   const [patternsResult, setPatternsResult]     = useState(null);
   const [riskSprintId, setRiskSprintId]         = useState('');
+  const [cockpitContext, setCockpitContext]     = useState(null); // { roleKey, tier, canManageSprints, canCreateItems, activeSprint, liveCeremony }
+  const [ceremonies, setCeremonies]             = useState([]);   // [{ session, counts }]
+  const [activeCeremony, setActiveCeremony]     = useState(null); // { session, attendance, counts }
+  const [newCeremony, setNewCeremony]           = useState({ ceremonyType: 'STANDUP', scheduledAt: '' });
   const [roadmapThemes, setRoadmapThemes]       = useState([]);
   const [newTheme, setNewTheme]                 = useState({ name: '', status: 'PLANNED', quarter: '', description: '' });
   const [ideas, setIdeas]                       = useState([]);
@@ -461,7 +465,7 @@ export default function App() {
   const [selectedViolations, setSelectedViolations] = useState([]);
   const [ruleBuilder, setRuleBuilder] = useState(null); // the rule being created/edited, or null
   const [ruleTestResult, setRuleTestResult] = useState(null);
-  const EMPTY_STATUS_METRICS = { durations: [], leadSeconds: null, cycleSeconds: null, completed: false, started: false };
+  const EMPTY_STATUS_METRICS = { durations: [], leadSeconds: null, cycleSeconds: null, leadRunning: false, cycleRunning: false };
   const [statusMetrics, setStatusMetrics] = useState(EMPTY_STATUS_METRICS);
   const [deleteUndoItem, setDeleteUndoItem] = useState(null);
   const deleteUndoTimer = useRef(null);
@@ -2021,7 +2025,44 @@ export default function App() {
     setView('smcockpit');
     const pid = i15ProjectId || (projects[0] && projects[0].id) || '';
     setI15ProjectId(pid);
-    if (pid) { fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
+    if (pid) { fetchCockpitContext(pid); fetchCeremonies(pid); fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
+  }
+  function fetchCockpitContext(pid) {
+    api.raw(`/cockpit/context?projectId=${pid}`).then(r => r.json())
+      .then(d => setCockpitContext(d && d.roleKey ? d : null)).catch(() => setCockpitContext(null));
+  }
+  function fetchCeremonies(pid) {
+    api.raw(`/ceremonies?projectId=${pid}`).then(r => r.json())
+      .then(d => setCeremonies(Array.isArray(d) ? d : [])).catch(() => setCeremonies([]));
+  }
+  function scheduleCeremony() {
+    const memberIds = (workspaceMembers.length ? workspaceMembers : users).map(m => m.id).filter(Boolean);
+    const scheduledAt = newCeremony.scheduledAt ? new Date(newCeremony.scheduledAt).toISOString() : null;
+    api.send(`/ceremonies`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId, ceremonyType: newCeremony.ceremonyType, scheduledAt, sprintId: cockpitContext?.activeSprint?.id || null, memberIds }) })
+      .then(d => { setActiveCeremony(d); setNewCeremony({ ceremonyType: 'STANDUP', scheduledAt: '' }); fetchCeremonies(i15ProjectId); showToast('Ceremony scheduled'); })
+      .catch(() => showToast('Failed to schedule ceremony', 'error'));
+  }
+  function openCeremony(id) {
+    api.raw(`/ceremonies/${id}`).then(r => r.json()).then(d => setActiveCeremony(d)).catch(reportError);
+  }
+  function startCeremony(id) {
+    api.send(`/ceremonies/${id}/start`, { method: 'POST' })
+      .then(d => { setActiveCeremony(d); fetchCeremonies(i15ProjectId); fetchCockpitContext(i15ProjectId); showToast('Ceremony is live'); })
+      .catch(() => showToast('Failed to start ceremony', 'error'));
+  }
+  function joinCeremony(id) {
+    api.send(`/ceremonies/${id}/join`, { method: 'POST' })
+      .then(d => { setActiveCeremony(d); fetchCeremonies(i15ProjectId); showToast('You joined the ceremony'); })
+      .catch(() => showToast('Failed to join — is the ceremony live?', 'error'));
+  }
+  function excuseCeremony(id, userId) {
+    api.send(`/ceremonies/${id}/excuse`, { method: 'POST', body: JSON.stringify({ userId }) })
+      .then(d => setActiveCeremony(d)).catch(() => showToast('Failed to excuse member', 'error'));
+  }
+  function completeCeremony(id) {
+    api.send(`/ceremonies/${id}/complete`, { method: 'POST' })
+      .then(d => { setActiveCeremony(d); fetchCeremonies(i15ProjectId); fetchCockpitContext(i15ProjectId); showToast('Ceremony complete — absentees recorded'); })
+      .catch(() => showToast('Failed to complete ceremony', 'error'));
   }
   function fetchImpediments(pid) {
     api.raw(`/impediments?projectId=${pid}`).then(r => r.json())
@@ -3608,6 +3649,21 @@ export default function App() {
           {view === 'smcockpit' && (
             <ScrumMasterCockpitView
               i15ProjectId={i15ProjectId}
+              cockpitContext={cockpitContext}
+              ceremonies={ceremonies}
+              activeCeremony={activeCeremony}
+              newCeremony={newCeremony}
+              currentUserId={currentUser?.id}
+              fetchCockpitContext={fetchCockpitContext}
+              fetchCeremonies={fetchCeremonies}
+              scheduleCeremony={scheduleCeremony}
+              openCeremony={openCeremony}
+              setActiveCeremony={setActiveCeremony}
+              setNewCeremony={setNewCeremony}
+              startCeremony={startCeremony}
+              joinCeremony={joinCeremony}
+              excuseCeremony={excuseCeremony}
+              completeCeremony={completeCeremony}
               smTab={smTab}
               impediments={impediments}
               newImpediment={newImpediment}

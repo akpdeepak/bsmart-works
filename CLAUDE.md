@@ -173,7 +173,7 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   Cap X + Admin Operations Center Cap Y), **17** (Universal Customization Engine Cap R), **18**
   (Mobile + Real-time + Performance Cap S), **19** (Enterprise Security + Compliance Certifications
   Cap T), and the Compliance/Service iterations (7–9).
-- **Flyway high-water mark:** **V76** (`V76__backfill_parent_links.sql`; note: V16 was
+- **Flyway high-water mark:** **V78** (`V78__ceremony_sessions_attendance.sql`; note: V16 was
   skipped, V23 does not exist; V50–V53 are iterations 16/17/19/18's migrations; V54–V57 are
   iteration 20's advanced-AI / marketplace / knowledge / customer-chat migrations; V58 = user locale
   + perf indexes; V59 = block-editor + SCIM; V60 = custom domains; V61–V65 = compliance escalation,
@@ -186,8 +186,11 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   on workflow_status — per-status lapse thresholds for the work-item status engine; V74 =
   status_changed_at on work_items — drives the time-in-status lapse indicator; V75 =
   attachment_type + url on attachments — Files section accepts external links/webpages; V76 =
-  backfill parent_id into work_item_links as PARENT links — hierarchy surfaced in the Links section).
-- **Next migration:** **`V77__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+  backfill parent_id into work_item_links as PARENT links — hierarchy surfaced in the Links
+  section; V77 = project_team_members — per-project team roles (V70 role_key vocabulary) for the
+  role-adaptive Sprint Cockpit; V78 = ceremony_sessions + ceremony_attendees — first-class sprint
+  ceremonies with per-member attendance).
+- **Next migration:** **`V79__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

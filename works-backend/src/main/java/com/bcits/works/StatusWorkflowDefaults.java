@@ -34,21 +34,29 @@ public final class StatusWorkflowDefaults {
     private static final String FLAME = "#E94E1B"; // escalated / blocked flag
 
     private static SeedStatus todo(String n, boolean init, Double w, Double b) {
-        return new SeedStatus(n, "TODO", GRAY, "NEUTRAL", init, w, b); }
+        return new SeedStatus(n, "TODO", GRAY, "NEUTRAL", init, w, b);
+    }
     private static SeedStatus wait(String n, Double w, Double b) {
-        return new SeedStatus(n, "TODO", AMBER, "NEUTRAL", false, w, b); }
+        return new SeedStatus(n, "TODO", AMBER, "NEUTRAL", false, w, b);
+    }
     private static SeedStatus prog(String n, Double w, Double b) {
-        return new SeedStatus(n, "IN_PROGRESS", NAVY, "NEUTRAL", false, w, b); }
+        return new SeedStatus(n, "IN_PROGRESS", NAVY, "NEUTRAL", false, w, b);
+    }
     private static SeedStatus hold(String n, Double w, Double b) {
-        return new SeedStatus(n, "IN_PROGRESS", AMBER, "NEUTRAL", false, w, b); }
+        return new SeedStatus(n, "IN_PROGRESS", AMBER, "NEUTRAL", false, w, b);
+    }
     private static SeedStatus review(String n, Double w, Double b) {
-        return new SeedStatus(n, "IN_PROGRESS", TEAL, "NEUTRAL", false, w, b); }
+        return new SeedStatus(n, "IN_PROGRESS", TEAL, "NEUTRAL", false, w, b);
+    }
     private static SeedStatus flag(String n, Double w, Double b) {
-        return new SeedStatus(n, "IN_PROGRESS", FLAME, "NEUTRAL", false, w, b); }
+        return new SeedStatus(n, "IN_PROGRESS", FLAME, "NEUTRAL", false, w, b);
+    }
     private static SeedStatus donePos(String n) {
-        return new SeedStatus(n, "DONE", TEAL, "POSITIVE", false, null, null); }
+        return new SeedStatus(n, "DONE", TEAL, "POSITIVE", false, null, null);
+    }
     private static SeedStatus doneNeg(String n) {
-        return new SeedStatus(n, "DONE", RED, "NEGATIVE", false, null, null); }
+        return new SeedStatus(n, "DONE", RED, "NEGATIVE", false, null, null);
+    }
 
     // ── The 10 templates ────────────────────────────────────────────────────────
     private static final Map<String, List<SeedStatus>> TEMPLATES = new LinkedHashMap<>();

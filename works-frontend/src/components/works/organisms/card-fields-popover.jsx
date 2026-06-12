@@ -254,16 +254,16 @@ export function CardFieldsPopover({ cardPrefs, workspaceId, customFieldDefs = []
               {tab === 'custom' && (
                 <form onSubmit={createCustomField} className="space-y-2.5">
                   <div>
-                    <label htmlFor="cf-field-name" className="text-xs text-neutral-600 dark:text-neutral-400 block mb-1">Field name</label>
+                    <label htmlFor="cfd-new-name" className="text-xs text-neutral-600 dark:text-neutral-400 block mb-1">Field name</label>
                     <input
-                      id="cf-field-name"
+                      id="cfd-new-name"
                       type="text" value={newName} onChange={e => setNewName(e.target.value)}
                       placeholder="e.g. Customer name, Region"
                       className="w-full text-xs px-2.5 py-1.5 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 outline-none focus:ring-1 focus:ring-brand-navy-tint/50"
                     />
                   </div>
                   <div>
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 block mb-1">Field type</p>
+                    <span className="text-xs text-neutral-600 dark:text-neutral-400 block mb-1">Field type</span>
                     <div className="grid grid-cols-4 gap-1" role="group" aria-label="Field type">
                       {FIELD_TYPES.map(t => (
                         <button key={t} type="button" onClick={() => setNewType(t)}
@@ -280,8 +280,8 @@ export function CardFieldsPopover({ cardPrefs, workspaceId, customFieldDefs = []
                   </div>
                   {newType === 'SELECT' && (
                     <div>
-                      <label htmlFor="cf-field-options" className="text-xs text-neutral-600 dark:text-neutral-400 block mb-1">Options <span className="text-neutral-400">(comma-separated)</span></label>
-                      <input id="cf-field-options" type="text" value={newOptions} onChange={e => setNewOptions(e.target.value)}
+                      <label htmlFor="cfd-new-options" className="text-xs text-neutral-600 dark:text-neutral-400 block mb-1">Options <span className="text-neutral-400">(comma-separated)</span></label>
+                      <input id="cfd-new-options" type="text" value={newOptions} onChange={e => setNewOptions(e.target.value)}
                         placeholder="Option A, Option B, Option C"
                         className="w-full text-xs px-2.5 py-1.5 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 outline-none focus:ring-1 focus:ring-brand-navy-tint/50"
                       />

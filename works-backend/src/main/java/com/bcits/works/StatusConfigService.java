@@ -67,6 +67,15 @@ public class StatusConfigService {
             .orElse(statuses.isEmpty() ? null : statuses.get(0).getName());
     }
 
+    /** Ordered statuses for one (workspace, type), seeding the type's default workflow if absent. */
+    @Transactional
+    public List<WorkflowStatus> statusesForType(String workspaceId, String typeKey) {
+        if (workspaceId == null || typeKey == null) return List.of();
+        if (workflowRepo.findByWorkspaceIdAndItemType(workspaceId, typeKey).isEmpty()) seedType(workspaceId, typeKey);
+        Workflow wf = primaryWorkflow(workspaceId, typeKey);
+        return wf == null ? List.of() : statusRepo.findByWorkflowIdOrderByPosition(wf.getId());
+    }
+
     /** Materialise default workflows for any built-in type that has none in this workspace. */
     @Transactional
     public void ensureSeeded(String workspaceId) {

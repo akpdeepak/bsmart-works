@@ -1,8 +1,12 @@
-// Work-item status timeline (mockup 05) — the honest cycle-time bar for a work item. Reads the
-// per-status durations the server already computes from the event log (GET
-// /work-items/{id}/status-durations, RBAC-enforced there) and renders a proportional bar, a
-// per-status legend, the total cycle time, and any "returned to <status>" reopen note. Drop-in:
-// <WorkItemStatusTimeline workItemId={id} />. Tokens only, WCAG-AA; all HTTP via apiClient (§3).
+// Work-item status timeline — the honest flow-metrics surface for a work item.
+//
+// Reads what the server computes from the event log (GET /work-items/{id}/status-durations,
+// RBAC-enforced there): per-status durations PLUS lead time and cycle time.
+//   • Lead time  = created → first Done-category status  (or → now while not done)
+//   • Cycle time = first In-Progress-category status → first Done  (or → now while running;
+//                  "Not started" when the item has never entered an in-progress status)
+// Renders the two headline metrics, a proportional per-status bar, a legend, and reopen notes.
+// Tokens only, WCAG-AA; all HTTP via apiClient (§3).
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/apiClient';
@@ -18,9 +22,37 @@ const CAT_BG = {
 
 const tone = (status) => CAT_BG[statusToCategory(status)] || 'bg-neutral-300';
 
-export function WorkItemStatusTimeline({ workItemId, durations: durationsProp }) {
-  // Controlled mode: when the parent already holds the durations, pass them in to avoid a 2nd fetch.
-  const controlled = durationsProp !== undefined;
+// Normalize the controlled prop / fetched payload to a metrics-shaped object.
+// Accepts: the metrics object {durations, leadSeconds, cycleSeconds, completed, started},
+// or a bare durations array (legacy / controlled tests).
+function normalize(raw) {
+  if (Array.isArray(raw)) return { durations: raw, leadSeconds: null, cycleSeconds: null, completed: null, started: null, hasMetrics: false };
+  if (raw && typeof raw === 'object') {
+    return {
+      durations: Array.isArray(raw.durations) ? raw.durations : [],
+      leadSeconds: raw.leadSeconds ?? null,
+      cycleSeconds: raw.cycleSeconds ?? null,
+      completed: raw.completed ?? null,
+      started: raw.started ?? null,
+      hasMetrics: true,
+    };
+  }
+  return { durations: [], leadSeconds: null, cycleSeconds: null, completed: null, started: null, hasMetrics: false };
+}
+
+function Metric({ label, value, hint }) {
+  return (
+    <div className="flex-1 min-w-0">
+      <p className="text-xs text-neutral-500 dark:text-neutral-400">{label}</p>
+      <p className="text-base font-bold font-mono text-neutral-900 dark:text-neutral-100 leading-tight">{value}</p>
+      <p className="text-xs text-neutral-400">{hint}</p>
+    </div>
+  );
+}
+
+export function WorkItemStatusTimeline({ workItemId, durations: durationsProp, metrics: metricsProp }) {
+  // Controlled mode: parent already holds the data (avoid a 2nd fetch).
+  const controlled = durationsProp !== undefined || metricsProp !== undefined;
   const [fetched, setFetched] = useState(null); // null = loading (fetch mode only)
   const [error, setError] = useState(null);
 
@@ -29,17 +61,17 @@ export function WorkItemStatusTimeline({ workItemId, durations: durationsProp })
     let active = true;
     Promise.resolve()
       .then(() => api.send(`/work-items/${encodeURIComponent(workItemId)}/status-durations`))
-      .then((rows) => { if (active) { setFetched(Array.isArray(rows) ? rows : []); setError(null); } })
-      .catch((e) => { if (active) { setError(e.message || 'Could not load the status timeline.'); setFetched([]); } });
+      .then((res) => { if (active) { setFetched(res ?? {}); setError(null); } })
+      .catch((e) => { if (active) { setError(e.message || 'Could not load the status timeline.'); setFetched({}); } });
     return () => { active = false; };
   }, [workItemId, controlled]);
 
-  const durations = controlled ? (Array.isArray(durationsProp) ? durationsProp : []) : fetched;
+  const raw = controlled ? (metricsProp ?? durationsProp) : fetched;
 
-  if (durations === null) {
+  if (!controlled && raw === null) {
     return (
       <section aria-busy="true" aria-label="Loading status timeline">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">Status timeline</p>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">Status timeline</p>
         <div className="h-2.5 w-full animate-pulse rounded-full bg-neutral-100 dark:bg-neutral-800" />
       </section>
     );
@@ -48,26 +80,42 @@ export function WorkItemStatusTimeline({ workItemId, durations: durationsProp })
   if (error) {
     return (
       <section>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">Status timeline</p>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">Status timeline</p>
         <p className="text-sm text-semantic-danger">{error}</p>
       </section>
     );
   }
 
+  const { durations, leadSeconds, cycleSeconds, completed, started, hasMetrics } = normalize(raw);
   const total = durations.reduce((sum, d) => sum + (d.totalSeconds || 0), 0);
   const reopened = durations.filter((d) => (d.timesEntered || 0) > 1);
 
+  const suffix = completed ? '' : ' so far';
+  const leadLabel = leadSeconds == null ? '—' : `${formatDuration(leadSeconds)}${suffix}`;
+  const cycleLabel = cycleSeconds == null
+    ? (started ? `${formatDuration(0)}${suffix}` : 'Not started')
+    : `${formatDuration(cycleSeconds)}${suffix}`;
+
   return (
     <section>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">Status timeline</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">Status timeline</p>
+
+      {hasMetrics && (
+        <div className="mb-3 flex gap-4 rounded-md bg-neutral-50 dark:bg-neutral-800/50 px-3 py-2">
+          <Metric label="Lead time" value={leadLabel} hint="created → done" />
+          <div className="w-px self-stretch bg-neutral-200 dark:bg-neutral-700" aria-hidden="true" />
+          <Metric label="Cycle time" value={cycleLabel} hint="in progress → done" />
+        </div>
+      )}
+
       {durations.length === 0 || total === 0 ? (
-        <p className="text-sm text-neutral-600">No status history yet — transitions appear here as the item moves.</p>
+        <p className="text-sm text-neutral-600 dark:text-neutral-400">No status history yet — transitions appear here as the item moves.</p>
       ) : (
         <>
           <div
             className="flex h-2.5 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800"
             role="img"
-            aria-label={`Total cycle time ${formatDuration(total)} across ${durations.length} status${durations.length === 1 ? '' : 'es'}`}
+            aria-label={`Time in workflow ${formatDuration(total)} across ${durations.length} status${durations.length === 1 ? '' : 'es'}`}
           >
             {durations.map((d) => {
               const pct = Math.round((d.totalSeconds / total) * 100);
@@ -95,7 +143,7 @@ export function WorkItemStatusTimeline({ workItemId, durations: durationsProp })
 
           <div className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-1">
             <span className="text-sm text-neutral-700 dark:text-neutral-300">
-              Total cycle time{' '}
+              Total time in workflow{' '}
               <span className="font-mono text-base font-bold text-neutral-900 dark:text-neutral-100">{formatDuration(total)}</span>
             </span>
             {reopened.map((d) => (

@@ -148,7 +148,7 @@ export function WorkItemDetailPanel({
   // attachments
   attachments, fileInputRef, handleUploadFile, handleDeleteAttachment, maxUploadMb,
   // activity
-  activity, statusDurations, activityEventFilter, setActivityEventFilter, setActivity, reportError,
+  activity, statusMetrics, activityEventFilter, setActivityEventFilter, setActivity, reportError,
   // per-type status configuration + lapse
   statusResolver,
 }) {
@@ -280,8 +280,8 @@ export function WorkItemDetailPanel({
               )}
 
               {/* Time-in-each-status journey bar (reuses the projection from the event log) */}
-              {statusDurations && statusDurations.length > 0 && (
-                <WorkItemStatusTimeline durations={statusDurations} />
+              {statusMetrics?.durations?.length > 0 && (
+                <WorkItemStatusTimeline metrics={statusMetrics} />
               )}
             </div>
 
@@ -900,9 +900,9 @@ export function WorkItemDetailPanel({
           {/* ACTIVITY TAB */}
           {detailTab === 'activity' && (
             <div>
-              {statusDurations.length > 0 && (
+              {statusMetrics?.durations?.length > 0 && (
                 <div className="mb-4 rounded-xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-700 dark:bg-neutral-800">
-                  <WorkItemStatusTimeline durations={statusDurations} />
+                  <WorkItemStatusTimeline metrics={statusMetrics} />
                 </div>
               )}
               <div className="flex items-center gap-2 mb-3 flex-wrap">

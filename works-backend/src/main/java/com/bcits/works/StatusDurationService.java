@@ -36,25 +36,83 @@ public class StatusDurationService {
     /** Total time and entry count for one status. */
     public record StatusDuration(String status, long totalSeconds, int timesEntered) { }
 
+    /**
+     * Lead/cycle metrics for a work item. {@code leadSeconds} = created → first DONE-category status
+     * (or → now while not done). {@code cycleSeconds} = first IN_PROGRESS-category status → first DONE
+     * (or → now while running); null when the item has never entered an in-progress status.
+     */
+    public record StatusTimelineMetrics(List<StatusDuration> durations, long leadSeconds,
+                                        Long cycleSeconds, boolean completed, boolean started) { }
+
     /** Load a work item's status timeline and project per-status durations. Empty if unknown. */
     public List<StatusDuration> forWorkItem(String workItemId) {
+        Loaded l = load(workItemId);
+        if (l == null) return List.of();
+        return compute(l.createdAt(), l.currentStatus(), l.changes(), OffsetDateTime.now());
+    }
+
+    /**
+     * Lead and cycle time, using a status-name → category resolver (TODO | IN_PROGRESS | DONE).
+     * Boundaries use the FIRST time each category is reached (reopens after Done don't move them).
+     */
+    public StatusTimelineMetrics metricsForWorkItem(String workItemId,
+                                                    java.util.function.Function<String, String> categoryOf) {
+        Loaded l = load(workItemId);
+        if (l == null) return new StatusTimelineMetrics(List.of(), 0, null, false, false);
+        return computeMetrics(l.createdAt(), l.currentStatus(), l.changes(), OffsetDateTime.now(), categoryOf);
+    }
+
+    /**
+     * Pure lead/cycle projection. Lead = createdAt → first DONE (or → now). Cycle = first IN_PROGRESS
+     * → first DONE (or → now); null when no IN_PROGRESS was ever entered. Boundaries are the FIRST
+     * time each category is reached. Unit-tested alongside {@link #compute}.
+     */
+    StatusTimelineMetrics computeMetrics(OffsetDateTime createdAt, String currentStatus,
+                                         List<StatusChange> changes, OffsetDateTime now,
+                                         java.util.function.Function<String, String> categoryOf) {
+        List<StatusDuration> durations = compute(createdAt, currentStatus, changes, now);
+        if (createdAt == null) return new StatusTimelineMetrics(durations, 0, null, false, false);
+
+        String initial = (!changes.isEmpty() && changes.get(0).from() != null)
+            ? changes.get(0).from() : currentStatus;
+        OffsetDateTime firstInProgress = "IN_PROGRESS".equals(cat(categoryOf, initial)) ? createdAt : null;
+        OffsetDateTime firstDone = "DONE".equals(cat(categoryOf, initial)) ? createdAt : null;
+        for (StatusChange c : changes) {
+            String category = cat(categoryOf, c.to());
+            if (firstInProgress == null && "IN_PROGRESS".equals(category)) firstInProgress = c.at();
+            if (firstDone == null && "DONE".equals(category)) firstDone = c.at();
+        }
+        boolean completed = firstDone != null;
+        boolean started = firstInProgress != null;
+        long leadSeconds = Math.max(0, seconds(createdAt, completed ? firstDone : now));
+        Long cycleSeconds = started ? Math.max(0, seconds(firstInProgress, completed ? firstDone : now)) : null;
+        return new StatusTimelineMetrics(durations, leadSeconds, cycleSeconds, completed, started);
+    }
+
+    private static String cat(java.util.function.Function<String, String> categoryOf, String status) {
+        String c = status == null ? null : categoryOf.apply(status);
+        return c == null ? "TODO" : c;
+    }
+
+    /** Item creation time, current status, and ordered status changes — or null if the item is unknown. */
+    private record Loaded(OffsetDateTime createdAt, String currentStatus, List<StatusChange> changes) { }
+
+    private Loaded load(String workItemId) {
         Map<String, Object> item;
         try {
-            item = jdbc.queryForMap(
-                "SELECT status, created_at FROM work_items WHERE id = ?", workItemId);
+            item = jdbc.queryForMap("SELECT status, created_at FROM work_items WHERE id = ?", workItemId);
         } catch (RuntimeException ex) {
-            return List.of();
+            return null;
         }
         String currentStatus = (String) item.get("status");
         OffsetDateTime createdAt = toOffset(item.get("created_at"));
-
         List<StatusChange> changes = new ArrayList<>();
         for (AppEvent e : events.findByAggregateIdOrderByOccurredAtAsc(workItemId)) {
             if ("STATUS_CHANGED".equals(e.getEventType())) {
                 changes.add(new StatusChange(e.getOldValue(), e.getNewValue(), e.getOccurredAt()));
             }
         }
-        return compute(createdAt, currentStatus, changes, OffsetDateTime.now());
+        return new Loaded(createdAt, currentStatus, changes);
     }
 
     /**

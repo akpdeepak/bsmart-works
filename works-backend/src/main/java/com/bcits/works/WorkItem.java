@@ -142,6 +142,8 @@ public class WorkItem {
     @Transient private List<String> tags;
     @Transient private boolean starred = false;
     @Transient private Map<String, Object> customFields = new HashMap<>();
+    /** Unified custom-field values (field_def id → value), attached to list responses for cards. */
+    @Transient private Map<String, Object> fieldValues = new HashMap<>();
 
     // ── Getters / setters ─────────────────────────────────────────────────────
 
@@ -293,4 +295,6 @@ public class WorkItem {
 
     public Map<String, Object> getCustomFields() { return customFields; }
     public void setCustomFields(Map<String, Object> v) { this.customFields = v != null ? v : new HashMap<>(); }
+    public Map<String, Object> getFieldValues() { return fieldValues; }
+    public void setFieldValues(Map<String, Object> v) { this.fieldValues = v != null ? v : new HashMap<>(); }
 }

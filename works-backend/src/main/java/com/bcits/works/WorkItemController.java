@@ -91,6 +91,7 @@ public class WorkItemController {
                 this::mapRow, userId, limit, offset);
         }
         attachTagsBatch(items);
+        attachFieldValuesBatch(items);
         attachStarred(items, userId);
         return items;
     }
@@ -106,6 +107,7 @@ public class WorkItemController {
             this::mapRow, id, userId);
         if (items.isEmpty()) throw ApiException.notFound("Work item", id); {
         attachTagsBatch(items);
+        attachFieldValuesBatch(items);
         }
         attachStarred(items, userId);
         return items.get(0);
@@ -122,6 +124,7 @@ public class WorkItemController {
             + "AND " + MEMBER_PROJECTS + " ORDER BY deleted_at DESC LIMIT ? OFFSET ?",
             this::mapRow, userId, limit, offset);
         attachTagsBatch(items);
+        attachFieldValuesBatch(items);
         return items;
     }
 
@@ -166,6 +169,7 @@ public class WorkItemController {
             + "WHERE si.user_id = ? AND wi.deleted_at IS NULL ORDER BY si.created_at DESC LIMIT ? OFFSET ?",
             this::mapRow, userId, limit, offset);
         attachTagsBatch(items);
+        attachFieldValuesBatch(items);
         items.forEach(i -> i.setStarred(true));
         return items;
     }
@@ -192,6 +196,7 @@ public class WorkItemController {
             return w;
         }, userId, userId, pattern, pattern, pattern);
         attachTagsBatch(items);
+        attachFieldValuesBatch(items);
         return items;
     }
 
@@ -309,6 +314,7 @@ public class WorkItemController {
     public List<WorkItem> myWorkItems() {
         List<WorkItem> items = repository.findByAssigneeId(authenticatedUser.id());
         attachTagsBatch(items);
+        attachFieldValuesBatch(items);
         return items;
     }
 
@@ -731,6 +737,30 @@ public class WorkItemController {
                           .add(rs.getString("tag")),
             ids.toArray());
         items.forEach(i -> i.setTags(tagsByItem.getOrDefault(i.getId(), new java.util.ArrayList<>())));
+    }
+
+    /**
+     * Attach unified custom-field values (field_def → value) to a list of items in one query, so
+     * cards can show custom fields without an N+1. Mirrors {@link #attachTagsBatch}. The value is the
+     * first non-null of text / number / json, as a display string.
+     */
+    private void attachFieldValuesBatch(List<WorkItem> items) {
+        if (items.isEmpty()) return;
+        List<String> ids = items.stream().map(WorkItem::getId).toList();
+        String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
+        java.util.Map<String, java.util.Map<String, Object>> byItem = new java.util.HashMap<>();
+        jdbc.query(
+            "SELECT work_item_id, field_def_id, value_text, value_number, value_json #>> '{}' AS value_json_text "
+            + "FROM work_item_field_value WHERE work_item_id IN (" + placeholders + ")",
+            (org.springframework.jdbc.core.RowCallbackHandler) rs -> {
+                Object v = rs.getString("value_text");
+                if (v == null) { Object n = rs.getObject("value_number"); v = n != null ? n.toString() : null; }
+                if (v == null) v = rs.getString("value_json_text");
+                byItem.computeIfAbsent(rs.getString("work_item_id"), k -> new java.util.HashMap<>())
+                      .put(rs.getString("field_def_id"), v);
+            },
+            ids.toArray());
+        items.forEach(i -> i.setFieldValues(byItem.getOrDefault(i.getId(), new java.util.HashMap<>())));
     }
 
     private void saveTags(String workItemId, List<String> tags) {

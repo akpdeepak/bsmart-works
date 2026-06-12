@@ -178,7 +178,7 @@ export default function BoardView({
 
 function WorkCard({ item, category, density, densityPad, iv, userName, customFieldDefs, statusResolver, onStar, onEdit, onDelete, onDragStart }) {
   const due = dueDays(item.dueDate);
-  const customVisible = customFieldDefs.filter(d => iv(`cfd_${d.id}`) && item.customFields?.[d.id] != null);
+  const customVisible = customFieldDefs.filter(d => iv(`fd_${d.id}`) && item.fieldValues?.[d.id] != null);
   // Time-in-status lapse — cards surface only the attention states (at risk / breached); the
   // detail panel shows the full picture. Done items don't carry an active lapse clock.
   const statusMeta = statusResolver?.metaFor(item.type, item.status) ?? null;
@@ -275,7 +275,7 @@ function WorkCard({ item, category, density, densityPad, iv, userName, customFie
         <div className="flex flex-wrap gap-1 mt-1.5">
           {customVisible.map(d => (
             <span key={d.id} className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded" title={d.name}>
-              {d.name}: {String(item.customFields[d.id])}
+              {d.name}: {String(item.fieldValues[d.id])}
             </span>
           ))}
         </div>

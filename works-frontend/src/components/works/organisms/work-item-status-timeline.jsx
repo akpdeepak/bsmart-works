@@ -26,18 +26,18 @@ const tone = (status) => CAT_BG[statusToCategory(status)] || 'bg-neutral-300';
 // Accepts: the metrics object {durations, leadSeconds, cycleSeconds, completed, started},
 // or a bare durations array (legacy / controlled tests).
 function normalize(raw) {
-  if (Array.isArray(raw)) return { durations: raw, leadSeconds: null, cycleSeconds: null, completed: null, started: null, hasMetrics: false };
+  if (Array.isArray(raw)) return { durations: raw, leadSeconds: null, cycleSeconds: null, leadRunning: false, cycleRunning: false, hasMetrics: false };
   if (raw && typeof raw === 'object') {
     return {
       durations: Array.isArray(raw.durations) ? raw.durations : [],
-      leadSeconds: raw.leadSeconds ?? null,
-      cycleSeconds: raw.cycleSeconds ?? null,
-      completed: raw.completed ?? null,
-      started: raw.started ?? null,
+      leadSeconds: raw.leadSeconds ?? 0,
+      cycleSeconds: raw.cycleSeconds ?? 0,
+      leadRunning: raw.leadRunning ?? false,
+      cycleRunning: raw.cycleRunning ?? false,
       hasMetrics: true,
     };
   }
-  return { durations: [], leadSeconds: null, cycleSeconds: null, completed: null, started: null, hasMetrics: false };
+  return { durations: [], leadSeconds: null, cycleSeconds: null, leadRunning: false, cycleRunning: false, hasMetrics: false };
 }
 
 function Metric({ label, value, hint }) {
@@ -86,15 +86,15 @@ export function WorkItemStatusTimeline({ workItemId, durations: durationsProp, m
     );
   }
 
-  const { durations, leadSeconds, cycleSeconds, completed, started, hasMetrics } = normalize(raw);
+  const { durations, leadSeconds, cycleSeconds, leadRunning, cycleRunning, hasMetrics } = normalize(raw);
   const total = durations.reduce((sum, d) => sum + (d.totalSeconds || 0), 0);
   const reopened = durations.filter((d) => (d.timesEntered || 0) > 1);
 
-  const suffix = completed ? '' : ' so far';
-  const leadLabel = leadSeconds == null ? '—' : `${formatDuration(leadSeconds)}${suffix}`;
-  const cycleLabel = cycleSeconds == null
-    ? (started ? `${formatDuration(0)}${suffix}` : 'Not started')
-    : `${formatDuration(cycleSeconds)}${suffix}`;
+  // Lead = time in To Do + In Progress; Cycle = time in In Progress. "so far" while the clock runs.
+  const leadLabel = leadSeconds == null ? '—' : `${formatDuration(leadSeconds)}${leadRunning ? ' so far' : ''}`;
+  const cycleLabel = cycleSeconds == null || (cycleSeconds === 0 && !cycleRunning)
+    ? '—'
+    : `${formatDuration(cycleSeconds)}${cycleRunning ? ' so far' : ''}`;
 
   return (
     <section>
@@ -102,9 +102,9 @@ export function WorkItemStatusTimeline({ workItemId, durations: durationsProp, m
 
       {hasMetrics && (
         <div className="mb-3 flex gap-4 rounded-md bg-neutral-50 dark:bg-neutral-800/50 px-3 py-2">
-          <Metric label="Lead time" value={leadLabel} hint="created → done" />
+          <Metric label="Lead time" value={leadLabel} hint="in To Do + In Progress" />
           <div className="w-px self-stretch bg-neutral-200 dark:bg-neutral-700" aria-hidden="true" />
-          <Metric label="Cycle time" value={cycleLabel} hint="in progress → done" />
+          <Metric label="Cycle time" value={cycleLabel} hint="in In Progress" />
         </div>
       )}
 

@@ -7,12 +7,6 @@ import { cn } from '@/lib/utils';
 import { ALL_TYPES, CATEGORIES, TYPES_BY_KEY, resolveTypeIcon } from '@/lib/work-item-types';
 import { getEffectiveSchema, defaultFormData } from '@/lib/type-field-schemas';
 
-// Pre-compute icon lookup at module load time so FormStep never creates a component
-// reference during render (avoids react-hooks/static-components lint error).
-const FORM_TYPE_ICONS = Object.fromEntries(
-  Object.entries(TYPES_BY_KEY).map(([key, t]) => [key, resolveTypeIcon(t.icon) ?? Package])
-);
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function typesByCategory(cat) {
@@ -273,7 +267,6 @@ const RAID_TYPES = ['RISK', 'ISSUE', 'ASSUMPTION', 'DEPENDENCY'];
 
 function FormStep({ typeKey, formData, onChange, onBack, onSubmit, projects, users, workItems, error }) {
   const typeDef = TYPES_BY_KEY[typeKey];
-  const Icon = FORM_TYPE_ICONS[typeKey] ?? Package;
   const schema = getEffectiveSchema(typeKey);
   const isRaid = RAID_TYPES.includes(typeKey);
 

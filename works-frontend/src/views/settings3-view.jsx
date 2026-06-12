@@ -11,6 +11,7 @@ import { onPressKey, cn } from '@/lib/utils';
 import { FIELD_SCHEMAS, loadFieldConfig, saveFieldConfig } from '@/lib/type-field-schemas';
 import { BRAND_NAVY } from '@/lib/brand-tokens';
 import StatusManagementTab from '@/components/works/organisms/status-management-tab';
+import FieldConfigEditor from '@/components/works/organisms/field-config-editor';
 
 // ── Field type display colours (badge behind the type name) ──────────────────
 const FIELD_TYPE_COLORS = {
@@ -303,6 +304,9 @@ function TypeFieldsTab() {
  */
 export default function Settings3View({
   settings3Tab,
+  fieldPrefs,
+  customFieldDefs,
+  onSaveFieldPrefs,
   workflows,
   expandedWorkflowId,
   workflowDetail,
@@ -384,6 +388,7 @@ export default function Settings3View({
           { key: 'permissions', label: 'Permissions' },
           { key: 'types',       label: 'Item Types' },
           { key: 'type-fields', label: 'Fields' },
+          { key: 'detail-fields', label: 'Detail Fields' },
         ].map(t => (
           <button key={t.key} onClick={() => {
             setSettings3Tab(t.key);
@@ -400,6 +405,11 @@ export default function Settings3View({
       {/* STATUS MANAGEMENT TAB */}
       {settings3Tab === 'statuses' && (
         <StatusManagementTab api={api} workspaceId={activeWorkspaceId} showToast={showToast} reportError={reportError} />
+      )}
+
+      {/* DETAIL FIELDS TAB — per-type visibility + order on the work item detail surface */}
+      {settings3Tab === 'detail-fields' && (
+        <FieldConfigEditor fieldPrefs={fieldPrefs} customFieldDefs={customFieldDefs || []} onSave={onSaveFieldPrefs} />
       )}
 
       {/* WORKFLOWS TAB */}

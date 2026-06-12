@@ -237,6 +237,11 @@ export default function App() {
       .then(updated => setTypeFieldPrefs(Array.isArray(updated) ? updated : []))
       .catch(reportError);
   };
+  // Bulk-replace a type's field prefs (visibility + order) — used by the Settings field editor.
+  const handleSaveFieldPrefs = (typeKey, prefList) =>
+    saveTypeFieldPrefs(api, activeWorkspaceId, typeKey, prefList)
+      .then(updated => setTypeFieldPrefs(Array.isArray(updated) ? updated : []))
+      .catch(reportError);
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false); // off-canvas drawer under md (G1)
   const [subRailCollapsed, setSubRailCollapsed] = useState(false);
@@ -3343,6 +3348,9 @@ export default function App() {
           {view === 'settings3' && (
             <Settings3View
               settings3Tab={settings3Tab}
+              fieldPrefs={fieldPrefs}
+              customFieldDefs={customFieldDefs}
+              onSaveFieldPrefs={handleSaveFieldPrefs}
               workflows={workflows}
               expandedWorkflowId={expandedWorkflowId}
               workflowDetail={workflowDetail}

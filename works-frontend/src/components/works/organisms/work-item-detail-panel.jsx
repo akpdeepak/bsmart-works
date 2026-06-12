@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import {
-  Star, X, ArrowUp, CornerDownRight, Reply, Sparkles,
+  Star, X, CornerDownRight, Reply, Sparkles,
   Upload, Image as ImageIcon, ShieldCheck, ArrowRight,
   ClipboardList, IndentIncrease, IndentDecrease, Link2, ExternalLink,
 } from 'lucide-react';
@@ -14,6 +14,7 @@ import { LapseBadge } from '@/components/works/atoms/lapse-badge';
 import { computeLapse, lapseProgress } from '@/lib/status-lapse';
 import { WorkItemStatusTimeline } from '@/components/works/organisms/work-item-status-timeline';
 import { AcceptanceCriteria } from '@/components/works/organisms/acceptance-criteria';
+import { WorkItemSearchPicker } from '@/components/works/organisms/work-item-search-picker';
 import { api } from '@/lib/apiClient';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { renderMd, onPressKey } from '@/lib/utils';
@@ -143,7 +144,8 @@ export function WorkItemDetailPanel({
   replyingTo, setReplyingTo, replyBody, setReplyBody, addReply,
   mentionOpen, mentionQuery, insertMention,
   // links
-  links, newLink, setNewLink, handleDeleteLink, handleAddLink,
+  links, newLink, setNewLink, handleDeleteLink,
+  handleCreateLink, handleSetParent, handleAddChild, handleRemoveChild,
   // attachments
   attachments, fileInputRef, handleUploadFile, handleAttachLink, handleDeleteAttachment, maxUploadMb,
   // activity
@@ -352,26 +354,22 @@ export function WorkItemDetailPanel({
               </div>
             </div>
 
-            <div>
-              <label htmlFor="detail-parent-id" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Parent Item</label>
-              <select id="detail-parent-id" value={selectedItem.parentId || ''}
-                onChange={e => { const u = { ...selectedItem, parentId: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
-                className="input">
-                <option value="">No parent</option>
-                {workItems.filter(i => i.id !== selectedItem.id && (i.type === 'EPIC' || i.type === 'STORY')).map(i => (
-                  <option key={i.id} value={i.id}>{i.id} — {i.title}</option>
-                ))}
-              </select>
-              {selectedItem.parentId && (() => {
-                const parent = workItems.find(i => i.id === selectedItem.parentId);
-                return parent ? (
-                  <button type="button" className="mt-1.5 flex items-center gap-2 text-xs text-brand-navy hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
-                    onClick={() => setSelectedItem(parent)} aria-label={`Navigate to parent: ${parent.title}`}>
-                    <span aria-hidden="true"><ArrowUp className="inline-block h-3.5 w-3.5 align-text-bottom" /></span><TypeBadge type={parent.type} compact /><span>{parent.title}</span>
-                  </button>
-                ) : null;
-              })()}
-            </div>
+            {/* Parent shown read-only here; set/clear it (and children) in the Links tab. */}
+            {selectedItem.parentId && (() => {
+              const parent = workItems.find(i => i.id === selectedItem.parentId);
+              return (
+                <div>
+                  <span className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Parent</span>
+                  {parent ? (
+                    <button type="button" onClick={() => setSelectedItem(parent)}
+                      className="flex items-center gap-1.5 text-xs text-brand-navy hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded min-w-0"
+                      aria-label={`Navigate to parent: ${parent.title}`}>
+                      <TypeBadge type={parent.type} compact /><span className="truncate">{parent.autoId || parent.id} · {parent.title}</span>
+                    </button>
+                  ) : <span className="text-xs text-neutral-500 font-mono">{selectedItem.parentId}</span>}
+                </div>
+              );
+            })()}
 
             {/* sub-items rendered in the main content column below */}
 
@@ -540,7 +538,7 @@ export function WorkItemDetailPanel({
                     'ac-gen',
                     () => aiClient.generate(activeWorkspaceId, 'acceptance_criteria', { item: selectedItem }),
                     res => {
-                      const ac = res?.result || res?.text || '';
+                      const ac = res?.draft || '';
                       if (ac) { const u = { ...selectedItem, acceptanceCriteria: ac }; setSelectedItem(u); handleUpdateItem(u); }
                     },
                     'Enable AI to generate acceptance criteria',
@@ -786,71 +784,93 @@ export function WorkItemDetailPanel({
             </div>
           )}
 
-          {/* LINKS TAB */}
-          {detailTab === 'links' && (
-            <div>
-              {links.length > 0 && (
-                <div className="mb-4 bg-neutral-50 dark:bg-neutral-800 rounded-xl p-4 border border-neutral-100 dark:border-neutral-700">
-                  <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">Link Graph</p>
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="bg-brand-navy text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm max-w-full truncate">
-                      {selectedItem.id}
+          {/* LINKS TAB — hierarchy (parent/child) + typed relationships, all via work-item search */}
+          {detailTab === 'links' && (() => {
+            const HIER = new Set(['PARENT', 'CHILD']);
+            const relLinks = links.filter(l => !HIER.has(l.linkType));
+            const parent = selectedItem.parentId ? workItems.find(i => i.id === selectedItem.parentId) : null;
+            const linkedIds = [selectedItem.id,
+              ...(selectedItem.parentId ? [selectedItem.parentId] : []),
+              ...itemChildren.map(c => c.id), ...relLinks.map(l => l.targetId)];
+            const catOf = (c) => statusResolver ? statusResolver.categoryOf(c.type, c.status) : statusToCategory(c.status);
+            const REL_TYPES = ['RELATES_TO', 'BLOCKS', 'BLOCKED_BY', 'DUPLICATES'];
+            const rowCls = 'flex items-center gap-2 p-2 rounded-lg border border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800';
+            return (
+            <div className="space-y-5">
+              {/* Hierarchy */}
+              <div>
+                <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2">Hierarchy</p>
+                <div className="mb-3">
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-1">Parent</p>
+                  {selectedItem.parentId ? (
+                    <div className={rowCls}>
+                      {parent ? <>
+                        <TypeBadge type={parent.type} compact />
+                        <button onClick={() => setSelectedItem(parent)} className="flex-1 min-w-0 text-left text-sm text-neutral-900 dark:text-neutral-100 truncate hover:text-brand-navy">
+                          <span className="font-mono text-xs text-neutral-500 mr-1">{parent.autoId || parent.id}</span>{parent.title}
+                        </button>
+                      </> : <span className="flex-1 font-mono text-xs">{selectedItem.parentId}</span>}
+                      <button onClick={() => handleSetParent(null)} className="text-neutral-300 hover:text-semantic-danger flex-shrink-0" aria-label="Remove parent"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                     </div>
-                    <div className="w-full space-y-1.5">
-                      {links.map(l => {
-                        const LINK_COLORS = {
-                          BLOCKS:      'border-semantic-danger bg-semantic-danger-surface text-semantic-danger',
-                          BLOCKED_BY:  'border-semantic-danger bg-semantic-danger-surface text-semantic-danger',
-                          RELATES_TO:  'border-brand-navy-tint bg-brand-navy/5 text-brand-navy',
-                          DUPLICATES:  'border-semantic-warning bg-semantic-warning-surface text-semantic-warning',
-                          PARENT:      'border-neutral-300 bg-neutral-100 text-neutral-700',
-                          CHILD:       'border-semantic-success bg-semantic-success/10 text-semantic-success',
-                        };
-                        const colorClass = LINK_COLORS[l.linkType] || LINK_COLORS.RELATES_TO;
-                        return (
-                          <div key={l.id} className="flex items-center gap-2">
-                            <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-700"></div>
-                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded border ${colorClass} flex-shrink-0`}>
-                              {l.linkType?.replace('_', ' ')}
-                            </span>
-                            <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-700"></div>
-                            <button type="button" className={`text-xs font-semibold px-2 py-1 rounded-lg border ${colorClass} cursor-pointer hover:opacity-80 truncate max-w-32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40`}
-                              onClick={() => { const t = workItems.find(i => i.id === l.targetId); if (t) setSelectedItem(t); }}
-                              title={l.targetTitle || l.targetId} aria-label={`Navigate to ${l.targetId}`}>
-                              {l.targetId}
-                            </button>
-                          </div>
-                        );
-                      })}
+                  ) : (
+                    <WorkItemSearchPicker placeholder="Search to set a parent…" excludeIds={linkedIds}
+                      onSelect={(item) => handleSetParent(item.id)} />
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-1">Children ({itemChildren.length})</p>
+                  {itemChildren.length > 0 && (
+                    <div className="space-y-1 mb-2">
+                      {itemChildren.map(child => (
+                        <div key={child.id} className={rowCls}>
+                          <TypeBadge type={child.type} compact />
+                          <button onClick={() => setSelectedItem(child)} className="flex-1 min-w-0 text-left text-sm text-neutral-900 dark:text-neutral-100 truncate hover:text-brand-navy">
+                            <span className="font-mono text-xs text-neutral-500 mr-1">{child.autoId || child.id}</span>{child.title}
+                          </button>
+                          <StatusBadge category={catOf(child)}>{child.status}</StatusBadge>
+                          <button onClick={() => handleRemoveChild(child.id)} className="text-neutral-300 hover:text-semantic-danger flex-shrink-0" aria-label="Remove child"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                        </div>
+                      ))}
                     </div>
+                  )}
+                  <WorkItemSearchPicker placeholder="Search to add a child…" excludeIds={linkedIds}
+                    onSelect={(item) => handleAddChild(item)} />
+                </div>
+              </div>
+
+              {/* Relationships */}
+              <div>
+                <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2">Relationships</p>
+                {relLinks.length === 0 && <p className="text-xs text-neutral-500 mb-2">No linked items yet.</p>}
+                {relLinks.length > 0 && (
+                  <div className="space-y-1 mb-2">
+                    {relLinks.map(l => {
+                      const t = workItems.find(i => i.id === l.targetId);
+                      return (
+                        <div key={l.id} className={rowCls}>
+                          <span className="text-xs font-semibold bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded uppercase flex-shrink-0">{l.linkType?.replace('_', ' ')}</span>
+                          <button onClick={() => t && setSelectedItem(t)} className="flex-1 min-w-0 text-left text-sm text-neutral-900 dark:text-neutral-100 truncate hover:text-brand-navy">
+                            <span className="font-mono text-xs text-neutral-500 mr-1">{l.targetId}</span>{l.targetTitle || ''}
+                          </button>
+                          <button onClick={() => handleDeleteLink(l.id)} className="text-neutral-300 hover:text-semantic-danger flex-shrink-0" aria-label="Remove link"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <div className="flex gap-2 items-start">
+                  <select value={newLink.linkType} onChange={e => setNewLink(p => ({ ...p, linkType: e.target.value }))} className="input w-32 flex-shrink-0">
+                    {REL_TYPES.map(t => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
+                  </select>
+                  <div className="flex-1 min-w-0">
+                    <WorkItemSearchPicker placeholder="Search to link…" excludeIds={linkedIds}
+                      onSelect={(item) => handleCreateLink(item.id, newLink.linkType || 'RELATES_TO')} />
                   </div>
                 </div>
-              )}
-              {links.length === 0 && <p className="text-xs text-neutral-600 text-center py-4">No links yet.</p>}
-              <div className="space-y-2 mb-4">
-                {links.map(l => (
-                  <div key={l.id} className="flex items-center gap-3 p-2.5 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700">
-                    <span className="text-xs font-semibold bg-neutral-200 text-neutral-600 px-1.5 py-0.5 rounded uppercase">{l.linkType?.replace('_', ' ')}</span>
-                    <span className="flex-1 text-sm text-neutral-900 font-mono">{l.targetId}</span>
-                    {l.targetTitle && <span className="text-xs text-neutral-600 dark:text-neutral-400 truncate max-w-24">{l.targetTitle}</span>}
-                    <button onClick={() => handleDeleteLink(l.id)} className="text-neutral-300 hover:text-semantic-danger text-xs" aria-label="Remove link"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <select value={newLink.linkType} onChange={e => setNewLink(p => ({ ...p, linkType: e.target.value }))} className="input w-36">
-                  {['BLOCKS','BLOCKED_BY','RELATES_TO','DUPLICATES','PARENT','CHILD'].map(t => <option key={t} value={t}>{t.replace('_',' ')}</option>)}
-                </select>
-                <select value={newLink.targetId} onChange={e => setNewLink(p => ({ ...p, targetId: e.target.value }))} className="input flex-1">
-                  <option value="">Select item...</option>
-                  {workItems.filter(i => i.id !== selectedItem.id).map(i => (
-                    <option key={i.id} value={i.id}>{i.id} — {i.title}</option>
-                  ))}
-                </select>
-                <Button size="sm" onClick={handleAddLink}>Link</Button>
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* ATTACHMENTS TAB */}
           {detailTab === 'attachments' && (

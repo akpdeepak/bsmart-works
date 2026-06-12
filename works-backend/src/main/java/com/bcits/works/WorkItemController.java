@@ -19,7 +19,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.OffsetDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -111,6 +110,8 @@ public class WorkItemController {
         attachStarred(items, userId);
         return items.get(0);
     }
+
+    @GetMapping("/trash")
     public List<WorkItem> getTrash(@RequestParam(defaultValue = "0") int page,
                                    @RequestParam(defaultValue = "50") int size) {
         String userId = authenticatedUser.id();
@@ -358,6 +359,7 @@ public class WorkItemController {
 
         WorkItem saved = repository.save(newItem);
         persistCustomFields(saved.getId(), newItem.getCustomFields());
+        syncParentLink(saved.getId(), saved.getParentId());
 
         if (newItem.getTags() != null) {
             saveTags(saved.getId(), newItem.getTags());
@@ -486,6 +488,7 @@ public class WorkItemController {
             existing.setVersion(ConcurrencyGuard.nextVersion(existing.getVersion()));
 
             WorkItem saved = repository.save(existing);
+            syncParentLink(id, saved.getParentId());
             if (updatedItem.getCustomFields() != null) {
                 persistCustomFields(id, updatedItem.getCustomFields());
             }
@@ -616,11 +619,56 @@ public class WorkItemController {
         item.setParentId(newParentId);
         item.setVersion(ConcurrencyGuard.nextVersion(item.getVersion()));
         WorkItem saved = repository.save(item);
+        syncParentLink(id, newParentId);
         eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "parentId",
             oldParentId != null ? oldParentId : "none",
             newParentId != null ? newParentId : "none");
         attachTags(saved);
         return saved;
+    }
+
+    @Operation(summary = "Set or clear the parent (Links hierarchy)",
+               description = "Sets parent_id and projects the PARENT link. Validates the hierarchy "
+                   + "rules; unlike move, applies to any type. parentId null/blank clears the parent.")
+    @PutMapping("/{id}/parent")
+    public WorkItem setParent(@PathVariable String id, @RequestBody Map<String, String> body) {
+        String userId = authenticatedUser.id();
+        WorkItem item = repository.findById(id)
+            .orElseThrow(() -> ApiException.notFound("Work item", id));
+        String wsId = rbac.workspaceForProject(item.getProjectId());
+        if (wsId != null && !rbac.canEdit(userId, wsId, item.getCreatedBy(), item.getAssigneeId())) {
+            throw ApiException.forbidden("You do not have permission to edit this work item.");
+        }
+        String newParentId = body.get("parentId");
+        if (newParentId != null && newParentId.isBlank()) newParentId = null;
+        if (id.equals(newParentId)) {
+            throw ApiException.badRequest("INVALID_PARENT", "An item cannot be its own parent.");
+        }
+        if (newParentId != null) validateParentType(newParentId, item.getType());
+        String oldParentId = item.getParentId();
+        item.setParentId(newParentId);
+        item.setVersion(ConcurrencyGuard.nextVersion(item.getVersion()));
+        WorkItem saved = repository.save(item);
+        syncParentLink(id, newParentId);
+        eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "parentId",
+            oldParentId != null ? oldParentId : "none", newParentId != null ? newParentId : "none");
+        attachTags(saved);
+        return saved;
+    }
+
+    /**
+     * Projects hierarchy into the links table: keeps exactly one PARENT link per child
+     * ({@code child → parent}) in sync with {@code work_items.parent_id}. parent_id is the single
+     * write path (board/backlog read it); this mirror lets the Links surface show parent/child
+     * alongside typed links without a second write path (V76).
+     */
+    private void syncParentLink(String childId, String parentId) {
+        jdbc.update("DELETE FROM work_item_links WHERE source_id = ? AND link_type = 'PARENT'", childId);
+        if (parentId != null && !parentId.isBlank()) {
+            jdbc.update("INSERT INTO work_item_links (source_id, target_id, link_type, created_at) "
+                + "VALUES (?, ?, 'PARENT', NOW()) ON CONFLICT (source_id, target_id, link_type) DO NOTHING",
+                childId, parentId);
+        }
     }
 
     /** Enforces the parent→child type hierarchy. Throws 422 if the parent type does not allow childType. */

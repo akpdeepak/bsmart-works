@@ -37,8 +37,9 @@ public class TypeFieldPrefController {
     @Operation(summary = "All per-type field prefs for a workspace")
     @GetMapping
     public List<TypeFieldPref> list(@RequestParam String workspaceId) {
-        if (rbac.getUserTier(authenticatedUser.id(), workspaceId) < 1)
+        if (rbac.getUserTier(authenticatedUser.id(), workspaceId) < 1) {
             throw ApiException.notFound("Workspace", workspaceId);
+        }
         return repo.findByWorkspaceId(workspaceId);
     }
 

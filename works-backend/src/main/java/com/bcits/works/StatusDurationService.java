@@ -82,8 +82,12 @@ public class StatusDurationService {
         long lead = 0, cycle = 0;
         for (StatusDuration d : durations) {
             String category = cat(categoryOf, d.status());
-            if ("IN_PROGRESS".equals(category)) { cycle += d.totalSeconds(); lead += d.totalSeconds(); }
-            else if ("TODO".equals(category))  { lead += d.totalSeconds(); }
+            if ("IN_PROGRESS".equals(category)) {
+                cycle += d.totalSeconds();
+                lead += d.totalSeconds();
+            } else if ("TODO".equals(category)) {
+                lead += d.totalSeconds();
+            }
             // DONE is excluded from both lead and cycle.
         }
         String currentCategory = cat(categoryOf, currentStatus);

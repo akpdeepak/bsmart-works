@@ -39,8 +39,9 @@ public class CustomFieldDefinitionController {
     @Operation(summary = "List custom field definitions for a workspace")
     @GetMapping
     public List<CustomFieldDefinition> list(@RequestParam String workspaceId) {
-        if (rbac.getUserTier(authenticatedUser.id(), workspaceId) < 1)
+        if (rbac.getUserTier(authenticatedUser.id(), workspaceId) < 1) {
             throw ApiException.notFound("Workspace", workspaceId);
+        }
         return repo.findActiveByWorkspaceId(workspaceId);
     }
 

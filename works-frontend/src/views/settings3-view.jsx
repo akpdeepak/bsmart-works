@@ -908,7 +908,7 @@ export default function Settings3View({
                 <select id="vis-visibility" className="input text-sm" value={newFieldVisForm.visibility}
                   onChange={e => setNewFieldVisForm(f => ({ ...f, visibility: e.target.value }))}>
                   <option value="EDITABLE">EDITABLE</option>
-                  <option value="READONLY">READ ONLY</option>
+                  <option value="READ_ONLY">READ ONLY</option>
                   <option value="HIDDEN">HIDDEN</option>
                 </select>
               </div>
@@ -936,7 +936,7 @@ export default function Settings3View({
                       </td>
                       <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">{fv.roleId}</td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded ${fv.visibility === 'HIDDEN' ? 'bg-semantic-danger-surface text-semantic-danger' : fv.visibility === 'READONLY' ? 'bg-semantic-warning-surface text-semantic-warning' : 'bg-semantic-success-surface text-semantic-success'}`}>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded ${fv.visibility === 'HIDDEN' ? 'bg-semantic-danger-surface text-semantic-danger' : fv.visibility === 'READ_ONLY' ? 'bg-semantic-warning-surface text-semantic-warning' : 'bg-semantic-success-surface text-semantic-success'}`}>
                           {fv.visibility}
                         </span>
                       </td>

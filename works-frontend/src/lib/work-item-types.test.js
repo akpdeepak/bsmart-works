@@ -4,27 +4,38 @@ import { TYPES, TYPE_ICON_SET, LEGACY_TYPE_ICON, resolveTypeIcon } from './work-
 // Pins the spec-mandated concept→icon map (WRK-BR08) so icon drift is caught by CI.
 describe('work-item-types', () => {
   describe('TYPES — spec-mandated icon mapping (WRK-BR08)', () => {
-    it('ships exactly the 16 built-in types (17-type taxonomy)', () => {
-      expect(Object.keys(TYPES)).toEqual(
-        expect.arrayContaining([
-          // DELIVERY
-          'Capability', 'Product', 'Initiative', 'Theme',
-          'Epic', 'Story', 'Bug', 'Task', 'Activity',
-          // RAID
-          'Risk', 'Issue', 'Assumption', 'Dependency',
-          // SERVICE
-          'Incident', 'HR Service Request', 'IT Service Request',
-        ])
-      );
+    const allTypeLabels = [
+      // Delivery (9)
+      'Capability', 'Product', 'Initiative', 'Theme', 'Epic',
+      'Story', 'Bug', 'Task', 'Activity',
+      // RAID (4)
+      'Risk', 'Issue', 'Assumption', 'Dependency',
+      // Service (3)
+      'Incident', 'HR Service Request', 'IT Service Request',
+    ];
+
+    it('ships exactly the 16 built-in types', () => {
+      expect(Object.keys(TYPES)).toEqual(expect.arrayContaining(allTypeLabels));
       expect(Object.keys(TYPES)).toHaveLength(16);
     });
 
     it('uses the locked concept→icon map from the spec', () => {
+      // Delivery
+      expect(TYPES.Capability.icon).toBe('target');
+      expect(TYPES.Product.icon).toBe('package');
+      expect(TYPES.Initiative.icon).toBe('rocket');
+      expect(TYPES.Theme.icon).toBe('layers');
       expect(TYPES.Epic.icon).toBe('zap');
       expect(TYPES.Story.icon).toBe('book-open');
-      expect(TYPES.Task.icon).toBe('check-square');
       expect(TYPES.Bug.icon).toBe('bug');
+      expect(TYPES.Task.icon).toBe('check-square');
       expect(TYPES.Activity.icon).toBe('corner-down-right');
+      // RAID
+      expect(TYPES.Risk.icon).toBe('alert-triangle');
+      expect(TYPES.Issue.icon).toBe('flame');
+      expect(TYPES.Assumption.icon).toBe('lightbulb');
+      expect(TYPES.Dependency.icon).toBe('git-branch');
+      // Service
       expect(TYPES.Incident.icon).toBe('shield');
       expect(TYPES['HR Service Request'].icon).toBe('users');
       expect(TYPES['IT Service Request'].icon).toBe('wrench');

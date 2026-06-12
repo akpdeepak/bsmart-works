@@ -277,4 +277,10 @@ public class WorkItem {
 
     public String getBusinessJustification() { return businessJustification; }
     public void setBusinessJustification(String v) { this.businessJustification = v; }
+
+    // ── Product association (Incident / IT Service Request) ───────────────────
+    /** Product this Incident or IT service request is raised against. */
+    private String productId;
+    public String getProductId() { return productId; }
+    public void setProductId(String v) { this.productId = v; }
 }

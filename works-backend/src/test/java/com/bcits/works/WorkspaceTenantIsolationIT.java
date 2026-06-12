@@ -102,7 +102,7 @@ class WorkspaceTenantIsolationIT {
             WS_A, USER_A, "MEMBER");
         jdbc.update(
             "INSERT INTO projects(id, workspace_id, name, key_prefix, slug, created_at) VALUES (?,?,?,?,?,?)",
-            PROJ_A, WS_A, "Isolation Project A", "ISOA", "isoa", now);
+            PROJ_A, WS_A, "Isolation Project A", "ISOA", "isol-proj-a", now);
 
         // Seed 3 items in workspace A
         for (int i = 1; i <= 3; i++) {
@@ -123,7 +123,7 @@ class WorkspaceTenantIsolationIT {
             WS_B, USER_B, "MEMBER");
         jdbc.update(
             "INSERT INTO projects(id, workspace_id, name, key_prefix, slug, created_at) VALUES (?,?,?,?,?,?)",
-            PROJ_B, WS_B, "Isolation Project B", "ISOB", "isob", now);
+            PROJ_B, WS_B, "Isolation Project B", "ISOB", "isol-proj-b", now);
 
         // Seed 5 items in workspace B
         for (int i = 1; i <= 5; i++) {

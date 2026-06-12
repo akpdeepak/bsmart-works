@@ -246,6 +246,7 @@ public class WorkItemController {
         try { w.setRequestedForId(rs.getString("requested_for_id")); } catch (Exception ignored) {}
         try { var nd = rs.getDate("needed_by_date");
               w.setNeededByDate(nd != null ? nd.toLocalDate() : null); } catch (Exception ignored) {}
+
         try { w.setItemCategory(rs.getString("item_category")); } catch (Exception ignored) {}
         try { w.setSubArea(rs.getString("sub_area")); } catch (Exception ignored) {}
         try { w.setDepartment(rs.getString("department")); } catch (Exception ignored) {}
@@ -272,6 +273,7 @@ public class WorkItemController {
         try { w.setClosureNotes(rs.getString("closure_notes")); } catch (Exception ignored) {}
         try { w.setStakeholderUpdate(rs.getString("stakeholder_update")); } catch (Exception ignored) {}
         try { w.setSlaBreachFlag(rs.getBoolean("sla_breach_flag")); } catch (Exception ignored) {}
+        try { w.setProductId(rs.getString("product_id")); } catch (Exception ignored) {}
         return w;
     }
 
@@ -433,6 +435,7 @@ public class WorkItemController {
             existing.setImpactIfDelayed(updatedItem.getImpactIfDelayed());
             existing.setExpectedResolutionDate(updatedItem.getExpectedResolutionDate());
             existing.setBusinessJustification(updatedItem.getBusinessJustification());
+            existing.setProductId(updatedItem.getProductId());
             existing.setAffectedSystem(updatedItem.getAffectedSystem());
             existing.setBusinessService(updatedItem.getBusinessService());
             existing.setResolutionSummary(updatedItem.getResolutionSummary());

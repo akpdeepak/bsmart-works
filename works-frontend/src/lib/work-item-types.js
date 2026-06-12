@@ -2,7 +2,7 @@ import {
   SquareCheck, BookOpen, Bug, Zap, CornerDownRight, Flame, Package,
   ClipboardList, Target, Wrench, Rocket, Shield, Flag, Lightbulb,
   Star, FileText, Gauge, Layers, GitBranch, AlertTriangle, Headphones,
-  Users, Lock, Tag, Briefcase,
+  Users, Lock, Tag, Briefcase, Ticket,
 } from 'lucide-react';
 
 // Work-item type vocabulary — 16 built-in types across three categories:

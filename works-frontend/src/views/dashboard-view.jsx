@@ -8,6 +8,7 @@ import { onPressKey } from '@/lib/utils';
 import { TIER } from '@/lib/nav-model';
 import { DonutChart, BarChart, SegmentBar, DayBars, PairedBars } from '@/components/works/molecules';
 import { TodayCanvas } from '@/components/works/organisms/today-canvas';
+import { TodayWidgetPicker } from '@/components/works/organisms/today-widget-picker';
 import { aggregateByDimension } from '@/lib/dashboard-metrics';
 import { builtinTodayLayout, widgetsToLayout, nextSpan } from '@/lib/today-layouts';
 import {
@@ -191,9 +192,53 @@ function widgetLabel(w) {
   return w.type.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function AddWidgetMenu({ addable, onAdd }) {
+// Renders a configured data widget's result per its viz (slice 5). Result comes from the
+// /widget-data executor: { shape, value | series | rows } or { error }.
+function renderDataViz(viz, result) {
+  if (viz === 'scorecard') {
+    return <p className="text-3xl font-bold text-brand-navy dark:text-white">{result.value ?? result.series?.length ?? result.rows?.length ?? 0}</p>;
+  }
+  if (viz === 'bar') return <BarChart data={(result.series || []).map((s) => ({ label: String(s.label), value: Number(s.value) }))} />;
+  if (viz === 'donut') return <DonutChart data={(result.series || []).map((s) => ({ label: String(s.label), value: Number(s.value) }))} />;
+  const rows = result.rows || [];
+  if (!rows.length) return <Empty msg="No matching items." />;
+  return (
+    <table className="w-full text-sm">
+      <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+        {rows.slice(0, 8).map((r) => (
+          <tr key={r.id}>
+            <td className="py-2 pr-2"><span className="flex min-w-0 items-center gap-2">
+              <span className="flex-shrink-0 font-mono text-xs text-neutral-400">{r.id}</span>
+              <span className="truncate text-neutral-900 dark:text-neutral-100">{r.title}</span>
+            </span></td>
+            <td className="py-2 text-right">{r.status && <StatusBadge category={statusToCategory(r.status)}>{r.status}</StatusBadge>}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+// Generic registry merged into every role's registry, so a saved layout's `data` widgets render
+// regardless of which role is active. The widget's result is supplied via ctx.widgetData[id].
+const GENERIC_DATA_REGISTRY = {
+  data: (ctx, w) => {
+    const cfg = w.config || {};
+    const result = ctx.widgetData?.[w.id];
+    return (
+      <TodayCard title={cfg.title || 'Widget'} icon={BarChart2} iconColor="text-brand-navy">
+        {!result
+          ? <div className="h-16 animate-pulse rounded bg-neutral-100 dark:bg-neutral-800" />
+          : result.error
+            ? <Empty msg={result.error} />
+            : renderDataViz(cfg.viz, result)}
+      </TodayCard>
+    );
+  },
+};
+
+function AddWidgetMenu({ addable, onAdd, onNew }) {
   const [open, setOpen] = useState(false);
-  if (!addable.length) return null;
   return (
     <div className="relative">
       <button type="button" onClick={() => setOpen((o) => !o)}
@@ -204,14 +249,25 @@ function AddWidgetMenu({ addable, onAdd }) {
       {open && (
         <div role="menu"
           className="absolute right-0 z-dropdown mt-1 max-h-64 w-56 overflow-auto rounded-lg border border-neutral-200 bg-white py-1 shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
-          {addable.map((w) => (
-            <button key={w.id} type="button" role="menuitem"
-              onClick={() => { onAdd(w); setOpen(false); }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-neutral-700 hover:bg-neutral-100 focus-visible:outline-none focus-visible:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700">
-              <Plus className="h-3.5 w-3.5 flex-shrink-0 text-neutral-400" aria-hidden="true" />
-              {widgetLabel(w)}
-            </button>
-          ))}
+          <button type="button" role="menuitem"
+            onClick={() => { onNew(); setOpen(false); }}
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-brand-navy hover:bg-neutral-100 focus-visible:outline-none focus-visible:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-700">
+            <Plus className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />New data widget…
+          </button>
+          {addable.length > 0 && (
+            <>
+              <div className="my-1 border-t border-neutral-100 dark:border-neutral-700" />
+              <p className="px-3 py-1 text-2xs font-semibold uppercase tracking-wide text-neutral-400">Re-add default</p>
+              {addable.map((w) => (
+                <button key={w.id} type="button" role="menuitem"
+                  onClick={() => { onAdd(w); setOpen(false); }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-neutral-700 hover:bg-neutral-100 focus-visible:outline-none focus-visible:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700">
+                  <Plus className="h-3.5 w-3.5 flex-shrink-0 text-neutral-400" aria-hidden="true" />
+                  {widgetLabel(w)}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -223,6 +279,31 @@ function TodaySurface({ header, registry, ctx, layout, builtinLayout, edit }) {
   const shown = editing ? edit.draft : layout;
   const addable = editing ? builtinLayout.filter((b) => !edit.draft.some((d) => d.id === b.id)) : [];
   const tbtn = 'flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40';
+  const tools = edit?.widgetTools;
+
+  // Batch-resolve every `data` widget in one round trip (NFR: one call, not one per widget).
+  const [widgetData, setWidgetData] = useState({});
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const dataWidgets = shown.filter((w) => w.type === 'data' && w.config?.source);
+  const dataKey = JSON.stringify(dataWidgets.map((w) => [w.id, w.config.source]));
+  useEffect(() => {
+    if (!dataWidgets.length || !tools?.fetchWidgetData) return undefined;
+    const items = {};
+    dataWidgets.forEach((w) => { items[w.id] = w.config.source; });
+    let cancelled = false;
+    tools.fetchWidgetData(items)
+      .then((results) => {
+        if (cancelled) return;
+        const map = {};
+        (results || []).forEach((r) => { map[r.id] = r.data ? r.data : { error: r.error || 'No data' }; });
+        setWidgetData(map);
+      })
+      .catch(() => { if (!cancelled) setWidgetData({}); });
+    return () => { cancelled = true; };
+  }, [dataKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fullRegistry = { ...GENERIC_DATA_REGISTRY, ...registry };
+  const fullCtx = { ...ctx, widgetData };
 
   return (
     <>
@@ -241,7 +322,7 @@ function TodaySurface({ header, registry, ctx, layout, builtinLayout, edit }) {
             </button>
           ) : (
             <>
-              <AddWidgetMenu addable={addable} onAdd={edit.add} />
+              <AddWidgetMenu addable={addable} onAdd={edit.add} onNew={() => setPickerOpen(true)} />
               <button type="button" onClick={edit.reset}
                 className={`${tbtn} border-neutral-200 bg-white text-neutral-600 hover:border-semantic-danger hover:text-semantic-danger dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400`}>
                 <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />Reset to default
@@ -259,9 +340,14 @@ function TodaySurface({ header, registry, ctx, layout, builtinLayout, edit }) {
         </div>
       )}
       <TodayCanvas
-        layout={shown} registry={registry} ctx={ctx} editMode={editing}
+        layout={shown} registry={fullRegistry} ctx={fullCtx} editMode={editing}
         onMoveUp={edit?.moveUp} onMoveDown={edit?.moveDown}
         onCycleSpan={edit?.cycleSpan} onRemove={edit?.remove} />
+      {pickerOpen && tools && (
+        <TodayWidgetPicker
+          onClose={() => setPickerOpen(false)} onAdd={edit.add}
+          metrics={tools.metrics} onPreview={tools.previewWidgetData} />
+      )}
     </>
   );
 }
@@ -1114,6 +1200,9 @@ export default function DashboardView({
   todayLayout,
   saveTodayLayout,
   resetTodayLayout,
+  fetchWidgetData,
+  previewWidgetData,
+  widgetMetrics,
 }) {
   // Resolve the data for the active role and auto-fetch if not yet loaded
   const DATA_MAP = {
@@ -1173,6 +1262,8 @@ export default function DashboardView({
     moveUp: (i) => setDraft((d) => swap(d, i, i - 1)),
     moveDown: (i) => setDraft((d) => swap(d, i, i + 1)),
     cycleSpan: (i) => setDraft((d) => d.map((w, j) => (j === i ? { ...w, span: nextSpan(w.span || 12) } : w))),
+    // Data-widget tooling (slice 5): batch-resolve, live preview, and the metric catalogue.
+    widgetTools: { fetchWidgetData, previewWidgetData, metrics: widgetMetrics || [] },
   };
 
   const sharedProps = {

@@ -60,6 +60,7 @@ import { api } from '@/lib/apiClient';
 import { layoutToWidgets } from '@/lib/today-layouts';
 import { useCardPrefs } from '@/hooks/useCardPrefs';
 import { buildStatusResolver } from '@/lib/status-config';
+import { buildFieldPrefsResolver, saveTypeFieldPrefs } from '@/lib/type-field-prefs';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { isIconComponent, onPressKey, renderMd } from '@/lib/utils';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -223,6 +224,19 @@ export default function App() {
   // status a work item stores (a string) to its category/color/clock across every surface.
   const [statusConfig, setStatusConfig] = useState([]);
   const statusResolver = useMemo(() => buildStatusResolver(statusConfig), [statusConfig]);
+  // Per-type field preferences — which fields show on the detail surface, per work-item type.
+  const [typeFieldPrefs, setTypeFieldPrefs] = useState([]);
+  const fieldPrefs = useMemo(() => buildFieldPrefsResolver(typeFieldPrefs), [typeFieldPrefs]);
+  // Toggle a field's visibility for a type (bulk-replaces that type's prefs server-side).
+  const handleToggleFieldPref = (typeKey, fieldKey, visible) => {
+    const forType = typeFieldPrefs
+      .filter(p => p.typeKey === typeKey && p.fieldKey !== fieldKey)
+      .map(p => ({ fieldKey: p.fieldKey, visible: p.visible, sortOrder: p.sortOrder }));
+    const next = [...forType, { fieldKey, visible }];
+    saveTypeFieldPrefs(api, activeWorkspaceId, typeKey, next)
+      .then(updated => setTypeFieldPrefs(Array.isArray(updated) ? updated : []))
+      .catch(reportError);
+  };
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false); // off-canvas drawer under md (G1)
   const [subRailCollapsed, setSubRailCollapsed] = useState(false);
@@ -756,6 +770,10 @@ export default function App() {
     api.send(`/status-config?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
       .then(cfg => setStatusConfig(Array.isArray(cfg) ? cfg : []))
       .catch(() => setStatusConfig([]));
+    // Load per-type field preferences (which detail-surface fields show per type).
+    api.send(`/type-field-prefs?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
+      .then(p => setTypeFieldPrefs(Array.isArray(p) ? p : []))
+      .catch(() => setTypeFieldPrefs([]));
     // Load AI capabilities for this workspace — drives hide/show of AI action buttons (RB-40 §2).
     aiClient.capabilities(activeWorkspaceId).then(caps => {
       setAiCapabilities(Array.isArray(caps) ? caps : []);
@@ -3882,6 +3900,8 @@ export default function App() {
           maxUploadMb={MAX_UPLOAD_MB}
           activity={activity}
           statusMetrics={statusMetrics}
+          fieldPrefs={fieldPrefs}
+          onToggleFieldPref={handleToggleFieldPref}
           activityEventFilter={activityEventFilter}
           setActivityEventFilter={setActivityEventFilter}
           setActivity={setActivity}

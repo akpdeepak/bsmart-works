@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from 'react';
 import {
   Star, X, ArrowUp, CornerDownRight, Reply, Sparkles,
   Upload, Image as ImageIcon, ShieldCheck, ArrowRight,
-  ClipboardList, IndentIncrease, IndentDecrease,
+  ClipboardList, IndentIncrease, IndentDecrease, Link2, ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { StatusBadge } from '@/components/works/status-badge';
@@ -145,7 +145,7 @@ export function WorkItemDetailPanel({
   // links
   links, newLink, setNewLink, handleDeleteLink, handleAddLink,
   // attachments
-  attachments, fileInputRef, handleUploadFile, handleDeleteAttachment, maxUploadMb,
+  attachments, fileInputRef, handleUploadFile, handleAttachLink, handleDeleteAttachment, maxUploadMb,
   // activity
   activity, statusMetrics, activityEventFilter, setActivityEventFilter, setActivity, reportError,
   // per-type status configuration + lapse
@@ -154,6 +154,8 @@ export function WorkItemDetailPanel({
   // Iteration 10 Cap O — summarize comments (second AI surface)
   const [commentSummary, setCommentSummary] = useState(null);
   const [summaryBusy, setSummaryBusy] = useState(false);
+  // Files tab — "attach link" inline form
+  const [linkForm, setLinkForm] = useState({ open: false, url: '', title: '' });
 
   const summarizeComments = () => {
     if (!selectedItem?.id || !activeWorkspaceId) return;
@@ -854,20 +856,53 @@ export function WorkItemDetailPanel({
           {detailTab === 'attachments' && (
             <div>
               <input type="file" ref={fileInputRef} className="hidden" onChange={handleUploadFile} />
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <Button variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()}>
                   <Upload className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Upload file
                 </Button>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-neutral-600 dark:text-neutral-400">Max {maxUploadMb} MB per file</span>
-                  <span className="text-xs bg-semantic-success-surface text-semantic-success px-1.5 py-0.5 rounded flex items-center gap-1">
-                    <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />Virus scan active
-                  </span>
-                </div>
+                <Button variant="secondary" size="sm" onClick={() => setLinkForm(f => ({ ...f, open: !f.open }))}>
+                  <Link2 className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Attach link
+                </Button>
+                <span className="text-xs text-neutral-600 dark:text-neutral-400">Max {maxUploadMb} MB per file</span>
+                <span className="text-xs bg-semantic-success-surface text-semantic-success px-1.5 py-0.5 rounded flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />Virus scan active
+                </span>
               </div>
-              {attachments.length === 0 && <p className="text-xs text-neutral-600 text-center py-4">No files attached yet.</p>}
+              {linkForm.open && (
+                <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 p-2">
+                  <input type="url" value={linkForm.url} placeholder="https://…"
+                    onChange={e => setLinkForm(f => ({ ...f, url: e.target.value }))}
+                    className="input flex-1 min-w-0 text-sm py-1" aria-label="Link URL" />
+                  <input type="text" value={linkForm.title} placeholder="Title (optional)"
+                    onChange={e => setLinkForm(f => ({ ...f, title: e.target.value }))}
+                    className="input flex-1 min-w-0 text-sm py-1" aria-label="Link title" />
+                  <Button size="sm" variant="action" disabled={!/^https?:\/\/.+/i.test(linkForm.url.trim())}
+                    onClick={() => { handleAttachLink(linkForm.url.trim(), linkForm.title.trim()); setLinkForm({ open: false, url: '', title: '' }); }}>
+                    Add
+                  </Button>
+                </div>
+              )}
+              {attachments.length === 0 && <p className="text-xs text-neutral-600 text-center py-4">No files or links attached yet.</p>}
               <div className="space-y-2">
                 {attachments.map(a => {
+                  if ((a.attachment_type || a.attachmentType) === 'URL') {
+                    const linkName = a.file_name || a.fileName || a.url;
+                    return (
+                      <div key={a.id} className="bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700 flex items-center gap-3 p-3">
+                        <div className="w-8 h-8 rounded flex items-center justify-center bg-brand-navy/10 text-brand-navy flex-shrink-0">
+                          <Link2 className="h-4 w-4" aria-hidden="true" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <a href={a.url} target="_blank" rel="noreferrer noopener"
+                            className="text-sm font-medium text-brand-navy hover:underline truncate flex items-center gap-1">
+                            <span className="truncate">{linkName}</span><ExternalLink className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+                          </a>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{a.url}</p>
+                        </div>
+                        <button onClick={() => handleDeleteAttachment(a.id)} className="text-neutral-300 hover:text-semantic-danger flex-shrink-0" aria-label="Remove link"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                      </div>
+                    );
+                  }
                   const mime = a.mime_type || a.mimeType || '';
                   const isImage = mime.startsWith('image/');
                   const fileName = a.file_name || a.fileName || '?';

@@ -2358,6 +2358,11 @@ export default function App() {
     api.raw(`/work-items/${selectedItem.id}/attachments/${attId}`, { method: 'DELETE', headers: headers() })
       .then(() => setAttachments(prev => prev.filter(a => a.id !== attId)));
   };
+  // Attach an external link (URL / webpage) — refetches so the new row carries server fields.
+  const handleAttachLink = (url, title) =>
+    api.send(`/work-items/${selectedItem.id}/attachments/link`, { method: 'POST', body: { url, title } })
+      .then(() => api.raw(`/work-items/${selectedItem.id}/attachments`, { headers: headers() })
+        .then(r => r.json()).then(d => setAttachments(Array.isArray(d) ? d : [])));
 
   // PROJECT ARCHIVE
   const handleArchiveProject = (projectId) => {
@@ -3784,6 +3789,7 @@ export default function App() {
           attachments={attachments}
           fileInputRef={fileInputRef}
           handleUploadFile={handleUploadFile}
+          handleAttachLink={handleAttachLink}
           handleDeleteAttachment={handleDeleteAttachment}
           maxUploadMb={MAX_UPLOAD_MB}
           activity={activity}

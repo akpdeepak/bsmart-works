@@ -79,7 +79,7 @@ export function CardFieldsPopover({ cardPrefs, workspaceId, customFieldDefs = []
 
   // Fields already visible on the card (default toggles + any added)
   const addedBuiltin = ADDABLE_FIELDS.filter(f => isVisible(f.key));
-  const addedCustom  = customFieldDefs.filter(d => isVisible(`cfd_${d.id}`));
+  const addedCustom  = customFieldDefs.filter(d => isVisible(`fd_${d.id}`));
 
   // Picker: built-in fields not yet visible
   const availableBuiltin = ADDABLE_FIELDS.filter(f => !isVisible(f.key));
@@ -96,16 +96,20 @@ export function CardFieldsPopover({ cardPrefs, workspaceId, customFieldDefs = []
     setSaving(true);
     setSaveError('');
     try {
+      // Unified onto field_def (Option B): card custom fields are now field_def rows, so their
+      // values are entered in the detail panel and shown on cards from the same store.
+      const opts = newType === 'SELECT' && newOptions.trim()
+        ? newOptions.split(',').map(s => s.trim()).filter(Boolean) : null;
       const payload = {
         workspaceId,
         name: newName.trim(),
         fieldType: newType,
-        options: newType === 'SELECT' && newOptions.trim()
-          ? JSON.stringify(newOptions.split(',').map(s => s.trim()).filter(Boolean))
-          : null,
+        fieldKey: `card_${newName.trim().toLowerCase().replace(/\W+/g, '_').slice(0, 40)}_${Date.now()}`,
+        config: opts ? JSON.stringify({ options: opts }) : '{}',
+        required: false,
       };
-      const def = await api.send('/custom-field-definitions', { method: 'POST', body: payload });
-      addField(`cfd_${def.id}`);
+      const def = await api.send('/field-defs', { method: 'POST', body: payload });
+      addField(`fd_${def.id}`);
       onCustomFieldCreated?.(def);
       setNewName('');
       setNewOptions('');
@@ -176,8 +180,8 @@ export function CardFieldsPopover({ cardPrefs, workspaceId, customFieldDefs = []
               ))}
               {addedCustom.map(d => (
                 <FieldToggle key={d.id} label={d.name} on removable
-                  onRemove={() => removeField(`cfd_${d.id}`)}
-                  onChange={() => toggleField(`cfd_${d.id}`)} />
+                  onRemove={() => removeField(`fd_${d.id}`)}
+                  onChange={() => toggleField(`fd_${d.id}`)} />
               ))}
             </div>
           </div>
@@ -264,7 +268,7 @@ export function CardFieldsPopover({ cardPrefs, workspaceId, customFieldDefs = []
                   </div>
                   <div>
                     <span className="text-xs text-neutral-600 dark:text-neutral-400 block mb-1">Field type</span>
-                    <div className="grid grid-cols-4 gap-1">
+                    <div className="grid grid-cols-4 gap-1" role="group" aria-label="Field type">
                       {FIELD_TYPES.map(t => (
                         <button key={t} type="button" onClick={() => setNewType(t)}
                           className={cn(

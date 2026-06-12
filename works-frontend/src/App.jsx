@@ -768,8 +768,10 @@ export default function App() {
     fetchUserRole();
     fetchBranding();
     fetchWipLimits();
-    // Load custom field definitions for card rendering and the field picker.
-    api.send(`/custom-field-definitions?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
+    // Load custom field definitions for card rendering and the field picker. Unified onto field_def
+    // (Option B): cards and the detail panel share one definition store; values arrive on each work
+    // item as `fieldValues` (batch-attached by the backend), keyed by field_def id.
+    api.send(`/field-defs?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
       .then(defs => setCustomFieldDefs(Array.isArray(defs) ? defs : []))
       .catch(() => setCustomFieldDefs([]));
     // Load per-type status configuration (seeds workspace defaults server-side on first read).

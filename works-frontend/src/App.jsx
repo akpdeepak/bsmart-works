@@ -376,6 +376,7 @@ export default function App() {
   const [ceremonies, setCeremonies]             = useState([]);   // [{ session, counts }]
   const [activeCeremony, setActiveCeremony]     = useState(null); // { session, attendance, counts }
   const [newCeremony, setNewCeremony]           = useState({ ceremonyType: 'STANDUP', scheduledAt: '' });
+  const [myDay, setMyDay]                       = useState(null); // { myItems, myImpediments, myActions, todayStandup, myStandupEntry }
   const [roadmapThemes, setRoadmapThemes]       = useState([]);
   const [newTheme, setNewTheme]                 = useState({ name: '', status: 'PLANNED', quarter: '', description: '' });
   const [ideas, setIdeas]                       = useState([]);
@@ -2025,7 +2026,19 @@ export default function App() {
     setView('smcockpit');
     const pid = i15ProjectId || (projects[0] && projects[0].id) || '';
     setI15ProjectId(pid);
-    if (pid) { fetchCockpitContext(pid); fetchCeremonies(pid); fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
+    if (pid) { fetchCockpitContext(pid); fetchCeremonies(pid); fetchMyDay(pid); fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
+  }
+  function fetchMyDay(pid) {
+    api.raw(`/cockpit/my-day?projectId=${pid}`).then(r => r.json())
+      .then(d => setMyDay(d && typeof d === 'object' ? d : null)).catch(() => setMyDay(null));
+  }
+  function submitMyStandup() {
+    const sid = myDay?.todayStandup?.id;
+    const eid = myDay?.myStandupEntry?.id;
+    if (!sid || !eid) return;
+    api.send(`/standups/${sid}/entries/${eid}/record`, { method: 'POST', body: JSON.stringify(standupDraft) })
+      .then(() => { setStandupDraft({ yesterday: '', today: '', blockers: '' }); fetchMyDay(i15ProjectId); showToast('Standup update recorded'); })
+      .catch(() => showToast('Failed to record your update', 'error'));
   }
   function fetchCockpitContext(pid) {
     api.raw(`/cockpit/context?projectId=${pid}`).then(r => r.json())
@@ -3654,6 +3667,9 @@ export default function App() {
               activeCeremony={activeCeremony}
               newCeremony={newCeremony}
               currentUserId={currentUser?.id}
+              myDay={myDay}
+              fetchMyDay={fetchMyDay}
+              submitMyStandup={submitMyStandup}
               fetchCockpitContext={fetchCockpitContext}
               fetchCeremonies={fetchCeremonies}
               scheduleCeremony={scheduleCeremony}

@@ -68,10 +68,37 @@ public class AttachmentController {
         int limit = Math.min(Math.max(size, 1), 200);
         int offset = Math.max(page, 0) * limit;
         return jdbc.queryForList(
-            "SELECT a.id, a.file_name, a.file_size, a.mime_type, a.created_at, u.full_name as uploaded_by_name " +
+            "SELECT a.id, a.file_name, a.file_size, a.mime_type, a.attachment_type, a.url, a.created_at, " +
+            "u.full_name as uploaded_by_name " +
             "FROM attachments a LEFT JOIN users u ON u.id = a.uploaded_by " +
             "WHERE a.work_item_id = ? ORDER BY a.created_at DESC LIMIT ? OFFSET ?",
             workItemId, limit, offset);
+    }
+
+    /** Attach an external link (URL / webpage) — no binary stored. */
+    @PostMapping("/link")
+    public Map<String, Object> attachLink(@PathVariable String workItemId,
+                                          @org.springframework.web.bind.annotation.RequestBody Map<String, String> body) {
+        String userId = authenticatedUser.id();
+        String url = body.get("url") != null ? body.get("url").trim() : "";
+        if (!url.matches("(?i)^https?://.+")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A valid http(s) URL is required");
+        }
+        if (url.length() > 2048) {
+            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "URL exceeds 2048 characters");
+        }
+        String title = body.get("title") != null && !body.get("title").isBlank() ? body.get("title").trim() : url;
+        if (title.length() > 255) title = title.substring(0, 255);
+
+        jdbc.update(
+            "INSERT INTO attachments (work_item_id, uploaded_by, file_name, file_size, mime_type, " +
+            "attachment_type, url, storage_path, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+            workItemId, userId, title, 0L, "text/uri-list", "URL", url, null, OffsetDateTime.now());
+
+        Long id = jdbc.queryForObject(
+            "SELECT id FROM attachments WHERE work_item_id = ? AND url = ? ORDER BY created_at DESC LIMIT 1",
+            Long.class, workItemId, url);
+        return Map.of("id", id, "fileName", title, "url", url, "attachmentType", "URL");
     }
 
     @PostMapping
@@ -143,7 +170,8 @@ public class AttachmentController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String workItemId, @PathVariable Long id) {
         List<String> paths = jdbc.queryForList("SELECT storage_path FROM attachments WHERE id = ?", String.class, id);
-        paths.forEach(p -> { try { Files.deleteIfExists(UPLOAD_DIR.resolve(p)); } catch (IOException ignored) {} });
+        paths.stream().filter(p -> p != null && !p.isBlank())  // URL attachments have no stored file
+            .forEach(p -> { try { Files.deleteIfExists(UPLOAD_DIR.resolve(p)); } catch (IOException ignored) {} });
         jdbc.update("DELETE FROM attachments WHERE id = ?", id);
         return ResponseEntity.noContent().build();
     }

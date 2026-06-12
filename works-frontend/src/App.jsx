@@ -447,7 +447,8 @@ export default function App() {
   const [selectedViolations, setSelectedViolations] = useState([]);
   const [ruleBuilder, setRuleBuilder] = useState(null); // the rule being created/edited, or null
   const [ruleTestResult, setRuleTestResult] = useState(null);
-  const [statusDurations, setStatusDurations] = useState([]);
+  const EMPTY_STATUS_METRICS = { durations: [], leadSeconds: null, cycleSeconds: null, completed: false, started: false };
+  const [statusMetrics, setStatusMetrics] = useState(EMPTY_STATUS_METRICS);
   const [deleteUndoItem, setDeleteUndoItem] = useState(null);
   const deleteUndoTimer = useRef(null);
   const [itemChildren, setItemChildren] = useState([]);
@@ -1441,9 +1442,12 @@ export default function App() {
       .catch(e => showToast(e.message || 'Create failed', 'error'));
   }
   function fetchStatusDurations(itemId) {
-    setStatusDurations([]);
+    setStatusMetrics(EMPTY_STATUS_METRICS);
     api.raw(`/work-items/${itemId}/status-durations`).then(r => r.json())
-      .then(d => setStatusDurations(Array.isArray(d) ? d : [])).catch(reportError);
+      .then(d => setStatusMetrics(d && typeof d === 'object' && !Array.isArray(d)
+        ? d
+        : { ...EMPTY_STATUS_METRICS, durations: Array.isArray(d) ? d : [] }))
+      .catch(reportError);
   }
   // severityClass / vStatusClass moved to compliance-view.jsx (TD-003).
   // eslint-disable-next-line no-unused-vars
@@ -2354,6 +2358,11 @@ export default function App() {
     api.raw(`/work-items/${selectedItem.id}/attachments/${attId}`, { method: 'DELETE', headers: headers() })
       .then(() => setAttachments(prev => prev.filter(a => a.id !== attId)));
   };
+  // Attach an external link (URL / webpage) — refetches so the new row carries server fields.
+  const handleAttachLink = (url, title) =>
+    api.send(`/work-items/${selectedItem.id}/attachments/link`, { method: 'POST', body: { url, title } })
+      .then(() => api.raw(`/work-items/${selectedItem.id}/attachments`, { headers: headers() })
+        .then(r => r.json()).then(d => setAttachments(Array.isArray(d) ? d : [])));
 
   // PROJECT ARCHIVE
   const handleArchiveProject = (projectId) => {
@@ -3780,10 +3789,11 @@ export default function App() {
           attachments={attachments}
           fileInputRef={fileInputRef}
           handleUploadFile={handleUploadFile}
+          handleAttachLink={handleAttachLink}
           handleDeleteAttachment={handleDeleteAttachment}
           maxUploadMb={MAX_UPLOAD_MB}
           activity={activity}
-          statusDurations={statusDurations}
+          statusMetrics={statusMetrics}
           activityEventFilter={activityEventFilter}
           setActivityEventFilter={setActivityEventFilter}
           setActivity={setActivity}

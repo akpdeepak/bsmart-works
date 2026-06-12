@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from 'react';
 import {
   Star, X, ArrowUp, CornerDownRight, Reply, Sparkles,
   Upload, Image as ImageIcon, ShieldCheck, ArrowRight,
-  ClipboardList, IndentIncrease, IndentDecrease,
+  ClipboardList, IndentIncrease, IndentDecrease, Link2, ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { StatusBadge } from '@/components/works/status-badge';
@@ -14,7 +14,6 @@ import { LapseBadge } from '@/components/works/atoms/lapse-badge';
 import { computeLapse, lapseProgress } from '@/lib/status-lapse';
 import { WorkItemStatusTimeline } from '@/components/works/organisms/work-item-status-timeline';
 import { AcceptanceCriteria } from '@/components/works/organisms/acceptance-criteria';
-import { TYPES } from '@/lib/work-item-types';
 import { api } from '@/lib/apiClient';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { renderMd, onPressKey } from '@/lib/utils';
@@ -146,15 +145,17 @@ export function WorkItemDetailPanel({
   // links
   links, newLink, setNewLink, handleDeleteLink, handleAddLink,
   // attachments
-  attachments, fileInputRef, handleUploadFile, handleDeleteAttachment, maxUploadMb,
+  attachments, fileInputRef, handleUploadFile, handleAttachLink, handleDeleteAttachment, maxUploadMb,
   // activity
-  activity, statusDurations, activityEventFilter, setActivityEventFilter, setActivity, reportError,
+  activity, statusMetrics, activityEventFilter, setActivityEventFilter, setActivity, reportError,
   // per-type status configuration + lapse
   statusResolver,
 }) {
   // Iteration 10 Cap O — summarize comments (second AI surface)
   const [commentSummary, setCommentSummary] = useState(null);
   const [summaryBusy, setSummaryBusy] = useState(false);
+  // Files tab — "attach link" inline form
+  const [linkForm, setLinkForm] = useState({ open: false, url: '', title: '' });
 
   const summarizeComments = () => {
     if (!selectedItem?.id || !activeWorkspaceId) return;
@@ -280,8 +281,8 @@ export function WorkItemDetailPanel({
               )}
 
               {/* Time-in-each-status journey bar (reuses the projection from the event log) */}
-              {statusDurations && statusDurations.length > 0 && (
-                <WorkItemStatusTimeline durations={statusDurations} />
+              {statusMetrics?.durations?.length > 0 && (
+                <WorkItemStatusTimeline metrics={statusMetrics} />
               )}
             </div>
 
@@ -306,12 +307,10 @@ export function WorkItemDetailPanel({
             <div className="space-y-3">
               <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Properties</p>
               <div>
-                <label htmlFor="detail-type" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Type</label>
-                <select id="detail-type" value={selectedItem.type}
-                  onChange={e => { const u = { ...selectedItem, type: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }}
-                  className="input">
-                  {Object.keys(TYPES).map(t => <option key={t}>{t}</option>)}
-                </select>
+                <span className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Type</span>
+                <div className="flex items-center gap-1.5" title="Type can't be changed after creation — its fields vary by type">
+                  <TypeBadge type={selectedItem.type} />
+                </div>
               </div>
               <div>
                 <label htmlFor="detail-priority" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Priority</label>
@@ -325,6 +324,15 @@ export function WorkItemDetailPanel({
                 <label htmlFor="detail-assignee" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Assignee</label>
                 <select id="detail-assignee" value={selectedItem.assigneeId || ''}
                   onChange={e => { const u = { ...selectedItem, assigneeId: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
+                  className="input">
+                  <option value="">Unassigned</option>
+                  {users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="detail-reporter" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Reporter</label>
+                <select id="detail-reporter" value={selectedItem.reporterId || ''}
+                  onChange={e => { const u = { ...selectedItem, reporterId: e.target.value || null }; setSelectedItem(u); handleUpdateItem(u); }}
                   className="input">
                   <option value="">Unassigned</option>
                   {users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
@@ -463,7 +471,6 @@ export function WorkItemDetailPanel({
                   <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">{sectionLabel}</p>
                   <div className="grid grid-cols-2 gap-3">
                     {t === 'BUG' && <>
-                      {uf('Reporter', 'reporterId')}
                       {sf('Severity', 'severity', ['Critical','High','Medium','Low'])}
                       {sf('Environment', 'environmentDetail', ['Development','Staging','UAT','Production'])}
                       {sf('Regression Risk', 'regressionRisk', ['Yes','No','Not Assessed'])}
@@ -501,7 +508,6 @@ export function WorkItemDetailPanel({
                       {tf('Impact if Delayed', 'impactIfDelayed')}
                     </>}
                     {t === 'INCIDENT' && <>
-                      {uf('Reporter', 'reporterId')}
                       {sf('Response Speed', 'responseSpeed', ['Immediate','High','Normal','Planned'])}
                       {sf('Business Impact', 'businessImpact', ['Organisation-wide','Department','Team','Individual'])}
                       {sf('Severity', 'severity', ['Critical','High','Medium','Low'])}
@@ -850,20 +856,53 @@ export function WorkItemDetailPanel({
           {detailTab === 'attachments' && (
             <div>
               <input type="file" ref={fileInputRef} className="hidden" onChange={handleUploadFile} />
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <Button variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()}>
                   <Upload className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Upload file
                 </Button>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-neutral-600 dark:text-neutral-400">Max {maxUploadMb} MB per file</span>
-                  <span className="text-xs bg-semantic-success-surface text-semantic-success px-1.5 py-0.5 rounded flex items-center gap-1">
-                    <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />Virus scan active
-                  </span>
-                </div>
+                <Button variant="secondary" size="sm" onClick={() => setLinkForm(f => ({ ...f, open: !f.open }))}>
+                  <Link2 className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Attach link
+                </Button>
+                <span className="text-xs text-neutral-600 dark:text-neutral-400">Max {maxUploadMb} MB per file</span>
+                <span className="text-xs bg-semantic-success-surface text-semantic-success px-1.5 py-0.5 rounded flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />Virus scan active
+                </span>
               </div>
-              {attachments.length === 0 && <p className="text-xs text-neutral-600 text-center py-4">No files attached yet.</p>}
+              {linkForm.open && (
+                <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 p-2">
+                  <input type="url" value={linkForm.url} placeholder="https://…"
+                    onChange={e => setLinkForm(f => ({ ...f, url: e.target.value }))}
+                    className="input flex-1 min-w-0 text-sm py-1" aria-label="Link URL" />
+                  <input type="text" value={linkForm.title} placeholder="Title (optional)"
+                    onChange={e => setLinkForm(f => ({ ...f, title: e.target.value }))}
+                    className="input flex-1 min-w-0 text-sm py-1" aria-label="Link title" />
+                  <Button size="sm" variant="action" disabled={!/^https?:\/\/.+/i.test(linkForm.url.trim())}
+                    onClick={() => { handleAttachLink(linkForm.url.trim(), linkForm.title.trim()); setLinkForm({ open: false, url: '', title: '' }); }}>
+                    Add
+                  </Button>
+                </div>
+              )}
+              {attachments.length === 0 && <p className="text-xs text-neutral-600 text-center py-4">No files or links attached yet.</p>}
               <div className="space-y-2">
                 {attachments.map(a => {
+                  if ((a.attachment_type || a.attachmentType) === 'URL') {
+                    const linkName = a.file_name || a.fileName || a.url;
+                    return (
+                      <div key={a.id} className="bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700 flex items-center gap-3 p-3">
+                        <div className="w-8 h-8 rounded flex items-center justify-center bg-brand-navy/10 text-brand-navy flex-shrink-0">
+                          <Link2 className="h-4 w-4" aria-hidden="true" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <a href={a.url} target="_blank" rel="noreferrer noopener"
+                            className="text-sm font-medium text-brand-navy hover:underline truncate flex items-center gap-1">
+                            <span className="truncate">{linkName}</span><ExternalLink className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+                          </a>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{a.url}</p>
+                        </div>
+                        <button onClick={() => handleDeleteAttachment(a.id)} className="text-neutral-300 hover:text-semantic-danger flex-shrink-0" aria-label="Remove link"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                      </div>
+                    );
+                  }
                   const mime = a.mime_type || a.mimeType || '';
                   const isImage = mime.startsWith('image/');
                   const fileName = a.file_name || a.fileName || '?';
@@ -900,9 +939,9 @@ export function WorkItemDetailPanel({
           {/* ACTIVITY TAB */}
           {detailTab === 'activity' && (
             <div>
-              {statusDurations.length > 0 && (
+              {statusMetrics?.durations?.length > 0 && (
                 <div className="mb-4 rounded-xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-700 dark:bg-neutral-800">
-                  <WorkItemStatusTimeline durations={statusDurations} />
+                  <WorkItemStatusTimeline metrics={statusMetrics} />
                 </div>
               )}
               <div className="flex items-center gap-2 mb-3 flex-wrap">

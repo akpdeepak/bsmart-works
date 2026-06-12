@@ -341,6 +341,10 @@ public class WorkItemController {
         String initialStatus = statusConfig.initialStatus(effectiveWsId, newItem.getType());
         newItem.setStatus(initialStatus != null ? initialStatus : defaultStatusFor(newItem.getType()));
         newItem.setCreatedBy(userId);
+        // Reporter defaults to the creator (JIRA-style), unless one was supplied. Universal field.
+        if (newItem.getReporterId() == null || newItem.getReporterId().isBlank()) {
+            newItem.setReporterId(userId);
+        }
         newItem.setCreatedAt(OffsetDateTime.now());
         newItem.setStatusChangedAt(newItem.getCreatedAt());
         if (newItem.getProjectId() == null) newItem.setProjectId("PROJ-001");
@@ -421,7 +425,11 @@ public class WorkItemController {
             if (!java.util.Objects.equals(oldStatus, updatedItem.getStatus())) {
                 existing.setStatusChangedAt(OffsetDateTime.now());
             }
-            existing.setType(updatedItem.getType());
+            // Type is immutable after creation — its fields vary by type. Reject any change; never
+            // overwrite the stored type from the request.
+            if (updatedItem.getType() != null && !updatedItem.getType().equals(existing.getType())) {
+                throw ApiException.badRequest("TYPE_IMMUTABLE", "Work item type cannot be changed after creation.");
+            }
             existing.setDescription(updatedItem.getDescription());
             existing.setAcceptanceCriteria(updatedItem.getAcceptanceCriteria());
             existing.setAssigneeId(updatedItem.getAssigneeId());

@@ -9,13 +9,19 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Tag("unit")
 class StatusDurationServiceTest {
 
-    // compute() is pure — collaborators are unused, so nulls are safe.
+    // compute()/computeMetrics() are pure — collaborators are unused, so nulls are safe.
     private final StatusDurationService service = new StatusDurationService(null, null);
+
+    // Test category resolver: maps the three canonical status names to their categories.
+    private final java.util.function.Function<String, String> cat = s ->
+        "In Progress".equals(s) ? "IN_PROGRESS" : "Done".equals(s) ? "DONE" : "TODO";
 
     private Map<String, StatusDurationService.StatusDuration> byStatus(
             List<StatusDurationService.StatusDuration> list) {
@@ -69,6 +75,41 @@ class StatusDurationServiceTest {
     @Test
     void nullCreatedAt_returnsEmpty() {
         assertTrue(service.compute(null, "Todo", List.of(), OffsetDateTime.now()).isEmpty());
+    }
+
+    @Test
+    void leadAndCycle_completedItem() {
+        OffsetDateTime created = OffsetDateTime.parse("2026-06-01T00:00:00Z");
+        List<StatusDurationService.StatusChange> changes = List.of(
+            new StatusDurationService.StatusChange("Todo", "In Progress", created.plusHours(1)),
+            new StatusDurationService.StatusChange("In Progress", "Done", created.plusHours(4)));
+        var m = service.computeMetrics(created, "Done", changes, created.plusHours(5), cat);
+        assertEquals(14400, m.leadSeconds());          // created → first Done (0→4h)
+        assertEquals(10800, m.cycleSeconds());         // first In Progress → first Done (1h→4h)
+        assertTrue(m.completed());
+        assertTrue(m.started());
+    }
+
+    @Test
+    void leadAndCycle_runningWhileInProgress() {
+        OffsetDateTime created = OffsetDateTime.parse("2026-06-01T00:00:00Z");
+        List<StatusDurationService.StatusChange> changes = List.of(
+            new StatusDurationService.StatusChange("Todo", "In Progress", created.plusHours(1)));
+        var m = service.computeMetrics(created, "In Progress", changes, created.plusHours(5), cat);
+        assertEquals(18000, m.leadSeconds());          // created → now (not done) = 5h
+        assertEquals(14400, m.cycleSeconds());         // first In Progress → now = 4h
+        assertFalse(m.completed());
+        assertTrue(m.started());
+    }
+
+    @Test
+    void cycle_isNullWhenNeverEnteredInProgress() {
+        OffsetDateTime created = OffsetDateTime.parse("2026-06-01T00:00:00Z");
+        var m = service.computeMetrics(created, "Todo", List.of(), created.plusHours(2), cat);
+        assertEquals(7200, m.leadSeconds());           // running lead time
+        assertNull(m.cycleSeconds());                  // never started
+        assertFalse(m.started());
+        assertFalse(m.completed());
     }
 
     @Test

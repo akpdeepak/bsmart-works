@@ -193,11 +193,22 @@ export function WorkItemDetailPanel({
         onClick={() => setSelectedItem(null)}
         className="fixed inset-0 z-panel cursor-default bg-brand-navy/20 md:bg-transparent"
       />
-      <div className="fixed right-0 top-0 bottom-0 z-panel w-panel max-w-[92vw] bg-white dark:bg-neutral-900 border-l border-neutral-200 dark:border-neutral-700 flex flex-col overflow-hidden shadow-xl">
+      <div className="fixed right-0 top-0 bottom-0 z-panel w-panel-wide max-w-[92vw] bg-white dark:bg-neutral-900 border-l border-neutral-200 dark:border-neutral-700 flex flex-col overflow-hidden shadow-xl">
         <div className="h-14 flex items-center justify-between px-5 border-b border-neutral-200 dark:border-neutral-700">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <TypeBadge type={selectedItem.type} compact />
-            <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{selectedItem.id}</span>
+            <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{selectedItem.autoId || selectedItem.id}</span>
+            {selectedItem.parentId && (() => {
+              const parent = workItems.find(i => i.id === selectedItem.parentId);
+              return parent ? (
+                <button type="button" onClick={() => setSelectedItem(parent)}
+                  className="hidden sm:inline-flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 rounded-full px-2 py-0.5 hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 min-w-0"
+                  title={`Parent: ${parent.title}`}>
+                  <CornerDownRight className="h-3 w-3 flex-shrink-0 rotate-180" aria-hidden="true" />
+                  <span className="truncate max-w-40">{parent.autoId || parent.id} · {parent.title}</span>
+                </button>
+              ) : null;
+            })()}
           </div>
           <div className="flex gap-1">
             <button onClick={() => toggleStar(selectedItem)}
@@ -242,14 +253,18 @@ export function WorkItemDetailPanel({
             {/* Status + time-in-status lapse summary (S4/S5) */}
             <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 p-3 space-y-3">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 dark:border-neutral-600 bg-white dark:bg-neutral-800 pl-2.5 pr-1 py-1">
                   <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: statusMeta?.color || '#94A3B8' }} aria-hidden="true" />
-                  {selectedItem.status}
+                  <select aria-label="Status" value={selectedItem.status}
+                    onChange={e => { const u = { ...selectedItem, status: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }}
+                    className="text-sm font-medium bg-transparent border-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded cursor-pointer text-neutral-900 dark:text-neutral-100">
+                    {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
                 </span>
                 <StatusBadge category={statusCat}>{statusCat === 'in_progress' ? 'In Progress' : statusCat === 'done' ? 'Done' : 'To Do'}</StatusBadge>
                 {!isDoneCat && <LapseBadge lapse={lapse} />}
                 {isDoneCat && lapse.state !== 'none' && (
-                  <span className="text-xs text-neutral-500 dark:text-neutral-400">Closed · {lapse.elapsedSec >= 0 ? 'in final status' : ''}</span>
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400">Closed</span>
                 )}
               </div>
 
@@ -270,6 +285,12 @@ export function WorkItemDetailPanel({
               )}
             </div>
 
+            {/* Two-column body: content-first in the DOM (and on mobile), properties on the right
+                on desktop — flex-col-reverse + md:flex-row-reverse keeps the content lead without
+                moving it ahead of the metadata in source order. */}
+            <div className="flex flex-col-reverse md:flex-row-reverse gap-5">
+              <aside className="md:w-60 flex-shrink-0 space-y-3">
+
             {/* SLA mini-card — surfaces the existing SLA target/breach signal on the detail surface */}
             {selectedItem.slaTarget && (
               <div className={`rounded-lg border p-3 ${selectedItem.slaBreachFlag ? 'border-semantic-danger/40 bg-semantic-danger-surface' : 'border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50'}`}>
@@ -282,15 +303,8 @@ export function WorkItemDetailPanel({
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="detail-status" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Status</label>
-                <select id="detail-status" value={selectedItem.status}
-                  onChange={e => { const u = { ...selectedItem, status: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }}
-                  className="input">
-                  {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Properties</p>
               <div>
                 <label htmlFor="detail-type" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Type</label>
                 <select id="detail-type" value={selectedItem.type}
@@ -351,23 +365,7 @@ export function WorkItemDetailPanel({
               })()}
             </div>
 
-            {itemChildren.length > 0 && (
-              <div>
-                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Sub-items ({itemChildren.length})</label>
-                <div className="space-y-1">
-                  {itemChildren.map(child => (
-                    <div key={child.id} onClick={() => setSelectedItem(child)} role="button" tabIndex={0} onKeyDown={onPressKey}
-                      className="flex items-center gap-2 p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700 cursor-pointer hover:border-brand-navy/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
-                      <span className="text-neutral-300"><CornerDownRight className="h-3.5 w-3.5" aria-hidden="true" /></span>
-                      <TypeBadge type={child.type} compact />
-                      <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{child.id}</span>
-                      <span className="flex-1 text-xs text-neutral-900 truncate">{child.title}</span>
-                      <StatusBadge category={statusToCategory(child.status)}>{child.status}</StatusBadge>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* sub-items rendered in the main content column below */}
 
             <div>
               <label htmlFor="detail-tags" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Tags</label>
@@ -383,6 +381,10 @@ export function WorkItemDetailPanel({
                 className="input" />
             </div>
 
+              </aside>
+
+              {/* MAIN content column */}
+              <div className="flex-1 min-w-0 space-y-4">
             <div>
               <label htmlFor="detail-description" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Description</label>
               <RichTextEditor
@@ -558,6 +560,27 @@ export function WorkItemDetailPanel({
                 </Button>
               </div>
             )}
+
+            {itemChildren.length > 0 && (
+              <div>
+                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Sub-items ({itemChildren.length})</label>
+                <div className="space-y-1">
+                  {itemChildren.map(child => (
+                    <div key={child.id} onClick={() => setSelectedItem(child)} role="button" tabIndex={0} onKeyDown={onPressKey}
+                      className="flex items-center gap-2 p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-100 dark:border-neutral-700 cursor-pointer hover:border-brand-navy/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
+                      <span className="text-neutral-300"><CornerDownRight className="h-3.5 w-3.5" aria-hidden="true" /></span>
+                      <TypeBadge type={child.type} compact />
+                      <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{child.autoId || child.id}</span>
+                      <span className="flex-1 text-xs text-neutral-900 dark:text-neutral-100 truncate">{child.title}</span>
+                      <StatusBadge category={statusResolver ? statusResolver.categoryOf(child.type, child.status) : statusToCategory(child.status)}>{child.status}</StatusBadge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+              </div>{/* /main content column */}
+            </div>{/* /two-column body */}
           </>}
 
           {/* CUSTOM FIELDS TAB */}
@@ -567,7 +590,7 @@ export function WorkItemDetailPanel({
                 <EmptyState icon={ClipboardList} title="No custom fields defined" subtitle="Go to Workflows & Fields settings to define custom fields for your work items." />
               ) : (
                 <div className="space-y-3">
-                  <span className="block text-xs text-neutral-600 dark:text-neutral-400 mb-2 font-medium uppercase tracking-wider">Custom Fields</span>
+                  <span className="block text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wider">Custom Fields</span>
                   {fieldDefs.map(fd => (
                     <div key={fd.id} className="flex items-center gap-2">
                       <label htmlFor={`cf-${fd.id}`} className="text-xs text-neutral-500 w-32 flex-shrink-0">{fd.name}{fd.required && <span className="text-semantic-danger ml-0.5">*</span>}</label>
@@ -762,7 +785,7 @@ export function WorkItemDetailPanel({
             <div>
               {links.length > 0 && (
                 <div className="mb-4 bg-neutral-50 dark:bg-neutral-800 rounded-xl p-4 border border-neutral-100 dark:border-neutral-700">
-                  <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-3">Link Graph</p>
+                  <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">Link Graph</p>
                   <div className="flex flex-col items-center gap-2">
                     <div className="bg-brand-navy text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm max-w-full truncate">
                       {selectedItem.id}

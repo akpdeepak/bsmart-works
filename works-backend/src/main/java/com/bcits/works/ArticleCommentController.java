@@ -52,10 +52,22 @@ public class ArticleCommentController {
         rbac.require(authenticatedUser.id(), space.getWorkspaceId(), "view_items");
     }
 
+    /** Load a comment and require it belongs to the article in the path — an id from another
+     *  article (or another tenant) is indistinguishable from a missing one (RB-40 §1). */
+    private ArticleComment requireCommentInArticle(String articleId, Long commentId) {
+        ArticleComment comment = articleCommentRepository.findById(commentId)
+                .orElseThrow(() -> ApiException.notFound("Comment", String.valueOf(commentId)));
+        if (!articleId.equals(comment.getArticleId())) {
+            throw ApiException.notFound("Comment", String.valueOf(commentId));
+        }
+        return comment;
+    }
+
     @GetMapping
     public List<ArticleComment> getComments(@PathVariable String articleId,
                                              @RequestParam(defaultValue = "0") int page,
                                              @RequestParam(defaultValue = "50") int size) {
+        requireArticleAccess(articleId);
         int limit = Math.min(Math.max(size, 1), 200);
         List<ArticleComment> all = articleCommentRepository.findByArticleIdOrderByCreatedAtAsc(
                 articleId, PageRequest.of(Math.max(page, 0), limit)).getContent();
@@ -67,6 +79,7 @@ public class ArticleCommentController {
     @PostMapping
     public ArticleComment addComment(@PathVariable String articleId,
                                      @Valid @RequestBody ArticleComment comment) {
+        requireArticleAccess(articleId);
         String userId = authenticatedUser.id();
         comment.setId(null);
         comment.setArticleId(articleId);
@@ -86,7 +99,7 @@ public class ArticleCommentController {
                                          @RequestBody(required = false) Map<String, Object> body) {
         String userId = authenticatedUser.id();
         requireArticleAccess(articleId);
-        ArticleComment comment = articleCommentRepository.findById(commentId).orElseThrow();
+        ArticleComment comment = requireCommentInArticle(articleId, commentId);
         boolean resolved = body != null && body.get("resolved") != null
                 ? Boolean.TRUE.equals(body.get("resolved"))
                 : !comment.isResolved();
@@ -103,7 +116,8 @@ public class ArticleCommentController {
     @DeleteMapping("/{commentId}")
     public ResponseEntity<Void> deleteComment(@PathVariable String articleId, @PathVariable Long commentId) {
         requireArticleAccess(articleId);
-        articleCommentRepository.deleteById(commentId);
+        ArticleComment comment = requireCommentInArticle(articleId, commentId);
+        articleCommentRepository.delete(comment);
         return ResponseEntity.noContent().build();
     }
 }

@@ -15,6 +15,11 @@ const baseProps = {
   onPressKey: noop,
 };
 
+const makeItem = (overrides) => ({
+  id: 'WRK-1', title: 'Do the thing', type: 'Task', status: 'Todo', priority: 'MEDIUM',
+  ...overrides,
+});
+
 describe('MyWorksView', () => {
   it('shows the empty assigned state with a create CTA', () => {
     render(<MyWorksView {...baseProps} />);
@@ -23,7 +28,7 @@ describe('MyWorksView', () => {
   });
 
   it('lists assigned items as keyboard-operable rows', () => {
-    render(<MyWorksView {...baseProps} myItems={[{ id: 'WRK-1', title: 'Do the thing', type: 'Task', status: 'Todo' }]} />);
+    render(<MyWorksView {...baseProps} myItems={[makeItem()]} />);
     const row = screen.getByRole('button', { name: /Do the thing/ });
     expect(row).toHaveAttribute('tabindex', '0');
   });
@@ -41,8 +46,45 @@ describe('MyWorksView', () => {
     expect(screen.getByRole('tab', { name: /Assigned/ })).toHaveAttribute('aria-selected', 'false');
   });
 
+  it('shows sort pills when there are assigned items', () => {
+    render(<MyWorksView {...baseProps} myItems={[makeItem()]} />);
+    expect(screen.getByRole('button', { name: 'Priority' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Due date' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Recent' })).toBeInTheDocument();
+  });
+
+  it('does not show sort pills when assigned list is empty', () => {
+    render(<MyWorksView {...baseProps} />);
+    expect(screen.queryByRole('button', { name: 'Priority' })).not.toBeInTheDocument();
+  });
+
+  it('sorts assigned items by priority: CRITICAL first, LOW last', () => {
+    const items = [
+      makeItem({ id: 'WRK-A', title: 'Low task',      priority: 'LOW'      }),
+      makeItem({ id: 'WRK-B', title: 'Critical task',  priority: 'CRITICAL' }),
+      makeItem({ id: 'WRK-C', title: 'High task',      priority: 'HIGH'     }),
+    ];
+    render(<MyWorksView {...baseProps} myItems={items} />);
+    const rows = screen.getAllByRole('button', { name: /task/ });
+    expect(rows[0]).toHaveTextContent('Critical task');
+    expect(rows[1]).toHaveTextContent('High task');
+    expect(rows[2]).toHaveTextContent('Low task');
+  });
+
+  it('re-sorts to recent when the Recent pill is clicked', () => {
+    const items = [
+      makeItem({ id: 'WRK-A', title: 'Alpha', priority: 'LOW',      updatedAt: '2026-01-01' }),
+      makeItem({ id: 'WRK-B', title: 'Beta',  priority: 'CRITICAL', updatedAt: '2026-06-01' }),
+    ];
+    render(<MyWorksView {...baseProps} myItems={items} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Recent' }));
+    const rows = screen.getAllByRole('button', { name: /Alpha|Beta/ });
+    expect(rows[0]).toHaveTextContent('Beta'); // more recent
+    expect(rows[1]).toHaveTextContent('Alpha');
+  });
+
   it('shows due date on starred items', () => {
-    const item = { id: 'WRK-2', title: 'Starred task', type: 'Task', status: 'Todo', starred: true, dueDate: '2099-12-31' };
+    const item = makeItem({ id: 'WRK-2', title: 'Starred task', starred: true, dueDate: '2099-12-31' });
     render(<MyWorksView {...baseProps} myWorksTab="starred" workItems={[item]} />);
     expect(screen.getByText(/12\/31\/2099|31\/12\/2099/)).toBeInTheDocument();
   });
@@ -54,7 +96,7 @@ describe('MyWorksView', () => {
   });
 
   it('makes a mention clickable when it has a linked item', () => {
-    const item = { id: 'WRK-3', title: 'Linked item', type: 'Task', status: 'Todo' };
+    const item = makeItem({ id: 'WRK-3', title: 'Linked item' });
     const n = { id: 'N-2', type: 'MENTION', message: 'You were mentioned in WRK-3', itemId: 'WRK-3', read: false };
     const setSelectedItem = vi.fn();
     render(<MyWorksView {...baseProps} myWorksTab="mentions" notifications={[n]} workItems={[item]} setSelectedItem={setSelectedItem} />);
@@ -63,9 +105,7 @@ describe('MyWorksView', () => {
   });
 
   it('shows activity capped with overflow count', () => {
-    const items = Array.from({ length: 25 }, (_, i) => ({
-      id: `WRK-${i}`, title: `Item ${i}`, type: 'Task', status: 'Todo', assigneeId: 'USR-1',
-    }));
+    const items = Array.from({ length: 25 }, (_, i) => makeItem({ id: `WRK-${i}`, title: `Item ${i}`, assigneeId: 'USR-1' }));
     render(<MyWorksView {...baseProps} myWorksTab="activity" workItems={items} />);
     expect(screen.getByText(/5 more/)).toBeInTheDocument();
   });

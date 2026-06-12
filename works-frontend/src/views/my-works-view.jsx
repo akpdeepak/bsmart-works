@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Star, User, AtSign, ClipboardList, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/works/button';
@@ -9,9 +10,24 @@ import { statusToCategory } from '@/components/works/status';
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 // Tune this surface here — no JSX diving needed.
 const CONFIG = {
-  activityLimit: 20,          // max rows shown in the Recent Activity tab
-  dueDateWarnDays: 3,         // days ahead at which the due-date label turns orange
+  activityLimit: 20,            // max rows shown in the Recent Activity tab
+  dueDateWarnDays: 3,           // days ahead at which the due-date label turns orange
   activitySortField: 'updatedAt', // sort key for activity; falls back to 'id'
+  assignedSortDefault: 'priority', // default sort for the Assigned tab
+  sortOptions: [                // pills rendered above the Assigned list
+    { key: 'priority', label: 'Priority' },
+    { key: 'dueDate',  label: 'Due date' },
+    { key: 'recent',   label: 'Recent'   },
+  ],
+};
+
+// Priority sort order (lower = shown first) and dot token map.
+const PRIORITY_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+const PRIORITY_DOT   = {
+  CRITICAL: 'bg-semantic-danger',
+  HIGH:     'bg-semantic-warning',
+  MEDIUM:   'bg-neutral-300',
+  LOW:      'bg-neutral-200',
 };
 
 // Returns a short relative time string: "2h ago", "3d ago", or a short date past 7 days.
@@ -38,9 +54,28 @@ function dueDateMeta(dateStr) {
   return { text: new Date(dateStr).toLocaleDateString(), urgent: false };
 }
 
+// Sorts a copy of items by the given sort key.
+function sortItems(items, by) {
+  return [...items].sort((a, b) => {
+    if (by === 'priority') {
+      return (PRIORITY_ORDER[a.priority] ?? 2) - (PRIORITY_ORDER[b.priority] ?? 2);
+    }
+    if (by === 'dueDate') {
+      const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+      const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+      return da - db; // earliest due date first; no-date items sink to the bottom
+    }
+    // recent: descending updatedAt / id
+    const av = String(a[CONFIG.activitySortField] ?? a.id ?? '');
+    const bv = String(b[CONFIG.activitySortField] ?? b.id ?? '');
+    return bv.localeCompare(av);
+  });
+}
+
 // Shared work-item row — used across Assigned, Starred, and Activity tabs.
 function WorkRow({ item, onSelect, onPressKey, starred = false, compact = false }) {
   const due = dueDateMeta(item.dueDate);
+  const dotColor = PRIORITY_DOT[item.priority] || PRIORITY_DOT.MEDIUM;
   return (
     <div
       role="button" tabIndex={0}
@@ -54,6 +89,7 @@ function WorkRow({ item, onSelect, onPressKey, starred = false, compact = false 
         starred ? 'border-brand-orange/40' : 'border-neutral-200 dark:border-neutral-700'
       )}
     >
+      <span className={cn('h-2 w-2 rounded-full flex-shrink-0', dotColor)} aria-hidden="true" />
       {starred && <Star className="h-3.5 w-3.5 text-brand-orange fill-current flex-shrink-0" aria-hidden="true" />}
       <TypeBadge type={item.type} compact={compact} />
       <div className="flex-1 min-w-0">
@@ -85,6 +121,8 @@ export default function MyWorksView({
   setIsCreateOpen,
   onPressKey,
 }) {
+  const [sort, setSort] = useState(CONFIG.assignedSortDefault);
+
   // Compute tab data once to avoid repeated inline .filter() calls in JSX.
   const starredItems = workItems.filter(i => i.starred);
   const mentions = notifications.filter(n => n.type === 'MENTION');
@@ -94,10 +132,12 @@ export default function MyWorksView({
     .sort((a, b) => {
       const av = String(a[CONFIG.activitySortField] ?? a.id ?? '');
       const bv = String(b[CONFIG.activitySortField] ?? b.id ?? '');
-      return bv.localeCompare(av); // descending — most recent first
+      return bv.localeCompare(av);
     });
   const activityItems = activityAll.slice(0, CONFIG.activityLimit);
   const activityOverflow = activityAll.length - activityItems.length;
+
+  const sortedItems = sortItems(myItems, sort);
 
   const tabs = [
     { key: 'assigned', label: 'Assigned', count: myItems.length },
@@ -137,11 +177,31 @@ export default function MyWorksView({
           ? <EmptyState icon={User} title="Nothing assigned to you"
               subtitle="Work items assigned to you will appear here."
               action={<Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(true)}>Create a work item</Button>} />
-          : <div className="space-y-2">
-              {myItems.map(item => (
-                <WorkRow key={item.id} item={item} onSelect={setSelectedItem} onPressKey={onPressKey} />
-              ))}
-            </div>
+          : <>
+              {/* Sort pills */}
+              <div className="flex items-center gap-1.5 mb-3">
+                <span className="text-xs text-neutral-600 dark:text-neutral-400">Sort:</span>
+                {CONFIG.sortOptions.map(s => (
+                  <button
+                    key={s.key}
+                    onClick={() => setSort(s.key)}
+                    className={cn(
+                      'text-xs px-2.5 py-1 rounded-full font-medium transition-colors',
+                      sort === s.key
+                        ? 'bg-brand-navy text-white'
+                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                    )}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-2">
+                {sortedItems.map(item => (
+                  <WorkRow key={item.id} item={item} onSelect={setSelectedItem} onPressKey={onPressKey} />
+                ))}
+              </div>
+            </>
       )}
 
       {/* Starred */}

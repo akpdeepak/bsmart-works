@@ -32,7 +32,10 @@ export default function BacklogView({
   // SprintItemList is defined inline in App.jsx and passed as a prop to avoid
   // circular extraction (the component has deep App-specific deps).
   SprintItemList,
+  cardPrefs,
+  customFieldDefs = [],
 }) {
+  const iv = cardPrefs?.isVisible ?? (() => true);
   const onPressKey = (e) => { if (e.key === 'Enter' || e.key === ' ') e.currentTarget.click(); };
 
   return (
@@ -150,11 +153,12 @@ export default function BacklogView({
                     </div>
                   ) : (
                     <>
-                      <PriorityBadge priority={item.priority} />
-                      {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
+                      {iv('priority') && <PriorityBadge priority={item.priority} />}
+                      {iv('storyPoints') && (item.storyPoints > 0) && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
+                      {iv('dueDate') && item.dueDate && <span className="text-xs text-semantic-warning">{item.dueDate}</span>}
                     </>
                   )}
-                  {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}
+                  {iv('assignee') && item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}
                   {sprints.filter(s => s.status !== 'COMPLETED').length > 0 && (
                     <select className="opacity-0 group-hover:opacity-100 text-xs border border-neutral-200 rounded px-1 py-0.5 text-neutral-600 transition-opacity"
                       onChange={e => e.target.value && handleMoveToSprint(item.id, e.target.value)} defaultValue="">

@@ -7,7 +7,9 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "work_items")
@@ -137,6 +139,7 @@ public class WorkItem {
 
     @Transient private List<String> tags;
     @Transient private boolean starred = false;
+    @Transient private Map<String, Object> customFields = new HashMap<>();
 
     // ── Getters / setters ─────────────────────────────────────────────────────
 
@@ -283,4 +286,7 @@ public class WorkItem {
     private String productId;
     public String getProductId() { return productId; }
     public void setProductId(String v) { this.productId = v; }
+
+    public Map<String, Object> getCustomFields() { return customFields; }
+    public void setCustomFields(Map<String, Object> v) { this.customFields = v != null ? v : new HashMap<>(); }
 }

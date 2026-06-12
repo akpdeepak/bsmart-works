@@ -60,6 +60,7 @@ import { api } from '@/lib/apiClient';
 import { layoutToWidgets } from '@/lib/today-layouts';
 import { useCardPrefs } from '@/hooks/useCardPrefs';
 import { buildStatusResolver } from '@/lib/status-config';
+import { buildFieldPrefsResolver, saveTypeFieldPrefs } from '@/lib/type-field-prefs';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { isIconComponent, onPressKey, renderMd } from '@/lib/utils';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -223,6 +224,24 @@ export default function App() {
   // status a work item stores (a string) to its category/color/clock across every surface.
   const [statusConfig, setStatusConfig] = useState([]);
   const statusResolver = useMemo(() => buildStatusResolver(statusConfig), [statusConfig]);
+  // Per-type field preferences — which fields show on the detail surface, per work-item type.
+  const [typeFieldPrefs, setTypeFieldPrefs] = useState([]);
+  const fieldPrefs = useMemo(() => buildFieldPrefsResolver(typeFieldPrefs), [typeFieldPrefs]);
+  // Toggle a field's visibility for a type (bulk-replaces that type's prefs server-side).
+  const handleToggleFieldPref = (typeKey, fieldKey, visible) => {
+    const forType = typeFieldPrefs
+      .filter(p => p.typeKey === typeKey && p.fieldKey !== fieldKey)
+      .map(p => ({ fieldKey: p.fieldKey, visible: p.visible, sortOrder: p.sortOrder }));
+    const next = [...forType, { fieldKey, visible }];
+    saveTypeFieldPrefs(api, activeWorkspaceId, typeKey, next)
+      .then(updated => setTypeFieldPrefs(Array.isArray(updated) ? updated : []))
+      .catch(reportError);
+  };
+  // Bulk-replace a type's field prefs (visibility + order) — used by the Settings field editor.
+  const handleSaveFieldPrefs = (typeKey, prefList) =>
+    saveTypeFieldPrefs(api, activeWorkspaceId, typeKey, prefList)
+      .then(updated => setTypeFieldPrefs(Array.isArray(updated) ? updated : []))
+      .catch(reportError);
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false); // off-canvas drawer under md (G1)
   const [subRailCollapsed, setSubRailCollapsed] = useState(false);
@@ -362,6 +381,7 @@ export default function App() {
   const [ceremonies, setCeremonies]             = useState([]);   // [{ session, counts }]
   const [activeCeremony, setActiveCeremony]     = useState(null); // { session, attendance, counts }
   const [newCeremony, setNewCeremony]           = useState({ ceremonyType: 'STANDUP', scheduledAt: '' });
+  const [myDay, setMyDay]                       = useState(null); // { myItems, myImpediments, myActions, todayStandup, myStandupEntry }
   const [roadmapThemes, setRoadmapThemes]       = useState([]);
   const [newTheme, setNewTheme]                 = useState({ name: '', status: 'PLANNED', quarter: '', description: '' });
   const [ideas, setIdeas]                       = useState([]);
@@ -756,6 +776,10 @@ export default function App() {
     api.send(`/status-config?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
       .then(cfg => setStatusConfig(Array.isArray(cfg) ? cfg : []))
       .catch(() => setStatusConfig([]));
+    // Load per-type field preferences (which detail-surface fields show per type).
+    api.send(`/type-field-prefs?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
+      .then(p => setTypeFieldPrefs(Array.isArray(p) ? p : []))
+      .catch(() => setTypeFieldPrefs([]));
     // Load AI capabilities for this workspace — drives hide/show of AI action buttons (RB-40 §2).
     aiClient.capabilities(activeWorkspaceId).then(caps => {
       setAiCapabilities(Array.isArray(caps) ? caps : []);
@@ -2007,7 +2031,19 @@ export default function App() {
     setView('smcockpit');
     const pid = i15ProjectId || (projects[0] && projects[0].id) || '';
     setI15ProjectId(pid);
-    if (pid) { fetchCockpitContext(pid); fetchCeremonies(pid); fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
+    if (pid) { fetchCockpitContext(pid); fetchCeremonies(pid); fetchMyDay(pid); fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
+  }
+  function fetchMyDay(pid) {
+    api.raw(`/cockpit/my-day?projectId=${pid}`).then(r => r.json())
+      .then(d => setMyDay(d && typeof d === 'object' ? d : null)).catch(() => setMyDay(null));
+  }
+  function submitMyStandup() {
+    const sid = myDay?.todayStandup?.id;
+    const eid = myDay?.myStandupEntry?.id;
+    if (!sid || !eid) return;
+    api.send(`/standups/${sid}/entries/${eid}/record`, { method: 'POST', body: JSON.stringify(standupDraft) })
+      .then(() => { setStandupDraft({ yesterday: '', today: '', blockers: '' }); fetchMyDay(i15ProjectId); showToast('Standup update recorded'); })
+      .catch(() => showToast('Failed to record your update', 'error'));
   }
   function fetchCockpitContext(pid) {
     api.raw(`/cockpit/context?projectId=${pid}`).then(r => r.json())
@@ -3312,6 +3348,9 @@ export default function App() {
           {view === 'settings3' && (
             <Settings3View
               settings3Tab={settings3Tab}
+              fieldPrefs={fieldPrefs}
+              customFieldDefs={customFieldDefs}
+              onSaveFieldPrefs={handleSaveFieldPrefs}
               workflows={workflows}
               expandedWorkflowId={expandedWorkflowId}
               workflowDetail={workflowDetail}
@@ -3636,6 +3675,9 @@ export default function App() {
               activeCeremony={activeCeremony}
               newCeremony={newCeremony}
               currentUserId={currentUser?.id}
+              myDay={myDay}
+              fetchMyDay={fetchMyDay}
+              submitMyStandup={submitMyStandup}
               fetchCockpitContext={fetchCockpitContext}
               fetchCeremonies={fetchCeremonies}
               scheduleCeremony={scheduleCeremony}
@@ -3882,6 +3924,8 @@ export default function App() {
           maxUploadMb={MAX_UPLOAD_MB}
           activity={activity}
           statusMetrics={statusMetrics}
+          fieldPrefs={fieldPrefs}
+          onToggleFieldPref={handleToggleFieldPref}
           activityEventFilter={activityEventFilter}
           setActivityEventFilter={setActivityEventFilter}
           setActivity={setActivity}

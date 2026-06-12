@@ -1,20 +1,20 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, Fragment } from 'react';
 import {
   Star, X, CornerDownRight, Reply, Sparkles,
   Upload, Image as ImageIcon, ShieldCheck, ArrowRight,
-  ClipboardList, IndentIncrease, IndentDecrease, Link2, ExternalLink,
+  IndentIncrease, IndentDecrease, Link2, ExternalLink, SlidersHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { Avatar } from '@/components/works/atoms/avatar';
-import { EmptyState } from '@/components/works/atoms/empty-state';
 import { LapseBadge } from '@/components/works/atoms/lapse-badge';
 import { computeLapse, lapseProgress } from '@/lib/status-lapse';
 import { WorkItemStatusTimeline } from '@/components/works/organisms/work-item-status-timeline';
 import { AcceptanceCriteria } from '@/components/works/organisms/acceptance-criteria';
 import { WorkItemSearchPicker } from '@/components/works/organisms/work-item-search-picker';
+import { detailFieldsFor, orderByPrefs, SECTION_LABELS } from '@/lib/type-detail-fields';
 import { api } from '@/lib/apiClient';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { renderMd, onPressKey } from '@/lib/utils';
@@ -152,12 +152,16 @@ export function WorkItemDetailPanel({
   activity, statusMetrics, activityEventFilter, setActivityEventFilter, setActivity, reportError,
   // per-type status configuration + lapse
   statusResolver,
+  // per-type field visibility
+  fieldPrefs, onToggleFieldPref,
 }) {
   // Iteration 10 Cap O — summarize comments (second AI surface)
   const [commentSummary, setCommentSummary] = useState(null);
   const [summaryBusy, setSummaryBusy] = useState(false);
   // Files tab — "attach link" inline form
   const [linkForm, setLinkForm] = useState({ open: false, url: '', title: '' });
+  // "Configure fields" edit mode — reveals per-field visibility checkboxes.
+  const [editFields, setEditFields] = useState(false);
 
   const summarizeComments = () => {
     if (!selectedItem?.id || !activeWorkspaceId) return;
@@ -232,7 +236,6 @@ export function WorkItemDetailPanel({
         <div className="flex border-b border-neutral-200 dark:border-neutral-700 px-5">
           {[
             { key: 'details',       label: 'Details' },
-            { key: 'custom-fields', label: 'Custom Fields' },
             { key: 'comments',      label: `Comments ${comments.length > 0 ? `(${comments.length})` : ''}` },
             { key: 'links',         label: `Links ${links.length > 0 ? `(${links.length})` : ''}` },
             { key: 'attachments',   label: `Files ${attachments.length > 0 ? `(${attachments.length})` : ''}` },
@@ -416,114 +419,188 @@ export function WorkItemDetailPanel({
               if (!TYPE_SPECIFIC.has(t)) return null;
 
               const upd = patch => { const u = { ...selectedItem, ...patch }; setSelectedItem(u); handleUpdateItem(u); };
-              const tf = (label, field, rows = 2) => (
+              const vis = (fk) => !fieldPrefs || fieldPrefs.isVisible(t, fk);
+              // Wrap a field: hide when toggled off (unless in "Configure fields" mode, where each
+              // field gets a visibility checkbox).
+              const field = (fk, node) => {
+                const visible = vis(fk);
+                if (!visible && !editFields) return null;
+                if (!editFields) return node;
+                return (
+                  <div key={fk} className="col-span-2 flex items-start gap-2">
+                    <input type="checkbox" checked={visible} aria-label={`Show ${fk}`}
+                      onChange={() => onToggleFieldPref?.(t, fk, !visible)} className="mt-2 accent-brand-navy flex-shrink-0" />
+                    <div className={`flex-1 min-w-0 ${visible ? '' : 'opacity-50'}`}>{node}</div>
+                  </div>
+                );
+              };
+              const tf = (label, fk, rows = 2) => field(fk, (
                 <div className="col-span-2">
                   <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">{label}</label>
                   <textarea rows={rows} className="input resize-none"
-                    value={selectedItem[field] || ''}
-                    onChange={e => setSelectedItem({ ...selectedItem, [field]: e.target.value })}
-                    onBlur={e => { const u = { ...selectedItem, [field]: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }} />
+                    value={selectedItem[fk] || ''}
+                    onChange={e => setSelectedItem({ ...selectedItem, [fk]: e.target.value })}
+                    onBlur={e => { const u = { ...selectedItem, [fk]: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }} />
                 </div>
-              );
-              const sf = (label, field, opts) => (
+              ));
+              const sf = (label, fk, opts) => field(fk, (
                 <div>
                   <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">{label}</label>
-                  <select className="input" value={selectedItem[field] || ''} onChange={e => upd({ [field]: e.target.value || null })}>
+                  <select className="input" value={selectedItem[fk] || ''} onChange={e => upd({ [fk]: e.target.value || null })}>
                     <option value="">— select —</option>
                     {opts.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </div>
-              );
-              const nf = (label, field, placeholder = '') => (
+              ));
+              const nf = (label, fk, placeholder = '') => field(fk, (
                 <div>
                   <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">{label}</label>
                   <input type="text" className="input" placeholder={placeholder}
-                    value={selectedItem[field] || ''}
-                    onChange={e => setSelectedItem({ ...selectedItem, [field]: e.target.value })}
-                    onBlur={e => { const u = { ...selectedItem, [field]: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }} />
+                    value={selectedItem[fk] || ''}
+                    onChange={e => setSelectedItem({ ...selectedItem, [fk]: e.target.value })}
+                    onBlur={e => { const u = { ...selectedItem, [fk]: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }} />
                 </div>
-              );
-              const df = (label, field) => (
+              ));
+              const df = (label, fk) => field(fk, (
                 <div>
                   <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">{label}</label>
-                  <input type="date" className="input" value={selectedItem[field] || ''} onChange={e => upd({ [field]: e.target.value || null })} />
+                  <input type="date" className="input" value={selectedItem[fk] || ''} onChange={e => upd({ [fk]: e.target.value || null })} />
                 </div>
-              );
-              const uf = (label, field) => (
+              ));
+              const uf = (label, fk) => field(fk, (
                 <div>
                   <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">{label}</label>
-                  <select className="input" value={selectedItem[field] || ''} onChange={e => upd({ [field]: e.target.value || null })}>
+                  <select className="input" value={selectedItem[fk] || ''} onChange={e => upd({ [fk]: e.target.value || null })}>
                     <option value="">— unassigned —</option>
                     {users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
                   </select>
                 </div>
-              );
+              ));
 
-              const sectionLabel = { BUG: 'Bug Details', RISK: 'Risk Details', ISSUE: 'Issue Details',
-                ASSUMPTION: 'Assumption Details', DEPENDENCY: 'Dependency Details',
-                INCIDENT: 'Incident Details', HR_SERVICE_REQUEST: 'HR Service Request Details',
-                IT_SERVICE_REQUEST: 'IT Service Request Details' }[t];
+              // Render the type's fields from the registry, ordered by saved prefs, gated by the
+              // helpers (visibility + edit-mode checkbox). Replaces the old hardcoded per-type JSX.
+              const descriptors = orderByPrefs(detailFieldsFor(t), fieldPrefs?.prefsMapForType?.(t));
+              const renderDescriptor = (d) => {
+                if (d.kind === 'select')   return sf(d.label, d.key, d.options || []);
+                if (d.kind === 'textarea') return tf(d.label, d.key, d.rows || 2);
+                if (d.kind === 'text')     return nf(d.label, d.key, d.placeholder || '');
+                if (d.kind === 'date')     return df(d.label, d.key);
+                if (d.kind === 'user')     return uf(d.label, d.key);
+                if (d.kind === 'readonly') {
+                  if (selectedItem[d.key] == null) return null;
+                  return field(d.key, (
+                    <div>
+                      <span className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">{d.label}</span>
+                      <p className="input bg-neutral-50 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-center font-mono font-semibold">{selectedItem[d.key]}</p>
+                    </div>
+                  ));
+                }
+                return null;
+              };
 
               return (
                 <div className="border-t border-neutral-100 dark:border-neutral-800 pt-4">
-                  <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">{sectionLabel}</p>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{SECTION_LABELS[t]}</p>
+                    {onToggleFieldPref && (
+                      <button type="button" onClick={() => setEditFields(v => !v)}
+                        className="text-xs flex items-center gap-1 text-neutral-500 hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded px-1">
+                        <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />{editFields ? 'Done' : 'Configure fields'}
+                      </button>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
-                    {t === 'BUG' && <>
-                      {sf('Severity', 'severity', ['Critical','High','Medium','Low'])}
-                      {sf('Environment', 'environmentDetail', ['Development','Staging','UAT','Production'])}
-                      {sf('Regression Risk', 'regressionRisk', ['Yes','No','Not Assessed'])}
-                      {tf('Steps to Reproduce', 'stepsToReproduce', 3)}
-                      {tf('Expected Behavior', 'expectedBehavior')}
-                      {tf('Actual Behavior', 'actualBehavior')}
-                      {nf('Affected Version', 'affectedVersion')}
-                      {nf('Fixed In Version', 'fixedInVersion')}
-                    </>}
-                    {t === 'RISK' && <>
-                      {sf('Probability', 'probability', ['High','Medium','Low'])}
-                      {sf('Impact Level', 'impactLevel', ['High','Medium','Low'])}
-                      {selectedItem.riskScore != null && (
-                        <div>
-                          <span className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Risk Score</span>
-                          <p className="input bg-neutral-50 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-center font-mono font-semibold">{selectedItem.riskScore}</p>
-                        </div>
-                      )}
-                      {tf('Mitigation Plan', 'mitigationPlan', 3)}
-                      {tf('Contingency Plan', 'contingencyPlan')}
-                    </>}
-                    {t === 'ISSUE' && <>
-                      {sf('Impact Level', 'impactLevel', ['High','Medium','Low'])}
-                      {tf('Root Cause', 'rootCause', 3)}
-                      {tf('Resolution Summary', 'resolutionSummary')}
-                    </>}
-                    {t === 'ASSUMPTION' && <>
-                      {tf('Basis / Rationale', 'basisRationale', 3)}
-                      {df('Validation Date', 'validationDate')}
-                      {tf('Risk if Wrong', 'riskIfWrong')}
-                    </>}
-                    {t === 'DEPENDENCY' && <>
-                      {sf('Dependency Type', 'dependencyType', ['Internal','External'])}
-                      {df('Expected Resolution', 'expectedResolutionDate')}
-                      {tf('Impact if Delayed', 'impactIfDelayed')}
-                    </>}
-                    {t === 'INCIDENT' && <>
-                      {sf('Response Speed', 'responseSpeed', ['Immediate','High','Normal','Planned'])}
-                      {sf('Business Impact', 'businessImpact', ['Organisation-wide','Department','Team','Individual'])}
-                      {sf('Severity', 'severity', ['Critical','High','Medium','Low'])}
-                      {nf('Affected Area', 'itemCategory', 'e.g. Billing, Field Ops')}
-                      {nf('Affected System', 'affectedSystem')}
-                      {nf('Responding Team', 'respondingTeam')}
-                      {tf('Root Cause', 'rootCause', 3)}
-                      {tf('Resolution Summary', 'resolutionSummary')}
-                    </>}
-                    {(t === 'HR_SERVICE_REQUEST' || t === 'IT_SERVICE_REQUEST') && <>
-                      {uf('Requested For', 'requestedForId')}
-                      {uf('Approver', 'approverId')}
-                      {t === 'HR_SERVICE_REQUEST' && nf('Department', 'department')}
-                      {t === 'IT_SERVICE_REQUEST' && nf('Affected System', 'affectedSystem')}
-                      {nf('Category', 'itemCategory', 'e.g. Access Request')}
-                      {df('Needed By', 'neededByDate')}
-                      {tf('Business Justification', 'businessJustification')}
-                    </>}
+                    {descriptors.map(d => <Fragment key={d.key}>{renderDescriptor(d)}</Fragment>)}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Custom fields — inline (the dedicated tab was removed); per-type visibility + edit mode */}
+            {fieldDefs.length > 0 && (() => {
+              const ct = (selectedItem.type || '').toUpperCase();
+              const cvis = (fd) => !fieldPrefs || fieldPrefs.isVisible(ct, `cf_${fd.id}`);
+              const shown = fieldDefs.filter(fd => editFields || cvis(fd));
+              if (shown.length === 0 && !editFields) return null;
+              return (
+                <div className="border-t border-neutral-100 dark:border-neutral-800 pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Custom fields</p>
+                    {onToggleFieldPref && (
+                      <button type="button" onClick={() => setEditFields(v => !v)}
+                        className="text-xs flex items-center gap-1 text-neutral-500 hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded px-1">
+                        <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />{editFields ? 'Done' : 'Configure fields'}
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-3">
+                    {shown.map(fd => {
+                      const visible = cvis(fd);
+                      return (
+                      <div key={fd.id} className={`flex items-center gap-2 ${visible ? '' : 'opacity-50'}`}>
+                        {editFields && (
+                          <input type="checkbox" checked={visible} onChange={() => onToggleFieldPref?.(ct, `cf_${fd.id}`, !visible)}
+                            className="accent-brand-navy flex-shrink-0" aria-label={`Show ${fd.name}`} />
+                        )}
+                        <label htmlFor={`cf-${fd.id}`} className="text-xs text-neutral-500 w-32 flex-shrink-0">{fd.name}{fd.required && <span className="text-semantic-danger ml-0.5">*</span>}</label>
+                        {(fd.fieldType === 'TEXT' || fd.fieldType === 'EMAIL' || fd.fieldType === 'URL' || fd.fieldType === 'PHONE') && (
+                          <input id={`cf-${fd.id}`} type={fd.fieldType === 'EMAIL' ? 'email' : fd.fieldType === 'URL' ? 'url' : 'text'}
+                            className="input flex-1 text-sm py-1" value={fieldValues[fd.id] || ''}
+                            onChange={e => setFieldValues(v => ({ ...v, [fd.id]: e.target.value }))}
+                            onBlur={e => saveFieldValue(selectedItem.id, fd.id, e.target.value)} placeholder={fd.description || fd.name} />
+                        )}
+                        {fd.fieldType === 'TEXTAREA' && (
+                          <textarea id={`cf-${fd.id}`} rows={2} className="input flex-1 text-sm resize-none" value={fieldValues[fd.id] || ''}
+                            onChange={e => setFieldValues(v => ({ ...v, [fd.id]: e.target.value }))}
+                            onBlur={e => saveFieldValue(selectedItem.id, fd.id, e.target.value)} placeholder={fd.description || fd.name} />
+                        )}
+                        {fd.fieldType === 'NUMBER' && (
+                          <input id={`cf-${fd.id}`} type="number" className="input flex-1 text-sm py-1" value={fieldValues[fd.id] || ''}
+                            onChange={e => setFieldValues(v => ({ ...v, [fd.id]: e.target.value }))}
+                            onBlur={e => saveFieldValue(selectedItem.id, fd.id, e.target.value)} />
+                        )}
+                        {fd.fieldType === 'DATE' && (
+                          <input id={`cf-${fd.id}`} type="date" className="input flex-1 text-sm py-1" value={fieldValues[fd.id] || ''}
+                            onChange={e => { setFieldValues(v => ({ ...v, [fd.id]: e.target.value })); saveFieldValue(selectedItem.id, fd.id, e.target.value); }} />
+                        )}
+                        {fd.fieldType === 'CHECKBOX' && (
+                          <input id={`cf-${fd.id}`} type="checkbox" className="w-4 h-4 accent-brand-navy"
+                            checked={fieldValues[fd.id] === 'true' || fieldValues[fd.id] === true}
+                            onChange={e => { const v = String(e.target.checked); setFieldValues(fv => ({ ...fv, [fd.id]: v })); saveFieldValue(selectedItem.id, fd.id, v); }} />
+                        )}
+                        {fd.fieldType === 'SELECT' && (
+                          <select id={`cf-${fd.id}`} className="input flex-1 text-sm py-1" value={fieldValues[fd.id] || ''}
+                            onChange={e => { setFieldValues(v => ({ ...v, [fd.id]: e.target.value })); saveFieldValue(selectedItem.id, fd.id, e.target.value); }}>
+                            <option value="">— Select —</option>
+                            {(fd.options || fd.config?.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                          </select>
+                        )}
+                        {fd.fieldType === 'USER' && (
+                          <select id={`cf-${fd.id}`} className="input flex-1 text-sm py-1" value={fieldValues[fd.id] || ''}
+                            onChange={e => { setFieldValues(v => ({ ...v, [fd.id]: e.target.value })); saveFieldValue(selectedItem.id, fd.id, e.target.value); }}>
+                            <option value="">— Select user —</option>
+                            {users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
+                          </select>
+                        )}
+                        {fd.fieldType === 'RATING' && (
+                          <div className="flex gap-1">
+                            {[1,2,3,4,5].map(n => (
+                              <button key={n} onClick={() => { setFieldValues(v => ({ ...v, [fd.id]: String(n) })); saveFieldValue(selectedItem.id, fd.id, String(n)); }}
+                                className={`w-6 h-6 rounded text-xs font-bold transition-colors ${Number(fieldValues[fd.id]) >= n ? 'bg-brand-amber text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'}`}>{n}</button>
+                            ))}
+                          </div>
+                        )}
+                        {fd.fieldType === 'PROGRESS' && (
+                          <div className="flex items-center gap-2 flex-1">
+                            <input type="range" min={0} max={100} className="flex-1" value={fieldValues[fd.id] || 0}
+                              onChange={e => setFieldValues(v => ({ ...v, [fd.id]: e.target.value }))}
+                              onMouseUp={e => saveFieldValue(selectedItem.id, fd.id, e.target.value)} />
+                            <span className="text-xs text-neutral-500 w-8">{fieldValues[fd.id] || 0}%</span>
+                          </div>
+                        )}
+                      </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -587,91 +664,8 @@ export function WorkItemDetailPanel({
             </div>{/* /two-column body */}
           </>}
 
-          {/* CUSTOM FIELDS TAB */}
-          {detailTab === 'custom-fields' && (
-            <div>
-              {fieldDefs.length === 0 ? (
-                <EmptyState icon={ClipboardList} title="No custom fields defined" subtitle="Go to Workflows & Fields settings to define custom fields for your work items." />
-              ) : (
-                <div className="space-y-3">
-                  <span className="block text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wider">Custom Fields</span>
-                  {fieldDefs.map(fd => (
-                    <div key={fd.id} className="flex items-center gap-2">
-                      <label htmlFor={`cf-${fd.id}`} className="text-xs text-neutral-500 w-32 flex-shrink-0">{fd.name}{fd.required && <span className="text-semantic-danger ml-0.5">*</span>}</label>
-                      {(fd.fieldType === 'TEXT' || fd.fieldType === 'EMAIL' || fd.fieldType === 'URL' || fd.fieldType === 'PHONE') && (
-                        <input id={`cf-${fd.id}`} type={fd.fieldType === 'EMAIL' ? 'email' : fd.fieldType === 'URL' ? 'url' : 'text'}
-                          className="input flex-1 text-sm py-1"
-                          value={fieldValues[fd.id] || ''}
-                          onChange={e => setFieldValues(v => ({ ...v, [fd.id]: e.target.value }))}
-                          onBlur={e => saveFieldValue(selectedItem.id, fd.id, e.target.value)}
-                          placeholder={fd.description || fd.name} />
-                      )}
-                      {fd.fieldType === 'TEXTAREA' && (
-                        <textarea id={`cf-${fd.id}`} rows={2} className="input flex-1 text-sm resize-none"
-                          value={fieldValues[fd.id] || ''}
-                          onChange={e => setFieldValues(v => ({ ...v, [fd.id]: e.target.value }))}
-                          onBlur={e => saveFieldValue(selectedItem.id, fd.id, e.target.value)}
-                          placeholder={fd.description || fd.name} />
-                      )}
-                      {fd.fieldType === 'NUMBER' && (
-                        <input id={`cf-${fd.id}`} type="number" className="input flex-1 text-sm py-1"
-                          value={fieldValues[fd.id] || ''}
-                          onChange={e => setFieldValues(v => ({ ...v, [fd.id]: e.target.value }))}
-                          onBlur={e => saveFieldValue(selectedItem.id, fd.id, e.target.value)} />
-                      )}
-                      {fd.fieldType === 'DATE' && (
-                        <input id={`cf-${fd.id}`} type="date" className="input flex-1 text-sm py-1"
-                          value={fieldValues[fd.id] || ''}
-                          onChange={e => { setFieldValues(v => ({ ...v, [fd.id]: e.target.value })); saveFieldValue(selectedItem.id, fd.id, e.target.value); }} />
-                      )}
-                      {fd.fieldType === 'CHECKBOX' && (
-                        <input id={`cf-${fd.id}`} type="checkbox" className="w-4 h-4 accent-brand-navy"
-                          checked={fieldValues[fd.id] === 'true' || fieldValues[fd.id] === true}
-                          onChange={e => { const v = String(e.target.checked); setFieldValues(fv => ({ ...fv, [fd.id]: v })); saveFieldValue(selectedItem.id, fd.id, v); }} />
-                      )}
-                      {fd.fieldType === 'SELECT' && (
-                        <select id={`cf-${fd.id}`} className="input flex-1 text-sm py-1"
-                          value={fieldValues[fd.id] || ''}
-                          onChange={e => { setFieldValues(v => ({ ...v, [fd.id]: e.target.value })); saveFieldValue(selectedItem.id, fd.id, e.target.value); }}>
-                          <option value="">— Select —</option>
-                          {(fd.options || fd.config?.options || []).map(opt => (
-                            <option key={opt} value={opt}>{opt}</option>
-                          ))}
-                        </select>
-                      )}
-                      {fd.fieldType === 'USER' && (
-                        <select id={`cf-${fd.id}`} className="input flex-1 text-sm py-1"
-                          value={fieldValues[fd.id] || ''}
-                          onChange={e => { setFieldValues(v => ({ ...v, [fd.id]: e.target.value })); saveFieldValue(selectedItem.id, fd.id, e.target.value); }}>
-                          <option value="">— Select user —</option>
-                          {users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
-                        </select>
-                      )}
-                      {fd.fieldType === 'RATING' && (
-                        <div className="flex gap-1">
-                          {[1,2,3,4,5].map(n => (
-                            <button key={n} onClick={() => { setFieldValues(v => ({ ...v, [fd.id]: String(n) })); saveFieldValue(selectedItem.id, fd.id, String(n)); }}
-                              className={`w-6 h-6 rounded text-xs font-bold transition-colors ${Number(fieldValues[fd.id]) >= n ? 'bg-brand-amber text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'}`}>
-                              {n}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      {fd.fieldType === 'PROGRESS' && (
-                        <div className="flex items-center gap-2 flex-1">
-                          <input type="range" min={0} max={100} className="flex-1"
-                            value={fieldValues[fd.id] || 0}
-                            onChange={e => setFieldValues(v => ({ ...v, [fd.id]: e.target.value }))}
-                            onMouseUp={e => saveFieldValue(selectedItem.id, fd.id, e.target.value)} />
-                          <span className="text-xs text-neutral-500 w-8">{fieldValues[fd.id] || 0}%</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          {/* (Custom Fields tab removed — custom fields now render inline in the Details surface,
+              per-type configurable via "Configure fields".) */}
 
           {/* COMMENTS TAB */}
           {detailTab === 'comments' && (

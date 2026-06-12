@@ -17,16 +17,24 @@ import java.util.Map;
 public class CockpitContextController {
 
     private final TeamRoleService service;
+    private final MyDayService myDayService;
     private final AuthenticatedUser authenticatedUser;
 
-    public CockpitContextController(TeamRoleService service, AuthenticatedUser authenticatedUser) {
+    public CockpitContextController(TeamRoleService service, MyDayService myDayService,
+                                    AuthenticatedUser authenticatedUser) {
         this.service = service;
+        this.myDayService = myDayService;
         this.authenticatedUser = authenticatedUser;
     }
 
     @GetMapping("/cockpit/context")
     public Map<String, Object> context(@RequestParam String projectId) {
         return service.cockpitContext(authenticatedUser.id(), projectId);
+    }
+
+    @GetMapping("/cockpit/my-day")
+    public Map<String, Object> myDay(@RequestParam String projectId) {
+        return myDayService.myDay(authenticatedUser.id(), projectId);
     }
 
     @GetMapping("/team-roles")

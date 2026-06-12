@@ -21,6 +21,10 @@ export function buildFieldPrefsResolver(prefs) {
       if (!m) return new Set();
       return new Set([...m.values()].filter((p) => p.visible === false).map((p) => p.fieldKey));
     },
+    /** Raw pref map (fieldKey → {visible, sortOrder}) for a type — used to order/configure fields. */
+    prefsMapForType(typeKey) {
+      return byType.get(typeKey) || new Map();
+    },
   };
 }
 

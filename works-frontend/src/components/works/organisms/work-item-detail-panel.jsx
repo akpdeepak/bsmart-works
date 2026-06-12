@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, Fragment } from 'react';
 import {
   Star, X, CornerDownRight, Reply, Sparkles,
   Upload, Image as ImageIcon, ShieldCheck, ArrowRight,
@@ -14,6 +14,7 @@ import { computeLapse, lapseProgress } from '@/lib/status-lapse';
 import { WorkItemStatusTimeline } from '@/components/works/organisms/work-item-status-timeline';
 import { AcceptanceCriteria } from '@/components/works/organisms/acceptance-criteria';
 import { WorkItemSearchPicker } from '@/components/works/organisms/work-item-search-picker';
+import { detailFieldsFor, orderByPrefs, SECTION_LABELS } from '@/lib/type-detail-fields';
 import { api } from '@/lib/apiClient';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { renderMd, onPressKey } from '@/lib/utils';
@@ -476,15 +477,31 @@ export function WorkItemDetailPanel({
                 </div>
               ));
 
-              const sectionLabel = { BUG: 'Bug Details', RISK: 'Risk Details', ISSUE: 'Issue Details',
-                ASSUMPTION: 'Assumption Details', DEPENDENCY: 'Dependency Details',
-                INCIDENT: 'Incident Details', HR_SERVICE_REQUEST: 'HR Service Request Details',
-                IT_SERVICE_REQUEST: 'IT Service Request Details' }[t];
+              // Render the type's fields from the registry, ordered by saved prefs, gated by the
+              // helpers (visibility + edit-mode checkbox). Replaces the old hardcoded per-type JSX.
+              const descriptors = orderByPrefs(detailFieldsFor(t), fieldPrefs?.prefsMapForType?.(t));
+              const renderDescriptor = (d) => {
+                if (d.kind === 'select')   return sf(d.label, d.key, d.options || []);
+                if (d.kind === 'textarea') return tf(d.label, d.key, d.rows || 2);
+                if (d.kind === 'text')     return nf(d.label, d.key, d.placeholder || '');
+                if (d.kind === 'date')     return df(d.label, d.key);
+                if (d.kind === 'user')     return uf(d.label, d.key);
+                if (d.kind === 'readonly') {
+                  if (selectedItem[d.key] == null) return null;
+                  return field(d.key, (
+                    <div>
+                      <span className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">{d.label}</span>
+                      <p className="input bg-neutral-50 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-center font-mono font-semibold">{selectedItem[d.key]}</p>
+                    </div>
+                  ));
+                }
+                return null;
+              };
 
               return (
                 <div className="border-t border-neutral-100 dark:border-neutral-800 pt-4">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{sectionLabel}</p>
+                    <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{SECTION_LABELS[t]}</p>
                     {onToggleFieldPref && (
                       <button type="button" onClick={() => setEditFields(v => !v)}
                         className="text-xs flex items-center gap-1 text-neutral-500 hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded px-1">
@@ -493,62 +510,7 @@ export function WorkItemDetailPanel({
                     )}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    {t === 'BUG' && <>
-                      {sf('Severity', 'severity', ['Critical','High','Medium','Low'])}
-                      {sf('Environment', 'environmentDetail', ['Development','Staging','UAT','Production'])}
-                      {sf('Regression Risk', 'regressionRisk', ['Yes','No','Not Assessed'])}
-                      {tf('Steps to Reproduce', 'stepsToReproduce', 3)}
-                      {tf('Expected Behavior', 'expectedBehavior')}
-                      {tf('Actual Behavior', 'actualBehavior')}
-                      {nf('Affected Version', 'affectedVersion')}
-                      {nf('Fixed In Version', 'fixedInVersion')}
-                    </>}
-                    {t === 'RISK' && <>
-                      {sf('Probability', 'probability', ['High','Medium','Low'])}
-                      {sf('Impact Level', 'impactLevel', ['High','Medium','Low'])}
-                      {selectedItem.riskScore != null && (
-                        <div>
-                          <span className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Risk Score</span>
-                          <p className="input bg-neutral-50 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-center font-mono font-semibold">{selectedItem.riskScore}</p>
-                        </div>
-                      )}
-                      {tf('Mitigation Plan', 'mitigationPlan', 3)}
-                      {tf('Contingency Plan', 'contingencyPlan')}
-                    </>}
-                    {t === 'ISSUE' && <>
-                      {sf('Impact Level', 'impactLevel', ['High','Medium','Low'])}
-                      {tf('Root Cause', 'rootCause', 3)}
-                      {tf('Resolution Summary', 'resolutionSummary')}
-                    </>}
-                    {t === 'ASSUMPTION' && <>
-                      {tf('Basis / Rationale', 'basisRationale', 3)}
-                      {df('Validation Date', 'validationDate')}
-                      {tf('Risk if Wrong', 'riskIfWrong')}
-                    </>}
-                    {t === 'DEPENDENCY' && <>
-                      {sf('Dependency Type', 'dependencyType', ['Internal','External'])}
-                      {df('Expected Resolution', 'expectedResolutionDate')}
-                      {tf('Impact if Delayed', 'impactIfDelayed')}
-                    </>}
-                    {t === 'INCIDENT' && <>
-                      {sf('Response Speed', 'responseSpeed', ['Immediate','High','Normal','Planned'])}
-                      {sf('Business Impact', 'businessImpact', ['Organisation-wide','Department','Team','Individual'])}
-                      {sf('Severity', 'severity', ['Critical','High','Medium','Low'])}
-                      {nf('Affected Area', 'itemCategory', 'e.g. Billing, Field Ops')}
-                      {nf('Affected System', 'affectedSystem')}
-                      {nf('Responding Team', 'respondingTeam')}
-                      {tf('Root Cause', 'rootCause', 3)}
-                      {tf('Resolution Summary', 'resolutionSummary')}
-                    </>}
-                    {(t === 'HR_SERVICE_REQUEST' || t === 'IT_SERVICE_REQUEST') && <>
-                      {uf('Requested For', 'requestedForId')}
-                      {uf('Approver', 'approverId')}
-                      {t === 'HR_SERVICE_REQUEST' && nf('Department', 'department')}
-                      {t === 'IT_SERVICE_REQUEST' && nf('Affected System', 'affectedSystem')}
-                      {nf('Category', 'itemCategory', 'e.g. Access Request')}
-                      {df('Needed By', 'neededByDate')}
-                      {tf('Business Justification', 'businessJustification')}
-                    </>}
+                    {descriptors.map(d => <Fragment key={d.key}>{renderDescriptor(d)}</Fragment>)}
                   </div>
                 </div>
               );

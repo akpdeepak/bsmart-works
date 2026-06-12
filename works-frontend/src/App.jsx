@@ -1,7 +1,7 @@
 ﻿/* eslint-disable no-unused-vars, no-undef */
 // App.jsx baseline-debt suppress: ~60 stale imports + a handful of undeclared state vars
 // pre-date the extraction wave. Track in TD-003. All NEW components must pass clean.
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 // DOMPurify was used only by renderMd, which now lives in @/lib/utils (TD-003).
 import {
   Mail, PanelLeft, Check,
@@ -59,6 +59,7 @@ import { ResetPasswordScreen } from '@/components/works/reset-password-screen';
 import { api } from '@/lib/apiClient';
 import { layoutToWidgets } from '@/lib/today-layouts';
 import { useCardPrefs } from '@/hooks/useCardPrefs';
+import { buildStatusResolver } from '@/lib/status-config';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { isIconComponent, onPressKey, renderMd } from '@/lib/utils';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -218,6 +219,10 @@ export default function App() {
   // Card field customisation — preferences persisted per-user in localStorage
   const cardPrefs = useCardPrefs();
   const [customFieldDefs, setCustomFieldDefs] = useState([]);
+  // Per-type status configuration (names, categories, colors, lapse thresholds) — resolves the
+  // status a work item stores (a string) to its category/color/clock across every surface.
+  const [statusConfig, setStatusConfig] = useState([]);
+  const statusResolver = useMemo(() => buildStatusResolver(statusConfig), [statusConfig]);
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false); // off-canvas drawer under md (G1)
   const [subRailCollapsed, setSubRailCollapsed] = useState(false);
@@ -742,6 +747,10 @@ export default function App() {
     api.send(`/custom-field-definitions?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
       .then(defs => setCustomFieldDefs(Array.isArray(defs) ? defs : []))
       .catch(() => setCustomFieldDefs([]));
+    // Load per-type status configuration (seeds workspace defaults server-side on first read).
+    api.send(`/status-config?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
+      .then(cfg => setStatusConfig(Array.isArray(cfg) ? cfg : []))
+      .catch(() => setStatusConfig([]));
     // Load AI capabilities for this workspace — drives hide/show of AI action buttons (RB-40 §2).
     aiClient.capabilities(activeWorkspaceId).then(caps => {
       setAiCapabilities(Array.isArray(caps) ? caps : []);
@@ -988,11 +997,19 @@ export default function App() {
 
   const handleDragStart = (e, id) => e.dataTransfer.setData('itemId', id);
   const handleDragOver  = (e) => e.preventDefault();
-  const handleDrop = (e, newStatus) => {
+  const handleDrop = (e, dropTarget) => {
     e.preventDefault();
     const itemId = e.dataTransfer.getData('itemId');
     const item = workItems.find(i => i.id === itemId);
-    if (!item || item.status === newStatus) return;
+    if (!item) return;
+    // dropTarget is a board category ('todo'|'in_progress'|'done') — resolve it to a concrete
+    // status from the item's own type workflow. (A literal status string is honored as-is too.)
+    let newStatus = dropTarget;
+    if (dropTarget === 'todo' || dropTarget === 'in_progress' || dropTarget === 'done') {
+      if (statusResolver.categoryOf(item.type, item.status) === dropTarget) return; // already there
+      newStatus = statusResolver.firstStatusOfCategory(item.type, dropTarget) || item.status;
+    }
+    if (item.status === newStatus) return;
     // Optimistic update
     setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: newStatus } : i));
     api.send(`/work-items/${itemId}`, {
@@ -2979,6 +2996,7 @@ export default function App() {
               setIsCreateOpen={setIsCreateOpen}
               onPressKey={onPressKey}
               cardPrefs={cardPrefs}
+              statusResolver={statusResolver}
             />
           )}
 
@@ -3003,6 +3021,7 @@ export default function App() {
               userName={userName}
               cardPrefs={cardPrefs}
               customFieldDefs={customFieldDefs}
+              statusResolver={statusResolver}
               workspaceId={activeWorkspaceId}
               onCustomFieldCreated={def => setCustomFieldDefs(prev => [...prev, def])}
             />
@@ -3099,6 +3118,7 @@ export default function App() {
               SprintItemList={SprintItemList}
               cardPrefs={cardPrefs}
               customFieldDefs={customFieldDefs}
+              statusResolver={statusResolver}
             />
           )}
 
@@ -3143,6 +3163,7 @@ export default function App() {
               selectedProjectId={selectedProjectId}
               cardPrefs={cardPrefs}
               customFieldDefs={customFieldDefs}
+              statusResolver={statusResolver}
             />
           )}
 
@@ -3767,6 +3788,7 @@ export default function App() {
           setActivityEventFilter={setActivityEventFilter}
           setActivity={setActivity}
           reportError={reportError}
+          statusResolver={statusResolver}
         />
       )}
 

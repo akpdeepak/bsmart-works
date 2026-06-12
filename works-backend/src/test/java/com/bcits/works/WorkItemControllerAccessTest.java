@@ -49,10 +49,12 @@ class WorkItemControllerAccessTest {
     private final DodChecklistService dodChecklists = mock(DodChecklistService.class);
     private final ExtensionExecutionService extensions = mock(ExtensionExecutionService.class);
     private final WorkflowRuleEngine workflowRules = mock(WorkflowRuleEngine.class);
+    private final StatusConfigService statusConfig = mock(StatusConfigService.class);
 
     private final WorkItemController controller = new WorkItemController(
             repository, eventService, jdbc, notificationRepository, userRepository,
-            emailService, batchService, authenticatedUser, rbac, dodChecklists, extensions, workflowRules);
+            emailService, batchService, authenticatedUser, rbac, dodChecklists, extensions, workflowRules,
+            statusConfig);
 
     WorkItemControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

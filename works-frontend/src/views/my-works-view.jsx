@@ -6,6 +6,8 @@ import { EmptyState } from '@/components/works/atoms/empty-state';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
+import { LapseBadge } from '@/components/works/atoms/lapse-badge';
+import { computeLapse } from '@/lib/status-lapse';
 
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 // Tune this surface here — no JSX diving needed.
@@ -73,9 +75,12 @@ function sortItems(items, by) {
 }
 
 // Shared work-item row — used across Assigned, Starred, and Activity tabs.
-function WorkRow({ item, onSelect, onPressKey, starred = false, compact = false, iv = () => true }) {
+function WorkRow({ item, onSelect, onPressKey, starred = false, compact = false, iv = () => true, statusResolver = null }) {
   const due = dueDateMeta(item.dueDate);
   const dotColor = PRIORITY_DOT[item.priority] || PRIORITY_DOT.MEDIUM;
+  const statusCat = statusResolver ? statusResolver.categoryOf(item.type, item.status) : statusToCategory(item.status);
+  const lapse = computeLapse(item.statusChangedAt, statusResolver?.metaFor(item.type, item.status) ?? null);
+  const showLapse = statusCat !== 'done' && (lapse.state === 'at_risk' || lapse.state === 'breached');
   return (
     <div
       role="button" tabIndex={0}
@@ -96,7 +101,8 @@ function WorkRow({ item, onSelect, onPressKey, starred = false, compact = false,
         <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{item.title}</p>
         <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{item.autoId || item.id}</p>
       </div>
-      {iv('status') && <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>}
+      {iv('status') && <StatusBadge category={statusCat}>{item.status}</StatusBadge>}
+      {showLapse && <LapseBadge lapse={lapse} compact />}
       {iv('dueDate') && due && (
         <span className={cn(
           'text-xs font-medium whitespace-nowrap',
@@ -124,6 +130,7 @@ export default function MyWorksView({
   setIsCreateOpen,
   onPressKey,
   cardPrefs,
+  statusResolver,
 }) {
   const [sort, setSort] = useState(CONFIG.assignedSortDefault);
   const iv = cardPrefs?.isVisible ?? (() => true);
@@ -203,7 +210,7 @@ export default function MyWorksView({
               </div>
               <div className="space-y-2">
                 {sortedItems.map(item => (
-                  <WorkRow key={item.id} item={item} onSelect={setSelectedItem} onPressKey={onPressKey} iv={iv} />
+                  <WorkRow key={item.id} item={item} onSelect={setSelectedItem} onPressKey={onPressKey} iv={iv} statusResolver={statusResolver} />
                 ))}
               </div>
             </>
@@ -216,7 +223,7 @@ export default function MyWorksView({
               subtitle="Star work items to keep them handy. Click the star on any card or in the detail panel." />
           : <div className="space-y-2">
               {starredItems.map(item => (
-                <WorkRow key={item.id} item={item} onSelect={setSelectedItem} onPressKey={onPressKey} starred iv={iv} />
+                <WorkRow key={item.id} item={item} onSelect={setSelectedItem} onPressKey={onPressKey} starred iv={iv} statusResolver={statusResolver} />
               ))}
             </div>
       )}
@@ -265,7 +272,7 @@ export default function MyWorksView({
               action={<Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(true)}>Create a work item</Button>} />
           : <div className="space-y-2">
               {activityItems.map(i => (
-                <WorkRow key={i.id} item={i} onSelect={setSelectedItem} onPressKey={onPressKey} compact iv={iv} />
+                <WorkRow key={i.id} item={i} onSelect={setSelectedItem} onPressKey={onPressKey} compact iv={iv} statusResolver={statusResolver} />
               ))}
               {activityOverflow > 0 && (
                 <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center pt-2">

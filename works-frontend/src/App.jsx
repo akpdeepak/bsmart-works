@@ -451,7 +451,7 @@ export default function App() {
   const [selectedViolations, setSelectedViolations] = useState([]);
   const [ruleBuilder, setRuleBuilder] = useState(null); // the rule being created/edited, or null
   const [ruleTestResult, setRuleTestResult] = useState(null);
-  const EMPTY_STATUS_METRICS = { durations: [], leadSeconds: null, cycleSeconds: null, completed: false, started: false };
+  const EMPTY_STATUS_METRICS = { durations: [], leadSeconds: null, cycleSeconds: null, leadRunning: false, cycleRunning: false };
   const [statusMetrics, setStatusMetrics] = useState(EMPTY_STATUS_METRICS);
   const [deleteUndoItem, setDeleteUndoItem] = useState(null);
   const deleteUndoTimer = useRef(null);

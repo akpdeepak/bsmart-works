@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Tag("unit")
@@ -78,16 +77,16 @@ class StatusDurationServiceTest {
     }
 
     @Test
-    void leadAndCycle_completedItem() {
+    void leadExcludesDone_cycleIsInProgressOnly() {
         OffsetDateTime created = OffsetDateTime.parse("2026-06-01T00:00:00Z");
         List<StatusDurationService.StatusChange> changes = List.of(
             new StatusDurationService.StatusChange("Todo", "In Progress", created.plusHours(1)),
             new StatusDurationService.StatusChange("In Progress", "Done", created.plusHours(4)));
         var m = service.computeMetrics(created, "Done", changes, created.plusHours(5), cat);
-        assertEquals(14400, m.leadSeconds());          // created → first Done (0→4h)
-        assertEquals(10800, m.cycleSeconds());         // first In Progress → first Done (1h→4h)
-        assertTrue(m.completed());
-        assertTrue(m.started());
+        assertEquals(14400, m.leadSeconds());          // Todo 1h + In Progress 3h (Done 1h excluded)
+        assertEquals(10800, m.cycleSeconds());         // In Progress 3h
+        assertFalse(m.leadRunning());                  // currently Done — lead paused
+        assertFalse(m.cycleRunning());
     }
 
     @Test
@@ -96,20 +95,35 @@ class StatusDurationServiceTest {
         List<StatusDurationService.StatusChange> changes = List.of(
             new StatusDurationService.StatusChange("Todo", "In Progress", created.plusHours(1)));
         var m = service.computeMetrics(created, "In Progress", changes, created.plusHours(5), cat);
-        assertEquals(18000, m.leadSeconds());          // created → now (not done) = 5h
-        assertEquals(14400, m.cycleSeconds());         // first In Progress → now = 4h
-        assertFalse(m.completed());
-        assertTrue(m.started());
+        assertEquals(18000, m.leadSeconds());          // Todo 1h + In Progress 4h (to now)
+        assertEquals(14400, m.cycleSeconds());         // In Progress 4h (to now)
+        assertTrue(m.leadRunning());
+        assertTrue(m.cycleRunning());
     }
 
     @Test
-    void cycle_isNullWhenNeverEnteredInProgress() {
+    void cycleIsZeroWhileStillInTodo_leadStillRuns() {
         OffsetDateTime created = OffsetDateTime.parse("2026-06-01T00:00:00Z");
         var m = service.computeMetrics(created, "Todo", List.of(), created.plusHours(2), cat);
-        assertEquals(7200, m.leadSeconds());           // running lead time
-        assertNull(m.cycleSeconds());                  // never started
-        assertFalse(m.started());
-        assertFalse(m.completed());
+        assertEquals(7200, m.leadSeconds());           // Todo time counts toward lead
+        assertEquals(0, m.cycleSeconds());             // never in progress yet
+        assertTrue(m.leadRunning());                   // not Done — lead still counting
+        assertFalse(m.cycleRunning());
+    }
+
+    @Test
+    void reopenedFromDone_excludesDoneAndResumesClocks() {
+        OffsetDateTime created = OffsetDateTime.parse("2026-06-01T00:00:00Z");
+        List<StatusDurationService.StatusChange> changes = List.of(
+            new StatusDurationService.StatusChange("Todo", "In Progress", created.plusHours(1)),
+            new StatusDurationService.StatusChange("In Progress", "Done", created.plusHours(3)),
+            new StatusDurationService.StatusChange("Done", "In Progress", created.plusHours(5)));
+        var m = service.computeMetrics(created, "In Progress", changes, created.plusHours(6), cat);
+        // Todo 1h; In Progress 2h (1→3) + 1h (5→6) = 3h; Done 2h (3→5) EXCLUDED.
+        assertEquals(14400, m.leadSeconds());          // Todo 1h + In Progress 3h
+        assertEquals(10800, m.cycleSeconds());         // In Progress 3h (both stints), Done excluded
+        assertTrue(m.leadRunning());                   // back in progress — resumed
+        assertTrue(m.cycleRunning());
     }
 
     @Test

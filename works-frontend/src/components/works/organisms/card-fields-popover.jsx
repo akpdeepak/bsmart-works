@@ -264,7 +264,7 @@ export function CardFieldsPopover({ cardPrefs, workspaceId, customFieldDefs = []
                   </div>
                   <div>
                     <span className="text-xs text-neutral-600 dark:text-neutral-400 block mb-1">Field type</span>
-                    <div className="grid grid-cols-4 gap-1">
+                    <div className="grid grid-cols-4 gap-1" role="group" aria-label="Field type">
                       {FIELD_TYPES.map(t => (
                         <button key={t} type="button" onClick={() => setNewType(t)}
                           className={cn(

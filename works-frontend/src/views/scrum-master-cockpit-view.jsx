@@ -11,6 +11,7 @@ import { StatCard } from '@/components/works/stat-card';
 import { AiMetaBadge } from '@/components/works/ai-meta-badge';
 import { api } from '@/lib/apiClient';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
+import { devClient } from '@/lib/developer';
 
 const RETRO_COLUMNS = {
   START_STOP_CONTINUE: [
@@ -396,9 +397,9 @@ export default function ScrumMasterCockpitView({
                         disabled={!!aiLoading['standup-draft']}
                         onClick={() => aiAction(
                           'standup-draft',
-                          () => aiClient.generate(activeWorkspaceId, 'standup_draft', { sprintId: activeSprint?.id }),
+                          () => devClient.standup(activeWorkspaceId),
                           res => {
-                            const draft = res?.result || res?.text || '';
+                            const draft = res?.draft || '';
                             if (draft) { setStandupDraft(d => ({ ...d, today: draft })); showToast('AI drafted standup update', 'info'); }
                             if (res?.meta?.fallback) showToast('AI standup draft used fallback.', 'info');
                           },
@@ -535,7 +536,7 @@ export default function ScrumMasterCockpitView({
                   'sprint-plan',
                   () => aiClient.generate(activeWorkspaceId, 'sprint_plan', { sprintId: activeSprint?.id, timeOffPoints: Number(planningTimeOff) || 0 }),
                   res => {
-                    const suggestion = res?.result || res?.text || '';
+                    const suggestion = res?.draft || '';
                     if (suggestion) showToast(`AI sprint plan: ${suggestion.slice(0, 120)}`, 'info');
                     if (res?.meta?.fallback) showToast('AI sprint planning used fallback (capacity calc).', 'info');
                   },

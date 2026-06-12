@@ -47,6 +47,8 @@ export default function SprintView({
   showToast,
   reportError,
   selectedProjectId,
+  cardPrefs,
+  customFieldDefs = [],
 }) {
   return (
     <div className="p-6 h-full flex flex-col">
@@ -188,7 +190,8 @@ export default function SprintView({
                 .then(r => { if (r && r.status === 409) { showToast('That item changed elsewhere — refreshing', 'error'); fetchSprints(); } })
                 .catch(reportError);
             }}
-            onSelect={setSelectedItem} onDelete={handleDelete} density={density} />
+            onSelect={setSelectedItem} onDelete={handleDelete} density={density}
+            cardPrefs={cardPrefs} customFieldDefs={customFieldDefs} />
         </>
       ) : (
         <EmptyState icon={Zap} title="No sprints yet" subtitle="Create a sprint in the Backlog view to get started."

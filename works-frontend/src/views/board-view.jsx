@@ -2,8 +2,12 @@ import { Star, SquarePen, X } from 'lucide-react';
 import { BoardWipBadge } from '@/components/works/organisms/board-wip-badge';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { Avatar } from '@/components/works/atoms/avatar';
+import { CardFieldsPopover } from '@/components/works/organisms/card-fields-popover';
+import { PriorityBadge } from '@/components/works/priority-badge';
+import { StatusBadge } from '@/components/works/status-badge';
+import { statusToCategory } from '@/components/works/status';
+import { cn } from '@/lib/utils';
 
-// Board view columns definition — shared with App.jsx for sprint board re-use.
 const COLUMNS = [
   { name: 'Todo',        display: 'TODO',        dot: 'bg-neutral-400',     limitKey: 'todoLimit' },
   { name: 'In Progress', display: 'IN PROGRESS', dot: 'bg-brand-navy-tint',  limitKey: 'inProgressLimit' },
@@ -12,12 +16,16 @@ const COLUMNS = [
 
 const DENSITY_PAD = { compact: 'p-2', comfortable: 'p-3', spacious: 'p-4' };
 
-/**
- * BoardView — Kanban board with WIP limits and drag-and-drop.
- *
- * Extracted from App.jsx (TD-003). All state lives in App; this component is a
- * pure rendering shell that accepts handlers as props.
- */
+function dueDays(dateStr) {
+  if (!dateStr) return null;
+  const days = Math.ceil(
+    (new Date(dateStr).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 86400000
+  );
+  if (days < 0)  return { text: `${Math.abs(days)}d overdue`, urgent: true };
+  if (days === 0) return { text: 'Due today', urgent: true };
+  return { text: `Due in ${days}d`, urgent: days <= 3 };
+}
+
 export default function BoardView({
   workItems,
   loading,
@@ -35,9 +43,15 @@ export default function BoardView({
   setWipLimit,
   can,
   userName,
+  // card field customisation
+  cardPrefs,
+  customFieldDefs = [],
+  onCustomFieldCreated,
+  workspaceId,
 }) {
   const columns = COLUMNS;
   const densityPad = DENSITY_PAD;
+  const iv = cardPrefs?.isVisible ?? (() => true);
 
   return (
     <div className="p-6 h-full flex flex-col">
@@ -46,19 +60,29 @@ export default function BoardView({
           <h1 className="text-xl font-bold text-brand-navy">Board</h1>
           <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{workItems.length} items total</p>
         </div>
-        {/* Density toggle */}
-        <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1">
-          {['compact', 'comfortable', 'spacious'].map(d => (
-            <button key={d} onClick={() => setDensity(d)}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors capitalize ${density === d ? 'bg-white dark:bg-neutral-700 shadow-sm text-brand-navy' : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
-              {d}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          {/* Fields popover */}
+          {cardPrefs && (
+            <CardFieldsPopover
+              cardPrefs={cardPrefs}
+              workspaceId={workspaceId}
+              customFieldDefs={customFieldDefs}
+              onCustomFieldCreated={onCustomFieldCreated}
+            />
+          )}
+          {/* Density toggle */}
+          <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1">
+            {['compact', 'comfortable', 'spacious'].map(d => (
+              <button key={d} onClick={() => setDensity(d)}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors capitalize ${density === d ? 'bg-white dark:bg-neutral-700 shadow-sm text-brand-navy' : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
+                {d}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {loading ? (
-        /* Skeleton — never a spinner (RB-30 §6, CLAUDE.md §4.11). */
         <div className="flex gap-4 flex-1 overflow-x-auto pb-4" aria-busy="true" aria-label="Loading board">
           {columns.map(col => (
             <div key={col.name} className="flex-1 min-w-56 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3">
@@ -110,48 +134,22 @@ export default function BoardView({
                     </div>
                   )}
                   {colItems.map(item => (
-                    <div key={item.id} draggable
-                      onDragStart={(e) => handleDragStart(e, item.id)}
-                      className={`bg-white dark:bg-neutral-700 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-600 cursor-grab hover:shadow-md transition-shadow group ${densityPad[density]} ${item.starred ? 'border-brand-orange/40' : ''}`}>
-                      <div className="flex items-start justify-between mb-1.5">
-                        <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.id}</span>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => toggleStar(item)} title={item.starred ? 'Unstar' : 'Star'}
-                            className={`text-xs p-0.5 transition-colors ${item.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}`}>
-                            <Star className={`h-3.5 w-3.5 ${item.starred ? 'fill-current' : ''}`} aria-hidden="true" />
-                          </button>
-                          <button onClick={() => setSelectedItem(item)} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-xs p-0.5" aria-label="Edit work item">
-                            <SquarePen className="h-3.5 w-3.5" aria-hidden="true" />
-                          </button>
-                          <button onClick={() => handleDelete(item.id)} className="text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label="Delete work item">
-                            <X className="h-3.5 w-3.5" aria-hidden="true" />
-                          </button>
-                        </div>
-                      </div>
-                      <button type="button" className="text-sm font-medium text-neutral-900 leading-snug mb-2 cursor-pointer text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
-                        onClick={() => setSelectedItem(item)}>{item.title}</button>
-                      {density !== 'compact' && item.description && (
-                        <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2 line-clamp-2">{item.description}</p>
-                      )}
-                      <div className="flex items-center justify-between">
-                        <TypeBadge type={item.type} compact={density === 'compact'} />
-                        <div className="flex items-center gap-1.5">
-                          {item.dueDate && <span className="text-xs text-semantic-warning font-medium">{item.dueDate}</span>}
-                          {item.assigneeId && <Avatar name={userName(item.assigneeId)} size={5} />}
-                        </div>
-                      </div>
-                      {density !== 'compact' && item.tags && item.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {item.tags.map(t => (
-                            <span key={t} className="text-xs bg-neutral-100 dark:bg-neutral-600 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{t}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    <WorkCard
+                      key={item.id}
+                      item={item}
+                      density={density}
+                      densityPad={densityPad}
+                      iv={iv}
+                      userName={userName}
+                      customFieldDefs={customFieldDefs}
+                      onStar={toggleStar}
+                      onEdit={setSelectedItem}
+                      onDelete={handleDelete}
+                      onDragStart={handleDragStart}
+                    />
                   ))}
                 </div>
 
-                {/* Add item shortcut */}
                 <button onClick={() => { setNewItem(p => ({ ...p, status: col.name })); setIsCreateOpen(true); }}
                   className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-700 rounded-lg transition-colors">
                   <span>+</span> Add item
@@ -159,6 +157,109 @@ export default function BoardView({
               </div>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Card sub-component ─────────────────────────────────────────────────────────
+
+function WorkCard({ item, density, densityPad, iv, userName, customFieldDefs, onStar, onEdit, onDelete, onDragStart }) {
+  const due = dueDays(item.dueDate);
+  const customVisible = customFieldDefs.filter(d => iv(`cfd_${d.id}`) && item.customFields?.[d.id] != null);
+
+  return (
+    <div
+      draggable
+      onDragStart={(e) => onDragStart(e, item.id)}
+      className={cn(
+        'bg-white dark:bg-neutral-700 rounded-lg shadow-sm border cursor-grab hover:shadow-md transition-shadow group',
+        densityPad[density],
+        item.starred ? 'border-brand-orange/40' : 'border-neutral-200 dark:border-neutral-600'
+      )}
+    >
+      {/* Top row: ID + actions */}
+      <div className="flex items-start justify-between mb-1.5">
+        <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.autoId || item.id}</span>
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button onClick={() => onStar(item)} title={item.starred ? 'Unstar' : 'Star'}
+            className={`text-xs p-0.5 transition-colors ${item.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}`}>
+            <Star className={`h-3.5 w-3.5 ${item.starred ? 'fill-current' : ''}`} aria-hidden="true" />
+          </button>
+          <button onClick={() => onEdit(item)} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-xs p-0.5" aria-label="Edit work item">
+            <SquarePen className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+          <button onClick={() => onDelete(item.id)} className="text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label="Delete work item">
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+
+      {/* Title */}
+      <button type="button"
+        className="text-sm font-medium text-neutral-900 dark:text-neutral-100 leading-snug mb-2 cursor-pointer text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
+        onClick={() => onEdit(item)}>
+        {item.title}
+      </button>
+
+      {/* Description (density-gated + pref-gated) */}
+      {density !== 'compact' && iv('description') && item.description && (
+        <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2 line-clamp-2">{item.description}</p>
+      )}
+
+      {/* Primary meta row */}
+      <div className="flex items-center justify-between">
+        <TypeBadge type={item.type} compact={density === 'compact'} />
+        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          {iv('priority') && item.priority && <PriorityBadge priority={item.priority} />}
+          {iv('status') && <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>}
+          {iv('storyPoints') && item.storyPoints > 0 && (
+            <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">{item.storyPoints}pt</span>
+          )}
+          {iv('dueDate') && due && (
+            <span className={cn('text-xs font-medium', due.urgent ? 'text-semantic-danger' : 'text-semantic-warning')}>
+              {due.text}
+            </span>
+          )}
+          {iv('assignee') && item.assigneeId && <Avatar name={userName(item.assigneeId)} size={5} />}
+        </div>
+      </div>
+
+      {/* Tags row (density + pref gated) */}
+      {density !== 'compact' && iv('tags') && item.tags && item.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {item.tags.map(t => (
+            <span key={t} className="text-xs bg-neutral-100 dark:bg-neutral-600 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{t}</span>
+          ))}
+        </div>
+      )}
+
+      {/* Extra built-in fields */}
+      {density !== 'compact' && (
+        <div className="flex flex-wrap gap-1.5 mt-1.5">
+          {iv('severity') && item.severity && (
+            <span className="text-xs bg-semantic-warning/10 text-semantic-warning px-1.5 py-0.5 rounded">{item.severity}</span>
+          )}
+          {iv('startDate') && item.startDate && (
+            <span className="text-xs text-neutral-500 dark:text-neutral-400">
+              Start: {new Date(item.startDate).toLocaleDateString()}
+            </span>
+          )}
+          {iv('businessImpact') && item.businessImpact && (
+            <span className="text-xs bg-brand-navy/10 text-brand-navy px-1.5 py-0.5 rounded">{item.businessImpact}</span>
+          )}
+        </div>
+      )}
+
+      {/* Custom fields */}
+      {customVisible.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1.5">
+          {customVisible.map(d => (
+            <span key={d.id} className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded" title={d.name}>
+              {d.name}: {String(item.customFields[d.id])}
+            </span>
+          ))}
         </div>
       )}
     </div>

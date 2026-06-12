@@ -58,6 +58,7 @@ import { ResetPasswordScreen } from '@/components/works/reset-password-screen';
 // exportElementToPng / exportElementToPdf / exportRowsToCsv moved to export-buttons.jsx (TD-003).
 import { api } from '@/lib/apiClient';
 import { layoutToWidgets } from '@/lib/today-layouts';
+import { useCardPrefs } from '@/hooks/useCardPrefs';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { isIconComponent, onPressKey, renderMd } from '@/lib/utils';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -213,6 +214,10 @@ export default function App() {
 
   // Kanban density: compact | comfortable | spacious
   const [density, setDensity]           = useState('comfortable');
+
+  // Card field customisation — preferences persisted per-user in localStorage
+  const cardPrefs = useCardPrefs();
+  const [customFieldDefs, setCustomFieldDefs] = useState([]);
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false); // off-canvas drawer under md (G1)
   const [subRailCollapsed, setSubRailCollapsed] = useState(false);
@@ -733,6 +738,10 @@ export default function App() {
     fetchUserRole();
     fetchBranding();
     fetchWipLimits();
+    // Load custom field definitions for card rendering and the field picker.
+    api.send(`/custom-field-definitions?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
+      .then(defs => setCustomFieldDefs(Array.isArray(defs) ? defs : []))
+      .catch(() => setCustomFieldDefs([]));
     // Load AI capabilities for this workspace — drives hide/show of AI action buttons (RB-40 §2).
     aiClient.capabilities(activeWorkspaceId).then(caps => {
       setAiCapabilities(Array.isArray(caps) ? caps : []);
@@ -2969,6 +2978,7 @@ export default function App() {
               setSelectedItem={setSelectedItem}
               setIsCreateOpen={setIsCreateOpen}
               onPressKey={onPressKey}
+              cardPrefs={cardPrefs}
             />
           )}
 
@@ -2991,6 +3001,10 @@ export default function App() {
               setWipLimit={setWipLimit}
               can={can}
               userName={userName}
+              cardPrefs={cardPrefs}
+              customFieldDefs={customFieldDefs}
+              workspaceId={activeWorkspaceId}
+              onCustomFieldCreated={def => setCustomFieldDefs(prev => [...prev, def])}
             />
           )}
           {/* PROJECTS */}
@@ -3083,6 +3097,8 @@ export default function App() {
               handleSprintStatusChange={handleSprintStatusChange}
               handleRefinementUpdate={handleRefinementUpdate}
               SprintItemList={SprintItemList}
+              cardPrefs={cardPrefs}
+              customFieldDefs={customFieldDefs}
             />
           )}
 
@@ -3125,6 +3141,8 @@ export default function App() {
               showToast={showToast}
               reportError={reportError}
               selectedProjectId={selectedProjectId}
+              cardPrefs={cardPrefs}
+              customFieldDefs={customFieldDefs}
             />
           )}
 

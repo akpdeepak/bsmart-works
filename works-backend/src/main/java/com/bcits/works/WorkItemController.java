@@ -15,8 +15,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,6 +41,7 @@ public class WorkItemController {
     private final DodChecklistService dodChecklists;
     private final ExtensionExecutionService extensions;
     private final WorkflowRuleEngine workflowRules;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
                               JdbcTemplate jdbc, NotificationRepository notificationRepository,
@@ -274,7 +278,21 @@ public class WorkItemController {
         try { w.setStakeholderUpdate(rs.getString("stakeholder_update")); } catch (Exception ignored) {}
         try { w.setSlaBreachFlag(rs.getBoolean("sla_breach_flag")); } catch (Exception ignored) {}
         try { w.setProductId(rs.getString("product_id")); } catch (Exception ignored) {}
+        try {
+            String cf = rs.getString("custom_fields");
+            if (cf != null && !cf.isBlank()) {
+                w.setCustomFields(objectMapper.readValue(cf, new TypeReference<Map<String, Object>>() {}));
+            }
+        } catch (Exception ignored) {}
         return w;
+    }
+
+    private void persistCustomFields(String itemId, Map<String, Object> fields) {
+        if (fields == null || fields.isEmpty()) return;
+        try {
+            jdbc.update("UPDATE work_items SET custom_fields = ?::jsonb WHERE id = ?",
+                objectMapper.writeValueAsString(fields), itemId);
+        } catch (Exception ignored) {}
     }
 
     /** Personal home (I01-S12): the signed-in user's assigned items. Identity comes from the JWT —
@@ -325,6 +343,7 @@ public class WorkItemController {
         }
 
         WorkItem saved = repository.save(newItem);
+        persistCustomFields(saved.getId(), newItem.getCustomFields());
 
         if (newItem.getTags() != null) {
             saveTags(saved.getId(), newItem.getTags());
@@ -446,6 +465,9 @@ public class WorkItemController {
             existing.setVersion(ConcurrencyGuard.nextVersion(existing.getVersion()));
 
             WorkItem saved = repository.save(existing);
+            if (updatedItem.getCustomFields() != null) {
+                persistCustomFields(id, updatedItem.getCustomFields());
+            }
 
             if (updatedItem.getTags() != null) {
                 jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);

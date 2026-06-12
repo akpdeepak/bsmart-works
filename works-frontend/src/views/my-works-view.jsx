@@ -73,7 +73,7 @@ function sortItems(items, by) {
 }
 
 // Shared work-item row — used across Assigned, Starred, and Activity tabs.
-function WorkRow({ item, onSelect, onPressKey, starred = false, compact = false }) {
+function WorkRow({ item, onSelect, onPressKey, starred = false, compact = false, iv = () => true }) {
   const due = dueDateMeta(item.dueDate);
   const dotColor = PRIORITY_DOT[item.priority] || PRIORITY_DOT.MEDIUM;
   return (
@@ -89,21 +89,24 @@ function WorkRow({ item, onSelect, onPressKey, starred = false, compact = false 
         starred ? 'border-brand-orange/40' : 'border-neutral-200 dark:border-neutral-700'
       )}
     >
-      <span className={cn('h-2 w-2 rounded-full flex-shrink-0', dotColor)} aria-hidden="true" />
+      {iv('priority') && <span className={cn('h-2 w-2 rounded-full flex-shrink-0', dotColor)} aria-hidden="true" />}
       {starred && <Star className="h-3.5 w-3.5 text-brand-orange fill-current flex-shrink-0" aria-hidden="true" />}
       <TypeBadge type={item.type} compact={compact} />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{item.title}</p>
-        <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{item.id}</p>
+        <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{item.autoId || item.id}</p>
       </div>
-      <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
-      {due && (
+      {iv('status') && <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>}
+      {iv('dueDate') && due && (
         <span className={cn(
           'text-xs font-medium whitespace-nowrap',
           due.urgent ? 'text-semantic-danger' : 'text-semantic-warning'
         )}>
           {due.text}
         </span>
+      )}
+      {iv('assignee') && item.assigneeId && (
+        <span className="text-xs text-neutral-500 dark:text-neutral-400 font-mono">{item.assigneeId}</span>
       )}
     </div>
   );
@@ -120,8 +123,10 @@ export default function MyWorksView({
   setSelectedItem,
   setIsCreateOpen,
   onPressKey,
+  cardPrefs,
 }) {
   const [sort, setSort] = useState(CONFIG.assignedSortDefault);
+  const iv = cardPrefs?.isVisible ?? (() => true);
 
   // Compute tab data once to avoid repeated inline .filter() calls in JSX.
   const starredItems = workItems.filter(i => i.starred);
@@ -198,7 +203,7 @@ export default function MyWorksView({
               </div>
               <div className="space-y-2">
                 {sortedItems.map(item => (
-                  <WorkRow key={item.id} item={item} onSelect={setSelectedItem} onPressKey={onPressKey} />
+                  <WorkRow key={item.id} item={item} onSelect={setSelectedItem} onPressKey={onPressKey} iv={iv} />
                 ))}
               </div>
             </>
@@ -211,7 +216,7 @@ export default function MyWorksView({
               subtitle="Star work items to keep them handy. Click the star on any card or in the detail panel." />
           : <div className="space-y-2">
               {starredItems.map(item => (
-                <WorkRow key={item.id} item={item} onSelect={setSelectedItem} onPressKey={onPressKey} starred />
+                <WorkRow key={item.id} item={item} onSelect={setSelectedItem} onPressKey={onPressKey} starred iv={iv} />
               ))}
             </div>
       )}
@@ -260,7 +265,7 @@ export default function MyWorksView({
               action={<Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(true)}>Create a work item</Button>} />
           : <div className="space-y-2">
               {activityItems.map(i => (
-                <WorkRow key={i.id} item={i} onSelect={setSelectedItem} onPressKey={onPressKey} compact />
+                <WorkRow key={i.id} item={i} onSelect={setSelectedItem} onPressKey={onPressKey} compact iv={iv} />
               ))}
               {activityOverflow > 0 && (
                 <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center pt-2">

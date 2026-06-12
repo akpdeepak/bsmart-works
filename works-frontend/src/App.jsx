@@ -377,6 +377,8 @@ export default function App() {
   const [reviewResult, setReviewResult]         = useState(null);
   const [patternsResult, setPatternsResult]     = useState(null);
   const [riskSprintId, setRiskSprintId]         = useState('');
+  const [varianceSprintId, setVarianceSprintId] = useState('');
+  const [varianceResult, setVarianceResult]     = useState(null);
   const [cockpitContext, setCockpitContext]     = useState(null); // { roleKey, tier, canManageSprints, canCreateItems, activeSprint, liveCeremony }
   const [ceremonies, setCeremonies]             = useState([]);   // [{ session, counts }]
   const [activeCeremony, setActiveCeremony]     = useState(null); // { session, attendance, counts }
@@ -2158,6 +2160,11 @@ export default function App() {
     api.raw(`/cockpit/risk-panel?workspaceId=${activeWorkspaceId}&sprintId=${riskSprintId}`).then(r => r.json())
       .then(d => setRiskPanel(d)).catch(() => showToast('Risk panel failed', 'error'));
   }
+  function runVariance() {
+    if (!varianceSprintId) { showToast('Select a sprint', 'error'); return; }
+    api.raw(`/cockpit/variance?workspaceId=${activeWorkspaceId}&sprintId=${varianceSprintId}`).then(r => r.json())
+      .then(d => setVarianceResult(d)).catch(() => showToast('Variance analysis failed', 'error'));
+  }
   function runReviewPrep() {
     if (!reviewSprintId) { showToast('Select a sprint', 'error'); return; }
     api.send(`/cockpit/review-prep?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ sprintId: reviewSprintId }) })
@@ -3730,6 +3737,10 @@ export default function App() {
               recordStandup={recordStandup}
               setRiskSprintId={setRiskSprintId}
               runRiskPanel={runRiskPanel}
+              varianceSprintId={varianceSprintId}
+              setVarianceSprintId={setVarianceSprintId}
+              varianceResult={varianceResult}
+              runVariance={runVariance}
               setPlanningTimeOff={setPlanningTimeOff}
               runSprintPlanning={runSprintPlanning}
               setActiveRetro={setActiveRetro}

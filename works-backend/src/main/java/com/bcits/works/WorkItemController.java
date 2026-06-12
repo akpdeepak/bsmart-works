@@ -41,6 +41,7 @@ public class WorkItemController {
     private final ExtensionExecutionService extensions;
     private final WorkflowRuleEngine workflowRules;
     private final StatusConfigService statusConfig;
+    private final BoardWipLimitService wipLimits;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
@@ -50,7 +51,8 @@ public class WorkItemController {
                               RbacService rbac, DodChecklistService dodChecklists,
                               ExtensionExecutionService extensions,
                               WorkflowRuleEngine workflowRules,
-                              StatusConfigService statusConfig) {
+                              StatusConfigService statusConfig,
+                              BoardWipLimitService wipLimits) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
@@ -64,6 +66,7 @@ public class WorkItemController {
         this.extensions = extensions;
         this.workflowRules = workflowRules;
         this.statusConfig = statusConfig;
+        this.wipLimits = wipLimits;
     }
 
     // Tenant-isolation predicate (RB-40 §1): an item is visible only when its project lives in a
@@ -406,6 +409,7 @@ public class WorkItemController {
             // validators before persisting the new status. Post-functions run after save.
             if (!java.util.Objects.equals(oldStatus, updatedItem.getStatus())) {
                 workflowRules.enforceTransitionRules(id, oldStatus, updatedItem.getStatus(), userId, wsId);
+                wipLimits.enforceEntry(wsId, oldStatus, updatedItem.getStatus());
             }
             String oldAssignee = existing.getAssigneeId();
             String oldPriority = existing.getPriority();

@@ -54,17 +54,29 @@ public class AttachmentController {
 
     private final JdbcTemplate jdbc;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
-    public AttachmentController(JdbcTemplate jdbc, AuthenticatedUser authenticatedUser) {
+    public AttachmentController(JdbcTemplate jdbc, AuthenticatedUser authenticatedUser, RbacService rbac) {
         this.jdbc = jdbc;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
         try { Files.createDirectories(UPLOAD_DIR); } catch (IOException e) { /* ignore */ }
+    }
+
+    /** Resolve the work item's workspace and require the caller is a member (RB-40 §1). 404 hides
+     *  both a missing item and a foreign-tenant one. Same contract as CommentController. */
+    private void requireItemAccess(String callerId, String workItemId) {
+        String wsId = rbac.workspaceForWorkItem(workItemId);
+        if (wsId == null || rbac.getUserTier(callerId, wsId) < 1) {
+            throw ApiException.notFound("Work item", workItemId);
+        }
     }
 
     @GetMapping
     public List<Map<String, Object>> getAttachments(@PathVariable String workItemId,
                                                     @RequestParam(defaultValue = "0") int page,
                                                     @RequestParam(defaultValue = "50") int size) {
+        requireItemAccess(authenticatedUser.id(), workItemId);
         int limit = Math.min(Math.max(size, 1), 200);
         int offset = Math.max(page, 0) * limit;
         return jdbc.queryForList(
@@ -80,6 +92,7 @@ public class AttachmentController {
     public Map<String, Object> attachLink(@PathVariable String workItemId,
                                           @org.springframework.web.bind.annotation.RequestBody Map<String, String> body) {
         String userId = authenticatedUser.id();
+        requireItemAccess(userId, workItemId);
         String url = body.get("url") != null ? body.get("url").trim() : "";
         if (!url.matches("(?i)^https?://.+")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A valid http(s) URL is required");
@@ -105,6 +118,7 @@ public class AttachmentController {
     public Map<String, Object> upload(@PathVariable String workItemId,
                                       @RequestParam("file") MultipartFile file) throws IOException {
         String userId = authenticatedUser.id();
+        requireItemAccess(userId, workItemId);
 
         // 1. Configurable size limit
         if (file.getSize() > maxSizeBytes) {
@@ -152,6 +166,7 @@ public class AttachmentController {
     @GetMapping("/{id}/content")
     public ResponseEntity<org.springframework.core.io.Resource> serveFile(
             @PathVariable String workItemId, @PathVariable Long id) throws IOException {
+        requireItemAccess(authenticatedUser.id(), workItemId);
         List<Map<String, Object>> rows = jdbc.queryForList(
             "SELECT file_name, mime_type, storage_path FROM attachments WHERE id = ? AND work_item_id = ?", id, workItemId);
         if (rows.isEmpty()) return ResponseEntity.notFound().build();
@@ -169,10 +184,15 @@ public class AttachmentController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String workItemId, @PathVariable Long id) {
-        List<String> paths = jdbc.queryForList("SELECT storage_path FROM attachments WHERE id = ?", String.class, id);
+        requireItemAccess(authenticatedUser.id(), workItemId);
+        // Bind both ids so an attachment can only be deleted through its own work item's path —
+        // an id belonging to another item (or another tenant) matches zero rows (RB-40 §1).
+        List<String> paths = jdbc.queryForList(
+            "SELECT storage_path FROM attachments WHERE id = ? AND work_item_id = ?",
+            String.class, id, workItemId);
         paths.stream().filter(p -> p != null && !p.isBlank())  // URL attachments have no stored file
             .forEach(p -> { try { Files.deleteIfExists(UPLOAD_DIR.resolve(p)); } catch (IOException ignored) {} });
-        jdbc.update("DELETE FROM attachments WHERE id = ?", id);
+        jdbc.update("DELETE FROM attachments WHERE id = ? AND work_item_id = ?", id, workItemId);
         return ResponseEntity.noContent().build();
     }
 

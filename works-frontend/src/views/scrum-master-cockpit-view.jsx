@@ -2,7 +2,7 @@ import {
   Construction, MessageCircle, ArrowLeft, AlertTriangle, LayoutDashboard,
   TrendingUp, Zap, CheckCircle2, ClipboardList, RefreshCw,
   ChevronUp, ArrowRight, Check, Megaphone, Reply, BarChart2, Repeat,
-  CalendarCheck, UserCheck, UserX,
+  CalendarCheck, UserCheck, UserX, Lightbulb, Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { Field } from '@/components/works/field';
@@ -73,6 +73,13 @@ const ATTENDANCE_GROUPS = [
   { status: 'EXCUSED', label: 'Excused' },
 ];
 
+// Coach pro-tip tone → token classes (status by colour AND icon, never colour alone).
+const TIP_TONE = {
+  danger: 'text-semantic-danger',
+  warning: 'text-semantic-warning',
+  info: 'text-brand-navy dark:text-neutral-200',
+};
+
 // Sprint Cockpit — extracted from the App.jsx monolith (Wave 3); now role-adaptive.
 // The parent owns all state and handlers; this renders the tabbed cockpit.
 export default function ScrumMasterCockpitView({
@@ -82,6 +89,7 @@ export default function ScrumMasterCockpitView({
   users, aiCapabilities, aiLoading, activeWorkspaceId,
   cockpitContext, ceremonies, activeCeremony, newCeremony, currentUserId,
   myDay, fetchMyDay, submitMyStandup,
+  coachTips, fetchCoachTips, retroClusters, clusterRetro,
   fetchCockpitContext, fetchCeremonies, scheduleCeremony, openCeremony, setActiveCeremony,
   setNewCeremony, startCeremony, joinCeremony, excuseCeremony, completeCeremony,
   setI15ProjectId, fetchImpediments, fetchStandups, fetchRetros, fetchSprints, setSmTab,
@@ -119,7 +127,7 @@ export default function ScrumMasterCockpitView({
           </p>
         </div>
         <select className="input text-sm py-1.5" value={i15ProjectId} aria-label="Project"
-          onChange={e => { setI15ProjectId(e.target.value); fetchCockpitContext(e.target.value); fetchCeremonies(e.target.value); fetchMyDay(e.target.value); fetchImpediments(e.target.value); fetchStandups(e.target.value); fetchRetros(e.target.value); fetchSprints(e.target.value); }}>
+          onChange={e => { setI15ProjectId(e.target.value); fetchCockpitContext(e.target.value); fetchCoachTips(e.target.value); fetchCeremonies(e.target.value); fetchMyDay(e.target.value); fetchImpediments(e.target.value); fetchStandups(e.target.value); fetchRetros(e.target.value); fetchSprints(e.target.value); }}>
           {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </div>
@@ -137,6 +145,27 @@ export default function ScrumMasterCockpitView({
             <Button variant="action" onClick={() => joinCeremony(liveCeremony.session.id)}>Join</Button>
             <Button variant="secondary" onClick={() => { setSmTab('ceremonies'); openCeremony(liveCeremony.session.id); }}>Open</Button>
           </div>
+        </div>
+      )}
+
+      {coachTips && (coachTips.tips || []).length > 0 && (
+        <div className="mb-5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-4 w-4 text-brand-navy dark:text-neutral-200" aria-hidden="true" />
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Coach pro-tips</h3>
+            {coachTips.meta?.fallback === false && <span className="text-xs text-neutral-400">AI</span>}
+          </div>
+          {coachTips.narrative && coachTips.meta?.fallback === false && (
+            <p className="text-sm text-neutral-700 dark:text-neutral-200 mb-2">{coachTips.narrative}</p>
+          )}
+          <ul className="space-y-1.5">
+            {(coachTips.tips || []).map((t, idx) => (
+              <li key={idx} className="flex items-start gap-2">
+                <Lightbulb className={`h-3.5 w-3.5 mt-0.5 flex-shrink-0 ${TIP_TONE[t.tone] || TIP_TONE.info}`} aria-hidden="true" />
+                <span className="text-sm text-neutral-800 dark:text-neutral-200">{t.text}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -622,8 +651,31 @@ export default function ScrumMasterCockpitView({
               <button onClick={() => setActiveRetro(null)} className="text-xs text-brand-navy hover:underline mb-3"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />All retros</button>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">{activeRetro.session.title}</h3>
-                {activeRetro.session.status !== 'COMPLETED' && <Button variant="secondary" onClick={() => { api.send(`/retros/${activeRetro.session.id}/complete`, { method: 'POST' }).then(() => openRetro(activeRetro.session.id)); }}>Complete</Button>}
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={clusterRetro}>✦ Cluster themes</Button>
+                  {activeRetro.session.status !== 'COMPLETED' && <Button variant="secondary" onClick={() => { api.send(`/retros/${activeRetro.session.id}/complete`, { method: 'POST' }).then(() => openRetro(activeRetro.session.id)); }}>Complete</Button>}
+                </div>
               </div>
+              {retroClusters && (retroClusters.themes || []).length > 0 && (
+                <div className="mb-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="h-4 w-4 text-brand-navy dark:text-neutral-200" aria-hidden="true" />
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Themes</h4>
+                  </div>
+                  {retroClusters.narrative && retroClusters.meta?.fallback === false && (
+                    <p className="text-sm text-neutral-700 dark:text-neutral-200 mb-2">{retroClusters.narrative}</p>
+                  )}
+                  <div className="space-y-1.5">
+                    {(retroClusters.themes || []).map((t, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100 flex-1 truncate">{t.theme}</span>
+                        <span className="text-xs text-neutral-600 dark:text-neutral-400">{t.noteCount} notes</span>
+                        <span className="text-xs font-mono text-brand-navy dark:text-neutral-200">{t.votes} votes</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {RETRO_COLUMNS[activeRetro.session.template].map(col => (
                   <div key={col.key} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3">

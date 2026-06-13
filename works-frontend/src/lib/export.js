@@ -1,11 +1,30 @@
-// Static exports for dashboards/reports — PNG, PDF and CSV (for spreadsheets).
-// The heavy image/pdf libraries are dynamically imported so they never bloat the
-// main bundle (CLAUDE.md §4.18 — route/feature-level code splitting).
+// Static exports for dashboards/reports.
 //
-// Note: "Excel" export is emitted as CSV (opens natively in Excel) rather than .xlsx.
-// The npm `xlsx`/SheetJS package carries an unfixable HIGH advisory (prototype pollution
-// + ReDoS) that fails the CI `npm audit --audit-level=high` gate, so CSV is the
-// dependency-free, audit-clean substitute.
+// PDF and Excel (.xlsx) are produced SERVER-side (Cap J — "static exports for stakeholders without
+// Works access"): the server renders the workspace-scoped data table to a real PDF / .xlsx with no
+// client library and no tenant-leak surface (the endpoint derives the workspace from the persisted
+// entity and enforces view_items). See `downloadExport`. All HTTP goes through the single apiClient
+// (CLAUDE.md §3) — never a bare fetch.
+//
+// PNG stays CLIENT-side: it captures the actually-rendered charts via html2canvas (a server PNG
+// would need a headless browser to draw them). The heavy image library is dynamically imported so
+// it never bloats the main bundle. CSV remains a pure, dependency-free client export.
+import { api } from '@/lib/apiClient';
+
+/**
+ * Download a server-rendered export (PDF / Excel / PNG) for a report or dashboard.
+ * `endpoint` is the API-relative export path (e.g. `/reports/RPT-1/export`). Streams the response
+ * as a blob and triggers a browser download; throws on a non-2xx so the caller can show an error.
+ */
+export async function downloadExport(endpoint, format, filename) {
+  const res = await api.raw(`${endpoint}?format=${encodeURIComponent(format)}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Export failed: ${res.status}`);
+  }
+  const ext = format === 'xlsx' ? 'xlsx' : format;
+  downloadBlob(await res.blob(), `${filename}.${ext}`);
+}
 
 /** Serialise an array of flat row objects to a CSV string (RFC-4180 quoting). Pure. */
 export function rowsToCsv(rows) {

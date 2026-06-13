@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Custom reports (iteration 6) — named, section-based reports plus seeded templates.
@@ -38,12 +39,20 @@ public class ReportController {
         this.rbac = rbac;
     }
 
+    // Sortable columns for the reports list — allow-listed so a client can't sort by an
+    // arbitrary entity field (RB-10 §4 filtering discipline).
+    private static final Set<String> SORTABLE = Set.of("updatedAt", "createdAt", "name");
+
     @GetMapping
-    public List<Report> list(@RequestParam(required = false) String workspaceId) {
+    public PageResponse<Report> list(@RequestParam(required = false) String workspaceId,
+                                     @RequestParam(defaultValue = "0") int page,
+                                     @RequestParam(defaultValue = "50") int size,
+                                     @RequestParam(required = false) String sort) {
         String userId = authenticatedUser.id();
-        return workspaceId != null
-            ? reportRepository.findByWorkspaceIdOrderByUpdatedAtDesc(workspaceId)
-            : reportRepository.findByOwnerIdOrderByUpdatedAtDesc(userId);
+        var pageable = ListPaging.of(page, size, sort, SORTABLE);
+        return PageResponse.of(workspaceId != null
+            ? reportRepository.findByWorkspaceId(workspaceId, pageable)
+            : reportRepository.findByOwnerId(userId, pageable));
     }
 
     @GetMapping("/templates")

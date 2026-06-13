@@ -37,6 +37,14 @@ public class PublicDashboardController {
     @GetMapping("/dashboards/{token}")
     public ResponseEntity<Map<String, Object>> getByToken(@PathVariable String token) {
         if (token == null || token.isBlank()) return ResponseEntity.notFound().build();
+        // System / unfiltered escape hatch (RB-40 §1): this endpoint is unauthenticated and resolves
+        // the workspace from the share token itself, not the caller — so the central tenant filter
+        // (which keys off the authenticated caller's workspace) must be off. The explicit
+        // workspace_id predicate below remains the entire scope.
+        return TenantScope.callAsSystem(() -> getByTokenInternal(token));
+    }
+
+    private ResponseEntity<Map<String, Object>> getByTokenInternal(String token) {
         return dashboardRepository.findByShareToken(token)
             .map(d -> {
                 Map<String, Object> out = new LinkedHashMap<>();

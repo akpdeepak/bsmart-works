@@ -380,6 +380,8 @@ export default function App() {
   const [varianceSprintId, setVarianceSprintId] = useState('');
   const [varianceResult, setVarianceResult]     = useState(null);
   const [cockpitContext, setCockpitContext]     = useState(null); // { roleKey, tier, canManageSprints, canCreateItems, activeSprint, liveCeremony }
+  const [coachTips, setCoachTips]               = useState(null); // { roleKey, tips, narrative, meta }
+  const [retroClusters, setRetroClusters]       = useState(null); // { retroId, themes, narrative, meta }
   const [ceremonies, setCeremonies]             = useState([]);   // [{ session, counts }]
   const [activeCeremony, setActiveCeremony]     = useState(null); // { session, attendance, counts }
   const [newCeremony, setNewCeremony]           = useState({ ceremonyType: 'STANDUP', scheduledAt: '' });
@@ -2035,7 +2037,18 @@ export default function App() {
     setView('smcockpit');
     const pid = i15ProjectId || (projects[0] && projects[0].id) || '';
     setI15ProjectId(pid);
-    if (pid) { fetchCockpitContext(pid); fetchCeremonies(pid); fetchMyDay(pid); fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
+    if (pid) { fetchCockpitContext(pid); fetchCoachTips(pid); fetchCeremonies(pid); fetchMyDay(pid); fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
+  }
+  function fetchCoachTips(pid) {
+    setCoachTips(null);
+    api.send(`/cockpit/pro-tips?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: pid }) })
+      .then(d => setCoachTips(d && Array.isArray(d.tips) ? d : null)).catch(() => setCoachTips(null));
+  }
+  function clusterRetro() {
+    if (!activeRetro?.session?.id) return;
+    api.send(`/cockpit/retro-cluster?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ retroId: activeRetro.session.id }) })
+      .then(d => { setRetroClusters(d && Array.isArray(d.themes) ? d : null); if (d?.meta?.fallback) showToast('Retro clustering used fallback (keyword themes).', 'info'); })
+      .catch(() => showToast('Retro clustering failed', 'error'));
   }
   function fetchMyDay(pid) {
     api.raw(`/cockpit/my-day?projectId=${pid}`).then(r => r.json())
@@ -2137,6 +2150,7 @@ export default function App() {
       .catch(() => showToast('Failed to create retro', 'error'));
   }
   function openRetro(id) {
+    setRetroClusters(null);
     api.raw(`/retros/${id}`).then(r => r.json()).then(d => setActiveRetro(d)).catch(reportError);
   }
   function addRetroNote(columnKey) {
@@ -3743,6 +3757,10 @@ export default function App() {
               setVarianceSprintId={setVarianceSprintId}
               varianceResult={varianceResult}
               runVariance={runVariance}
+              coachTips={coachTips}
+              fetchCoachTips={fetchCoachTips}
+              retroClusters={retroClusters}
+              clusterRetro={clusterRetro}
               setPlanningTimeOff={setPlanningTimeOff}
               runSprintPlanning={runSprintPlanning}
               setActiveRetro={setActiveRetro}

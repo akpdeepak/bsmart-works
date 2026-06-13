@@ -123,6 +123,46 @@ public class ImpedimentService {
                 && ageDays(i, today) > 1;
     }
 
+    /**
+     * Keyword classifier — the deterministic default category when none is supplied (the AI coach's
+     * classification fallback tier; no model call inside the create transaction). Pure.
+     */
+    static String classifyCategory(String title, String description) {
+        String text = ((title == null ? "" : title) + " " + (description == null ? "" : description))
+                .toLowerCase(java.util.Locale.ROOT);
+        if (containsAny(text, "environment", "staging", "server", "deploy", "infra", "database",
+                "outage", "down")) {
+            return "Environment";
+        }
+        if (containsAny(text, "waiting", "blocked by", "dependency", "third-party", "vendor",
+                "upstream", "external")) {
+            return "Dependency";
+        }
+        if (containsAny(text, "vacation", "leave", "sick", "capacity", "resourc", "hiring",
+                "onboard")) {
+            return "People";
+        }
+        if (containsAny(text, "approval", "process", "sign-off", "compliance", "policy")) {
+            return "Process";
+        }
+        if (containsAny(text, "license", "tool", "pipeline", "build", "ci", "git", "ide")) {
+            return "Tooling";
+        }
+        if (containsAny(text, "unclear", "requirement", "spec", "scope", "acceptance")) {
+            return "Requirements";
+        }
+        return "General";
+    }
+
+    private static boolean containsAny(String text, String... keys) {
+        for (String k : keys) {
+            if (text.contains(k)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ── Writes ────────────────────────────────────────────────────────────────
     @Transactional
     public Impediment create(String callerId, Impediment in) {
@@ -134,6 +174,9 @@ public class ImpedimentService {
         if (!allowedRaiseTypes(roleKey).contains(in.getRaiseType())) {
             throw ApiException.forbidden("Your team role (" + roleKey + ") cannot raise "
                     + in.getRaiseType() + ".");
+        }
+        if (in.getCategory() == null || in.getCategory().isBlank()) {
+            in.setCategory(classifyCategory(in.getTitle(), in.getDescription()));
         }
         Impediment saved = repo.save(prepareNew(in, wsId, callerId));
         events.recordInWorkspace(wsId, saved.getId(), "IMPEDIMENT_RAISED", callerId,

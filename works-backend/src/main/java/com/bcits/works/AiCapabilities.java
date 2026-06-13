@@ -36,6 +36,8 @@ public final class AiCapabilities {
     public static final String SPRINT_PLAN        = "sprint_plan";        // Cap V — sprint planning commit suggestion (I15-S01)
     public static final String SPRINT_REVIEW      = "sprint_review";      // Cap V — sprint review prep draft (I15-S06)
     public static final String SPRINT_PATTERNS    = "sprint_patterns";    // Cap V — cross-sprint pattern detection (I15-S07)
+    public static final String COCKPIT_PROTIPS    = "cockpit_protips";    // Cap V — role-targeted cockpit coaching tips
+    public static final String RETRO_CLUSTER      = "retro_cluster";      // Cap V — retro note theme clustering
     public static final String BACKLOG_REFINE     = "backlog_refine";     // Cap W — backlog refinement ranking (I15-S09)
     public static final String FEEDBACK_CLUSTER   = "feedback_cluster";   // Cap W — customer-feedback theme clustering (I15-S11)
     public static final String RELEASE_NOTES      = "release_notes";      // Cap W — release-notes auto-draft (I15-S13)
@@ -96,6 +98,13 @@ public final class AiCapabilities {
         new Descriptor(SPRINT_PATTERNS, "Cross-sprint pattern detection", AiModelTier.SONNET,
             "Falls back to the frequency tables — recurring impediment categories and repeated "
             + "estimation misses — shown without an interpretive narrative."),
+        new Descriptor(COCKPIT_PROTIPS, "Cockpit coach pro-tips", AiModelTier.HAIKU,
+            "Falls back to the deterministic rule-based tips computed from cockpit signals (stale items, "
+            + "unassigned work, SLA breaches, attendance rate, recurring raise categories, open retro "
+            + "actions) — shown as-is, without narrative polish."),
+        new Descriptor(RETRO_CLUSTER, "Retro theme clustering", AiModelTier.HAIKU,
+            "Falls back to deterministic keyword bucketing of retro notes into fixed themes (process, "
+            + "people, tooling, quality, communication, planning) with note and vote counts."),
         new Descriptor(BACKLOG_REFINE, "Backlog refinement ranking", AiModelTier.SONNET,
             "Falls back to the deterministic weighted score (value / effort / strategic-fit) and the "
             + "needs-detail flags, presented in the manual backlog view."),

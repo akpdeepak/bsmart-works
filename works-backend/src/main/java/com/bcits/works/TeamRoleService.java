@@ -80,10 +80,12 @@ public class TeamRoleService {
     public Map<String, Object> cockpitContext(String callerId, String projectId) {
         String wsId = requireWorkspaceForProject(callerId, projectId, "view_items");
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("roleKey", roleFor(callerId, projectId, wsId));
+        String roleKey = roleFor(callerId, projectId, wsId);
+        out.put("roleKey", roleKey);
         out.put("tier", rbac.getUserTier(callerId, wsId));
         out.put("canManageSprints", rbac.canManageSprints(callerId, wsId));
         out.put("canCreateItems", rbac.canCreateItems(callerId, wsId));
+        out.put("allowedRaiseTypes", ImpedimentService.allowedRaiseTypes(roleKey).stream().sorted().toList());
         List<Sprint> active = sprints.findByProjectIdAndStatus(projectId, "ACTIVE");
         out.put("activeSprint", active.isEmpty() ? null : active.get(0));
         List<CeremonySession> live = ceremonies.findByProjectIdAndStatusOrderByCreatedAtDesc(projectId, "LIVE");

@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -20,14 +21,25 @@ import java.util.UUID;
 @Service
 public class ImpedimentService {
 
+    /** Which raise types each team role may create — relevance AND authority (V80). */
+    private static final Map<String, Set<String>> RAISE_TYPES_BY_ROLE = Map.of(
+        "developer", Set.of("IMPEDIMENT", "RISK", "DEPENDENCY"),
+        "product-owner", Set.of("IMPEDIMENT", "RISK", "DEPENDENCY", "SCOPE_CHANGE", "DECISION_NEEDED"),
+        "scrum-master", Set.of("IMPEDIMENT", "RISK", "DEPENDENCY", "SCOPE_CHANGE", "DECISION_NEEDED", "ESCALATION"),
+        "admin", Set.of("IMPEDIMENT", "RISK", "DEPENDENCY", "SCOPE_CHANGE", "DECISION_NEEDED", "ESCALATION"),
+        "executive", Set.of("DECISION_NEEDED"));
+
     private final ImpedimentRepository repo;
     private final RbacService rbac;
     private final EventService events;
+    private final TeamRoleService teamRoles;
 
-    public ImpedimentService(ImpedimentRepository repo, RbacService rbac, EventService events) {
+    public ImpedimentService(ImpedimentRepository repo, RbacService rbac, EventService events,
+                             TeamRoleService teamRoles) {
         this.repo = repo;
         this.rbac = rbac;
         this.events = events;
+        this.teamRoles = teamRoles;
     }
 
     // ── Tenant guard ─────────────────────────────────────────────────────────
@@ -52,7 +64,10 @@ public class ImpedimentService {
     // ── Reads (tenant-scoped) ─────────────────────────────────────────────────
     public List<Impediment> listByProject(String callerId, String projectId) {
         requireWorkspaceForProject(callerId, projectId, "view_items");
-        return repo.findByProjectIdAndDeletedAtIsNullOrderByCreatedAtDesc(projectId);
+        List<Impediment> rows = repo.findByProjectIdAndDeletedAtIsNullOrderByCreatedAtDesc(projectId);
+        LocalDate today = LocalDate.now();
+        rows.forEach(i -> i.setSlaBreached(slaBreached(i, today)));
+        return rows;
     }
 
     // ── Pure helpers (unit-testable) ──────────────────────────────────────────
@@ -97,13 +112,33 @@ public class ImpedimentService {
         return Math.max(0, days);
     }
 
+    /** Raise types the given team role may create; empty set for unknown roles. Pure. */
+    static Set<String> allowedRaiseTypes(String roleKey) {
+        return RAISE_TYPES_BY_ROLE.getOrDefault(roleKey, Set.of());
+    }
+
+    /** SLA contract: a CRITICAL raise left unresolved for more than one day is breached. Pure. */
+    static boolean slaBreached(Impediment i, LocalDate today) {
+        return "CRITICAL".equals(i.getSeverity()) && !"RESOLVED".equals(i.getStatus())
+                && ageDays(i, today) > 1;
+    }
+
     // ── Writes ────────────────────────────────────────────────────────────────
     @Transactional
     public Impediment create(String callerId, Impediment in) {
         String wsId = requireWorkspaceForProject(callerId, in.getProjectId(), "create_items");
+        if (in.getRaiseType() == null || in.getRaiseType().isBlank()) {
+            in.setRaiseType("IMPEDIMENT");
+        }
+        String roleKey = teamRoles.roleFor(callerId, in.getProjectId(), wsId);
+        if (!allowedRaiseTypes(roleKey).contains(in.getRaiseType())) {
+            throw ApiException.forbidden("Your team role (" + roleKey + ") cannot raise "
+                    + in.getRaiseType() + ".");
+        }
         Impediment saved = repo.save(prepareNew(in, wsId, callerId));
         events.recordInWorkspace(wsId, saved.getId(), "IMPEDIMENT_RAISED", callerId,
-                Map.of("title", saved.getTitle(), "severity", saved.getSeverity()));
+                Map.of("title", saved.getTitle(), "severity", saved.getSeverity(),
+                       "raiseType", saved.getRaiseType()));
         return saved;
     }
 

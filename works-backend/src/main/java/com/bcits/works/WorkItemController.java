@@ -754,7 +754,10 @@ public class WorkItemController {
             + "FROM work_item_field_value WHERE work_item_id IN (" + placeholders + ")",
             (org.springframework.jdbc.core.RowCallbackHandler) rs -> {
                 Object v = rs.getString("value_text");
-                if (v == null) { Object n = rs.getObject("value_number"); v = n != null ? n.toString() : null; }
+                if (v == null) {
+                    Object n = rs.getObject("value_number");
+                    v = n != null ? n.toString() : null;
+                }
                 if (v == null) v = rs.getString("value_json_text");
                 byItem.computeIfAbsent(rs.getString("work_item_id"), k -> new java.util.HashMap<>())
                       .put(rs.getString("field_def_id"), v);

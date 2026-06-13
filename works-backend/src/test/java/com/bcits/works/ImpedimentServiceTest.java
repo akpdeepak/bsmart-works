@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Tag("unit")
 class ImpedimentServiceTest {
 
-    private final ImpedimentService service = new ImpedimentService(null, null, null);
+    private final ImpedimentService service = new ImpedimentService(null, null, null, null);
 
     @Test
     void prepareNew_stampsIdWorkspaceDefaultsAndDates() {

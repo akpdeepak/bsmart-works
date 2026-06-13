@@ -151,7 +151,7 @@ export default function DashboardsView({
                 <h1 className="text-xl font-semibold text-neutral-900 dark:text-white truncate">{selectedDashboard.name}</h1>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                {!dashboardEditMode && <ExportButtons targetId="dashboard-export-area"
+                {!dashboardEditMode && <ExportButtons endpoint={`/dashboards/${selectedDashboard.id}/export`} targetId="dashboard-export-area"
                   rows={workItems.map(i => ({ ID: i.id, Title: i.title, Type: i.type, Status: i.status, Priority: i.priority, Assignee: i.assigneeId }))}
                   filename={selectedDashboard.name || 'dashboard'} onError={() => showToast('Export failed — try again', 'error')} />}
                 {!dashboardEditMode && (

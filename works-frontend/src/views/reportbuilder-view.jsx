@@ -105,7 +105,7 @@ export default function ReportBuilderView({
                 )}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                {!reportEditMode && <ExportButtons targetId="report-export-area"
+                {!reportEditMode && <ExportButtons endpoint={`/reports/${selectedReport.id}/export`} targetId="report-export-area"
                   rows={workItems.map(i => ({ ID: i.id, Title: i.title, Type: i.type, Status: i.status, Priority: i.priority, Assignee: i.assigneeId }))}
                   filename={selectedReport.name || 'report'} onError={() => showToast('Export failed — try again', 'error')} />}
                 {!reportEditMode && <Button variant="secondary" onClick={() => openScheduleManager(selectedReport.id)}>Schedule</Button>}

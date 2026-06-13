@@ -275,6 +275,9 @@ public class BqlCompiler {
             this.params = params;
         }
 
+        /** A resolved field: a built-in {@code work_items} column, or a custom field's value store. */
+        private record Resolved(String column, BqlField.BqlType type, boolean custom, String fieldDefId) { }
+
         String emit(BqlAst.Expr e) {
             return switch (e) {
                 case BqlAst.And a -> "(" + emit(a.left()) + " AND " + emit(a.right()) + ")";
@@ -287,67 +290,129 @@ public class BqlCompiler {
             };
         }
 
-        private String comparison(BqlAst.Comparison c) {
-            BqlField f = BqlFieldRegistry.resolve(c.field(), ctx);
-            String col = f.column();
-            return switch (c.op().toUpperCase(Locale.ROOT)) {
-                case "CONTAINS" -> like(col, "%" + literal(c.value(), f) + "%");
-                case "STARTSWITH" -> like(col, literal(c.value(), f) + "%");
-                case "ENDSWITH" -> like(col, "%" + literal(c.value(), f));
-                case "<>" -> col + " != " + valueSql(c.value(), f);
-                default -> col + " " + c.op() + " " + valueSql(c.value(), f);
-            };
+        /**
+         * Resolve a field alias to a built-in column or a custom field. Custom fields are checked
+         * first so a workspace can shadow nothing built-in; an unknown alias still throws.
+         */
+        private Resolved resolve(String alias) {
+            BqlContext.CustomField cf = ctx == null ? null : ctx.customField(alias);
+            if (cf != null) {
+                String col = cf.type() == BqlField.BqlType.NUMBER ? "value_number" : "value_text";
+                return new Resolved(col, cf.type(), true, cf.fieldDefId());
+            }
+            BqlField f = BqlFieldRegistry.resolve(alias, ctx); // throws on unknown/forbidden
+            return new Resolved(f.column(), f.type(), false, null);
         }
 
-        private String like(String col, String pattern) {
-            params.add(pattern);
+        /**
+         * Assemble the final predicate. A built-in field uses the fragment directly; a custom field
+         * wraps it in an EXISTS-style membership subquery against the value store, with the
+         * {@code field_def_id} bound before the value params (correct order).
+         */
+        private String wrap(Resolved r, String fragment, List<Object> valueParams, boolean outerNegated) {
+            if (!r.custom()) {
+                params.addAll(valueParams);
+                return fragment;
+            }
+            params.add(r.fieldDefId());
+            params.addAll(valueParams);
+            return (outerNegated ? "id NOT IN" : "id IN")
+                + " (SELECT work_item_id FROM work_item_field_value WHERE field_def_id = ? AND "
+                + fragment + ")";
+        }
+
+        private String comparison(BqlAst.Comparison c) {
+            Resolved r = resolve(c.field());
+            String op = c.op().toUpperCase(Locale.ROOT);
+            validateOp(r.type(), op);
+            List<Object> local = new ArrayList<>();
+            String frag = switch (op) {
+                case "CONTAINS" -> like(r.column(), "%" + literal(c.value()) + "%", local);
+                case "STARTSWITH" -> like(r.column(), literal(c.value()) + "%", local);
+                case "ENDSWITH" -> like(r.column(), "%" + literal(c.value()), local);
+                case "<>" -> r.column() + " != " + valueSql(c.value(), r.type(), local);
+                default -> r.column() + " " + c.op() + " " + valueSql(c.value(), r.type(), local);
+            };
+            return wrap(r, frag, local, false);
+        }
+
+        private String like(String col, String pattern, List<Object> local) {
+            local.add(pattern);
             return col + " ILIKE ?";
         }
 
         private String inList(BqlAst.InList in) {
-            BqlField f = BqlFieldRegistry.resolve(in.field(), ctx);
-            StringBuilder sb = new StringBuilder(f.column()).append(in.negated() ? " NOT IN (" : " IN (");
+            Resolved r = resolve(in.field());
+            List<Object> local = new ArrayList<>();
+            // Built-in encodes its own NOT; custom keeps a positive inner list and flips membership.
+            StringBuilder sb = new StringBuilder(r.column())
+                .append((!r.custom() && in.negated()) ? " NOT IN (" : " IN (");
             for (int i = 0; i < in.values().size(); i++) {
                 if (i > 0) {
                     sb.append(", ");
                 }
-                sb.append(valueSql(in.values().get(i), f));
+                sb.append(valueSql(in.values().get(i), r.type(), local));
             }
-            return sb.append(')').toString();
+            sb.append(')');
+            return wrap(r, sb.toString(), local, in.negated());
         }
 
         private String between(BqlAst.Between b) {
-            BqlField f = BqlFieldRegistry.resolve(b.field(), ctx);
-            return f.column() + " BETWEEN " + valueSql(b.low(), f) + " AND " + valueSql(b.high(), f);
+            Resolved r = resolve(b.field());
+            validateOp(r.type(), "BETWEEN");
+            List<Object> local = new ArrayList<>();
+            String frag = r.column() + " BETWEEN " + valueSql(b.low(), r.type(), local)
+                + " AND " + valueSql(b.high(), r.type(), local);
+            return wrap(r, frag, local, false);
         }
 
         private String isEmpty(BqlAst.IsEmpty is) {
-            BqlField f = BqlFieldRegistry.resolve(is.field(), ctx);
-            return f.column() + (is.negated() ? " IS NOT NULL" : " IS NULL");
+            Resolved r = resolve(is.field());
+            if (!r.custom()) {
+                return r.column() + (is.negated() ? " IS NOT NULL" : " IS NULL");
+            }
+            // Custom: emptiness is presence of a non-null value row. IS EMPTY => no such row.
+            return wrap(r, r.column() + " IS NOT NULL", new ArrayList<>(), !is.negated());
         }
 
-        /** Emits SQL for a value: a function becomes a SQL expression; a literal becomes {@code ?}. */
-        private String valueSql(BqlAst.Value v, BqlField f) {
-            if (v instanceof BqlAst.FunctionCall fn) {
-                return functionSql(fn);
+        /** Reject operator/field-type pairings that cannot behave (RB-10 §6 typed fields). */
+        private void validateOp(BqlField.BqlType type, String op) {
+            boolean relational = op.equals(">") || op.equals("<") || op.equals(">=")
+                || op.equals("<=") || op.equals("BETWEEN");
+            boolean textual = op.equals("CONTAINS") || op.equals("STARTSWITH") || op.equals("ENDSWITH");
+            boolean numericOrDate = type == BqlField.BqlType.NUMBER || type == BqlField.BqlType.DATE;
+            if (relational && !numericOrDate) {
+                throw new BqlException("Operator " + op + " is not valid for a "
+                    + type.name().toLowerCase(Locale.ROOT) + " field");
             }
-            params.add(coerce(((BqlAst.Literal) v).raw(), f));
+            if (textual && numericOrDate) {
+                throw new BqlException("Operator " + op + " is not valid for a "
+                    + type.name().toLowerCase(Locale.ROOT) + " field");
+            }
+        }
+
+        /** Emits SQL for a value into {@code local}: a function becomes SQL; a literal becomes {@code ?}. */
+        private String valueSql(BqlAst.Value v, BqlField.BqlType type, List<Object> local) {
+            if (v instanceof BqlAst.FunctionCall fn) {
+                return functionSql(fn, local);
+            }
+            local.add(coerce(((BqlAst.Literal) v).raw(), type));
             return "?";
         }
 
-        /** Resolves a literal/function to the raw string used inside an ILIKE pattern. */
-        private String literal(BqlAst.Value v, BqlField f) {
+        /** Resolves a literal to the raw string used inside an ILIKE pattern (functions are invalid here). */
+        private String literal(BqlAst.Value v) {
             if (v instanceof BqlAst.FunctionCall) {
                 throw new BqlException("Functions are not valid with text operators");
             }
             return ((BqlAst.Literal) v).raw();
         }
 
-        private String functionSql(BqlAst.FunctionCall fn) {
+        private String functionSql(BqlAst.FunctionCall fn, List<Object> local) {
             String name = fn.name().toLowerCase(Locale.ROOT);
             return switch (name) {
                 case "currentuser" -> {
-                    params.add(ctx == null ? null : ctx.currentUserId());
+                    local.add(ctx == null ? null : ctx.currentUserId());
                     yield "?";
                 }
                 case "today" -> "CURRENT_DATE";
@@ -358,11 +423,11 @@ public class BqlCompiler {
                 case "endofmonth" ->
                     "(date_trunc('month', CURRENT_DATE) + INTERVAL '1 month' - INTERVAL '1 day')";
                 case "daysago" -> {
-                    params.add(intArg(fn));
+                    local.add(intArg(fn));
                     yield "(CURRENT_DATE - (? * INTERVAL '1 day'))";
                 }
                 case "daysfromnow" -> {
-                    params.add(intArg(fn));
+                    local.add(intArg(fn));
                     yield "(CURRENT_DATE + (? * INTERVAL '1 day'))";
                 }
                 default -> throw new BqlException("Unknown function: " + fn.name() + "()");
@@ -380,9 +445,9 @@ public class BqlCompiler {
             }
         }
 
-        /** Coerce a literal by the field's declared type so numeric comparisons behave. */
-        private Object coerce(String value, BqlField f) {
-            if (f.type() == BqlField.BqlType.NUMBER) {
+        /** Coerce a literal by the declared type so numeric comparisons behave. */
+        private Object coerce(String value, BqlField.BqlType type) {
+            if (type == BqlField.BqlType.NUMBER) {
                 try {
                     if (value.matches("-?\\d+")) {
                         return Long.parseLong(value);

@@ -68,6 +68,8 @@ public class BqlController {
         String workspaceId = resolveWorkspace(userId, body.get("workspaceId"));
         String query = body.getOrDefault("query", "").trim();
         String sort = orderBy(body.get("sort"));
+        int size = clampSize(body.get("size"));
+        int offset = pageOffset(body.get("page"), size);
 
         // Hard workspace scope: work_items has no workspace_id — scope via projects (RB-40 §1).
         String base = "SELECT " + SELECT_COLUMNS + " FROM work_items"
@@ -80,7 +82,7 @@ public class BqlController {
             BqlCompiler.Compiled c = compiler.compileFor(query, contextFor(userId, workspaceId));
             String sql = base
                 + (c.sql().isEmpty() ? "" : " AND (" + c.sql() + ")")
-                + " ORDER BY " + sort + " LIMIT 500";
+                + " ORDER BY " + sort + " LIMIT " + size + " OFFSET " + offset;
             params.addAll(c.params());
             return jdbc.queryForList(sql, params.toArray());
         } catch (BqlException e) {
@@ -121,8 +123,18 @@ public class BqlController {
             m.put("alias", f.alias());
             m.put("column", f.column());
             m.put("type", f.type().name().toLowerCase(Locale.ROOT));
+            m.put("custom", false);
             fields.add(m);
         }
+        // Workspace custom fields are queryable too (RB-10 §6) — surface them for autocomplete.
+        ctx.customFields().forEach((key, cf) -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("alias", key);
+            m.put("column", key);
+            m.put("type", cf.type().name().toLowerCase(Locale.ROOT));
+            m.put("custom", true);
+            fields.add(m);
+        });
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("fields", fields);
@@ -137,11 +149,11 @@ public class BqlController {
 
     // Saved BQL filters
     @GetMapping("/filters")
-    public List<BqlFilter> listFilters() {
+    public List<BqlFilter> listFilters(@RequestParam(required = false) String workspaceId) {
         String userId = authenticatedUser.id();
-        String workspaceId = getWorkspaceForUser(userId);
-        List<BqlFilter> mine = filterRepo.findByWorkspaceIdAndCreatedBy(workspaceId, userId);
-        List<BqlFilter> shared = filterRepo.findByWorkspaceIdAndIsSharedTrue(workspaceId);
+        String wsId = resolveWorkspace(userId, workspaceId);
+        List<BqlFilter> mine = filterRepo.findByWorkspaceIdAndCreatedBy(wsId, userId);
+        List<BqlFilter> shared = filterRepo.findByWorkspaceIdAndIsSharedTrue(wsId);
         Set<String> ids = new HashSet<>();
         List<BqlFilter> combined = new ArrayList<>();
         for (BqlFilter f : mine) {
@@ -155,22 +167,24 @@ public class BqlController {
     }
 
     @PostMapping("/filters")
-    public BqlFilter saveFilter(@Valid @RequestBody BqlFilter filter) {
+    public BqlFilter saveFilter(@RequestParam(required = false) String workspaceId,
+                                @Valid @RequestBody BqlFilter filter) {
         String userId = authenticatedUser.id();
         filter.setId("BQL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         filter.setCreatedBy(userId);
-        filter.setWorkspaceId(getWorkspaceForUser(userId));
+        filter.setWorkspaceId(resolveWorkspace(userId, workspaceId));
         filter.setCreatedAt(OffsetDateTime.now());
         return filterRepo.save(filter);
     }
 
     @DeleteMapping("/filters/{id}")
-    public Map<String, String> deleteFilter(@PathVariable String id) {
+    public Map<String, String> deleteFilter(@PathVariable String id,
+                                            @RequestParam(required = false) String workspaceId) {
         String userId = authenticatedUser.id();
-        String workspaceId = getWorkspaceForUser(userId);
-        // A user can only delete a filter in their own workspace (cross-tenant guard).
+        String wsId = resolveWorkspace(userId, workspaceId);
+        // A user can only delete a filter in a workspace they belong to (cross-tenant guard).
         BqlFilter existing = filterRepo.findById(id).orElse(null);
-        if (existing == null || !workspaceId.equals(existing.getWorkspaceId())) {
+        if (existing == null || !wsId.equals(existing.getWorkspaceId())) {
             throw ApiException.forbidden("Filter not found in this workspace.");
         }
         filterRepo.deleteById(id);
@@ -193,7 +207,51 @@ public class BqlController {
 
     private BqlContext contextFor(String userId, String workspaceId) {
         boolean canSeeSensitive = rbac.getUserTier(userId, workspaceId) >= SENSITIVE_FIELD_MIN_TIER;
-        return BqlContext.forUser(userId, canSeeSensitive);
+        return BqlContext.forUser(userId, canSeeSensitive, customFields(workspaceId));
+    }
+
+    /** Workspace custom fields keyed by field_key — makes them queryable in BQL (RB-10 §6). */
+    private Map<String, BqlContext.CustomField> customFields(String workspaceId) {
+        Map<String, BqlContext.CustomField> out = new LinkedHashMap<>();
+        try {
+            jdbc.query("SELECT id, field_key, field_type FROM field_def WHERE workspace_id = ?",
+                rs -> {
+                    String key = rs.getString("field_key");
+                    if (key == null || key.isBlank()) {
+                        return;
+                    }
+                    BqlField.BqlType type = "NUMBER".equalsIgnoreCase(rs.getString("field_type"))
+                        ? BqlField.BqlType.NUMBER : BqlField.BqlType.TEXT;
+                    out.put(key.toLowerCase(Locale.ROOT),
+                        new BqlContext.CustomField(rs.getString("id"), type));
+                }, workspaceId);
+        } catch (Exception ignored) {
+            // No custom fields / table absent — built-in fields still work.
+        }
+        return out;
+    }
+
+    /** Page size, clamped to [1, 500]; default 100. */
+    private int clampSize(String raw) {
+        int size = parseIntOr(raw, 100);
+        return Math.max(1, Math.min(size, 500));
+    }
+
+    /** Zero-based page → row offset (non-negative). */
+    private int pageOffset(String rawPage, int size) {
+        int page = Math.max(0, parseIntOr(rawPage, 0));
+        return page * size;
+    }
+
+    private int parseIntOr(String raw, int fallback) {
+        if (raw == null || raw.isBlank()) {
+            return fallback;
+        }
+        try {
+            return Integer.parseInt(raw.trim());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
     }
 
     /** Validate the requested sort against the allow-list; default to newest first. */

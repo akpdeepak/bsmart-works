@@ -119,3 +119,34 @@ workspace-scope + RBAC path runs.
 - [x] P1 — NL→BQL dialect unified with the compiler
 - [x] P2 — parser/AST grammar upgrade (grouping, NOT, BETWEEN, NOT IN, IS EMPTY, relative dates)
 - [x] P3 — schema endpoint, autocomplete, live validation, visual builder
+
+---
+
+## 7. Round 2 — stored-BQL compatibility (regression fix, #242)
+
+The stricter P2 parser + closed allow-list broke BQL **already stored in seed data** (compiled
+with no try/catch in `ComplianceEvaluationService`):
+
+- **Multi-word bare values** — `status = In Progress` threw "Unexpected token". `parseValue` now
+  consumes consecutive non-reserved words into one value (stops at a keyword / operator / paren /
+  comma / EOF). Also a UX win — no quoting needed.
+- **Missing long-text fields** — `acceptance_criteria`, `steps_to_reproduce`, `definition_of_done`,
+  `expected_result`, `actual_result` registered as `TEXT`.
+- Guard test compiles every scope/assertion pair from the V37 seed templates.
+
+## 8. Round 3 — depth & cleanup
+
+- **Custom fields are queryable** *(closes the biggest unification gap)* — `field_def` /
+  `work_item_field_value` custom fields resolve by `field_key` and compile to a membership subquery
+  against the value store (`value_text` / `value_number`), supporting `=`, `!=`, relational,
+  `CONTAINS`/`STARTSWITH`/`ENDSWITH`, `IN`/`NOT IN`, `BETWEEN`, `IS [NOT] EMPTY`. Carried on
+  `BqlContext`; surfaced in `/schema` (`custom: true`) so autocomplete + the visual builder include
+  them. System-side consumers (KPI/SLA/compliance) compile trusted with no custom fields.
+- **Operator / field-type validation** — the typed registry now rejects nonsensical pairings
+  (`CONTAINS` on a number, relational/`BETWEEN` on text/enum) at compile time.
+- **Pagination** — `/execute` accepts `page` + `size` (clamped 1..500, default 100) instead of a
+  hard `LIMIT 500`; the editor gained a **Show more** control.
+- **Filters/Views consolidation** — the redundant "Saved Filter" surface is gone; **Saved Views**
+  is the single concept. The saved-filter endpoints now scope to the active workspace
+  (`resolveWorkspace`) instead of `users.workspace_id`. (The `bql_filter` table/endpoints remain for
+  API compatibility — a later contract migration can drop them once nothing reads them.)

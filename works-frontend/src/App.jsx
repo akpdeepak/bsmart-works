@@ -1656,10 +1656,12 @@ export default function App() {
     api.raw(`/permission-schemes/roles`, { method: 'POST', body: JSON.stringify({ ...newRoleForm, workspaceId: activeWorkspaceId }) })
       .then(r => r.json()).then(() => { fetchRoles(); fetchPermMatrix(); setShowRoleForm(false); setNewRoleForm({ name: '', tier: 2 }); }).catch(reportError);
   }
-  function runBql(sort) {
+  function runBql(opts) {
     setBqlError('');
+    const o = opts && typeof opts === 'object' ? opts : {};
     const body = { query: bqlQuery, workspaceId: activeWorkspaceId };
-    if (typeof sort === 'string' && sort) body.sort = sort;
+    if (typeof o.sort === 'string' && o.sort) body.sort = o.sort;
+    if (Number.isFinite(o.size)) body.size = String(o.size);
     api.raw(`/bql/execute`, { method: 'POST', body: JSON.stringify(body) })
       .then(r => r.json()).then(d => {
         if (d.error) { setBqlError(d.error); setBqlResults([]); }

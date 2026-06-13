@@ -11,6 +11,7 @@ vi.mock('@/lib/ai', async () => {
     aiClient: {
       compileConversationalDashboard: vi.fn(),
       saveConversationalDashboard: vi.fn(),
+      suggestDashboard: vi.fn(),
     },
   };
 });
@@ -119,6 +120,41 @@ describe('DashboardsView', () => {
       expect(screen.getByText(/deterministic fallback/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /save dashboard/i })).toBeInTheDocument();
     });
+  });
+});
+
+describe('DashboardsView — suggested dashboard entry (dashboard_suggestion gate, §2.2)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const ON = [{ id: 'dashboard_suggestion', label: 'AI-suggested starter dashboard', enabled: true }];
+  const OFF = [{ id: 'dashboard_suggestion', label: 'AI-suggested starter dashboard', enabled: false }];
+
+  it('hides the suggest entry when the capability is disabled', () => {
+    render(<DashboardsView {...baseProps} aiCapabilities={OFF} activeWorkspaceId="ws-1" />);
+    expect(screen.queryByText(/suggest a dashboard/i)).not.toBeInTheDocument();
+  });
+
+  it('shows the suggest entry when the capability is enabled', () => {
+    render(<DashboardsView {...baseProps} aiCapabilities={ON} activeWorkspaceId="ws-1" />);
+    expect(screen.getAllByText(/suggest a dashboard/i)[0]).toBeInTheDocument();
+  });
+
+  it('accepting a suggestion creates a dashboard via the handler', async () => {
+    aiClient.suggestDashboard.mockResolvedValue({
+      role: 'developer', name: 'Developer starter dashboard',
+      rationale: 'A starter set tuned for the Developer role.',
+      widgets: [{ widgetType: 'SCORECARD', title: 'My open work', config: {}, gridW: 3 }],
+      usedAi: false, fallback: true, policyState: 'DISABLED_WORKSPACE', tier: 'none',
+    });
+    const acceptDashboardSuggestion = vi.fn().mockResolvedValue({ id: 'DSH-9' });
+    render(<DashboardsView {...baseProps} aiCapabilities={ON} activeWorkspaceId="ws-1"
+      dashboardRole="developer" acceptDashboardSuggestion={acceptDashboardSuggestion} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /suggest a dashboard/i }));
+    expect(await screen.findByText('Developer starter dashboard')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /accept & create/i }));
+
+    await waitFor(() => expect(acceptDashboardSuggestion).toHaveBeenCalled());
   });
 });
 

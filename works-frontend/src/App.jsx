@@ -1232,6 +1232,23 @@ export default function App() {
       .catch(() => showToast('Failed to create dashboard', 'error'));
   }
 
+  // Cap J — accept an AI-suggested starter dashboard: create the dashboard, then add its proposed
+  // widgets via the existing widget endpoints (INSIGHTS-AI-ALIGNMENT-REVIEW §2.2). The widget set is
+  // the deterministic role-based starter set the panel previewed; returns a promise the panel awaits.
+  function acceptDashboardSuggestion(suggestion) {
+    const widgets = (suggestion && suggestion.widgets) || [];
+    return api.send(`/dashboards`, { method: 'POST', body: JSON.stringify({ name: (suggestion && suggestion.name) || 'Suggested dashboard', scope: 'PERSONAL', workspaceId: activeWorkspaceId }) })
+      .then(async (d) => {
+        for (const w of widgets) {
+          const body = { widgetType: w.widgetType, title: w.title, config: JSON.stringify(w.config || {}), gridW: w.gridW || 4, gridH: 2 };
+          await api.send(`/dashboards/${d.id}/widgets`, { method: 'POST', body: JSON.stringify(body) });
+        }
+        fetchCustomDashboards();
+        openDashboard(d.id);
+        return d;
+      });
+  }
+
   function deleteDashboard(id) {
     api.send(`/dashboards/${id}`, { method: 'DELETE' })
       .then(() => { showToast('Dashboard deleted'); setSelectedDashboard(null); fetchCustomDashboards(); })
@@ -3589,6 +3606,8 @@ export default function App() {
               currentUser={currentUser}
               activeWorkspaceId={activeWorkspaceId}
               aiCapabilities={aiCapabilities}
+              dashboardRole={dashboardRole}
+              acceptDashboardSuggestion={acceptDashboardSuggestion}
               createDashboard={createDashboard}
               openDashboard={openDashboard}
               deleteDashboard={deleteDashboard}

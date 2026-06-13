@@ -30,17 +30,20 @@ public class AiController {
     private final RbacService rbac;
     private final AiWorkspaceSettingsService settingsService;
     private final DashboardSummaryService dashboardSummary;
+    private final DashboardSuggestionService dashboardSuggestion;
 
     public AiController(AiControlPlaneService controlPlane, AiInvocationRepository invocations,
                         AuthenticatedUser authenticatedUser, RbacService rbac,
                         AiWorkspaceSettingsService settingsService,
-                        DashboardSummaryService dashboardSummary) {
+                        DashboardSummaryService dashboardSummary,
+                        DashboardSuggestionService dashboardSuggestion) {
         this.controlPlane = controlPlane;
         this.invocations = invocations;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
         this.settingsService = settingsService;
         this.dashboardSummary = dashboardSummary;
+        this.dashboardSuggestion = dashboardSuggestion;
     }
 
     /** The capability catalogue with each capability's effective enabled state for the caller and
@@ -140,5 +143,19 @@ public class AiController {
         List<DashboardSummaryService.Point> series =
             DashboardSummaryService.toSeries(req == null ? null : req.series());
         return dashboardSummary.summarize(workspaceId, userId, req == null ? null : req.title(), series, inContext);
+    }
+
+    /** Cap J — AI-suggested starter dashboard from the caller's role + workspace context
+     *  (INSIGHTS-AI-ALIGNMENT-REVIEW §2.2). RBAC ({@code view_items}) + the deterministic role-based
+     *  starter set (the mandatory fallback) live in {@link DashboardSuggestionService}. */
+    public record DashboardSuggestionRequest(String role, Boolean aiInContext) { }
+
+    @PostMapping("/dashboard-suggestions")
+    public DashboardSuggestionService.Suggestion dashboardSuggestions(@RequestParam String workspaceId,
+                                                                      @RequestBody(required = false)
+                                                                      DashboardSuggestionRequest req) {
+        String userId = authenticatedUser.id();
+        boolean inContext = req == null || req.aiInContext() == null || req.aiInContext();
+        return dashboardSuggestion.suggest(workspaceId, userId, req == null ? null : req.role(), inContext);
     }
 }

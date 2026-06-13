@@ -15,18 +15,13 @@ import { NULLARY_OPS, SET_OPS, rowToClause } from '@/lib/bql-builder';
 export default function BqlView({
   bqlQuery,
   bqlError,
-  bqlFilterName,
-  bqlFilters,
   bqlResults,
   workItems,
   activeWorkspaceId,
   aiCapabilities = [],
   setBqlQuery,
-  setBqlFilterName,
   setSelectedItem,
   runBql,
-  saveBqlFilter,
-  fetchBqlFilters,
 }) {
   // Iteration 10 Cap O — NL→BQL translation (first AI surface)
   const [nlText, setNlText] = useState('');
@@ -42,7 +37,14 @@ export default function BqlView({
   const [builderOpen, setBuilderOpen] = useState(false);
   const [rows, setRows] = useState([{ field: '', op: '=', value: '' }]);
   const [connector, setConnector] = useState('AND');
+  const [resultSize, setResultSize] = useState(100);
   const queryRef = useRef(null);
+
+  const showMore = () => {
+    const next = Math.min(resultSize + 100, 500);
+    setResultSize(next);
+    runBql({ size: next });
+  };
 
   const translateNl = () => {
     if (!nlText.trim() || !activeWorkspaceId) return;
@@ -193,10 +195,7 @@ export default function BqlView({
             onClick={() => setBuilderOpen(o => !o)} aria-expanded={builderOpen}>
             Visual builder
           </Button>
-          <div className="flex gap-2 items-center flex-1">
-            <input className="input flex-1 text-sm" aria-label="Filter name" placeholder="Filter name..." value={bqlFilterName} onChange={e => setBqlFilterName(e.target.value)} />
-            <Button variant="secondary" onClick={saveBqlFilter}>Save Filter</Button>
-          </div>
+          <span className="text-xs text-neutral-500 ml-auto">Save a query as a reusable View below.</span>
         </div>
 
         {/* Schema-driven reference — click any token to insert it (autocomplete-by-click) */}
@@ -315,29 +314,14 @@ export default function BqlView({
         )}
       </div>
 
-      {/* Saved filters */}
-      {bqlFilters.length > 0 && (
-        <div className="mb-4">
-          <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-2">Saved Filters</p>
-          <div className="flex flex-wrap gap-2">
-            {bqlFilters.map(f => (
-              <button key={f.id} onClick={() => { setBqlQuery(f.query); runBql(); }}
-                className="flex items-center gap-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5 text-sm hover:border-brand-navy transition-colors group">
-                <span className="font-medium text-neutral-900">{f.name}</span>
-                {f.isShared && <span className="text-xs text-neutral-600 dark:text-neutral-400">shared</span>}
-                <button onClick={e => { e.stopPropagation(); api.raw(`/bql/filters/${f.id}`, { method: 'DELETE' }).then(() => fetchBqlFilters()); }}
-                  className="text-neutral-300 hover:text-semantic-danger opacity-0 group-hover:opacity-100 transition-opacity ml-1" aria-label="Remove"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Results */}
       {bqlResults.length > 0 && (
         <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
           <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
             <span className="text-sm font-semibold text-neutral-900">{bqlResults.length} result{bqlResults.length !== 1 ? 's' : ''}</span>
+            {bqlResults.length >= resultSize && resultSize < 500 && (
+              <Button variant="ghost" size="sm" onClick={showMore}>Show more</Button>
+            )}
           </div>
           <div className="divide-y divide-neutral-50 max-h-96 overflow-y-auto">
             {bqlResults.map((item, i) => (

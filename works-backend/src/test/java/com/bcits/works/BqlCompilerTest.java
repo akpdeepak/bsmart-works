@@ -262,6 +262,82 @@ class BqlCompilerTest {
         }
     }
 
+    // ── Operator / field-type validation ─────────────────────────────────────────────
+
+    @Test
+    void textOperatorOnNumber_isRejected() {
+        assertThrows(BqlException.class, () -> compiler.compile("storyPoints CONTAINS x", "u"));
+    }
+
+    @Test
+    void relationalOperatorOnText_isRejected() {
+        assertThrows(BqlException.class, () -> compiler.compile("title > 5", "u"));
+        assertThrows(BqlException.class, () -> compiler.compile("status BETWEEN a AND b", "u"));
+    }
+
+    @Test
+    void relationalOnNumberOrDate_isAllowed() {
+        assertEquals("story_points >= ?", compiler.compile("points >= 5", "u").sql());
+        assertEquals("due_date < CURRENT_DATE", compiler.compile("dueDate < today()", "u").sql());
+    }
+
+    // ── Custom fields (queryable via the value store) ─────────────────────────────────
+
+    private BqlContext customCtx() {
+        return BqlContext.forUser("u", true, java.util.Map.of(
+            "team", new BqlContext.CustomField("FD-1", BqlField.BqlType.TEXT),
+            "score", new BqlContext.CustomField("FD-2", BqlField.BqlType.NUMBER)));
+    }
+
+    @Test
+    void customTextField_comparesViaValueStore() {
+        BqlCompiler.Compiled c = compiler.compileFor("team = Platform", customCtx());
+        assertEquals("id IN (SELECT work_item_id FROM work_item_field_value "
+            + "WHERE field_def_id = ? AND value_text = ?)", c.sql());
+        assertEquals(List.of("FD-1", "Platform"), c.params());
+    }
+
+    @Test
+    void customNumberField_usesValueNumberColumn() {
+        BqlCompiler.Compiled c = compiler.compileFor("score > 5", customCtx());
+        assertEquals("id IN (SELECT work_item_id FROM work_item_field_value "
+            + "WHERE field_def_id = ? AND value_number > ?)", c.sql());
+        assertEquals(List.of("FD-2", 5L), c.params());
+    }
+
+    @Test
+    void customField_isEmpty_negatesMembership() {
+        BqlCompiler.Compiled empty = compiler.compileFor("team IS EMPTY", customCtx());
+        assertEquals("id NOT IN (SELECT work_item_id FROM work_item_field_value "
+            + "WHERE field_def_id = ? AND value_text IS NOT NULL)", empty.sql());
+        assertEquals(List.of("FD-1"), empty.params());
+
+        BqlCompiler.Compiled notEmpty = compiler.compileFor("team IS NOT EMPTY", customCtx());
+        assertEquals("id IN (SELECT work_item_id FROM work_item_field_value "
+            + "WHERE field_def_id = ? AND value_text IS NOT NULL)", notEmpty.sql());
+    }
+
+    @Test
+    void customField_notIn_flipsOuterMembership() {
+        BqlCompiler.Compiled c = compiler.compileFor("team NOT IN (A, B)", customCtx());
+        assertEquals("id NOT IN (SELECT work_item_id FROM work_item_field_value "
+            + "WHERE field_def_id = ? AND value_text IN (?, ?))", c.sql());
+        assertEquals(List.of("FD-1", "A", "B"), c.params());
+    }
+
+    @Test
+    void customAndBuiltin_mix_keepsParamOrder() {
+        BqlCompiler.Compiled c = compiler.compileFor("status = Open AND score > 3", customCtx());
+        assertEquals("(status = ? AND id IN (SELECT work_item_id FROM work_item_field_value "
+            + "WHERE field_def_id = ? AND value_number > ?))", c.sql());
+        assertEquals(List.of("Open", "FD-2", 3L), c.params());
+    }
+
+    @Test
+    void unknownField_stillRejected_whenCustomFieldsPresent() {
+        assertThrows(BqlException.class, () -> compiler.compileFor("nope = 1", customCtx()));
+    }
+
     @Test
     void malformedCondition_throwsBqlException() {
         assertThrows(BqlException.class, () -> compiler.compile("this is not valid", "u"));

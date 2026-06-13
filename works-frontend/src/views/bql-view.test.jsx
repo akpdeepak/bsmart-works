@@ -7,16 +7,11 @@ const noop = () => {};
 const baseProps = {
   bqlQuery: '',
   bqlError: '',
-  bqlFilterName: '',
-  bqlFilters: [],
   bqlResults: [],
   workItems: [],
   setBqlQuery: noop,
-  setBqlFilterName: noop,
   setSelectedItem: noop,
   runBql: noop,
-  saveBqlFilter: noop,
-  fetchBqlFilters: noop,
 };
 
 describe('BqlView', () => {
@@ -24,7 +19,8 @@ describe('BqlView', () => {
     render(<BqlView {...baseProps} />);
     // label-for association: getByLabelText resolves the textarea via htmlFor/id.
     expect(screen.getByLabelText('Query')).toBeInTheDocument();
-    expect(screen.getByLabelText('Filter name')).toBeInTheDocument();
+    // Saving is now a single concept — "Save as View" (the redundant Save Filter input is gone).
+    expect(screen.getByRole('button', { name: /Save as View/ })).toBeInTheDocument();
   });
 
   it('runs the query when Run is clicked', () => {

@@ -2,7 +2,23 @@ import { Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen, AlertT
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { BlockEditor } from '@/components/BlockEditor';
+import { BlockRenderer } from '@/components/BlockRenderer';
+import { KnowAiPanel } from '@/components/knowledge/KnowAiPanel';
+import { ArticleSummarizeButton } from '@/components/knowledge/ArticleSummarizeButton';
+import { AiTextAssist } from '@/components/knowledge/AiTextAssist';
 import { onPressKey, renderMd } from '@/lib/utils';
+import { blocksText } from '@/lib/doc-stats';
+import { makeAiAssist } from '@/lib/knowledge-ai';
+import { capabilityEnabled } from '@/lib/ai';
+
+// Plain text of an article for AI summary — block content when present, else the markdown body.
+function articleText(article) {
+  if (!article) return '';
+  let blocks;
+  try { blocks = JSON.parse(article.contentBlocks || '[]'); } catch { blocks = []; }
+  if (Array.isArray(blocks) && blocks.length > 0) return blocksText(blocks);
+  return article.content || '';
+}
 
 /**
  * KnowledgeView — knowledge base: spaces, articles, editor, version history,
@@ -57,7 +73,21 @@ export default function KnowledgeView({
   rejectArticle,
   articleChildren = [],
   fetchArticleChildren,
+  workspaceId,
+  aiCapabilities = [],
 }) {
+  const aiGenEnabled = capabilityEnabled(aiCapabilities, 'generation');
+  const aiAssist = makeAiAssist(workspaceId, aiGenEnabled);
+  // Open a cited article if it's already loaded in a list (full object); otherwise leave the user in
+  // place rather than render a stub with no content.
+  const openArticleById = (id) => {
+    const found = [...(knowledgeArticles || []), ...(knowledgeSearchResults || [])].find((a) => a.id === id);
+    if (!found) return;
+    setSelectedArticle(found);
+    setEditingArticle(false);
+    setArticlePanel(null);
+    fetchArticleChildren?.(id);
+  };
   return (
     <div className="flex h-full overflow-hidden">
       {/* Left sidebar — spaces */}
@@ -69,7 +99,7 @@ export default function KnowledgeView({
           </div>
           {/* Search */}
           <div className="relative">
-            <input type="text" placeholder="Search articles..." value={knowledgeSearch}
+            <input type="text" aria-label="Search articles" placeholder="Search articles..." value={knowledgeSearch}
               onChange={e => setKnowledgeSearch(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { searchKnowledge(); setKnowledgeTab('search'); } }}
               className="input text-xs pl-6 py-1.5 w-full" />
@@ -86,7 +116,7 @@ export default function KnowledgeView({
         {/* Space list */}
         <div className="flex-1 overflow-y-auto px-2 pb-2">
           {knowledgeSpaces.length === 0 && (
-            <p className="text-xs text-neutral-600 text-center py-6">No spaces yet. Create one to get started.</p>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center py-6">No spaces yet. Create one to get started.</p>
           )}
           {knowledgeSpaces.map(space => (
             <div key={space.id}>
@@ -110,6 +140,11 @@ export default function KnowledgeView({
         {/* Article list panel */}
         {!selectedArticle && (
           <div className="flex-1 overflow-y-auto p-6">
+            {aiAssist && knowledgeTab !== 'search' && (
+              <div className="mb-5">
+                <KnowAiPanel workspaceId={workspaceId} onOpenArticle={openArticleById} />
+              </div>
+            )}
             {knowledgeTab === 'search' ? (
               <div>
                 <div className="flex items-center gap-3 mb-4">
@@ -235,6 +270,7 @@ export default function KnowledgeView({
                 {selectedArticle.status === 'ARCHIVED' && (
                   <Button variant="secondary" onClick={() => restoreArticle(selectedArticle.id)}>Restore</Button>
                 )}
+                {aiAssist && <ArticleSummarizeButton workspaceId={workspaceId} text={articleText(selectedArticle)} />}
                 <Button variant="secondary" onClick={() => setEditingArticle(e => !e)}>
                   {editingArticle ? 'View' : 'Edit'}
                 </Button>
@@ -277,7 +313,16 @@ export default function KnowledgeView({
                     </div>
                     {articleContentFormat === 'markdown' ? (
                       <div>
-                        <label htmlFor="article-content" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">Content (Markdown supported)</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label htmlFor="article-content" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block">Content (Markdown supported)</label>
+                          {aiAssist && (
+                            <AiTextAssist
+                              workspaceId={workspaceId}
+                              getText={() => selectedArticle.content || ''}
+                              onApply={(text) => { setSelectedArticle(a => ({ ...a, content: text })); updateArticle(selectedArticle.id, { title: selectedArticle.title, content: text, templateType: selectedArticle.templateType }); }}
+                            />
+                          )}
+                        </div>
                         <textarea id="article-content" rows={20} className="input resize-none font-mono text-sm w-full"
                           value={selectedArticle.content || ''}
                           onChange={e => setSelectedArticle(a => ({ ...a, content: e.target.value }))}
@@ -288,6 +333,8 @@ export default function KnowledgeView({
                       <div>
                         <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-2">Content (Block editor)</span>
                         <BlockEditor
+                          aiAssist={aiAssist}
+                          workspaceId={workspaceId}
                           blocks={(() => { try { return JSON.parse(selectedArticle.contentBlocks || '[]'); } catch { return []; } })()}
                           onChange={blocks => {
                             const json = JSON.stringify(blocks);
@@ -303,12 +350,22 @@ export default function KnowledgeView({
                   </div>
                 ) : (
                   <div className="prose prose-sm max-w-none dark:prose-invert">
-                    {selectedArticle.content ? (
-                      <div className="text-neutral-800 dark:text-neutral-200 leading-relaxed whitespace-pre-wrap text-sm"
-                        dangerouslySetInnerHTML={{ __html: renderMd(selectedArticle.content) }} />
-                    ) : (
-                      <EmptyState icon={FileText} title="No content yet" subtitle="Click Edit to start writing." action={<Button variant="action" onClick={() => setEditingArticle(true)}>Start Writing</Button>} />
-                    )}
+                    {(() => {
+                      // Block-format articles (content_format='blocks') render via BlockRenderer —
+                      // until now they showed nothing in read mode. Markdown articles keep renderMd.
+                      let blocks;
+                      try { blocks = JSON.parse(selectedArticle.contentBlocks || '[]'); } catch { blocks = []; }
+                      if (Array.isArray(blocks) && blocks.length > 0) {
+                        return <BlockRenderer blocks={blocks} workspaceId={workspaceId} />;
+                      }
+                      if (selectedArticle.content) {
+                        return (
+                          <div className="text-neutral-800 dark:text-neutral-200 leading-relaxed whitespace-pre-wrap text-sm"
+                            dangerouslySetInnerHTML={{ __html: renderMd(selectedArticle.content) }} />
+                        );
+                      }
+                      return <EmptyState icon={FileText} title="No content yet" subtitle="Click Edit to start writing." action={<Button variant="action" onClick={() => setEditingArticle(true)}>Start Writing</Button>} />;
+                    })()}
                   </div>
                 )}
               </div>
@@ -339,7 +396,7 @@ export default function KnowledgeView({
                 <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
                   <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Version history</h3>
                   {articleVersions.length === 0 ? (
-                    <p className="text-xs text-neutral-600">No versions saved yet.</p>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400">No versions saved yet.</p>
                   ) : (
                     <div className="space-y-2">
                       {articleVersions.map(v => (
@@ -361,7 +418,7 @@ export default function KnowledgeView({
                   <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Comments ({articleComments.length})</h3>
                   <div className="flex-1 space-y-2">
                     {articleComments.length === 0 && (
-                      <p className="text-xs text-neutral-600">No comments yet. Start the discussion below.</p>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400">No comments yet. Start the discussion below.</p>
                     )}
                     {articleComments.map(c => (
                       <div key={c.id} className={`rounded-lg p-3 border ${c.resolved ? 'bg-semantic-success-surface border-semantic-success/30' : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700'}`}>
@@ -380,7 +437,17 @@ export default function KnowledgeView({
                     ))}
                   </div>
                   <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
-                    <textarea rows={3} value={newArticleComment} onChange={e => setNewArticleComment(e.target.value)}
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Add comment</span>
+                      {aiAssist && (
+                        <AiTextAssist
+                          workspaceId={workspaceId}
+                          getText={() => newArticleComment}
+                          onApply={(text) => setNewArticleComment(text)}
+                        />
+                      )}
+                    </div>
+                    <textarea rows={3} aria-label="Add a comment" value={newArticleComment} onChange={e => setNewArticleComment(e.target.value)}
                       placeholder="Add a comment…" className="input resize-none text-xs w-full" />
                     <Button variant="action" className="mt-2 w-full" onClick={() => addArticleComment(selectedArticle.id)}>Comment</Button>
                   </div>

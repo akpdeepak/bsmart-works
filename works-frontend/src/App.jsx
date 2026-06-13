@@ -3310,6 +3310,7 @@ export default function App() {
               fetchNotifications={fetchNotifications}
               fetchUnreadCount={fetchUnreadCount}
               setUnreadCount={setUnreadCount}
+              onError={reportError}
             />
           )}
 
@@ -3744,6 +3745,8 @@ export default function App() {
               rejectArticle={rejectArticle}
               articleChildren={articleChildren}
               fetchArticleChildren={fetchArticleChildren}
+              workspaceId={activeWorkspaceId}
+              aiCapabilities={aiCapabilities}
             />
           )}
 

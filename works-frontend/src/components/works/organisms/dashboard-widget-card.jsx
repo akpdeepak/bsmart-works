@@ -68,9 +68,22 @@ export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, on
         .map(([label, value]) => ({ label, value }));
   const listItems = aggregate ? (aggregate.recent || []) : items;
   const span = Math.max(1, Math.min(widget.gridW || 4, 12));
-  // Drill needs the underlying item set, which the aggregate doesn't carry — disable it then.
-  const canDrill = !editMode && !!onDrill && !aggregate;
+  // Drill needs an underlying item set to list. The aggregate overrides only the *series*; the
+  // client-loaded `items` (workItems narrowed by the widget's own filter) are still available, so
+  // a widget is drillable whenever there are items to show — including server-aggregate widgets,
+  // as long as the client carries the matching rows (§3.4). A pure server aggregate with no client
+  // items can't list a slice, so drill stays off then.
+  const canDrill = !editMode && !!onDrill && items.length > 0;
   const drillBy = (label) => items.filter(i => (i[dimension] || 'None') === label);
+
+  // Every drill carries the widget's filter/dimension context so the modal lists exactly the
+  // underlying rows for the clicked slice — not the whole dashboard (§3.4). `value` is the slice
+  // (a status / dimension value); omit it for a whole-widget drill (e.g. the scorecard total).
+  const drill = (sliceItems, sliceLabel, value) => onDrill({
+    title: sliceLabel,
+    items: sliceItems,
+    filterContext: { baseFilter: filter, dimension, value: value ?? null },
+  });
 
   return (
     <div
@@ -113,7 +126,7 @@ export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, on
 
       {widget.widgetType === 'SCORECARD' && (
         canDrill ? (
-          <button type="button" onClick={() => onDrill({ title: widget.title || 'Items', items })}
+          <button type="button" onClick={() => drill(items, widget.title || 'Items')}
             className="text-3xl font-bold text-brand-navy dark:text-white rounded hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
             {scorecardCount}
           </button>
@@ -140,7 +153,7 @@ export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, on
               );
               return canDrill ? (
                 <button key={status} type="button" aria-label={`${status}: ${count} — show items`}
-                  onClick={() => onDrill({ title: `${widget.title || 'Items'} · Status: ${status}`, items: items.filter(i => (i.status || 'Unknown') === status) })}
+                  onClick={() => drill(items.filter(i => (i.status || 'Unknown') === status), `${widget.title || 'Items'} · Status: ${status}`, status)}
                   className="flex w-full items-center gap-2 rounded px-1 -mx-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors">
                   {row}
                 </button>
@@ -166,12 +179,12 @@ export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, on
 
       {widget.widgetType === 'PIE' && (
         <DonutChart data={chartData}
-          onSelect={canDrill ? (e => onDrill({ title: `${widget.title || 'Items'} · ${dimension}: ${e.label}`, items: drillBy(e.label) })) : undefined} />
+          onSelect={canDrill ? (e => drill(drillBy(e.label), `${widget.title || 'Items'} · ${dimension}: ${e.label}`, e.label)) : undefined} />
       )}
 
       {widget.widgetType === 'BAR' && (
         <BarChart data={chartData}
-          onSelect={canDrill ? (e => onDrill({ title: `${widget.title || 'Items'} · ${dimension}: ${e.label}`, items: drillBy(e.label) })) : undefined} />
+          onSelect={canDrill ? (e => drill(drillBy(e.label), `${widget.title || 'Items'} · ${dimension}: ${e.label}`, e.label)) : undefined} />
       )}
 
       {widget.widgetType === 'PIVOT' && (

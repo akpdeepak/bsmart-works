@@ -74,6 +74,13 @@ public class ReleaseController {
     @PostMapping
     public Release createRelease(@Valid @RequestBody Release release) {
         String userId = authenticatedUser.id();
+        // Workspace-scoped (RB-40 §1): projectId comes from the request body, so without this guard
+        // any authenticated user could create a release in another tenant's project. Mirrors the
+        // access check in updateRelease / deleteRelease.
+        String wsId = rbac.workspaceForProject(release.getProjectId());
+        if (wsId == null || rbac.getUserTier(userId, wsId) < 1) {
+            throw ApiException.notFound("Project", release.getProjectId());
+        }
         release.setId("REL-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         release.setStatus(release.getStatus() != null ? release.getStatus() : "PLANNED");
         release.setCreatedBy(userId);

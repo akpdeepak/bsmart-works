@@ -61,6 +61,22 @@ class ReleaseControllerAccessTest {
     }
 
     @Test
+    void createRelease_deniedForProjectOutsideCallersWorkspace() {
+        // projectId comes from the request body; a caller with no access to that project's workspace
+        // must not be able to create a release in it (RB-40 §1).
+        Release incoming = new Release();
+        incoming.setProjectId("PROJ-B");
+        incoming.setName("New");
+        incoming.setVersion("2.0.0");
+
+        assertThatThrownBy(() -> controller.createRelease(incoming))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+
+        verify(releaseRepository, never()).save(any());
+    }
+
+    @Test
     void getRelease_unknownIdReturnsNotFound() {
         when(releaseRepository.findById("REL-missing")).thenReturn(Optional.empty());
 

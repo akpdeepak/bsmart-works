@@ -35,9 +35,10 @@ class SprintControllerAccessTest {
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
+    private final StatusConfigService statusConfig = mock(StatusConfigService.class);
 
     private final SprintController controller = new SprintController(
-            sprintRepository, workItemRepository, eventService, jdbc, authenticatedUser, rbac);
+            sprintRepository, workItemRepository, eventService, jdbc, authenticatedUser, rbac, statusConfig);
 
     SprintControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

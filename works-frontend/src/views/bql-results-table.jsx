@@ -206,20 +206,26 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
           </thead>
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
             {results.map((item, i) => (
-              <tr key={item.id || i} role="button" tabIndex={0}
-                className="cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40"
-                onClick={() => onOpen(item)}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(item); } }}>
+              <tr key={item.id || i}
+                className="hover:bg-neutral-50 dark:hover:bg-neutral-700/40">
                 {bulkEnabled && (
-                  <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
+                  <td className="px-3 py-2.5">
                     <input type="checkbox" checked={selected.has(item.id)}
                       onChange={() => toggleRow(item.id)}
                       aria-label={`Select ${item.id}`} className="cursor-pointer" />
                   </td>
                 )}
-                {cols.map(col => (
+                {cols.map((col, ci) => (
                   <td key={col.key} className={`px-4 py-2.5 text-neutral-900 dark:text-neutral-100 ${col.grow ? 'font-medium' : ''} ${col.date ? 'whitespace-nowrap text-neutral-600 dark:text-neutral-400' : ''}`}>
-                    {renderCell(col, item)}
+                    {ci === 0 ? (
+                      // The first cell is the row's open affordance — a real button so it works by
+                      // mouse AND keyboard without making the whole <tr> an interactive control
+                      // (which would nest the bulk-select checkbox inside it — nested-interactive, RB-30 §6).
+                      <button type="button" onClick={() => onOpen(item)}
+                        className="text-left hover:underline rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
+                        {renderCell(col, item)}
+                      </button>
+                    ) : renderCell(col, item)}
                   </td>
                 ))}
               </tr>

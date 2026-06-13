@@ -51,7 +51,8 @@ class WorkItemBulkActionIT {
         OffsetDateTime now = OffsetDateTime.now();
         jdbc.update("DELETE FROM tags WHERE work_item_id IN (SELECT id FROM work_items WHERE project_id IN (?, ?))",
             PROJ_A, PROJ_B);
-        jdbc.update("DELETE FROM events WHERE aggregate_id LIKE 'BULK-%'");
+        // The events table is append-only (RB-10 §3 — a trigger blocks DELETE), so it is never
+        // cleaned between runs; audit assertions measure a delta around the action instead.
         jdbc.update("DELETE FROM work_items WHERE project_id IN (?, ?)", PROJ_A, PROJ_B);
         jdbc.update("DELETE FROM projects WHERE id IN (?, ?)", PROJ_A, PROJ_B);
         jdbc.update("DELETE FROM workspace_members WHERE workspace_id IN (?, ?)", WS_A, WS_B);
@@ -115,11 +116,13 @@ class WorkItemBulkActionIT {
 
     @Test
     void bulkChange_isAudited() {
+        String countSql = "SELECT COUNT(*) FROM events WHERE aggregate_id = ? AND field_name = 'priority' "
+            + "AND old_value = 'HIGH' AND new_value = 'LOW'";
+        // events is append-only; measure the delta this action adds rather than assuming a clean table.
+        Integer before = jdbc.queryForObject(countSql, Integer.class, "BULK-A-1");
         bulk.apply(ADMIN_A, List.of("BULK-A-1"), "priority", "LOW");
-        Integer events = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM events WHERE aggregate_id = ? AND field_name = 'priority' "
-            + "AND old_value = 'HIGH' AND new_value = 'LOW'", Integer.class, "BULK-A-1");
-        assertThat(events).isEqualTo(1);
+        Integer after = jdbc.queryForObject(countSql, Integer.class, "BULK-A-1");
+        assertThat(after - before).isEqualTo(1);
     }
 
     @Test

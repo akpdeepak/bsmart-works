@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Rocket } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -30,6 +31,9 @@ export default function ReleasesView({
   onPressKey,
 }) {
   const { t } = useI18n();
+  // Local search over the add-to-release candidate list, so items past the first page are
+  // reachable (previously the picker hard-capped at 20 with no way to find the rest).
+  const [itemSearch, setItemSearch] = useState('');
   return (
     <div className="flex h-full overflow-hidden">
       <div className="w-72 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col">
@@ -109,16 +113,43 @@ export default function ReleasesView({
             </div>
             <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
               <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">{t('deliver.releases.addItemsTitle')}</h3>
-              <div className="space-y-1 max-h-64 overflow-y-auto">
-                {workItems.filter(wi => !releaseItems.find(ri => ri.id === wi.id)).slice(0, 20).map(item => (
-                  <div key={item.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                    <TypeBadge type={item.type} compact />
-                    <span className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate">{item.title}</span>
-                    <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
-                    <button onClick={() => addItemToRelease(selectedRelease.id, item.id)} className="text-xs text-brand-navy hover:underline">{t('deliver.releases.add')}</button>
-                  </div>
-                ))}
-              </div>
+              {(() => {
+                const q = itemSearch.trim().toLowerCase();
+                const candidates = workItems.filter(wi => !releaseItems.find(ri => ri.id === wi.id));
+                const matches = q
+                  ? candidates.filter(wi => `${wi.id} ${wi.title}`.toLowerCase().includes(q))
+                  : candidates;
+                const shown = matches.slice(0, 20);
+                return (
+                  <>
+                    <input
+                      type="search"
+                      aria-label="Search work items to add to this release"
+                      placeholder="Search by ID or title…"
+                      value={itemSearch}
+                      onChange={e => setItemSearch(e.target.value)}
+                      className="input mb-3"
+                    />
+                    <div className="space-y-1 max-h-64 overflow-y-auto">
+                      {shown.length === 0
+                        ? <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-4">No matching items.</p>
+                        : shown.map(item => (
+                          <div key={item.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
+                            <TypeBadge type={item.type} compact />
+                            <span className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate">{item.title}</span>
+                            <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
+                            <button onClick={() => addItemToRelease(selectedRelease.id, item.id)} className="text-xs text-brand-navy hover:underline">{t('deliver.releases.add')}</button>
+                          </div>
+                        ))}
+                    </div>
+                    {matches.length > shown.length && (
+                      <p className="mt-2 text-xs text-neutral-600 dark:text-neutral-400">
+                        Showing {shown.length} of {matches.length} — refine your search to narrow the list.
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
         )}

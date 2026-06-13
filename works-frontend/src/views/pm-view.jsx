@@ -2,6 +2,7 @@ import {
   AlertTriangle, Lightbulb, AlertCircle, Link, Scale, Calendar, CheckCircle2,
   Users, BookOpen, Globe, Target, Heart, Clock, ArrowLeft, Ban, X, MapPin,
 } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { Modal } from '@/components/works/molecules/modal';
@@ -66,6 +67,23 @@ export default function PmView({
   showToast,
   api,
 }) {
+  // Per-section save status for meeting notes ('dirty' | 'saving' | 'saved' | 'error'), so an
+  // autosave-on-blur is no longer silent — the user sees whether their notes persisted.
+  const [noteStatus, setNoteStatus] = useState({});
+  const saveMeetingNote = (section, content) => {
+    setNoteStatus(s => ({ ...s, [section]: 'saving' }));
+    api.raw(`/meetings/${selectedMeeting.id}/notes/${section}`, {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
+    })
+      .then(() => setNoteStatus(s => ({ ...s, [section]: 'saved' })))
+      .catch(err => { setNoteStatus(s => ({ ...s, [section]: 'error' })); reportError(err); });
+  };
+  const NOTE_STATUS_LABEL = { dirty: 'Unsaved changes', saving: 'Saving…', saved: 'Saved', error: 'Save failed — retry' };
+  const NOTE_STATUS_CLASS = {
+    dirty: 'text-semantic-warning', saving: 'text-neutral-600 dark:text-neutral-400',
+    saved: 'text-semantic-success', error: 'text-semantic-danger',
+  };
   return (
     <div className="p-6 max-w-6xl">
       <div className="flex items-center justify-between mb-4">
@@ -285,18 +303,26 @@ export default function PmView({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {['AGENDA', 'NOTES', 'DECISIONS', 'ACTIONS'].map(section => {
                   const note = Array.isArray(meetingNotes) ? meetingNotes.find(n => n.section === section) : null;
+                  const status = noteStatus[section];
                   return (
                     <div key={section} className="bg-white border border-neutral-200 rounded-xl p-4">
-                      <p className="text-xs font-bold text-neutral-600 uppercase tracking-wider mb-2">{section}</p>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{section}</p>
+                        {status && (
+                          <span className={`text-xs ${NOTE_STATUS_CLASS[status]}`} role="status" aria-live="polite">
+                            {NOTE_STATUS_LABEL[status]}
+                          </span>
+                        )}
+                      </div>
                       <textarea
                         className="w-full text-sm text-neutral-900 dark:text-neutral-100 border-none outline-none resize-none min-h-24 bg-transparent"
                         placeholder={`Enter ${section.toLowerCase()}...`}
                         defaultValue={note?.content || ''}
+                        onChange={() => setNoteStatus(s => (s[section] === 'dirty' ? s : { ...s, [section]: 'dirty' }))}
                         onBlur={e => {
-                          api.raw(`/meetings/${selectedMeeting.id}/notes/${section}`, {
-                            method: 'PUT',
-                            body: JSON.stringify({ content: e.target.value })
-                          }).catch(reportError);
+                          // Only persist when the content actually changed from what was loaded.
+                          if (e.target.value !== (note?.content || '')) saveMeetingNote(section, e.target.value);
+                          else setNoteStatus(s => { const next = { ...s }; delete next[section]; return next; });
                         }}
                       />
                     </div>
@@ -487,8 +513,8 @@ export default function PmView({
       {pmFormOpen && (
         <Modal title={<span className="capitalize">New {pmFormOpen.replace('issue','PM Issue').replace('lesson','Lesson Learned').replace('action','Action Item').replace('dependency','Dependency')}</span>} onClose={() => { setPmFormOpen(null); setPmForm({}); }} size="lg">
             <div className="space-y-3">
-              <Field label="Title">
-                <input className="input" placeholder="Brief title" value={pmForm.title || ''} onChange={e => setPmForm(p => ({ ...p, title: e.target.value }))} />
+              <Field label={pmFormOpen === 'stakeholder' ? 'Name' : 'Title'}>
+                <input className="input" placeholder={pmFormOpen === 'stakeholder' ? 'Full name' : 'Brief title'} value={pmForm.title || ''} onChange={e => setPmForm(p => ({ ...p, title: e.target.value }))} />
               </Field>
               <Field label="Description">
                 <textarea className="input" rows={2} placeholder="Details..." value={pmForm.description || ''} onChange={e => setPmForm(p => ({ ...p, description: e.target.value }))} />

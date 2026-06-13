@@ -4,6 +4,7 @@ import { EmptyState } from '@/components/works/atoms/empty-state';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { PriorityBadge } from '@/components/works/priority-badge';
 import { Avatar } from '@/components/works/atoms/avatar';
+import { statusToCategory } from '@/components/works/status';
 import { useI18n } from '@/lib/i18n';
 import { absoluteDate } from '@/lib/format';
 
@@ -35,9 +36,15 @@ export default function BacklogView({
   // circular extraction (the component has deep App-specific deps).
   SprintItemList,
   cardPrefs,
+  statusResolver,
 }) {
   const { t } = useI18n();
   const iv = cardPrefs?.isVisible ?? (() => true);
+  // An item counts as "done" by its status's resolved board category, not a literal "Done"
+  // string — so custom / renamed done statuses (Completed, Closed, …) roll up correctly.
+  const isDone = (item) => (statusResolver
+    ? statusResolver.categoryOf(item.type, item.status)
+    : statusToCategory(item.status)) === 'done';
   const onPressKey = (e) => { if (e.key === 'Enter' || e.key === ' ') e.currentTarget.click(); };
 
   return (
@@ -53,7 +60,7 @@ export default function BacklogView({
               <ul className="space-y-1">
                 {workItems.filter(i => i.type === 'EPIC').map(epic => {
                   const kids = workItems.filter(i => i.parentId === epic.id);
-                  const done = kids.filter(i => i.status === 'Done').length;
+                  const done = kids.filter(isDone).length;
                   const pct = kids.length ? Math.round((done / kids.length) * 100) : 0;
                   return (
                     <li key={epic.id}>

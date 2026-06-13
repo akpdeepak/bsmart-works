@@ -70,6 +70,21 @@ class WorkItemControllerAccessTest {
         return w;
     }
 
+    // ── personal home (/my) ─────────────────────────────────────────────────────
+
+    @Test
+    void myWorkItems_scopesToTheCallersWorkspaces() {
+        // The /my endpoint must route through the workspace-scoped query (findMyItemsScoped),
+        // never the unscoped assignee lookup — so a user cannot see items assigned to them in a
+        // workspace they no longer belong to. Row-level filtering is proven by the native @Query
+        // under Testcontainers in CI; here we prove the controller uses the scoped path.
+        when(repository.findMyItemsScoped(CALLER)).thenReturn(java.util.List.of());
+
+        controller.myWorkItems();
+
+        verify(repository).findMyItemsScoped(CALLER);
+    }
+
     // ── create ────────────────────────────────────────────────────────────────
 
     @Test

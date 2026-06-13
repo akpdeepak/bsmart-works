@@ -164,8 +164,51 @@ public class BqlCompiler {
                 next();
                 return new BqlAst.IsEmpty(field, negated);
             }
+            // Historical operators over the event store (JQL-style).
+            if (isKeyword("WAS")) {
+                next();
+                return new BqlAst.History(field, false, parseAtomicValue(), null, null, null, null);
+            }
+            if (isKeyword("CHANGED")) {
+                next();
+                BqlAst.Value from = null;
+                BqlAst.Value to = null;
+                String whenOp = null;
+                BqlAst.Value when = null;
+                if (isKeyword("FROM")) {
+                    next();
+                    from = parseAtomicValue();
+                }
+                if (isKeyword("TO")) {
+                    next();
+                    to = parseAtomicValue();
+                }
+                if (isKeyword("AFTER")) {
+                    next();
+                    whenOp = ">=";
+                    when = parseValue();
+                } else if (isKeyword("BEFORE")) {
+                    next();
+                    whenOp = "<";
+                    when = parseValue();
+                } else if (isKeyword("ON")) {
+                    next();
+                    whenOp = "ON";
+                    when = parseValue();
+                }
+                return new BqlAst.History(field, true, null, from, to, whenOp, when);
+            }
             String op = parseOperator();
             return new BqlAst.Comparison(field, op, parseValue());
+        }
+
+        /** A single field value for history operators (a quoted string or one bareword; no multiword). */
+        private BqlAst.Value parseAtomicValue() {
+            BqlLexer.Token t = next();
+            if (t.type() != BqlLexer.TokenType.STRING && t.type() != BqlLexer.TokenType.WORD) {
+                throw new BqlException("Expected a value but found '" + t.text() + "'", t.pos());
+            }
+            return new BqlAst.Literal(t.text());
         }
 
         private String parseOperator() {
@@ -287,7 +330,58 @@ public class BqlCompiler {
                 case BqlAst.InList in -> inList(in);
                 case BqlAst.Between b -> between(b);
                 case BqlAst.IsEmpty is -> isEmpty(is);
+                case BqlAst.History h -> history(h);
             };
+        }
+
+        /** Event-store field_name for each history-tracked BQL alias (mirrors EventService.recordDiff). */
+        private static final java.util.Map<String, String> HISTORY_FIELDS = java.util.Map.of(
+            "status", "status", "assignee", "assignee", "priority", "priority", "type", "type",
+            "title", "title", "duedate", "dueDate", "storypoints", "storyPoints", "parent", "parentId");
+
+        /**
+         * {@code WAS}/{@code CHANGED} compile to a membership subquery over the append-only event log.
+         * The outer {@code id IN (...)} is already workspace-scoped (work_items are), so the subquery
+         * needs no extra tenant predicate. History values match the recorded display value.
+         */
+        private String history(BqlAst.History h) {
+            String eventField = HISTORY_FIELDS.get(h.field().toLowerCase(Locale.ROOT));
+            if (eventField == null) {
+                throw new BqlException("Field is not history-tracked: " + h.field());
+            }
+            StringBuilder sub = new StringBuilder("field_name = ?");
+            params.add(eventField);
+            if (!h.changed()) {
+                sub.append(" AND (new_value = ? OR old_value = ?)");
+                String v = ((BqlAst.Literal) h.was()).raw();
+                params.add(v);
+                params.add(v);
+            } else {
+                if (h.from() != null) {
+                    sub.append(" AND old_value = ?");
+                    params.add(((BqlAst.Literal) h.from()).raw());
+                }
+                if (h.to() != null) {
+                    sub.append(" AND new_value = ?");
+                    params.add(((BqlAst.Literal) h.to()).raw());
+                }
+                if (h.whenOp() != null) {
+                    String when = whenSql(h.when());
+                    sub.append("ON".equals(h.whenOp())
+                        ? " AND occurred_at::date = " + when
+                        : " AND occurred_at " + h.whenOp() + " " + when);
+                }
+            }
+            return "id IN (SELECT aggregate_id FROM events WHERE " + sub + ")";
+        }
+
+        /** A date bound for CHANGED AFTER/BEFORE/ON — a function expression or a {@code ?::date} literal. */
+        private String whenSql(BqlAst.Value v) {
+            if (v instanceof BqlAst.FunctionCall fn) {
+                return functionSql(fn, params);
+            }
+            params.add(((BqlAst.Literal) v).raw());
+            return "?::date";
         }
 
         /**

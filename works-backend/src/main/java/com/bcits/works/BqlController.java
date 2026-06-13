@@ -141,11 +141,14 @@ public class BqlController {
         });
         // Virtual full-text field: `text ~ "..."` searches title + description together.
         fields.add(Map.of("alias", "text", "column", "title+description", "type", "text", "custom", false));
+        // Virtual collection field: `labels = X` / `labels IN (..)` query the tags table.
+        fields.add(Map.of("alias", "labels", "column", "tags", "type", "text", "custom", false));
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("fields", fields);
         out.put("operators", List.of("=", "!=", ">", "<", ">=", "<=", "~",
-            "CONTAINS", "STARTSWITH", "ENDSWITH", "IN", "NOT IN", "BETWEEN", "IS EMPTY", "IS NOT EMPTY"));
+            "CONTAINS", "STARTSWITH", "ENDSWITH", "IN", "NOT IN", "BETWEEN", "IS EMPTY", "IS NOT EMPTY",
+            "WAS", "CHANGED"));
         out.put("connectors", List.of("AND", "OR", "NOT"));
         out.put("functions", List.of("currentUser()", "today()", "now()", "startOfWeek()",
             "endOfWeek()", "startOfMonth()", "endOfMonth()", "startOfQuarter()", "endOfQuarter()",

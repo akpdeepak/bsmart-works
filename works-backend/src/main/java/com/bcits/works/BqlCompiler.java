@@ -164,8 +164,51 @@ public class BqlCompiler {
                 next();
                 return new BqlAst.IsEmpty(field, negated);
             }
+            // Historical operators over the event store (JQL-style).
+            if (isKeyword("WAS")) {
+                next();
+                return new BqlAst.History(field, false, parseAtomicValue(), null, null, null, null);
+            }
+            if (isKeyword("CHANGED")) {
+                next();
+                BqlAst.Value from = null;
+                BqlAst.Value to = null;
+                String whenOp = null;
+                BqlAst.Value when = null;
+                if (isKeyword("FROM")) {
+                    next();
+                    from = parseAtomicValue();
+                }
+                if (isKeyword("TO")) {
+                    next();
+                    to = parseAtomicValue();
+                }
+                if (isKeyword("AFTER")) {
+                    next();
+                    whenOp = ">=";
+                    when = parseValue();
+                } else if (isKeyword("BEFORE")) {
+                    next();
+                    whenOp = "<";
+                    when = parseValue();
+                } else if (isKeyword("ON")) {
+                    next();
+                    whenOp = "ON";
+                    when = parseValue();
+                }
+                return new BqlAst.History(field, true, null, from, to, whenOp, when);
+            }
             String op = parseOperator();
             return new BqlAst.Comparison(field, op, parseValue());
+        }
+
+        /** A single field value for history operators (a quoted string or one bareword; no multiword). */
+        private BqlAst.Value parseAtomicValue() {
+            BqlLexer.Token t = next();
+            if (t.type() != BqlLexer.TokenType.STRING && t.type() != BqlLexer.TokenType.WORD) {
+                throw new BqlException("Expected a value but found '" + t.text() + "'", t.pos());
+            }
+            return new BqlAst.Literal(t.text());
         }
 
         private String parseOperator() {
@@ -287,7 +330,58 @@ public class BqlCompiler {
                 case BqlAst.InList in -> inList(in);
                 case BqlAst.Between b -> between(b);
                 case BqlAst.IsEmpty is -> isEmpty(is);
+                case BqlAst.History h -> history(h);
             };
+        }
+
+        /** Event-store field_name for each history-tracked BQL alias (mirrors EventService.recordDiff). */
+        private static final java.util.Map<String, String> HISTORY_FIELDS = java.util.Map.of(
+            "status", "status", "assignee", "assignee", "priority", "priority", "type", "type",
+            "title", "title", "duedate", "dueDate", "storypoints", "storyPoints", "parent", "parentId");
+
+        /**
+         * {@code WAS}/{@code CHANGED} compile to a membership subquery over the append-only event log.
+         * The outer {@code id IN (...)} is already workspace-scoped (work_items are), so the subquery
+         * needs no extra tenant predicate. History values match the recorded display value.
+         */
+        private String history(BqlAst.History h) {
+            String eventField = HISTORY_FIELDS.get(h.field().toLowerCase(Locale.ROOT));
+            if (eventField == null) {
+                throw new BqlException("Field is not history-tracked: " + h.field());
+            }
+            StringBuilder sub = new StringBuilder("field_name = ?");
+            params.add(eventField);
+            if (!h.changed()) {
+                sub.append(" AND (new_value = ? OR old_value = ?)");
+                String v = ((BqlAst.Literal) h.was()).raw();
+                params.add(v);
+                params.add(v);
+            } else {
+                if (h.from() != null) {
+                    sub.append(" AND old_value = ?");
+                    params.add(((BqlAst.Literal) h.from()).raw());
+                }
+                if (h.to() != null) {
+                    sub.append(" AND new_value = ?");
+                    params.add(((BqlAst.Literal) h.to()).raw());
+                }
+                if (h.whenOp() != null) {
+                    String when = whenSql(h.when());
+                    sub.append("ON".equals(h.whenOp())
+                        ? " AND occurred_at::date = " + when
+                        : " AND occurred_at " + h.whenOp() + " " + when);
+                }
+            }
+            return "id IN (SELECT aggregate_id FROM events WHERE " + sub + ")";
+        }
+
+        /** A date bound for CHANGED AFTER/BEFORE/ON — a function expression or a {@code ?::date} literal. */
+        private String whenSql(BqlAst.Value v) {
+            if (v instanceof BqlAst.FunctionCall fn) {
+                return functionSql(fn, params);
+            }
+            params.add(((BqlAst.Literal) v).raw());
+            return "?::date";
         }
 
         /**
@@ -325,6 +419,13 @@ public class BqlCompiler {
                 + fragment + ")";
         }
 
+        /** Virtual collection field backed by the {@code tags} table — see {@link #labelsComparison}. */
+        private static final String LABELS_FIELD = "labels";
+
+        private static boolean isLabels(String field) {
+            return LABELS_FIELD.equalsIgnoreCase(field);
+        }
+
         private String comparison(BqlAst.Comparison c) {
             String op = c.op().toUpperCase(Locale.ROOT);
             // Virtual full-text field: `text ~ "..."` / `text CONTAINS ...` searches title + description.
@@ -333,6 +434,9 @@ public class BqlCompiler {
                 params.add(pattern);
                 params.add(pattern);
                 return "(title ILIKE ? OR description ILIKE ?)";
+            }
+            if (isLabels(c.field())) {
+                return labelsComparison(c, op);
             }
             Resolved r = resolve(c.field());
             validateOp(r.type(), op);
@@ -353,7 +457,59 @@ public class BqlCompiler {
             return col + " ILIKE ?";
         }
 
+        /**
+         * {@code labels} is a one-to-many collection (the {@code tags} table), not a column — so
+         * every operator compiles to a membership subquery: a work item matches when it has (or, for
+         * {@code !=}, lacks) a tag satisfying the inner predicate. The outer {@code id IN (...)} only
+         * ever matches {@code work_items} rows the surrounding query already workspace-scoped, so the
+         * subquery needs no extra tenant predicate (same guarantee as history/custom fields).
+         */
+        private String labelsComparison(BqlAst.Comparison c, String op) {
+            List<Object> local = new ArrayList<>();
+            boolean negated = "!=".equals(op) || "<>".equals(op);
+            String inner = switch (op) {
+                case "=", "!=", "<>" -> {
+                    local.add(literal(c.value()));
+                    yield "tag = ?";
+                }
+                case "CONTAINS", "~" -> {
+                    local.add("%" + literal(c.value()) + "%");
+                    yield "tag ILIKE ?";
+                }
+                case "STARTSWITH" -> {
+                    local.add(literal(c.value()) + "%");
+                    yield "tag ILIKE ?";
+                }
+                case "ENDSWITH" -> {
+                    local.add("%" + literal(c.value()));
+                    yield "tag ILIKE ?";
+                }
+                default -> throw new BqlException("Operator " + op + " is not valid for labels");
+            };
+            return labelsMembership(inner, local, negated);
+        }
+
+        /** Wrap a {@code tags}-table predicate as a work-item membership test. */
+        private String labelsMembership(String inner, List<Object> local, boolean negated) {
+            params.addAll(local);
+            return (negated ? "id NOT IN" : "id IN")
+                + " (SELECT work_item_id FROM tags WHERE " + inner + ")";
+        }
+
         private String inList(BqlAst.InList in) {
+            if (isLabels(in.field())) {
+                List<Object> local = new ArrayList<>();
+                StringBuilder inner = new StringBuilder("tag IN (");
+                for (int i = 0; i < in.values().size(); i++) {
+                    if (i > 0) {
+                        inner.append(", ");
+                    }
+                    inner.append('?');
+                    local.add(literal(in.values().get(i)));
+                }
+                inner.append(')');
+                return labelsMembership(inner.toString(), local, in.negated());
+            }
             Resolved r = resolve(in.field());
             List<Object> local = new ArrayList<>();
             // Built-in encodes its own NOT; custom keeps a positive inner list and flips membership.
@@ -379,6 +535,11 @@ public class BqlCompiler {
         }
 
         private String isEmpty(BqlAst.IsEmpty is) {
+            if (isLabels(is.field())) {
+                // IS EMPTY => the work item has no tags at all; IS NOT EMPTY => it has at least one.
+                return (is.negated() ? "id IN" : "id NOT IN")
+                    + " (SELECT work_item_id FROM tags)";
+            }
             Resolved r = resolve(is.field());
             if (!r.custom()) {
                 return r.column() + (is.negated() ? " IS NOT NULL" : " IS NULL");

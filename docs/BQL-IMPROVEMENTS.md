@@ -207,3 +207,19 @@ First batch of the "add everything" follow-ups — compiler-contained, low risk:
   `membersOf(team)`.
 - **Batch 5 — workflow/governance (needs design sign-off):** filter subscriptions/alerts, bulk
   actions on results, group-by/board view, BQL execution audit + row-count preview.
+
+## 12. Round 7 — historical queries (WAS / CHANGED)
+
+Batch 3 — the marquee JQL differentiator, powered by the append-only event store:
+
+- **`field WAS value`** — the field held `value` at some point (matches either side of a recorded
+  change). Compiles to `id IN (SELECT aggregate_id FROM events WHERE field_name = ? AND (new_value
+  = ? OR old_value = ?))`.
+- **`field CHANGED [FROM a] [TO b] [AFTER|BEFORE|ON when]`** — any transition, optionally
+  constrained by from/to values and an `occurred_at` window (`when` is a date function or a
+  `?::date` literal).
+- History-tracked fields mirror `EventService.recordDiff`: status, assignee, priority, type, title,
+  dueDate, storyPoints, parent. Untracked fields are rejected with a clear error.
+- The outer `id IN (…)` is already workspace-scoped (work_items are), so the event subquery needs no
+  extra tenant predicate. History values match the recorded display value (e.g. assignee = name).
+- Surfaced in `/schema` operators (`WAS`, `CHANGED`). 59 compiler tests.

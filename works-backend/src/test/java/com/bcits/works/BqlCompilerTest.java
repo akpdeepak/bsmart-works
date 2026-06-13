@@ -227,9 +227,118 @@ class BqlCompilerTest {
         assertThrows(BqlException.class, () -> compiler.compile("storyPoints ~ 5", "u"));
     }
 
+    // ── Historical operators (WAS / CHANGED over the event store) ─────────────────────
+
+    @Test
+    void was_matchesEitherSideOfAChange() {
+        BqlCompiler.Compiled c = compiler.compile("status WAS Blocked", "u");
+        assertEquals("id IN (SELECT aggregate_id FROM events WHERE field_name = ? "
+            + "AND (new_value = ? OR old_value = ?))", c.sql());
+        assertEquals(List.of("status", "Blocked", "Blocked"), c.params());
+    }
+
+    @Test
+    void changed_anyTransition() {
+        BqlCompiler.Compiled c = compiler.compile("status CHANGED", "u");
+        assertEquals("id IN (SELECT aggregate_id FROM events WHERE field_name = ?)", c.sql());
+        assertEquals(List.of("status"), c.params());
+    }
+
+    @Test
+    void changedFromTo_constrainsBothSides() {
+        BqlCompiler.Compiled c = compiler.compile("status CHANGED FROM Open TO Done", "u");
+        assertEquals("id IN (SELECT aggregate_id FROM events WHERE field_name = ? "
+            + "AND old_value = ? AND new_value = ?)", c.sql());
+        assertEquals(List.of("status", "Open", "Done"), c.params());
+    }
+
+    @Test
+    void changedAfter_function_constrainsOccurredAt() {
+        BqlCompiler.Compiled c = compiler.compile("assignee CHANGED AFTER today()", "u");
+        assertEquals("id IN (SELECT aggregate_id FROM events WHERE field_name = ? "
+            + "AND occurred_at >= CURRENT_DATE)", c.sql());
+        assertEquals(List.of("assignee"), c.params());
+    }
+
+    @Test
+    void changedAfter_dateLiteral_castsToDate() {
+        BqlCompiler.Compiled c = compiler.compile("status CHANGED AFTER 2026-01-01", "u");
+        assertEquals("id IN (SELECT aggregate_id FROM events WHERE field_name = ? "
+            + "AND occurred_at >= ?::date)", c.sql());
+        assertEquals(List.of("status", "2026-01-01"), c.params());
+    }
+
+    @Test
+    void historyOnUntrackedField_isRejected() {
+        assertThrows(BqlException.class, () -> compiler.compile("description WAS x", "u"));
+    }
+
     @Test
     void daysAgo_nonNumericArg_throws() {
         assertThrows(BqlException.class, () -> compiler.compile("createdAt >= daysAgo(abc)", "u"));
+    }
+
+    // ── Labels (virtual collection field over the tags table) ─────────────────────────
+
+    @Test
+    void labelsEquality_isMembershipSubquery() {
+        BqlCompiler.Compiled c = compiler.compile("labels = backend", "u");
+        assertEquals("id IN (SELECT work_item_id FROM tags WHERE tag = ?)", c.sql());
+        assertEquals(List.of("backend"), c.params());
+    }
+
+    @Test
+    void labelsNotEqual_negatesMembership() {
+        BqlCompiler.Compiled c = compiler.compile("labels != backend", "u");
+        assertEquals("id NOT IN (SELECT work_item_id FROM tags WHERE tag = ?)", c.sql());
+        assertEquals(List.of("backend"), c.params());
+    }
+
+    @Test
+    void labelsIn_bindsEachTag() {
+        BqlCompiler.Compiled c = compiler.compile("labels IN (backend, ui)", "u");
+        assertEquals("id IN (SELECT work_item_id FROM tags WHERE tag IN (?, ?))", c.sql());
+        assertEquals(List.of("backend", "ui"), c.params());
+    }
+
+    @Test
+    void labelsNotIn_negatesMembership() {
+        BqlCompiler.Compiled c = compiler.compile("labels NOT IN (backend, ui)", "u");
+        assertEquals("id NOT IN (SELECT work_item_id FROM tags WHERE tag IN (?, ?))", c.sql());
+        assertEquals(List.of("backend", "ui"), c.params());
+    }
+
+    @Test
+    void labelsContains_usesIlikeOnTag() {
+        BqlCompiler.Compiled c = compiler.compile("labels CONTAINS sec", "u");
+        assertEquals("id IN (SELECT work_item_id FROM tags WHERE tag ILIKE ?)", c.sql());
+        assertEquals(List.of("%sec%"), c.params());
+    }
+
+    @Test
+    void labelsIsEmpty_excludesAnyTaggedItem() {
+        BqlCompiler.Compiled c = compiler.compile("labels IS EMPTY", "u");
+        assertEquals("id NOT IN (SELECT work_item_id FROM tags)", c.sql());
+        assertTrue(c.params().isEmpty());
+    }
+
+    @Test
+    void labelsIsNotEmpty_requiresAtLeastOneTag() {
+        BqlCompiler.Compiled c = compiler.compile("labels IS NOT EMPTY", "u");
+        assertEquals("id IN (SELECT work_item_id FROM tags)", c.sql());
+        assertTrue(c.params().isEmpty());
+    }
+
+    @Test
+    void labelsCombineWithBuiltinField_keepsParamOrder() {
+        BqlCompiler.Compiled c = compiler.compile("labels = backend AND priority = High", "u");
+        assertEquals("(id IN (SELECT work_item_id FROM tags WHERE tag = ?) AND priority = ?)", c.sql());
+        assertEquals(List.of("backend", "High"), c.params());
+    }
+
+    @Test
+    void labelsRelationalOperator_isRejected() {
+        assertThrows(BqlException.class, () -> compiler.compile("labels > backend", "u"));
     }
 
     // ── Field allow-list + field-level security ───────────────────────────────────────

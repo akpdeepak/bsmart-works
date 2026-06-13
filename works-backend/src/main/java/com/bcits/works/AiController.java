@@ -3,6 +3,7 @@ package com.bcits.works;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,15 +29,18 @@ public class AiController {
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
     private final AiWorkspaceSettingsService settingsService;
+    private final DashboardSummaryService dashboardSummary;
 
     public AiController(AiControlPlaneService controlPlane, AiInvocationRepository invocations,
                         AuthenticatedUser authenticatedUser, RbacService rbac,
-                        AiWorkspaceSettingsService settingsService) {
+                        AiWorkspaceSettingsService settingsService,
+                        DashboardSummaryService dashboardSummary) {
         this.controlPlane = controlPlane;
         this.invocations = invocations;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
         this.settingsService = settingsService;
+        this.dashboardSummary = dashboardSummary;
     }
 
     /** The capability catalogue with each capability's effective enabled state for the caller and
@@ -121,5 +125,20 @@ public class AiController {
         rbac.require(userId, workspaceId, "manage_ai");   // the audit log is admin-only
         return PageResponse.of(invocations.findByWorkspaceIdOrderByCreatedAtDesc(
             workspaceId, PageRequest.of(Math.max(0, page), Math.min(200, Math.max(1, size)))));
+    }
+
+    /** Cap J — AI summary + anomaly explanation over an already-rendered chart/dashboard series.
+     *  The client passes the data it already aggregated; the server never re-queries work items.
+     *  RBAC ({@code view_items}) + the deterministic fallback live in {@link DashboardSummaryService}. */
+    public record DashboardSummaryRequest(String title, List<Map<String, Object>> series, Boolean aiInContext) { }
+
+    @PostMapping("/dashboard-summary")
+    public DashboardSummaryService.Summary dashboardSummary(@RequestParam String workspaceId,
+                                                            @RequestBody(required = false) DashboardSummaryRequest req) {
+        String userId = authenticatedUser.id();
+        boolean inContext = req == null || req.aiInContext() == null || req.aiInContext();
+        List<DashboardSummaryService.Point> series =
+            DashboardSummaryService.toSeries(req == null ? null : req.series());
+        return dashboardSummary.summarize(workspaceId, userId, req == null ? null : req.title(), series, inContext);
     }
 }

@@ -4,7 +4,9 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,13 +22,14 @@ import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for the impediment SLA-breach notifier (RB-05 Stage 3). Covers the pure
- * recipient/message helpers and the sweep's three gates: only CRITICAL breaches notify,
- * an already-notified breach is skipped (dedupe via the events ledger), and a fresh
- * breach escalates to recipients + records the dedupe event exactly once.
+ * recipient/message/reminder helpers and the sweep's gates: only CRITICAL breaches escalate,
+ * a recently-escalated breach is skipped, a breach past the reminder window re-escalates, and a
+ * fresh breach notifies recipients (in-app + email) + records the ledger event once per window.
  */
 @Tag("unit")
 class ImpedimentSlaServiceTest {
 
+    private static final long REMINDER_HOURS = 24;
     private final ImpedimentRepository impediments = mock(ImpedimentRepository.class);
     private final NotificationRepository notifications = mock(NotificationRepository.class);
     private final ProjectTeamMemberRepository teamMembers = mock(ProjectTeamMemberRepository.class);
@@ -35,7 +38,14 @@ class ImpedimentSlaServiceTest {
     private final EmailService emailService = mock(EmailService.class);
 
     private final ImpedimentSlaService service =
-            new ImpedimentSlaService(impediments, notifications, teamMembers, events, eventService, emailService, null);
+            new ImpedimentSlaService(impediments, notifications, teamMembers, events, eventService,
+                    emailService, null, REMINDER_HOURS);
+
+    private static AppEvent notifiedAt(OffsetDateTime when) {
+        AppEvent e = new AppEvent();
+        e.setOccurredAt(when);
+        return e;
+    }
 
     private static Impediment critical(String id, String status, LocalDate raisedAt) {
         Impediment i = new Impediment();
@@ -74,12 +84,20 @@ class ImpedimentSlaServiceTest {
     }
 
     @Test
-    void sweep_freshBreach_notifiesRecipientsAndRecordsEventOnce() {
+    void reminderDue_trueWhenNeverOrOlderThanWindow() {
+        OffsetDateTime now = OffsetDateTime.parse("2026-06-13T12:00:00Z");
+        assertThat(ImpedimentSlaService.reminderDue(null, now, 24)).isTrue();           // never escalated
+        assertThat(ImpedimentSlaService.reminderDue(now.minusHours(25), now, 24)).isTrue();  // past window
+        assertThat(ImpedimentSlaService.reminderDue(now.minusHours(2), now, 24)).isFalse();  // within window
+    }
+
+    @Test
+    void sweep_freshBreach_notifiesRecipientsViaInAppAndEmailAndRecordsEvent() {
         Impediment breached = critical("IMP-1", "OPEN", LocalDate.now().minusDays(3));
         when(impediments.findBySeverityAndStatusNotAndDeletedAtIsNull("CRITICAL", "RESOLVED"))
                 .thenReturn(List.of(breached));
-        when(events.existsByAggregateIdAndEventType("IMP-1", ImpedimentSlaService.NOTIFIED_EVENT))
-                .thenReturn(false);
+        when(events.findFirstByAggregateIdAndEventTypeOrderByOccurredAtDesc("IMP-1", ImpedimentSlaService.NOTIFIED_EVENT))
+                .thenReturn(Optional.empty());
         when(teamMembers.findByProjectIdOrderByCreatedAtAsc("PROJ-1"))
                 .thenReturn(List.of(member("u-po", "product-owner"), member("u-sm", "scrum-master")));
 
@@ -87,7 +105,6 @@ class ImpedimentSlaServiceTest {
 
         assertThat(n).isEqualTo(1);
         verify(notifications, times(2)).save(any());
-        // Email each recipient too (best-effort, preference-gated inside EmailService).
         verify(emailService).sendSlaBreachEmail(eq("u-po"), eq("Payments gateway down"), eq(3L), anyString());
         verify(emailService).sendSlaBreachEmail(eq("u-sm"), eq("Payments gateway down"), eq(3L), anyString());
         verify(eventService).recordInWorkspace(eq("WS-1"), eq("IMP-1"),
@@ -95,12 +112,12 @@ class ImpedimentSlaServiceTest {
     }
 
     @Test
-    void sweep_alreadyNotified_isSkipped() {
+    void sweep_escalatedWithinWindow_isSkipped() {
         Impediment breached = critical("IMP-1", "OPEN", LocalDate.now().minusDays(5));
         when(impediments.findBySeverityAndStatusNotAndDeletedAtIsNull("CRITICAL", "RESOLVED"))
                 .thenReturn(List.of(breached));
-        when(events.existsByAggregateIdAndEventType("IMP-1", ImpedimentSlaService.NOTIFIED_EVENT))
-                .thenReturn(true);
+        when(events.findFirstByAggregateIdAndEventTypeOrderByOccurredAtDesc("IMP-1", ImpedimentSlaService.NOTIFIED_EVENT))
+                .thenReturn(Optional.of(notifiedAt(OffsetDateTime.now().minusHours(2)))); // recent
 
         int n = service.sweep();
 
@@ -108,6 +125,25 @@ class ImpedimentSlaServiceTest {
         verify(notifications, never()).save(any());
         verify(emailService, never()).sendSlaBreachEmail(anyString(), anyString(), anyLong(), anyString());
         verify(eventService, never()).recordInWorkspace(anyString(), anyString(), anyString(), anyString(), any());
+    }
+
+    @Test
+    void sweep_pastReminderWindow_reEscalates() {
+        Impediment breached = critical("IMP-1", "OPEN", LocalDate.now().minusDays(5));
+        when(impediments.findBySeverityAndStatusNotAndDeletedAtIsNull("CRITICAL", "RESOLVED"))
+                .thenReturn(List.of(breached));
+        when(events.findFirstByAggregateIdAndEventTypeOrderByOccurredAtDesc("IMP-1", ImpedimentSlaService.NOTIFIED_EVENT))
+                .thenReturn(Optional.of(notifiedAt(OffsetDateTime.now().minusHours(30)))); // older than 24h window
+        when(teamMembers.findByProjectIdOrderByCreatedAtAsc("PROJ-1"))
+                .thenReturn(List.of(member("u-po", "product-owner")));
+
+        int n = service.sweep();
+
+        assertThat(n).isEqualTo(1);
+        verify(notifications, times(1)).save(any());
+        verify(emailService).sendSlaBreachEmail(eq("u-po"), anyString(), anyLong(), anyString());
+        verify(eventService).recordInWorkspace(eq("WS-1"), eq("IMP-1"),
+                eq(ImpedimentSlaService.NOTIFIED_EVENT), eq("system"), any());
     }
 
     @Test
@@ -120,6 +156,6 @@ class ImpedimentSlaServiceTest {
 
         assertThat(n).isZero();
         verify(notifications, never()).save(any());
-        verify(events, never()).existsByAggregateIdAndEventType(anyString(), anyString());
+        verify(events, never()).findFirstByAggregateIdAndEventTypeOrderByOccurredAtDesc(anyString(), anyString());
     }
 }

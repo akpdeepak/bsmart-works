@@ -76,6 +76,12 @@ public final class BqlFieldRegistry {
         return f;
     }
 
+    /** Resolve an alias (or raw column) to its column, ignoring sensitivity — for ORDER BY validation. */
+    public static String columnForAlias(String alias) {
+        BqlField f = alias == null ? null : BY_ALIAS.get(alias.toLowerCase(Locale.ROOT));
+        return f == null ? null : f.column();
+    }
+
     /** All non-sensitive fields plus the sensitive ones the context may see — for the schema endpoint. */
     public static List<BqlField> visibleFields(BqlContext ctx) {
         boolean sensitive = ctx != null && ctx.canSeeSensitive();

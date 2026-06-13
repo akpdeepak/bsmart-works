@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { visibleModes } from '@/lib/nav-model';
+import { useI18n } from '@/lib/i18n';
 
 // Organism — the narrow navy icon rail (mockup left edge). One icon per top-level mode; the active
 // mode gets a brand-orange left accent + white icon. The final mode ("Set up") is pinned to the
@@ -9,21 +10,23 @@ import { visibleModes } from '@/lib/nav-model';
 // states, labelled buttons (§4.6, §4.8, §4.12, §4.23). Width is the `w-rail` token, not a literal.
 
 export function ModeRail({ activeMode, onSelectMode, visibility }) {
+  const { t } = useI18n();
   const modes = visibleModes(visibility);
   return (
     <nav
-      aria-label="Workspace modes"
+      aria-label={t('nav.workspaceModes')}
       className="flex h-full w-rail shrink-0 flex-col items-center gap-1 overflow-y-auto border-r border-white/5 bg-brand-navy py-2"
     >
       {modes.map((mode, i) => {
         const Icon = mode.Icon;
         const active = activeMode === mode.id;
         const pinnedBottom = mode.id === 'setup' && i === modes.length - 1;
+        const label = mode.labelKey ? t(mode.labelKey) : mode.label;
         return (
           <button
             key={mode.id}
             type="button"
-            title={mode.label}
+            title={label}
             aria-current={active ? 'page' : undefined}
             onClick={() => onSelectMode?.(mode.id)}
             className={cn(
@@ -40,7 +43,7 @@ export function ModeRail({ activeMode, onSelectMode, visibility }) {
               />
             )}
             <Icon aria-hidden="true" className="h-5 w-5" />
-            <span className="text-2xs font-semibold leading-none">{mode.label}</span>
+            <span className="text-2xs font-semibold leading-none">{label}</span>
           </button>
         );
       })}

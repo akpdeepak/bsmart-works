@@ -2,6 +2,7 @@ import { TrendingUp, Activity } from 'lucide-react';
 import { Folder } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { useI18n } from '@/lib/i18n';
 
 // Teams view (formerly Projects). A Team is a workspace-level container for work items —
 // equivalent to a JIRA project. Work item IDs are workspace-scoped (EP-0001 is unique
@@ -15,25 +16,26 @@ export default function ProjectsView({
   projectMetrics = {},
   projectMetricsLoading = false,
 }) {
+  const { t } = useI18n();
   return (
     <div className="p-8 max-w-4xl">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-brand-navy">Teams</h1>
+          <h1 className="text-2xl font-bold text-brand-navy">{t('deliver.teams.title')}</h1>
           <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-0.5">
-            {projects.length} team{projects.length !== 1 ? 's' : ''} in this workspace
+            {projects.length} {projects.length !== 1 ? t('deliver.teams.teamPlural') : t('deliver.teams.teamSingular')} {t('deliver.teams.inThisWorkspace')}
           </p>
         </div>
-        <Button variant="action" onClick={() => setIsProjectOpen(true)}>+ New Team</Button>
+        <Button variant="action" onClick={() => setIsProjectOpen(true)}>{t('deliver.teams.newTeam')}</Button>
       </div>
 
       {projects.length === 0
         ? (
           <EmptyState
             icon={Folder}
-            title="No teams yet"
-            subtitle="Teams help you organise work items into focused areas — like a squad, product group, or client engagement. Create your first team to get started."
-            action={<Button variant="action" onClick={() => setIsProjectOpen(true)}>Create first team</Button>}
+            title={t('deliver.teams.emptyTitle')}
+            subtitle={t('deliver.teams.emptySubtitle')}
+            action={<Button variant="action" onClick={() => setIsProjectOpen(true)}>{t('deliver.teams.createFirst')}</Button>}
           />
         )
         : (
@@ -53,29 +55,29 @@ export default function ProjectsView({
                         {p.slug && (
                           <span
                             className="text-xs font-mono bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-600"
-                            title="Team identifier"
+                            title={t('deliver.teams.teamIdentifier')}
                           >
                             {p.keyPrefix}
                           </span>
                         )}
                       </div>
                       <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                        {p.description || 'No description'}
+                        {p.description || t('deliver.teams.noDescription')}
                       </p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-sm font-semibold text-neutral-900">{count} items</p>
-                      {count > 0 && <p className="text-xs text-semantic-success">{done} done</p>}
+                      <p className="text-sm font-semibold text-neutral-900">{count} {t('deliver.teams.items')}</p>
+                      {count > 0 && <p className="text-xs text-semantic-success">{done} {t('deliver.teams.done')}</p>}
                       {p.leadUserId && (
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                          Lead: {userName(p.leadUserId)}
+                          {t('deliver.teams.leadPrefix')}{userName(p.leadUserId)}
                         </p>
                       )}
                       <button
                         onClick={() => handleArchiveProject(p.id)}
                         className="text-xs text-neutral-300 hover:text-neutral-600 mt-1 transition-colors"
                       >
-                        {p.archived ? 'Unarchive' : 'Archive'}
+                        {p.archived ? t('deliver.teams.unarchive') : t('deliver.teams.archive')}
                       </button>
                     </div>
                   </div>
@@ -89,14 +91,14 @@ export default function ProjectsView({
                         />
                       </div>
                       <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
-                        {Math.round((done / count) * 100)}% complete
+                        {Math.round((done / count) * 100)}{t('deliver.teams.percentComplete')}
                       </p>
                     </div>
                   )}
 
                   {/* B20 — inline metrics strip */}
                   {projectMetricsLoading ? (
-                    <div className="mt-3 flex gap-3" aria-busy="true" aria-label="Loading metrics">
+                    <div className="mt-3 flex gap-3" aria-busy="true" aria-label={t('deliver.teams.loadingMetrics')}>
                       <div className="animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded h-8 w-24" aria-hidden="true" />
                       <div className="animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded h-8 w-24" aria-hidden="true" />
                       <div className="animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded h-8 w-24" aria-hidden="true" />
@@ -107,21 +109,21 @@ export default function ProjectsView({
                         <div className="flex items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400">
                           <TrendingUp className="h-3.5 w-3.5 text-brand-navy" aria-hidden="true" />
                           <span className="font-semibold text-neutral-900 dark:text-neutral-100">{projectMetrics[p.id].velocity}</span>
-                          <span>pts / sprint</span>
+                          <span>{t('deliver.teams.ptsPerSprint')}</span>
                         </div>
                       )}
                       {projectMetrics[p.id].completionPct != null && (
                         <div className="flex items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400">
                           <Activity className="h-3.5 w-3.5 text-semantic-success" aria-hidden="true" />
                           <span className="font-semibold text-neutral-900 dark:text-neutral-100">{Math.round(projectMetrics[p.id].completionPct)}%</span>
-                          <span>completion</span>
+                          <span>{t('deliver.teams.completion')}</span>
                         </div>
                       )}
                       {projectMetrics[p.id].cycleTimeDays != null && (
                         <div className="flex items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400">
                           <span className="inline-block h-3.5 w-3.5 rounded-full border border-neutral-400 text-center leading-none text-xs font-bold" aria-hidden="true">⏱</span>
                           <span className="font-semibold text-neutral-900 dark:text-neutral-100">{projectMetrics[p.id].cycleTimeDays.toFixed(1)}d</span>
-                          <span>cycle time</span>
+                          <span>{t('deliver.teams.cycleTime')}</span>
                         </div>
                       )}
                     </div>

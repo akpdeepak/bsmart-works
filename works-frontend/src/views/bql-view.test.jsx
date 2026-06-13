@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import BqlView, { rowToClause, quoteIfNeeded } from './bql-view';
+import BqlView from './bql-view';
+import { rowToClause, quoteIfNeeded } from '@/lib/bql-builder';
 
 const noop = () => {};
 const baseProps = {

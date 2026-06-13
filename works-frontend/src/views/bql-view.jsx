@@ -7,32 +7,7 @@ import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { PriorityBadge } from '@/components/works/priority-badge';
 import { anyCapabilityEnabled } from '@/lib/ai';
-
-// Operators that take no right-hand value.
-const NULLARY_OPS = ['IS EMPTY', 'IS NOT EMPTY'];
-// Operators that take a comma-separated set.
-const SET_OPS = ['IN', 'NOT IN'];
-
-// Quote a value if it contains whitespace so the compiler reads it as one token.
-export function quoteIfNeeded(v) {
-  const s = String(v ?? '').trim();
-  if (s === '') return '""';
-  if (/\s/.test(s) && !/^".*"$/.test(s)) return `"${s}"`;
-  return s;
-}
-
-// Compose a single visual-builder row into a BQL clause.
-export function rowToClause({ field, op, value }) {
-  if (!field) return '';
-  if (NULLARY_OPS.includes(op)) return `${field} ${op}`;
-  if (SET_OPS.includes(op)) {
-    const items = String(value || '').split(',').map(s => s.trim()).filter(Boolean).map(quoteIfNeeded);
-    if (items.length === 0) return '';
-    return `${field} ${op} (${items.join(', ')})`;
-  }
-  if (value === '' || value == null) return '';
-  return `${field} ${op} ${quoteIfNeeded(value)}`;
-}
+import { NULLARY_OPS, SET_OPS, rowToClause } from '@/lib/bql-builder';
 
 // BQL query view. The parent owns query state + run/save/fetch handlers; this view adds the
 // schema-driven editor assists (P3): live validation, insert chips, and a visual builder that

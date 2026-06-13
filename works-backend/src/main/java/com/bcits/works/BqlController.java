@@ -29,8 +29,10 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/v1/bql")
 public class BqlController {
 
+    // Columns returned by /execute — the selectable set for the navigator's column chooser.
     private static final String SELECT_COLUMNS =
-        "id, title, status, type, priority, assignee_id, project_id, due_date, created_at";
+        "id, title, status, type, priority, assignee_id, created_by, project_id, sprint_id, "
+        + "story_points, due_date, created_at, updated_at";
 
     /** Sort fields a user may order by — resolved through the same allow-list, defends ORDER BY. */
     private static final Set<String> SORTABLE = Set.of(
@@ -94,6 +96,7 @@ public class BqlController {
         } catch (BqlException e) {
             result.put("valid", false);
             result.put("error", e.getMessage());
+            result.put("position", e.getPosition());
         }
         return result;
     }

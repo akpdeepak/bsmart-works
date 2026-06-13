@@ -83,7 +83,7 @@ public class BqlCompiler {
         BqlAst.Expr parse() {
             BqlAst.Expr e = parseOr();
             if (peek().type() != BqlLexer.TokenType.EOF) {
-                throw new BqlException("Unexpected token '" + peek().text() + "'");
+                throw new BqlException("Unexpected token '" + peek().text() + "'", peek().pos());
             }
             return e;
         }
@@ -127,7 +127,7 @@ public class BqlCompiler {
         private BqlAst.Expr parseCondition() {
             BqlLexer.Token fieldTok = next();
             if (fieldTok.type() != BqlLexer.TokenType.WORD) {
-                throw new BqlException("Expected a field but found '" + fieldTok.text() + "'");
+                throw new BqlException("Expected a field but found '" + fieldTok.text() + "'", fieldTok.pos());
             }
             String field = fieldTok.text();
 
@@ -181,7 +181,7 @@ public class BqlCompiler {
                     return up;
                 }
             }
-            throw new BqlException("Expected an operator but found '" + t.text() + "'");
+            throw new BqlException("Expected an operator but found '" + t.text() + "'", t.pos());
         }
 
         private List<BqlAst.Value> parseValueList() {
@@ -202,7 +202,7 @@ public class BqlCompiler {
                 return new BqlAst.Literal(t.text());
             }
             if (t.type() != BqlLexer.TokenType.WORD) {
-                throw new BqlException("Expected a value but found '" + t.text() + "'");
+                throw new BqlException("Expected a value but found '" + t.text() + "'", t.pos());
             }
             // function call: WORD immediately followed by '('
             if (peek().type() == BqlLexer.TokenType.LPAREN) {
@@ -246,7 +246,7 @@ public class BqlCompiler {
 
         private void expect(BqlLexer.TokenType type, String what) {
             if (peek().type() != type) {
-                throw new BqlException("Expected '" + what + "' but found '" + peek().text() + "'");
+                throw new BqlException("Expected '" + what + "' but found '" + peek().text() + "'", peek().pos());
             }
             next();
         }

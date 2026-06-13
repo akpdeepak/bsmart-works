@@ -1,7 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import BqlView from './bql-view';
-import { rowToClause, quoteIfNeeded } from '@/lib/bql-builder';
+import { rowToClause, quoteIfNeeded, suggestions, applySuggestion } from '@/lib/bql-builder';
+
+const schema = {
+  fields: [{ alias: 'status' }, { alias: 'priority' }, { alias: 'assignee' }],
+  operators: ['=', '!=', 'IN', 'CONTAINS'],
+  enums: { status: ['Open', 'In Progress', 'Done'], priority: ['High', 'Low'] },
+};
 
 const noop = () => {};
 const baseProps = {
@@ -69,6 +75,39 @@ describe('rowToClause', () => {
   it('returns empty for an incomplete row', () => {
     expect(rowToClause({ field: '', op: '=', value: 'x' })).toBe('');
     expect(rowToClause({ field: 'priority', op: '=', value: '' })).toBe('');
+  });
+});
+
+describe('suggestions (caret-aware autocomplete)', () => {
+  it('suggests fields at the start and after a connector', () => {
+    expect(suggestions('', schema).options).toContain('status');
+    expect(suggestions('status = Open AND ', schema).options).toContain('priority');
+  });
+
+  it('filters fields by the partial token', () => {
+    const r = suggestions('pri', schema);
+    expect(r.partial).toBe('pri');
+    expect(r.options).toEqual(['priority']);
+  });
+
+  it('suggests operators after a field', () => {
+    expect(suggestions('status ', schema).kind).toBe('operator');
+    expect(suggestions('status ', schema).options).toContain('=');
+  });
+
+  it('suggests enum values after an operator', () => {
+    const r = suggestions('status = ', schema);
+    expect(r.kind).toBe('value');
+    expect(r.options).toEqual(['Open', 'In Progress', 'Done']);
+  });
+});
+
+describe('applySuggestion', () => {
+  it('replaces the partial token under the caret and trails a space', () => {
+    const text = 'sta';
+    const r = applySuggestion(text, 3, 'sta', 'status');
+    expect(r.text).toBe('status ');
+    expect(r.caret).toBe(7);
   });
 });
 

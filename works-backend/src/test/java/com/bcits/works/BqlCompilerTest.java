@@ -373,6 +373,14 @@ class BqlCompilerTest {
     }
 
     @Test
+    void parseError_carriesCharacterPosition() {
+        // Positional errors let the editor point at the exact spot (JQL pain-point fix).
+        BqlException e = assertThrows(BqlException.class,
+            () -> compiler.compile("priority = High AND = Low", "u"));
+        assertTrue(e.getPosition() > 0, "expected a positive character position");
+    }
+
+    @Test
     void unbalancedParen_throwsBqlException() {
         assertThrows(BqlException.class, () -> compiler.compile("(status = Open", "u"));
     }

@@ -123,7 +123,7 @@ to make the gate non-optional; the checks do the enforcing.
 | No inline `fetch`/`axios` (one `apiClient`) | ESLint `no-restricted-imports`/`-syntax` | save · pre-commit · CI |
 | WCAG 2.1 AA | `eslint-plugin-jsx-a11y` | save · pre-commit · CI |
 | RBAC in service (not controller); Flyway-only; package layout | `scripts/guardrails.sh` | pre-commit · CI |
-| **Every repository query workspace-scoped** | **`guardrails.sh` tenant-scope check — TO BE ADDED (RB-40)** | pre-commit · CI |
+| **Every repository query workspace-scoped** | `guardrails.sh`: repo `@Query` SELECT scope (BLOCK) + raw-`JdbcTemplate` `work_items` scope-signal tripwire (WARN). Full guarantee = central Hibernate tenant filter, **still TO BE ADDED (#243, RB-40)** | pre-commit · CI |
 | Java style | Checkstyle (`failOnViolation=true`; baseline clean as of 2026-06-08 — TD-005 closed) | `./mvnw verify` · CI |
 | Backend behavior + coverage | JUnit 5 + JaCoCo gate | CI |
 | Frontend behavior | Vitest + React Testing Library | pre-commit · CI |

@@ -123,7 +123,7 @@ to make the gate non-optional; the checks do the enforcing.
 | No inline `fetch`/`axios` (one `apiClient`) | ESLint `no-restricted-imports`/`-syntax` | save · pre-commit · CI |
 | WCAG 2.1 AA | `eslint-plugin-jsx-a11y` | save · pre-commit · CI |
 | RBAC in service (not controller); Flyway-only; package layout | `scripts/guardrails.sh` | pre-commit · CI |
-| **Every repository query workspace-scoped** | **`guardrails.sh` tenant-scope check — TO BE ADDED (RB-40)** | pre-commit · CI |
+| **Every repository query workspace-scoped** | `guardrails.sh`: repo `@Query` SELECT scope (BLOCK) + raw-`JdbcTemplate` `work_items` scope-signal tripwire (WARN). Full guarantee = central Hibernate tenant filter, **still TO BE ADDED (#243, RB-40)** | pre-commit · CI |
 | Java style | Checkstyle (`failOnViolation=true`; baseline clean as of 2026-06-08 — TD-005 closed) | `./mvnw verify` · CI |
 | Backend behavior + coverage | JUnit 5 + JaCoCo gate | CI |
 | Frontend behavior | Vitest + React Testing Library | pre-commit · CI |
@@ -838,9 +838,15 @@ guarantees they can never see *another* tenant's data.
 - **Field-level security** *(spec `06 §5.5`)*: sensitive fields are visible per-field, per-role,
   **enforced server-side** — not hidden in the UI. Manager drill-down into individuals is blocked
   at the API.
-- **Enforcement to add:** a `guardrails.sh` check that fails any repository query lacking workspace
-  scoping (the natural neighbour of the existing RBAC-in-controller check). Every feature ships an
-  **unauthorized** and a **cross-tenant** test.
+- **Enforcement (partial):** `guardrails.sh` blocks any repository `@Query` SELECT lacking a
+  workspace token, and **warns** on raw-`JdbcTemplate` `work_items` SQL in a Controller/Service that
+  carries no tenant-scope signal anywhere in the file (workspace token, id-scope key, or `RbacService`
+  call) — a coarse tripwire for new unscoped raw-SQL surfaces, not the guarantee. The leak-proof
+  guarantee remains a **central Hibernate tenant filter / mandatory predicate applied once** (this §1:
+  "scoping applied centrally, not re-typed per query"), tracked as **#243** (needs sign-off). A
+  per-statement grep was deliberately rejected as too false-positive-prone (see
+  `docs/INSIGHTS-AI-ALIGNMENT-REVIEW.md` §1.2). Every feature ships an **unauthorized** and a
+  **cross-tenant** test.
 
 ## 2. AI Control Plane *(spec `05 §1.2–1.6`)*
 

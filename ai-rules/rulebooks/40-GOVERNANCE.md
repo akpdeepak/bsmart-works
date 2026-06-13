@@ -22,9 +22,15 @@ guarantees they can never see *another* tenant's data.
 - **Field-level security** *(spec `06 §5.5`)*: sensitive fields are visible per-field, per-role,
   **enforced server-side** — not hidden in the UI. Manager drill-down into individuals is blocked
   at the API.
-- **Enforcement to add:** a `guardrails.sh` check that fails any repository query lacking workspace
-  scoping (the natural neighbour of the existing RBAC-in-controller check). Every feature ships an
-  **unauthorized** and a **cross-tenant** test.
+- **Enforcement (partial):** `guardrails.sh` blocks any repository `@Query` SELECT lacking a
+  workspace token, and **warns** on raw-`JdbcTemplate` `work_items` SQL in a Controller/Service that
+  carries no tenant-scope signal anywhere in the file (workspace token, id-scope key, or `RbacService`
+  call) — a coarse tripwire for new unscoped raw-SQL surfaces, not the guarantee. The leak-proof
+  guarantee remains a **central Hibernate tenant filter / mandatory predicate applied once** (this §1:
+  "scoping applied centrally, not re-typed per query"), tracked as **#243** (needs sign-off). A
+  per-statement grep was deliberately rejected as too false-positive-prone (see
+  `docs/INSIGHTS-AI-ALIGNMENT-REVIEW.md` §1.2). Every feature ships an **unauthorized** and a
+  **cross-tenant** test.
 
 ## 2. AI Control Plane *(spec `05 §1.2–1.6`)*
 

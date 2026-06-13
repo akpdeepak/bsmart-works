@@ -1497,6 +1497,7 @@ export default function App() {
     const defaults = {
       kpi:       { title: 'Open items', config: { metric: 'count', filter: { open: true } } },
       chart:     { title: 'By status', config: { chartType: 'bar', dimension: 'status' } },
+      pivot:     { title: 'Custom chart', config: { spec: null } },
       table:     { title: 'Work items', config: { limit: 20 } },
       narrative: { title: 'Summary', config: { text: '' } },
     };
@@ -3332,6 +3333,7 @@ export default function App() {
               selectedSprintId={selectedSprintId}
               sprintReport={sprintReport}
               scopeChanges={scopeChanges}
+              activeWorkspaceId={activeWorkspaceId}
               setSelectedSprintId={setSelectedSprintId}
               fetchSprintReport={fetchSprintReport}
             />
@@ -3606,6 +3608,7 @@ export default function App() {
               reportSchedules={reportSchedules}
               scheduleForm={scheduleForm}
               workItems={workItems}
+              activeWorkspaceId={activeWorkspaceId}
               createBlankReport={createBlankReport}
               createReportFromTemplate={createReportFromTemplate}
               openReport={openReport}

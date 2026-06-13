@@ -1,4 +1,7 @@
+import { useEffect, useState } from 'react';
 import { DonutChart, BarChart } from '@/components/works/molecules';
+import { PivotChart } from '@/components/works/organisms/pivot-chart';
+import { resolvePivot, buildPivotSpec } from '@/lib/pivot';
 import {
   filterItems as filterWidgetItems,
   statusBreakdown,
@@ -10,13 +13,44 @@ import {
 } from '@/lib/dashboard-metrics';
 
 /**
+ * PivotWidgetBody — renders a multi-dimensional PIVOT widget by resolving its saved PivotSpec
+ * through the shared pivot client (one apiClient, workspace-scoped server-side) and dispatching
+ * the result to <PivotChart/>. Self-contained five-state handling (loading / empty / error).
+ */
+function PivotWidgetBody({ config, workspaceId }) {
+  const [state, setState] = useState({ loading: true, error: null, result: null });
+  const specKey = JSON.stringify(config);
+
+  useEffect(() => {
+    let alive = true;
+    if (!workspaceId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setState({ loading: false, error: 'No workspace selected.', result: null });
+      return undefined;
+    }
+    setState((s) => ({ ...s, loading: true, error: null }));
+    resolvePivot(workspaceId, buildPivotSpec(config))
+      .then((result) => { if (alive) setState({ loading: false, error: null, result }); })
+      .catch((e) => { if (alive) setState({ loading: false, error: e.message || 'Could not load this widget.', result: null }); });
+    return () => { alive = false; };
+    // specKey captures the config object identity; config itself is intentionally excluded.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId, specKey]);
+
+  return (
+    <PivotChart type={config.chartType || 'pivot_table'} result={state.result}
+      loading={state.loading} error={state.error} className="mt-1" />
+  );
+}
+
+/**
  * DashboardWidgetCard — renders a single dashboard widget from the live work-item set.
  * Widget data is computed client-side from the config (metric + filter) so the
  * designer is fully functional without a per-widget query endpoint.
  *
  * Extracted from App.jsx (TD-003).
  */
-export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove, onResize, onConfigChange, onDrill, onDragStart, onDrop, sprints, velocity, currentUserId }) {
+export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove, onResize, onConfigChange, onDrill, onDragStart, onDrop, sprints, velocity, currentUserId, workspaceId, onEditPivot }) {
   let config = {};
   try { config = JSON.parse(widget.config || '{}'); } catch { config = {}; }
   const filter = config.filter || {};
@@ -56,6 +90,9 @@ export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, on
                 {w === 12 ? 'Full' : `${w}`}
               </button>
             ))}
+            {widget.widgetType === 'PIVOT' && onEditPivot && (
+              <button onClick={() => onEditPivot(widget)} className="text-xs text-brand-navy dark:text-brand-amber hover:underline ml-1">Edit chart</button>
+            )}
             <button onClick={onRemove} aria-label="Remove widget" className="text-xs text-semantic-danger hover:underline ml-1">Remove</button>
           </div>
         )}
@@ -135,6 +172,12 @@ export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, on
       {widget.widgetType === 'BAR' && (
         <BarChart data={chartData}
           onSelect={canDrill ? (e => onDrill({ title: `${widget.title || 'Items'} · ${dimension}: ${e.label}`, items: drillBy(e.label) })) : undefined} />
+      )}
+
+      {widget.widgetType === 'PIVOT' && (
+        config.spec
+          ? <PivotWidgetBody config={config.spec} workspaceId={workspaceId} />
+          : <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Configure this widget — turn on Edit and pick a source, measures and a chart type.</p>
       )}
 
       {(widget.widgetType === 'SPRINT_HEALTH' || widget.widgetType === 'BURNDOWN') && (() => {

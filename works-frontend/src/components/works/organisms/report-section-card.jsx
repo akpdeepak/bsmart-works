@@ -1,6 +1,36 @@
+import { useEffect, useState } from 'react';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 import { DonutChart, BarChart } from '@/components/works/molecules';
+import { PivotChart } from '@/components/works/organisms/pivot-chart';
+import { WidgetBuilder } from '@/components/works/organisms/widget-builder';
+import { resolvePivot, buildPivotSpec } from '@/lib/pivot';
 import { aggregateByDimension, filterReportItems } from '@/lib/dashboard-metrics';
+
+/**
+ * PivotSectionBody — resolves a report section's saved PivotSpec through the shared pivot client
+ * (one apiClient, workspace-scoped server-side) and renders it via <PivotChart/>. Five states
+ * handled inline (loading / empty / error). Same component reused by Dashboards + Reports.
+ */
+function PivotSectionBody({ spec, workspaceId }) {
+  const [state, setState] = useState({ loading: true, error: null, result: null });
+  const specKey = JSON.stringify(spec);
+  useEffect(() => {
+    let alive = true;
+    if (!workspaceId || !spec) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setState({ loading: false, error: workspaceId ? null : 'No workspace selected.', result: null });
+      return undefined;
+    }
+    setState((s) => ({ ...s, loading: true, error: null }));
+    resolvePivot(workspaceId, buildPivotSpec(spec))
+      .then((result) => { if (alive) setState({ loading: false, error: null, result }); })
+      .catch((e) => { if (alive) setState({ loading: false, error: e.message || 'Could not load this section.', result: null }); });
+    return () => { alive = false; };
+    // specKey captures the spec identity; spec itself is intentionally excluded.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId, specKey]);
+  return <PivotChart type={spec?.chartType || 'pivot_table'} result={state.result} loading={state.loading} error={state.error} />;
+}
 
 /**
  * ReportSectionControls — edit controls for a report section's config.
@@ -55,9 +85,10 @@ function ReportSectionControls({ section, onChange }) {
  *
  * Extracted from App.jsx (TD-003).
  */
-export function ReportSectionCard({ section, index, total, workItems, editMode, onChange, onMove, onRemove }) {
+export function ReportSectionCard({ section, index, total, workItems, editMode, onChange, onMove, onRemove, workspaceId }) {
   const config = section.config || {};
   const items = filterReportItems(workItems, config.filter);
+  const [editingPivot, setEditingPivot] = useState(false);
 
   return (
     <section className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-5">
@@ -115,6 +146,30 @@ export function ReportSectionCard({ section, index, total, workItems, editMode, 
           : (config.text
               ? <p className="text-sm text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">{config.text}</p>
               : <p className="text-sm text-neutral-600 dark:text-neutral-400">—</p>)
+      )}
+
+      {section.type === 'pivot' && (
+        editMode ? (
+          editingPivot ? (
+            <WidgetBuilder workspaceId={workspaceId} value={config.spec}
+              onSave={(spec) => { onChange({ ...section, config: { ...config, spec } }); setEditingPivot(false); }}
+              onCancel={() => setEditingPivot(false)} />
+          ) : (
+            <div className="flex items-center gap-3">
+              {config.spec
+                ? <div className="flex-1 min-w-0"><PivotSectionBody spec={config.spec} workspaceId={workspaceId} /></div>
+                : <p className="flex-1 text-xs text-neutral-600 dark:text-neutral-400">No chart configured yet.</p>}
+              <button type="button" onClick={() => setEditingPivot(true)}
+                className="flex-shrink-0 text-xs px-2.5 py-1.5 rounded-lg border border-brand-navy/40 text-brand-navy dark:text-brand-amber hover:border-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
+                {config.spec ? 'Edit chart' : 'Configure chart'}
+              </button>
+            </div>
+          )
+        ) : (
+          config.spec
+            ? <PivotSectionBody spec={config.spec} workspaceId={workspaceId} />
+            : <p className="text-sm text-neutral-600 dark:text-neutral-400">—</p>
+        )
       )}
     </section>
   );

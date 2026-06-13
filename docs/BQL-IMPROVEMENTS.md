@@ -289,3 +289,23 @@ The audit half of the "saved/automated runs only" decision. Automations already 
 - **Frontend**: loading a saved view now runs through the audited endpoint instead of ad-hoc execute.
 - Integration tests cover workspace-scoped run results, audit-row recording with match count, and the
   admin-gated read (unauthorized VIEWER rejected).
+
+## 17. Round 12 — saved-view subscriptions (Batch 5, completes the batch)
+
+JIRA "subscribe to a filter": a user subscribes to a saved view and gets a periodic in-app + email
+summary of how many items currently match.
+
+- Migration **V86** `bql_subscriptions` (one per view+user): frequency (DAILY/WEEKLY), channels
+  (IN_APP/EMAIL/BOTH), active, last_run_at.
+- **`/api/v1/bql-subscriptions`** CRUD — subscribe (idempotent per view+user, requires `view_items`),
+  list own, unsubscribe own. RBAC + scope in `BqlSubscriptionService`.
+- **`BqlSubscriptionScheduler`** sweeps hourly; a subscription is "due" when never delivered or its
+  cadence window has elapsed. Delivery runs the view through the shared `BqlExecutionService` (so it
+  is workspace-scoped and field-secure on the *subscriber's* context), records a `SUBSCRIPTION`
+  `bql_run_audit` row (each delivery is an audited automated run), and creates an in-app notification
+  + email. A subscription whose owner has lost workspace access is **deactivated**, never leaking
+  counts (RB-40 §1).
+- **Frontend**: a bell toggle on each saved view (subscribe/unsubscribe), shown as sibling controls
+  to the load/delete buttons (no nested interactive elements, RB-30 §6).
+- Tests: scheduler due-logic unit tests + integration tests for the lifecycle, workspace-scoped
+  match count, audit + notification on delivery, and the lost-access deactivation.

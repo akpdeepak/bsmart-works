@@ -9,6 +9,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -31,9 +32,10 @@ class ImpedimentSlaServiceTest {
     private final ProjectTeamMemberRepository teamMembers = mock(ProjectTeamMemberRepository.class);
     private final EventRepository events = mock(EventRepository.class);
     private final EventService eventService = mock(EventService.class);
+    private final EmailService emailService = mock(EmailService.class);
 
     private final ImpedimentSlaService service =
-            new ImpedimentSlaService(impediments, notifications, teamMembers, events, eventService, null);
+            new ImpedimentSlaService(impediments, notifications, teamMembers, events, eventService, emailService, null);
 
     private static Impediment critical(String id, String status, LocalDate raisedAt) {
         Impediment i = new Impediment();
@@ -85,6 +87,9 @@ class ImpedimentSlaServiceTest {
 
         assertThat(n).isEqualTo(1);
         verify(notifications, times(2)).save(any());
+        // Email each recipient too (best-effort, preference-gated inside EmailService).
+        verify(emailService).sendSlaBreachEmail(eq("u-po"), eq("Payments gateway down"), eq(3L), anyString());
+        verify(emailService).sendSlaBreachEmail(eq("u-sm"), eq("Payments gateway down"), eq(3L), anyString());
         verify(eventService).recordInWorkspace(eq("WS-1"), eq("IMP-1"),
                 eq(ImpedimentSlaService.NOTIFIED_EVENT), eq("system"), any());
     }
@@ -101,6 +106,7 @@ class ImpedimentSlaServiceTest {
 
         assertThat(n).isZero();
         verify(notifications, never()).save(any());
+        verify(emailService, never()).sendSlaBreachEmail(anyString(), anyString(), anyLong(), anyString());
         verify(eventService, never()).recordInWorkspace(anyString(), anyString(), anyString(), anyString(), any());
     }
 

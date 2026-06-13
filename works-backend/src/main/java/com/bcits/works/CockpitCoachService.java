@@ -69,8 +69,17 @@ public class CockpitCoachService {
     record Signals(int staleItems, int unassigned, int slaBreached, String topCategory,
                    int topCategoryCount, Integer attendanceRate, int actionsOpen, int actionsTotal) { }
 
-    /** One tip: who it is for, how urgent it reads, and the plain-language advice. */
-    record Tip(String audience, String tone, String text) { }
+    /** A one-click jump a tip can offer: a label and the cockpit tab to switch to. */
+    record Action(String label, String tab) { }
+
+    /**
+     * One tip: who it is for, how urgent it reads, the advice, and an optional jump that lets the
+     * reader act on it in one click (the frontend only renders it if the tab is in the caller's
+     * role set). The 3-arg form is for tips with no action.
+     */
+    record Tip(String audience, String tone, String text, Action action) {
+        Tip(String audience, String tone, String text) { this(audience, tone, text, null); }
+    }
 
     /**
      * The rule engine — deterministic coaching per role. {@code audience} matches the caller's
@@ -80,32 +89,40 @@ public class CockpitCoachService {
         List<Tip> all = new ArrayList<>();
         if (s.slaBreached() > 0) {
             all.add(new Tip("all", "danger", s.slaBreached()
-                + " critical raise(s) past the 1-day SLA — escalate or re-assign an owner today."));
+                + " critical raise(s) past the 1-day SLA — escalate or re-assign an owner today.",
+                new Action("View impediments", "impediments")));
         }
         if (s.staleItems() > 0) {
             all.add(new Tip("developer", "warning", s.staleItems()
                 + " of the project's in-progress items have had no status change for 3+ days — "
-                + "post an update or raise a blocker so they don't stall silently."));
+                + "post an update or raise a blocker so they don't stall silently.",
+                new Action("Review my items", "myday")));
             all.add(new Tip("scrum-master", "warning", s.staleItems()
-                + " in-progress items are 3+ days without movement — ask for blockers at standup."));
+                + " in-progress items are 3+ days without movement — ask for blockers at standup.",
+                new Action("Open risk panel", "risk")));
         }
         if (s.unassigned() > 0) {
             all.add(new Tip("scrum-master", "warning", s.unassigned()
-                + " active-sprint items have no assignee — assign them before they slip."));
+                + " active-sprint items have no assignee — assign them before they slip.",
+                new Action("Open risk panel", "risk")));
         }
         if (s.attendanceRate() != null && s.attendanceRate() < 70) {
             all.add(new Tip("scrum-master", "info", "Ceremony attendance is " + s.attendanceRate()
-                + "% — try a different slot, a tighter time-box, or a smaller required list."));
+                + "% — try a different slot, a tighter time-box, or a smaller required list.",
+                new Action("View ceremonies", "ceremonies")));
         }
         if (s.topCategoryCount() > 1 && s.topCategory() != null) {
             all.add(new Tip("scrum-master", "info", "'" + s.topCategory() + "' raises keep recurring ("
-                + s.topCategoryCount() + "×) — worth a systemic fix, not another workaround."));
+                + s.topCategoryCount() + "×) — worth a systemic fix, not another workaround.",
+                new Action("See patterns", "patterns")));
             all.add(new Tip("product-owner", "info", "'" + s.topCategory() + "' keeps blocking delivery ("
-                + s.topCategoryCount() + "×) — consider prioritising a permanent fix in the backlog."));
+                + s.topCategoryCount() + "×) — consider prioritising a permanent fix in the backlog.",
+                new Action("See patterns", "patterns")));
         }
         if (s.actionsTotal() > 0 && s.actionsOpen() * 2 > s.actionsTotal()) {
             all.add(new Tip("scrum-master", "info", s.actionsOpen() + " of " + s.actionsTotal()
-                + " retro actions are still open — start the next retro by reviewing them."));
+                + " retro actions are still open — start the next retro by reviewing them.",
+                new Action("Open retro", "retro")));
         }
         if (all.isEmpty()) {
             all.add(new Tip("all", "info",

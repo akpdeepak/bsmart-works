@@ -236,6 +236,12 @@ export default function ScrumMasterCockpitView({
               <li key={idx} className="flex items-start gap-2">
                 <Lightbulb className={`h-3.5 w-3.5 mt-0.5 flex-shrink-0 ${TIP_TONE[t.tone] || TIP_TONE.info}`} aria-hidden="true" />
                 <span className="text-sm text-neutral-800 dark:text-neutral-200">{t.text}</span>
+                {t.action && visibleTabs.includes(t.action.tab) && (
+                  <button onClick={() => setSmTab(t.action.tab)}
+                    className="ml-1 flex-shrink-0 text-xs font-medium text-brand-navy hover:underline whitespace-nowrap">
+                    {t.action.label} →
+                  </button>
+                )}
               </li>
             ))}
           </ul>

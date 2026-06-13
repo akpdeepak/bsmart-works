@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plug, Webhook, KeyRound } from 'lucide-react';
 import { integrationsClient } from '@/lib/integrations';
 import { Badge } from '@/components/works/atoms/badge';
+import { Skeleton } from '@/components/works/atoms/skeleton';
 
 // Organism — the iteration-13 Integrations surface (Cap Q / Cap A). Three tabs: connectors
 // (Slack/GitHub/GitLab/email/calendar + SSO/SCIM), outbound webhooks, and public-API tokens.
@@ -19,11 +20,30 @@ export function IntegrationsPanel({ workspaceId, can = () => true, onToast = () 
   const [connections, setConnections] = useState([]);
   const [webhooks, setWebhooks] = useState([]);
   const [tokens, setTokens] = useState([]);
+  const [loading, setLoading] = useState(Boolean(workspaceId));
   const [error, setError] = useState(null);
   const [tick, setTick] = useState(0);
   const manage = can('manage_integrations');
   const manageTokens = can('manage_api_tokens');
   const reload = () => setTick((t) => t + 1);
+
+  // Arrow-key navigation across the tabs (WCAG tab pattern): Left/Right/Home/End move and select.
+  function onTabKeyDown(e) {
+    const idx = TABS.findIndex((t) => t.id === tab);
+    if (idx < 0) return;
+    const moves = {
+      ArrowRight: (idx + 1) % TABS.length,
+      ArrowLeft: (idx - 1 + TABS.length) % TABS.length,
+      Home: 0,
+      End: TABS.length - 1,
+    };
+    if (!(e.key in moves)) return;
+    e.preventDefault();
+    const nextId = TABS[moves[e.key]].id;
+    setTab(nextId);
+    const el = typeof document !== 'undefined' && document.getElementById(`integrations-tab-${nextId}`);
+    if (el && typeof el.focus === 'function') el.focus();
+  }
 
   // Fetch inlined with setState only in the .then continuation (never synchronously in the effect
   // body); handlers refresh via the tick dep — satisfies react-hooks/set-state-in-effect.
@@ -44,7 +64,8 @@ export function IntegrationsPanel({ workspaceId, can = () => true, onToast = () 
         setTokens(tok);
         setError(null);
       })
-      .catch((e) => { if (active) setError(e.message || 'Could not load integrations.'); });
+      .catch((e) => { if (active) setError(e.message || 'Could not load integrations.'); })
+      .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [workspaceId, manageTokens, tick]);
 
@@ -88,20 +109,26 @@ export function IntegrationsPanel({ workspaceId, can = () => true, onToast = () 
         <p className="mt-0.5 text-sm text-neutral-600">Connect Works to the tools your teams already use.</p>
       </div>
 
-      <div role="tablist" aria-label="Integration area" className="mb-4 inline-flex rounded-lg border border-neutral-200 p-1 dark:border-neutral-700">
+      <div role="tablist" aria-label="Integration area"
+        className="mb-4 inline-flex rounded-lg border border-neutral-200 p-1 dark:border-neutral-700">
         {TABS.map((t) => {
           const Icon = t.icon;
+          const selected = tab === t.id;
           return (
             <button
               key={t.id}
+              id={`integrations-tab-${t.id}`}
               type="button"
               role="tab"
-              aria-selected={tab === t.id}
+              aria-selected={selected}
+              aria-controls={`integrations-panel-${t.id}`}
+              tabIndex={selected ? 0 : -1}
+              onKeyDown={onTabKeyDown}
               onClick={() => setTab(t.id)}
               className={[
                 'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-fast',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-1 active:translate-y-px',
-                tab === t.id ? 'bg-brand-navy text-white' : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
+                selected ? 'bg-brand-navy text-white' : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
               ].join(' ')}
             >
               <Icon aria-hidden="true" className="h-4 w-4" />
@@ -111,10 +138,18 @@ export function IntegrationsPanel({ workspaceId, can = () => true, onToast = () 
         })}
       </div>
 
-      {error && <div className="mb-4 rounded-lg bg-semantic-danger-surface p-4 text-sm text-semantic-danger">{error}</div>}
+      {error && <div role="alert" className="mb-4 rounded-lg bg-semantic-danger-surface p-4 text-sm text-semantic-danger">{error}</div>}
 
-      {tab === 'connectors' && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {loading ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
+          {[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
+        </div>
+      ) : tab === 'connectors' ? (
+        <div id="integrations-panel-connectors" role="tabpanel" aria-labelledby="integrations-tab-connectors"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {providers.length === 0 && (
+            <p className="text-sm text-neutral-600">No connectors are available for this workspace yet.</p>
+          )}
           {providers.map((p) => {
             const conn = connectionFor(p.id);
             return (
@@ -137,10 +172,8 @@ export function IntegrationsPanel({ workspaceId, can = () => true, onToast = () 
             );
           })}
         </div>
-      )}
-
-      {tab === 'webhooks' && (
-        <div>
+      ) : tab === 'webhooks' ? (
+        <div id="integrations-panel-webhooks" role="tabpanel" aria-labelledby="integrations-tab-webhooks">
           {webhooks.length === 0 ? (
             <p className="text-sm text-neutral-600">No webhook subscriptions yet.</p>
           ) : (
@@ -157,10 +190,8 @@ export function IntegrationsPanel({ workspaceId, can = () => true, onToast = () 
             </ul>
           )}
         </div>
-      )}
-
-      {tab === 'tokens' && (
-        <div>
+      ) : (
+        <div id="integrations-panel-tokens" role="tabpanel" aria-labelledby="integrations-tab-tokens">
           {manageTokens && (
             <button type="button" onClick={issueToken}
               className="mb-4 inline-flex items-center gap-1.5 rounded-md bg-brand-orange px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2 active:translate-y-px">

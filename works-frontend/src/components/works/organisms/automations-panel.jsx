@@ -111,7 +111,7 @@ export function AutomationsPanel({ workspaceId, can = () => true, onToast = () =
         </div>
       </div>
 
-      {error && <div className="mb-4 rounded-lg bg-semantic-danger-surface p-4 text-sm text-semantic-danger">{error}</div>}
+      {error && <div role="alert" className="mb-4 rounded-lg bg-semantic-danger-surface p-4 text-sm text-semantic-danger">{error}</div>}
 
       {manage && (
         <form onSubmit={create} className="mb-6 rounded-lg border border-neutral-200 p-4 dark:border-neutral-700">

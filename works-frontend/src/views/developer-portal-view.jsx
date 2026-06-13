@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Code2, Key, ExternalLink, Copy, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/works/button';
+import { EmptyState } from '@/components/works/atoms/empty-state';
 import { developerPortalClient } from '@/lib/marketplace';
 
 // Developer Portal view (iteration 20, Cap R). Documentation, SDK manifest and a sandbox for
@@ -14,7 +15,7 @@ export default function DeveloperPortalView({ workspaceId }) {
   const [generating, setGenerating] = useState(false);
 
   const load = useCallback(async () => {
-    if (!workspaceId) return;
+    if (!workspaceId) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {
@@ -145,6 +146,9 @@ export default function DeveloperPortalView({ workspaceId }) {
             )}
           </section>
         </>
+      ) : !error ? (
+        <EmptyState icon={Code2} title="Developer portal unavailable"
+          subtitle="The SDK manifest could not be loaded for this workspace. Refresh the page, or contact a workspace admin if the problem persists." />
       ) : null}
     </div>
   );

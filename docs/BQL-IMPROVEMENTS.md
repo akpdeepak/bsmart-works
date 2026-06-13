@@ -223,3 +223,32 @@ Batch 3 — the marquee JQL differentiator, powered by the append-only event sto
 - The outer `id IN (…)` is already workspace-scoped (work_items are), so the event subquery needs no
   extra tenant predicate. History values match the recorded display value (e.g. assignee = name).
 - Surfaced in `/schema` operators (`WAS`, `CHANGED`). 59 compiler tests.
+
+## 13. Round 8 — labels as a collection field (Batch 4, #277)
+
+JQL has `labels IN (...)`; BQL now matches it. `labels` is a one-to-many collection (the `tags`
+table), not a `work_items` column, so every operator compiles to a **membership subquery**:
+
+- `labels = X` → `id IN (SELECT work_item_id FROM tags WHERE tag = ?)`; `labels != X` flips to
+  `id NOT IN (...)`.
+- `labels IN (a, b)` / `NOT IN (...)` → `... WHERE tag IN (?, ?)`.
+- `labels CONTAINS x` / `~` / `STARTSWITH` / `ENDSWITH` → `... WHERE tag ILIKE ?`.
+- `labels IS EMPTY` → `id NOT IN (SELECT work_item_id FROM tags)`; `IS NOT EMPTY` → `id IN (...)`.
+- Relational operators are rejected (labels are textual). Surfaced in `/schema`; 9 new compiler
+  tests. The outer `id IN (…)` only matches already-workspace-scoped rows, so no extra tenant
+  predicate is needed (same guarantee as history/custom-field subqueries).
+
+## 14. Round 9 — group-by / board view (Batch 5, #278)
+
+The JIRA board parity feature, as a read-only aggregation:
+
+- **`POST /api/v1/bql/group`** takes `{ query, groupBy }` and returns count-per-bucket
+  (`SELECT COALESCE(<col>::text,'') AS value, COUNT(*) AS count … GROUP BY <col>`), with the same
+  hard workspace scope + field-level security as `/execute`.
+- `groupBy` resolves through the field allow-list and must be in a closed `GROUPABLE` set
+  (status, type, priority, severity, assignee, project, sprint) — the GROUP BY target is never raw
+  user SQL. `null` buckets come back as `''` (an "unassigned" lane). Exposed as `groupable` in
+  `/schema`.
+- **Frontend**: a Group-by control renders count bars in the BQL screen; assignee/project/sprint
+  buckets resolve to display names; clicking a lane drills in by ANDing the bucket onto the query.
+- 2 new workspace-scoped integration tests (count-per-bucket isolation; filter-before-count).

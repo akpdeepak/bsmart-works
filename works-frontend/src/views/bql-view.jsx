@@ -49,6 +49,10 @@ export default function BqlView({
   const [connector, setConnector] = useState('AND');
   const [resultSize, setResultSize] = useState(100);
   const [sort, setSort] = useState('created_at desc');
+  // Board / group-by view (Batch 5): a field to bucket results by + the per-bucket counts.
+  const [groupBy, setGroupBy] = useState('');
+  const [groups, setGroups] = useState(null); // [{ value, count }] | null when not grouped
+  const [groupBusy, setGroupBusy] = useState(false);
   const [history, setHistory] = useState(loadHistory);
   const [ac, setAc] = useState({ open: false, options: [], partial: '', index: 0 });
   const queryRef = useRef(null);
@@ -88,6 +92,41 @@ export default function BqlView({
   };
 
   const showMore = () => runQuery({ size: Math.min(resultSize + 100, 500) });
+
+  // Fetch per-bucket counts for the current query, grouped by the chosen field. Empty field clears
+  // the board back to the flat results table. Runs on demand (no effect) to avoid set-state-in-effect.
+  const runGroup = (field) => {
+    setGroupBy(field);
+    if (!field || !activeWorkspaceId) { setGroups(null); return; }
+    setGroupBusy(true);
+    api.send('/bql/group', {
+      method: 'POST',
+      body: JSON.stringify({ query: bqlQuery, groupBy: field, workspaceId: activeWorkspaceId }),
+    })
+      .then(d => setGroups(Array.isArray(d) ? d : []))
+      .catch(() => setGroups([]))
+      .finally(() => setGroupBusy(false));
+  };
+
+  // Resolve a raw group value (which may be an id for assignee/project/sprint) to a display label.
+  const groupLabel = (value) => {
+    if (!value) return 'Unassigned';
+    const map = groupBy === 'assignee' || groupBy === 'assignee_id' ? nameMaps.users
+      : groupBy === 'project' || groupBy === 'project_id' ? nameMaps.projects
+        : groupBy === 'sprint' || groupBy === 'sprint_id' ? nameMaps.sprints
+          : null;
+    return (map && map[value]) || value;
+  };
+
+  // Drill into a bucket: AND the bucket onto the query and switch back to the flat table.
+  const drillInto = (value) => {
+    const clause = `${groupBy} ${value ? `= ${/\s/.test(value) ? `"${value}"` : value}` : 'IS EMPTY'}`;
+    const next = bqlQuery.trim() ? `${bqlQuery.trim()} AND ${clause}` : clause;
+    setBqlQuery(next);
+    setGroupBy('');
+    setGroups(null);
+    runQuery({ query: next });
+  };
 
   // Open a result reliably — like JIRA, any row opens its item even if it isn't in the local cache.
   const openItem = (item) => {
@@ -313,6 +352,19 @@ export default function BqlView({
             onClick={copyLink} disabled={!bqlQuery.trim()} title="Copy a shareable link to this query">
             Copy link
           </Button>
+          {schema?.groupable?.length > 0 && (
+            <label className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400 ml-auto">
+              Group by
+              <select className="input text-xs py-1" value={groupBy}
+                onChange={e => runGroup(e.target.value)} aria-label="Group results by field">
+                <option value="">none</option>
+                {schema.groupable.map(g => {
+                  const alias = (schema.fields || []).find(f => f.column === g)?.alias || g;
+                  return <option key={g} value={alias}>{alias}</option>;
+                })}
+              </select>
+            </label>
+          )}
         </div>
 
         {/* Recent queries — quick re-run (JIRA lacks query history; addresses a JQL pain point) */}
@@ -448,8 +500,44 @@ export default function BqlView({
         )}
       </div>
 
+      {/* Board / group-by breakdown — count per bucket, click a lane to drill into it. */}
+      {groups && (
+        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 mb-4">
+          <p className="text-xs font-semibold text-neutral-600 uppercase tracking-wider mb-3">
+            Grouped by {groupBy} {groupBusy && <span className="text-neutral-400">· loading…</span>}
+          </p>
+          {groups.length === 0 && !groupBusy && (
+            <p className="text-sm text-neutral-600 dark:text-neutral-400">No matching items to group.</p>
+          )}
+          <div className="space-y-2">
+            {(() => {
+              const max = groups.reduce((m, g) => Math.max(m, Number(g.count) || 0), 0) || 1;
+              return groups.map(g => {
+                const count = Number(g.count) || 0;
+                return (
+                  <button key={g.value || '∅'} type="button" onClick={() => drillInto(g.value)}
+                    className="flex w-full items-center gap-3 text-left group"
+                    aria-label={`Filter to ${groupLabel(g.value)} (${count} items)`}>
+                    <span className="w-40 shrink-0 truncate text-sm text-neutral-900 dark:text-neutral-100 group-hover:text-brand-navy">
+                      {groupLabel(g.value)}
+                    </span>
+                    <span className="flex-1 h-5 bg-neutral-100 dark:bg-neutral-900 rounded-sm overflow-hidden">
+                      <span className="block h-full bg-brand-navy-tint/70 group-hover:bg-brand-navy"
+                        style={{ width: `${Math.round((count / max) * 100)}%` }} />
+                    </span>
+                    <span className="w-10 shrink-0 text-right font-mono text-sm text-neutral-600 dark:text-neutral-400">
+                      {count}
+                    </span>
+                  </button>
+                );
+              });
+            })()}
+          </div>
+        </div>
+      )}
+
       {/* Results — JIRA-style navigator: sortable columns, column chooser, CSV export */}
-      {bqlResults.length > 0 && (
+      {!groups && bqlResults.length > 0 && (
         <BqlResultsTable
           results={bqlResults}
           sort={sort}

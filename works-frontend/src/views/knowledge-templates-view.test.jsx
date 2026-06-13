@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { expectNoA11yViolations } from '@/test/a11y';
 import KnowledgeTemplatesView from './knowledge-templates-view';
 import { templatesClient, extractionClient } from '@/lib/knowledge-advanced';
 
@@ -75,5 +76,12 @@ describe('KnowledgeTemplatesView', () => {
     expect(screen.getByText('2026-06-07')).toBeInTheDocument();
     // The deterministic fallback is surfaced honestly as "Offline".
     expect(screen.getByText('Offline')).toBeInTheDocument();
+  });
+
+  it('has no serious a11y violations with templates listed', async () => {
+    templatesClient.list.mockResolvedValue(TEMPLATES);
+    const { container } = render(<KnowledgeTemplatesView workspaceId="WS-001" />);
+    await screen.findByText('Operational Runbook');
+    await expectNoA11yViolations(container);
   });
 });

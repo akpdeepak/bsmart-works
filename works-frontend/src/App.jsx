@@ -3310,6 +3310,7 @@ export default function App() {
               fetchNotifications={fetchNotifications}
               fetchUnreadCount={fetchUnreadCount}
               setUnreadCount={setUnreadCount}
+              onError={reportError}
             />
           )}
 

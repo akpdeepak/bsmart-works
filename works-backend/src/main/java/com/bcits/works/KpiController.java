@@ -48,8 +48,9 @@ public class KpiController {
 
     @GetMapping("/definitions")
     public List<MetricDefinition> definitions(@RequestParam String workspaceId) {
-        rbac.require(authenticatedUser.id(), workspaceId, "view_team_metrics");
-        return kpi.listDefinitions(workspaceId);
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "view_team_metrics");
+        return kpi.listDefinitions(workspaceId, userId);
     }
 
     @PostMapping("/definitions")
@@ -74,26 +75,30 @@ public class KpiController {
 
     @GetMapping("/team")
     public KpiService.Layer team(@RequestParam String workspaceId, @RequestParam String teamId) {
-        rbac.require(authenticatedUser.id(), workspaceId, "view_team_metrics");
-        return kpi.team(workspaceId, teamId);
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "view_team_metrics");
+        return kpi.team(workspaceId, userId, teamId);
     }
 
     @GetMapping("/project")
     public KpiService.Layer project(@RequestParam String workspaceId, @RequestParam String projectId) {
-        rbac.require(authenticatedUser.id(), workspaceId, "view_team_metrics");
-        return kpi.project(workspaceId, projectId);
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "view_team_metrics");
+        return kpi.project(workspaceId, userId, projectId);
     }
 
     @GetMapping("/manager")
     public List<KpiService.Layer> manager(@RequestParam String workspaceId) {
-        rbac.require(authenticatedUser.id(), workspaceId, "view_team_metrics");
-        return kpi.manager(workspaceId);
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "view_team_metrics");
+        return kpi.manager(workspaceId, userId);
     }
 
     @GetMapping("/org")
     public KpiService.Layer org(@RequestParam String workspaceId) {
-        rbac.require(authenticatedUser.id(), workspaceId, "view_team_metrics");
-        return kpi.org(workspaceId);
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "view_team_metrics");
+        return kpi.org(workspaceId, userId);
     }
 
     @GetMapping("/health")

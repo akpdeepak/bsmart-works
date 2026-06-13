@@ -5,6 +5,8 @@ import { api } from '@/lib/apiClient';
 import { Badge } from '@/components/works/atoms/badge';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { Button } from '@/components/works/button';
+import { CycleTimeHistogram } from '@/components/works/molecules/cycle-time-histogram';
+import { MetricShareControl } from '@/components/works/molecules/metric-share-control';
 
 // Organism — the iteration-12 Performance surface (Cap L). Layered metrics with a prominent layer
 // switcher and a privacy banner. Individual/Manager/Org need no entity id; Team and Project pick an
@@ -105,7 +107,7 @@ function LayerView({ layer, aiOn, anomalyBusy, anomalyResult, onExplainAnomaly }
   );
 }
 
-export function PerformancePanel({ workspaceId, aiCapabilities = [] }) {
+export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem }) {
   const [layer, setLayer] = useState('INDIVIDUAL');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -117,6 +119,10 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [] }) {
   const [projectId, setProjectId] = useState('');
   const [anomalyBusy, setAnomalyBusy] = useState(null); // metricKey currently explaining
   const [anomalyResult, setAnomalyResult] = useState({}); // metricKey → explanation text
+  // Cycle-time distribution for the active single-layer scope (§3.7). Keyed by scope so a stale
+  // result never paints under a new scope, and so the effect never calls setState synchronously
+  // (react-hooks/set-state-in-effect) — it only resolves in the async continuation.
+  const [distByScope, setDistByScope] = useState({}); // scopeKey → { data } | { error }
 
   const aiOn = anyCapabilityEnabled(aiCapabilities);
 
@@ -172,6 +178,27 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [] }) {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [workspaceId, layer, teamId, projectId]);
+
+  // Cycle-time distribution histogram (§3.7). MANAGER is a multi-team rollup with no single scope,
+  // so it has no distribution; the other layers map cleanly to the backend's scopeLevel/scopeId.
+  // setState happens only in the async continuation (react-hooks/set-state-in-effect).
+  const distScopeId = layer === 'TEAM' ? teamId : layer === 'PROJECT' ? projectId : undefined;
+  const distNeedsId = layer === 'TEAM' || layer === 'PROJECT';
+  const distScopeKey = layer === 'MANAGER' ? null : `${layer}:${distScopeId || ''}`;
+  useEffect(() => {
+    if (!workspaceId || layer === 'MANAGER') return undefined;
+    if (distNeedsId && !distScopeId) return undefined;
+    let active = true;
+    const key = distScopeKey;
+    kpiClient.distribution(workspaceId, layer, distScopeId)
+      .then((d) => { if (active) setDistByScope((prev) => ({ ...prev, [key]: { data: d } })); })
+      .catch((e) => {
+        if (active) setDistByScope((prev) => ({ ...prev, [key]: { error: e.message || 'Could not load the cycle-time distribution.' } }));
+      });
+    return () => { active = false; };
+  }, [workspaceId, layer, distScopeId, distNeedsId, distScopeKey]);
+
+  const distEntry = distScopeKey ? distByScope[distScopeKey] : null;
 
   const noTeam = layer === 'TEAM' && teams !== null && teams.length === 0;
   const noProject = layer === 'PROJECT' && projects !== null && projects.length === 0;
@@ -267,6 +294,29 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [] }) {
           {data.many.map((l) => (
             <LayerView key={l.scopeId || l.label} layer={l} aiOn={aiOn} anomalyBusy={anomalyBusy} anomalyResult={anomalyResult} onExplainAnomaly={explainAnomaly} />
           ))}
+        </div>
+      )}
+
+      {/* Cycle-time distribution histogram (§3.7) — single-layer scopes only, once metrics resolve. */}
+      {!loading && !error && !noEntity && layer !== 'MANAGER' && (
+        <section aria-labelledby="cycle-time-heading" className="mt-6 rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
+          <h3 id="cycle-time-heading" className="mb-3 text-base font-semibold text-neutral-900 dark:text-neutral-100">
+            Cycle-time distribution
+          </h3>
+          {distEntry?.error ? (
+            <div className="rounded-lg bg-semantic-danger-surface p-3 text-sm text-semantic-danger" role="alert">{distEntry.error}</div>
+          ) : !distEntry ? (
+            <div className="h-28 animate-pulse rounded-lg bg-neutral-100 dark:bg-neutral-800" />
+          ) : (
+            <CycleTimeHistogram distribution={distEntry.data} onSelectOutlier={onOpenItem} />
+          )}
+        </section>
+      )}
+
+      {/* Voluntary metric-sharing — Individual layer only (§3.8). */}
+      {layer === 'INDIVIDUAL' && (
+        <div className="mt-6">
+          <MetricShareControl workspaceId={workspaceId} />
         </div>
       )}
 

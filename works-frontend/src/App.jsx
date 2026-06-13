@@ -1182,7 +1182,7 @@ export default function App() {
   // ── Iteration 6 — custom dashboards ──────────────────────────────────────────
   function fetchCustomDashboards() {
     api.raw(`/dashboards`)
-      .then(r => r.json()).then(d => setCustomDashboards(Array.isArray(d) ? d : [])).catch(reportError);
+      .then(r => r.json()).then(d => setCustomDashboards(Array.isArray(d) ? d : (d?.items || []))).catch(reportError);
   }
 
   function openDashboard(id) {
@@ -1239,7 +1239,7 @@ export default function App() {
 
   // ── Iteration 6 — custom reports ─────────────────────────────────────────────
   function fetchReports() {
-    api.raw(`/reports`).then(r => r.json()).then(d => setReports(Array.isArray(d) ? d : [])).catch(reportError);
+    api.raw(`/reports`).then(r => r.json()).then(d => setReports(Array.isArray(d) ? d : (d?.items || []))).catch(reportError);
   }
   function fetchReportTemplates() {
     api.raw(`/reports/templates`).then(r => r.json()).then(d => setReportTemplates(Array.isArray(d) ? d : [])).catch(reportError);

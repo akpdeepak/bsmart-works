@@ -41,16 +41,18 @@ public class ImpedimentSlaService {
     private final ProjectTeamMemberRepository teamMembers;
     private final EventRepository events;
     private final EventService eventService;
+    private final EmailService emailService;
     private final JdbcTemplate jdbc;
 
     public ImpedimentSlaService(ImpedimentRepository impediments, NotificationRepository notifications,
                                 ProjectTeamMemberRepository teamMembers, EventRepository events,
-                                EventService eventService, JdbcTemplate jdbc) {
+                                EventService eventService, EmailService emailService, JdbcTemplate jdbc) {
         this.impediments = impediments;
         this.notifications = notifications;
         this.teamMembers = teamMembers;
         this.events = events;
         this.eventService = eventService;
+        this.emailService = emailService;
         this.jdbc = jdbc;
     }
 
@@ -88,8 +90,12 @@ public class ImpedimentSlaService {
             Set<String> recipients = resolveRecipients(i.getProjectId(), i.getWorkspaceId());
             String message = breachMessage(i, today);
             String link = "/impediments/" + i.getId();
+            long age = ImpedimentService.ageDays(i, today);
             for (String userId : recipients) {
                 inApp(userId, message, link);
+                // Email is best-effort and preference-gated (notify_sla_breach); @Async + its own
+                // try/catch mean a mail outage never blocks the in-app escalation or the sweep.
+                emailService.sendSlaBreachEmail(userId, i.getTitle(), age, link);
             }
             eventService.recordInWorkspace(i.getWorkspaceId(), i.getId(), NOTIFIED_EVENT, "system",
                 Map.of("severity", i.getSeverity(),

@@ -41,6 +41,7 @@ public class WorkItemController {
     private final ExtensionExecutionService extensions;
     private final WorkflowRuleEngine workflowRules;
     private final StatusConfigService statusConfig;
+    private final WorkItemBulkService bulkService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
@@ -50,7 +51,8 @@ public class WorkItemController {
                               RbacService rbac, DodChecklistService dodChecklists,
                               ExtensionExecutionService extensions,
                               WorkflowRuleEngine workflowRules,
-                              StatusConfigService statusConfig) {
+                              StatusConfigService statusConfig,
+                              WorkItemBulkService bulkService) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
@@ -64,6 +66,24 @@ public class WorkItemController {
         this.extensions = extensions;
         this.workflowRules = workflowRules;
         this.statusConfig = statusConfig;
+        this.bulkService = bulkService;
+    }
+
+    @Operation(summary = "Bulk-edit work items",
+        description = "Applies one field change (assignee, priority, addLabel, removeLabel) to many "
+            + "items at once. Each item is re-checked for edit rights and audited; items the caller "
+            + "may not edit are skipped. Status is not a bulk field (it must run the DoD + workflow "
+            + "gates per item). Returns the per-item outcome.")
+    @PostMapping("/bulk")
+    public WorkItemBulkService.BulkResult bulkEdit(@Valid @RequestBody Map<String, Object> body) {
+        String userId = authenticatedUser.id();
+        Object rawIds = body.get("ids");
+        List<String> ids = rawIds instanceof List<?> list
+            ? list.stream().filter(java.util.Objects::nonNull).map(Object::toString).toList()
+            : List.of();
+        String action = body.get("action") == null ? null : body.get("action").toString();
+        String value = body.get("value") == null ? null : body.get("value").toString();
+        return bulkService.apply(userId, ids, action, value);
     }
 
     // Tenant-isolation predicate (RB-40 §1): an item is visible only when its project lives in a

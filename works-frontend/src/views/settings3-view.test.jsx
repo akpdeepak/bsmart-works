@@ -75,4 +75,22 @@ describe('Settings3View', () => {
     expect(screen.getByRole('button', { name: /^custom fields$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^item types$/i })).toBeInTheDocument();
   });
+
+  // Regression: the Field Layout tab showed a checkbox whose only action was a "go elsewhere" toast
+  // (a dead control / honest-software violation). Visibility is owned by the Field Visibility tab,
+  // so it now renders as a read-only Visible/Hidden status with no interactive checkbox.
+  it('shows field visibility on the Layout tab as a read-only status, not a fake checkbox', () => {
+    const { container } = render(
+      <Settings3View
+        {...baseProps}
+        settings3Tab="layout"
+        fieldDefs={[{ id: 'FD-1', name: 'Meter Serial', fieldType: 'TEXT' }]}
+        fieldLayouts={[{ itemType: 'Story', layout: [{ fieldDefId: 'FD-1', visible: false }] }]}
+      />,
+    );
+    // No interactive checkbox is rendered in the layout rows anymore.
+    expect(container.querySelector('input[type="checkbox"]')).toBeNull();
+    // The honest read-only status is shown instead (Story row marks FD-1 hidden).
+    expect(screen.getAllByText(/^Hidden$/).length).toBeGreaterThan(0);
+  });
 });

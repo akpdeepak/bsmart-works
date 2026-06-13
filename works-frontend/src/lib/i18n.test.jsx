@@ -39,8 +39,8 @@ describe('i18n foundation', () => {
     document.documentElement.lang = '';
   });
 
-  it('switching locale changes a rendered Insights string (stub locale)', () => {
-    // The Reports page title is one of the few keys the non-en catalogs translate as a stub;
+  it('switching locale changes a rendered Insights string (translated locale)', () => {
+    // The Insights catalog (insights.*) is fully translated for every non-en locale (issue 275);
     // English and Hindi differ, so the rendered heading must change when the locale switches.
     expect(translate('en', 'insights.reports.title')).toBe('Sprint Reports');
     expect(MESSAGES.hi['insights.reports.title']).toBeDefined();
@@ -56,10 +56,34 @@ describe('i18n foundation', () => {
     // Starts in English.
     expect(screen.getByRole('heading', { name: 'Sprint Reports' })).toBeInTheDocument();
 
-    // Switch to Hindi → the heading re-renders with the Hindi stub.
+    // Switch to Hindi → the heading re-renders with the Hindi translation.
     fireEvent.change(screen.getByLabelText('locale'), { target: { value: 'hi' } });
     expect(screen.getByRole('heading', { name: MESSAGES.hi['insights.reports.title'] })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Sprint Reports' })).not.toBeInTheDocument();
+  });
+
+  it('Insights catalog is fully translated (non-en, never the en string) for RTL + LTR locales', () => {
+    // A representative slice of the insights.* set — issue 275 translated the whole catalog for all
+    // 9 non-en locales. Each must be present and differ from the English source string.
+    const sampleKeys = [
+      'insights.reports.subtitle',
+      'insights.dashboards.new',
+      'insights.reportBuilder.editReport',
+      'insights.performance.cycleTimeDistribution',
+      'insights.widgetBuilder.dataSource',
+    ];
+    for (const locale of ['ar', 'ja']) { // ar = RTL, ja = LTR
+      for (const key of sampleKeys) {
+        const translated = translate(locale, key);
+        expect(MESSAGES[locale][key]).toBeDefined();        // not falling back
+        expect(translated).toBe(MESSAGES[locale][key]);     // resolves to the locale entry
+        expect(translated).not.toBe(translate('en', key));  // genuinely localized, not the en string
+        expect(translated.trim()).not.toBe('');             // never blank
+      }
+    }
+    // BQL keyword stays untranslated inside the (translated) BQL subtitle — kept as a product term.
+    expect(translate('ja', 'insights.bql.subtitle')).toContain('startOfWeek()');
+    expect(translate('ar', 'insights.bql.subtitle')).toContain('IS EMPTY');
   });
 
   it('sets <html dir="rtl"> for Arabic and ltr otherwise', () => {
@@ -79,20 +103,16 @@ describe('i18n foundation', () => {
     expect(document.documentElement.lang).toBe('ar');
   });
 
-  it('falls back to English when a locale is missing a key (never blank, never the key)', () => {
-    // `insights.reports.subtitle` is English-only (not in the stub catalogs) → en fallback.
-    expect(MESSAGES.hi['insights.reports.subtitle']).toBeUndefined();
-    expect(translate('hi', 'insights.reports.subtitle')).toBe(translate('en', 'insights.reports.subtitle'));
+  it('falls back to English when a locale has not externalized a key (never blank, never the key)', () => {
+    // The Insights catalog is now fully translated, so the fallback path is proven with a surface
+    // that has NOT been externalized to the non-en catalogs yet — `settings.notifications` is
+    // English-only. The Hindi catalog has no entry, so translate() must return the English string
+    // (graceful degradation), never a blank or the raw key.
+    expect(MESSAGES.hi['settings.notifications']).toBeUndefined();
+    expect(translate('hi', 'settings.notifications')).toBe(translate('en', 'settings.notifications'));
+    expect(translate('hi', 'settings.notifications')).toBe('Notifications');
 
-    render(
-      <I18nProvider>
-        <LocaleHarness>
-          <ReportsView {...reportsProps} />
-        </LocaleHarness>
-      </I18nProvider>,
-    );
-    fireEvent.change(screen.getByLabelText('locale'), { target: { value: 'hi' } });
-    // The English subtitle still renders under the Hindi locale (graceful fallback).
-    expect(screen.getByText('Velocity, delivery, and scope tracking')).toBeInTheDocument();
+    // An entirely unknown key falls back to the key itself — never a blank string.
+    expect(translate('hi', 'totally.unknown.key')).toBe('totally.unknown.key');
   });
 });

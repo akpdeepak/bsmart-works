@@ -6,6 +6,7 @@ import {
   fetchChartTypes, fetchFieldSchema, resolvePivot, buildPivotSpec, AGGS, MAX_DIMENSIONS,
 } from '@/lib/pivot';
 import { annotateChartTypes, resolveSelection } from '@/lib/pivot-charts';
+import { useI18n } from '@/lib/i18n';
 
 const SOURCES = [
   { id: 'guided', label: 'Guided' },
@@ -29,6 +30,7 @@ const SOURCES = [
  *   onCancel()     — optional
  */
 export function WidgetBuilder({ workspaceId, value, onSave, onCancel }) {
+  const { t } = useI18n();
   const v = value || {};
   const [chartType, setChartType] = useState(v.chartType || 'bar');
   const [sourceKind, setSourceKind] = useState(v.sourceKind || 'guided');
@@ -60,8 +62,9 @@ export function WidgetBuilder({ workspaceId, value, onSave, onCancel }) {
     let alive = true;
     fetchFieldSchema(workspaceId)
       .then((s) => { if (alive) { setFields(s?.fields || []); setSchemaError(null); } })
-      .catch((e) => { if (alive) setSchemaError(e.message || 'Could not load fields.'); });
+      .catch((e) => { if (alive) setSchemaError(e.message || t('insights.widgetBuilder.couldNotLoadFields')); });
     return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
 
   const dimCount = dimensions.length;
@@ -85,9 +88,10 @@ export function WidgetBuilder({ workspaceId, value, onSave, onCancel }) {
       setPreviewError(null);
       resolvePivot(workspaceId, spec)
         .then((res) => { setPreview(res); setPreviewLoading(false); })
-        .catch((e) => { setPreviewError(e.message || 'Preview failed — check the fields and filter.'); setPreviewLoading(false); });
+        .catch((e) => { setPreviewError(e.message || t('insights.widgetBuilder.previewFailed')); setPreviewLoading(false); });
     }, 350);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, sourceKind, query, metricKey, mode, measures, dimensions, filters]);
 
   const fieldOptions = fields.map((f) => f.alias);
@@ -113,7 +117,7 @@ export function WidgetBuilder({ workspaceId, value, onSave, onCancel }) {
     <div className="space-y-4">
       {/* Source */}
       <fieldset>
-        <legend className="text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mb-1.5">Data source</legend>
+        <legend className="text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mb-1.5">{t('insights.widgetBuilder.dataSource')}</legend>
         <div className="flex flex-wrap items-center gap-1.5">
           {SOURCES.map((s) => (
             <button key={s.id} type="button" onClick={() => setSourceKind(s.id)}
@@ -144,7 +148,7 @@ export function WidgetBuilder({ workspaceId, value, onSave, onCancel }) {
 
       {/* Measures */}
       <fieldset>
-        <legend className="text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mb-1.5">Measures</legend>
+        <legend className="text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mb-1.5">{t('insights.widgetBuilder.measures')}</legend>
         <div className="space-y-1.5">
           {measures.map((m, i) => (
             <div key={i} className="flex items-center gap-1.5">
@@ -152,7 +156,7 @@ export function WidgetBuilder({ workspaceId, value, onSave, onCancel }) {
                 {AGGS.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
               </select>
               <select aria-label={`Measure ${i + 1} field`} value={m.field} onChange={(e) => setMeasure(i, { field: e.target.value })} className={`${selectClass} flex-1`}>
-                <option value="*">All items (count)</option>
+                <option value="*">{t('insights.widgetBuilder.allItemsCount')}</option>
                 {fieldOptions.map((f) => <option key={f} value={f}>{f}</option>)}
               </select>
               <button type="button" onClick={() => removeMeasure(i)} disabled={measures.length <= 1}
@@ -165,14 +169,14 @@ export function WidgetBuilder({ workspaceId, value, onSave, onCancel }) {
         </div>
         <button type="button" onClick={addMeasure}
           className="mt-1.5 inline-flex items-center gap-1 text-xs text-brand-navy dark:text-brand-amber hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded">
-          <Plus className="h-3.5 w-3.5" aria-hidden="true" />Add measure
+          <Plus className="h-3.5 w-3.5" aria-hidden="true" />{t('insights.widgetBuilder.addMeasure')}
         </button>
       </fieldset>
 
       {/* Dimensions */}
       <fieldset>
         <legend className="text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mb-1.5">
-          Dimensions <span className="font-normal normal-case text-neutral-500">({dimCount} of {MAX_DIMENSIONS})</span>
+          {t('insights.widgetBuilder.dimensions')} <span className="font-normal normal-case text-neutral-500">({dimCount} of {MAX_DIMENSIONS})</span>
         </legend>
         <div className="space-y-1.5">
           {dimensions.map((d, i) => (
@@ -190,7 +194,7 @@ export function WidgetBuilder({ workspaceId, value, onSave, onCancel }) {
         </div>
         <button type="button" onClick={addDimension} disabled={dimensions.length >= MAX_DIMENSIONS || availableDims.length === 0}
           className="mt-1.5 inline-flex items-center gap-1 text-xs text-brand-navy dark:text-brand-amber hover:underline disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded">
-          <Plus className="h-3.5 w-3.5" aria-hidden="true" />Add dimension
+          <Plus className="h-3.5 w-3.5" aria-hidden="true" />{t('insights.widgetBuilder.addDimension')}
         </button>
         {dimensions.length >= MAX_DIMENSIONS && (
           <p className="mt-1 text-2xs text-neutral-500">Maximum {MAX_DIMENSIONS} dimensions — the engine's cap (NFR).</p>
@@ -207,7 +211,7 @@ export function WidgetBuilder({ workspaceId, value, onSave, onCancel }) {
 
       {/* Chart-type picker — offers every type, flags incompatible ones, suggests an alternative */}
       <fieldset>
-        <legend className="text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mb-1.5">Chart type</legend>
+        <legend className="text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mb-1.5">{t('insights.widgetBuilder.chartType')}</legend>
         <div className="flex flex-wrap gap-1.5">
           {annotated.map((c) => (
             <button key={c.id} type="button" onClick={() => setChartType(c.id)}
@@ -246,7 +250,7 @@ export function WidgetBuilder({ workspaceId, value, onSave, onCancel }) {
 
       {/* Live preview */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mb-1.5">Preview</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mb-1.5">{t('insights.widgetBuilder.preview')}</p>
         <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-3 min-h-24">
           <PivotChart
             type={selection.compatible ? chartType : (selection.suggestion?.id || 'pivot_table')}
@@ -255,8 +259,8 @@ export function WidgetBuilder({ workspaceId, value, onSave, onCancel }) {
       </div>
 
       <div className="flex items-center justify-end gap-2">
-        {onCancel && <Button variant="secondary" onClick={onCancel}>Cancel</Button>}
-        <Button variant="action" onClick={handleSave}>Save widget</Button>
+        {onCancel && <Button variant="secondary" onClick={onCancel}>{t('insights.common.cancel')}</Button>}
+        <Button variant="action" onClick={handleSave}>{t('insights.widgetBuilder.saveWidget')}</Button>
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import { Button } from '@/components/works/button';
 import { capabilityEnabled } from '@/lib/ai';
 import { NULLARY_OPS, SET_OPS, rowToClause, suggestions, applySuggestion } from '@/lib/bql-builder';
 import BqlResultsTable from '@/views/bql-results-table';
+import { useI18n } from '@/lib/i18n';
 
 const HISTORY_KEY = 'bql.history';
 
@@ -31,6 +32,7 @@ export default function BqlView({
   setSelectedItem,
   runBql,
 }) {
+  const { t } = useI18n();
   // Iteration 10 Cap O — NL→BQL translation (first AI surface)
   const [nlText, setNlText] = useState('');
   const [nlBusy, setNlBusy] = useState(false);
@@ -222,15 +224,15 @@ export default function BqlView({
 
   return (
     <div className="p-8 max-w-5xl">
-      <h1 className="text-2xl font-bold text-brand-navy mb-1">BQL — bSmart Query Language</h1>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">Write composable queries to filter work items. Use AND/OR/NOT, grouping with (), operators like IN, BETWEEN and IS EMPTY, and date functions like today() and startOfWeek().</p>
+      <h1 className="text-2xl font-bold text-brand-navy mb-1">{t('insights.bql.title')}</h1>
+      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">{t('insights.bql.subtitle')}</p>
 
       {/* Iteration 10 Cap O — NL→BQL translation panel */}
       {aiOn && (
         <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-4 mb-4 flex gap-3 items-start">
           <Sparkles aria-hidden="true" className="h-4 w-4 text-brand-navy mt-2 shrink-0" />
           <div className="flex-1">
-            <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-200 mb-1">Ask in plain English</p>
+            <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-200 mb-1">{t('insights.bql.askPlainEnglish')}</p>
             <div className="flex gap-2">
               <label htmlFor="nl-query" className="sr-only">Plain-English filter query</label>
               <input

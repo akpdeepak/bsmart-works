@@ -9,6 +9,7 @@ import { AiMetaBadge } from '@/components/works/ai-meta-badge';
 import { AiBudgetNotice } from '@/components/works/organisms/ai-budget-notice';
 import { CycleTimeHistogram } from '@/components/works/molecules/cycle-time-histogram';
 import { MetricShareControl } from '@/components/works/molecules/metric-share-control';
+import { useI18n } from '@/lib/i18n';
 
 // Organism — the iteration-12 Performance surface (Cap L). Layered metrics with a prominent layer
 // switcher and a privacy banner. Individual/Manager/Org need no entity id; Team and Project pick an
@@ -17,11 +18,11 @@ import { MetricShareControl } from '@/components/works/molecules/metric-share-co
 // only, five interactive states, WCAG-AA. All HTTP via the kpi client / apiClient (CLAUDE.md §3).
 
 const LAYERS = [
-  { id: 'INDIVIDUAL', label: 'Individual' },
-  { id: 'TEAM', label: 'Team' },
-  { id: 'PROJECT', label: 'Project' },
-  { id: 'MANAGER', label: 'Manager' },
-  { id: 'ORG', label: 'Organization' },
+  { id: 'INDIVIDUAL', labelKey: 'insights.performance.individual' },
+  { id: 'TEAM', labelKey: 'insights.performance.team' },
+  { id: 'PROJECT', labelKey: 'insights.performance.project' },
+  { id: 'MANAGER', labelKey: 'insights.performance.manager' },
+  { id: 'ORG', labelKey: 'insights.performance.org' },
 ];
 
 const PRIVACY_NOTE = {
@@ -64,6 +65,7 @@ function MetricCard({ metric }) {
 }
 
 function LayerView({ layer, aiOn, anomalyBusy, anomalyResult, onExplainAnomaly }) {
+  const { t } = useI18n();
   if (!layer) return null;
   return (
     <div>
@@ -91,7 +93,7 @@ function LayerView({ layer, aiOn, anomalyBusy, anomalyResult, onExplainAnomaly }
                     onClick={() => onExplainAnomaly(m.key, [m.value])}
                     aria-label={`Explain ${m.label} anomaly`}
                   >
-                    Explain
+                    {t('insights.performance.explain')}
                   </Button>
                   {anomalyResult[m.key] && (
                     <div className="mt-1 space-y-1">
@@ -110,7 +112,7 @@ function LayerView({ layer, aiOn, anomalyBusy, anomalyResult, onExplainAnomaly }
           ))}
         </div>
       ) : (
-        <p className="text-sm text-neutral-600">No metrics yet — start completing work to see trends.</p>
+        <p className="text-sm text-neutral-600">{t('insights.performance.noMetrics')}</p>
       )}
       {layer.privacyNote && <p className="mt-2 text-xs text-neutral-600">{layer.privacyNote}</p>}
     </div>
@@ -118,6 +120,7 @@ function LayerView({ layer, aiOn, anomalyBusy, anomalyResult, onExplainAnomaly }
 }
 
 export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem }) {
+  const { t } = useI18n();
   const [layer, setLayer] = useState('INDIVIDUAL');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -225,9 +228,9 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem 
   return (
     <div className="p-8 max-w-7xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-brand-navy">Performance</h1>
+        <h1 className="text-2xl font-bold text-brand-navy">{t('insights.performance.title')}</h1>
         <p className="mt-0.5 text-sm text-neutral-600">
-          Layered metrics — individual data is private; team, project, and org views are aggregated.
+          {t('insights.performance.subtitle')}
         </p>
       </div>
 
@@ -249,7 +252,7 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem 
                 : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
             ].join(' ')}
           >
-            {l.label}
+            {t(l.labelKey)}
           </button>
         ))}
       </div>
@@ -267,7 +270,7 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem 
       {selectorItems && selectorItems.length > 0 && (
         <div className="mb-4">
           <label htmlFor="kpi-entity" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-neutral-600">
-            {layer === 'TEAM' ? 'Team' : 'Project'}
+            {layer === 'TEAM' ? t('insights.performance.team') : t('insights.performance.project')}
           </label>
           <select
             id="kpi-entity"
@@ -320,7 +323,7 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem 
       {!loading && !error && !noEntity && layer !== 'MANAGER' && (
         <section aria-labelledby="cycle-time-heading" className="mt-6 rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
           <h3 id="cycle-time-heading" className="mb-3 text-base font-semibold text-neutral-900 dark:text-neutral-100">
-            Cycle-time distribution
+            {t('insights.performance.cycleTimeDistribution')}
           </h3>
           {distEntry?.error ? (
             <div className="rounded-lg bg-semantic-danger-surface p-3 text-sm text-semantic-danger" role="alert">{distEntry.error}</div>

@@ -10,6 +10,8 @@ import { ConversationalDashboardPanel } from '@/components/works/organisms/conve
 import { WidgetBuilder } from '@/components/works/organisms/widget-builder';
 import { capabilityEnabled } from '@/lib/ai';
 import { DashboardAiSummary } from '@/components/works/organisms/dashboard-ai-summary';
+import { useI18n } from '@/lib/i18n';
+import { absoluteDate } from '@/lib/format';
 
 // Status breakdown of the items already on screen — the chartable series the AI summary band reads.
 // Built from data the client already rendered (no re-query); empty when there is nothing to chart.
@@ -75,6 +77,7 @@ export default function DashboardsView({
   showToast,
   onConversationalDashboardSaved,
 }) {
+  const { t } = useI18n();
   // Gate the NL entry on ITS capability (conversational_dashboard), not "any AI" — most-restrictive
   // wins is already resolved server-side (RB-40 §2). Hidden entirely when off; the deterministic
   // NL→spec fallback still works server-side when AI is on but over budget/unavailable.
@@ -106,10 +109,10 @@ export default function DashboardsView({
           <>
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h1 className="text-xl font-semibold text-neutral-900 dark:text-white">Dashboards</h1>
-                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">Build your own views — add widgets, arrange the grid, save.</p>
+                <h1 className="text-xl font-semibold text-neutral-900 dark:text-white">{t('insights.dashboards.title')}</h1>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{t('insights.dashboards.subtitle')}</p>
               </div>
-              <Button variant="action" onClick={createDashboard}>New dashboard</Button>
+              <Button variant="action" onClick={createDashboard}>{t('insights.dashboards.new')}</Button>
             </div>
             {convDashOn && (
               <ConversationalDashboardPanel
@@ -119,9 +122,9 @@ export default function DashboardsView({
               />
             )}
             {customDashboards.length === 0 ? (
-              <EmptyState icon={LayoutDashboard} title="No dashboards yet"
-                subtitle="Create a dashboard and drop in widgets to track what matters to you."
-                action={<Button variant="action" onClick={createDashboard}>New dashboard</Button>} />
+              <EmptyState icon={LayoutDashboard} title={t('insights.dashboards.emptyTitle')}
+                subtitle={t('insights.dashboards.emptySubtitle')}
+                action={<Button variant="action" onClick={createDashboard}>{t('insights.dashboards.new')}</Button>} />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {customDashboards.map(d => (
@@ -134,7 +137,7 @@ export default function DashboardsView({
                     </div>
                     <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mt-2 truncate">{d.name}</p>
                     <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                      {d.updatedAt ? `Updated ${new Date(d.updatedAt).toLocaleDateString()}` : '—'}
+                      {d.updatedAt ? absoluteDate(d.updatedAt) : '—'}
                     </p>
                   </div>
                 ))}
@@ -146,51 +149,51 @@ export default function DashboardsView({
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3 min-w-0">
                 <button onClick={() => setSelectedDashboard(null)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0">
-                  <ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Dashboards
+                  <ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{t('insights.dashboards.title')}
                 </button>
                 <h1 className="text-xl font-semibold text-neutral-900 dark:text-white truncate">{selectedDashboard.name}</h1>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 {!dashboardEditMode && <ExportButtons endpoint={`/dashboards/${selectedDashboard.id}/export`} targetId="dashboard-export-area"
                   rows={workItems.map(i => ({ ID: i.id, Title: i.title, Type: i.type, Status: i.status, Priority: i.priority, Assignee: i.assigneeId }))}
-                  filename={selectedDashboard.name || 'dashboard'} onError={() => showToast('Export failed — try again', 'error')} />}
+                  filename={selectedDashboard.name || 'dashboard'} onError={() => showToast(t('insights.common.exportFailed'), 'error')} />}
                 {!dashboardEditMode && (
                   <button onClick={() => mintShare(selectedDashboard.id)}
-                    className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">Share</button>
+                    className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">{t('insights.common.share')}</button>
                 )}
                 <Button variant={dashboardEditMode ? 'action' : 'secondary'} onClick={() => setDashboardEditMode(e => !e)}>
-                  {dashboardEditMode ? 'Done' : 'Edit'}
+                  {dashboardEditMode ? t('insights.common.done') : t('insights.common.edit')}
                 </Button>
-                <button onClick={() => deleteDashboard(selectedDashboard.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
+                <button onClick={() => deleteDashboard(selectedDashboard.id)} className="text-xs text-semantic-danger hover:underline">{t('insights.common.delete')}</button>
               </div>
             </div>
 
             {shareInfo && shareInfo.id === selectedDashboard.id && shareInfo.token && (
               <div className="flex items-center gap-2 mb-4 p-3 rounded-md bg-semantic-info-surface border border-neutral-200 dark:border-neutral-700">
-                <span className="text-xs font-semibold text-neutral-700 flex-shrink-0">Public link</span>
+                <span className="text-xs font-semibold text-neutral-700 flex-shrink-0">{t('insights.dashboards.publicLink')}</span>
                 <input readOnly aria-label="Public embed link"
                   value={`${window.location.origin}${window.location.pathname}?share=${shareInfo.token}`}
                   className="flex-1 min-w-0 text-xs font-mono rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-2 py-1" />
-                <button onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}${window.location.pathname}?share=${shareInfo.token}`); showToast('Link copied'); }}
-                  className="text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors flex-shrink-0">Copy</button>
-                <button onClick={() => stopShare(selectedDashboard.id)} className="text-xs text-semantic-danger hover:underline flex-shrink-0">Stop sharing</button>
+                <button onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}${window.location.pathname}?share=${shareInfo.token}`); showToast(t('insights.dashboards.linkCopied')); }}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors flex-shrink-0">{t('insights.common.copy')}</button>
+                <button onClick={() => stopShare(selectedDashboard.id)} className="text-xs text-semantic-danger hover:underline flex-shrink-0">{t('insights.dashboards.stopSharing')}</button>
               </div>
             )}
 
             <div className="flex flex-wrap items-center gap-2 mb-4">
-              <span className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Scope</span>
+              <span className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">{t('insights.dashboards.scope')}</span>
               {['PROJECT', 'TEAM', 'ORG'].map(s => (
                 <button key={s} type="button"
                   onClick={() => { setDashboardScope(s); fetchDashboardAggregate(s, dashboardTeamId); }}
                   className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${dashboardScope === s ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy'}`}>
-                  {s === 'PROJECT' ? 'Project' : s === 'TEAM' ? 'Team' : 'Organization'}
+                  {s === 'PROJECT' ? t('insights.dashboards.project') : s === 'TEAM' ? t('insights.dashboards.team') : t('insights.dashboards.organization')}
                 </button>
               ))}
               {dashboardScope === 'TEAM' && (
                 <select value={dashboardTeamId || ''} aria-label="Team"
                   onChange={e => { setDashboardTeamId(e.target.value); fetchDashboardAggregate('TEAM', e.target.value); }}
                   className="text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-1.5 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
-                  <option value="">Select a team…</option>
+                  <option value="">{t('insights.dashboards.selectTeam')}</option>
                   {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               )}
@@ -202,8 +205,8 @@ export default function DashboardsView({
             {dashboardEditMode && (
               <div className="mb-4 p-3 rounded-md bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide">Widget library</span>
-                  <span className="text-xs text-neutral-600 dark:text-neutral-400">Drag widgets to reorder</span>
+                  <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide">{t('insights.dashboards.widgetLibrary')}</span>
+                  <span className="text-xs text-neutral-600 dark:text-neutral-400">{t('insights.dashboards.dragToReorder')}</span>
                 </div>
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -236,9 +239,9 @@ export default function DashboardsView({
             )}
 
             {(selectedDashboard.widgets || []).length === 0 ? (
-              <EmptyState icon={Puzzle} title="Empty dashboard"
-                subtitle="Turn on Edit and add your first widget to start tracking."
-                action={<Button variant="action" onClick={() => setDashboardEditMode(true)}>Edit dashboard</Button>} />
+              <EmptyState icon={Puzzle} title={t('insights.dashboards.emptyWidgetsTitle')}
+                subtitle={t('insights.dashboards.emptyWidgetsSubtitle')}
+                action={<Button variant="action" onClick={() => setDashboardEditMode(true)}>{t('insights.dashboards.editDashboard')}</Button>} />
             ) : (
               <div id="dashboard-export-area" className="grid grid-cols-12 gap-4">
                 {selectedDashboard.widgets.map(w => (
@@ -264,7 +267,7 @@ export default function DashboardsView({
       )}
 
       {editingPivot && (
-        <Modal title={editingPivot === 'new' ? 'Add custom chart' : 'Edit chart'}
+        <Modal title={editingPivot === 'new' ? t('insights.dashboards.addCustomChart') : t('insights.dashboards.editChart')}
           onClose={() => setEditingPivot(null)} size="lg" className="max-h-[90vh] overflow-y-auto">
           <WidgetBuilder workspaceId={activeWorkspaceId} value={pivotInitial}
             onSave={savePivotWidget} onCancel={() => setEditingPivot(null)} />

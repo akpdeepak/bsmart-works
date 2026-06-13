@@ -26,6 +26,7 @@ export default function BqlView({
   workItems,
   activeWorkspaceId,
   aiCapabilities = [],
+  nameMaps = {},
   setBqlQuery,
   setSelectedItem,
   runBql,
@@ -450,6 +451,7 @@ export default function BqlView({
         <BqlResultsTable
           results={bqlResults}
           sort={sort}
+          nameMaps={nameMaps}
           onSort={(s) => runQuery({ sort: s })}
           onOpen={openItem}
           onShowMore={showMore}

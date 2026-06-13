@@ -270,7 +270,7 @@ public class AutomationService {
     boolean conditionMatchesBql(WorkItem item, String expr) {
         if (expr == null || expr.isBlank()) return true;
         try {
-            BqlCompiler.Compiled c = bqlCompiler.compile(expr, null);
+            BqlCompiler.Compiled c = bqlCompiler.compileFor(expr, BqlContext.trusted(null));
             if (c.sql().isBlank()) return true;
             String sql = "SELECT COUNT(*) FROM work_items WHERE id = ? AND deleted_at IS NULL AND (" + c.sql() + ")";
             List<Object> params = new ArrayList<>();

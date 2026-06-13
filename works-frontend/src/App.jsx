@@ -1655,9 +1655,11 @@ export default function App() {
     api.raw(`/permission-schemes/roles`, { method: 'POST', body: JSON.stringify({ ...newRoleForm, workspaceId: activeWorkspaceId }) })
       .then(r => r.json()).then(() => { fetchRoles(); fetchPermMatrix(); setShowRoleForm(false); setNewRoleForm({ name: '', tier: 2 }); }).catch(reportError);
   }
-  function runBql() {
+  function runBql(sort) {
     setBqlError('');
-    api.raw(`/bql/execute`, { method: 'POST', body: JSON.stringify({ query: bqlQuery }) })
+    const body = { query: bqlQuery, workspaceId: activeWorkspaceId };
+    if (typeof sort === 'string' && sort) body.sort = sort;
+    api.raw(`/bql/execute`, { method: 'POST', body: JSON.stringify(body) })
       .then(r => r.json()).then(d => {
         if (d.error) { setBqlError(d.error); setBqlResults([]); }
         else setBqlResults(Array.isArray(d) ? d : []);

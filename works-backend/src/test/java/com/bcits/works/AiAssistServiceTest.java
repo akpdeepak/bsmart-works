@@ -264,7 +264,7 @@ class AiAssistServiceTest {
     @Test
     void deterministicNlToBql_mapsAssignedToMeKeyword() {
         String bql = AiAssistService.deterministicNlToBql("items assigned to me");
-        assertThat(bql).contains("assigneeId = @me");
+        assertThat(bql).contains("assignee = currentUser()");
     }
 
     @Test
@@ -280,9 +280,26 @@ class AiAssistServiceTest {
     }
 
     @Test
+    void deterministicNlToBql_outputCompilesAsCanonicalBql() {
+        // P1 regression: the NL→BQL fallback must emit BQL the compiler can actually parse.
+        // Previously it emitted @me / @startOfWeek / = null, which the compiler could not handle.
+        BqlCompiler compiler = new BqlCompiler();
+        for (String phrase : List.of(
+                "in progress high priority bugs assigned to me",
+                "unassigned overdue items",
+                "items created this week",
+                "critical bugs created today")) {
+            String bql = AiAssistService.deterministicNlToBql(phrase);
+            // Must not throw — proves the dialects are unified.
+            BqlCompiler.Compiled c = compiler.compile(bql, "user-1");
+            assertThat(c.sql()).isNotNull();
+        }
+    }
+
+    @Test
     void deterministicNlToBql_combinesMultipleClauses() {
         String bql = AiAssistService.deterministicNlToBql("in progress high priority bugs assigned to me");
-        assertThat(bql).contains("status").contains("priority").contains("type").contains("assigneeId");
+        assertThat(bql).contains("status").contains("priority").contains("type").contains("assignee = currentUser()");
     }
 
     // ── fixtures ─────────────────────────────────────────────────────────────────

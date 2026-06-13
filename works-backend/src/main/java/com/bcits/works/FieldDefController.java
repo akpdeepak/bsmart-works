@@ -99,11 +99,16 @@ public class FieldDefController {
 
     @PostMapping
     public FieldDef create(@Valid @RequestBody FieldDef fd) {
+        // Tenant scoping (RB-40 §1): a field def is workspace-owned data, so creating one must be
+        // gated by the caller's permission in *that* workspace. Previously this method ran with no
+        // RBAC or workspace check at all, so any authenticated caller could create a field def in
+        // any workspace. The other methods here scope by existing.getWorkspaceId(); create scopes
+        // by the workspaceId on the incoming record.
+        rbac.require(authenticatedUser.id(), fd.getWorkspaceId(), "view_items");
         fd.setId("FD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         fd.setCreatedAt(OffsetDateTime.now());
-        if (fd.getConfig() == null) fd.setConfig("{}"); {
+        if (fd.getConfig() == null) fd.setConfig("{}");
         return fieldDefRepo.save(fd);
-        }
     }
 
     @PutMapping("/{id}")

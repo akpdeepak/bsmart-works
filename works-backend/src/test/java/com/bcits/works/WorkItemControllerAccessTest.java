@@ -138,6 +138,47 @@ class WorkItemControllerAccessTest {
         verify(jdbc, never()).update(anyString(), any(), any());
     }
 
+    // ── permanent delete (Trash "Delete permanently") ───────────────────────────
+    // This destructive purge previously ran with NO RBAC and NO workspace check — a cross-tenant
+    // IDOR letting any authenticated user purge any item by ID. It is now gated like the soft delete.
+
+    @Test
+    void permanentDelete_deniedForCallerOutsideTheResourceWorkspace() {
+        when(repository.findById("WRK-1")).thenReturn(Optional.of(itemInForeignWorkspace()));
+        when(rbac.workspaceForProject("PROJ-B")).thenReturn(FOREIGN_WS);
+        doThrowForbiddenOnRequire(FOREIGN_WS, "delete_items");
+
+        assertThatThrownBy(() -> controller.permanentDelete("WRK-1"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+
+        // No cascade deletes, no repository.delete() across the tenant boundary.
+        verify(jdbc, never()).update(anyString(), any(), any());
+        verify(repository, never()).delete(any());
+    }
+
+    @Test
+    void permanentDelete_unknownItemReturns404WithoutTouchingTheDatabase() {
+        when(repository.findById("WRK-missing")).thenReturn(Optional.empty());
+
+        assertThat(controller.permanentDelete("WRK-missing").getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        verify(repository, never()).delete(any());
+    }
+
+    @Test
+    void permanentDelete_allowedForCallerInsideTheResourceWorkspacePurgesTheItem() {
+        WorkItem own = new WorkItem();
+        own.setId("WRK-2");
+        own.setProjectId("PROJ-A");
+        when(repository.findById("WRK-2")).thenReturn(Optional.of(own));
+        when(rbac.workspaceForProject("PROJ-A")).thenReturn("ws-A");
+        // rbac.require is a no-op (permitted) by default on the mock.
+
+        assertThat(controller.permanentDelete("WRK-2").getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(rbac).require(eq(CALLER), eq("ws-A"), eq("delete_items"));
+        verify(repository).delete(own);
+    }
+
     // RbacService.require() throws 403 when the caller lacks the permission in that workspace.
     private void doThrowForbiddenOnRequire(String workspaceId, String permission) {
         org.mockito.Mockito.doThrow(ApiException.forbidden("denied"))

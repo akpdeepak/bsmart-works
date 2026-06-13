@@ -609,9 +609,15 @@ public class WorkItemController {
 
     @DeleteMapping("/{id}/permanent")
     public ResponseEntity<Void> permanentDelete(@PathVariable String id) {
+        String userId = authenticatedUser.id();
         var opt = repository.findById(id);
         if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build();
         var item = opt.get();
+        // RBAC + tenant scoping (RB-40 §1): a permanent purge is the most destructive op on a work
+        // item and must be gated exactly like the soft delete above. Without this, any authenticated
+        // user could purge any item (and its comments/links/attachments) from any workspace by ID.
+        String wsId = rbac.workspaceForProject(item.getProjectId());
+        if (wsId != null) rbac.require(userId, wsId, "delete_items");
         jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);
         jdbc.update("DELETE FROM comments WHERE work_item_id = ?", id);
         jdbc.update("DELETE FROM work_item_links WHERE source_id = ? OR target_id = ?", id, id);

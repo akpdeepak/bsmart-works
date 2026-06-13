@@ -14,7 +14,7 @@ public final class BqlAst {
 
     /** A boolean expression node. */
     public sealed interface Expr
-        permits And, Or, Not, Comparison, InList, Between, IsEmpty { }
+        permits And, Or, Not, Comparison, InList, Between, IsEmpty, History { }
 
     public record And(Expr left, Expr right) implements Expr { }
 
@@ -33,6 +33,15 @@ public final class BqlAst {
 
     /** {@code field IS EMPTY} / {@code field IS NOT EMPTY} — proper null check. */
     public record IsEmpty(String field, boolean negated) implements Expr { }
+
+    /**
+     * Historical query over the event store: {@code field WAS value} (held that value at some point)
+     * or {@code field CHANGED [FROM a] [TO b] [AFTER|BEFORE|ON when]}. {@code changed} distinguishes
+     * the two modes; {@code was} is the WAS value; {@code from}/{@code to}/{@code whenOp}/{@code when}
+     * are the optional CHANGED qualifiers.
+     */
+    public record History(String field, boolean changed, Value was, Value from, Value to,
+                          String whenOp, Value when) implements Expr { }
 
     /** A right-hand-side value: either a literal (quoted/bareword/number) or a function call. */
     public sealed interface Value permits Literal, FunctionCall { }

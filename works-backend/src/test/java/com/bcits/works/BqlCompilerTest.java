@@ -227,6 +227,52 @@ class BqlCompilerTest {
         assertThrows(BqlException.class, () -> compiler.compile("storyPoints ~ 5", "u"));
     }
 
+    // ── Historical operators (WAS / CHANGED over the event store) ─────────────────────
+
+    @Test
+    void was_matchesEitherSideOfAChange() {
+        BqlCompiler.Compiled c = compiler.compile("status WAS Blocked", "u");
+        assertEquals("id IN (SELECT aggregate_id FROM events WHERE field_name = ? "
+            + "AND (new_value = ? OR old_value = ?))", c.sql());
+        assertEquals(List.of("status", "Blocked", "Blocked"), c.params());
+    }
+
+    @Test
+    void changed_anyTransition() {
+        BqlCompiler.Compiled c = compiler.compile("status CHANGED", "u");
+        assertEquals("id IN (SELECT aggregate_id FROM events WHERE field_name = ?)", c.sql());
+        assertEquals(List.of("status"), c.params());
+    }
+
+    @Test
+    void changedFromTo_constrainsBothSides() {
+        BqlCompiler.Compiled c = compiler.compile("status CHANGED FROM Open TO Done", "u");
+        assertEquals("id IN (SELECT aggregate_id FROM events WHERE field_name = ? "
+            + "AND old_value = ? AND new_value = ?)", c.sql());
+        assertEquals(List.of("status", "Open", "Done"), c.params());
+    }
+
+    @Test
+    void changedAfter_function_constrainsOccurredAt() {
+        BqlCompiler.Compiled c = compiler.compile("assignee CHANGED AFTER today()", "u");
+        assertEquals("id IN (SELECT aggregate_id FROM events WHERE field_name = ? "
+            + "AND occurred_at >= CURRENT_DATE)", c.sql());
+        assertEquals(List.of("assignee"), c.params());
+    }
+
+    @Test
+    void changedAfter_dateLiteral_castsToDate() {
+        BqlCompiler.Compiled c = compiler.compile("status CHANGED AFTER 2026-01-01", "u");
+        assertEquals("id IN (SELECT aggregate_id FROM events WHERE field_name = ? "
+            + "AND occurred_at >= ?::date)", c.sql());
+        assertEquals(List.of("status", "2026-01-01"), c.params());
+    }
+
+    @Test
+    void historyOnUntrackedField_isRejected() {
+        assertThrows(BqlException.class, () -> compiler.compile("description WAS x", "u"));
+    }
+
     @Test
     void daysAgo_nonNumericArg_throws() {
         assertThrows(BqlException.class, () -> compiler.compile("createdAt >= daysAgo(abc)", "u"));

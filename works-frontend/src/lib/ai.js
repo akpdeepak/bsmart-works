@@ -43,6 +43,11 @@ export const aiClient = {
     api.send(`/ai/kb/suggest?workspaceId=${ws(workspaceId)}`, { method: 'POST', body: { text } }),
   route: (workspaceId, text) =>
     api.send(`/ai/route?workspaceId=${ws(workspaceId)}`, { method: 'POST', body: { text } }),
+  // Cap J — AI summary + anomaly explanation over an already-rendered chart/dashboard series.
+  // The caller passes the data it already aggregated (title + [{ label, value }]); the server
+  // never re-queries work items and always returns a usable result (meta.fallback says if AI ran).
+  dashboardSummary: (workspaceId, payload) =>
+    api.send(`/ai/dashboard-summary?workspaceId=${ws(workspaceId)}`, { method: 'POST', body: payload }),
 };
 
 // Whether the workspace exposes any AI at all — the AI button disappears entirely when not.

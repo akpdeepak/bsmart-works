@@ -4,6 +4,18 @@ import { EmptyState } from '@/components/works/atoms/empty-state';
 import { ExportButtons } from '@/components/works/export-buttons';
 import { DashboardWidgetCard } from '@/components/works/organisms/dashboard-widget-card';
 import { DashboardDrillModal } from '@/components/works/organisms/dashboard-drill-modal';
+import { DashboardAiSummary } from '@/components/works/organisms/dashboard-ai-summary';
+
+// Status breakdown of the items already on screen — the chartable series the AI summary band reads.
+// Built from data the client already rendered (no re-query); empty when there is nothing to chart.
+function statusSeries(items) {
+  const counts = new Map();
+  (items || []).forEach((i) => {
+    const key = i.status || 'Unknown';
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+  return Array.from(counts, ([label, value]) => ({ label, value }));
+}
 
 const EXTRA_WIDGET_CATEGORIES = ['Agile', 'Performance', 'AI', 'Compliance'];
 const EXTRA_WIDGET_PRESETS = [
@@ -36,6 +48,8 @@ export default function DashboardsView({
   sprints,
   velocityData,
   currentUser,
+  activeWorkspaceId,
+  aiCapabilities = [],
   createDashboard,
   openDashboard,
   deleteDashboard,
@@ -176,6 +190,11 @@ export default function DashboardsView({
                   ))}
                 </div>
               </div>
+            )}
+
+            {!dashboardEditMode && (
+              <DashboardAiSummary workspaceId={activeWorkspaceId} aiCapabilities={aiCapabilities}
+                title={selectedDashboard.name} series={statusSeries(workItems)} />
             )}
 
             {(selectedDashboard.widgets || []).length === 0 ? (

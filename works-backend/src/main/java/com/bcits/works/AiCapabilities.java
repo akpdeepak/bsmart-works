@@ -49,6 +49,7 @@ public final class AiCapabilities {
     public static final String CONVERSATIONAL_DASHBOARD = "conversational_dashboard"; // Cap O — NL → dashboard widget spec
     public static final String STRUCTURED_EXTRACTION  = "structured_extraction";  // Cap I — structured-data extraction from text
     public static final String SUPPORT_CHAT           = "support_chat";           // Cap N — customer-chat tier-1 auto-response
+    public static final String DASHBOARD_SUMMARY      = "dashboard_summary";      // Cap J — chart/dashboard summary + anomaly
 
     /** Description of each capability and its deterministic fallback, surfaced to the UI panel. */
     public record Descriptor(String id, String label, AiModelTier defaultTier, String fallback) { }
@@ -130,7 +131,10 @@ public final class AiCapabilities {
         new Descriptor(STRUCTURED_EXTRACTION, "Structured data extraction", AiModelTier.HAIKU,
             "Falls back to deterministic pattern extraction (dates, ids, emails, key: value lines) from the text."),
         new Descriptor(SUPPORT_CHAT, "Customer-chat tier-1 assistant", AiModelTier.HAIKU,
-            "Falls back to a canned acknowledgement and automatic escalation to a human agent — no customer waits on AI.")
+            "Falls back to a canned acknowledgement and automatic escalation to a human agent — no customer waits on AI."),
+        new Descriptor(DASHBOARD_SUMMARY, "Dashboard / chart summary + anomaly explanation", AiModelTier.HAIKU,
+            "Falls back to a deterministic structured digest of the already-rendered series — largest bucket, "
+            + "notable deltas and statistical outliers — with the charts shown standalone.")
     );
 
     private static final Map<String, Descriptor> BY_ID =

@@ -3587,6 +3587,8 @@ export default function App() {
               sprints={sprints}
               velocityData={velocityData}
               currentUser={currentUser}
+              activeWorkspaceId={activeWorkspaceId}
+              aiCapabilities={aiCapabilities}
               createDashboard={createDashboard}
               openDashboard={openDashboard}
               deleteDashboard={deleteDashboard}

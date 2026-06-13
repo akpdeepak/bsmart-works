@@ -1657,7 +1657,10 @@ export default function App() {
   function runBql(opts) {
     setBqlError('');
     const o = opts && typeof opts === 'object' ? opts : {};
-    const body = { query: bqlQuery, workspaceId: activeWorkspaceId };
+    // An explicit query (saved-view / history / shared-link run) avoids the stale-closure read of
+    // bqlQuery when the editor was just set in the same tick.
+    const query = typeof o.query === 'string' ? o.query : bqlQuery;
+    const body = { query, workspaceId: activeWorkspaceId };
     if (typeof o.sort === 'string' && o.sort) body.sort = o.sort;
     if (Number.isFinite(o.size)) body.size = String(o.size);
     api.raw(`/bql/execute`, { method: 'POST', body: JSON.stringify(body) })

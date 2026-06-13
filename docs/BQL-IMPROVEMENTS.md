@@ -162,3 +162,25 @@ with no try/catch in `ComplianceEvaluationService`):
   `BqlType.DATE` and compile against `value_date`, so `>`, `<`, `>=`, `<=`, `BETWEEN` work;
   `FieldDefController` keeps `value_date` in sync on write. Date literals bind as `?::date` (custom
   *and* built-in date fields) so a string param no longer mismatches a date column.
+
+## 10. Round 5 — JIRA-style navigator + JQL parity
+
+Brings the BQL screen (top-bar **BQL** button → `navigate('bql')`) to JIRA filter / JQL parity and
+fixes several long-standing JQL pain points.
+
+**JIRA-filter parity**
+- **Results are a sortable issue navigator** (`bql-results-table.jsx`): click a column header to sort
+  (compiles to the backend's allow-listed `ORDER BY`), a **column chooser** (persisted per user in
+  `localStorage`), and **CSV export**. `/execute` now returns a wider column set to choose from.
+- **Rows always open their work item** — like JIRA, clicking any result opens the detail panel; if
+  the item isn't in the local cache the view fetches it by id (`GET /work-items/{id}`). Previously a
+  result not in the cache silently did nothing.
+- **Shareable / bookmarkable query URL** — a run reflects `?bql=…&bqlSort=…` into the URL
+  (`replaceState`), seeded back on load + auto-run; a **Copy link** button shares without saving.
+
+**JQL pain points addressed**
+- **Inline, caret-aware autocomplete** in the editor (fields → operators → enum values → connectors),
+  keyboard-navigable (↑/↓/Enter/Esc) — the signature JQL editor experience, schema-driven.
+- **Positional parse errors** — `BqlException` carries a character offset, surfaced by `/validate`
+  and shown as "At position N: …", instead of JQL's opaque, locationless errors.
+- **Recent-query history** (last 8, `localStorage`) for one-click re-run — something JIRA lacks.

@@ -1,13 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
-import { Sparkles, X, BookmarkPlus, Bookmark, Check, AlertCircle, Plus, Trash2, SlidersHorizontal } from 'lucide-react';
+import { Sparkles, X, BookmarkPlus, Bookmark, Check, AlertCircle, Plus, Trash2, SlidersHorizontal, Link2, Clock } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { savedViewsClient } from '@/lib/saved-views';
 import { Button } from '@/components/works/button';
-import { StatusBadge } from '@/components/works/status-badge';
-import { statusToCategory } from '@/components/works/status';
-import { PriorityBadge } from '@/components/works/priority-badge';
 import { capabilityEnabled } from '@/lib/ai';
-import { NULLARY_OPS, SET_OPS, rowToClause } from '@/lib/bql-builder';
+import { NULLARY_OPS, SET_OPS, rowToClause, suggestions, applySuggestion } from '@/lib/bql-builder';
+import BqlResultsTable from '@/views/bql-results-table';
+
+const HISTORY_KEY = 'bql.history';
+
+function loadHistory() {
+  try {
+    const h = JSON.parse(localStorage.getItem(HISTORY_KEY));
+    return Array.isArray(h) ? h : [];
+  } catch { return []; }
+}
 
 // BQL query view. The parent owns query state + run/save/fetch handlers; this view adds the
 // schema-driven editor assists (P3): live validation, insert chips, and a visual builder that
@@ -38,13 +45,98 @@ export default function BqlView({
   const [rows, setRows] = useState([{ field: '', op: '=', value: '' }]);
   const [connector, setConnector] = useState('AND');
   const [resultSize, setResultSize] = useState(100);
+  const [sort, setSort] = useState('created_at desc');
+  const [history, setHistory] = useState(loadHistory);
+  const [ac, setAc] = useState({ open: false, options: [], partial: '', index: 0 });
   const queryRef = useRef(null);
 
-  const showMore = () => {
-    const next = Math.min(resultSize + 100, 500);
-    setResultSize(next);
-    runBql({ size: next });
+  // Reflect the current query + sort into the URL so a run is shareable/bookmarkable (JIRA filter
+  // URLs), without polluting history. Uses replaceState; the app's path stays unchanged.
+  const syncUrl = (query, sortVal) => {
+    try {
+      const params = new URLSearchParams();
+      if (query && query.trim()) params.set('bql', query.trim());
+      if (sortVal) params.set('bqlSort', sortVal);
+      const qs = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+    } catch { /* ignore */ }
   };
+
+  const recordHistory = (q) => {
+    const query = (q || '').trim();
+    if (!query) return;
+    setHistory(prev => {
+      const next = [query, ...prev.filter(x => x !== query)].slice(0, 8);
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
+  // Single entry point for running: records history, syncs the URL, then delegates to the parent.
+  const runQuery = (opts = {}) => {
+    const query = typeof opts.query === 'string' ? opts.query : bqlQuery;
+    const nextSort = opts.sort !== undefined ? opts.sort : sort;
+    const nextSize = opts.size !== undefined ? opts.size : resultSize;
+    if (opts.sort !== undefined) setSort(opts.sort);
+    if (opts.size !== undefined) setResultSize(opts.size);
+    recordHistory(query);
+    syncUrl(query, nextSort);
+    runBql({ query, sort: nextSort, size: nextSize });
+  };
+
+  const showMore = () => runQuery({ size: Math.min(resultSize + 100, 500) });
+
+  // Open a result reliably — like JIRA, any row opens its item even if it isn't in the local cache.
+  const openItem = (item) => {
+    const full = workItems.find(w => w.id === item.id);
+    if (full) { setSelectedItem(full); return; }
+    api.send(`/work-items/${encodeURIComponent(item.id)}`).then(setSelectedItem).catch(() => {});
+  };
+
+  const copyLink = () => {
+    const params = new URLSearchParams();
+    if (bqlQuery.trim()) params.set('bql', bqlQuery.trim());
+    if (sort) params.set('bqlSort', sort);
+    const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+    navigator.clipboard?.writeText(url).catch(() => {});
+  };
+
+  // ── Inline autocomplete (caret-aware, schema-driven) ──────────────────────────────
+  const refreshAc = (val, caret) => {
+    if (!schema) { setAc(a => ({ ...a, open: false })); return; }
+    const { partial, options } = suggestions(val.slice(0, caret ?? val.length), schema);
+    setAc({ open: options.length > 0, options, partial, index: 0 });
+  };
+
+  const acceptSuggestion = (choice) => {
+    const el = queryRef.current;
+    const caret = el ? el.selectionStart : bqlQuery.length;
+    const next = applySuggestion(bqlQuery, caret, ac.partial, choice);
+    setBqlQuery(next.text);
+    setAc(a => ({ ...a, open: false }));
+    setTimeout(() => { if (el) { el.focus(); el.setSelectionRange(next.caret, next.caret); } }, 0);
+  };
+
+  const onQueryKeyDown = (e) => {
+    if (ac.open && ac.options.length) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setAc(a => ({ ...a, index: (a.index + 1) % a.options.length })); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setAc(a => ({ ...a, index: (a.index - 1 + a.options.length) % a.options.length })); return; }
+      if (e.key === 'Enter' && !(e.ctrlKey || e.metaKey)) { e.preventDefault(); acceptSuggestion(ac.options[ac.index]); return; }
+      if (e.key === 'Escape') { e.preventDefault(); setAc(a => ({ ...a, open: false })); return; }
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); setAc(a => ({ ...a, open: false })); runQuery(); }
+  };
+
+  // Seed from a shared URL once on mount (deferred so no setState runs synchronously in the effect).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('bql');
+    if (!q) return undefined;
+    const s = params.get('bqlSort') || undefined;
+    const t = setTimeout(() => { setBqlQuery(q); if (s) setSort(s); runBql({ query: q, sort: s }); }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const translateNl = () => {
     if (!nlText.trim() || !activeWorkspaceId) return;
@@ -175,28 +267,67 @@ export default function BqlView({
                 : <span className="flex items-center gap-1 text-xs text-semantic-danger"><AlertCircle aria-hidden="true" className="h-3.5 w-3.5" /> {validation.error}</span>
             )}
           </div>
-          <div className="flex gap-2 mt-2">
+          <div className="relative mt-2">
             <textarea
               id="bql-query"
               ref={queryRef}
-              className="input flex-1 font-mono text-sm resize-none"
+              className="input w-full font-mono text-sm resize-none"
               rows={3}
               placeholder={'status = Open AND (priority = High OR priority = Critical)\nassignee = currentUser() AND createdAt >= startOfWeek()\ndueDate < today() AND status NOT IN (Done, Cancelled)'}
               value={bqlQuery}
-              onChange={e => setBqlQuery(e.target.value)}
-              onKeyDown={e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runBql(); } }}
+              onChange={e => { setBqlQuery(e.target.value); refreshAc(e.target.value, e.target.selectionStart); }}
+              onKeyDown={onQueryKeyDown}
+              onBlur={() => setTimeout(() => setAc(a => ({ ...a, open: false })), 120)}
+              aria-autocomplete="list"
             />
+            {ac.open && (
+              <ul role="listbox" className="absolute left-0 right-0 mt-1 z-overlay max-h-56 overflow-y-auto bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg py-1 text-sm">
+                {ac.options.map((opt, i) => (
+                  <li key={opt} role="option" aria-selected={i === ac.index}>
+                    <button type="button"
+                      // onMouseDown (not onClick) so it fires before the textarea blur closes the list.
+                      onMouseDown={e => { e.preventDefault(); acceptSuggestion(opt); }}
+                      className={`flex w-full items-center px-3 py-1.5 text-left font-mono ${i === ac.index ? 'bg-neutral-100 dark:bg-neutral-700 text-brand-navy' : 'text-neutral-700 dark:text-neutral-200'}`}>
+                      {opt}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
+          {validation && !validation.valid && validation.position >= 0 && (
+            <p className="text-xs text-semantic-danger mt-2 font-mono">At position {validation.position}: {validation.error}</p>
+          )}
           {bqlError && <p className="text-xs text-semantic-danger mt-2 font-mono">{bqlError}</p>}
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="action" onClick={() => runBql()}>Run Query (Ctrl+Enter)</Button>
+          <Button variant="action" onClick={() => runQuery()}>Run Query (Ctrl+Enter)</Button>
           <Button variant="secondary" leftIcon={<SlidersHorizontal aria-hidden="true" className="h-3.5 w-3.5" />}
             onClick={() => setBuilderOpen(o => !o)} aria-expanded={builderOpen}>
             Visual builder
           </Button>
-          <span className="text-xs text-neutral-500 ml-auto">Save a query as a reusable View below.</span>
+          <Button variant="ghost" leftIcon={<Link2 aria-hidden="true" className="h-3.5 w-3.5" />}
+            onClick={copyLink} disabled={!bqlQuery.trim()} title="Copy a shareable link to this query">
+            Copy link
+          </Button>
         </div>
+
+        {/* Recent queries — quick re-run (JIRA lacks query history; addresses a JQL pain point) */}
+        {history.length > 0 && (
+          <div className="mt-3 flex items-start gap-2 text-xs">
+            <Clock aria-hidden="true" className="h-3.5 w-3.5 text-neutral-400 mt-1 shrink-0" />
+            <div className="flex flex-wrap gap-1">
+              {history.map(q => (
+                <button key={q} type="button"
+                  onClick={() => { setBqlQuery(q); runQuery({ query: q }); }}
+                  title={q}
+                  className="font-mono max-w-xs truncate bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded px-1.5 py-0.5 text-neutral-600 dark:text-neutral-300 hover:border-brand-navy hover:text-brand-navy transition-colors">
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Schema-driven reference — click any token to insert it (autocomplete-by-click) */}
         {schema && (
@@ -297,7 +428,7 @@ export default function BqlView({
         {savedViews.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {savedViews.map(v => (
-              <button key={v.id} onClick={() => { setBqlQuery(v.bqlFilter || ''); runBql(); }}
+              <button key={v.id} onClick={() => { setBqlQuery(v.bqlFilter || ''); runQuery({ query: v.bqlFilter || '' }); }}
                 className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5 text-sm hover:border-brand-navy transition-colors group"
                 aria-label={`Load view: ${v.name}`}>
                 <Bookmark aria-hidden="true" className="h-3.5 w-3.5 text-brand-navy flex-shrink-0" />
@@ -314,28 +445,16 @@ export default function BqlView({
         )}
       </div>
 
-      {/* Results */}
+      {/* Results — JIRA-style navigator: sortable columns, column chooser, CSV export */}
       {bqlResults.length > 0 && (
-        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
-            <span className="text-sm font-semibold text-neutral-900">{bqlResults.length} result{bqlResults.length !== 1 ? 's' : ''}</span>
-            {bqlResults.length >= resultSize && resultSize < 500 && (
-              <Button variant="ghost" size="sm" onClick={showMore}>Show more</Button>
-            )}
-          </div>
-          <div className="divide-y divide-neutral-50 max-h-96 overflow-y-auto">
-            {bqlResults.map((item, i) => (
-              <div key={item.id || i} role="button" tabIndex={0} className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40"
-                onClick={() => { const full = workItems.find(w => w.id === item.id); if (full) setSelectedItem(full); }}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const full = workItems.find(w => w.id === item.id); if (full) setSelectedItem(full); } }}>
-                <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400 w-24 flex-shrink-0">{item.id}</span>
-                <span className="flex-1 text-sm font-medium text-neutral-900 truncate">{item.title}</span>
-                {item.status && <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>}
-                {item.priority && <PriorityBadge priority={item.priority} />}
-              </div>
-            ))}
-          </div>
-        </div>
+        <BqlResultsTable
+          results={bqlResults}
+          sort={sort}
+          onSort={(s) => runQuery({ sort: s })}
+          onOpen={openItem}
+          onShowMore={showMore}
+          canShowMore={bqlResults.length >= resultSize && resultSize < 500}
+        />
       )}
       {bqlResults.length === 0 && bqlQuery && !bqlError && (
         <div className="text-center py-12 text-neutral-600 dark:text-neutral-400">

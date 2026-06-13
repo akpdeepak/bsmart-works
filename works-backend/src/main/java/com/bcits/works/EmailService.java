@@ -97,6 +97,15 @@ public class EmailService {
             "If you didn't request this, you can safely ignore this email — your password won't change.");
     }
 
+    /** Periodic saved-view subscription summary — "your view X has N matching items". */
+    @Async
+    public void sendSubscriptionEmail(String recipientUserId, String viewName, int matchCount, String link) {
+        send(recipientUserId,
+            "Subscription: " + viewName,
+            "Your saved view \"" + viewName + "\" currently has " + matchCount
+                + " matching item" + (matchCount == 1 ? "" : "s") + ".\n\nOpen it: " + link);
+    }
+
     // ---- helpers ----
 
     private String safeName(String fullName) {

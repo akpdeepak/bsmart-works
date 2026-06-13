@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Sparkles, X, BookmarkPlus, Bookmark, Check, AlertCircle, Plus, Trash2, SlidersHorizontal, Link2, Clock } from 'lucide-react';
+import { Sparkles, X, BookmarkPlus, Bookmark, Check, AlertCircle, Plus, Trash2, SlidersHorizontal, Link2, Clock, Bell } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { savedViewsClient } from '@/lib/saved-views';
 import { Button } from '@/components/works/button';
@@ -40,6 +40,7 @@ export default function BqlView({
   const [savedViews, setSavedViews] = useState([]);
   const [viewName, setViewName] = useState('');
   const [viewSaving, setViewSaving] = useState(false);
+  const [subscriptions, setSubscriptions] = useState([]); // saved-view subscriptions for this user
 
   // P3 — editor assists
   const [schema, setSchema] = useState(null); // { fields, operators, functions, enums }
@@ -219,13 +220,37 @@ export default function BqlView({
   // Gate the NL→BQL panel on ITS capability (nl_to_bql), not "any AI" (RB-40 §2 most-restrictive).
   const aiOn = capabilityEnabled(aiCapabilities, 'nl_to_bql');
 
+  const refreshSubscriptions = () => {
+    if (!activeWorkspaceId) return;
+    api.send(`/bql-subscriptions?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
+      .then(r => setSubscriptions(Array.isArray(r) ? r : []))
+      .catch(() => setSubscriptions([]));
+  };
+
+  const subscriptionFor = (viewId) => subscriptions.find(s => s.savedViewId === viewId && s.active);
+
   useEffect(() => {
     if (!activeWorkspaceId) return;
     savedViewsClient.list(activeWorkspaceId).then(r => setSavedViews(Array.isArray(r) ? r : [])).catch(() => {});
+    refreshSubscriptions();
     api.send(`/bql/schema?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
       .then(setSchema)
       .catch(() => setSchema(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWorkspaceId]);
+
+  // Toggle a daily, in-app + email subscription to a saved view (the manage UI can refine later).
+  const toggleSubscribe = (v) => {
+    if (!activeWorkspaceId) return;
+    const existing = subscriptionFor(v.id);
+    const req = existing
+      ? api.send(`/bql-subscriptions/${encodeURIComponent(existing.id)}?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, { method: 'DELETE' })
+      : api.send(`/bql-subscriptions?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, {
+        method: 'POST',
+        body: JSON.stringify({ savedViewId: v.id, frequency: 'DAILY', channels: 'BOTH' }),
+      });
+    req.then(refreshSubscriptions).catch(() => {});
+  };
 
   // Live validation — debounced; surfaces parse/field errors before the user runs the query.
   // All setState happens inside the timeout (async), never synchronously in the effect body.
@@ -502,20 +527,34 @@ export default function BqlView({
         </div>
         {savedViews.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
-            {savedViews.map(v => (
-              <button key={v.id} onClick={() => loadSavedView(v)}
-                className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5 text-sm hover:border-brand-navy transition-colors group"
-                aria-label={`Load view: ${v.name}`}>
-                <Bookmark aria-hidden="true" className="h-3.5 w-3.5 text-brand-navy flex-shrink-0" />
-                <span className="font-medium text-neutral-900 dark:text-neutral-100">{v.name}</span>
-                {v.isShared && <span className="text-xs text-neutral-500">shared</span>}
-                <button type="button" onClick={e => { e.stopPropagation(); deleteView(v.id); }}
-                  className="text-neutral-300 hover:text-semantic-danger opacity-0 group-hover:opacity-100 transition-opacity ml-0.5"
-                  aria-label={`Remove view ${v.name}`}>
-                  <X className="h-3.5 w-3.5" aria-hidden="true" />
-                </button>
-              </button>
-            ))}
+            {savedViews.map(v => {
+              const subscribed = !!subscriptionFor(v.id);
+              return (
+                // Sibling controls (not nested buttons) — load, subscribe, delete — for a11y (RB-30 §6).
+                <div key={v.id}
+                  className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg pl-3 pr-2 py-1.5 text-sm hover:border-brand-navy transition-colors group">
+                  <button type="button" onClick={() => loadSavedView(v)}
+                    className="flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded-sm"
+                    aria-label={`Load view: ${v.name}`}>
+                    <Bookmark aria-hidden="true" className="h-3.5 w-3.5 text-brand-navy flex-shrink-0" />
+                    <span className="font-medium text-neutral-900 dark:text-neutral-100">{v.name}</span>
+                    {v.isShared && <span className="text-xs text-neutral-500">shared</span>}
+                  </button>
+                  <button type="button" onClick={() => toggleSubscribe(v)}
+                    className={`${subscribed ? 'text-brand-navy' : 'text-neutral-300 hover:text-brand-navy'} transition-colors`}
+                    aria-label={subscribed ? `Unsubscribe from ${v.name}` : `Subscribe to ${v.name} (daily summary)`}
+                    aria-pressed={subscribed}
+                    title={subscribed ? 'Subscribed — daily summary' : 'Subscribe — daily summary'}>
+                    <Bell className={`h-3.5 w-3.5 ${subscribed ? 'fill-brand-navy' : ''}`} aria-hidden="true" />
+                  </button>
+                  <button type="button" onClick={() => deleteView(v.id)}
+                    className="text-neutral-300 hover:text-semantic-danger opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label={`Remove view ${v.name}`}>
+                    <X className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

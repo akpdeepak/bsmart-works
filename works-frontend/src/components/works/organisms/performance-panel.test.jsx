@@ -8,11 +8,20 @@ vi.mock('@/lib/kpi', async () => {
   const actual = await vi.importActual('@/lib/kpi');
   return {
     ...actual,
-    kpiClient: { personal: vi.fn(), org: vi.fn(), manager: vi.fn(), team: vi.fn(), project: vi.fn() },
+    kpiClient: {
+      personal: vi.fn(), org: vi.fn(), manager: vi.fn(), team: vi.fn(), project: vi.fn(),
+      distribution: vi.fn(), shares: vi.fn(), share: vi.fn(), unshare: vi.fn(),
+    },
   };
 });
 
 vi.mock('@/lib/apiClient', () => ({ api: { send: vi.fn() } }));
+
+const DISTRIBUTION = { median: 36, p85: 200, buckets: [2, 5, 3, 1, 0], outliers: ['WI-101', 'WI-102'] };
+const USERS = [
+  { id: 'u-1', fullName: 'Alice Admin', email: 'alice@x.io' },
+  { id: 'u-2', fullName: 'Bob Builder', email: 'bob@x.io' },
+];
 
 const PERSONAL = {
   scopeLevel: 'INDIVIDUAL', scopeId: 'me', label: 'Personal', privacyNote: '',
@@ -34,6 +43,7 @@ beforeEach(() => {
   api.send.mockImplementation((url) => {
     if (url.startsWith('/teams')) return Promise.resolve(TEAMS);
     if (url.startsWith('/projects')) return Promise.resolve(PROJECTS);
+    if (url.startsWith('/users')) return Promise.resolve(USERS);
     return Promise.resolve([]);
   });
   kpiClient.personal.mockResolvedValue(PERSONAL);
@@ -41,6 +51,11 @@ beforeEach(() => {
   kpiClient.manager.mockResolvedValue([]);
   kpiClient.team.mockResolvedValue(TEAM_LAYER);
   kpiClient.project.mockResolvedValue(PROJECT_LAYER);
+  kpiClient.distribution.mockResolvedValue(DISTRIBUTION);
+  kpiClient.shares.mockResolvedValue([]);
+  kpiClient.share.mockImplementation((_ws, viewerUserId) =>
+    Promise.resolve({ id: 'SH-1', workspaceId: 'ws-1', ownerUserId: 'me', viewerUserId }));
+  kpiClient.unshare.mockResolvedValue({ ok: true });
 });
 
 describe('PerformancePanel', () => {
@@ -83,5 +98,31 @@ describe('PerformancePanel', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Project' }));
     await waitFor(() => expect(kpiClient.project).toHaveBeenCalledWith('ws-1', 'PROJ-1'));
     expect(await screen.findByText('Cycle time')).toBeInTheDocument();
+  });
+
+  it('renders the cycle-time distribution histogram with an outlier drill on the Individual layer', async () => {
+    const onOpenItem = vi.fn();
+    render(<PerformancePanel workspaceId="ws-1" onOpenItem={onOpenItem} />);
+    await waitFor(() => expect(kpiClient.distribution).toHaveBeenCalledWith('ws-1', 'INDIVIDUAL', undefined));
+    expect(await screen.findByText('Cycle-time distribution')).toBeInTheDocument();
+    expect(await screen.findByText(/Outliers — slower than P85 \(2\)/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Open outlier work item WI-101' }));
+    expect(onOpenItem).toHaveBeenCalledWith('WI-101');
+  });
+
+  it('does not render a histogram on the Manager rollup layer', async () => {
+    render(<PerformancePanel workspaceId="ws-1" />);
+    await screen.findByText('Throughput');
+    fireEvent.click(screen.getByRole('tab', { name: 'Manager' }));
+    await waitFor(() => expect(kpiClient.manager).toHaveBeenCalledWith('ws-1'));
+    expect(screen.queryByText('Cycle-time distribution')).not.toBeInTheDocument();
+  });
+
+  it('shows the metric-sharing control only on the Individual layer', async () => {
+    render(<PerformancePanel workspaceId="ws-1" />);
+    expect(await screen.findByText('Share my metrics with…')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Team' }));
+    await waitFor(() => expect(kpiClient.team).toHaveBeenCalled());
+    expect(screen.queryByText('Share my metrics with…')).not.toBeInTheDocument();
   });
 });

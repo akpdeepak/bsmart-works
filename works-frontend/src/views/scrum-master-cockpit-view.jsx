@@ -87,6 +87,11 @@ const RAG_TONE = {
   AMBER: 'text-semantic-warning',
   GREEN: 'text-semantic-success',
 };
+const RAG_DOT = {
+  RED: 'bg-semantic-danger',
+  AMBER: 'bg-semantic-warning',
+  GREEN: 'bg-semantic-success',
+};
 
 // Loading skeleton for an analysis tab (RB-30 §6 — animate-pulse, not a spinner or empty-flash).
 function CockpitSkeleton({ rows = 3 }) {
@@ -177,19 +182,42 @@ export default function ScrumMasterCockpitView({
         </select>
       </div>
 
-      {liveCeremony && (
-        <div className="flex items-center justify-between gap-3 mb-5 rounded-xl border border-brand-navy/30 bg-brand-navy/5 dark:bg-neutral-800 p-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="h-2.5 w-2.5 rounded-full bg-semantic-danger animate-pulse" aria-hidden="true" />
-            <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 truncate">
-              {CEREMONY_LABELS[liveCeremony.session.ceremonyType] || liveCeremony.session.ceremonyType} is live
+      {/* F3 — persistent sprint context bar: RAG, day X/Y, burndown sparkline, delivery, and the
+          live-ceremony chip, shown on every tab so context never disappears (RB-30 context zone). */}
+      {(digest || liveCeremony) && (
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-2 mb-5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-4 py-2.5">
+          {digest?.rag?.status && (
+            <span className="flex items-center gap-1.5" title={(digest.rag.reasons || []).join(' · ')}>
+              <span className={`h-2.5 w-2.5 rounded-full ${RAG_DOT[digest.rag.status] || RAG_DOT.GREEN}`} aria-hidden="true" />
+              <span className={`text-xs font-bold uppercase tracking-wide ${RAG_TONE[digest.rag.status] || RAG_TONE.GREEN}`}>{digest.rag.status}</span>
             </span>
-            <span className="text-xs text-neutral-600 dark:text-neutral-400">{liveCeremony.counts?.joined ?? 0} joined</span>
-          </div>
-          <div className="flex gap-2 flex-shrink-0">
-            <Button variant="action" onClick={() => joinCeremony(liveCeremony.session.id)}>Join</Button>
-            <Button variant="secondary" onClick={() => { setSmTab('ceremonies'); openCeremony(liveCeremony.session.id); }}>Open</Button>
-          </div>
+          )}
+          {digest?.sprint
+            ? <span className="text-sm text-neutral-700 dark:text-neutral-200">{digest.sprint.name}{digest.sprintDayOf ? ` · day ${digest.sprintDayOf}/${digest.sprintDayTotal}` : ''}</span>
+            : digest && <span className="text-sm text-neutral-500 dark:text-neutral-400">No active sprint</span>}
+          {(digest?.burndown || []).length > 1 && (() => {
+            const max = Math.max(1, ...digest.burndown.map(d => d.remaining));
+            return (
+              <span className="flex items-end gap-px h-5" title="Burndown — points remaining per day" aria-hidden="true">
+                {digest.burndown.map((d, i) => (
+                  <span key={i} className="w-1 bg-brand-navy/60 rounded-sm" style={{ height: `${Math.max(2, Math.round(d.remaining * 100 / max))}%` }} />
+                ))}
+              </span>
+            );
+          })()}
+          {typeof digest?.deliveryRate === 'number' && digest?.sprint && (
+            <span className="text-xs text-neutral-600 dark:text-neutral-400">{digest.deliveryRate}% delivered</span>
+          )}
+          {liveCeremony && (
+            <span className="ml-auto flex items-center gap-2 flex-shrink-0">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-semantic-danger animate-pulse" aria-hidden="true" />
+                <span className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">{CEREMONY_LABELS[liveCeremony.session.ceremonyType] || liveCeremony.session.ceremonyType} live · {liveCeremony.counts?.joined ?? 0} joined</span>
+              </span>
+              <Button variant="action" onClick={() => joinCeremony(liveCeremony.session.id)}>Join</Button>
+              <Button variant="secondary" onClick={() => { setSmTab('ceremonies'); openCeremony(liveCeremony.session.id); }}>Open</Button>
+            </span>
+          )}
         </div>
       )}
 

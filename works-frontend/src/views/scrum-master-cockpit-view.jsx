@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   Construction, MessageCircle, ArrowLeft, AlertTriangle, LayoutDashboard,
   TrendingUp, Zap, CheckCircle2, ClipboardList, RefreshCw,
@@ -87,6 +88,22 @@ const RAG_TONE = {
   GREEN: 'text-semantic-success',
 };
 
+// Loading skeleton for an analysis tab (RB-30 §6 — animate-pulse, not a spinner or empty-flash).
+function CockpitSkeleton({ rows = 3 }) {
+  return (
+    <div className="space-y-3" aria-busy="true" aria-label="Loading">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-20 rounded-xl bg-neutral-100 dark:bg-neutral-800 animate-pulse" />
+        ))}
+      </div>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="h-16 rounded-xl bg-neutral-100 dark:bg-neutral-800 animate-pulse" />
+      ))}
+    </div>
+  );
+}
+
 // Sprint Cockpit — extracted from the App.jsx monolith (Wave 3); now role-adaptive.
 // The parent owns all state and handlers; this renders the tabbed cockpit.
 export default function ScrumMasterCockpitView({
@@ -97,7 +114,7 @@ export default function ScrumMasterCockpitView({
   cockpitContext, ceremonies, activeCeremony, newCeremony, currentUserId,
   myDay, fetchMyDay, submitMyStandup,
   coachTips, fetchCoachTips, retroClusters, clusterRetro,
-  digest, fetchDigest,
+  cockpitLoading = {}, resetCockpitAnalysis, digest, fetchDigest,
   fetchCockpitContext, fetchCeremonies, scheduleCeremony, openCeremony, setActiveCeremony,
   setNewCeremony, startCeremony, joinCeremony, excuseCeremony, completeCeremony,
   setI15ProjectId, fetchImpediments, fetchStandups, fetchRetros, fetchSprints, setSmTab,
@@ -119,6 +136,26 @@ export default function ScrumMasterCockpitView({
   const tab = visibleTabs.includes(smTab) ? smTab : visibleTabs[0];
   const liveCeremony = (ceremonies || []).find(c => c.session?.status === 'LIVE');
 
+  // F1 — auto-load the active sprint when an analysis tab opens, so there's no
+  // "select a sprint → click Analyze" step on the common path. The sprint selectors and
+  // buttons stay for re-running or inspecting history. App.jsx clears results on project
+  // change, so this re-fires per project.
+  const activeSprintId = cockpitContext?.activeSprint?.id;
+  useEffect(() => {
+    if (tab === 'risk' && activeSprintId && !riskPanel && !cockpitLoading.risk) {
+      runRiskPanel(activeSprintId);
+    } else if (tab === 'variance' && activeSprintId && !varianceResult && !cockpitLoading.variance) {
+      runVariance(activeSprintId);
+    } else if (tab === 'review' && activeSprintId && !reviewResult && !cockpitLoading.review) {
+      runReviewPrep(activeSprintId);
+    } else if (tab === 'planning' && !planningResult && !cockpitLoading.planning) {
+      runSprintPlanning();
+    } else if (tab === 'patterns' && !patternsResult && !cockpitLoading.patterns) {
+      runPatterns();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, activeSprintId, i15ProjectId]);
+
   return (
     <div className="flex flex-col h-full overflow-y-auto p-6 max-w-7xl mx-auto w-full">
       <div className="flex items-center justify-between mb-5">
@@ -135,7 +172,7 @@ export default function ScrumMasterCockpitView({
           </p>
         </div>
         <select className="input text-sm py-1.5" value={i15ProjectId} aria-label="Project"
-          onChange={e => { setI15ProjectId(e.target.value); fetchCockpitContext(e.target.value); fetchCoachTips(e.target.value); fetchDigest(e.target.value); fetchCeremonies(e.target.value); fetchMyDay(e.target.value); fetchImpediments(e.target.value); fetchStandups(e.target.value); fetchRetros(e.target.value); fetchSprints(e.target.value); }}>
+          onChange={e => { setI15ProjectId(e.target.value); resetCockpitAnalysis?.(); fetchCockpitContext(e.target.value); fetchCoachTips(e.target.value); fetchDigest(e.target.value); fetchCeremonies(e.target.value); fetchMyDay(e.target.value); fetchImpediments(e.target.value); fetchStandups(e.target.value); fetchRetros(e.target.value); fetchSprints(e.target.value); }}>
           {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </div>
@@ -552,7 +589,8 @@ export default function ScrumMasterCockpitView({
             </Field>
             <Button variant="action" onClick={runRiskPanel}>Analyze</Button>
           </div>
-          {!riskPanel ? <EmptyState icon={AlertTriangle} title="Mid-sprint risk panel" subtitle="Live view of scope creep, stale items, unassigned work and breach predictions." />
+          {cockpitLoading.risk && !riskPanel ? <CockpitSkeleton />
+            : !riskPanel ? <EmptyState icon={AlertTriangle} title="Mid-sprint risk panel" subtitle="Live view of scope creep, stale items, unassigned work and breach predictions." />
             : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[['Scope creep', riskPanel.scopeCreep, 'work_item_id'], ['Stale items', riskPanel.staleItems, 'id'], ['Unassigned', riskPanel.unassignedItems, 'id'], ['Breach risk', riskPanel.breachPredictions, 'id']].map(([label, rows]) => (
@@ -583,7 +621,8 @@ export default function ScrumMasterCockpitView({
             </Field>
             <Button variant="action" onClick={runVariance}>Analyze</Button>
           </div>
-          {!varianceResult ? <EmptyState icon={BarChart2} title="Sprint variance" subtitle="Committed vs delivered, day-by-day burndown, scope change, ceremony attendance and action follow-through." />
+          {cockpitLoading.variance && !varianceResult ? <CockpitSkeleton />
+            : !varianceResult ? <EmptyState icon={BarChart2} title="Sprint variance" subtitle="Committed vs delivered, day-by-day burndown, scope change, ceremony attendance and action follow-through." />
             : (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -642,7 +681,8 @@ export default function ScrumMasterCockpitView({
               </Button>
             )}
           </div>
-          {!planningResult ? <EmptyState icon={LayoutDashboard} title="Sprint planning helper" subtitle="Capacity from rolling velocity, an AI-suggested commit, and the refined-item list." />
+          {cockpitLoading.planning && !planningResult ? <CockpitSkeleton />
+            : !planningResult ? <EmptyState icon={LayoutDashboard} title="Sprint planning helper" subtitle="Capacity from rolling velocity, an AI-suggested commit, and the refined-item list." />
             : (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -771,7 +811,8 @@ export default function ScrumMasterCockpitView({
             </Field>
             <Button variant="action" onClick={runReviewPrep}>Draft review</Button>
           </div>
-          {!reviewResult ? <EmptyState icon={Megaphone} title="Sprint review prep" subtitle="Auto-drafts the summary, demo list and metrics for stakeholders." />
+          {cockpitLoading.review && !reviewResult ? <CockpitSkeleton />
+            : !reviewResult ? <EmptyState icon={Megaphone} title="Sprint review prep" subtitle="Auto-drafts the summary, demo list and metrics for stakeholders." />
             : (
               <div className="space-y-4">
                 <AiMetaBadge meta={reviewResult.meta} narrative={reviewResult.narrative} />
@@ -793,7 +834,8 @@ export default function ScrumMasterCockpitView({
       {tab === 'patterns' && (
         <div>
           <Button variant="action" onClick={runPatterns}>Detect patterns</Button>
-          {!patternsResult ? <div className="mt-4"><EmptyState icon={Repeat} title="Cross-sprint patterns" subtitle="Recurring impediments, repeated estimation misses, and common scope-creep sources." /></div>
+          {cockpitLoading.patterns && !patternsResult ? <div className="mt-4"><CockpitSkeleton /></div>
+            : !patternsResult ? <div className="mt-4"><EmptyState icon={Repeat} title="Cross-sprint patterns" subtitle="Recurring impediments, repeated estimation misses, and common scope-creep sources." /></div>
             : (
               <div className="mt-4 space-y-4">
                 <AiMetaBadge meta={patternsResult.meta} narrative={patternsResult.narrative} />

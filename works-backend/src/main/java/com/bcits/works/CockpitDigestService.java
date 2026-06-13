@@ -86,6 +86,7 @@ public class CockpitDigestService {
         int progressPct = 0;
         Integer dayOf = null;
         Integer dayTotal = null;
+        List<Map<String, Object>> burndown = List.of();
         if (sprint != null) {
             Map<String, Object> pts = jdbc.queryForMap(
                 "SELECT COALESCE(SUM(story_points),0) AS committed, "
@@ -98,6 +99,19 @@ public class CockpitDigestService {
                 dayTotal = (int) (sprint.getEndDate().toEpochDay() - sprint.getStartDate().toEpochDay()) + 1;
                 dayOf = (int) Math.min(Math.max(today.toEpochDay() - sprint.getStartDate().toEpochDay() + 1, 1), dayTotal);
             }
+            // Compact burndown for the context-bar sparkline — Done points burn on the day they
+            // entered Done (status_changed_at, V74), same basis as the Variance tab.
+            java.util.Map<LocalDate, Integer> doneByDay = new java.util.TreeMap<>();
+            for (Map<String, Object> row : jdbc.queryForList(
+                    "SELECT status_changed_at, COALESCE(story_points,0) AS pts FROM work_items "
+                    + "WHERE sprint_id = ? AND deleted_at IS NULL AND status = 'Done' "
+                    + "AND status_changed_at IS NOT NULL", sprint.getId())) {
+                LocalDate day = ((java.sql.Timestamp) row.get("status_changed_at")).toLocalDateTime().toLocalDate();
+                doneByDay.merge(day, ((Number) row.get("pts")).intValue(), Integer::sum);
+            }
+            LocalDate upTo = sprint.getEndDate() == null || today.isBefore(sprint.getEndDate())
+                    ? today : sprint.getEndDate();
+            burndown = SprintVarianceService.burndown(sprint.getStartDate(), upTo, committed, doneByDay);
         }
         int deliveryRate = SprintVarianceService.rate(delivered, committed);
 
@@ -144,6 +158,7 @@ public class CockpitDigestService {
         out.put("ceremoniesHeld", ((Number) cer.get("sessions")).intValue());
         out.put("attendanceRate", attendanceRate);
         out.put("velocityTrend", velocityTrend);
+        out.put("burndown", burndown);
         out.put("rag", rag(slaBreached, criticalOpen, attendanceRate, deliveryRate, progressPct));
         return out;
     }

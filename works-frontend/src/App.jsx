@@ -3744,6 +3744,8 @@ export default function App() {
               rejectArticle={rejectArticle}
               articleChildren={articleChildren}
               fetchArticleChildren={fetchArticleChildren}
+              workspaceId={activeWorkspaceId}
+              aiCapabilities={aiCapabilities}
             />
           )}
 

@@ -38,6 +38,18 @@ class CockpitCoachServiceTest {
         // SLA breaches reach every role.
         assertThat(dev).anyMatch(t -> t.tone().equals("danger"));
         assertThat(sm).anyMatch(t -> t.tone().equals("danger"));
+
+        // Actionable: the SLA tip jumps to impediments; the developer stale tip to My Day.
+        assertThat(dev).anyMatch(t -> t.action() != null && "impediments".equals(t.action().tab()));
+        assertThat(dev).anyMatch(t -> t.action() != null && "myday".equals(t.action().tab()));
+        assertThat(sm).anyMatch(t -> t.action() != null && "risk".equals(t.action().tab()));
+    }
+
+    @Test
+    void tipsFor_positiveTipHasNoAction() {
+        List<CockpitCoachService.Tip> tips =
+                CockpitCoachService.tipsFor("scrum-master", signals(0, 0, 0, null, 0, null, 0, 0));
+        assertThat(tips).singleElement().satisfies(t -> assertThat(t.action()).isNull());
     }
 
     @Test

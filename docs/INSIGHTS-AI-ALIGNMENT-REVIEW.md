@@ -70,20 +70,29 @@ project/team ⊂ workspace; make the workspace predicate mandatory for **all** s
 at the table level. Best option: retire this endpoint and route the scope selector through the
 already-scoped `WidgetDataService`.
 
-### 1.2 The central tenant-scope guardrail still doesn't exist
-CLAUDE.md §4 and RB-40 §1 both list **"`guardrails.sh` tenant-scope check — TO BE ADDED."** Scoping
-is re-typed per query (`WORKSPACE_SCOPE` in `WidgetDataService`, joins in `DashboardService`), so a
-forgotten predicate — exactly like §1.1 — passes CI. Add the guardrail (fail any query over a
-tenant table lacking a workspace predicate) and/or a central Hibernate tenant filter, so isolation
-"cannot be forgotten" as the spec requires.
+### 1.2 The central tenant-scope guardrail still doesn't exist — ⚠️ design task (not a grep rule)
+CLAUDE.md §4 and RB-40 §1 both list **"`guardrails.sh` tenant-scope check — TO BE ADDED."** The
+existing check only covers repository `@Query` annotations; the two leaks fixed here (§1.1, §1.3)
+lived in raw `JdbcTemplate` SQL in controllers/services. **Investigated:** a blanket file-level
+"`FROM work_items` ⇒ must reference a workspace token" grep is **too crude** — it false-positives on
+the legitimate *id-scoped + RBAC-validated* pattern (`SprintController`, `ReleaseController`,
+`WorkLogController`, `StatusDurationService` all scope by `sprint_id`/`release_id`/`work_item_id`
+after `rbac.workspaceForProject(...)` + `require(...)`), exactly the case the `@Query` guardrail
+already exempts. The correct enforcement is a **central Hibernate tenant filter / mandatory
+predicate applied once** (RB-40 §1: "scoping applied centrally, not re-typed per query") — an
+architectural change requiring sign-off, tracked as its own task. A noisy grep rule was deliberately
+**not** added.
 
 ### 1.3 `RaidDashboardController` and `BqlController` scope by the wrong key (or not at all)
-- `GET /api/v1/raid-dashboard?projectId=` — no visible RBAC; scopes only by `projectId` (same IDOR
-  shape as §1.1).
-- `POST /api/v1/bql/execute` — runs a user-authored query that is **not workspace-scoped at
-  compilation**. RB-10 §6 / RB-40 §1 require BQL to be scoped at compile time so "a query cannot
-  escape its tenant regardless of what the user types." Verify `BqlCompiler` injects a mandatory
-  `workspace_id` predicate; if not, this is a second cross-tenant path into the Insights/BQL surface.
+- `POST /api/v1/bql/execute` — **✅ FIXED.** Was `FROM work_items WHERE deleted_at IS NULL` with no
+  workspace predicate (any user could dump up to 500 rows across all tenants). Now scopes every BQL
+  query — including the empty query — to the caller's workspace via a mandatory
+  `project_id IN (SELECT id FROM projects WHERE workspace_id = ?)` predicate (workspace bound first),
+  and requires `view_items` before running. Covered by `BqlControllerScopeTest` (forbidden without
+  permission, empty + filtered queries stay workspace-scoped, workspace bound ahead of BQL params).
+  `BqlCompiler` itself only emits parameterized field/value binds, so it cannot escape the predicate.
+- `GET /api/v1/raid-dashboard?projectId=` — still **open** (no visible RBAC; scopes only by
+  `projectId`). Tracked as a follow-up; same fix shape as §1.1 (`rbac.workspaceForProject` + require).
 
 ### 1.4 Field-level security absent on metrics (RB-40 §1, spec `06 §5.5`)
 KPI privacy is enforced at the **layer/endpoint** level (no manager→individual endpoint) — good — but
@@ -105,7 +114,7 @@ Insights capabilities (`KPI_NARRATIVE`, `CONVERSATIONAL_DASHBOARD`, `COCKPIT_PRO
 |---|-----|-------------|-------------|
 | 2.1 | **P1** | **Anomaly detection + AI summary on charts/dashboards.** Today only the Performance panel has "Explain". Dashboards/Reports/widgets have no AI narrative layer. Add `DASHBOARD_SUMMARY` / `CHART_ANOMALY` capabilities rendered as an opt-in narrative band, **hidden** (not dimmed) when AI off; fallback = charts standalone. | spec `05 §J`, `06 §1155`, `8.2` |
 | 2.2 | P2 | **AI-suggested dashboards** from captured usage data (spec iter-6 note). `DASHBOARD_SUGGESTION` capability; fallback = template gallery. | spec `06 §823` |
-| 2.3 | P2 | **Surface the conversational dashboard.** Backend `ConversationalDashboardService` / `compile` exists but there is **no frontend surface** wiring NL→widget into Dashboards — the marquee iter-20 feature is invisible. Also: the BQL NL panel gate uses `anyCapabilityEnabled` instead of the specific capability's effective policy (wrong scope vs RB-40 §2). | RB-40 §2, spec `06 §1915` |
+| 2.3 | P2 | **NL gate — ✅ FIXED:** the BQL NL panel now gates on its specific capability (`nl_to_bql`) via a new `capabilityEnabled(capabilities, id)` helper, instead of `anyCapabilityEnabled` (RB-40 §2 most-restrictive-wins). **Still open:** surface the conversational dashboard — backend `ConversationalDashboardService` / `compile` exists but there is no frontend NL→widget entry in Dashboards (the marquee iter-20 feature is invisible). | RB-40 §2, spec `06 §1915` |
 | 2.4 | P2 | **Consistent AI provenance.** `AiMetaBadge` shows on briefings/board-decks but not on Performance "Explain" or KPI narratives. Render it on every AI output; show an explicit "AI off — structured digest" state instead of silently dropping to fallback text. | RB-40 §2 |
 | 2.5 | P2 | **Budget/degradation signal in UI.** Surface `BudgetStatus` (`degraded`/`disabled`) as a non-blocking notice on AI-bearing Insights panels (spec 8.4). | RB-40 §2, spec `8.4` |
 | 2.6 | P3 | **Model tiering.** Confirm the classification half (is-this-anomalous? / intent) routes to Haiku and only generation uses Sonnet — `KPI_NARRATIVE` and `CONVERSATIONAL_DASHBOARD` default to Sonnet. | RB-40 §2 |
@@ -159,9 +168,10 @@ Insights capabilities (`KPI_NARRATIVE`, `CONVERSATIONAL_DASHBOARD`, `COCKPIT_PRO
 - "Explain" output lacks `AiMetaBadge` + clean AI-off state (§2.4).
 
 ### Leadership Console (`leadership-console-view.jsx`) — P1/P2
-- **Verify `EXEC_BRIEFING` / `BOARD_DECK` endpoints exist.** Frontend already calls
-  `generateBriefing` / `boardDeck`, but the backend inventory marked these "assumed future / N/A
-  yet" — confirm wiring or these buttons 404 (correctness risk).
+- **✅ VERIFIED — no 404 risk.** `ExecutiveBriefingController` (`/api/v1/executive-briefings`,
+  incl. `/{id}/generate`) and `LeadershipController` (`/board-deck`) both exist and route through
+  `Iteration16AiService` (capabilities `EXEC_BRIEFING` / `BOARD_DECK`). The earlier inventory's
+  "assumed future" note was incorrect.
 - Customer-health / churn tabs surface tenant + potentially personal data — confirm field-level
   security + workspace scoping on all `leadership/*` endpoints.
 

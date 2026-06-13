@@ -6,7 +6,7 @@ import { Button } from '@/components/works/button';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { PriorityBadge } from '@/components/works/priority-badge';
-import { anyCapabilityEnabled } from '@/lib/ai';
+import { capabilityEnabled } from '@/lib/ai';
 
 // BQL query view — extracted from the App.jsx monolith (UX finding A3/H2). Behaviour-preserving:
 // the parent owns query state + run/save/fetch handlers. Extraction also associates the "Query"
@@ -51,7 +51,8 @@ export default function BqlView({
       .finally(() => setNlBusy(false));
   };
 
-  const aiOn = anyCapabilityEnabled(aiCapabilities);
+  // Gate the NL→BQL panel on ITS capability (nl_to_bql), not "any AI" (RB-40 §2 most-restrictive).
+  const aiOn = capabilityEnabled(aiCapabilities, 'nl_to_bql');
 
   useEffect(() => {
     if (!activeWorkspaceId) return;

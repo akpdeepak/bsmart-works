@@ -50,6 +50,13 @@ export function anyCapabilityEnabled(capabilities) {
   return Array.isArray(capabilities) && capabilities.some((c) => c.enabled);
 }
 
+// Whether one specific capability is enabled (most-restrictive-wins is already resolved server-side,
+// RB-40 §2). Surfaces gate on THEIR capability, not "any AI", so e.g. NL→BQL hides only when
+// nl_to_bql is off — not whenever some unrelated capability is on.
+export function capabilityEnabled(capabilities, id) {
+  return Array.isArray(capabilities) && capabilities.some((c) => c.id === id && c.enabled);
+}
+
 // Browser SpeechRecognition handle (voice command input), or null when unsupported.
 export function getSpeechRecognition() {
   if (typeof window === 'undefined') return null;

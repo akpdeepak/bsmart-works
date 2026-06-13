@@ -37,34 +37,51 @@ public class BqlController {
         "SELECT id, title, status, type, priority, assignee_id, project_id, due_date, created_at "
         + "FROM work_items WHERE deleted_at IS NULL";
 
+    // Mandatory tenant boundary (RB-40 §1): a BQL query can only ever see work items whose project
+    // lives in the caller's workspace, no matter what the user types. The workspaceId bind is always
+    // the FIRST parameter; compiled BQL binds follow.
+    private static final String WORKSPACE_SCOPE =
+        " AND project_id IN (SELECT id FROM projects WHERE workspace_id = ?)";
+
     private final JdbcTemplate jdbc;
     private final BqlCompiler compiler;
     private final BqlFilterRepository filterRepo;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
     public BqlController(JdbcTemplate jdbc,
                          BqlCompiler compiler,
                          BqlFilterRepository filterRepo,
-                         AuthenticatedUser authenticatedUser) {
+                         AuthenticatedUser authenticatedUser,
+                         RbacService rbac) {
         this.jdbc = jdbc;
         this.compiler = compiler;
         this.filterRepo = filterRepo;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @PostMapping("/execute")
     public List<Map<String, Object>> execute(@Valid @RequestBody Map<String, String> body) {
         String query = body.getOrDefault("query", "").trim();
         String userId = authenticatedUser.id();
+        // Scope to the caller's workspace and prove view_items before running anything (RB-40 §1,
+        // RB-10 §2). BQL is workspace-scoped at compilation — it cannot escape its tenant.
+        String workspaceId = getWorkspaceForUser(userId);
+        rbac.require(userId, workspaceId, "view_items");
+        String scoped = BASE_SELECT + WORKSPACE_SCOPE;
         if (query.isEmpty()) {
-            return jdbc.queryForList(BASE_SELECT + " ORDER BY created_at DESC LIMIT 100");
+            return jdbc.queryForList(scoped + " ORDER BY created_at DESC LIMIT 100", workspaceId);
         }
         try {
             BqlCompiler.Compiled c = compiler.compile(query, userId);
-            String sql = BASE_SELECT
+            List<Object> params = new ArrayList<>();
+            params.add(workspaceId);
+            params.addAll(c.params());
+            String sql = scoped
                 + (c.sql().isEmpty() ? "" : " AND (" + c.sql() + ")")
                 + " ORDER BY created_at DESC LIMIT 500";
-            return jdbc.queryForList(sql, c.params().toArray());
+            return jdbc.queryForList(sql, params.toArray());
         } catch (BqlException e) {
             throw new IllegalArgumentException("BQL parse error: " + e.getMessage());
         }

@@ -278,6 +278,69 @@ class BqlCompilerTest {
         assertThrows(BqlException.class, () -> compiler.compile("createdAt >= daysAgo(abc)", "u"));
     }
 
+    // ── Labels (virtual collection field over the tags table) ─────────────────────────
+
+    @Test
+    void labelsEquality_isMembershipSubquery() {
+        BqlCompiler.Compiled c = compiler.compile("labels = backend", "u");
+        assertEquals("id IN (SELECT work_item_id FROM tags WHERE tag = ?)", c.sql());
+        assertEquals(List.of("backend"), c.params());
+    }
+
+    @Test
+    void labelsNotEqual_negatesMembership() {
+        BqlCompiler.Compiled c = compiler.compile("labels != backend", "u");
+        assertEquals("id NOT IN (SELECT work_item_id FROM tags WHERE tag = ?)", c.sql());
+        assertEquals(List.of("backend"), c.params());
+    }
+
+    @Test
+    void labelsIn_bindsEachTag() {
+        BqlCompiler.Compiled c = compiler.compile("labels IN (backend, ui)", "u");
+        assertEquals("id IN (SELECT work_item_id FROM tags WHERE tag IN (?, ?))", c.sql());
+        assertEquals(List.of("backend", "ui"), c.params());
+    }
+
+    @Test
+    void labelsNotIn_negatesMembership() {
+        BqlCompiler.Compiled c = compiler.compile("labels NOT IN (backend, ui)", "u");
+        assertEquals("id NOT IN (SELECT work_item_id FROM tags WHERE tag IN (?, ?))", c.sql());
+        assertEquals(List.of("backend", "ui"), c.params());
+    }
+
+    @Test
+    void labelsContains_usesIlikeOnTag() {
+        BqlCompiler.Compiled c = compiler.compile("labels CONTAINS sec", "u");
+        assertEquals("id IN (SELECT work_item_id FROM tags WHERE tag ILIKE ?)", c.sql());
+        assertEquals(List.of("%sec%"), c.params());
+    }
+
+    @Test
+    void labelsIsEmpty_excludesAnyTaggedItem() {
+        BqlCompiler.Compiled c = compiler.compile("labels IS EMPTY", "u");
+        assertEquals("id NOT IN (SELECT work_item_id FROM tags)", c.sql());
+        assertTrue(c.params().isEmpty());
+    }
+
+    @Test
+    void labelsIsNotEmpty_requiresAtLeastOneTag() {
+        BqlCompiler.Compiled c = compiler.compile("labels IS NOT EMPTY", "u");
+        assertEquals("id IN (SELECT work_item_id FROM tags)", c.sql());
+        assertTrue(c.params().isEmpty());
+    }
+
+    @Test
+    void labelsCombineWithBuiltinField_keepsParamOrder() {
+        BqlCompiler.Compiled c = compiler.compile("labels = backend AND priority = High", "u");
+        assertEquals("(id IN (SELECT work_item_id FROM tags WHERE tag = ?) AND priority = ?)", c.sql());
+        assertEquals(List.of("backend", "High"), c.params());
+    }
+
+    @Test
+    void labelsRelationalOperator_isRejected() {
+        assertThrows(BqlException.class, () -> compiler.compile("labels > backend", "u"));
+    }
+
     // ── Field allow-list + field-level security ───────────────────────────────────────
 
     @Test

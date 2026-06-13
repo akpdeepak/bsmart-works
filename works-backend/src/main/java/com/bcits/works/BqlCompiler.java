@@ -419,6 +419,13 @@ public class BqlCompiler {
                 + fragment + ")";
         }
 
+        /** Virtual collection field backed by the {@code tags} table — see {@link #labelsComparison}. */
+        private static final String LABELS_FIELD = "labels";
+
+        private static boolean isLabels(String field) {
+            return LABELS_FIELD.equalsIgnoreCase(field);
+        }
+
         private String comparison(BqlAst.Comparison c) {
             String op = c.op().toUpperCase(Locale.ROOT);
             // Virtual full-text field: `text ~ "..."` / `text CONTAINS ...` searches title + description.
@@ -427,6 +434,9 @@ public class BqlCompiler {
                 params.add(pattern);
                 params.add(pattern);
                 return "(title ILIKE ? OR description ILIKE ?)";
+            }
+            if (isLabels(c.field())) {
+                return labelsComparison(c, op);
             }
             Resolved r = resolve(c.field());
             validateOp(r.type(), op);
@@ -447,7 +457,59 @@ public class BqlCompiler {
             return col + " ILIKE ?";
         }
 
+        /**
+         * {@code labels} is a one-to-many collection (the {@code tags} table), not a column — so
+         * every operator compiles to a membership subquery: a work item matches when it has (or, for
+         * {@code !=}, lacks) a tag satisfying the inner predicate. The outer {@code id IN (...)} only
+         * ever matches {@code work_items} rows the surrounding query already workspace-scoped, so the
+         * subquery needs no extra tenant predicate (same guarantee as history/custom fields).
+         */
+        private String labelsComparison(BqlAst.Comparison c, String op) {
+            List<Object> local = new ArrayList<>();
+            boolean negated = "!=".equals(op) || "<>".equals(op);
+            String inner = switch (op) {
+                case "=", "!=", "<>" -> {
+                    local.add(literal(c.value()));
+                    yield "tag = ?";
+                }
+                case "CONTAINS", "~" -> {
+                    local.add("%" + literal(c.value()) + "%");
+                    yield "tag ILIKE ?";
+                }
+                case "STARTSWITH" -> {
+                    local.add(literal(c.value()) + "%");
+                    yield "tag ILIKE ?";
+                }
+                case "ENDSWITH" -> {
+                    local.add("%" + literal(c.value()));
+                    yield "tag ILIKE ?";
+                }
+                default -> throw new BqlException("Operator " + op + " is not valid for labels");
+            };
+            return labelsMembership(inner, local, negated);
+        }
+
+        /** Wrap a {@code tags}-table predicate as a work-item membership test. */
+        private String labelsMembership(String inner, List<Object> local, boolean negated) {
+            params.addAll(local);
+            return (negated ? "id NOT IN" : "id IN")
+                + " (SELECT work_item_id FROM tags WHERE " + inner + ")";
+        }
+
         private String inList(BqlAst.InList in) {
+            if (isLabels(in.field())) {
+                List<Object> local = new ArrayList<>();
+                StringBuilder inner = new StringBuilder("tag IN (");
+                for (int i = 0; i < in.values().size(); i++) {
+                    if (i > 0) {
+                        inner.append(", ");
+                    }
+                    inner.append('?');
+                    local.add(literal(in.values().get(i)));
+                }
+                inner.append(')');
+                return labelsMembership(inner.toString(), local, in.negated());
+            }
             Resolved r = resolve(in.field());
             List<Object> local = new ArrayList<>();
             // Built-in encodes its own NOT; custom keeps a positive inner list and flips membership.
@@ -473,6 +535,11 @@ public class BqlCompiler {
         }
 
         private String isEmpty(BqlAst.IsEmpty is) {
+            if (isLabels(is.field())) {
+                // IS EMPTY => the work item has no tags at all; IS NOT EMPTY => it has at least one.
+                return (is.negated() ? "id IN" : "id NOT IN")
+                    + " (SELECT work_item_id FROM tags)";
+            }
             Resolved r = resolve(is.field());
             if (!r.custom()) {
                 return r.column() + (is.negated() ? " IS NOT NULL" : " IS NULL");

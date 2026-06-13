@@ -21,6 +21,7 @@ export default function ReportBuilderView({
   reportSchedules,
   scheduleForm,
   workItems,
+  activeWorkspaceId,
   createBlankReport,
   createReportFromTemplate,
   openReport,
@@ -122,6 +123,7 @@ export default function ReportBuilderView({
                 <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mr-1">Add section</span>
                 <button onClick={() => addReportSection('kpi')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ KPI</button>
                 <button onClick={() => addReportSection('chart')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Chart</button>
+                <button onClick={() => addReportSection('pivot')} className="text-xs px-2.5 py-1.5 rounded-lg border border-brand-navy/40 text-brand-navy dark:text-brand-amber hover:border-brand-navy transition-colors">+ Pivot chart</button>
                 <button onClick={() => addReportSection('table')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Table</button>
                 <button onClick={() => addReportSection('narrative')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Narrative</button>
               </div>
@@ -135,7 +137,7 @@ export default function ReportBuilderView({
               <div id="report-export-area" className="space-y-4 max-w-4xl">
                 {reportSections.map((sec, i) => (
                   <ReportSectionCard key={i} section={sec} index={i} total={reportSections.length}
-                    workItems={workItems} editMode={reportEditMode}
+                    workItems={workItems} editMode={reportEditMode} workspaceId={activeWorkspaceId}
                     onChange={s => updateReportSection(i, s)}
                     onMove={delta => moveReportSection(i, delta)}
                     onRemove={() => removeReportSection(i)} />

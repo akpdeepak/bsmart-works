@@ -1,17 +1,70 @@
+import { useEffect, useState } from 'react';
 import { BarChart2, AlertTriangle } from 'lucide-react';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
+import { PivotChart } from '@/components/works/organisms/pivot-chart';
+import { resolvePivotBatch } from '@/lib/pivot';
+
+// The pivot-backed insight tiles rendered at the top of Reports — same shared <PivotChart/> +
+// pivot client as Dashboards and the Report Builder, so all three surfaces render the engine
+// identically. Specs are grouped guided counts (workspace-scoped server-side, RB-40 §1).
+const REPORT_PIVOTS = {
+  byStatus: { spec: { source: { kind: 'guided', guided: {}, mode: 'group' }, measures: [{ field: '*', agg: 'COUNT' }], dimensions: ['status'], filters: null }, chartType: 'bar', title: 'Items by status' },
+  byType: { spec: { source: { kind: 'guided', guided: {}, mode: 'group' }, measures: [{ field: '*', agg: 'COUNT' }], dimensions: ['type'], filters: null }, chartType: 'donut', title: 'Items by type' },
+};
+
+function ReportPivotStrip({ workspaceId }) {
+  const [state, setState] = useState({ loading: true, error: null, byId: {} });
+  useEffect(() => {
+    let alive = true;
+    if (!workspaceId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setState({ loading: false, error: null, byId: {} });
+      return undefined;
+    }
+    setState((s) => ({ ...s, loading: true, error: null }));
+    const items = Object.fromEntries(Object.entries(REPORT_PIVOTS).map(([id, v]) => [id, v.spec]));
+    resolvePivotBatch(workspaceId, items)
+      .then((rows) => {
+        if (!alive) return;
+        const byId = {};
+        (rows || []).forEach((r) => { byId[r.id] = r; });
+        setState({ loading: false, error: null, byId });
+      })
+      .catch((e) => { if (alive) setState({ loading: false, error: e.message || 'Could not load insights.', byId: {} }); });
+    return () => { alive = false; };
+  }, [workspaceId]);
+
+  if (!workspaceId) return null;
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      {Object.entries(REPORT_PIVOTS).map(([id, cfg]) => {
+        const entry = state.byId[id];
+        return (
+          <div key={id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+            <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">{cfg.title}</h3>
+            <PivotChart type={cfg.chartType} result={entry?.data}
+              loading={state.loading} error={state.error || entry?.error} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 // Sprint Reports view — extracted from the App.jsx monolith (UX finding A3/H2). Behaviour-
-// preserving: the parent owns velocity/sprint/report data and the report fetcher.
+// preserving: the parent owns velocity/sprint/report data and the report fetcher. Now also
+// renders a pivot-backed insight strip via the shared multi-dimensional engine.
 export default function ReportsView({
   velocityData,
   sprints,
   selectedSprintId,
   sprintReport,
   scopeChanges,
+  activeWorkspaceId,
   setSelectedSprintId,
   fetchSprintReport,
 }) {
@@ -19,6 +72,8 @@ export default function ReportsView({
     <div className="p-8 max-w-5xl">
       <h1 className="text-2xl font-bold text-brand-navy mb-1">Sprint Reports</h1>
       <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">Velocity, delivery, and scope tracking</p>
+
+      <ReportPivotStrip workspaceId={activeWorkspaceId} />
 
       {/* VELOCITY CHART — multi-sprint comparison */}
       {velocityData.length > 0 && (

@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { LayoutDashboard, ArrowLeft, Puzzle } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { ExportButtons } from '@/components/works/export-buttons';
+import { Modal } from '@/components/works/molecules/modal';
 import { DashboardWidgetCard } from '@/components/works/organisms/dashboard-widget-card';
 import { DashboardDrillModal } from '@/components/works/organisms/dashboard-drill-modal';
 import { ConversationalDashboardPanel } from '@/components/works/organisms/conversational-dashboard-panel';
+import { WidgetBuilder } from '@/components/works/organisms/widget-builder';
 import { capabilityEnabled } from '@/lib/ai';
 import { DashboardAiSummary } from '@/components/works/organisms/dashboard-ai-summary';
 
@@ -76,6 +79,26 @@ export default function DashboardsView({
   // wins is already resolved server-side (RB-40 §2). Hidden entirely when off; the deterministic
   // NL→spec fallback still works server-side when AI is on but over budget/unavailable.
   const convDashOn = capabilityEnabled(aiCapabilities, 'conversational_dashboard');
+
+  // The shared <WidgetBuilder/> modal — open for a brand-new PIVOT widget (editingPivot === 'new')
+  // or to edit an existing one (the widget object). Pure UI state; persistence still flows through
+  // the parent's addDashboardWidget / updateDashboardWidgetConfig handlers.
+  const [editingPivot, setEditingPivot] = useState(null);
+  const pivotInitial = (() => {
+    if (!editingPivot || editingPivot === 'new') return undefined;
+    try { return (JSON.parse(editingPivot.config || '{}').spec) || undefined; } catch { return undefined; }
+  })();
+  const savePivotWidget = (spec) => {
+    if (editingPivot === 'new') {
+      addDashboardWidget('PIVOT', { spec }, 'Custom chart', 6);
+    } else if (editingPivot) {
+      let cfg;
+      try { cfg = JSON.parse(editingPivot.config || '{}'); } catch { cfg = {}; }
+      updateDashboardWidgetConfig(editingPivot, { ...cfg, spec });
+    }
+    setEditingPivot(null);
+  };
+
   return (
     <>
       <div className="p-6 overflow-y-auto h-full">
@@ -190,6 +213,7 @@ export default function DashboardsView({
                     <button onClick={() => addDashboardWidget('ITEM_LIST', { filter: { open: true }, limit: 6 }, 'Open work items')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Item list</button>
                     <button onClick={() => addDashboardWidget('PIE', { dimension: 'status' }, 'Items by status')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Pie chart</button>
                     <button onClick={() => addDashboardWidget('BAR', { dimension: 'priority' }, 'Items by priority')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Bar chart</button>
+                    <button onClick={() => setEditingPivot('new')} className="text-xs px-2 py-1 rounded-lg border border-brand-navy/40 text-brand-navy dark:text-brand-amber hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">+ Custom chart</button>
                   </div>
                   {EXTRA_WIDGET_CATEGORIES.map(cat => (
                     <div key={cat} className="flex flex-wrap items-center gap-1.5">
@@ -220,6 +244,7 @@ export default function DashboardsView({
                 {selectedDashboard.widgets.map(w => (
                   <DashboardWidgetCard key={w.id} widget={w} workItems={workItems} aggregate={dashboardAggregate} editMode={dashboardEditMode}
                     sprints={sprints} velocity={velocityData} currentUserId={currentUser?.id}
+                    workspaceId={activeWorkspaceId} onEditPivot={setEditingPivot}
                     onRemove={() => removeDashboardWidget(w.id)}
                     onResize={gridW => resizeDashboardWidget(w, gridW)}
                     onConfigChange={cfg => updateDashboardWidgetConfig(w, cfg)}
@@ -236,6 +261,14 @@ export default function DashboardsView({
       {dashboardDrill && (
         <DashboardDrillModal drill={dashboardDrill} onClose={() => setDashboardDrill(null)}
           onOpenItem={() => { setDashboardDrill(null); }} />
+      )}
+
+      {editingPivot && (
+        <Modal title={editingPivot === 'new' ? 'Add custom chart' : 'Edit chart'}
+          onClose={() => setEditingPivot(null)} size="lg" className="max-h-[90vh] overflow-y-auto">
+          <WidgetBuilder workspaceId={activeWorkspaceId} value={pivotInitial}
+            onSave={savePivotWidget} onCancel={() => setEditingPivot(null)} />
+        </Modal>
       )}
     </>
   );

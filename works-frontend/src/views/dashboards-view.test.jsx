@@ -1,6 +1,19 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import DashboardsView from './dashboards-view';
+import { aiClient } from '@/lib/ai';
+
+// Mock only the api surface; keep the real pure helpers (capabilityEnabled, compiledSpecToMeta).
+vi.mock('@/lib/ai', async () => {
+  const actual = await vi.importActual('@/lib/ai');
+  return {
+    ...actual,
+    aiClient: {
+      compileConversationalDashboard: vi.fn(),
+      saveConversationalDashboard: vi.fn(),
+    },
+  };
+});
 
 const noop = () => {};
 
@@ -56,6 +69,56 @@ describe('DashboardsView', () => {
   it('renders New dashboard button', () => {
     render(<DashboardsView {...baseProps} />);
     expect(screen.getAllByRole('button', { name: /new dashboard/i })[0]).toBeInTheDocument();
+  });
+
+  describe('conversational dashboard entry (Cap O, RB-40 §2)', () => {
+    beforeEach(() => vi.clearAllMocks());
+
+    const ENABLED = [{ id: 'conversational_dashboard', label: 'Conversational dashboards', enabled: true, fallback: 'parser' }];
+    const DISABLED = [{ id: 'conversational_dashboard', label: 'Conversational dashboards', enabled: false, fallback: 'parser' }];
+
+    it('hides the NL entry when the capability is disabled', () => {
+      render(<DashboardsView {...baseProps} aiCapabilities={DISABLED} activeWorkspaceId="ws-1" />);
+      expect(screen.queryByText(/describe a dashboard/i)).not.toBeInTheDocument();
+    });
+
+    it('shows the NL entry when the capability is enabled', () => {
+      render(<DashboardsView {...baseProps} aiCapabilities={ENABLED} activeWorkspaceId="ws-1" />);
+      expect(screen.getByText(/describe a dashboard/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/describe the dashboard you want/i)).toBeInTheDocument();
+    });
+
+    it('compiles a prompt and renders the returned widget spec preview', async () => {
+      aiClient.compileConversationalDashboard.mockResolvedValue({
+        spec: {
+          title: 'Velocity by team',
+          metric: 'velocity',
+          groupBy: 'team',
+          chart: 'bar',
+          timeframe: { amount: 6, unit: 'sprint' },
+          composites: ['predictability'],
+        },
+        usedAi: false,
+        fallback: true,
+        policyState: 'OFF',
+        tier: 'NONE',
+      });
+
+      render(<DashboardsView {...baseProps} aiCapabilities={ENABLED} activeWorkspaceId="ws-1" />);
+      fireEvent.change(screen.getByLabelText(/describe the dashboard you want/i), {
+        target: { value: 'velocity per team last 6 sprints with predictability' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /build preview/i }));
+
+      await waitFor(() => expect(aiClient.compileConversationalDashboard).toHaveBeenCalledWith(
+        'ws-1', 'velocity per team last 6 sprints with predictability',
+      ));
+      // Preview surfaces the compiled spec + the deterministic-fallback provenance badge.
+      expect(await screen.findByText('Velocity by team')).toBeInTheDocument();
+      expect(screen.getByText(/last 6 sprint/i)).toBeInTheDocument();
+      expect(screen.getByText(/deterministic fallback/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /save dashboard/i })).toBeInTheDocument();
+    });
   });
 });
 

@@ -193,6 +193,41 @@ class BqlCompilerTest {
     }
 
     @Test
+    void startOfQuarter_andYear_compileToDateTrunc() {
+        assertEquals("created_at >= date_trunc('quarter', CURRENT_DATE)",
+            compiler.compile("createdAt >= startOfQuarter()", "u").sql());
+        assertEquals("created_at >= date_trunc('year', CURRENT_DATE)",
+            compiler.compile("createdAt >= startOfYear()", "u").sql());
+    }
+
+    @Test
+    void startOfDay_usesNow() {
+        assertEquals("created_at >= date_trunc('day', NOW())",
+            compiler.compile("createdAt >= startOfDay()", "u").sql());
+    }
+
+    // ── Full-text `~` operator + virtual `text` field ─────────────────────────────────
+
+    @Test
+    void tildeOperator_isFuzzyContainsOnTextField() {
+        BqlCompiler.Compiled c = compiler.compile("title ~ auth", "u");
+        assertEquals("title ILIKE ?", c.sql());
+        assertEquals(List.of("%auth%"), c.params());
+    }
+
+    @Test
+    void textVirtualField_searchesTitleAndDescription() {
+        BqlCompiler.Compiled c = compiler.compile("text ~ login", "u");
+        assertEquals("(title ILIKE ? OR description ILIKE ?)", c.sql());
+        assertEquals(List.of("%login%", "%login%"), c.params());
+    }
+
+    @Test
+    void tildeOnNumber_isRejected() {
+        assertThrows(BqlException.class, () -> compiler.compile("storyPoints ~ 5", "u"));
+    }
+
+    @Test
     void daysAgo_nonNumericArg_throws() {
         assertThrows(BqlException.class, () -> compiler.compile("createdAt >= daysAgo(abc)", "u"));
     }

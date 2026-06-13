@@ -2,6 +2,7 @@ package com.bcits.works;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,22 +12,26 @@ import java.time.OffsetDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
  * Cap V · Proactive SLA-breach notifier for impediments. A CRITICAL raise left unresolved past
- * its one-day SLA ({@link ImpedimentService#slaBreached}) is escalated <em>once</em> to the
- * people who can act on it — the project's product owner / scrum master, falling back to the
- * workspace admins when no project roles are assigned.
+ * its one-day SLA ({@link ImpedimentService#slaBreached}) is escalated to the people who can act
+ * on it — the project's product owner / scrum master, falling back to the workspace admins when
+ * no project roles are assigned — and then <em>re-escalated on a recurring cadence</em> while it
+ * stays unresolved (a single notification is easy to miss).
  *
- * <p><b>Dedupe without a schema change:</b> the append-only {@code events} log is the ledger.
- * Before notifying we check for an existing {@code IMPEDIMENT_SLA_NOTIFIED} event on the
- * impediment; after notifying we record one. So each breach is escalated exactly once, the
- * audit trail comes for free, and no migration is needed (RB-10 §3, event-sourced).
+ * <p><b>Cadence + dedupe without a schema change:</b> the append-only {@code events} log is the
+ * ledger. We look at the most recent {@code IMPEDIMENT_SLA_NOTIFIED} event for the impediment and
+ * only (re)escalate when none exists yet or the last one is older than the reminder window
+ * ({@code app.cockpit.sla-reminder-hours}, default 24h). The hourly sweep therefore reminds at
+ * most once per window — no spam — and the audit trail comes for free (RB-10 §3, event-sourced).
  *
  * <p>This is a system job (actor {@code "system"}) that legitimately scans every tenant; the
  * notifications it raises are confined to each impediment's own project/workspace members, so
- * there is no cross-tenant leak (RB-40 §1). The {@link #posAndScrumMasters} helper is pure.
+ * there is no cross-tenant leak (RB-40 §1). {@link #posAndScrumMasters} and {@link #reminderDue}
+ * are pure.
  */
 @Service
 public class ImpedimentSlaService {
@@ -43,10 +48,12 @@ public class ImpedimentSlaService {
     private final EventService eventService;
     private final EmailService emailService;
     private final JdbcTemplate jdbc;
+    private final long reminderHours;
 
     public ImpedimentSlaService(ImpedimentRepository impediments, NotificationRepository notifications,
                                 ProjectTeamMemberRepository teamMembers, EventRepository events,
-                                EventService eventService, EmailService emailService, JdbcTemplate jdbc) {
+                                EventService eventService, EmailService emailService, JdbcTemplate jdbc,
+                                @Value("${app.cockpit.sla-reminder-hours:24}") long reminderHours) {
         this.impediments = impediments;
         this.notifications = notifications;
         this.teamMembers = teamMembers;
@@ -54,6 +61,7 @@ public class ImpedimentSlaService {
         this.eventService = eventService;
         this.emailService = emailService;
         this.jdbc = jdbc;
+        this.reminderHours = reminderHours;
     }
 
     // ── Pure helpers (unit-testable) ──────────────────────────────────────────
@@ -68,6 +76,13 @@ public class ImpedimentSlaService {
         return ids;
     }
 
+    /**
+     * Whether a breach is due for (re)escalation: never escalated yet, or the last escalation is
+     * older than the reminder window. Pure. {@code lastNotifiedAt} is null when none exists. */
+    static boolean reminderDue(OffsetDateTime lastNotifiedAt, OffsetDateTime now, long reminderHours) {
+        return lastNotifiedAt == null || !lastNotifiedAt.isAfter(now.minusHours(reminderHours));
+    }
+
     /** The escalation message for a breached impediment. Pure. */
     static String breachMessage(Impediment i, LocalDate today) {
         return "SLA breach: critical impediment \"" + i.getTitle() + "\" has been open "
@@ -75,17 +90,21 @@ public class ImpedimentSlaService {
     }
 
     // ── The sweep ─────────────────────────────────────────────────────────────
-    /** Notify on every newly-breached impediment; returns how many were escalated this run. */
+    /** (Re)escalate every breached impediment that is due this run; returns how many. */
     @Transactional
     public int sweep() {
         LocalDate today = LocalDate.now();
+        OffsetDateTime now = OffsetDateTime.now();
         int notified = 0;
         for (Impediment i : impediments.findBySeverityAndStatusNotAndDeletedAtIsNull("CRITICAL", "RESOLVED")) {
             if (!ImpedimentService.slaBreached(i, today)) {
                 continue;
             }
-            if (events.existsByAggregateIdAndEventType(i.getId(), NOTIFIED_EVENT)) {
-                continue; // already escalated — notify once per breach
+            Optional<AppEvent> last =
+                events.findFirstByAggregateIdAndEventTypeOrderByOccurredAtDesc(i.getId(), NOTIFIED_EVENT);
+            boolean firstEscalation = last.isEmpty();
+            if (!reminderDue(last.map(AppEvent::getOccurredAt).orElse(null), now, reminderHours)) {
+                continue; // escalated recently — wait for the next reminder window
             }
             Set<String> recipients = resolveRecipients(i.getProjectId(), i.getWorkspaceId());
             String message = breachMessage(i, today);
@@ -99,8 +118,9 @@ public class ImpedimentSlaService {
             }
             eventService.recordInWorkspace(i.getWorkspaceId(), i.getId(), NOTIFIED_EVENT, "system",
                 Map.of("severity", i.getSeverity(),
-                       "ageDays", ImpedimentService.ageDays(i, today),
-                       "recipients", recipients.size()));
+                       "ageDays", age,
+                       "recipients", recipients.size(),
+                       "reminder", !firstEscalation));
             notified++;
         }
         if (notified > 0) {

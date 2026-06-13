@@ -38,6 +38,10 @@ public class BqlController {
     private static final Set<String> SORTABLE = Set.of(
         "created_at", "updated_at", "due_date", "priority", "status", "story_points", "title");
 
+    /** Matches a trailing {@code ORDER BY …} clause (JQL-style) in a query string. */
+    private static final java.util.regex.Pattern ORDER_BY =
+        java.util.regex.Pattern.compile("(?i)\\s+ORDER\\s+BY\\s+(.+)$");
+
     /** Tier at/above which leadership-sensitive fields (e.g. businessValue) are queryable. */
     private static final int SENSITIVE_FIELD_MIN_TIER = 3; // LEAD+
 
@@ -60,8 +64,12 @@ public class BqlController {
     public List<Map<String, Object>> execute(@Valid @RequestBody Map<String, String> body) {
         String userId = authenticatedUser.id();
         String workspaceId = resolveWorkspace(userId, body.get("workspaceId"));
-        String query = body.getOrDefault("query", "").trim();
-        String sort = orderBy(body.get("sort"));
+        String rawQuery = body.getOrDefault("query", "").trim();
+        // An in-query `ORDER BY …` (JQL-style) takes precedence over the sort param, then is stripped
+        // so the WHERE compiler never sees it.
+        String inlineSort = extractInlineOrderBy(rawQuery);
+        String query = stripOrderBy(rawQuery);
+        String sort = inlineSort != null ? inlineSort : orderBy(body.get("sort"));
         int size = clampSize(body.get("size"));
         int offset = pageOffset(body.get("page"), size);
 
@@ -88,7 +96,8 @@ public class BqlController {
     public Map<String, Object> validate(@Valid @RequestBody Map<String, String> body) {
         String userId = authenticatedUser.id();
         String workspaceId = resolveWorkspace(userId, body.get("workspaceId"));
-        String query = body.getOrDefault("query", "").trim();
+        // Strip any trailing ORDER BY so the predicate validates like it runs (execute() does the same).
+        String query = stripOrderBy(body.getOrDefault("query", "").trim());
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             compiler.compileFor(query, contextFor(userId, workspaceId));
@@ -130,15 +139,19 @@ public class BqlController {
             m.put("custom", true);
             fields.add(m);
         });
+        // Virtual full-text field: `text ~ "..."` searches title + description together.
+        fields.add(Map.of("alias", "text", "column", "title+description", "type", "text", "custom", false));
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("fields", fields);
-        out.put("operators", List.of("=", "!=", ">", "<", ">=", "<=",
+        out.put("operators", List.of("=", "!=", ">", "<", ">=", "<=", "~",
             "CONTAINS", "STARTSWITH", "ENDSWITH", "IN", "NOT IN", "BETWEEN", "IS EMPTY", "IS NOT EMPTY"));
         out.put("connectors", List.of("AND", "OR", "NOT"));
         out.put("functions", List.of("currentUser()", "today()", "now()", "startOfWeek()",
-            "endOfWeek()", "startOfMonth()", "endOfMonth()", "daysAgo(n)", "daysFromNow(n)"));
+            "endOfWeek()", "startOfMonth()", "endOfMonth()", "startOfQuarter()", "endOfQuarter()",
+            "startOfYear()", "endOfYear()", "startOfDay()", "endOfDay()", "daysAgo(n)", "daysFromNow(n)"));
         out.put("enums", enumSuggestions(wsId));
+        out.put("sortable", SORTABLE);
         return out;
     }
 
@@ -210,18 +223,44 @@ public class BqlController {
         }
     }
 
-    /** Validate the requested sort against the allow-list; default to newest first. */
+    /**
+     * Validate a sort spec against the allow-list; default to newest first. Accepts one or more
+     * comma-separated {@code field [ASC|DESC]} terms; field aliases (e.g. {@code dueDate}) resolve
+     * to columns and each must be in {@link #SORTABLE}. Invalid terms are dropped.
+     */
     private String orderBy(String sort) {
         if (sort == null || sort.isBlank()) {
             return "created_at DESC";
         }
-        String[] parts = sort.trim().split("\\s+");
-        String col = parts[0].toLowerCase(Locale.ROOT);
-        if (!SORTABLE.contains(col)) {
-            return "created_at DESC";
+        List<String> terms = new ArrayList<>();
+        for (String term : sort.split(",")) {
+            String[] parts = term.trim().split("\\s+");
+            if (parts.length == 0 || parts[0].isBlank()) {
+                continue;
+            }
+            String alias = parts[0].toLowerCase(Locale.ROOT);
+            String col = BqlFieldRegistry.columnForAlias(alias);
+            if (col == null) {
+                col = alias; // allow a raw column name too
+            }
+            if (!SORTABLE.contains(col)) {
+                continue;
+            }
+            boolean asc = parts.length > 1 && parts[1].equalsIgnoreCase("asc");
+            terms.add(col + (asc ? " ASC" : " DESC"));
         }
-        boolean asc = parts.length > 1 && parts[1].equalsIgnoreCase("asc");
-        return col + (asc ? " ASC" : " DESC");
+        return terms.isEmpty() ? "created_at DESC" : String.join(", ", terms);
+    }
+
+    /** Pull the {@code ORDER BY …} tail (if any) out of a query and normalise it to a sort spec. */
+    private String extractInlineOrderBy(String query) {
+        java.util.regex.Matcher m = ORDER_BY.matcher(query);
+        return m.find() ? orderBy(m.group(1)) : null;
+    }
+
+    /** Strip a trailing {@code ORDER BY …} so the WHERE compiler only sees the predicate. */
+    private String stripOrderBy(String query) {
+        return ORDER_BY.matcher(query).replaceAll("").trim();
     }
 
     private Map<String, List<String>> enumSuggestions(String workspaceId) {

@@ -41,6 +41,7 @@ final class BqlLexer {
                 case ')' -> out.add(single(TokenType.RPAREN, ")"));
                 case ',' -> out.add(single(TokenType.COMMA, ","));
                 case '\'', '"' -> out.add(readString(c));
+                case '~' -> out.add(single(TokenType.OP, "~"));
                 case '=', '!', '<', '>' -> out.add(readOperator());
                 default -> out.add(readWord());
             }
@@ -95,7 +96,7 @@ final class BqlLexer {
         while (i < src.length()) {
             char c = src.charAt(i);
             if (Character.isWhitespace(c) || c == '(' || c == ')' || c == ','
-                || c == '=' || c == '!' || c == '<' || c == '>') {
+                || c == '=' || c == '!' || c == '<' || c == '>' || c == '~') {
                 break;
             }
             i++;

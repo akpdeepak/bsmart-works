@@ -38,6 +38,15 @@ public class BqlController {
     private static final Set<String> SORTABLE = Set.of(
         "created_at", "updated_at", "due_date", "priority", "status", "story_points", "title");
 
+    /**
+     * Low-cardinality columns a result set may be grouped by (the board/group-by view). Each must be
+     * a real {@code work_items} column (resolved through {@link BqlFieldRegistry}) so the GROUP BY
+     * target is never user-controlled SQL — it is matched against this allow-list, defending the
+     * grouped query exactly as {@link #SORTABLE} defends ORDER BY.
+     */
+    private static final Set<String> GROUPABLE = Set.of(
+        "status", "type", "priority", "severity", "assignee_id", "project_id", "sprint_id");
+
     /** Matches a trailing {@code ORDER BY …} clause (JQL-style) in a query string. */
     private static final java.util.regex.Pattern ORDER_BY =
         java.util.regex.Pattern.compile("(?i)\\s+ORDER\\s+BY\\s+(.+)$");
@@ -111,6 +120,40 @@ public class BqlController {
     }
 
     /**
+     * Group a BQL result set by a low-cardinality field and return the count per group — the data
+     * behind the board (kanban) and group-by views. Same governance as {@code /execute}: hard
+     * workspace scope plus field-level security on the predicate. The {@code groupBy} target is
+     * resolved through the allow-list and checked against {@link #GROUPABLE}, so it is never raw
+     * user SQL. Buckets are ordered largest-first; a {@code null} group value (e.g. unassigned) is
+     * returned as an empty string so the client can render an "unassigned" lane.
+     */
+    @PostMapping("/group")
+    public List<Map<String, Object>> group(@Valid @RequestBody Map<String, String> body) {
+        String userId = authenticatedUser.id();
+        String workspaceId = resolveWorkspace(userId, body.get("workspaceId"));
+        String groupCol = resolveGroupBy(body.get("groupBy"));
+        String query = stripOrderBy(body.getOrDefault("query", "").trim());
+
+        List<Object> params = new ArrayList<>();
+        params.add(workspaceId);
+        String base = "SELECT COALESCE(" + groupCol + "::text, '') AS value, COUNT(*) AS count"
+            + " FROM work_items"
+            + " WHERE deleted_at IS NULL"
+            + " AND project_id IN (SELECT id FROM projects WHERE workspace_id = ?)";
+        try {
+            BqlCompiler.Compiled c = compiler.compileFor(query, contextFor(userId, workspaceId));
+            String sql = base
+                + (c.sql().isEmpty() ? "" : " AND (" + c.sql() + ")")
+                + " GROUP BY " + groupCol
+                + " ORDER BY count DESC, value ASC";
+            params.addAll(c.params());
+            return jdbc.queryForList(sql, params.toArray());
+        } catch (BqlException e) {
+            throw new IllegalArgumentException("BQL parse error: " + e.getMessage());
+        }
+    }
+
+    /**
      * Grammar metadata for the editor: the fields this user may query (field-level security
      * applied), the operators/functions, and enum value suggestions. Lets the client drive
      * autocomplete + the visual builder without hard-coding the grammar.
@@ -155,6 +198,7 @@ public class BqlController {
             "startOfYear()", "endOfYear()", "startOfDay()", "endOfDay()", "daysAgo(n)", "daysFromNow(n)"));
         out.put("enums", enumSuggestions(wsId));
         out.put("sortable", SORTABLE);
+        out.put("groupable", GROUPABLE);
         return out;
     }
 
@@ -253,6 +297,25 @@ public class BqlController {
             terms.add(col + (asc ? " ASC" : " DESC"));
         }
         return terms.isEmpty() ? "created_at DESC" : String.join(", ", terms);
+    }
+
+    /**
+     * Resolve a {@code groupBy} alias to a real, group-safe column. Aliases (e.g. {@code assignee})
+     * resolve through the allow-list to their column; the column must be in {@link #GROUPABLE}.
+     * Anything else is rejected so the GROUP BY target can never be attacker-controlled.
+     */
+    private String resolveGroupBy(String groupBy) {
+        if (groupBy == null || groupBy.isBlank()) {
+            throw ApiException.badRequest("GROUP_BY_REQUIRED", "A groupBy field is required.");
+        }
+        String col = BqlFieldRegistry.columnForAlias(groupBy.trim().toLowerCase(Locale.ROOT));
+        if (col == null) {
+            col = groupBy.trim().toLowerCase(Locale.ROOT); // allow a raw column name too
+        }
+        if (!GROUPABLE.contains(col)) {
+            throw ApiException.badRequest("GROUP_BY_INVALID", "Cannot group by '" + groupBy + "'.");
+        }
+        return col;
     }
 
     /** Pull the {@code ORDER BY …} tail (if any) out of a query and normalise it to a sort spec. */

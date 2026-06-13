@@ -133,4 +133,38 @@ class BqlWorkspaceScopeIT {
             "(priority IN (HIGH, LOW)) AND assignee IS EMPTY AND status = Open");
         assertThat(ids).containsExactly("BQLSCOPE-A-1", "BQLSCOPE-A-2");
     }
+
+    /** Compose the controller's /group query: count per group value, workspace-scoped. */
+    private List<java.util.Map<String, Object>> runGrouped(String workspaceId, String groupCol, String bql) {
+        BqlCompiler.Compiled c = compiler.compileFor(bql, BqlContext.forUser("tester", false));
+        String sql = "SELECT COALESCE(" + groupCol + "::text, '') AS value, COUNT(*) AS count"
+            + " FROM work_items WHERE " + SCOPE
+            + (c.sql().isEmpty() ? "" : " AND (" + c.sql() + ")")
+            + " GROUP BY " + groupCol + " ORDER BY count DESC, value ASC";
+        List<Object> params = new ArrayList<>();
+        params.add(workspaceId);
+        params.addAll(c.params());
+        return jdbc.queryForList(sql, params.toArray());
+    }
+
+    @Test
+    void groupByType_countsPerBucket_andStaysScoped() {
+        // WS B has two Bugs; WS A has one Bug + one Task. Grouping in A must not see B's bugs.
+        List<java.util.Map<String, Object>> buckets = runGrouped(WS_A, "type", "");
+        assertThat(buckets).hasSize(2);
+        java.util.Map<String, Long> byValue = new java.util.HashMap<>();
+        for (java.util.Map<String, Object> b : buckets) {
+            byValue.put((String) b.get("value"), ((Number) b.get("count")).longValue());
+        }
+        assertThat(byValue).containsEntry("Bug", 1L).containsEntry("Task", 1L);
+    }
+
+    @Test
+    void groupByWithFilter_appliesPredicateBeforeCounting() {
+        List<java.util.Map<String, Object>> buckets = runGrouped(WS_B, "priority", "type = Bug");
+        // Only B's two HIGH bugs survive the filter → a single HIGH bucket of 2.
+        assertThat(buckets).hasSize(1);
+        assertThat(buckets.get(0)).containsEntry("value", "HIGH");
+        assertThat(((Number) buckets.get(0).get("count")).longValue()).isEqualTo(2L);
+    }
 }

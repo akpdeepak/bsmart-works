@@ -4,6 +4,8 @@ import { EmptyState } from '@/components/works/atoms/empty-state';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
+import { useI18n } from '@/lib/i18n';
+import { absoluteDate } from '@/lib/format';
 
 // Releases view — extracted from the App.jsx monolith (UX finding A3/H2). Behaviour-preserving:
 // the parent owns release data + mutations; this renders the two-pane list/detail. A11y nudge
@@ -27,19 +29,20 @@ export default function ReleasesView({
   addItemToRelease,
   onPressKey,
 }) {
+  const { t } = useI18n();
   return (
     <div className="flex h-full overflow-hidden">
       <div className="w-72 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col">
         <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">Releases</h2>
-            <button onClick={() => setIsReleaseOpen(true)} aria-label="New release" className="w-6 h-6 flex items-center justify-center rounded bg-brand-navy text-white text-sm hover:opacity-80">+</button>
+            <h2 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{t('deliver.releases.title')}</h2>
+            <button onClick={() => setIsReleaseOpen(true)} aria-label={t('deliver.releases.newRelease')} className="w-6 h-6 flex items-center justify-center rounded bg-brand-navy text-white text-sm hover:opacity-80">+</button>
           </div>
-          <input type="text" placeholder="Search releases..." aria-label="Search releases" value={releaseSearch} onChange={e => setReleaseSearch(e.target.value)} className="input text-xs py-1.5 w-full" />
+          <input type="text" placeholder={t('deliver.releases.searchPlaceholder')} aria-label={t('deliver.releases.searchAria')} value={releaseSearch} onChange={e => setReleaseSearch(e.target.value)} className="input text-xs py-1.5 w-full" />
         </div>
         <div className="px-3 py-2 border-b border-neutral-200 dark:border-neutral-700">
-          <select className="input text-xs w-full py-1" aria-label="Filter releases by project" onChange={e => fetchReleases(e.target.value || null)}>
-            <option value="">All Projects</option>
+          <select className="input text-xs w-full py-1" aria-label={t('deliver.releases.filterByProject')} onChange={e => fetchReleases(e.target.value || null)}>
+            <option value="">{t('deliver.releases.allProjects')}</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
@@ -52,15 +55,15 @@ export default function ReleasesView({
                 <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400 ml-1">v{r.version}</span>
               </div>
               <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${r.status === 'RELEASED' ? 'bg-semantic-success text-white' : r.status === 'IN_PROGRESS' ? 'bg-brand-navy text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{r.status}</span>
-              {r.releaseDate && <span className="text-xs text-neutral-600 dark:text-neutral-400 ml-2">{new Date(r.releaseDate).toLocaleDateString()}</span>}
+              {r.releaseDate && <span className="text-xs text-neutral-600 dark:text-neutral-400 ml-2">{absoluteDate(r.releaseDate)}</span>}
             </button>
           ))}
-          {releases.length === 0 && <p className="text-xs text-neutral-600 text-center py-6">No releases yet. Create one to get started.</p>}
+          {releases.length === 0 && <p className="text-xs text-neutral-600 text-center py-6">{t('deliver.releases.emptySidebar')}</p>}
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-6">
         {!selectedRelease ? (
-          <EmptyState icon={Rocket} title="Select a release" subtitle="Choose a release from the left to view its details and linked work items." action={<Button variant="action" onClick={() => setIsReleaseOpen(true)}>New Release</Button>} />
+          <EmptyState icon={Rocket} title={t('deliver.releases.selectTitle')} subtitle={t('deliver.releases.selectSubtitle')} action={<Button variant="action" onClick={() => setIsReleaseOpen(true)}>{t('deliver.releases.newReleaseCta')}</Button>} />
         ) : (
           <div>
             <div className="flex items-start justify-between mb-5">
@@ -71,19 +74,19 @@ export default function ReleasesView({
                   <span className={`text-xs font-bold px-2 py-0.5 rounded ${selectedRelease.status === 'RELEASED' ? 'bg-semantic-success text-white' : selectedRelease.status === 'IN_PROGRESS' ? 'bg-brand-navy text-white' : 'bg-neutral-100 text-neutral-500'}`}>{selectedRelease.status}</span>
                 </div>
                 {selectedRelease.description && <p className="text-sm text-neutral-500">{selectedRelease.description}</p>}
-                {selectedRelease.releaseDate && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Target: {new Date(selectedRelease.releaseDate).toLocaleDateString()}</p>}
+                {selectedRelease.releaseDate && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">{t('deliver.releases.targetPrefix')}{absoluteDate(selectedRelease.releaseDate)}</p>}
               </div>
               <div className="flex gap-2 items-center">
-                {selectedRelease.status !== 'RELEASED' && <Button variant="action" onClick={() => updateRelease(selectedRelease.id, { ...selectedRelease, status: 'RELEASED' })}>Mark Released</Button>}
-                {selectedRelease.status === 'PLANNED' && <Button variant="secondary" onClick={() => updateRelease(selectedRelease.id, { ...selectedRelease, status: 'IN_PROGRESS' })}>Start</Button>}
-                <button onClick={() => deleteRelease(selectedRelease.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
+                {selectedRelease.status !== 'RELEASED' && <Button variant="action" onClick={() => updateRelease(selectedRelease.id, { ...selectedRelease, status: 'RELEASED' })}>{t('deliver.releases.markReleased')}</Button>}
+                {selectedRelease.status === 'PLANNED' && <Button variant="secondary" onClick={() => updateRelease(selectedRelease.id, { ...selectedRelease, status: 'IN_PROGRESS' })}>{t('deliver.releases.start')}</Button>}
+                <button onClick={() => deleteRelease(selectedRelease.id)} className="text-xs text-semantic-danger hover:underline">{t('deliver.releases.delete')}</button>
               </div>
             </div>
             {releaseItems.length > 0 && (
               <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 mb-5">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">Progress</span>
-                  <span className="text-xs text-neutral-500">{releaseItems.filter(i => i.status === 'Done').length}/{releaseItems.length} done</span>
+                  <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">{t('deliver.releases.progress')}</span>
+                  <span className="text-xs text-neutral-500">{releaseItems.filter(i => i.status === 'Done').length}/{releaseItems.length} {t('deliver.releases.doneSuffix')}</span>
                 </div>
                 <div className="h-3 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
                   <div className="h-full bg-semantic-success rounded-full" style={{ width: `${Math.round(releaseItems.filter(i => i.status === 'Done').length * 100 / releaseItems.length)}%` }} />
@@ -91,28 +94,28 @@ export default function ReleasesView({
               </div>
             )}
             <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 mb-5">
-              <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Work Items ({releaseItems.length})</h3>
-              {releaseItems.length === 0 ? <p className="text-sm text-neutral-600 text-center py-4">No work items linked yet.</p>
+              <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">{t('deliver.releases.workItems')} ({releaseItems.length})</h3>
+              {releaseItems.length === 0 ? <p className="text-sm text-neutral-600 text-center py-4">{t('deliver.releases.noItemsLinked')}</p>
                 : releaseItems.map(item => (
                   <div key={item.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                     <TypeBadge type={item.type} compact />
                     <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.id}</span>
                     <span role="button" tabIndex={0} onKeyDown={onPressKey} className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate cursor-pointer hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => setSelectedItem(item)}>{item.title}</span>
                     <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
-                    <button onClick={() => removeItemFromRelease(selectedRelease.id, item.id)} className="text-xs text-semantic-danger hover:underline">Remove</button>
+                    <button onClick={() => removeItemFromRelease(selectedRelease.id, item.id)} className="text-xs text-semantic-danger hover:underline">{t('deliver.releases.remove')}</button>
                   </div>
                 ))
               }
             </div>
             <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-              <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Add Items to Release</h3>
+              <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">{t('deliver.releases.addItemsTitle')}</h3>
               <div className="space-y-1 max-h-64 overflow-y-auto">
                 {workItems.filter(wi => !releaseItems.find(ri => ri.id === wi.id)).slice(0, 20).map(item => (
                   <div key={item.id} className="flex items-center gap-2 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                     <TypeBadge type={item.type} compact />
                     <span className="flex-1 text-sm text-neutral-900 dark:text-neutral-100 truncate">{item.title}</span>
                     <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
-                    <button onClick={() => addItemToRelease(selectedRelease.id, item.id)} className="text-xs text-brand-navy hover:underline">+ Add</button>
+                    <button onClick={() => addItemToRelease(selectedRelease.id, item.id)} className="text-xs text-brand-navy hover:underline">{t('deliver.releases.add')}</button>
                   </div>
                 ))}
               </div>

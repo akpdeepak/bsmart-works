@@ -71,69 +71,74 @@ export function allowed(view, vis) {
 // Order matches the mockup rail top-to-bottom. The last mode ("Set up") is pinned to the
 // bottom of the rail by the ModeRail component.
 
+// Each mode + surface also carries an i18n `labelKey` (issue 275). `label` remains the English
+// fallback / canonical orientation string; user-facing renders prefer `t(labelKey)` (see
+// mode-rail.jsx, sub-rail.jsx, command-palette.jsx). Keys live in the `nav.*` namespace (locales.js).
 export const MODES = [
-  { id: 'today', label: 'Home', Icon: Home, surfaces: [
-    { id: 'dashboard',     label: 'Today',         Icon: Home },
-    { id: 'myworks',       label: 'My Works',      Icon: User },
-    { id: 'notifications', label: 'Notifications', Icon: Bell },
+  { id: 'today', label: 'Home', labelKey: 'nav.mode.home', Icon: Home, surfaces: [
+    { id: 'dashboard',     label: 'Today',         labelKey: 'nav.today',         Icon: Home },
+    { id: 'myworks',       label: 'My Works',      labelKey: 'nav.myWork',        Icon: User },
+    { id: 'notifications', label: 'Notifications', labelKey: 'nav.notifications', Icon: Bell },
   ] },
-  { id: 'deliver', label: 'Deliver', Icon: LayoutGrid, surfaces: [
-    { id: 'smcockpit', label: 'Sprint Cockpit', Icon: Gauge },
-    { id: 'board',     label: 'Board',          Icon: LayoutGrid },
-    { id: 'backlog',   label: 'Backlog',        Icon: ListTodo },
-    { id: 'sprint',    label: 'Active Sprint',  Icon: Zap },
-    { id: 'releases',  label: 'Releases',       Icon: Rocket },
-    { id: 'projects',  label: 'Teams',           Icon: FolderKanban },
-    { id: 'pm',        label: 'PM Artifacts',   Icon: ClipboardList },
+  { id: 'deliver', label: 'Deliver', labelKey: 'nav.mode.deliver', Icon: LayoutGrid, surfaces: [
+    { id: 'smcockpit', label: 'Sprint Cockpit', labelKey: 'nav.sprintCockpit', Icon: Gauge },
+    { id: 'board',     label: 'Board',          labelKey: 'nav.board',         Icon: LayoutGrid },
+    { id: 'backlog',   label: 'Backlog',        labelKey: 'nav.backlog',       Icon: ListTodo },
+    { id: 'sprint',    label: 'Active Sprint',  labelKey: 'nav.sprint',        Icon: Zap },
+    { id: 'releases',  label: 'Releases',       labelKey: 'nav.releases',      Icon: Rocket },
+    { id: 'projects',  label: 'Teams',           labelKey: 'nav.teams',         Icon: FolderKanban },
+    { id: 'pm',        label: 'PM Artifacts',   labelKey: 'nav.pmArtifacts',   Icon: ClipboardList },
   ] },
-  { id: 'insight', label: 'Insight', Icon: BarChart2, surfaces: [
-    { id: 'reports',       label: 'Reports',       Icon: BarChart2 },
-    { id: 'dashboards',    label: 'Dashboards',    Icon: LayoutDashboard },
-    { id: 'reportbuilder', label: 'Report Builder', Icon: FileText },
-    { id: 'performance',   label: 'Performance',   Icon: TrendingUp },
+  { id: 'insight', label: 'Insight', labelKey: 'nav.mode.insight', Icon: BarChart2, surfaces: [
+    { id: 'reports',       label: 'Reports',       labelKey: 'nav.reports',       Icon: BarChart2 },
+    { id: 'dashboards',    label: 'Dashboards',    labelKey: 'nav.dashboards',    Icon: LayoutDashboard },
+    { id: 'reportbuilder', label: 'Report Builder', labelKey: 'nav.reportBuilder', Icon: FileText },
+    { id: 'performance',   label: 'Performance',   labelKey: 'nav.performance',   Icon: TrendingUp },
   ] },
-  { id: 'service', label: 'Service', Icon: Headset, surfaces: [
-    { id: 'service',      label: 'Service Desk',  Icon: Headset },
-    { id: 'supportinbox', label: 'Support Inbox', Icon: MessageSquare },
-    { id: 'sla',          label: 'SLA',           Icon: Timer },
-    { id: 'compliance',   label: 'Compliance',    Icon: ShieldCheck },
+  { id: 'service', label: 'Service', labelKey: 'nav.mode.service', Icon: Headset, surfaces: [
+    { id: 'service',      label: 'Service Desk',  labelKey: 'nav.serviceDesk',  Icon: Headset },
+    { id: 'supportinbox', label: 'Support Inbox', labelKey: 'nav.supportInbox', Icon: MessageSquare },
+    { id: 'sla',          label: 'SLA',           labelKey: 'nav.sla',          Icon: Timer },
+    { id: 'compliance',   label: 'Compliance',    labelKey: 'nav.compliance',   Icon: ShieldCheck },
   ] },
-  { id: 'know', label: 'Know', Icon: BookOpen, surfaces: [
-    { id: 'knowledge',         label: 'Knowledge',           Icon: BookOpen },
-    { id: 'knowledgeadvanced', label: 'Templates & Extract', Icon: FileText },
+  { id: 'know', label: 'Know', labelKey: 'nav.mode.know', Icon: BookOpen, surfaces: [
+    { id: 'knowledge',         label: 'Knowledge',           labelKey: 'nav.knowledge',        Icon: BookOpen },
+    { id: 'knowledgeadvanced', label: 'Templates & Extract', labelKey: 'nav.templatesExtract', Icon: FileText },
   ] },
-  { id: 'extend', label: 'Extend', Icon: Puzzle, surfaces: [
-    { id: 'automations',     label: 'Automations',      Icon: Workflow },
-    { id: 'integrations',    label: 'Integrations',     Icon: Plug },
-    { id: 'aistudio',        label: 'AI Studio',        Icon: Bot },
-    { id: 'marketplace',     label: 'Marketplace',      Icon: Package },
-    { id: 'developerportal', label: 'Developer Portal', Icon: Code2 },
+  { id: 'extend', label: 'Extend', labelKey: 'nav.mode.extend', Icon: Puzzle, surfaces: [
+    { id: 'automations',     label: 'Automations',      labelKey: 'nav.automations',     Icon: Workflow },
+    { id: 'integrations',    label: 'Integrations',     labelKey: 'nav.integrations',    Icon: Plug },
+    { id: 'aistudio',        label: 'AI Studio',        labelKey: 'nav.aiStudio',        Icon: Bot },
+    { id: 'marketplace',     label: 'Marketplace',      labelKey: 'nav.marketplace',     Icon: Package },
+    { id: 'developerportal', label: 'Developer Portal', labelKey: 'nav.developerPortal', Icon: Code2 },
   ] },
-  { id: 'setup', label: 'Settings', Icon: Settings, surfaces: [
-    { id: 'workspace',     label: 'Settings',           Icon: Settings },
-    { id: 'settings3',     label: 'Workflows & Fields', Icon: SlidersHorizontal },
-    { id: 'aicontrol',     label: 'AI Control',         Icon: Sparkles },
-    { id: 'customization', label: 'Customization',      Icon: Puzzle },
-    { id: 'security',      label: 'Security',           Icon: Shield },
-    { id: 'trash',         label: 'Trash',              Icon: Trash2 },
+  { id: 'setup', label: 'Settings', labelKey: 'nav.mode.setup', Icon: Settings, surfaces: [
+    { id: 'workspace',     label: 'Settings',           labelKey: 'nav.settings',        Icon: Settings },
+    { id: 'settings3',     label: 'Workflows & Fields', labelKey: 'nav.workflowsFields', Icon: SlidersHorizontal },
+    { id: 'aicontrol',     label: 'AI Control',         labelKey: 'nav.aiControl',       Icon: Sparkles },
+    { id: 'customization', label: 'Customization',      labelKey: 'nav.customization',   Icon: Puzzle },
+    { id: 'security',      label: 'Security',           labelKey: 'nav.security',        Icon: Shield },
+    { id: 'trash',         label: 'Trash',              labelKey: 'nav.trash',           Icon: Trash2 },
   ] },
 ];
 
 // Satellite destinations — reachable via a lens / the BQL chip / ⌘K, but not pinned to a sub-rail.
 export const SATELLITES = [
-  { id: 'developer',   label: 'Developer',    Icon: Code },
-  { id: 'poworkspace', label: 'PO Workspace', Icon: MapIcon },
-  { id: 'leadership',  label: 'Leadership',   Icon: Crown },
-  { id: 'adminops',    label: 'Admin Ops',    Icon: ShieldHalf },
-  { id: 'bql',         label: 'BQL Query',    Icon: Search },
+  { id: 'developer',   label: 'Developer',    labelKey: 'nav.developer',   Icon: Code },
+  { id: 'poworkspace', label: 'PO Workspace', labelKey: 'nav.poWorkspace', Icon: MapIcon },
+  { id: 'leadership',  label: 'Leadership',   labelKey: 'nav.leadership',  Icon: Crown },
+  { id: 'adminops',    label: 'Admin Ops',    labelKey: 'nav.adminOps',    Icon: ShieldHalf },
+  { id: 'bql',         label: 'BQL Query',    labelKey: 'nav.bqlQuery',    Icon: Search },
 ];
 
 // Flat list of every navigable destination (mode surfaces + satellites), each tagged with the
 // group it belongs to — the single source the ⌘K palette builds its "go to" commands from.
+// Each entry carries `labelKey` (from the surface) and `groupKey` (the owning mode's key) so a
+// consumer with the i18n `t` can localize at render; `label`/`group` remain the English fallback.
 export function navDestinations() {
   const out = [];
-  for (const m of MODES) for (const s of m.surfaces) out.push({ ...s, group: m.label });
-  for (const s of SATELLITES) out.push({ ...s, group: 'More' });
+  for (const m of MODES) for (const s of m.surfaces) out.push({ ...s, group: m.label, groupKey: m.labelKey });
+  for (const s of SATELLITES) out.push({ ...s, group: 'More', groupKey: 'nav.more' });
   return out;
 }
 

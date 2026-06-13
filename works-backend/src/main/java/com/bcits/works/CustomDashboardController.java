@@ -15,6 +15,7 @@ import jakarta.validation.Valid;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * User-built (custom) dashboards — persisted widget grids. Lives on /api/v1/dashboards
@@ -45,12 +46,19 @@ public class CustomDashboardController {
         this.rbac = rbac;
     }
 
+    // Sortable columns for the dashboards list — allow-listed (RB-10 §4 filtering discipline).
+    private static final Set<String> SORTABLE = Set.of("updatedAt", "createdAt", "name");
+
     @GetMapping
-    public List<Dashboard> list(@RequestParam(required = false) String workspaceId) {
+    public PageResponse<Dashboard> list(@RequestParam(required = false) String workspaceId,
+                                        @RequestParam(defaultValue = "0") int page,
+                                        @RequestParam(defaultValue = "50") int size,
+                                        @RequestParam(required = false) String sort) {
         String userId = authenticatedUser.id();
-        return workspaceId != null
-            ? dashboardRepository.findByWorkspaceIdOrderByUpdatedAtDesc(workspaceId)
-            : dashboardRepository.findByOwnerIdOrderByUpdatedAtDesc(userId);
+        var pageable = ListPaging.of(page, size, sort, SORTABLE);
+        return PageResponse.of(workspaceId != null
+            ? dashboardRepository.findByWorkspaceId(workspaceId, pageable)
+            : dashboardRepository.findByOwnerId(userId, pageable));
     }
 
     @GetMapping("/{id}")

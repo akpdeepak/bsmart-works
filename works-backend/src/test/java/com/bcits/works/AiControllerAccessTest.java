@@ -32,9 +32,10 @@ class AiControllerAccessTest {
     private final RbacService rbac = mock(RbacService.class);
     private final AiWorkspaceSettingsService settings = mock(AiWorkspaceSettingsService.class);
     private final DashboardSummaryService dashboardSummary = mock(DashboardSummaryService.class);
+    private final DashboardSuggestionService dashboardSuggestion = mock(DashboardSuggestionService.class);
 
     private final AiController controller =
-        new AiController(cp, invocations, authenticatedUser, rbac, settings, dashboardSummary);
+        new AiController(cp, invocations, authenticatedUser, rbac, settings, dashboardSummary, dashboardSuggestion);
 
     AiControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);
@@ -85,6 +86,18 @@ class AiControllerAccessTest {
             java.util.List.of(java.util.Map.of("label", "Open", "value", 4)), true);
         assertThatThrownBy(() -> controller.dashboardSummary(FOREIGN_WS, req)).isInstanceOf(ApiException.class);
         verify(dashboardSummary).summarize(eq(FOREIGN_WS), eq(CALLER), any(), any(),
+            org.mockito.ArgumentMatchers.anyBoolean());
+    }
+
+    @Test
+    void dashboardSuggestions_delegatesToServiceWhichEnforcesViewItems() {
+        // The service owns RBAC (view_items) — denial there propagates through the controller.
+        when(dashboardSuggestion.suggest(eq(FOREIGN_WS), eq(CALLER), any(),
+            org.mockito.ArgumentMatchers.anyBoolean()))
+            .thenThrow(ApiException.forbidden("denied"));
+        var req = new AiController.DashboardSuggestionRequest("developer", true);
+        assertThatThrownBy(() -> controller.dashboardSuggestions(FOREIGN_WS, req)).isInstanceOf(ApiException.class);
+        verify(dashboardSuggestion).suggest(eq(FOREIGN_WS), eq(CALLER), any(),
             org.mockito.ArgumentMatchers.anyBoolean());
     }
 }

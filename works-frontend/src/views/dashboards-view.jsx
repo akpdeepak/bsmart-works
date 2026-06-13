@@ -7,6 +7,7 @@ import { Modal } from '@/components/works/molecules/modal';
 import { DashboardWidgetCard } from '@/components/works/organisms/dashboard-widget-card';
 import { DashboardDrillModal } from '@/components/works/organisms/dashboard-drill-modal';
 import { ConversationalDashboardPanel } from '@/components/works/organisms/conversational-dashboard-panel';
+import { DashboardSuggestionPanel } from '@/components/works/organisms/dashboard-suggestion-panel';
 import { WidgetBuilder } from '@/components/works/organisms/widget-builder';
 import { capabilityEnabled } from '@/lib/ai';
 import { DashboardAiSummary } from '@/components/works/organisms/dashboard-ai-summary';
@@ -57,6 +58,8 @@ export default function DashboardsView({
   currentUser,
   activeWorkspaceId,
   aiCapabilities = [],
+  dashboardRole = 'developer',
+  acceptDashboardSuggestion,
   createDashboard,
   openDashboard,
   deleteDashboard,
@@ -82,6 +85,9 @@ export default function DashboardsView({
   // wins is already resolved server-side (RB-40 §2). Hidden entirely when off; the deterministic
   // NL→spec fallback still works server-side when AI is on but over budget/unavailable.
   const convDashOn = capabilityEnabled(aiCapabilities, 'conversational_dashboard');
+  // Same gating for the AI-suggested starter dashboard entry — HIDDEN when dashboard_suggestion is
+  // off (RB-40 §2). When on but over budget/unavailable, the deterministic starter set still shows.
+  const suggestOn = capabilityEnabled(aiCapabilities, 'dashboard_suggestion');
 
   // The shared <WidgetBuilder/> modal — open for a brand-new PIVOT widget (editingPivot === 'new')
   // or to edit an existing one (the widget object). Pure UI state; persistence still flows through
@@ -114,6 +120,14 @@ export default function DashboardsView({
               </div>
               <Button variant="action" onClick={createDashboard}>{t('insights.dashboards.new')}</Button>
             </div>
+            {suggestOn && (
+              <DashboardSuggestionPanel
+                workspaceId={activeWorkspaceId}
+                roleKey={dashboardRole}
+                onAccept={acceptDashboardSuggestion}
+                showToast={showToast}
+              />
+            )}
             {convDashOn && (
               <ConversationalDashboardPanel
                 workspaceId={activeWorkspaceId}

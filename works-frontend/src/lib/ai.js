@@ -69,6 +69,15 @@ export const aiClient = {
   // never re-queries work items and always returns a usable result (meta.fallback says if AI ran).
   dashboardSummary: (workspaceId, payload) =>
     api.send(`/ai/dashboard-summary?workspaceId=${ws(workspaceId)}`, { method: 'POST', body: payload }),
+  // Cap J — AI-suggested starter dashboard from the caller's role + workspace context. Returns
+  // { role, name, rationale, widgets, usedAi, fallback, policyState, tier }. The widget set is
+  // always the deterministic role-based starter set, so the preview renders even when AI is
+  // off/over budget (RB-40 §2) — meta.fallback says whether AI refined the rationale.
+  suggestDashboard: (workspaceId, role, aiInContext = true) =>
+    api.send(`/ai/dashboard-suggestions?workspaceId=${ws(workspaceId)}`, {
+      method: 'POST',
+      body: { role, aiInContext },
+    }),
 };
 
 // Map a CompiledSpec verdict ({ usedAi, fallback, policyState, tier }) onto the shape AiMetaBadge

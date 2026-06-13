@@ -227,6 +227,41 @@ class BqlCompilerTest {
         assertEquals(List.of("; DROP TABLE users; --"), c.params());
     }
 
+    // ── Backward compatibility with stored/seeded BQL (regression guard) ──────────────
+
+    @Test
+    void multiWordBareValue_isReadAsOneValue() {
+        // Seeded compliance rules use unquoted multi-word values like `status = In Progress`.
+        BqlCompiler.Compiled c = compiler.compile("status = In Progress", "u");
+        assertEquals("status = ?", c.sql());
+        assertEquals(List.of("In Progress"), c.params());
+    }
+
+    @Test
+    void multiWordBareValue_stopsAtConnector() {
+        BqlCompiler.Compiled c = compiler.compile("type = Story AND status = In Progress", "u");
+        assertEquals("(type = ? AND status = ?)", c.sql());
+        assertEquals(List.of("Story", "In Progress"), c.params());
+    }
+
+    @Test
+    void seededComplianceRules_compile() {
+        // Exact scope/assertion BQL pairs from V37 seed templates must still compile.
+        for (String bql : List.of(
+                "type = Story AND status = In Progress",
+                "acceptance_criteria != ''",
+                "status = In Progress",
+                "assignee_id != ''",
+                "due_date >= today()",
+                "type = Bug AND priority = CRITICAL",
+                "steps_to_reproduce != ''",
+                "definition_of_done != ''",
+                "business_value > 0")) {
+            BqlCompiler.Compiled c = compiler.compile(bql, "system");
+            assertTrue(c.sql() != null && !c.sql().isEmpty(), "should compile: " + bql);
+        }
+    }
+
     @Test
     void malformedCondition_throwsBqlException() {
         assertThrows(BqlException.class, () -> compiler.compile("this is not valid", "u"));

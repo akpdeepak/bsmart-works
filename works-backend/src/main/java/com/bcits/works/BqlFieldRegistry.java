@@ -47,6 +47,13 @@ public final class BqlFieldRegistry {
         register(BqlField.of("statusChangedAt", "status_changed_at", BqlField.BqlType.DATE), "statuschangedat");
         register(BqlField.of("environment", "environment", BqlField.BqlType.TEXT));
         register(BqlField.of("effortEstimate", "effort_estimate", BqlField.BqlType.TEXT), "effortestimate");
+        // Long-text detail fields — queryable (e.g. CONTAINS, or != '' emptiness checks used by
+        // compliance rules). Kept TEXT so only text-appropriate operators bind sensibly.
+        register(BqlField.of("acceptanceCriteria", "acceptance_criteria", BqlField.BqlType.TEXT), "acceptancecriteria");
+        register(BqlField.of("stepsToReproduce", "steps_to_reproduce", BqlField.BqlType.TEXT), "stepstoreproduce");
+        register(BqlField.of("definitionOfDone", "definition_of_done", BqlField.BqlType.TEXT), "definitionofdone");
+        register(BqlField.of("expectedResult", "expected_result", BqlField.BqlType.TEXT), "expectedresult");
+        register(BqlField.of("actualResult", "actual_result", BqlField.BqlType.TEXT), "actualresult");
         // Sensitive: business value is leadership-facing; gated by the sensitivity check.
         register(BqlField.sensitive("businessValue", "business_value", BqlField.BqlType.NUMBER), "businessvalue");
     }

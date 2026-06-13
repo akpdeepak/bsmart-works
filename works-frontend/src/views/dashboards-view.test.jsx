@@ -121,3 +121,28 @@ describe('DashboardsView', () => {
     });
   });
 });
+
+describe('DashboardsView — AI summary band (dashboard_summary gate)', () => {
+  const openProps = {
+    ...baseProps,
+    activeWorkspaceId: 'ws-1',
+    selectedDashboard: { id: 'd1', name: 'Sprint Health', widgets: [], scope: 'TEAM' },
+    workItems: [{ id: 'WRK-1', status: 'Open' }],
+  };
+
+  it('is hidden entirely when the dashboard_summary capability is off', () => {
+    render(<DashboardsView {...openProps} aiCapabilities={[{ id: 'dashboard_summary', enabled: false }]} />);
+    expect(screen.queryByText(/AI summary & anomalies/i)).not.toBeInTheDocument();
+  });
+
+  it('is hidden when only unrelated capabilities are enabled (most-restrictive-wins)', () => {
+    render(<DashboardsView {...openProps} aiCapabilities={[{ id: 'nl_to_bql', enabled: true }]} />);
+    expect(screen.queryByText(/AI summary & anomalies/i)).not.toBeInTheDocument();
+  });
+
+  it('shows the band when dashboard_summary is enabled', () => {
+    render(<DashboardsView {...openProps} aiCapabilities={[{ id: 'dashboard_summary', enabled: true }]} />);
+    expect(screen.getByText(/AI summary & anomalies/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /summarise/i })).toBeInTheDocument();
+  });
+});

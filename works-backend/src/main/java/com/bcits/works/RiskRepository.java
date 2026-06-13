@@ -9,6 +9,9 @@ public interface RiskRepository extends JpaRepository<Risk, String> {
     List<Risk> findByProjectIdAndDeletedAtIsNull(String projectId);
     List<Risk> findByWorkspaceIdAndDeletedAtIsNull(String workspaceId);
 
+    /** Bounded to a project within its owning workspace (RB-40 §1) — a foreign projectId cannot leak rows. */
+    List<Risk> findByProjectIdAndWorkspaceIdAndDeletedAtIsNull(String projectId, String workspaceId);
+
     /** Workspace-scoped fallback (RB-40 §1): only risks in workspaces the caller belongs to. */
     @Query(nativeQuery = true,
            value = "SELECT * FROM risk WHERE deleted_at IS NULL " +

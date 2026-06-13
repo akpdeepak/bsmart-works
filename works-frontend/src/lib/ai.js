@@ -64,6 +64,11 @@ export const aiClient = {
     api.send(`/ai/conversational-dashboards/${encodeURIComponent(id)}?workspaceId=${ws(workspaceId)}`, {
       method: 'DELETE',
     }),
+  // Cap J — AI summary + anomaly explanation over an already-rendered chart/dashboard series.
+  // The caller passes the data it already aggregated (title + [{ label, value }]); the server
+  // never re-queries work items and always returns a usable result (meta.fallback says if AI ran).
+  dashboardSummary: (workspaceId, payload) =>
+    api.send(`/ai/dashboard-summary?workspaceId=${ws(workspaceId)}`, { method: 'POST', body: payload }),
 };
 
 // Map a CompiledSpec verdict ({ usedAi, fallback, policyState, tier }) onto the shape AiMetaBadge

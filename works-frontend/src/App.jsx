@@ -3587,6 +3587,8 @@ export default function App() {
               sprints={sprints}
               velocityData={velocityData}
               currentUser={currentUser}
+              activeWorkspaceId={activeWorkspaceId}
+              aiCapabilities={aiCapabilities}
               createDashboard={createDashboard}
               openDashboard={openDashboard}
               deleteDashboard={deleteDashboard}
@@ -3605,8 +3607,6 @@ export default function App() {
               mintShare={mintShare}
               stopShare={stopShare}
               showToast={showToast}
-              aiCapabilities={aiCapabilities}
-              activeWorkspaceId={activeWorkspaceId}
             />
           )}
 

@@ -207,6 +207,23 @@ Insights capabilities (`KPI_NARRATIVE`, `CONVERSATIONAL_DASHBOARD`, `COCKPIT_PRO
 
 ---
 
+## 5a. Status & tracking (as of this branch)
+
+**Landed on `claude/insights-ai-alignment-review-59gyu7`:**
+- ✅ §1.1 — `AggregationController` tenant isolation + RBAC (commit + `AggregationControllerAccessTest`).
+- ✅ §1.3 — `BqlController.execute` workspace scoping + RBAC (`BqlControllerScopeTest`).
+- ✅ §2.3 (gate) — NL→BQL panel gates on `nl_to_bql` via new `capabilityEnabled` helper.
+- ✅ §4 — Leadership briefing/board-deck endpoints verified present (no 404 risk).
+
+**Tracked as issues (remaining):**
+| Issue | Covers |
+|-------|--------|
+| #243 | §1.2 central tenant filter (sign-off) + §1.3-RAID `RaidDashboardController` scoping |
+| #244 | §1.4 field-level security on metrics / BQL columns (sign-off) |
+| #245 | §2.1 dashboard/chart AI summary + anomaly detection capability |
+| #246 | §2.3 surface conversational dashboards (NL → widget) in Dashboards |
+| #247 | §2.2/§2.4–2.6 AI provenance/budget/tiering · §3 spec-gap features · §4 cross-cutting |
+
 ## 6. What's verified vs. what to confirm
 
 **Verified by direct read:** §1.1 (`AggregationController` + `AggregationService` — no RBAC, param

@@ -39,6 +39,13 @@ public class KpiSnapshotScheduler {
      */
     @Scheduled(cron = "${kpi.snapshot.cron:0 0 * * * *}")
     public void writeSnapshots() {
+        // System / unfiltered escape hatch (RB-40 §1): this job legitimately iterates every
+        // workspace, so the central tenant filter must be off. Each iteration still scopes itself by
+        // the explicit workspaceId it passes to KpiService.
+        TenantScope.runAsSystem(this::writeSnapshotsForAllWorkspaces);
+    }
+
+    private void writeSnapshotsForAllWorkspaces() {
         OffsetDateTime now = OffsetDateTime.now();
         String period = now.format(PERIOD_FMT); // e.g. "2026-06-07T14"
         List<Workspace> allWorkspaces = workspaces.findAll();

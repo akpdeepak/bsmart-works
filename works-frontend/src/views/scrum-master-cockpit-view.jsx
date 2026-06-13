@@ -255,7 +255,7 @@ export default function ScrumMasterCockpitView({
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-4 w-4 text-brand-navy dark:text-neutral-200" aria-hidden="true" />
             <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Coach pro-tips</h3>
-            {coachTips.meta?.fallback === false && <span className="text-xs text-neutral-400">AI</span>}
+            {coachTips.meta?.fallback === false && <span className="text-xs text-neutral-600 dark:text-neutral-400">AI</span>}
           </div>
           {coachTips.narrative && coachTips.meta?.fallback === false && (
             <p className="text-sm text-neutral-700 dark:text-neutral-200 mb-2">{coachTips.narrative}</p>
@@ -487,7 +487,7 @@ export default function ScrumMasterCockpitView({
                           ? <UserCheck className="h-4 w-4 text-semantic-success" aria-hidden="true" />
                           : group.status === 'ABSENT'
                             ? <UserX className="h-4 w-4 text-semantic-danger" aria-hidden="true" />
-                            : <UserX className="h-4 w-4 text-neutral-400" aria-hidden="true" />}
+                            : <UserX className="h-4 w-4 text-neutral-600 dark:text-neutral-400" aria-hidden="true" />}
                         <h4 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{group.label}</h4>
                         <span className="text-sm font-bold text-brand-navy dark:text-white ml-auto">{rows.length}</span>
                       </div>

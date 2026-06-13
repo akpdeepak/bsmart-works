@@ -23,7 +23,8 @@ class SavedViewServiceTest {
 
     private final SavedViewRepository repo = mock(SavedViewRepository.class);
     private final RbacService rbac = mock(RbacService.class);
-    private final SavedViewService svc = new SavedViewService(repo, rbac);
+    private final SavedViewService svc = new SavedViewService(repo, rbac,
+        mock(BqlExecutionService.class), mock(BqlContextFactory.class), mock(BqlRunAuditService.class));
 
     @Test
     void create_stampsIdWorkspaceAndDefaultColumnKeys() {

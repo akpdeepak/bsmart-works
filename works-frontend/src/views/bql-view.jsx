@@ -93,6 +93,18 @@ export default function BqlView({
 
   const showMore = () => runQuery({ size: Math.min(resultSize + 100, 500) });
 
+  // Load a saved view: reflect its query in the editor, then run it through the audited saved-view
+  // endpoint (RB-20 §5) rather than ad-hoc execute, so the named run is recorded.
+  const loadSavedView = (v) => {
+    const q = v.bqlFilter || '';
+    setBqlQuery(q);
+    recordHistory(q);
+    syncUrl(q, sort);
+    setGroupBy('');
+    setGroups(null);
+    runBql({ query: q, savedViewId: v.id, size: resultSize });
+  };
+
   // Fetch per-bucket counts for the current query, grouped by the chosen field. Empty field clears
   // the board back to the flat results table. Runs on demand (no effect) to avoid set-state-in-effect.
   const runGroup = (field) => {
@@ -491,7 +503,7 @@ export default function BqlView({
         {savedViews.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {savedViews.map(v => (
-              <button key={v.id} onClick={() => { setBqlQuery(v.bqlFilter || ''); runQuery({ query: v.bqlFilter || '' }); }}
+              <button key={v.id} onClick={() => loadSavedView(v)}
                 className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5 text-sm hover:border-brand-navy transition-colors group"
                 aria-label={`Load view: ${v.name}`}>
                 <Bookmark aria-hidden="true" className="h-3.5 w-3.5 text-brand-navy flex-shrink-0" />

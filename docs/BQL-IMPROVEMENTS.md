@@ -270,3 +270,22 @@ Bulk-edit the navigator's results, JIRA-style: select rows → apply one change 
   results table; applying re-runs the query so the change is reflected.
 - Integration tests cover the mandatory unauthorized + cross-tenant scenarios plus add/remove-label
   and audit, against real Postgres.
+
+## 16. Round 11 — audit of saved/automated runs (Batch 5)
+
+The audit half of the "saved/automated runs only" decision. Automations already keep their own
+`automation_runs` log, so the gap was **saved-view runs** (and, next, subscription runs).
+
+- **`BqlExecutionService`** — extracted as the single place the workspace-scope predicate is applied
+  to a BQL run (RB-40 §1: "scoping applied centrally, not re-typed per query"). The `/bql/execute`
+  endpoint, the saved-view run, and the subscription scheduler all route through it, so none can
+  forget the tenant predicate. `BqlContextFactory` likewise centralises field-level-security context
+  construction.
+- **`POST /api/v1/saved-views/{id}/run`** — runs a view server-side (workspace-scoped, field-secure)
+  and appends a `bql_run_audit` row (who ran which view, when, current match count). Migration **V85**
+  adds the append-only `bql_run_audit` table (`SAVED_VIEW` / `SUBSCRIPTION` source). Ad-hoc
+  `/bql/execute` is intentionally not audited.
+- **`GET /api/v1/saved-views/audit`** — admin-gated (`manage_projects`) read of the workspace's run log.
+- **Frontend**: loading a saved view now runs through the audited endpoint instead of ad-hoc execute.
+- Integration tests cover workspace-scoped run results, audit-row recording with match count, and the
+  admin-gated read (unauthorized VIEWER rejected).

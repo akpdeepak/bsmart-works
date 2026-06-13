@@ -52,4 +52,21 @@ public class SavedViewController {
         savedViewService.delete(authenticatedUser.id(), workspaceId, id);
         return Map.of("ok", true);
     }
+
+    /**
+     * Run a saved view's query server-side and return the matching rows. Unlike {@code /bql/execute},
+     * this is an audited, named run (RB-20 §5) — every call is recorded in the run-audit log.
+     */
+    @PostMapping("/{id}/run")
+    public List<Map<String, Object>> run(@RequestParam String workspaceId, @PathVariable String id,
+                                         @RequestParam(required = false, defaultValue = "100") int size) {
+        return savedViewService.run(authenticatedUser.id(), workspaceId, id, size);
+    }
+
+    /** The workspace's saved/automated-run audit log (newest first). Requires manage_projects. */
+    @GetMapping("/audit")
+    public List<BqlRunAudit> audit(@RequestParam String workspaceId,
+                                   @RequestParam(required = false, defaultValue = "100") int limit) {
+        return savedViewService.auditLog(authenticatedUser.id(), workspaceId, limit);
+    }
 }

@@ -1679,6 +1679,18 @@ export default function App() {
     // An explicit query (saved-view / history / shared-link run) avoids the stale-closure read of
     // bqlQuery when the editor was just set in the same tick.
     const query = typeof o.query === 'string' ? o.query : bqlQuery;
+    // Running a saved view goes through its audited run endpoint (RB-20 §5) instead of the ad-hoc
+    // /bql/execute path, so the named run is recorded; results flow into the same table.
+    if (o.savedViewId) {
+      const size = Number.isFinite(o.size) ? o.size : 100;
+      api.raw(`/saved-views/${encodeURIComponent(o.savedViewId)}/run`
+        + `?workspaceId=${encodeURIComponent(activeWorkspaceId)}&size=${size}`, { method: 'POST' })
+        .then(r => r.json()).then(d => {
+          if (d.error || d.message) { setBqlError(d.message || d.error); setBqlResults([]); }
+          else setBqlResults(Array.isArray(d) ? d : []);
+        }).catch(err => setBqlError(err.message));
+      return;
+    }
     const body = { query, workspaceId: activeWorkspaceId };
     if (typeof o.sort === 'string' && o.sort) body.sort = o.sort;
     if (Number.isFinite(o.size)) body.size = String(o.size);

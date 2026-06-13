@@ -29,11 +29,6 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/v1/bql")
 public class BqlController {
 
-    // Columns returned by /execute — the selectable set for the navigator's column chooser.
-    private static final String SELECT_COLUMNS =
-        "id, title, status, type, priority, assignee_id, created_by, project_id, sprint_id, "
-        + "story_points, due_date, created_at, updated_at";
-
     /** Sort fields a user may order by — resolved through the same allow-list, defends ORDER BY. */
     private static final Set<String> SORTABLE = Set.of(
         "created_at", "updated_at", "due_date", "priority", "status", "story_points", "title");
@@ -51,20 +46,23 @@ public class BqlController {
     private static final java.util.regex.Pattern ORDER_BY =
         java.util.regex.Pattern.compile("(?i)\\s+ORDER\\s+BY\\s+(.+)$");
 
-    /** Tier at/above which leadership-sensitive fields (e.g. businessValue) are queryable. */
-    private static final int SENSITIVE_FIELD_MIN_TIER = 3; // LEAD+
-
     private final JdbcTemplate jdbc;
     private final BqlCompiler compiler;
+    private final BqlExecutionService execution;
+    private final BqlContextFactory contextFactory;
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
 
     public BqlController(JdbcTemplate jdbc,
                          BqlCompiler compiler,
+                         BqlExecutionService execution,
+                         BqlContextFactory contextFactory,
                          AuthenticatedUser authenticatedUser,
                          RbacService rbac) {
         this.jdbc = jdbc;
         this.compiler = compiler;
+        this.execution = execution;
+        this.contextFactory = contextFactory;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
     }
@@ -82,20 +80,9 @@ public class BqlController {
         int size = clampSize(body.get("size"));
         int offset = pageOffset(body.get("page"), size);
 
-        // Hard workspace scope: work_items has no workspace_id — scope via projects (RB-40 §1).
-        String base = "SELECT " + SELECT_COLUMNS + " FROM work_items"
-            + " WHERE deleted_at IS NULL"
-            + " AND project_id IN (SELECT id FROM projects WHERE workspace_id = ?)";
-        List<Object> params = new ArrayList<>();
-        params.add(workspaceId);
-
         try {
-            BqlCompiler.Compiled c = compiler.compileFor(query, contextFor(userId, workspaceId));
-            String sql = base
-                + (c.sql().isEmpty() ? "" : " AND (" + c.sql() + ")")
-                + " ORDER BY " + sort + " LIMIT " + size + " OFFSET " + offset;
-            params.addAll(c.params());
-            return jdbc.queryForList(sql, params.toArray());
+            // Workspace scope (RB-40 §1) is applied centrally inside the execution service.
+            return execution.execute(workspaceId, contextFor(userId, workspaceId), query, sort, size, offset);
         } catch (BqlException e) {
             throw new IllegalArgumentException("BQL parse error: " + e.getMessage());
         }
@@ -220,31 +207,7 @@ public class BqlController {
     }
 
     private BqlContext contextFor(String userId, String workspaceId) {
-        boolean canSeeSensitive = rbac.getUserTier(userId, workspaceId) >= SENSITIVE_FIELD_MIN_TIER;
-        return BqlContext.forUser(userId, canSeeSensitive, customFields(workspaceId));
-    }
-
-    /** Workspace custom fields keyed by field_key — makes them queryable in BQL (RB-10 §6). */
-    private Map<String, BqlContext.CustomField> customFields(String workspaceId) {
-        Map<String, BqlContext.CustomField> out = new LinkedHashMap<>();
-        try {
-            jdbc.query("SELECT id, field_key, field_type FROM field_def WHERE workspace_id = ?",
-                rs -> {
-                    String key = rs.getString("field_key");
-                    if (key == null || key.isBlank()) {
-                        return;
-                    }
-                    String ft = rs.getString("field_type");
-                    BqlField.BqlType type = "NUMBER".equalsIgnoreCase(ft) ? BqlField.BqlType.NUMBER
-                        : "DATE".equalsIgnoreCase(ft) ? BqlField.BqlType.DATE
-                        : BqlField.BqlType.TEXT;
-                    out.put(key.toLowerCase(Locale.ROOT),
-                        new BqlContext.CustomField(rs.getString("id"), type));
-                }, workspaceId);
-        } catch (Exception ignored) {
-            // No custom fields / table absent — built-in fields still work.
-        }
-        return out;
+        return contextFactory.forUser(userId, workspaceId);
     }
 
     /** Page size, clamped to [1, 500]; default 100. */

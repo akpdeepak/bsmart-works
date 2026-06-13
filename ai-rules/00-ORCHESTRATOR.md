@@ -169,7 +169,7 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   Cap X + Admin Operations Center Cap Y), **17** (Universal Customization Engine Cap R), **18**
   (Mobile + Real-time + Performance Cap S), **19** (Enterprise Security + Compliance Certifications
   Cap T), and the Compliance/Service iterations (7–9).
-- **Flyway high-water mark:** **V84** (`V84__enrich_report_templates_exec_customer.sql`; note: V16 was
+- **Flyway high-water mark:** **V85** (`V85__bql_run_audit.sql`; note: V16 was
   skipped, V23 does not exist; V50–V53 are iterations 16/17/19/18's migrations; V54–V57 are
   iteration 20's advanced-AI / marketplace / knowledge / customer-chat migrations; V58 = user locale
   + perf indexes; V59 = block-editor + SCIM; V60 = custom domains; V61–V65 = compliance escalation,
@@ -195,8 +195,10 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   saved queries unified onto saved_views, legacy rows migrated then table dropped; V84 = enrich
   Monthly-executive-summary + Customer-status report templates (Cap J) — forward-only UPDATE of the
   two V38-seeded rows to the full spec section set: exec = KPI grid + velocity/trend chart +
-  narrative + risk summary; customer = customer health + SLA + open-requests table + narrative).
-- **Next migration:** **`V85__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+  narrative + risk summary; customer = customer health + SLA + open-requests table + narrative;
+  V85 = bql_run_audit — append-only audit of saved-view / subscription BQL runs ("saved/automated
+  runs only"; ad-hoc /bql/execute is not audited, automations keep their own automation_runs log)).
+- **Next migration:** **`V86__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

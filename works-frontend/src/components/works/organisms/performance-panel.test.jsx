@@ -3,6 +3,14 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { PerformancePanel } from './performance-panel';
 import { kpiClient } from '@/lib/kpi';
 import { api } from '@/lib/apiClient';
+import { aiClient } from '@/lib/ai';
+
+vi.mock('@/lib/ai', async () => {
+  const actual = await vi.importActual('@/lib/ai');
+  return { ...actual, aiClient: { explainAnomaly: vi.fn(), budget: vi.fn() } };
+});
+
+const AI_CAPS = [{ id: 'anomaly_explain', label: 'Explain anomaly', enabled: true }];
 
 vi.mock('@/lib/kpi', async () => {
   const actual = await vi.importActual('@/lib/kpi');
@@ -56,6 +64,10 @@ beforeEach(() => {
   kpiClient.share.mockImplementation((_ws, viewerUserId) =>
     Promise.resolve({ id: 'SH-1', workspaceId: 'ws-1', ownerUserId: 'me', viewerUserId }));
   kpiClient.unshare.mockResolvedValue({ ok: true });
+  aiClient.budget.mockResolvedValue({ percent: 20, degraded: false, disabled: false });
+  aiClient.explainAnomaly.mockResolvedValue({
+    explanation: 'Throughput is within the normal range.', meta: { usedAi: true, fallback: false, tier: 'sonnet', policyState: 'ENABLED' },
+  });
 });
 
 describe('PerformancePanel', () => {
@@ -124,5 +136,29 @@ describe('PerformancePanel', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Team' }));
     await waitFor(() => expect(kpiClient.team).toHaveBeenCalled());
     expect(screen.queryByText('Share my metrics with…')).not.toBeInTheDocument();
+  });
+
+  it('renders an AiMetaBadge on the Explain-anomaly output (§2.4)', async () => {
+    render(<PerformancePanel workspaceId="ws-1" aiCapabilities={AI_CAPS} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Explain Throughput anomaly/i }));
+    await waitFor(() => expect(aiClient.explainAnomaly).toHaveBeenCalled());
+    expect(await screen.findByText('Throughput is within the normal range.')).toBeInTheDocument();
+    expect(screen.getByText('AI · sonnet')).toBeInTheDocument();
+  });
+
+  it('shows the explicit AI-off note when an anomaly explanation falls back', async () => {
+    aiClient.explainAnomaly.mockResolvedValue({
+      explanation: 'No AI — value shown as-is.', meta: { usedAi: false, fallback: true, tier: 'none', policyState: 'DISABLED_WORKSPACE' },
+    });
+    render(<PerformancePanel workspaceId="ws-1" aiCapabilities={AI_CAPS} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Explain Throughput anomaly/i }));
+    expect(await screen.findByText(/AI off — showing deterministic result/i)).toBeInTheDocument();
+    expect(screen.getByText('Deterministic fallback')).toBeInTheDocument();
+  });
+
+  it('surfaces the budget notice when AI is on and the workspace is degraded (§2.5)', async () => {
+    aiClient.budget.mockResolvedValue({ percent: 90, degraded: true, disabled: false });
+    render(<PerformancePanel workspaceId="ws-1" aiCapabilities={AI_CAPS} />);
+    expect(await screen.findByText(/cheaper tier/i)).toBeInTheDocument();
   });
 });

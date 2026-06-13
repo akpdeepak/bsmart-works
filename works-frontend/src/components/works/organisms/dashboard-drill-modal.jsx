@@ -9,6 +9,11 @@ import { X } from 'lucide-react';
  */
 export function DashboardDrillModal({ drill, onClose, onOpenItem }) {
   const items = drill.items || [];
+  // The widget passes the slice it was drilled from (§3.4): the dimension + the clicked value. We
+  // surface it so it's clear the list is exactly that slice's underlying items — not the whole
+  // dashboard. Absent for a whole-widget drill (e.g. a scorecard total).
+  const ctx = drill.filterContext;
+  const sliceLabel = ctx && ctx.value != null ? `${ctx.dimension}: ${ctx.value}` : null;
   return (
     <div className="fixed inset-0 bg-neutral-900/50 dark:bg-black/70 flex items-center justify-center z-50 p-4"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
@@ -18,7 +23,10 @@ export function DashboardDrillModal({ drill, onClose, onOpenItem }) {
         <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-700">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-neutral-900 dark:text-white truncate">{drill.title}</h2>
-            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{items.length} {items.length === 1 ? 'item' : 'items'}</p>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
+              {items.length} {items.length === 1 ? 'item' : 'items'}
+              {sliceLabel && <span className="text-neutral-500 dark:text-neutral-500"> · {sliceLabel}</span>}
+            </p>
           </div>
           <button onClick={onClose} aria-label="Close"
             className="flex-shrink-0 ml-2 text-lg leading-none text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">

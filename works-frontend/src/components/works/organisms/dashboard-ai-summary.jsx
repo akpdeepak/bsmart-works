@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { AiMetaBadge } from '@/components/works/ai-meta-badge';
+import { AiBudgetNotice } from '@/components/works/organisms/ai-budget-notice';
 import { aiClient, capabilityEnabled } from '@/lib/ai';
 
 // Cap J — opt-in AI summary + anomaly band for the Dashboards surface (RB-40 §2). The mapping
@@ -35,6 +36,7 @@ export function DashboardAiSummary({ workspaceId, aiCapabilities = [], series = 
 
   return (
     <div className="mb-4 p-4 rounded-xl border border-brand-navy/20 bg-white dark:bg-neutral-800">
+      <AiBudgetNotice workspaceId={workspaceId} className="mb-3" />
       <div className="flex items-start gap-3">
         <Sparkles aria-hidden="true" className="h-5 w-5 text-brand-navy mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0">
@@ -64,6 +66,11 @@ export function DashboardAiSummary({ workspaceId, aiCapabilities = [], series = 
 
           {summary && !error && (
             <div className="mt-3 space-y-2">
+              {summary.fallback && (
+                <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
+                  AI off — showing deterministic result.
+                </p>
+              )}
               <p className="text-sm text-neutral-700 dark:text-neutral-300">{summary.text}</p>
               <AiMetaBadge meta={meta} />
             </div>

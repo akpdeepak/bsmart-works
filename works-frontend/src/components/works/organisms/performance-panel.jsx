@@ -5,6 +5,8 @@ import { api } from '@/lib/apiClient';
 import { Badge } from '@/components/works/atoms/badge';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { Button } from '@/components/works/button';
+import { AiMetaBadge } from '@/components/works/ai-meta-badge';
+import { AiBudgetNotice } from '@/components/works/organisms/ai-budget-notice';
 import { CycleTimeHistogram } from '@/components/works/molecules/cycle-time-histogram';
 import { MetricShareControl } from '@/components/works/molecules/metric-share-control';
 
@@ -92,7 +94,15 @@ function LayerView({ layer, aiOn, anomalyBusy, anomalyResult, onExplainAnomaly }
                     Explain
                   </Button>
                   {anomalyResult[m.key] && (
-                    <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">{anomalyResult[m.key]}</p>
+                    <div className="mt-1 space-y-1">
+                      {anomalyResult[m.key].meta?.fallback && (
+                        <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
+                          AI off — showing deterministic result.
+                        </p>
+                      )}
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400">{anomalyResult[m.key].text}</p>
+                      <AiMetaBadge meta={anomalyResult[m.key].meta} />
+                    </div>
                   )}
                 </div>
               )}
@@ -129,9 +139,15 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem 
   const explainAnomaly = (metricKey, values) => {
     if (!workspaceId || !values?.length) return;
     setAnomalyBusy(metricKey);
+    // The explain-anomaly response carries its AI Control Plane verdict (r.meta) — keep it so the
+    // provenance badge and the explicit AI-off note render honestly (RB-40 §2.4); never drop to
+    // bare text silently.
     aiClient.explainAnomaly(workspaceId, metricKey, values)
-      .then((r) => setAnomalyResult((prev) => ({ ...prev, [metricKey]: r?.explanation || r?.text || 'No explanation returned.' })))
-      .catch(() => setAnomalyResult((prev) => ({ ...prev, [metricKey]: 'Could not explain anomaly.' })))
+      .then((r) => setAnomalyResult((prev) => ({
+        ...prev,
+        [metricKey]: { text: r?.explanation || r?.text || 'No explanation returned.', meta: r?.meta || null },
+      })))
+      .catch(() => setAnomalyResult((prev) => ({ ...prev, [metricKey]: { text: 'Could not explain anomaly.', meta: null } })))
       .finally(() => setAnomalyBusy(null));
   };
 
@@ -243,6 +259,9 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem 
         <ShieldCheck aria-hidden="true" className="mt-0.5 h-4 w-4 text-semantic-info" />
         <p className="text-xs text-neutral-700 dark:text-neutral-200">{PRIVACY_NOTE[layer]}</p>
       </div>
+
+      {/* AI budget/degradation signal — only meaningful when AI is on for this workspace (RB-40 §2.5). */}
+      {aiOn && <AiBudgetNotice workspaceId={workspaceId} className="mb-4" />}
 
       {/* Entity selector (Team / Project) */}
       {selectorItems && selectorItems.length > 0 && (

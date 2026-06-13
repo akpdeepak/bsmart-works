@@ -41,9 +41,10 @@ class SprintReportTest {
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
+    private final StatusConfigService statusConfig = mock(StatusConfigService.class);
 
     private final SprintController controller = new SprintController(
-            sprintRepository, workItemRepository, eventService, jdbc, authenticatedUser, rbac);
+            sprintRepository, workItemRepository, eventService, jdbc, authenticatedUser, rbac, statusConfig);
 
     private Sprint sprintA;
     private Sprint sprintB;
@@ -135,6 +136,35 @@ class SprintReportTest {
 
         assertThat(((Number) report.get("completionRate")).longValue()).isEqualTo(100L);
         assertThat(report.get("doneItems")).isEqualTo(2L);
+    }
+
+    /**
+     * A workspace that renamed its done status (e.g. "Shipped", category DONE) must still have those
+     * items counted as done — the report resolves the status's configured category, not a literal
+     * "Done" string (RB-20 §4). Previously these were under-counted.
+     */
+    @Test
+    void sprintReport_countsCustomConfiguredDoneStatus() {
+        when(sprintRepository.findById(SPRINT_A)).thenReturn(Optional.of(sprintA));
+        WorkflowStatus shipped = new WorkflowStatus();
+        shipped.setName("Shipped");
+        shipped.setCategory("DONE");
+        when(statusConfig.statusesForType("WS-A", "Story")).thenReturn(List.of(shipped));
+        // 2 "Shipped" (5+3=8 pts, both DONE by config) + 1 Todo (2 pts)
+        List<Map<String, Object>> items = List.of(
+            itemRow("WI-1", "T1", "Shipped", "Story", 5, "u1"),
+            itemRow("WI-2", "T2", "Shipped", "Story", 3, "u1"),
+            itemRow("WI-3", "T3", "Todo",    "Story", 2, null)
+        );
+        when(jdbc.queryForList(contains("sprint_id"), eq(SPRINT_A))).thenReturn(items);
+
+        Map<String, Object> report = controller.getSprintReport(SPRINT_A);
+
+        assertThat(report.get("doneItems")).isEqualTo(2L);
+        assertThat(report.get("donePoints")).isEqualTo(8L);
+        assertThat(report.get("todoItems")).isEqualTo(1L);
+        // round(2/3 * 100) = 67
+        assertThat(((Number) report.get("completionRate")).longValue()).isEqualTo(67L);
     }
 
     @Test

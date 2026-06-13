@@ -35,16 +35,43 @@ public class SprintController {
     private final JdbcTemplate jdbc;
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
+    private final StatusConfigService statusConfig;
 
     public SprintController(SprintRepository sprintRepository, WorkItemRepository workItemRepository,
                             EventService eventService, JdbcTemplate jdbc,
-                            AuthenticatedUser authenticatedUser, RbacService rbac) {
+                            AuthenticatedUser authenticatedUser, RbacService rbac,
+                            StatusConfigService statusConfig) {
         this.sprintRepository = sprintRepository;
         this.workItemRepository = workItemRepository;
         this.eventService = eventService;
         this.jdbc = jdbc;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
+        this.statusConfig = statusConfig;
+    }
+
+    // Resolve an item's board category (TODO | IN_PROGRESS | DONE) from the workspace's configured
+    // per-type workflow, so renamed/custom statuses (e.g. "Completed", "Shipped") are counted in the
+    // right bucket — matching how the Board/Sprint surfaces classify done (RB-20 §4, RB-10 §6). Falls
+    // back to the canonical status name when no config exists (legacy rows / unseeded workspace).
+    // Cached per workspace|type so a multi-item report reads each type's config at most once.
+    private String resolveCategory(String wsId, String type, String status,
+                                   Map<String, Map<String, String>> cache) {
+        if (status == null) return "TODO";
+        Map<String, String> byName = (wsId == null || type == null)
+                ? Map.of()
+                : cache.computeIfAbsent(wsId + "|" + type, k -> {
+                    Map<String, String> m = new HashMap<>();
+                    for (WorkflowStatus ws : statusConfig.statusesForType(wsId, type)) {
+                        if (ws.getName() != null) m.put(ws.getName(), ws.getCategory());
+                    }
+                    return m;
+                });
+        String cat = byName.get(status);
+        if (cat != null) return cat;
+        if ("Done".equals(status)) return "DONE";
+        if ("In Progress".equals(status)) return "IN_PROGRESS";
+        return "TODO";
     }
 
     @Operation(summary = "List sprints", description = "Returns sprints for the authenticated user's workspaces. Filter by projectId to scope to a single project.")
@@ -75,10 +102,13 @@ public class SprintController {
     @PostMapping
     public Sprint createSprint(@Valid @RequestBody Sprint sprint) {
         String userId = authenticatedUser.id();
+        // Workspace-scoped (RB-40 §1): resolve the project's workspace and require manage_sprints.
+        // A null workspace means the project does not exist / is not visible — reject rather than
+        // create an orphan sprint.
         String wsId = rbac.workspaceForProject(sprint.getProjectId());
-        if (wsId != null) rbac.require(userId, wsId, "manage_sprints"); {
+        if (wsId == null) throw ApiException.notFound("Project", sprint.getProjectId());
+        rbac.require(userId, wsId, "manage_sprints");
         sprint.setId("SPR-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-        }
         sprint.setStatus("PLANNING");
         sprint.setCreatedAt(OffsetDateTime.now());
         Sprint saved = sprintRepository.save(sprint);
@@ -182,18 +212,24 @@ public class SprintController {
     public List<Map<String, Object>> getVelocityChart() {
         // Workspace-scoped (RB-40 §1 / B04): caller sees only sprints in their own workspaces.
         List<Sprint> sprints = sprintRepository.findAllScopedToUser(authenticatedUser.id());
+        Map<String, Map<String, String>> catCache = new HashMap<>();
         List<Map<String, Object>> result = new ArrayList<>();
         for (Sprint sprint : sprints) {
+            String wsId = rbac.workspaceForProject(sprint.getProjectId());
             List<Map<String, Object>> items = jdbc.queryForList(
-                "SELECT status, story_points FROM work_items WHERE sprint_id = ?", sprint.getId());
+                "SELECT status, story_points, type FROM work_items WHERE sprint_id = ?", sprint.getId());
             int totalPoints = items.stream()
                     .mapToInt(i -> i.get("story_points") != null
                             ? ((Number) i.get("story_points")).intValue() : 0)
                     .sum();
-            int donePoints = items.stream().filter(i -> "Done".equals(i.get("status")))
+            // Count by resolved status category, not the literal "Done" — so renamed/custom done
+            // statuses are credited (RB-20 §4); was previously under-counting those workspaces.
+            java.util.function.Predicate<Map<String, Object>> isDone = i ->
+                    "DONE".equals(resolveCategory(wsId, (String) i.get("type"), (String) i.get("status"), catCache));
+            int donePoints = items.stream().filter(isDone)
                     .mapToInt(i -> i.get("story_points") != null ? ((Number) i.get("story_points")).intValue() : 0).sum();
             int totalItems = items.size();
-            long doneItems = items.stream().filter(i -> "Done".equals(i.get("status"))).count();
+            long doneItems = items.stream().filter(isDone).count();
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("sprintId", sprint.getId());
             entry.put("sprintName", sprint.getName());
@@ -219,12 +255,18 @@ public class SprintController {
         List<Map<String, Object>> items = jdbc.queryForList(
             "SELECT id, title, status, type, story_points, assignee_id FROM work_items WHERE sprint_id = ?", id);
 
+        // Bucket by resolved status category (not literal "Done"/"In Progress"/"Todo") so workspaces
+        // with renamed/custom statuses report accurate completion (RB-20 §4); cached per type.
+        Map<String, Map<String, String>> catCache = new HashMap<>();
+        java.util.function.Function<Map<String, Object>, String> catOf = i ->
+                resolveCategory(wsId, (String) i.get("type"), (String) i.get("status"), catCache);
+
         int total = items.size();
-        long done = items.stream().filter(i -> "Done".equals(i.get("status"))).count();
-        long inProgress = items.stream().filter(i -> "In Progress".equals(i.get("status"))).count();
-        long todo = items.stream().filter(i -> "Todo".equals(i.get("status"))).count();
+        long done = items.stream().filter(i -> "DONE".equals(catOf.apply(i))).count();
+        long inProgress = items.stream().filter(i -> "IN_PROGRESS".equals(catOf.apply(i))).count();
+        long todo = items.stream().filter(i -> "TODO".equals(catOf.apply(i))).count();
         int totalPoints = items.stream().mapToInt(i -> i.get("story_points") != null ? (int)i.get("story_points") : 0).sum();
-        long donePoints = items.stream().filter(i -> "Done".equals(i.get("status")))
+        long donePoints = items.stream().filter(i -> "DONE".equals(catOf.apply(i)))
                 .mapToInt(i -> i.get("story_points") != null ? (int)i.get("story_points") : 0).sum();
 
         Map<String, Object> report = new LinkedHashMap<>();

@@ -1051,10 +1051,22 @@ export default function App() {
     api.send(`/work-items/${itemId}`, {
       method: 'PUT',
       body: JSON.stringify({ ...item, status: newStatus })
-    }).catch(() => {
-      // Revert on failure
-      setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: item.status } : i));
-      showToast('Failed to update status', 'error');
+    }).then(saved => {
+      // Adopt the saved item so derived fields (e.g. statusChangedAt for the lapse badge) reflect
+      // the server rather than the optimistic guess.
+      setWorkItems(prev => prev.map(i => i.id === itemId ? saved : i));
+    }).catch(err => {
+      if (err?.status === 409) {
+        // Concurrent edit: pull the authoritative item instead of leaving the stale optimistic move.
+        api.raw(`/work-items/${itemId}`).then(r => (r.ok ? r.json() : null)).then(fresh => {
+          setWorkItems(prev => prev.map(i => i.id === itemId ? (fresh || { ...i, status: item.status }) : i));
+        }).catch(() => setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: item.status } : i)));
+        showToast('This item changed elsewhere — refreshed to the latest', 'error');
+      } else {
+        // Revert on failure
+        setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: item.status } : i));
+        showToast('Failed to update status', 'error');
+      }
     });
   };
 
@@ -1724,7 +1736,16 @@ export default function App() {
     };
     const ep = endpoints[type];
     if (!ep) return;
-    api.raw(`/${ep}`, { method: 'POST', body: JSON.stringify({ ...payload, projectId: pmProjectId, workspaceId: activeWorkspaceId }) })
+    // Boundary validation (defence-in-depth beyond the disabled Create button): a PM artifact
+    // must belong to a team and carry a non-empty title, else the POST silently mis-scopes.
+    if (!pmProjectId) { showToast('Select a team before adding an artifact', 'error'); return; }
+    if (!payload.title || !payload.title.trim()) { showToast('Title is required', 'error'); return; }
+    // The shared form binds the primary input to `title`, but a Stakeholder's identity field is
+    // `name` (and its free text is `notes`) — map them so the register shows a real name, not blank.
+    const body = type === 'stakeholder'
+      ? { ...payload, name: payload.name || payload.title, notes: payload.notes || payload.description }
+      : payload;
+    api.raw(`/${ep}`, { method: 'POST', body: JSON.stringify({ ...body, projectId: pmProjectId, workspaceId: activeWorkspaceId }) })
       .then(r => r.json()).then(() => {
         setPmFormOpen(null); setPmForm({});
         if (type === 'risk')        { fetchRisks(pmProjectId); fetchRaidDashboard(pmProjectId); }
@@ -3232,6 +3253,7 @@ export default function App() {
               userName={userName}
               projectMetrics={projectMetrics}
               projectMetricsLoading={projectMetricsLoading}
+              statusResolver={statusResolver}
             />
           )}
 

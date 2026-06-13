@@ -97,4 +97,54 @@ class SprintControllerAccessTest {
         // The delete must not run for a cross-tenant caller.
         verify(sprintRepository, never()).deleteById(any());
     }
+
+    @Test
+    void getSprintItems_hiddenFromCallerOutsideTheProjectWorkspace() {
+        when(sprintRepository.findById("SPR-1")).thenReturn(Optional.of(sprintInForeignWorkspace()));
+        when(rbac.getUserTier(CALLER, FOREIGN_WS)).thenReturn(0); // not a member of the sprint's workspace
+
+        // A read leak is the worst case here: deny with 404 rather than return another tenant's items.
+        assertThatThrownBy(() -> controller.getSprintItems("SPR-1"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void addItemToSprint_deniedForCallerOutsideTheProjectWorkspace() {
+        when(sprintRepository.findById("SPR-1")).thenReturn(Optional.of(sprintInForeignWorkspace()));
+
+        assertThatThrownBy(() -> controller.addItemToSprint("SPR-1", "WI-1"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+
+        verify(jdbc, never()).update(any(String.class), any(Object[].class));
+    }
+
+    @Test
+    void addItemToSprint_deniedWhenItemBelongsToAnotherWorkspace() {
+        // Caller can manage this sprint, but the item lives in a different workspace — must not be pulled in.
+        Sprint own = new Sprint();
+        own.setId("SPR-2");
+        own.setProjectId("PROJ-A");
+        when(sprintRepository.findById("SPR-2")).thenReturn(Optional.of(own));
+        when(rbac.workspaceForProject("PROJ-A")).thenReturn("ws-A");
+        when(rbac.workspaceForWorkItem("WI-foreign")).thenReturn(FOREIGN_WS);
+
+        assertThatThrownBy(() -> controller.addItemToSprint("SPR-2", "WI-foreign"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+
+        verify(jdbc, never()).update(any(String.class), any(Object[].class));
+    }
+
+    @Test
+    void removeItemFromSprint_deniedForCallerOutsideTheProjectWorkspace() {
+        when(sprintRepository.findById("SPR-1")).thenReturn(Optional.of(sprintInForeignWorkspace()));
+
+        assertThatThrownBy(() -> controller.removeItemFromSprint("SPR-1", "WI-1"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+
+        verify(jdbc, never()).update(any(String.class), any(Object[].class));
+    }
 }

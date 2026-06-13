@@ -332,7 +332,7 @@ public class WorkItemController {
      *  a client cannot request another user's items (the old, ignored userId param is removed). */
     @GetMapping("/my")
     public List<WorkItem> myWorkItems() {
-        List<WorkItem> items = repository.findByAssigneeId(authenticatedUser.id());
+        List<WorkItem> items = repository.findMyItemsScoped(authenticatedUser.id());
         attachTagsBatch(items);
         attachFieldValuesBatch(items);
         return items;

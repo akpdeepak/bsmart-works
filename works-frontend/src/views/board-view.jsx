@@ -172,7 +172,7 @@ export default function BoardView({
                   ))}
                 </div>
 
-                <button onClick={() => { setNewItem(p => ({ ...p, status: col.name })); setIsCreateOpen(true); }}
+                <button onClick={() => { setNewItem(p => ({ ...p, status: statusResolver?.firstStatusOfCategory(p.type, col.key) || p.status })); setIsCreateOpen(true); }}
                   className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-700 rounded-lg transition-colors">
                   <span>+</span> {t('deliver.board.addItem')}
                 </button>

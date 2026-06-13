@@ -196,8 +196,20 @@ export default function SprintView({
               if (item.status === status) return;
               setSprintItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
               api.send(`/work-items/${itemId}`, { method: 'PUT', body: { ...item, status } })
-                .then(r => { if (r && r.status === 409) { showToast(t('deliver.sprint.itemChangedElsewhere'), 'error'); fetchSprints(); } })
-                .catch(reportError);
+                // Success: adopt the saved item so derived fields (e.g. statusChangedAt for the
+                // lapse badge) reflect the server, not the optimistic guess.
+                .then(saved => setSprintItems(prev => prev.map(i => i.id === itemId ? saved : i)))
+                .catch(err => {
+                  if (err?.status === 409) {
+                    // Concurrent edit: pull the authoritative sprint items instead of leaving the
+                    // optimistic move on screen. (api.send throws on 409 — the .then check was dead.)
+                    showToast(t('deliver.sprint.itemChangedElsewhere'), 'error');
+                    if (activeSprint) fetchSprintItems(activeSprint.id);
+                  } else {
+                    setSprintItems(prev => prev.map(i => i.id === itemId ? { ...i, status: item.status } : i));
+                    reportError(err);
+                  }
+                });
             }}
             onSelect={setSelectedItem} onDelete={handleDelete} density={density}
             cardPrefs={cardPrefs} customFieldDefs={customFieldDefs} statusResolver={statusResolver} />

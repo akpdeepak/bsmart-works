@@ -17,7 +17,9 @@ import jakarta.validation.Valid;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,13 +55,19 @@ public class SprintController {
         List<Sprint> sprints = projectId != null
             ? sprintRepository.findByProjectIdScopedToUser(projectId, userId)
             : sprintRepository.findAllScopedToUser(userId);
-        // Attach actual used story points per sprint
-        sprints.forEach(s -> {
-            Integer used = jdbc.queryForObject(
-                "SELECT COALESCE(SUM(story_points), 0) FROM work_items WHERE sprint_id = ? AND deleted_at IS NULL",
-                Integer.class, s.getId());
-            s.setUsedPoints(used != null ? used : 0);
-        });
+        // Attach actual used story points per sprint — batched into a single grouped query to
+        // avoid an N+1 (previously one SUM query per sprint).
+        if (!sprints.isEmpty()) {
+            List<String> sprintIds = sprints.stream().map(Sprint::getId).toList();
+            String placeholders = String.join(",", Collections.nCopies(sprintIds.size(), "?"));
+            Map<String, Integer> usedBySprint = new HashMap<>();
+            jdbc.query(
+                "SELECT sprint_id, COALESCE(SUM(story_points), 0) AS pts FROM work_items "
+                    + "WHERE sprint_id IN (" + placeholders + ") AND deleted_at IS NULL GROUP BY sprint_id",
+                rs -> { usedBySprint.put(rs.getString("sprint_id"), rs.getInt("pts")); },
+                sprintIds.toArray());
+            sprints.forEach(s -> s.setUsedPoints(usedBySprint.getOrDefault(s.getId(), 0)));
+        }
         return sprints;
     }
 
@@ -118,6 +126,13 @@ public class SprintController {
     // Get work items in this sprint
     @GetMapping("/{id}/items")
     public List<WorkItem> getSprintItems(@PathVariable String id) {
+        // Workspace-scoped (RB-40 §1): the caller must have access to the sprint's workspace,
+        // otherwise another tenant's items would leak through a guessed/known sprint id.
+        Sprint sprint = sprintRepository.findById(id).orElseThrow(() -> ApiException.notFound("Sprint", id));
+        String wsId = rbac.workspaceForProject(sprint.getProjectId());
+        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("Sprint", id);
+        }
         return jdbc.query(
             "SELECT * FROM work_items WHERE sprint_id = ? ORDER BY backlog_order ASC",
             (rs, row) -> {
@@ -138,6 +153,13 @@ public class SprintController {
     // Move item into sprint
     @PostMapping("/{id}/items/{itemId}")
     public Map<String, String> addItemToSprint(@PathVariable String id, @PathVariable String itemId) {
+        String userId = authenticatedUser.id();
+        Sprint sprint = sprintRepository.findById(id).orElseThrow(() -> ApiException.notFound("Sprint", id));
+        String wsId = rbac.workspaceForProject(sprint.getProjectId());
+        if (wsId == null) throw ApiException.notFound("Sprint", id);
+        rbac.require(userId, wsId, "manage_sprints");
+        // The item must live in the sprint's workspace — never pull another tenant's item in (RB-40 §1).
+        if (!wsId.equals(rbac.workspaceForWorkItem(itemId))) throw ApiException.notFound("Work item", itemId);
         jdbc.update("UPDATE work_items SET sprint_id = ? WHERE id = ?", id, itemId);
         return Map.of("message", "Item added to sprint");
     }
@@ -145,6 +167,11 @@ public class SprintController {
     // Remove item from sprint (back to backlog)
     @DeleteMapping("/{id}/items/{itemId}")
     public Map<String, String> removeItemFromSprint(@PathVariable String id, @PathVariable String itemId) {
+        String userId = authenticatedUser.id();
+        Sprint sprint = sprintRepository.findById(id).orElseThrow(() -> ApiException.notFound("Sprint", id));
+        String wsId = rbac.workspaceForProject(sprint.getProjectId());
+        if (wsId == null) throw ApiException.notFound("Sprint", id);
+        rbac.require(userId, wsId, "manage_sprints");
         jdbc.update("UPDATE work_items SET sprint_id = NULL WHERE id = ? AND sprint_id = ?", itemId, id);
         return Map.of("message", "Item moved to backlog");
     }

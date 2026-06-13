@@ -2,6 +2,7 @@ import { TrendingUp, Activity } from 'lucide-react';
 import { Folder } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { statusToCategory } from '@/components/works/status';
 import { useI18n } from '@/lib/i18n';
 
 // Teams view (formerly Projects). A Team is a workspace-level container for work items —
@@ -15,8 +16,14 @@ export default function ProjectsView({
   userName,
   projectMetrics = {},
   projectMetricsLoading = false,
+  statusResolver,
 }) {
   const { t } = useI18n();
+  // "Done" is resolved from the item's status category, not a literal string, so teams using
+  // custom / renamed done statuses still show accurate completion.
+  const isDone = (item) => (statusResolver
+    ? statusResolver.categoryOf(item.type, item.status)
+    : statusToCategory(item.status)) === 'done';
   return (
     <div className="p-8 max-w-4xl">
       <div className="flex justify-between items-center mb-6">
@@ -42,7 +49,7 @@ export default function ProjectsView({
           <div className="space-y-3">
             {projects.map(p => {
               const count = workItems.filter(i => i.projectId === p.id).length;
-              const done  = workItems.filter(i => i.projectId === p.id && i.status === 'Done').length;
+              const done  = workItems.filter(i => i.projectId === p.id && isDone(i)).length;
               return (
                 <div key={p.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 hover:shadow-sm transition-shadow">
                   <div className="flex items-center gap-4">

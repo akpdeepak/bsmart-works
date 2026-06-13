@@ -496,19 +496,19 @@ public class AiAssistService {
         if (!"TASK".equals(type) || containsAny(lower, "task")) {
             clauses.add("type = \"" + type + "\"");
         }
-        // Assignee
+        // Assignee — canonical BQL: currentUser() function + IS EMPTY null check (compiler-parseable).
         if (containsAny(lower, "assigned to me", "my items", "mine")) {
-            clauses.add("assigneeId = @me");
+            clauses.add("assignee = currentUser()");
         } else if (containsAny(lower, "unassigned")) {
-            clauses.add("assigneeId = null");
+            clauses.add("assignee IS EMPTY");
         }
-        // Time windows
+        // Time windows — canonical relative-date functions.
         if (containsAny(lower, "last week", "this week")) {
-            clauses.add("createdAt > @startOfWeek");
+            clauses.add("createdAt >= startOfWeek()");
         } else if (containsAny(lower, "today")) {
-            clauses.add("createdAt > @today");
+            clauses.add("createdAt >= today()");
         } else if (containsAny(lower, "overdue")) {
-            clauses.add("dueDate < @today AND status != \"Done\"");
+            clauses.add("dueDate < today() AND status != \"Done\"");
         }
         return String.join(" AND ", clauses);
     }

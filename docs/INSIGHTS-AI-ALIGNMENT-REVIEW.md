@@ -42,9 +42,17 @@ Findings are graded **P0 (blocker / governance)**, **P1**, **P2**, **P3**.
 > These items touch tenant isolation / RBAC, so per Orchestrator §5 and RB-05 Stage 0 they require
 > **Deepak's explicit sign-off before code** — captured here, not silently changed.
 
-### 1.1 `AggregationController` (`GET /api/v1/insights/work-items`) is cross-tenant readable
-Still powers the **Dashboards scope selector** (`App.jsx` → `api.raw('/insights/work-items?...')`).
-Three compounding defects:
+### 1.1 `AggregationController` (`GET /api/v1/insights/work-items`) is cross-tenant readable — ✅ FIXED
+> **Status: fixed on this branch** (with owner sign-off). The controller now derives the workspace
+> from the data (project→workspace for PROJECT, team→workspace for TEAM, explicit + required for
+> ORG/PERSONAL), proves `rbac.require(userId, workspaceId, "view_items")` membership **before any
+> query**, and applies a mandatory `project_id IN (SELECT id FROM projects WHERE workspace_id = ?)`
+> predicate to every scope. `AggregationService.resolve` is reduced to within-workspace narrowing
+> (ORG → no `1=1` leak). The same-shaped fix was applied to the share-token `PublicDashboardController`
+> path. Covered by `AggregationControllerAccessTest` (cross-tenant 403, foreign-project/team 403,
+> ORG-without-workspace 400, unknown project/team 404) + updated `AggregationServiceTest`.
+
+Original defects (now closed):
 
 - **No RBAC.** No `rbac.require(...)` in the controller or `AggregationService`; it only reads
   `authenticatedUser.id()`. Violates RB-10 §2 (RBAC in the service layer).

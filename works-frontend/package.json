@@ -60,5 +60,8 @@
     "eslint-plugin-storybook": "^10.4.2",
     "playwright": "^1.60.0",
     "@vitest/browser-playwright": "^4.1.8"
+  },
+  "overrides": {
+    "esbuild": "0.28.1"
   }
 }

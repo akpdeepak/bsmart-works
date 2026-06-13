@@ -148,5 +148,17 @@ with no try/catch in `ComplianceEvaluationService`):
   hard `LIMIT 500`; the editor gained a **Show more** control.
 - **Filters/Views consolidation** — the redundant "Saved Filter" surface is gone; **Saved Views**
   is the single concept. The saved-filter endpoints now scope to the active workspace
-  (`resolveWorkspace`) instead of `users.workspace_id`. (The `bql_filter` table/endpoints remain for
-  API compatibility — a later contract migration can drop them once nothing reads them.)
+  (`resolveWorkspace`) instead of `users.workspace_id`.
+
+## 9. Round 4 — closing the two follow-ups
+
+- **`bql_filter` contract migration (done)** — `V83` migrates any existing saved filters into
+  `saved_views` (data preserved, keyed `SV-<id>`) then `DROP`s the legacy table. The
+  `/api/v1/bql/filters` endpoints, the `BqlFilter` entity, the repository, and the App.jsx plumbing
+  are removed. Saved Views is now the sole saved-query store end to end (expand→contract complete,
+  RB-10 §3).
+- **Relational queries on custom date fields (done)** — `V82` adds a typed `value_date` column to
+  `work_item_field_value` (backfilled from ISO-prefixed `value_text`). DATE custom fields now map to
+  `BqlType.DATE` and compile against `value_date`, so `>`, `<`, `>=`, `<=`, `BETWEEN` work;
+  `FieldDefController` keeps `value_date` in sync on write. Date literals bind as `?::date` (custom
+  *and* built-in date fields) so a string param no longer mismatches a date column.

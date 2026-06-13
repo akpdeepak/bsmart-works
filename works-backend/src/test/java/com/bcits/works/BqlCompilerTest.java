@@ -286,7 +286,31 @@ class BqlCompilerTest {
     private BqlContext customCtx() {
         return BqlContext.forUser("u", true, java.util.Map.of(
             "team", new BqlContext.CustomField("FD-1", BqlField.BqlType.TEXT),
-            "score", new BqlContext.CustomField("FD-2", BqlField.BqlType.NUMBER)));
+            "score", new BqlContext.CustomField("FD-2", BqlField.BqlType.NUMBER),
+            "golive", new BqlContext.CustomField("FD-3", BqlField.BqlType.DATE)));
+    }
+
+    @Test
+    void customDateField_relationalUsesValueDateColumnAndCast() {
+        BqlCompiler.Compiled c = compiler.compileFor("golive >= 2026-01-01", customCtx());
+        assertEquals("id IN (SELECT work_item_id FROM work_item_field_value "
+            + "WHERE field_def_id = ? AND value_date >= ?::date)", c.sql());
+        assertEquals(List.of("FD-3", "2026-01-01"), c.params());
+    }
+
+    @Test
+    void customDateField_betweenUsesValueDate() {
+        BqlCompiler.Compiled c = compiler.compileFor("golive BETWEEN 2026-01-01 AND 2026-03-31", customCtx());
+        assertEquals("id IN (SELECT work_item_id FROM work_item_field_value "
+            + "WHERE field_def_id = ? AND value_date BETWEEN ?::date AND ?::date)", c.sql());
+        assertEquals(List.of("FD-3", "2026-01-01", "2026-03-31"), c.params());
+    }
+
+    @Test
+    void builtinDateField_literalIsCastToDate() {
+        BqlCompiler.Compiled c = compiler.compile("dueDate >= 2026-01-01", "u");
+        assertEquals("due_date >= ?::date", c.sql());
+        assertEquals(List.of("2026-01-01"), c.params());
     }
 
     @Test

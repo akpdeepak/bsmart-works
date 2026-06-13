@@ -60,7 +60,7 @@ public class KpiSnapshotScheduler {
     }
 
     private void writeOrgSnapshot(String workspaceId, String period) {
-        KpiService.Layer org = kpiService.org(workspaceId);
+        KpiService.Layer org = kpiService.orgForSystem(workspaceId);
         for (KpiService.MetricValue mv : org.metrics()) {
             kpiService.snapshot(workspaceId, mv.key(), "ORG", null, period, mv.value(), mv.sampleSize());
         }

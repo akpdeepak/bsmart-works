@@ -99,7 +99,7 @@ export default function KnowledgeView({
           </div>
           {/* Search */}
           <div className="relative">
-            <input type="text" placeholder="Search articles..." value={knowledgeSearch}
+            <input type="text" aria-label="Search articles" placeholder="Search articles..." value={knowledgeSearch}
               onChange={e => setKnowledgeSearch(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { searchKnowledge(); setKnowledgeTab('search'); } }}
               className="input text-xs pl-6 py-1.5 w-full" />
@@ -116,7 +116,7 @@ export default function KnowledgeView({
         {/* Space list */}
         <div className="flex-1 overflow-y-auto px-2 pb-2">
           {knowledgeSpaces.length === 0 && (
-            <p className="text-xs text-neutral-600 text-center py-6">No spaces yet. Create one to get started.</p>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center py-6">No spaces yet. Create one to get started.</p>
           )}
           {knowledgeSpaces.map(space => (
             <div key={space.id}>
@@ -396,7 +396,7 @@ export default function KnowledgeView({
                 <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
                   <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Version history</h3>
                   {articleVersions.length === 0 ? (
-                    <p className="text-xs text-neutral-600">No versions saved yet.</p>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400">No versions saved yet.</p>
                   ) : (
                     <div className="space-y-2">
                       {articleVersions.map(v => (
@@ -418,7 +418,7 @@ export default function KnowledgeView({
                   <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Comments ({articleComments.length})</h3>
                   <div className="flex-1 space-y-2">
                     {articleComments.length === 0 && (
-                      <p className="text-xs text-neutral-600">No comments yet. Start the discussion below.</p>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400">No comments yet. Start the discussion below.</p>
                     )}
                     {articleComments.map(c => (
                       <div key={c.id} className={`rounded-lg p-3 border ${c.resolved ? 'bg-semantic-success-surface border-semantic-success/30' : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700'}`}>
@@ -447,7 +447,7 @@ export default function KnowledgeView({
                         />
                       )}
                     </div>
-                    <textarea rows={3} value={newArticleComment} onChange={e => setNewArticleComment(e.target.value)}
+                    <textarea rows={3} aria-label="Add a comment" value={newArticleComment} onChange={e => setNewArticleComment(e.target.value)}
                       placeholder="Add a comment…" className="input resize-none text-xs w-full" />
                     <Button variant="action" className="mt-2 w-full" onClick={() => addArticleComment(selectedArticle.id)}>Comment</Button>
                   </div>

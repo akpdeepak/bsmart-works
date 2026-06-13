@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { expectNoA11yViolations } from '@/test/a11y';
 import NotificationsView from './notifications-view';
 
 vi.mock('@/lib/apiClient', () => ({
@@ -44,5 +45,32 @@ describe('NotificationsView', () => {
     render(<NotificationsView {...baseProps} notifications={[{ id: 'N1', message: 'Ping', read: false }]} />);
     fireEvent.click(screen.getByRole('button', { name: 'Mark as read' }));
     expect(api.raw).toHaveBeenCalledWith('/notifications/N1/read', { method: 'PUT' });
+  });
+
+  it('surfaces a failed mark-read via onError instead of silently swallowing it', async () => {
+    const { api } = await import('@/lib/apiClient');
+    api.raw.mockImplementationOnce(() => Promise.reject(new Error('boom')));
+    const onError = vi.fn();
+    render(<NotificationsView {...baseProps} onError={onError} notifications={[{ id: 'N1', message: 'Ping', read: false }]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Mark as read' }));
+    await waitFor(() => expect(onError).toHaveBeenCalled());
+  });
+
+  it('surfaces a failed mark-all-read via onError', async () => {
+    const { api } = await import('@/lib/apiClient');
+    api.raw.mockImplementationOnce(() => Promise.reject(new Error('boom')));
+    const onError = vi.fn();
+    render(<NotificationsView {...baseProps} onError={onError} unreadCount={1}
+      notifications={[{ id: 'N1', message: 'Ping', read: false }]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Mark all as read' }));
+    await waitFor(() => expect(onError).toHaveBeenCalled());
+  });
+
+  it('has no serious a11y violations', async () => {
+    const { container } = render(
+      <NotificationsView {...baseProps} unreadCount={1}
+        notifications={[{ id: 'N1', message: 'Ping', read: false, createdAt: '2026-06-01' }]} />,
+    );
+    await expectNoA11yViolations(container);
   });
 });

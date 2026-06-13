@@ -49,6 +49,18 @@ describe('BqlView', () => {
     expect(screen.getByText('High')).toBeInTheDocument();
   });
 
+  it('resolves id columns to names in results (JIRA-style)', () => {
+    render(
+      <BqlView
+        {...baseProps}
+        bqlQuery="assignee = currentUser()"
+        bqlResults={[{ id: 'WRK-1', title: 'A bug', assignee_id: 'USR-1' }]}
+        nameMaps={{ users: { 'USR-1': 'Alice Smith' }, projects: {}, sprints: {} }}
+      />,
+    );
+    expect(screen.getByText('Alice Smith')).toBeInTheDocument();
+  });
+
   it('toggles the visual builder open', () => {
     render(<BqlView {...baseProps} />);
     expect(screen.queryByText('Visual builder', { selector: 'p' })).not.toBeInTheDocument();

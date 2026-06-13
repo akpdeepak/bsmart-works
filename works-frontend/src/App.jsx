@@ -3463,6 +3463,11 @@ export default function App() {
               workItems={workItems}
               activeWorkspaceId={activeWorkspaceId}
               aiCapabilities={aiCapabilities}
+              nameMaps={{
+                users: Object.fromEntries(users.map(u => [u.id, u.fullName || u.email])),
+                projects: Object.fromEntries(projects.map(p => [p.id, p.name])),
+                sprints: Object.fromEntries(sprints.map(s => [s.id, s.name])),
+              }}
               setBqlQuery={setBqlQuery}
               setSelectedItem={setSelectedItem}
               runBql={runBql}

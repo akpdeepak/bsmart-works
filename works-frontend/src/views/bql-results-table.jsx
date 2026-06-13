@@ -25,6 +25,8 @@ const COLUMNS = [
 
 const DEFAULT_VISIBLE = ['id', 'title', 'status', 'type', 'priority', 'assignee_id', 'due_date'];
 const STORAGE_KEY = 'bql.navigator.columns';
+// ID columns → which nameMaps lookup resolves them to a human-readable name (JIRA shows names, not ids).
+const ID_MAP = { assignee_id: 'users', created_by: 'users', project_id: 'projects', sprint_id: 'sprints' };
 
 function loadVisible() {
   try {
@@ -34,23 +36,25 @@ function loadVisible() {
   return DEFAULT_VISIBLE;
 }
 
-function cellText(col, item) {
+function cellText(col, item, nameMaps) {
   const v = item[col.key];
   if (v == null || v === '') return '';
   if (col.date) return String(v).slice(0, 10);
-  return String(v);
+  const mapKey = ID_MAP[col.key];
+  const name = mapKey && nameMaps?.[mapKey]?.[v];
+  return name || String(v);
 }
 
-function toCsv(rows, cols) {
+function toCsv(rows, cols, nameMaps) {
   const esc = (s) => `"${String(s ?? '').replace(/"/g, '""')}"`;
   const header = cols.map(c => esc(c.label)).join(',');
-  const body = rows.map(r => cols.map(c => esc(cellText(c, r))).join(',')).join('\n');
+  const body = rows.map(r => cols.map(c => esc(cellText(c, r, nameMaps))).join(',')).join('\n');
   return `${header}\n${body}`;
 }
 
 // JIRA-style issue navigator for BQL results: sortable columns, a column chooser, CSV export, and
 // rows that always open their work item (the parent resolves by id, fetching if needed).
-export default function BqlResultsTable({ results, sort, onSort, onOpen, onShowMore, canShowMore }) {
+export default function BqlResultsTable({ results, sort, nameMaps = {}, onSort, onOpen, onShowMore, canShowMore }) {
   const [visibleKeys, setVisibleKeys] = useState(loadVisible);
   const [chooserOpen, setChooserOpen] = useState(false);
 
@@ -73,7 +77,7 @@ export default function BqlResultsTable({ results, sort, onSort, onOpen, onShowM
   };
 
   const exportCsv = () => {
-    const blob = new Blob([toCsv(results, cols)], { type: 'text/csv' });
+    const blob = new Blob([toCsv(results, cols, nameMaps)], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -89,7 +93,7 @@ export default function BqlResultsTable({ results, sort, onSort, onOpen, onShowM
     if (col.key === 'priority' && item.priority) {
       return <PriorityBadge priority={item.priority} />;
     }
-    return <span className={col.mono ? 'font-mono text-xs text-neutral-600 dark:text-neutral-400' : ''}>{cellText(col, item)}</span>;
+    return <span className={col.mono ? 'font-mono text-xs text-neutral-600 dark:text-neutral-400' : ''}>{cellText(col, item, nameMaps)}</span>;
   };
 
   return (

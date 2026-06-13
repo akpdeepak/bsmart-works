@@ -218,7 +218,21 @@ public class BqlCompiler {
                 expect(BqlLexer.TokenType.RPAREN, ")");
                 return new BqlAst.FunctionCall(t.text(), args);
             }
-            return new BqlAst.Literal(t.text());
+            // Bare value — may span multiple words (e.g. `status = In Progress`), mirroring a
+            // quoted value without the quotes. Consume following words until a reserved keyword,
+            // operator, comma, paren, or end — so connectors and the next condition still parse.
+            StringBuilder sb = new StringBuilder(t.text());
+            while (peek().type() == BqlLexer.TokenType.WORD && !isReserved(peek().text())) {
+                sb.append(' ').append(next().text());
+            }
+            return new BqlAst.Literal(sb.toString());
+        }
+
+        private static final java.util.Set<String> RESERVED = java.util.Set.of(
+            "AND", "OR", "NOT", "IN", "BETWEEN", "IS", "EMPTY", "CONTAINS", "STARTSWITH", "ENDSWITH");
+
+        private boolean isReserved(String word) {
+            return RESERVED.contains(word.toUpperCase(Locale.ROOT));
         }
 
         // token helpers

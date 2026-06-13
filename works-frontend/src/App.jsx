@@ -45,6 +45,7 @@ import { PresenceBar } from '@/components/works/organisms/presence-bar';
 import { ShortcutsHelp } from '@/components/works/organisms/shortcuts-help';
 import { ConflictResolver } from '@/components/works/organisms/conflict-resolver';
 import { StatusPage } from '@/components/works/organisms/status-page';
+import { PublicDashboardEmbed } from '@/components/works/organisms/public-dashboard-embed';
 import { PushSettingsPanel } from '@/components/works/organisms/push-settings-panel';
 import { connectRealtime, sendPresence, leavePresence } from '@/lib/realtime';
 import { queueDraft, removeDraft, pendingDrafts, syncDrafts } from '@/lib/offline';
@@ -2533,8 +2534,13 @@ export default function App() {
   const userName = u => users.find(x => x.id === u)?.fullName || '';
   const myItems  = workItems.filter(i => i.assigneeId === currentUser?.id);
 
-  // Public, unauthenticated, read-only dashboard embed (?share=<token>) — short-circuits
-  // before the auth gate so it renders without a login (iteration 6).
+  // Public, unauthenticated, read-only dashboard embed — short-circuits before the auth gate so it
+  // renders without a login (iteration 6, Cap J). Two equivalent entry points to the same view:
+  //   • ?share=<token>           — the shareable "open in a tab" public link.
+  //   • /embed/dashboard/<token> — the chrome-less iframe surface (no header) for portals/status
+  //     pages; this path is what nginx serves with the narrow framing allowance (frame-ancestors).
+  const embedMatch = window.location.pathname.match(/^\/embed\/dashboard\/([^/?#]+)/);
+  if (embedMatch) return <PublicDashboardEmbed token={decodeURIComponent(embedMatch[1])} embedded />;
   const shareToken = new URLSearchParams(window.location.search).get('share');
   if (shareToken) return <PublicDashboardEmbed token={shareToken} />;
 
@@ -4222,80 +4228,9 @@ function getTimeOfDay() {
 // ReportSectionControls + ReportSectionCard extracted to
 // src/components/works/organisms/report-section-card.jsx (TD-003).
 
-// Iteration 6 — public, read-only embed of a shared dashboard. Rendered before the auth
-// gate from ?share=<token>; fetches the token-scoped public endpoint and renders the widgets
-// from the server aggregate (no app shell, no auth, no drill).
-function PublicDashboardEmbed({ token }) {
-  const [data, setData] = useState(null);
-  const [status, setStatus] = useState('loading'); // loading | ok | error
-  useEffect(() => {
-    let alive = true;
-    api.raw(`/public/dashboards/${encodeURIComponent(token)}`)
-      .then(r => { if (!r.ok) throw new Error('not found'); return r.json(); })
-      .then(d => { if (alive) { setData(d); setStatus('ok'); } })
-      .catch(() => { if (alive) setStatus('error'); });
-    return () => { alive = false; };
-  }, [token]);
-
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 font-sans" aria-busy="true" aria-label="Loading dashboard">
-        <header className="bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-7 w-7 rounded-md" />
-            <Skeleton className="h-4 w-40" />
-          </div>
-          <Skeleton className="h-5 w-20 rounded-full" />
-        </header>
-        <main className="p-6">
-          <div className="grid grid-cols-12 gap-4 max-w-7xl mx-auto">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="col-span-12 sm:col-span-6 lg:col-span-4">
-                <Skeleton className="h-40 w-full rounded-xl" />
-              </div>
-            ))}
-          </div>
-        </main>
-      </div>
-    );
-  }
-  if (status === 'error' || !data) {
-    return (
-      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center font-sans p-6">
-        <div className="text-center max-w-sm">
-          <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Dashboard unavailable</p>
-          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">This share link is invalid or has been revoked.</p>
-        </div>
-      </div>
-    );
-  }
-  const widgets = data.widgets || [];
-  return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 font-sans">
-      <header className="bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3 min-w-0">
-          <Logo />
-          <span className="text-sm font-semibold text-neutral-900 dark:text-white truncate">{data.name}</span>
-        </div>
-        <span className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-700 rounded-full px-2 py-0.5 flex-shrink-0">Read-only</span>
-      </header>
-      <main className="p-6">
-        {widgets.length === 0 ? (
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">This dashboard has no widgets.</p>
-        ) : (
-          <div className="grid grid-cols-12 gap-4 max-w-7xl mx-auto">
-            {widgets.map(w => (
-              <DashboardWidgetCard key={w.id} widget={w} workItems={[]} aggregate={data.aggregate} editMode={false} />
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
-  );
-}
-
-// DashboardWidgetCard extracted to src/components/works/organisms/dashboard-widget-card.jsx (TD-003).
-// Imported at the top of this file; used here by PublicDashboardEmbed.
+// PublicDashboardEmbed (iteration 6, Cap J) extracted to
+// src/components/works/organisms/public-dashboard-embed.jsx — imported at the top of this file and
+// rendered before the auth gate from ?share=<token> or /embed/dashboard/<token>.
 
 // B27 — AI-assisted compliance rule suggestion. Sends a natural-language prompt to the AI
 // which returns suggested rules; the user can adopt one directly into the rule builder.

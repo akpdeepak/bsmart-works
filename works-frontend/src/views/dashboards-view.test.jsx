@@ -122,6 +122,32 @@ describe('DashboardsView', () => {
   });
 });
 
+describe('DashboardsView — share + embed surface (Cap J)', () => {
+  const sharedProps = {
+    ...baseProps,
+    activeWorkspaceId: 'ws-1',
+    selectedDashboard: { id: 'd1', name: 'Customer Status', widgets: [], scope: 'TEAM' },
+    shareInfo: { id: 'd1', token: 'tok-xyz' },
+  };
+
+  it('shows both the public link and the iframe embed snippet when a share token exists', () => {
+    render(<DashboardsView {...sharedProps} />);
+
+    const link = screen.getByLabelText(/public dashboard link/i);
+    expect(link.value).toContain('?share=tok-xyz');
+
+    const embed = screen.getByLabelText(/embed iframe snippet/i);
+    expect(embed.value).toContain('<iframe');
+    expect(embed.value).toContain('/embed/dashboard/tok-xyz');
+    expect(embed.value).toContain('title="Customer Status"');
+  });
+
+  it('does not show the share/embed panel when there is no share token', () => {
+    render(<DashboardsView {...sharedProps} shareInfo={null} />);
+    expect(screen.queryByLabelText(/embed iframe snippet/i)).not.toBeInTheDocument();
+  });
+});
+
 describe('DashboardsView — AI summary band (dashboard_summary gate)', () => {
   const openProps = {
     ...baseProps,

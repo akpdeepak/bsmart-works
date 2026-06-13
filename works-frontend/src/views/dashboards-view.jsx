@@ -168,17 +168,35 @@ export default function DashboardsView({
               </div>
             </div>
 
-            {shareInfo && shareInfo.id === selectedDashboard.id && shareInfo.token && (
-              <div className="flex items-center gap-2 mb-4 p-3 rounded-md bg-semantic-info-surface border border-neutral-200 dark:border-neutral-700">
-                <span className="text-xs font-semibold text-neutral-700 flex-shrink-0">{t('insights.dashboards.publicLink')}</span>
-                <input readOnly aria-label="Public embed link"
-                  value={`${window.location.origin}${window.location.pathname}?share=${shareInfo.token}`}
-                  className="flex-1 min-w-0 text-xs font-mono rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-2 py-1" />
-                <button onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}${window.location.pathname}?share=${shareInfo.token}`); showToast(t('insights.dashboards.linkCopied')); }}
-                  className="text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors flex-shrink-0">{t('insights.common.copy')}</button>
-                <button onClick={() => stopShare(selectedDashboard.id)} className="text-xs text-semantic-danger hover:underline flex-shrink-0">{t('insights.dashboards.stopSharing')}</button>
-              </div>
-            )}
+            {shareInfo && shareInfo.id === selectedDashboard.id && shareInfo.token && (() => {
+              // Two surfaces for the same token (Cap J): a public link to open in a tab, and an
+              // iframe snippet to embed in a portal / customer status page. The /embed/ path is the
+              // chrome-less, framable surface (nginx serves it with the narrow frame-ancestors
+              // allowance). The data is read-only + token-scoped, never owner/PII (RB-40 §1).
+              const publicLink = `${window.location.origin}/?share=${shareInfo.token}`;
+              const embedUrl = `${window.location.origin}/embed/dashboard/${shareInfo.token}`;
+              const iframeSnippet = `<iframe src="${embedUrl}" width="100%" height="600" style="border:0" title="${selectedDashboard.name || 'Dashboard'}" loading="lazy"></iframe>`;
+              return (
+                <div className="mb-4 p-3 rounded-md bg-semantic-info-surface border border-neutral-200 dark:border-neutral-700 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-neutral-700 w-16 flex-shrink-0">Public link</span>
+                    <input readOnly aria-label="Public dashboard link" value={publicLink}
+                      className="flex-1 min-w-0 text-xs font-mono rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-2 py-1" />
+                    <button onClick={() => { navigator.clipboard?.writeText(publicLink); showToast('Link copied'); }}
+                      className="text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors flex-shrink-0">Copy</button>
+                    <button onClick={() => stopShare(selectedDashboard.id)} className="text-xs text-semantic-danger hover:underline flex-shrink-0">Stop sharing</button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-neutral-700 w-16 flex-shrink-0">Embed</span>
+                    <input readOnly aria-label="Embed iframe snippet" value={iframeSnippet}
+                      className="flex-1 min-w-0 text-xs font-mono rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-2 py-1" />
+                    <button onClick={() => { navigator.clipboard?.writeText(iframeSnippet); showToast('Embed code copied'); }}
+                      className="text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors flex-shrink-0">Copy</button>
+                  </div>
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400">Paste the embed code into an internal portal or customer status page. The view is read-only and updates with the dashboard.</p>
+                </div>
+              );
+            })()}
 
             <div className="flex flex-wrap items-center gap-2 mb-4">
               <span className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">{t('insights.dashboards.scope')}</span>

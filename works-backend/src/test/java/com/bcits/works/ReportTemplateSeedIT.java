@@ -57,11 +57,14 @@ class ReportTemplateSeedIT {
     void monthlyExecutiveSummaryHasKpiTrendNarrativeAndRiskSections() {
         Report exec = templateNamed("Monthly executive summary");
         String sections = exec.getSections();
+        // Whitespace-insensitive for the structural `"type":"x"` checks — the stored JSON may be
+        // pretty-printed (`"type": "kpi"`); the section shape is what matters, not the spacing.
+        String compact = sections.replaceAll("\\s+", "");
 
         // KPI grid + velocity/trend chart + executive narrative + risk summary.
-        assertThat(sections).contains("\"type\":\"kpi\"");
+        assertThat(compact).contains("\"type\":\"kpi\"");
         assertThat(sections).contains("Velocity & delivery trend");
-        assertThat(sections).contains("\"type\":\"chart\"");
+        assertThat(compact).contains("\"type\":\"chart\"");
         assertThat(sections).contains("Executive summary");
         assertThat(sections).contains("Risk summary");
         // Section shape matches the seed contract: chartType + dimension on charts.
@@ -73,13 +76,14 @@ class ReportTemplateSeedIT {
     void customerStatusHasHealthSlaTableAndNarrativeSections() {
         Report customer = templateNamed("Customer status");
         String sections = customer.getSections();
+        String compact = sections.replaceAll("\\s+", "");
 
         // Customer health + SLA + open-requests table + narrative.
         assertThat(sections).contains("Customer health");
         assertThat(sections).contains("Within SLA");
         assertThat(sections).contains("SLA at risk");
-        assertThat(sections).contains("\"type\":\"table\"");
+        assertThat(compact).contains("\"type\":\"table\"");
         assertThat(sections).contains("Open requests");
-        assertThat(sections).contains("\"type\":\"narrative\"");
+        assertThat(compact).contains("\"type\":\"narrative\"");
     }
 }

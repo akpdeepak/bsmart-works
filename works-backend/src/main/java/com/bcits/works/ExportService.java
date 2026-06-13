@@ -16,6 +16,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import javax.imageio.ImageIO;
 import javax.sql.DataSource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -60,6 +61,7 @@ public class ExportService {
 
     private final JdbcTemplate jdbc;
 
+    @Autowired
     public ExportService(DataSource dataSource) {
         this.jdbc = new JdbcTemplate(dataSource);
         this.jdbc.setQueryTimeout(10); // bounded; an export is not on the interactive hot path

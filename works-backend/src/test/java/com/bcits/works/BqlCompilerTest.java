@@ -14,6 +14,8 @@ class BqlCompilerTest {
 
     private final BqlCompiler compiler = new BqlCompiler();
 
+    // ── Basics (parameterization preserved from the original translator) ──────────────
+
     @Test
     void simpleEquality_parameterizesValue() {
         BqlCompiler.Compiled c = compiler.compile("priority = Highest", "u1");
@@ -36,13 +38,6 @@ class BqlCompilerTest {
     }
 
     @Test
-    void andOrChaining_preservesConnectors() {
-        BqlCompiler.Compiled c = compiler.compile("status != Done AND type = Bug", "u");
-        assertEquals("status != ? AND type = ?", c.sql());
-        assertEquals(List.of("Done", "Bug"), c.params());
-    }
-
-    @Test
     void contains_usesIlikeWithSurroundingWildcards() {
         BqlCompiler.Compiled c = compiler.compile("title CONTAINS auth", "u");
         assertEquals("title ILIKE ?", c.sql());
@@ -58,7 +53,7 @@ class BqlCompilerTest {
 
     @Test
     void dateFunction_isLiteralNotParameter() {
-        BqlCompiler.Compiled c = compiler.compile("due_date < today()", "u");
+        BqlCompiler.Compiled c = compiler.compile("dueDate < today()", "u");
         assertEquals("due_date < CURRENT_DATE", c.sql());
         assertTrue(c.params().isEmpty());
     }
@@ -78,13 +73,6 @@ class BqlCompilerTest {
     }
 
     @Test
-    void injectionAttempt_isBoundAsOneParam_notExecutedAsSql() {
-        BqlCompiler.Compiled c = compiler.compile("status = x'; DROP TABLE users; --", "u");
-        assertEquals("status = ?", c.sql());
-        assertEquals(List.of("x'; DROP TABLE users; --"), c.params());
-    }
-
-    @Test
     void emptyQuery_yieldsEmptySqlAndNoParams() {
         BqlCompiler.Compiled c = compiler.compile("   ", "u");
         assertEquals("", c.sql());
@@ -92,22 +80,8 @@ class BqlCompilerTest {
     }
 
     @Test
-    void malformedCondition_throwsBqlException() {
-        assertThrows(BqlException.class, () -> compiler.compile("this is not valid", "u"));
-    }
-
-    @Test
-    void unknownField_passesThroughAsLowercasedColumn() {
-        // A field with no explicit alias falls through to the default branch: lowercased and used
-        // directly as a column (after the safe-identifier check), with the value still bound.
-        BqlCompiler.Compiled c = compiler.compile("Severity = High", "u");
-        assertEquals("severity = ?", c.sql());
-        assertEquals(List.of("High"), c.params());
-    }
-
-    @Test
     void nowFunction_isLiteralNotParameter() {
-        BqlCompiler.Compiled c = compiler.compile("created_at >= now()", "u");
+        BqlCompiler.Compiled c = compiler.compile("createdAt >= now()", "u");
         assertEquals("created_at >= NOW()", c.sql());
         assertTrue(c.params().isEmpty());
     }
@@ -126,10 +100,180 @@ class BqlCompilerTest {
         assertEquals(List.of("Done"), c.params());
     }
 
+    // ── Boolean structure: AND/OR are now parenthesized for correct precedence ─────────
+
+    @Test
+    void andChaining_parenthesizesForPrecedence() {
+        BqlCompiler.Compiled c = compiler.compile("status != Done AND type = Bug", "u");
+        assertEquals("(status != ? AND type = ?)", c.sql());
+        assertEquals(List.of("Done", "Bug"), c.params());
+    }
+
     @Test
     void orConnector_isPreserved() {
         BqlCompiler.Compiled c = compiler.compile("priority = High OR priority = Highest", "u");
-        assertEquals("priority = ? OR priority = ?", c.sql());
+        assertEquals("(priority = ? OR priority = ?)", c.sql());
         assertEquals(List.of("High", "Highest"), c.params());
+    }
+
+    @Test
+    void parentheses_groupOrInsideAnd() {
+        BqlCompiler.Compiled c = compiler.compile(
+            "status = Open AND (priority = High OR priority = Critical)", "u");
+        assertEquals("(status = ? AND (priority = ? OR priority = ?))", c.sql());
+        assertEquals(List.of("Open", "High", "Critical"), c.params());
+    }
+
+    @Test
+    void andBindsTighterThanOr_withoutParentheses() {
+        BqlCompiler.Compiled c = compiler.compile("priority = High OR status = Open AND type = Bug", "u");
+        // OR is lowest precedence → priority OR (status AND type)
+        assertEquals("(priority = ? OR (status = ? AND type = ?))", c.sql());
+        assertEquals(List.of("High", "Open", "Bug"), c.params());
+    }
+
+    // ── New operators ─────────────────────────────────────────────────────────────────
+
+    @Test
+    void not_negatesGroup() {
+        BqlCompiler.Compiled c = compiler.compile("NOT status = Done", "u");
+        assertEquals("NOT (status = ?)", c.sql());
+        assertEquals(List.of("Done"), c.params());
+    }
+
+    @Test
+    void notIn_negatesSetMembership() {
+        BqlCompiler.Compiled c = compiler.compile("status NOT IN (Done, Cancelled)", "u");
+        assertEquals("status NOT IN (?, ?)", c.sql());
+        assertEquals(List.of("Done", "Cancelled"), c.params());
+    }
+
+    @Test
+    void between_emitsRange() {
+        BqlCompiler.Compiled c = compiler.compile("points BETWEEN 2 AND 8", "u");
+        assertEquals("story_points BETWEEN ? AND ?", c.sql());
+        assertEquals(List.of(2L, 8L), c.params());
+    }
+
+    @Test
+    void isEmpty_isNullCheck() {
+        BqlCompiler.Compiled c = compiler.compile("assignee IS EMPTY", "u");
+        assertEquals("assignee_id IS NULL", c.sql());
+        assertTrue(c.params().isEmpty());
+    }
+
+    @Test
+    void isNotEmpty_isNotNullCheck() {
+        BqlCompiler.Compiled c = compiler.compile("assignee IS NOT EMPTY", "u");
+        assertEquals("assignee_id IS NOT NULL", c.sql());
+        assertTrue(c.params().isEmpty());
+    }
+
+    @Test
+    void endsWith_usesIlikeSuffixWildcard() {
+        BqlCompiler.Compiled c = compiler.compile("title ENDSWITH login", "u");
+        assertEquals("title ILIKE ?", c.sql());
+        assertEquals(List.of("%login"), c.params());
+    }
+
+    // ── Relative-date functions ─────────────────────────────────────────────────────
+
+    @Test
+    void startOfWeek_compilesToDateTrunc() {
+        BqlCompiler.Compiled c = compiler.compile("createdAt >= startOfWeek()", "u");
+        assertEquals("created_at >= date_trunc('week', CURRENT_DATE)", c.sql());
+        assertTrue(c.params().isEmpty());
+    }
+
+    @Test
+    void daysAgo_bindsIntervalCount() {
+        BqlCompiler.Compiled c = compiler.compile("createdAt >= daysAgo(7)", "u");
+        assertEquals("created_at >= (CURRENT_DATE - (? * INTERVAL '1 day'))", c.sql());
+        assertEquals(List.of(7L), c.params());
+    }
+
+    @Test
+    void daysAgo_nonNumericArg_throws() {
+        assertThrows(BqlException.class, () -> compiler.compile("createdAt >= daysAgo(abc)", "u"));
+    }
+
+    // ── Field allow-list + field-level security ───────────────────────────────────────
+
+    @Test
+    void unknownField_isRejected() {
+        // The former open-default pass-through is gone: only allow-listed fields compile.
+        assertThrows(BqlException.class, () -> compiler.compile("secret_column = 1", "u"));
+    }
+
+    @Test
+    void sensitiveField_allowedForTrustedContext() {
+        BqlCompiler.Compiled c = compiler.compile("businessValue > 5", "u");
+        assertEquals("business_value > ?", c.sql());
+        assertEquals(List.of(5L), c.params());
+    }
+
+    @Test
+    void sensitiveField_rejectedForUngatedUser() {
+        BqlContext ctx = BqlContext.forUser("u", false);
+        assertThrows(BqlException.class, () -> compiler.compileFor("businessValue > 5", ctx));
+    }
+
+    // ── Safety ────────────────────────────────────────────────────────────────────────
+
+    @Test
+    void injectionAttempt_isBoundAsOneParam_notExecutedAsSql() {
+        BqlCompiler.Compiled c = compiler.compile("status = '; DROP TABLE users; --'", "u");
+        assertEquals("status = ?", c.sql());
+        assertEquals(List.of("; DROP TABLE users; --"), c.params());
+    }
+
+    // ── Backward compatibility with stored/seeded BQL (regression guard) ──────────────
+
+    @Test
+    void multiWordBareValue_isReadAsOneValue() {
+        // Seeded compliance rules use unquoted multi-word values like `status = In Progress`.
+        BqlCompiler.Compiled c = compiler.compile("status = In Progress", "u");
+        assertEquals("status = ?", c.sql());
+        assertEquals(List.of("In Progress"), c.params());
+    }
+
+    @Test
+    void multiWordBareValue_stopsAtConnector() {
+        BqlCompiler.Compiled c = compiler.compile("type = Story AND status = In Progress", "u");
+        assertEquals("(type = ? AND status = ?)", c.sql());
+        assertEquals(List.of("Story", "In Progress"), c.params());
+    }
+
+    @Test
+    void seededComplianceRules_compile() {
+        // Exact scope/assertion BQL pairs from V37 seed templates must still compile.
+        for (String bql : List.of(
+                "type = Story AND status = In Progress",
+                "acceptance_criteria != ''",
+                "status = In Progress",
+                "assignee_id != ''",
+                "due_date >= today()",
+                "type = Bug AND priority = CRITICAL",
+                "steps_to_reproduce != ''",
+                "definition_of_done != ''",
+                "business_value > 0")) {
+            BqlCompiler.Compiled c = compiler.compile(bql, "system");
+            assertTrue(c.sql() != null && !c.sql().isEmpty(), "should compile: " + bql);
+        }
+    }
+
+    @Test
+    void malformedCondition_throwsBqlException() {
+        assertThrows(BqlException.class, () -> compiler.compile("this is not valid", "u"));
+    }
+
+    @Test
+    void unterminatedString_throwsBqlException() {
+        assertThrows(BqlException.class, () -> compiler.compile("status = 'oops", "u"));
+    }
+
+    @Test
+    void unbalancedParen_throwsBqlException() {
+        assertThrows(BqlException.class, () -> compiler.compile("(status = Open", "u"));
     }
 }

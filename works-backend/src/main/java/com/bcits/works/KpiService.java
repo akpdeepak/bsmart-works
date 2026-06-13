@@ -437,8 +437,10 @@ public class KpiService {
             if (def.getBqlFormula() == null || def.getBqlFormula().isBlank()) continue;
             if (defsByKey.containsKey(def.getMetricKey()) && updated.stream().anyMatch(m -> m.key().equals(def.getMetricKey()))) continue;
             try {
-                BqlCompiler.Compiled compiled = bqlCompiler.compile(def.getBqlFormula(), null);
-                String countSql = "SELECT COUNT(*) FROM work_items WHERE workspace_id = ? AND deleted_at IS NULL"
+                BqlCompiler.Compiled compiled = bqlCompiler.compileFor(def.getBqlFormula(), BqlContext.trusted(null));
+                // work_items has no workspace_id column — scope through projects (unified idiom, RB-40 §1).
+                String countSql = "SELECT COUNT(*) FROM work_items WHERE deleted_at IS NULL"
+                    + " AND project_id IN (SELECT id FROM projects WHERE workspace_id = ?)"
                     + (compiled.sql().isBlank() ? "" : " AND (" + compiled.sql() + ")");
                 List<Object> params = new ArrayList<>();
                 params.add(workspaceId);

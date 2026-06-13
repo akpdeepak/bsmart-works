@@ -380,7 +380,9 @@ export default function App() {
   const [varianceSprintId, setVarianceSprintId] = useState('');
   const [varianceResult, setVarianceResult]     = useState(null);
   const [cockpitContext, setCockpitContext]     = useState(null); // { roleKey, tier, canManageSprints, canCreateItems, activeSprint, liveCeremony }
+  const [cockpitLoading, setCockpitLoading]     = useState({});   // tab key -> bool, drives loading skeletons
   const [coachTips, setCoachTips]               = useState(null); // { roleKey, tips, narrative, meta }
+  const [digest, setDigest]                     = useState(null); // { sprint, rag, deliveryRate, ... } executive Health lens
   const [retroClusters, setRetroClusters]       = useState(null); // { retroId, themes, narrative, meta }
   const [ceremonies, setCeremonies]             = useState([]);   // [{ session, counts }]
   const [activeCeremony, setActiveCeremony]     = useState(null); // { session, attendance, counts }
@@ -1654,9 +1656,11 @@ export default function App() {
     api.raw(`/permission-schemes/roles`, { method: 'POST', body: JSON.stringify({ ...newRoleForm, workspaceId: activeWorkspaceId }) })
       .then(r => r.json()).then(() => { fetchRoles(); fetchPermMatrix(); setShowRoleForm(false); setNewRoleForm({ name: '', tier: 2 }); }).catch(reportError);
   }
-  function runBql() {
+  function runBql(sort) {
     setBqlError('');
-    api.raw(`/bql/execute`, { method: 'POST', body: JSON.stringify({ query: bqlQuery }) })
+    const body = { query: bqlQuery, workspaceId: activeWorkspaceId };
+    if (typeof sort === 'string' && sort) body.sort = sort;
+    api.raw(`/bql/execute`, { method: 'POST', body: JSON.stringify(body) })
       .then(r => r.json()).then(d => {
         if (d.error) { setBqlError(d.error); setBqlResults([]); }
         else setBqlResults(Array.isArray(d) ? d : []);
@@ -2033,16 +2037,29 @@ export default function App() {
   }
 
   // ── Iteration 15 — Scrum Master Cockpit (Cap V) ──────────────────────────────
+  // Clear per-sprint analysis so the active-sprint auto-load re-fires for the new project
+  // (stale results would otherwise suppress the reload).
+  function resetCockpitAnalysis() {
+    setRiskPanel(null); setVarianceResult(null); setReviewResult(null);
+    setPatternsResult(null); setPlanningResult(null);
+    setRiskSprintId(''); setVarianceSprintId(''); setReviewSprintId('');
+  }
   function openCockpit() {
     setView('smcockpit');
     const pid = i15ProjectId || (projects[0] && projects[0].id) || '';
     setI15ProjectId(pid);
-    if (pid) { fetchCockpitContext(pid); fetchCoachTips(pid); fetchCeremonies(pid); fetchMyDay(pid); fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
+    resetCockpitAnalysis();
+    if (pid) { fetchCockpitContext(pid); fetchCoachTips(pid); fetchDigest(pid); fetchCeremonies(pid); fetchMyDay(pid); fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
   }
   function fetchCoachTips(pid) {
     setCoachTips(null);
     api.send(`/cockpit/pro-tips?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: pid }) })
       .then(d => setCoachTips(d && Array.isArray(d.tips) ? d : null)).catch(() => setCoachTips(null));
+  }
+  function fetchDigest(pid) {
+    setDigest(null);
+    api.raw(`/cockpit/digest?workspaceId=${activeWorkspaceId}&projectId=${pid}`).then(r => r.json())
+      .then(d => setDigest(d && d.rag ? d : null)).catch(() => setDigest(null));
   }
   function clusterRetro() {
     if (!activeRetro?.session?.id) return;
@@ -2167,28 +2184,42 @@ export default function App() {
     api.send(`/retros/notes/${noteId}/convert`, { method: 'POST', body: JSON.stringify({}) })
       .then(() => { showToast('Action item created'); openRetro(activeRetro.session.id); }).catch(() => showToast('Failed', 'error'));
   }
+  function setTabLoading(tab, on) { setCockpitLoading(l => ({ ...l, [tab]: on })); }
   function runSprintPlanning() {
+    setTabLoading('planning', true);
     api.send(`/cockpit/sprint-planning?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId, timeOffPoints: Number(planningTimeOff) || 0 }) })
-      .then(d => setPlanningResult(d)).catch(() => showToast('Planning helper failed', 'error'));
+      .then(d => setPlanningResult(d)).catch(() => showToast('Planning helper failed', 'error'))
+      .finally(() => setTabLoading('planning', false));
   }
-  function runRiskPanel() {
-    if (!riskSprintId) { showToast('Select a sprint', 'error'); return; }
-    api.raw(`/cockpit/risk-panel?workspaceId=${activeWorkspaceId}&sprintId=${riskSprintId}`).then(r => r.json())
-      .then(d => setRiskPanel(d)).catch(() => showToast('Risk panel failed', 'error'));
+  function runRiskPanel(sprintId = riskSprintId) {
+    if (!sprintId) { showToast('Select a sprint', 'error'); return; }
+    setRiskSprintId(sprintId);
+    setTabLoading('risk', true);
+    api.raw(`/cockpit/risk-panel?workspaceId=${activeWorkspaceId}&sprintId=${sprintId}`).then(r => r.json())
+      .then(d => setRiskPanel(d)).catch(() => showToast('Risk panel failed', 'error'))
+      .finally(() => setTabLoading('risk', false));
   }
-  function runVariance() {
-    if (!varianceSprintId) { showToast('Select a sprint', 'error'); return; }
-    api.raw(`/cockpit/variance?workspaceId=${activeWorkspaceId}&sprintId=${varianceSprintId}`).then(r => r.json())
-      .then(d => setVarianceResult(d)).catch(() => showToast('Variance analysis failed', 'error'));
+  function runVariance(sprintId = varianceSprintId) {
+    if (!sprintId) { showToast('Select a sprint', 'error'); return; }
+    setVarianceSprintId(sprintId);
+    setTabLoading('variance', true);
+    api.raw(`/cockpit/variance?workspaceId=${activeWorkspaceId}&sprintId=${sprintId}`).then(r => r.json())
+      .then(d => setVarianceResult(d)).catch(() => showToast('Variance analysis failed', 'error'))
+      .finally(() => setTabLoading('variance', false));
   }
-  function runReviewPrep() {
-    if (!reviewSprintId) { showToast('Select a sprint', 'error'); return; }
-    api.send(`/cockpit/review-prep?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ sprintId: reviewSprintId }) })
-      .then(d => setReviewResult(d)).catch(() => showToast('Review prep failed', 'error'));
+  function runReviewPrep(sprintId = reviewSprintId) {
+    if (!sprintId) { showToast('Select a sprint', 'error'); return; }
+    setReviewSprintId(sprintId);
+    setTabLoading('review', true);
+    api.send(`/cockpit/review-prep?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ sprintId }) })
+      .then(d => setReviewResult(d)).catch(() => showToast('Review prep failed', 'error'))
+      .finally(() => setTabLoading('review', false));
   }
   function runPatterns() {
+    setTabLoading('patterns', true);
     api.send(`/cockpit/patterns?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId }) })
-      .then(d => setPatternsResult(d)).catch(() => showToast('Pattern detection failed', 'error'));
+      .then(d => setPatternsResult(d)).catch(() => showToast('Pattern detection failed', 'error'))
+      .finally(() => setTabLoading('patterns', false));
   }
 
   // ── Iteration 15 — Product Owner Workspace (Cap W) ───────────────────────────
@@ -3759,6 +3790,10 @@ export default function App() {
               runVariance={runVariance}
               coachTips={coachTips}
               fetchCoachTips={fetchCoachTips}
+              cockpitLoading={cockpitLoading}
+              resetCockpitAnalysis={resetCockpitAnalysis}
+              digest={digest}
+              fetchDigest={fetchDigest}
               retroClusters={retroClusters}
               clusterRetro={clusterRetro}
               setPlanningTimeOff={setPlanningTimeOff}

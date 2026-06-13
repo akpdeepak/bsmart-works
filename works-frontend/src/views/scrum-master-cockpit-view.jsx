@@ -1,8 +1,9 @@
+import { useEffect, useState } from 'react';
 import {
   Construction, MessageCircle, ArrowLeft, AlertTriangle, LayoutDashboard,
   TrendingUp, Zap, CheckCircle2, ClipboardList, RefreshCw,
   ChevronUp, ArrowRight, Check, Megaphone, Reply, BarChart2, Repeat,
-  CalendarCheck, UserCheck, UserX, Lightbulb, Sparkles,
+  CalendarCheck, UserCheck, UserX, Lightbulb, Sparkles, Activity,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { Field } from '@/components/works/field';
@@ -41,7 +42,7 @@ const CEREMONY_LABELS = {
 };
 
 const TAB_LABELS = {
-  myday: 'My Day', ceremonies: 'Ceremonies', standup: 'Standup', impediments: 'Impediments',
+  health: 'Health', myday: 'My Day', ceremonies: 'Ceremonies', standup: 'Standup', impediments: 'Impediments',
   risk: 'Risk panel', variance: 'Variance', planning: 'Planning', retro: 'Retro', review: 'Review prep',
   patterns: 'Patterns',
 };
@@ -49,17 +50,21 @@ const TAB_LABELS = {
 // One surface, role-shaped: tab order/visibility follows the caller's team role (role_key,
 // shared with the Today surface). Relevance only — every action stays RBAC-gated server-side.
 const ROLE_TABS = {
-  'scrum-master': ['ceremonies', 'standup', 'impediments', 'risk', 'variance', 'planning', 'retro', 'review', 'patterns'],
-  admin: ['ceremonies', 'standup', 'impediments', 'risk', 'variance', 'planning', 'retro', 'review', 'patterns'],
+  'scrum-master': ['ceremonies', 'standup', 'impediments', 'risk', 'variance', 'planning', 'retro', 'review', 'patterns', 'health'],
+  admin: ['ceremonies', 'standup', 'impediments', 'risk', 'variance', 'planning', 'retro', 'review', 'patterns', 'health'],
   developer: ['myday', 'standup', 'impediments', 'retro', 'ceremonies'],
-  'product-owner': ['planning', 'review', 'variance', 'patterns', 'ceremonies', 'impediments'],
-  executive: ['variance', 'risk', 'review', 'patterns', 'ceremonies'],
+  'product-owner': ['health', 'planning', 'review', 'variance', 'patterns', 'ceremonies', 'impediments'],
+  executive: ['health', 'variance', 'risk', 'review', 'patterns', 'ceremonies'],
 };
 
 const ROLE_LABELS = {
   'scrum-master': 'Scrum master', developer: 'Developer', 'product-owner': 'Product owner',
   executive: 'Executive', admin: 'Admin',
 };
+
+// Two-mode IA: "Run" = surfaces you act on; "Insights" = surfaces you read/analyse.
+const RUN_TABS = ['myday', 'ceremonies', 'standup', 'impediments', 'retro', 'planning', 'review'];
+const INSIGHTS_TABS = ['health', 'variance', 'risk', 'patterns'];
 
 const RAISE_LABELS = {
   IMPEDIMENT: 'Impediment', RISK: 'Risk', DEPENDENCY: 'Dependency',
@@ -80,6 +85,34 @@ const TIP_TONE = {
   info: 'text-brand-navy dark:text-neutral-200',
 };
 
+// Executive Health RAG verdict → token classes (paired with the label + Activity icon).
+const RAG_TONE = {
+  RED: 'text-semantic-danger',
+  AMBER: 'text-semantic-warning',
+  GREEN: 'text-semantic-success',
+};
+const RAG_DOT = {
+  RED: 'bg-semantic-danger',
+  AMBER: 'bg-semantic-warning',
+  GREEN: 'bg-semantic-success',
+};
+
+// Loading skeleton for an analysis tab (RB-30 §6 — animate-pulse, not a spinner or empty-flash).
+function CockpitSkeleton({ rows = 3 }) {
+  return (
+    <div className="space-y-3" aria-busy="true" aria-label="Loading">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-20 rounded-xl bg-neutral-100 dark:bg-neutral-800 animate-pulse" />
+        ))}
+      </div>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="h-16 rounded-xl bg-neutral-100 dark:bg-neutral-800 animate-pulse" />
+      ))}
+    </div>
+  );
+}
+
 // Sprint Cockpit — extracted from the App.jsx monolith (Wave 3); now role-adaptive.
 // The parent owns all state and handlers; this renders the tabbed cockpit.
 export default function ScrumMasterCockpitView({
@@ -90,6 +123,7 @@ export default function ScrumMasterCockpitView({
   cockpitContext, ceremonies, activeCeremony, newCeremony, currentUserId,
   myDay, fetchMyDay, submitMyStandup,
   coachTips, fetchCoachTips, retroClusters, clusterRetro,
+  cockpitLoading = {}, resetCockpitAnalysis, digest, fetchDigest,
   fetchCockpitContext, fetchCeremonies, scheduleCeremony, openCeremony, setActiveCeremony,
   setNewCeremony, startCeremony, joinCeremony, excuseCeremony, completeCeremony,
   setI15ProjectId, fetchImpediments, fetchStandups, fetchRetros, fetchSprints, setSmTab,
@@ -104,12 +138,57 @@ export default function ScrumMasterCockpitView({
   setReviewSprintId, runReviewPrep, runPatterns,
   showToast, aiAction,
 }) {
+  const [tabTouched, setTabTouched] = useState(false); // has the user picked a tab this session?
   const roleKey = cockpitContext?.roleKey || 'scrum-master';
   // Until the context loads, keep the classic full cockpit — the server gates every action anyway.
   const canManage = cockpitContext ? !!cockpitContext.canManageSprints : true;
   const visibleTabs = ROLE_TABS[roleKey] || ROLE_TABS['scrum-master'];
-  const tab = visibleTabs.includes(smTab) ? smTab : visibleTabs[0];
   const liveCeremony = (ceremonies || []).find(c => c.session?.status === 'LIVE');
+
+  // PR-D — two-mode IA. Split the role's tabs into "Run" (do the work) and "Insights" (analyse);
+  // a segmented control swaps which set shows (only when the role has both).
+  const runTabs = visibleTabs.filter(t => RUN_TABS.includes(t));
+  const insightsTabs = visibleTabs.filter(t => INSIGHTS_TABS.includes(t));
+  const hasBothModes = runTabs.length > 0 && insightsTabs.length > 0;
+
+  // Phase-aware default: until the user touches a tab this session, land on the live ceremony
+  // (standup if that's what's live, else the Ceremonies tab) or the role's first tab. Once the
+  // user picks a tab, their choice sticks and a newly-live ceremony won't yank them away.
+  const ceremonyTab = liveCeremony
+    ? (liveCeremony.session.ceremonyType === 'STANDUP' && visibleTabs.includes('standup') ? 'standup'
+       : visibleTabs.includes('ceremonies') ? 'ceremonies' : null)
+    : null;
+  const defaultTab = ceremonyTab || visibleTabs[0];
+  const tab = (tabTouched && visibleTabs.includes(smTab)) ? smTab : defaultTab;
+  const mode = INSIGHTS_TABS.includes(tab) ? 'insights' : 'run';
+  const shownTabs = mode === 'insights' ? insightsTabs : runTabs;
+  const selectTab = (k) => { setTabTouched(true); setSmTab(k); };
+
+  // F1 — auto-load the active sprint when an analysis tab opens, so there's no
+  // "select a sprint → click Analyze" step on the common path. The sprint selectors and
+  // buttons stay for re-running or inspecting history. App.jsx clears results on project
+  // change, so this re-fires per project.
+  const activeSprintId = cockpitContext?.activeSprint?.id;
+  useEffect(() => {
+    if (tab === 'risk' && activeSprintId && !riskPanel && !cockpitLoading.risk) {
+      runRiskPanel(activeSprintId);
+    } else if (tab === 'variance' && activeSprintId && !varianceResult && !cockpitLoading.variance) {
+      runVariance(activeSprintId);
+    } else if (tab === 'review' && activeSprintId && !reviewResult && !cockpitLoading.review) {
+      runReviewPrep(activeSprintId);
+    } else if (tab === 'planning' && !planningResult && !cockpitLoading.planning) {
+      runSprintPlanning();
+    } else if (tab === 'patterns' && !patternsResult && !cockpitLoading.patterns) {
+      runPatterns();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, activeSprintId, i15ProjectId]);
+
+  // Reset the manual-touch flag on project switch so the phase-aware default applies afresh.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTabTouched(false);
+  }, [i15ProjectId]);
 
   return (
     <div className="flex flex-col h-full overflow-y-auto p-6 max-w-7xl mx-auto w-full">
@@ -127,24 +206,47 @@ export default function ScrumMasterCockpitView({
           </p>
         </div>
         <select className="input text-sm py-1.5" value={i15ProjectId} aria-label="Project"
-          onChange={e => { setI15ProjectId(e.target.value); fetchCockpitContext(e.target.value); fetchCoachTips(e.target.value); fetchCeremonies(e.target.value); fetchMyDay(e.target.value); fetchImpediments(e.target.value); fetchStandups(e.target.value); fetchRetros(e.target.value); fetchSprints(e.target.value); }}>
+          onChange={e => { setI15ProjectId(e.target.value); resetCockpitAnalysis?.(); fetchCockpitContext(e.target.value); fetchCoachTips(e.target.value); fetchDigest(e.target.value); fetchCeremonies(e.target.value); fetchMyDay(e.target.value); fetchImpediments(e.target.value); fetchStandups(e.target.value); fetchRetros(e.target.value); fetchSprints(e.target.value); }}>
           {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </div>
 
-      {liveCeremony && (
-        <div className="flex items-center justify-between gap-3 mb-5 rounded-xl border border-brand-navy/30 bg-brand-navy/5 dark:bg-neutral-800 p-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="h-2.5 w-2.5 rounded-full bg-semantic-danger animate-pulse" aria-hidden="true" />
-            <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 truncate">
-              {CEREMONY_LABELS[liveCeremony.session.ceremonyType] || liveCeremony.session.ceremonyType} is live
+      {/* F3 — persistent sprint context bar: RAG, day X/Y, burndown sparkline, delivery, and the
+          live-ceremony chip, shown on every tab so context never disappears (RB-30 context zone). */}
+      {(digest || liveCeremony) && (
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-2 mb-5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-4 py-2.5">
+          {digest?.rag?.status && (
+            <span className="flex items-center gap-1.5" title={(digest.rag.reasons || []).join(' · ')}>
+              <span className={`h-2.5 w-2.5 rounded-full ${RAG_DOT[digest.rag.status] || RAG_DOT.GREEN}`} aria-hidden="true" />
+              <span className={`text-xs font-bold uppercase tracking-wide ${RAG_TONE[digest.rag.status] || RAG_TONE.GREEN}`}>{digest.rag.status}</span>
             </span>
-            <span className="text-xs text-neutral-600 dark:text-neutral-400">{liveCeremony.counts?.joined ?? 0} joined</span>
-          </div>
-          <div className="flex gap-2 flex-shrink-0">
-            <Button variant="action" onClick={() => joinCeremony(liveCeremony.session.id)}>Join</Button>
-            <Button variant="secondary" onClick={() => { setSmTab('ceremonies'); openCeremony(liveCeremony.session.id); }}>Open</Button>
-          </div>
+          )}
+          {digest?.sprint
+            ? <span className="text-sm text-neutral-700 dark:text-neutral-200">{digest.sprint.name}{digest.sprintDayOf ? ` · day ${digest.sprintDayOf}/${digest.sprintDayTotal}` : ''}</span>
+            : digest && <span className="text-sm text-neutral-500 dark:text-neutral-400">No active sprint</span>}
+          {(digest?.burndown || []).length > 1 && (() => {
+            const max = Math.max(1, ...digest.burndown.map(d => d.remaining));
+            return (
+              <span className="flex items-end gap-px h-5" title="Burndown — points remaining per day" aria-hidden="true">
+                {digest.burndown.map((d, i) => (
+                  <span key={i} className="w-1 bg-brand-navy/60 rounded-sm" style={{ height: `${Math.max(2, Math.round(d.remaining * 100 / max))}%` }} />
+                ))}
+              </span>
+            );
+          })()}
+          {typeof digest?.deliveryRate === 'number' && digest?.sprint && (
+            <span className="text-xs text-neutral-600 dark:text-neutral-400">{digest.deliveryRate}% delivered</span>
+          )}
+          {liveCeremony && (
+            <span className="ml-auto flex items-center gap-2 flex-shrink-0">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-semantic-danger animate-pulse" aria-hidden="true" />
+                <span className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">{CEREMONY_LABELS[liveCeremony.session.ceremonyType] || liveCeremony.session.ceremonyType} live · {liveCeremony.counts?.joined ?? 0} joined</span>
+              </span>
+              <Button variant="action" onClick={() => joinCeremony(liveCeremony.session.id)}>Join</Button>
+              <Button variant="secondary" onClick={() => { selectTab('ceremonies'); openCeremony(liveCeremony.session.id); }}>Open</Button>
+            </span>
+          )}
         </div>
       )}
 
@@ -163,29 +265,90 @@ export default function ScrumMasterCockpitView({
               <li key={idx} className="flex items-start gap-2">
                 <Lightbulb className={`h-3.5 w-3.5 mt-0.5 flex-shrink-0 ${TIP_TONE[t.tone] || TIP_TONE.info}`} aria-hidden="true" />
                 <span className="text-sm text-neutral-800 dark:text-neutral-200">{t.text}</span>
+                {t.action && visibleTabs.includes(t.action.tab) && (
+                  <button onClick={() => selectTab(t.action.tab)}
+                    className="ml-1 flex-shrink-0 text-xs font-medium text-brand-navy hover:underline whitespace-nowrap">
+                    {t.action.label} →
+                  </button>
+                )}
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 mb-5">
-        {canManage && <Button variant="action" onClick={() => setSmTab('planning')}>Plan sprint</Button>}
-        {canManage && <Button variant="secondary" onClick={() => setSmTab('standup')}>Start standup</Button>}
-        {canManage && <Button variant="secondary" onClick={() => setSmTab('retro')}>Run retro</Button>}
-        {canManage && <Button variant="secondary" onClick={() => setSmTab('ceremonies')}>Schedule ceremony</Button>}
-        {!canManage && visibleTabs.includes('impediments') && cockpitContext?.canCreateItems && <Button variant="action" onClick={() => setSmTab('impediments')}>Raise impediment</Button>}
-        {!canManage && visibleTabs.includes('standup') && <Button variant="secondary" onClick={() => setSmTab('standup')}>My standup</Button>}
+      {/* Mode bar: [Run | Insights] segments (when the role has both) + a global Raise. */}
+      <div className="flex items-center justify-between gap-3 mb-3">
+        {hasBothModes ? (
+          <div className="inline-flex rounded-lg border border-neutral-200 dark:border-neutral-700 p-0.5" role="tablist" aria-label="Cockpit mode">
+            {[['run', 'Run'], ['insights', 'Insights']].map(([m, label]) => (
+              <button key={m} role="tab" aria-selected={mode === m}
+                onClick={() => selectTab(m === 'insights' ? insightsTabs[0] : runTabs[0])}
+                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${mode === m ? 'bg-brand-navy text-white' : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        ) : <span />}
+        {visibleTabs.includes('impediments') && cockpitContext?.canCreateItems && (
+          <Button variant="action" onClick={() => selectTab('impediments')}>+ Raise</Button>
+        )}
       </div>
 
-      <div className="flex flex-wrap gap-1 border-b border-neutral-200 dark:border-neutral-700 mb-5">
-        {visibleTabs.map(k => (
-          <button key={k} onClick={() => setSmTab(k)}
+      <div className="flex flex-wrap gap-1 border-b border-neutral-200 dark:border-neutral-700 mb-5" role="tablist">
+        {shownTabs.map(k => (
+          <button key={k} role="tab" aria-selected={tab === k} onClick={() => selectTab(k)}
             className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === k ? 'border-brand-navy text-brand-navy dark:text-white' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'}`}>
             {TAB_LABELS[k]}
           </button>
         ))}
       </div>
+
+      {tab === 'health' && (
+        <div>
+          {!digest ? <EmptyState icon={Activity} title="Sprint health" subtitle="An at-a-glance RAG verdict with delivery, impediment and ceremony-attendance roll-ups for the active sprint." />
+            : (
+              <div className="space-y-4">
+                <div className={`rounded-xl border p-4 ${digest.rag?.status === 'RED' ? 'border-semantic-danger/40 bg-semantic-danger/5' : digest.rag?.status === 'AMBER' ? 'border-semantic-warning/40 bg-semantic-warning/5' : 'border-semantic-success/40 bg-semantic-success/5'}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Activity className={`h-5 w-5 ${RAG_TONE[digest.rag?.status] || RAG_TONE.GREEN}`} aria-hidden="true" />
+                    <span className={`text-sm font-bold uppercase tracking-wide ${RAG_TONE[digest.rag?.status] || RAG_TONE.GREEN}`}>{digest.rag?.status || 'GREEN'}</span>
+                    {digest.sprint && <span className="text-sm text-neutral-700 dark:text-neutral-200">{digest.sprint.name}{digest.sprintDayOf ? ` · day ${digest.sprintDayOf}/${digest.sprintDayTotal}` : ''}</span>}
+                    {!digest.sprint && <span className="text-sm text-neutral-600 dark:text-neutral-400">No active sprint</span>}
+                  </div>
+                  <ul className="mt-1 space-y-0.5">
+                    {(digest.rag?.reasons || []).map((r, idx) => <li key={idx} className="text-sm text-neutral-700 dark:text-neutral-200">• {r}</li>)}
+                  </ul>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <StatCard label="Delivery" value={`${digest.deliveryRate}%`} sub={`${digest.deliveredPoints}/${digest.committedPoints} pts`} color="text-brand-navy" icon={CheckCircle2} />
+                  <StatCard label="Open impediments" value={digest.openImpediments} sub={`${digest.criticalOpenImpediments} critical`} color="text-semantic-warning" icon={Construction} />
+                  <StatCard label="SLA breaches" value={digest.slaBreachedImpediments} sub="critical > 1 day" color={digest.slaBreachedImpediments > 0 ? 'text-semantic-danger' : 'text-neutral-600'} icon={AlertTriangle} />
+                  <StatCard label="Attendance" value={digest.attendanceRate == null ? '—' : `${digest.attendanceRate}%`} sub={`${digest.ceremoniesHeld} ceremonies`} color="text-brand-navy" icon={UserCheck} />
+                </div>
+                <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="h-4 w-4 text-brand-navy dark:text-neutral-200" aria-hidden="true" />
+                    <h4 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">Velocity — last {(digest.velocityTrend || []).length} sprint(s)</h4>
+                  </div>
+                  {(digest.velocityTrend || []).length === 0
+                    ? <p className="text-xs text-neutral-600 dark:text-neutral-400">No completed sprints yet.</p>
+                    : <div className="flex items-end gap-2 h-20">
+                        {[...(digest.velocityTrend || [])].reverse().map((pts, idx) => {
+                          const max = Math.max(1, ...(digest.velocityTrend || []));
+                          return (
+                            <div key={idx} className="flex-1 flex flex-col items-center justify-end gap-1">
+                              <div className="w-full bg-brand-navy rounded-sm" style={{ height: `${Math.round(pts * 100 / max)}%` }} />
+                              <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400">{pts}</span>
+                            </div>
+                          );
+                        })}
+                      </div>}
+                </div>
+              </div>
+            )}
+        </div>
+      )}
 
       {tab === 'myday' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -231,7 +394,7 @@ export default function ScrumMasterCockpitView({
           <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">My impediments ({(myDay?.myImpediments || []).length})</h3>
-              <Button variant="secondary" onClick={() => setSmTab('impediments')}>Raise impediment</Button>
+              <Button variant="secondary" onClick={() => selectTab('impediments')}>Raise impediment</Button>
             </div>
             {(myDay?.myImpediments || []).length === 0
               ? <p className="text-xs text-neutral-600 dark:text-neutral-400">No open impediments raised by or assigned to you. Blocked on something? Raise it so it gets an owner and an age.</p>
@@ -498,7 +661,8 @@ export default function ScrumMasterCockpitView({
             </Field>
             <Button variant="action" onClick={runRiskPanel}>Analyze</Button>
           </div>
-          {!riskPanel ? <EmptyState icon={AlertTriangle} title="Mid-sprint risk panel" subtitle="Live view of scope creep, stale items, unassigned work and breach predictions." />
+          {cockpitLoading.risk && !riskPanel ? <CockpitSkeleton />
+            : !riskPanel ? <EmptyState icon={AlertTriangle} title="Mid-sprint risk panel" subtitle="Live view of scope creep, stale items, unassigned work and breach predictions." />
             : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[['Scope creep', riskPanel.scopeCreep, 'work_item_id'], ['Stale items', riskPanel.staleItems, 'id'], ['Unassigned', riskPanel.unassignedItems, 'id'], ['Breach risk', riskPanel.breachPredictions, 'id']].map(([label, rows]) => (
@@ -529,7 +693,8 @@ export default function ScrumMasterCockpitView({
             </Field>
             <Button variant="action" onClick={runVariance}>Analyze</Button>
           </div>
-          {!varianceResult ? <EmptyState icon={BarChart2} title="Sprint variance" subtitle="Committed vs delivered, day-by-day burndown, scope change, ceremony attendance and action follow-through." />
+          {cockpitLoading.variance && !varianceResult ? <CockpitSkeleton />
+            : !varianceResult ? <EmptyState icon={BarChart2} title="Sprint variance" subtitle="Committed vs delivered, day-by-day burndown, scope change, ceremony attendance and action follow-through." />
             : (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -588,7 +753,8 @@ export default function ScrumMasterCockpitView({
               </Button>
             )}
           </div>
-          {!planningResult ? <EmptyState icon={LayoutDashboard} title="Sprint planning helper" subtitle="Capacity from rolling velocity, an AI-suggested commit, and the refined-item list." />
+          {cockpitLoading.planning && !planningResult ? <CockpitSkeleton />
+            : !planningResult ? <EmptyState icon={LayoutDashboard} title="Sprint planning helper" subtitle="Capacity from rolling velocity, an AI-suggested commit, and the refined-item list." />
             : (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -717,7 +883,8 @@ export default function ScrumMasterCockpitView({
             </Field>
             <Button variant="action" onClick={runReviewPrep}>Draft review</Button>
           </div>
-          {!reviewResult ? <EmptyState icon={Megaphone} title="Sprint review prep" subtitle="Auto-drafts the summary, demo list and metrics for stakeholders." />
+          {cockpitLoading.review && !reviewResult ? <CockpitSkeleton />
+            : !reviewResult ? <EmptyState icon={Megaphone} title="Sprint review prep" subtitle="Auto-drafts the summary, demo list and metrics for stakeholders." />
             : (
               <div className="space-y-4">
                 <AiMetaBadge meta={reviewResult.meta} narrative={reviewResult.narrative} />
@@ -739,7 +906,8 @@ export default function ScrumMasterCockpitView({
       {tab === 'patterns' && (
         <div>
           <Button variant="action" onClick={runPatterns}>Detect patterns</Button>
-          {!patternsResult ? <div className="mt-4"><EmptyState icon={Repeat} title="Cross-sprint patterns" subtitle="Recurring impediments, repeated estimation misses, and common scope-creep sources." /></div>
+          {cockpitLoading.patterns && !patternsResult ? <div className="mt-4"><CockpitSkeleton /></div>
+            : !patternsResult ? <div className="mt-4"><EmptyState icon={Repeat} title="Cross-sprint patterns" subtitle="Recurring impediments, repeated estimation misses, and common scope-creep sources." /></div>
             : (
               <div className="mt-4 space-y-4">
                 <AiMetaBadge meta={patternsResult.meta} narrative={patternsResult.narrative} />

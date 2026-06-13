@@ -3605,6 +3605,8 @@ export default function App() {
               mintShare={mintShare}
               stopShare={stopShare}
               showToast={showToast}
+              aiCapabilities={aiCapabilities}
+              activeWorkspaceId={activeWorkspaceId}
             />
           )}
 

@@ -4,6 +4,8 @@ import { EmptyState } from '@/components/works/atoms/empty-state';
 import { ExportButtons } from '@/components/works/export-buttons';
 import { DashboardWidgetCard } from '@/components/works/organisms/dashboard-widget-card';
 import { DashboardDrillModal } from '@/components/works/organisms/dashboard-drill-modal';
+import { ConversationalDashboardPanel } from '@/components/works/organisms/conversational-dashboard-panel';
+import { capabilityEnabled } from '@/lib/ai';
 
 const EXTRA_WIDGET_CATEGORIES = ['Agile', 'Performance', 'AI', 'Compliance'];
 const EXTRA_WIDGET_PRESETS = [
@@ -54,7 +56,14 @@ export default function DashboardsView({
   mintShare,
   stopShare,
   showToast,
+  aiCapabilities = [],
+  activeWorkspaceId,
+  onConversationalDashboardSaved,
 }) {
+  // Gate the NL entry on ITS capability (conversational_dashboard), not "any AI" — most-restrictive
+  // wins is already resolved server-side (RB-40 §2). Hidden entirely when off; the deterministic
+  // NL→spec fallback still works server-side when AI is on but over budget/unavailable.
+  const convDashOn = capabilityEnabled(aiCapabilities, 'conversational_dashboard');
   return (
     <>
       <div className="p-6 overflow-y-auto h-full">
@@ -67,6 +76,13 @@ export default function DashboardsView({
               </div>
               <Button variant="action" onClick={createDashboard}>New dashboard</Button>
             </div>
+            {convDashOn && (
+              <ConversationalDashboardPanel
+                workspaceId={activeWorkspaceId}
+                showToast={showToast}
+                onSaved={onConversationalDashboardSaved}
+              />
+            )}
             {customDashboards.length === 0 ? (
               <EmptyState icon={LayoutDashboard} title="No dashboards yet"
                 subtitle="Create a dashboard and drop in widgets to track what matters to you."

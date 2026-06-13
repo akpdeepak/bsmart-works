@@ -43,7 +43,40 @@ export const aiClient = {
     api.send(`/ai/kb/suggest?workspaceId=${ws(workspaceId)}`, { method: 'POST', body: { text } }),
   route: (workspaceId, text) =>
     api.send(`/ai/route?workspaceId=${ws(workspaceId)}`, { method: 'POST', body: { text } }),
+
+  // ── Iteration-20 conversational dashboards (Cap O) ────────────────────────
+  // NL → widget spec. compile() returns { spec, usedAi, fallback, policyState, tier } — the spec
+  // is always the deterministic parse, so the preview renders even when AI is off/over budget
+  // (RB-40 §2). Nothing is persisted until saveConversationalDashboard.
+  listConversationalDashboards: (workspaceId) =>
+    api.send(`/ai/conversational-dashboards?workspaceId=${ws(workspaceId)}`),
+  compileConversationalDashboard: (workspaceId, prompt, aiInContext = true) =>
+    api.send(`/ai/conversational-dashboards/compile?workspaceId=${ws(workspaceId)}`, {
+      method: 'POST',
+      body: { prompt, aiInContext },
+    }),
+  saveConversationalDashboard: (workspaceId, title, prompt) =>
+    api.send(`/ai/conversational-dashboards?workspaceId=${ws(workspaceId)}`, {
+      method: 'POST',
+      body: { title, prompt },
+    }),
+  deleteConversationalDashboard: (workspaceId, id) =>
+    api.send(`/ai/conversational-dashboards/${encodeURIComponent(id)}?workspaceId=${ws(workspaceId)}`, {
+      method: 'DELETE',
+    }),
 };
+
+// Map a CompiledSpec verdict ({ usedAi, fallback, policyState, tier }) onto the shape AiMetaBadge
+// reads ({ fallback, cacheHit, tier, policyState }) so AI provenance renders consistently (RB-40 §2).
+export function compiledSpecToMeta(compiled) {
+  if (!compiled) return null;
+  return {
+    fallback: !!compiled.fallback,
+    cacheHit: false,
+    tier: compiled.tier,
+    policyState: compiled.policyState,
+  };
+}
 
 // Whether the workspace exposes any AI at all — the AI button disappears entirely when not.
 export function anyCapabilityEnabled(capabilities) {

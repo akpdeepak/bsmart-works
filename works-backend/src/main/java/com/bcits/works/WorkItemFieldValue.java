@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import org.hibernate.annotations.ColumnTransformer;
 
@@ -16,6 +17,7 @@ public class WorkItemFieldValue {
     private String fieldDefId;
     @Column(columnDefinition = "TEXT") private String valueText;
     private BigDecimal valueNumber;
+    private LocalDate valueDate;
     @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb") private String valueJson;
     private OffsetDateTime createdAt;
@@ -31,6 +33,8 @@ public class WorkItemFieldValue {
     public void setValueText(String valueText) { this.valueText = valueText; }
     public BigDecimal getValueNumber() { return valueNumber; }
     public void setValueNumber(BigDecimal valueNumber) { this.valueNumber = valueNumber; }
+    public LocalDate getValueDate() { return valueDate; }
+    public void setValueDate(LocalDate valueDate) { this.valueDate = valueDate; }
     public String getValueJson() { return valueJson; }
     public void setValueJson(String valueJson) { this.valueJson = valueJson; }
     public OffsetDateTime getCreatedAt() { return createdAt; }

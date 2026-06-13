@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -181,6 +183,12 @@ public class FieldDefController {
         if (body.containsKey("valueJson")) fv.setValueJson(body.get("valueJson") != null ? body.get("valueJson").toString() : null); {
         fv.setUpdatedAt(OffsetDateTime.now());
         }
+        // Keep the typed date projection in sync so BQL can range-query DATE custom fields (V82).
+        fieldDefRepo.findById(fieldDefId).ifPresent(fd -> {
+            if ("DATE".equalsIgnoreCase(fd.getFieldType())) {
+                fv.setValueDate(parseIsoDate(fv.getValueText()));
+            }
+        });
         return valueRepo.save(fv);
     }
 
@@ -188,5 +196,17 @@ public class FieldDefController {
     public ResponseEntity<Void> deleteValue(@PathVariable String workItemId, @PathVariable String fieldDefId) {
         valueRepo.findByWorkItemIdAndFieldDefId(workItemId, fieldDefId).ifPresent(valueRepo::delete);
         return ResponseEntity.noContent().build();
+    }
+
+    /** Parse an ISO date (optionally a longer timestamp) from its first 10 chars; null if not ISO. */
+    private static LocalDate parseIsoDate(String text) {
+        if (text == null || text.length() < 10) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(text.substring(0, 10));
+        } catch (DateTimeParseException e) {
+            return null;
+        }
     }
 }

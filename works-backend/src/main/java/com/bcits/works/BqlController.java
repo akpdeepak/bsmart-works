@@ -1,23 +1,18 @@
 package com.bcits.works;
 
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import jakarta.validation.Valid;
 
 /**
@@ -46,18 +41,15 @@ public class BqlController {
 
     private final JdbcTemplate jdbc;
     private final BqlCompiler compiler;
-    private final BqlFilterRepository filterRepo;
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
 
     public BqlController(JdbcTemplate jdbc,
                          BqlCompiler compiler,
-                         BqlFilterRepository filterRepo,
                          AuthenticatedUser authenticatedUser,
                          RbacService rbac) {
         this.jdbc = jdbc;
         this.compiler = compiler;
-        this.filterRepo = filterRepo;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
     }
@@ -147,49 +139,8 @@ public class BqlController {
         return out;
     }
 
-    // Saved BQL filters
-    @GetMapping("/filters")
-    public List<BqlFilter> listFilters(@RequestParam(required = false) String workspaceId) {
-        String userId = authenticatedUser.id();
-        String wsId = resolveWorkspace(userId, workspaceId);
-        List<BqlFilter> mine = filterRepo.findByWorkspaceIdAndCreatedBy(wsId, userId);
-        List<BqlFilter> shared = filterRepo.findByWorkspaceIdAndIsSharedTrue(wsId);
-        Set<String> ids = new HashSet<>();
-        List<BqlFilter> combined = new ArrayList<>();
-        for (BqlFilter f : mine) {
-            ids.add(f.getId());
-            combined.add(f);
-        }
-        for (BqlFilter f : shared) {
-            if (!ids.contains(f.getId())) { combined.add(f); }
-        }
-        return combined;
-    }
-
-    @PostMapping("/filters")
-    public BqlFilter saveFilter(@RequestParam(required = false) String workspaceId,
-                                @Valid @RequestBody BqlFilter filter) {
-        String userId = authenticatedUser.id();
-        filter.setId("BQL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-        filter.setCreatedBy(userId);
-        filter.setWorkspaceId(resolveWorkspace(userId, workspaceId));
-        filter.setCreatedAt(OffsetDateTime.now());
-        return filterRepo.save(filter);
-    }
-
-    @DeleteMapping("/filters/{id}")
-    public Map<String, String> deleteFilter(@PathVariable String id,
-                                            @RequestParam(required = false) String workspaceId) {
-        String userId = authenticatedUser.id();
-        String wsId = resolveWorkspace(userId, workspaceId);
-        // A user can only delete a filter in a workspace they belong to (cross-tenant guard).
-        BqlFilter existing = filterRepo.findById(id).orElse(null);
-        if (existing == null || !wsId.equals(existing.getWorkspaceId())) {
-            throw ApiException.forbidden("Filter not found in this workspace.");
-        }
-        filterRepo.deleteById(id);
-        return Map.of("message", "Filter deleted");
-    }
+    // Saved queries are now Saved Views (/api/v1/saved-views) — the legacy bql_filter
+    // endpoints were removed and the table dropped in V83 (consolidation, #250).
 
     // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -220,8 +171,10 @@ public class BqlController {
                     if (key == null || key.isBlank()) {
                         return;
                     }
-                    BqlField.BqlType type = "NUMBER".equalsIgnoreCase(rs.getString("field_type"))
-                        ? BqlField.BqlType.NUMBER : BqlField.BqlType.TEXT;
+                    String ft = rs.getString("field_type");
+                    BqlField.BqlType type = "NUMBER".equalsIgnoreCase(ft) ? BqlField.BqlType.NUMBER
+                        : "DATE".equalsIgnoreCase(ft) ? BqlField.BqlType.DATE
+                        : BqlField.BqlType.TEXT;
                     out.put(key.toLowerCase(Locale.ROOT),
                         new BqlContext.CustomField(rs.getString("id"), type));
                 }, workspaceId);

@@ -297,7 +297,11 @@ public class BqlCompiler {
         private Resolved resolve(String alias) {
             BqlContext.CustomField cf = ctx == null ? null : ctx.customField(alias);
             if (cf != null) {
-                String col = cf.type() == BqlField.BqlType.NUMBER ? "value_number" : "value_text";
+                String col = switch (cf.type()) {
+                    case NUMBER -> "value_number";
+                    case DATE -> "value_date";
+                    default -> "value_text";
+                };
                 return new Resolved(col, cf.type(), true, cf.fieldDefId());
             }
             BqlField f = BqlFieldRegistry.resolve(alias, ctx); // throws on unknown/forbidden
@@ -397,7 +401,9 @@ public class BqlCompiler {
                 return functionSql(fn, local);
             }
             local.add(coerce(((BqlAst.Literal) v).raw(), type));
-            return "?";
+            // Bind a date literal as a typed parameter so `col >= ?::date` compares correctly
+            // (a JDBC string param against a DATE column would otherwise be a type mismatch).
+            return type == BqlField.BqlType.DATE ? "?::date" : "?";
         }
 
         /** Resolves a literal to the raw string used inside an ILIKE pattern (functions are invalid here). */

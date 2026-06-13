@@ -298,8 +298,6 @@ export default function App() {
   const [roles, setRoles]                   = useState([]);
   const [bqlQuery, setBqlQuery]           = useState('');
   const [bqlResults, setBqlResults]       = useState([]);
-  const [bqlFilters, setBqlFilters]       = useState([]);
-  const [bqlFilterName, setBqlFilterName] = useState('');
   const [bqlError, setBqlError]           = useState('');
   const [workItemTypes, setWorkItemTypes]   = useState({ builtIn: [], custom: [] });
   const [permMatrix, setPermMatrix]         = useState(null);
@@ -1668,16 +1666,6 @@ export default function App() {
         else setBqlResults(Array.isArray(d) ? d : []);
       }).catch(err => setBqlError(err.message));
   }
-  function fetchBqlFilters() {
-    api.raw(`/bql/filters`)
-      .then(r => r.json()).then(d => setBqlFilters(Array.isArray(d) ? d : [])).catch(reportError);
-  }
-  function saveBqlFilter() {
-    if (!bqlFilterName.trim() || !bqlQuery.trim()) return;
-    api.raw(`/bql/filters`, { method: 'POST', body: JSON.stringify({ name: bqlFilterName, query: bqlQuery, isShared: false }) })
-      .then(r => r.json()).then(f => { setBqlFilters(prev => [f, ...prev]); setBqlFilterName(''); showToast('Filter saved'); })
-      .catch(() => showToast('Failed to save filter', 'error'));
-  }
 
   // ---- Iteration 4 fetches ----
   function fetchRaidDashboard(pid) {
@@ -2779,7 +2767,6 @@ export default function App() {
       case 'reportbuilder': setSelectedReport(null); fetchReports(); fetchReportTemplates(); break;
       case 'releases': fetchReleases(); break;
       case 'settings3': fetchWorkflows(); fetchFieldDefs(); fetchRoles(); fetchWorkItemTypes(); break;
-      case 'bql': fetchBqlFilters(); break;
       case 'knowledge': fetchKnowledgeSpaces(); setKnowledgeTab('spaces'); setSelectedSpace(null); setSelectedArticle(null); break;
       case 'compliance': setComplianceTab('dashboard'); setRuleBuilder(null); fetchComplianceDashboard(); fetchComplianceRules(); fetchComplianceViolations(); break;
       case 'service': setServiceTab('queues'); setServiceQueue('open'); fetchServiceRequests('open'); break;
@@ -3467,18 +3454,13 @@ export default function App() {
             <BqlView
               bqlQuery={bqlQuery}
               bqlError={bqlError}
-              bqlFilterName={bqlFilterName}
-              bqlFilters={bqlFilters}
               bqlResults={bqlResults}
               workItems={workItems}
               activeWorkspaceId={activeWorkspaceId}
               aiCapabilities={aiCapabilities}
               setBqlQuery={setBqlQuery}
-              setBqlFilterName={setBqlFilterName}
               setSelectedItem={setSelectedItem}
               runBql={runBql}
-              saveBqlFilter={saveBqlFilter}
-              fetchBqlFilters={fetchBqlFilters}
             />
           )}
 

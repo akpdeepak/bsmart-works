@@ -381,6 +381,7 @@ export default function App() {
   const [varianceResult, setVarianceResult]     = useState(null);
   const [cockpitContext, setCockpitContext]     = useState(null); // { roleKey, tier, canManageSprints, canCreateItems, activeSprint, liveCeremony }
   const [coachTips, setCoachTips]               = useState(null); // { roleKey, tips, narrative, meta }
+  const [digest, setDigest]                     = useState(null); // { sprint, rag, deliveryRate, ... } executive Health lens
   const [retroClusters, setRetroClusters]       = useState(null); // { retroId, themes, narrative, meta }
   const [ceremonies, setCeremonies]             = useState([]);   // [{ session, counts }]
   const [activeCeremony, setActiveCeremony]     = useState(null); // { session, attendance, counts }
@@ -2037,12 +2038,17 @@ export default function App() {
     setView('smcockpit');
     const pid = i15ProjectId || (projects[0] && projects[0].id) || '';
     setI15ProjectId(pid);
-    if (pid) { fetchCockpitContext(pid); fetchCoachTips(pid); fetchCeremonies(pid); fetchMyDay(pid); fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
+    if (pid) { fetchCockpitContext(pid); fetchCoachTips(pid); fetchDigest(pid); fetchCeremonies(pid); fetchMyDay(pid); fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
   }
   function fetchCoachTips(pid) {
     setCoachTips(null);
     api.send(`/cockpit/pro-tips?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: pid }) })
       .then(d => setCoachTips(d && Array.isArray(d.tips) ? d : null)).catch(() => setCoachTips(null));
+  }
+  function fetchDigest(pid) {
+    setDigest(null);
+    api.raw(`/cockpit/digest?workspaceId=${activeWorkspaceId}&projectId=${pid}`).then(r => r.json())
+      .then(d => setDigest(d && d.rag ? d : null)).catch(() => setDigest(null));
   }
   function clusterRetro() {
     if (!activeRetro?.session?.id) return;
@@ -3759,6 +3765,8 @@ export default function App() {
               runVariance={runVariance}
               coachTips={coachTips}
               fetchCoachTips={fetchCoachTips}
+              digest={digest}
+              fetchDigest={fetchDigest}
               retroClusters={retroClusters}
               clusterRetro={clusterRetro}
               setPlanningTimeOff={setPlanningTimeOff}

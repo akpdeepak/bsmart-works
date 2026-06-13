@@ -2,7 +2,7 @@ import {
   Construction, MessageCircle, ArrowLeft, AlertTriangle, LayoutDashboard,
   TrendingUp, Zap, CheckCircle2, ClipboardList, RefreshCw,
   ChevronUp, ArrowRight, Check, Megaphone, Reply, BarChart2, Repeat,
-  CalendarCheck, UserCheck, UserX, Lightbulb, Sparkles,
+  CalendarCheck, UserCheck, UserX, Lightbulb, Sparkles, Activity,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { Field } from '@/components/works/field';
@@ -41,7 +41,7 @@ const CEREMONY_LABELS = {
 };
 
 const TAB_LABELS = {
-  myday: 'My Day', ceremonies: 'Ceremonies', standup: 'Standup', impediments: 'Impediments',
+  health: 'Health', myday: 'My Day', ceremonies: 'Ceremonies', standup: 'Standup', impediments: 'Impediments',
   risk: 'Risk panel', variance: 'Variance', planning: 'Planning', retro: 'Retro', review: 'Review prep',
   patterns: 'Patterns',
 };
@@ -49,11 +49,11 @@ const TAB_LABELS = {
 // One surface, role-shaped: tab order/visibility follows the caller's team role (role_key,
 // shared with the Today surface). Relevance only — every action stays RBAC-gated server-side.
 const ROLE_TABS = {
-  'scrum-master': ['ceremonies', 'standup', 'impediments', 'risk', 'variance', 'planning', 'retro', 'review', 'patterns'],
-  admin: ['ceremonies', 'standup', 'impediments', 'risk', 'variance', 'planning', 'retro', 'review', 'patterns'],
+  'scrum-master': ['ceremonies', 'standup', 'impediments', 'risk', 'variance', 'planning', 'retro', 'review', 'patterns', 'health'],
+  admin: ['ceremonies', 'standup', 'impediments', 'risk', 'variance', 'planning', 'retro', 'review', 'patterns', 'health'],
   developer: ['myday', 'standup', 'impediments', 'retro', 'ceremonies'],
-  'product-owner': ['planning', 'review', 'variance', 'patterns', 'ceremonies', 'impediments'],
-  executive: ['variance', 'risk', 'review', 'patterns', 'ceremonies'],
+  'product-owner': ['health', 'planning', 'review', 'variance', 'patterns', 'ceremonies', 'impediments'],
+  executive: ['health', 'variance', 'risk', 'review', 'patterns', 'ceremonies'],
 };
 
 const ROLE_LABELS = {
@@ -80,6 +80,13 @@ const TIP_TONE = {
   info: 'text-brand-navy dark:text-neutral-200',
 };
 
+// Executive Health RAG verdict → token classes (paired with the label + Activity icon).
+const RAG_TONE = {
+  RED: 'text-semantic-danger',
+  AMBER: 'text-semantic-warning',
+  GREEN: 'text-semantic-success',
+};
+
 // Sprint Cockpit — extracted from the App.jsx monolith (Wave 3); now role-adaptive.
 // The parent owns all state and handlers; this renders the tabbed cockpit.
 export default function ScrumMasterCockpitView({
@@ -90,6 +97,7 @@ export default function ScrumMasterCockpitView({
   cockpitContext, ceremonies, activeCeremony, newCeremony, currentUserId,
   myDay, fetchMyDay, submitMyStandup,
   coachTips, fetchCoachTips, retroClusters, clusterRetro,
+  digest, fetchDigest,
   fetchCockpitContext, fetchCeremonies, scheduleCeremony, openCeremony, setActiveCeremony,
   setNewCeremony, startCeremony, joinCeremony, excuseCeremony, completeCeremony,
   setI15ProjectId, fetchImpediments, fetchStandups, fetchRetros, fetchSprints, setSmTab,
@@ -127,7 +135,7 @@ export default function ScrumMasterCockpitView({
           </p>
         </div>
         <select className="input text-sm py-1.5" value={i15ProjectId} aria-label="Project"
-          onChange={e => { setI15ProjectId(e.target.value); fetchCockpitContext(e.target.value); fetchCoachTips(e.target.value); fetchCeremonies(e.target.value); fetchMyDay(e.target.value); fetchImpediments(e.target.value); fetchStandups(e.target.value); fetchRetros(e.target.value); fetchSprints(e.target.value); }}>
+          onChange={e => { setI15ProjectId(e.target.value); fetchCockpitContext(e.target.value); fetchCoachTips(e.target.value); fetchDigest(e.target.value); fetchCeremonies(e.target.value); fetchMyDay(e.target.value); fetchImpediments(e.target.value); fetchStandups(e.target.value); fetchRetros(e.target.value); fetchSprints(e.target.value); }}>
           {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </div>
@@ -186,6 +194,52 @@ export default function ScrumMasterCockpitView({
           </button>
         ))}
       </div>
+
+      {tab === 'health' && (
+        <div>
+          {!digest ? <EmptyState icon={Activity} title="Sprint health" subtitle="An at-a-glance RAG verdict with delivery, impediment and ceremony-attendance roll-ups for the active sprint." />
+            : (
+              <div className="space-y-4">
+                <div className={`rounded-xl border p-4 ${digest.rag?.status === 'RED' ? 'border-semantic-danger/40 bg-semantic-danger/5' : digest.rag?.status === 'AMBER' ? 'border-semantic-warning/40 bg-semantic-warning/5' : 'border-semantic-success/40 bg-semantic-success/5'}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Activity className={`h-5 w-5 ${RAG_TONE[digest.rag?.status] || RAG_TONE.GREEN}`} aria-hidden="true" />
+                    <span className={`text-sm font-bold uppercase tracking-wide ${RAG_TONE[digest.rag?.status] || RAG_TONE.GREEN}`}>{digest.rag?.status || 'GREEN'}</span>
+                    {digest.sprint && <span className="text-sm text-neutral-700 dark:text-neutral-200">{digest.sprint.name}{digest.sprintDayOf ? ` · day ${digest.sprintDayOf}/${digest.sprintDayTotal}` : ''}</span>}
+                    {!digest.sprint && <span className="text-sm text-neutral-600 dark:text-neutral-400">No active sprint</span>}
+                  </div>
+                  <ul className="mt-1 space-y-0.5">
+                    {(digest.rag?.reasons || []).map((r, idx) => <li key={idx} className="text-sm text-neutral-700 dark:text-neutral-200">• {r}</li>)}
+                  </ul>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <StatCard label="Delivery" value={`${digest.deliveryRate}%`} sub={`${digest.deliveredPoints}/${digest.committedPoints} pts`} color="text-brand-navy" icon={CheckCircle2} />
+                  <StatCard label="Open impediments" value={digest.openImpediments} sub={`${digest.criticalOpenImpediments} critical`} color="text-semantic-warning" icon={Construction} />
+                  <StatCard label="SLA breaches" value={digest.slaBreachedImpediments} sub="critical > 1 day" color={digest.slaBreachedImpediments > 0 ? 'text-semantic-danger' : 'text-neutral-600'} icon={AlertTriangle} />
+                  <StatCard label="Attendance" value={digest.attendanceRate == null ? '—' : `${digest.attendanceRate}%`} sub={`${digest.ceremoniesHeld} ceremonies`} color="text-brand-navy" icon={UserCheck} />
+                </div>
+                <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="h-4 w-4 text-brand-navy dark:text-neutral-200" aria-hidden="true" />
+                    <h4 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">Velocity — last {(digest.velocityTrend || []).length} sprint(s)</h4>
+                  </div>
+                  {(digest.velocityTrend || []).length === 0
+                    ? <p className="text-xs text-neutral-600 dark:text-neutral-400">No completed sprints yet.</p>
+                    : <div className="flex items-end gap-2 h-20">
+                        {[...(digest.velocityTrend || [])].reverse().map((pts, idx) => {
+                          const max = Math.max(1, ...(digest.velocityTrend || []));
+                          return (
+                            <div key={idx} className="flex-1 flex flex-col items-center justify-end gap-1">
+                              <div className="w-full bg-brand-navy rounded-sm" style={{ height: `${Math.round(pts * 100 / max)}%` }} />
+                              <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400">{pts}</span>
+                            </div>
+                          );
+                        })}
+                      </div>}
+                </div>
+              </div>
+            )}
+        </div>
+      )}
 
       {tab === 'myday' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

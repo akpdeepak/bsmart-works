@@ -29,6 +29,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test-setup.js'],
+    // Playwright browser specs live in e2e/ and run via `npm run test:e2e`, not Vitest.
+    exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
     coverage: {
       provider: 'v8',
       // Coverage thresholds for new components. Raise incrementally as the suite grows.

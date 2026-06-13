@@ -326,12 +326,20 @@ public class BqlCompiler {
         }
 
         private String comparison(BqlAst.Comparison c) {
-            Resolved r = resolve(c.field());
             String op = c.op().toUpperCase(Locale.ROOT);
+            // Virtual full-text field: `text ~ "..."` / `text CONTAINS ...` searches title + description.
+            if ("text".equalsIgnoreCase(c.field()) && (op.equals("~") || op.equals("CONTAINS"))) {
+                String pattern = "%" + literal(c.value()) + "%";
+                params.add(pattern);
+                params.add(pattern);
+                return "(title ILIKE ? OR description ILIKE ?)";
+            }
+            Resolved r = resolve(c.field());
             validateOp(r.type(), op);
             List<Object> local = new ArrayList<>();
             String frag = switch (op) {
-                case "CONTAINS" -> like(r.column(), "%" + literal(c.value()) + "%", local);
+                // `~` is a fuzzy "contains" on any text field (JQL-style); CONTAINS is its synonym.
+                case "CONTAINS", "~" -> like(r.column(), "%" + literal(c.value()) + "%", local);
                 case "STARTSWITH" -> like(r.column(), literal(c.value()) + "%", local);
                 case "ENDSWITH" -> like(r.column(), "%" + literal(c.value()), local);
                 case "<>" -> r.column() + " != " + valueSql(c.value(), r.type(), local);
@@ -383,7 +391,8 @@ public class BqlCompiler {
         private void validateOp(BqlField.BqlType type, String op) {
             boolean relational = op.equals(">") || op.equals("<") || op.equals(">=")
                 || op.equals("<=") || op.equals("BETWEEN");
-            boolean textual = op.equals("CONTAINS") || op.equals("STARTSWITH") || op.equals("ENDSWITH");
+            boolean textual = op.equals("CONTAINS") || op.equals("STARTSWITH")
+                || op.equals("ENDSWITH") || op.equals("~");
             boolean numericOrDate = type == BqlField.BqlType.NUMBER || type == BqlField.BqlType.DATE;
             if (relational && !numericOrDate) {
                 throw new BqlException("Operator " + op + " is not valid for a "
@@ -428,6 +437,15 @@ public class BqlCompiler {
                 case "startofmonth" -> "date_trunc('month', CURRENT_DATE)";
                 case "endofmonth" ->
                     "(date_trunc('month', CURRENT_DATE) + INTERVAL '1 month' - INTERVAL '1 day')";
+                case "startofquarter" -> "date_trunc('quarter', CURRENT_DATE)";
+                case "endofquarter" ->
+                    "(date_trunc('quarter', CURRENT_DATE) + INTERVAL '3 months' - INTERVAL '1 day')";
+                case "startofyear" -> "date_trunc('year', CURRENT_DATE)";
+                case "endofyear" ->
+                    "(date_trunc('year', CURRENT_DATE) + INTERVAL '1 year' - INTERVAL '1 day')";
+                case "startofday" -> "date_trunc('day', NOW())";
+                case "endofday" ->
+                    "(date_trunc('day', NOW()) + INTERVAL '1 day' - INTERVAL '1 second')";
                 case "daysago" -> {
                     local.add(intArg(fn));
                     yield "(CURRENT_DATE - (? * INTERVAL '1 day'))";

@@ -184,3 +184,26 @@ fixes several long-standing JQL pain points.
 - **Positional parse errors** — `BqlException` carries a character offset, surfaced by `/validate`
   and shown as "At position N: …", instead of JQL's opaque, locationless errors.
 - **Recent-query history** (last 8, `localStorage`) for one-click re-run — something JIRA lacks.
+
+## 11. Round 6 — language batch 1 (more JQL parity)
+
+First batch of the "add everything" follow-ups — compiler-contained, low risk:
+
+- **In-syntax `ORDER BY`** — `… ORDER BY priority DESC, dueDate ASC`. The controller strips the
+  trailing clause, resolves aliases→columns, validates each against the sortable allow-list
+  (multi-column), and it takes precedence over the `sort` param. `/validate` strips it too so the
+  predicate validates like it runs.
+- **More date functions** — `startOfQuarter()`, `endOfQuarter()`, `startOfYear()`, `endOfYear()`,
+  `startOfDay()`, `endOfDay()` (compiled to parameterized `date_trunc`/interval SQL).
+- **Full-text search** — `~` operator (fuzzy "contains" on any text field) and a virtual **`text`**
+  field that searches `title` + `description` together (`text ~ "login"`). Surfaced in `/schema`
+  for autocomplete; `~` is type-checked (rejected on number/date).
+
+### Remaining batches (sequenced)
+- **Batch 2 — everyday UX:** ID→name resolution in autocomplete + results, saved-view persists
+  columns/sort, global `/` shortcut + "explain this query".
+- **Batch 3 — historical:** `WAS` / `CHANGED` operators over the event store.
+- **Batch 4 — collections & context fns:** `labels CONTAINS ANY (...)` (tags), `currentSprint()`,
+  `membersOf(team)`.
+- **Batch 5 — workflow/governance (needs design sign-off):** filter subscriptions/alerts, bulk
+  actions on results, group-by/board view, BQL execution audit + row-count preview.

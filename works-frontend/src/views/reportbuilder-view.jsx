@@ -4,6 +4,8 @@ import { EmptyState } from '@/components/works/atoms/empty-state';
 import { ExportButtons } from '@/components/works/export-buttons';
 import { Modal } from '@/components/works/molecules/modal';
 import { ReportSectionCard } from '@/components/works/organisms/report-section-card';
+import { useI18n } from '@/lib/i18n';
+import { absoluteDate } from '@/lib/format';
 
 /**
  * ReportBuilderView — report composition surface (list + editor + schedule manager).
@@ -41,6 +43,7 @@ export default function ReportBuilderView({
   setScheduleForm,
   showToast,
 }) {
+  const { t } = useI18n();
   const onPressKey = (e) => { if (e.key === 'Enter' || e.key === ' ') e.currentTarget.click(); };
 
   return (
@@ -50,32 +53,32 @@ export default function ReportBuilderView({
           <>
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h1 className="text-xl font-semibold text-neutral-900 dark:text-white">Report builder</h1>
-                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">Compose full-page reports from sections — KPIs, charts, tables and narrative.</p>
+                <h1 className="text-xl font-semibold text-neutral-900 dark:text-white">{t('insights.reportBuilder.title')}</h1>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{t('insights.reportBuilder.subtitle')}</p>
               </div>
-              <Button variant="action" onClick={createBlankReport}>New report</Button>
+              <Button variant="action" onClick={createBlankReport}>{t('insights.reportBuilder.new')}</Button>
             </div>
 
             {reportTemplates.length > 0 && (
               <div className="mb-6">
-                <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mb-3">Start from a template</h2>
+                <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mb-3">{t('insights.reportBuilder.startFromTemplate')}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {reportTemplates.map(t => (
-                    <div key={t.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 flex flex-col">
-                      <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{t.name}</p>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5 mb-3 flex-1">{t.description || '—'}</p>
-                      <div><Button variant="secondary" onClick={() => createReportFromTemplate(t)}>Use template</Button></div>
+                  {reportTemplates.map(tpl => (
+                    <div key={tpl.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 flex flex-col">
+                      <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{tpl.name}</p>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5 mb-3 flex-1">{tpl.description || '—'}</p>
+                      <div><Button variant="secondary" onClick={() => createReportFromTemplate(tpl)}>{t('insights.reportBuilder.useTemplate')}</Button></div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mb-3">Your reports</h2>
+            <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mb-3">{t('insights.reportBuilder.yourReports')}</h2>
             {reports.length === 0 ? (
-              <EmptyState icon={FileIcon} title="No reports yet"
-                subtitle="Create a report from scratch or start from a template above."
-                action={<Button variant="action" onClick={createBlankReport}>New report</Button>} />
+              <EmptyState icon={FileIcon} title={t('insights.reportBuilder.emptyTitle')}
+                subtitle={t('insights.reportBuilder.emptySubtitle')}
+                action={<Button variant="action" onClick={createBlankReport}>{t('insights.reportBuilder.new')}</Button>} />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {reports.map(r => (
@@ -83,7 +86,7 @@ export default function ReportBuilderView({
                     className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                     <FileText className="h-6 w-6 text-neutral-600 dark:text-neutral-400" aria-hidden="true" />
                     <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mt-2 truncate">{r.name}</p>
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{r.updatedAt ? `Updated ${new Date(r.updatedAt).toLocaleDateString()}` : '—'}</p>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{r.updatedAt ? absoluteDate(r.updatedAt) : '—'}</p>
                   </div>
                 ))}
               </div>
@@ -94,11 +97,11 @@ export default function ReportBuilderView({
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3 min-w-0">
                 <button onClick={() => setSelectedReport(null)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0">
-                  <ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Reports
+                  <ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{t('nav.reports')}
                 </button>
                 {reportEditMode ? (
                   <input value={selectedReport.name || ''} onChange={e => setSelectedReport(r => ({ ...r, name: e.target.value }))}
-                    aria-label="Report name"
+                    aria-label={t('insights.reportBuilder.title')}
                     className="text-xl font-semibold text-neutral-900 dark:text-white bg-transparent border-b border-neutral-200 dark:border-neutral-700 focus-visible:outline-none focus-visible:border-brand-navy" />
                 ) : (
                   <h1 className="text-xl font-semibold text-neutral-900 dark:text-white truncate">{selectedReport.name}</h1>
@@ -107,20 +110,20 @@ export default function ReportBuilderView({
               <div className="flex items-center gap-2 flex-shrink-0">
                 {!reportEditMode && <ExportButtons endpoint={`/reports/${selectedReport.id}/export`} targetId="report-export-area"
                   rows={workItems.map(i => ({ ID: i.id, Title: i.title, Type: i.type, Status: i.status, Priority: i.priority, Assignee: i.assigneeId }))}
-                  filename={selectedReport.name || 'report'} onError={() => showToast('Export failed — try again', 'error')} />}
-                {!reportEditMode && <Button variant="secondary" onClick={() => openScheduleManager(selectedReport.id)}>Schedule</Button>}
-                {reportEditMode && <Button variant="action" onClick={() => { saveReport(); setReportEditMode(false); }}>Save</Button>}
+                  filename={selectedReport.name || 'report'} onError={() => showToast(t('insights.common.exportFailed'), 'error')} />}
+                {!reportEditMode && <Button variant="secondary" onClick={() => openScheduleManager(selectedReport.id)}>{t('insights.reportBuilder.schedule')}</Button>}
+                {reportEditMode && <Button variant="action" onClick={() => { saveReport(); setReportEditMode(false); }}>{t('insights.common.save')}</Button>}
                 <Button variant={reportEditMode ? 'secondary' : 'action'}
                   onClick={() => { if (reportEditMode) { openReport(selectedReport.id); } else { setReportEditMode(true); } }}>
-                  {reportEditMode ? 'Cancel' : 'Edit'}
+                  {reportEditMode ? t('insights.common.cancel') : t('insights.common.edit')}
                 </Button>
-                <button onClick={() => deleteReport(selectedReport.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
+                <button onClick={() => deleteReport(selectedReport.id)} className="text-xs text-semantic-danger hover:underline">{t('insights.common.delete')}</button>
               </div>
             </div>
 
             {reportEditMode && (
               <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-md bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700">
-                <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mr-1">Add section</span>
+                <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mr-1">{t('insights.reportBuilder.addSection')}</span>
                 <button onClick={() => addReportSection('kpi')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ KPI</button>
                 <button onClick={() => addReportSection('chart')} className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">+ Chart</button>
                 <button onClick={() => addReportSection('pivot')} className="text-xs px-2.5 py-1.5 rounded-lg border border-brand-navy/40 text-brand-navy dark:text-brand-amber hover:border-brand-navy transition-colors">+ Pivot chart</button>
@@ -130,9 +133,9 @@ export default function ReportBuilderView({
             )}
 
             {reportSections.length === 0 ? (
-              <EmptyState icon={Puzzle} title="Empty report"
-                subtitle="Turn on Edit and add sections — KPIs, charts, tables, narrative."
-                action={<Button variant="action" onClick={() => setReportEditMode(true)}>Edit report</Button>} />
+              <EmptyState icon={Puzzle} title={t('insights.reportBuilder.emptyReportTitle')}
+                subtitle={t('insights.reportBuilder.emptyReportSubtitle')}
+                action={<Button variant="action" onClick={() => setReportEditMode(true)}>{t('insights.reportBuilder.editReport')}</Button>} />
             ) : (
               <div id="report-export-area" className="space-y-4 max-w-4xl">
                 {reportSections.map((sec, i) => (
@@ -150,17 +153,17 @@ export default function ReportBuilderView({
 
       {/* Scheduled delivery modal */}
       {scheduleManagerOpen && selectedReport && (
-        <Modal title="Scheduled delivery" onClose={() => setScheduleManagerOpen(false)} size="lg" className="max-h-[90vh] overflow-y-auto">
+        <Modal title={t('insights.reportBuilder.scheduledDelivery')} onClose={() => setScheduleManagerOpen(false)} size="lg" className="max-h-[90vh] overflow-y-auto">
           <p className="text-xs text-neutral-500 mb-4 truncate">"{selectedReport.name}" — delivered on a cadence to recipients (in-app / email).</p>
 
           <div className="space-y-2 mb-5">
             {reportSchedules.length === 0
-              ? <p className="text-sm text-neutral-600 text-center py-3">No schedules yet.</p>
+              ? <p className="text-sm text-neutral-600 text-center py-3">{t('insights.reportBuilder.noSchedules')}</p>
               : reportSchedules.map(s => (
                 <div key={s.id} className="flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-neutral-900 dark:text-neutral-100">{s.cadence?.toLowerCase()} · {s.channel?.replace('_', '-').toLowerCase()}</p>
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{s.recipients ? `to ${s.recipients}` : 'owner only'}{s.nextRunAt ? ` · next ${new Date(s.nextRunAt).toLocaleDateString()}` : ''}</p>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{s.recipients ? `to ${s.recipients}` : 'owner only'}{s.nextRunAt ? ` · next ${absoluteDate(s.nextRunAt)}` : ''}</p>
                   </div>
                   <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${s.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500'}`}>{s.active ? 'ACTIVE' : 'PAUSED'}</span>
                   <button onClick={() => toggleReportSchedule(s)} className="text-xs text-brand-navy hover:underline">{s.active ? 'Pause' : 'Resume'}</button>
@@ -170,10 +173,10 @@ export default function ReportBuilderView({
           </div>
 
           <div className="border-t border-neutral-200 dark:border-neutral-700 pt-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">Add a schedule</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">{t('insights.reportBuilder.addSchedule')}</p>
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
-                <label htmlFor="sched-cadence" className="block text-xs text-neutral-500 mb-1">Cadence</label>
+                <label htmlFor="sched-cadence" className="block text-xs text-neutral-500 mb-1">{t('insights.reportBuilder.cadence')}</label>
                 <select id="sched-cadence" className="input w-full" value={scheduleForm.cadence} onChange={e => setScheduleForm({ ...scheduleForm, cadence: e.target.value })}>
                   <option value="DAILY">Daily</option>
                   <option value="WEEKLY">Weekly</option>
@@ -181,7 +184,7 @@ export default function ReportBuilderView({
                 </select>
               </div>
               <div>
-                <label htmlFor="sched-channel" className="block text-xs text-neutral-500 mb-1">Channel</label>
+                <label htmlFor="sched-channel" className="block text-xs text-neutral-500 mb-1">{t('insights.reportBuilder.channel')}</label>
                 <select id="sched-channel" className="input w-full" value={scheduleForm.channel} onChange={e => setScheduleForm({ ...scheduleForm, channel: e.target.value })}>
                   <option value="IN_APP">In-app</option>
                   <option value="EMAIL">Email</option>

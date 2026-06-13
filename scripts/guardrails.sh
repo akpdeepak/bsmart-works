@@ -130,6 +130,44 @@ if [ -d "$BE" ]; then
   unset _unscoped _f _lnum _block
 fi
 
+# Raw JdbcTemplate SQL over work_items in a Controller/Service must carry a tenant-scope signal
+# (RB-40 §1). This is the neighbour of the @Query check above, for the *other* place tenant leaks
+# hide: hand-written JdbcTemplate SQL in the controller/service layer (the shape of the leaks fixed
+# in AggregationController + BqlController). It is a TRIPWIRE, not the real fix.
+#
+# Why this is deliberately COARSE (file-level) and a WARN, not a BLOCK:
+#   The precise, leak-proof enforcement is a central Hibernate tenant filter / mandatory predicate
+#   applied once (RB-40 §1: "scoping applied centrally, not re-typed per query") — a separate,
+#   sign-off-gated architectural task (issue #243), OUT OF SCOPE here. A per-SQL-statement grep was
+#   investigated and REJECTED (see docs/INSIGHTS-AI-ALIGNMENT-REVIEW.md §1.2): the workspace
+#   predicate is almost always built into a `where`/`scope` variable on adjacent lines, or the row
+#   is fetched by a pre-validated id (`WHERE id = ?`), so a line-level rule false-positives on the
+#   legitimate id-scoped+RBAC pattern (SprintController, ReleaseController, WorkLogController,
+#   StatusDurationService, WidgetDataService, DashboardService, …). So we scope to the file:
+#   we only flag a Controller/Service that queries work_items via JdbcTemplate yet references
+#   NONE of the tenant-scope signals ANYWHERE in the file — no workspace token, no id-scope key,
+#   and no RbacService/workspaceFor/require() call. On the current tree this is zero files (verified),
+#   so it adds no noise; it fires only when a brand-new raw-SQL surface ships with no scope signal
+#   at all (the exact regression we want to catch early). Kept as WARN because the file-level
+#   exemption is intentionally generous (an unrelated rbac.* elsewhere in the file silences it) —
+#   the real guarantee is the central filter in #243, not this grep.
+if [ -d "$BE" ]; then
+  _ws='workspace_id|workspace_members|workspaceId'
+  _idscope='project_id|sprint_id|release_id|work_item_id|parent_id|aggregate_id|[^a-zA-Z_]id *= *\?'
+  _rbac='rbac\.|RbacService|workspaceFor|\.require\('
+  _rawleak=""
+  while IFS= read -r _f; do
+    grep -qE 'FROM work_items' "$_f" 2>/dev/null || continue   # raw SQL over the table
+    grep -qE '\bjdbc' "$_f" 2>/dev/null || continue            # via JdbcTemplate (not JPQL/@Query)
+    grep -qiE "$_ws" "$_f" 2>/dev/null && continue             # has a workspace token — scoped
+    grep -qiE "$_idscope" "$_f" 2>/dev/null && continue        # has an id-scope key — narrowed
+    grep -qE "$_rbac" "$_f" 2>/dev/null && continue            # resolves/checks tenant via RBAC
+    _rawleak="${_rawleak:+${_rawleak}$'\n'}${_f}"
+  done < <(find "$BE" \( -name '*Controller.java' -o -name '*Service.java' \) 2>/dev/null)
+  check WARN "Raw JdbcTemplate work_items SQL must carry a tenant-scope signal (RB-40 §1; central filter is #243)" "$_rawleak"
+  unset _ws _idscope _rbac _rawleak _f
+fi
+
 # Native JPQL/SQL queries must use bind parameters, never string concatenation (CLAUDE.md §17).
 # Targets strings that contain SQL keywords AND are concatenated with a variable — not general
 # Java string building (error messages, rate-limiter keys, URL construction etc.).

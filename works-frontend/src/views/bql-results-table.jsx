@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowUp, ArrowDown, Columns3, Download, Check } from 'lucide-react';
+import { ArrowUp, ArrowDown, Columns3, Download, Check, X } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
@@ -54,12 +54,37 @@ function toCsv(rows, cols, nameMaps) {
 
 // JIRA-style issue navigator for BQL results: sortable columns, a column chooser, CSV export, and
 // rows that always open their work item (the parent resolves by id, fetching if needed).
-export default function BqlResultsTable({ results, sort, nameMaps = {}, onSort, onOpen, onShowMore, canShowMore }) {
+export default function BqlResultsTable({ results, sort, nameMaps = {}, priorityOptions = [],
+  onSort, onOpen, onShowMore, onBulk, canShowMore }) {
   const [visibleKeys, setVisibleKeys] = useState(loadVisible);
   const [chooserOpen, setChooserOpen] = useState(false);
+  // Bulk-edit selection (JIRA-style): pick rows, apply one change to all (server re-checks per item).
+  const [selected, setSelected] = useState(() => new Set());
+  const [bulkAction, setBulkAction] = useState('priority');
+  const [bulkValue, setBulkValue] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const cols = COLUMNS.filter(c => visibleKeys.includes(c.key));
   const [sortKey, sortDir] = (sort || 'created_at desc').split(/\s+/);
+  const bulkEnabled = typeof onBulk === 'function';
+
+  const toggleRow = (id) => setSelected(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const allSelected = results.length > 0 && results.every(r => selected.has(r.id));
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(results.map(r => r.id)));
+  const clearSelection = () => setSelected(new Set());
+
+  const applyBulk = () => {
+    const ids = [...selected];
+    if (!ids.length || (bulkAction !== 'assignee' && !bulkValue.trim())) return;
+    setBulkBusy(true);
+    Promise.resolve(onBulk(bulkAction, bulkValue.trim(), ids))
+      .then(() => { setBulkValue(''); clearSelection(); })
+      .finally(() => setBulkBusy(false));
+  };
 
   const toggleColumn = (key) => {
     setVisibleKeys(prev => {
@@ -125,10 +150,45 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, onSort, 
         </div>
       </div>
 
+      {/* Bulk-edit toolbar — only when rows are selected; the server re-checks edit rights per item. */}
+      {bulkEnabled && selected.size > 0 && (
+        <div className="px-4 py-2 border-b border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">{selected.size} selected</span>
+          <label className="sr-only" htmlFor="bulk-action">Bulk action</label>
+          <select id="bulk-action" className="input text-xs py-1" value={bulkAction}
+            onChange={e => { setBulkAction(e.target.value); setBulkValue(''); }}>
+            <option value="priority">Set priority</option>
+            <option value="addLabel">Add label</option>
+            <option value="removeLabel">Remove label</option>
+          </select>
+          <label className="sr-only" htmlFor="bulk-value">Value</label>
+          {bulkAction === 'priority' && priorityOptions.length > 0 ? (
+            <select id="bulk-value" className="input text-xs py-1" value={bulkValue}
+              onChange={e => setBulkValue(e.target.value)}>
+              <option value="">value…</option>
+              {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          ) : (
+            <input id="bulk-value" className="input text-xs py-1" placeholder="value"
+              value={bulkValue} onChange={e => setBulkValue(e.target.value)} />
+          )}
+          <Button variant="secondary" size="sm" onClick={applyBulk} loading={bulkBusy}
+            disabled={!bulkValue.trim()}>Apply</Button>
+          <Button variant="ghost" size="sm" leftIcon={<X aria-hidden="true" className="h-3.5 w-3.5" />}
+            onClick={clearSelection}>Clear</Button>
+        </div>
+      )}
+
       <div className="max-h-96 overflow-auto">
         <table className="w-full text-sm">
           <thead className="sticky top-0 bg-neutral-50 dark:bg-neutral-900 text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">
             <tr>
+              {bulkEnabled && (
+                <th scope="col" className="px-3 py-2 w-8">
+                  <input type="checkbox" checked={allSelected} onChange={toggleAll}
+                    aria-label="Select all rows" className="cursor-pointer" />
+                </th>
+              )}
               {cols.map(col => (
                 <th key={col.key} scope="col"
                   className={`px-4 py-2 text-left font-semibold ${col.sort ? 'cursor-pointer select-none hover:text-brand-navy' : ''}`}
@@ -150,6 +210,13 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, onSort, 
                 className="cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40"
                 onClick={() => onOpen(item)}
                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(item); } }}>
+                {bulkEnabled && (
+                  <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
+                    <input type="checkbox" checked={selected.has(item.id)}
+                      onChange={() => toggleRow(item.id)}
+                      aria-label={`Select ${item.id}`} className="cursor-pointer" />
+                  </td>
+                )}
                 {cols.map(col => (
                   <td key={col.key} className={`px-4 py-2.5 text-neutral-900 dark:text-neutral-100 ${col.grow ? 'font-medium' : ''} ${col.date ? 'whitespace-nowrap text-neutral-600 dark:text-neutral-400' : ''}`}>
                     {renderCell(col, item)}

@@ -54,7 +54,7 @@ class WorkItemControllerAccessTest {
     private final WorkItemController controller = new WorkItemController(
             repository, eventService, jdbc, notificationRepository, userRepository,
             emailService, batchService, authenticatedUser, rbac, dodChecklists, extensions, workflowRules,
-            statusConfig);
+            statusConfig, mock(WorkItemBulkService.class));
 
     WorkItemControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

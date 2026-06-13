@@ -118,6 +118,14 @@ export default function BqlView({
     return (map && map[value]) || value;
   };
 
+  // Apply a bulk edit to the selected rows, then re-run so the table reflects the change. The
+  // server re-checks edit rights per item and skips any the user can't touch (RB-40 §1).
+  const runBulk = (action, value, ids) =>
+    api.send('/work-items/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ ids, action, value }),
+    }).then(() => runQuery());
+
   // Drill into a bucket: AND the bucket onto the query and switch back to the flat table.
   const drillInto = (value) => {
     const clause = `${groupBy} ${value ? `= ${/\s/.test(value) ? `"${value}"` : value}` : 'IS EMPTY'}`;
@@ -542,9 +550,11 @@ export default function BqlView({
           results={bqlResults}
           sort={sort}
           nameMaps={nameMaps}
+          priorityOptions={schema?.enums?.priority || []}
           onSort={(s) => runQuery({ sort: s })}
           onOpen={openItem}
           onShowMore={showMore}
+          onBulk={runBulk}
           canShowMore={bqlResults.length >= resultSize && resultSize < 500}
         />
       )}

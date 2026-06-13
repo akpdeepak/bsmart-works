@@ -252,3 +252,21 @@ The JIRA board parity feature, as a read-only aggregation:
 - **Frontend**: a Group-by control renders count bars in the BQL screen; assignee/project/sprint
   buckets resolve to display names; clicking a lane drills in by ANDing the bucket onto the query.
 - 2 new workspace-scoped integration tests (count-per-bucket isolation; filter-before-count).
+
+## 15. Round 10 — bulk actions (Batch 5)
+
+Bulk-edit the navigator's results, JIRA-style: select rows → apply one change to all.
+
+- **`POST /api/v1/work-items/bulk`** `{ ids, action, value }` where action ∈ {assignee, priority,
+  addLabel, removeLabel}. Logic in `WorkItemBulkService` (RBAC in the service layer, RB-10).
+- **Per-item RBAC** — each item is re-checked with `RbacService.canEdit`, which resolves the
+  item's own workspace, so a caller can only ever change items in workspaces they belong to
+  (RB-40 §1). Un-editable items are **skipped with a reason**, never mutated (partial-success
+  contract). **Audited** — every applied change emits a per-field diff to the event store, exactly
+  like the single-item update path (RB-20 §5).
+- Status is deliberately **not** a bulk field — it must run the DoD gate + workflow rule engine per
+  item; bulk-shortcutting those would be unsafe.
+- **Frontend**: row checkboxes + a selection toolbar (set priority / add / remove label) in the BQL
+  results table; applying re-runs the query so the change is reflected.
+- Integration tests cover the mandatory unauthorized + cross-tenant scenarios plus add/remove-label
+  and audit, against real Postgres.

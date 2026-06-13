@@ -18,6 +18,7 @@ import { detailFieldsFor, orderByPrefs, SECTION_LABELS } from '@/lib/type-detail
 import { api } from '@/lib/apiClient';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { renderMd, onPressKey } from '@/lib/utils';
+import { SaveToKnowButton } from '@/components/knowledge/SaveToKnowButton';
 
 const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
@@ -224,6 +225,20 @@ export function WorkItemDetailPanel({
               <Star className={`h-4 w-4 ${selectedItem.starred ? 'fill-current text-brand-orange' : ''}`} aria-hidden="true" />
             </button>
             <button onClick={() => setIsWorklogOpen(true)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors px-2 py-1 rounded border border-neutral-200 dark:border-neutral-600">⏱ Log Work</button>
+            {activeWorkspaceId && (
+              <SaveToKnowButton
+                workspaceId={activeWorkspaceId}
+                defaultTitle={selectedItem.title || ''}
+                linkWorkItemId={selectedItem.id}
+                getContent={() => [
+                  `# ${selectedItem.title || selectedItem.id}`,
+                  '',
+                  `**Item:** ${selectedItem.id} · **Type:** ${selectedItem.type || '—'} · **Status:** ${selectedItem.status || '—'} · **Priority:** ${selectedItem.priority || '—'}`,
+                  '',
+                  selectedItem.description || '_No description._',
+                ].join('\n')}
+              />
+            )}
             {can('delete_items') && (
               <button onClick={() => handleDelete(selectedItem.id)}
                 className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger px-2 py-1 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">Delete</button>

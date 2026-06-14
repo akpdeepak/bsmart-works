@@ -557,7 +557,9 @@ export default function App() {
     const entity = parseEntityRoute(pathname);
     if (entity?.kind === 'work-item') {
       // workItems may not be loaded yet; set a stub so the detail panel fetches the full item.
-      setSelectedItem(prev => prev?.id === entity.id ? prev : { id: entity.id });
+      // queueMicrotask defers the setState out of the synchronous effect body (react-hooks/set-state-in-effect).
+      const entityId = entity.id;
+      queueMicrotask(() => setSelectedItem(prev => prev?.id === entityId ? prev : { id: entityId }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);

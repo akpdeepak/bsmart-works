@@ -128,7 +128,6 @@ describe('NotificationsView', () => {
   });
 
   it('mark-all-read updates local state and resets unread count', async () => {
-    const { api } = await import('@/lib/apiClient');
     const setNotifications = vi.fn();
     const setUnreadCount = vi.fn();
     render(

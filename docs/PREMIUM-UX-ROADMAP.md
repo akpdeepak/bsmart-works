@@ -1,205 +1,233 @@
 # Premium UI/UX End-to-End Roadmap — bSmart Works
 
-> A prioritized, governance-aware backlog of premium UI/UX practices, behaviours, surfaces,
-> features, and visual specs that can be introduced/adopted/adjusted/integrated across
-> bSmart Works. **This is a backlog, not a licence to build now** — each item is tagged with
-> where it fits, and must still pass the active-iteration check (Orchestrator §6) and earn its
-> place (RB-20 §1) before it ships.
+> **The single source for premium UI/UX work.** Saying *"execute the premium UI/UX design roadmap"*
+> means running this whole program, in order: **Part A — Converge & Lock** (finish adopting the
+> existing design system across every surface and lock it so it can't drift) then **Part B —
+> Elevate** (premium depth built on the converged base).
 >
-> Status: proposal · created 2026-06-14 · owner: Deepak Pandey
+> This doc **absorbs** the *Design-Consistency Convergence Program*
+> (`docs/DESIGN-CONSISTENCY-PROGRAM.md`, now superseded as the execution entry point) and the prior
+> premium enhancement themes into one ordered scope.
+>
+> Status: proposal · created 2026-06-14 · owner: Deepak Pandey · governed by RB-30
+> (`ai-rules/rulebooks/30-DESIGN.md`), executed per RB-05.
 
 ---
 
-## Why this exists
+## 0. Why this exists (and what it is *not*)
 
-bSmart Works already has a **mature, machine-governed design system** — not a greenfield. This
-roadmap is therefore about *deepening* and *evening out* premium polish, never rebuilding what
-works. It is grounded in a full frontend audit (`works-frontend/`), and every recommendation is
-expressed in tokens + accessibility terms so it passes the existing gate
-(`eslint.config.js` + `scripts/guardrails.sh`).
+bSmart Works already has a **mature, machine-governed design system** — not a greenfield. So this is
+a **convergence + elevation** program, never a redesign or a token rework:
 
-### What we keep (strengths — do not disturb)
+- **Tokens are single-source and enforced.** `works-frontend/tailwind.config.js` + `src/index.css`
+  hold every colour / spacing / radius / shadow / duration / z-index / width token; ESLint +
+  `scripts/guardrails.sh` block raw hex, `gray-*`, `works-*`, arbitrary `z-[]` / `p-[]` at
+  save · pre-commit · CI.
+- **Canonical primitives + `cva`+`cn()` pattern exist** (`atoms/button.jsx`), dark mode universal,
+  three-zone shell (`templates/three-zone-layout.jsx`) app-wide.
+- **Convergence is ~60% done:** `App.jsx` ~8,400 → **~4,300 lines**, **~95 views extracted**,
+  emoji→Lucide largely complete (`docs/UX-PROGRESS.md`, `docs/UX-CODEBASE-ANALYSIS.md`).
+- **Standout surfaces already premium:** role-tuned Today dashboards, Scrum Master Cockpit,
+  AI Studio (Assistants/Agents/Ask), BQL builder, pivot-chart engine, command palette (⌘K),
+  real-time SSE presence + offline sync, i18n ×10 incl. Arabic RTL, PWA.
 
-- **Token-first system** in `works-frontend/tailwind.config.js`: brand / neutral / semantic /
-  status colours; motion scale (`duration-fast/base/slow/slower` + `out-quint` / `spring`
-  easing); shadow scale; named z-index (`base → sticky → dropdown → panel → bulkbar → modal →
-  palette → toast`); width tokens (`rail / subrail / sidebar / panel`).
-- **`cva` + `cn()` component pattern** — canonical: `src/components/works/button.jsx`. Atomic
-  structure (atoms → molecules → organisms). Dark mode baked into every variant.
-- **Standout surfaces:** role-tuned Today dashboards (`src/views/dashboards/`), Scrum Master
-  Cockpit (11 tabs), AI Studio (Assistants / Agents / Ask), BQL builder, pivot-chart engine
-  (~10 chart types), command palette (⌘K), real-time SSE presence + offline draft/sync,
-  i18n across 10 languages incl. Arabic RTL (`src/lib/i18n.jsx`), PWA service worker.
-- **Accessibility discipline:** 21 `.a11y.test.jsx` files; WCAG tab/combobox/dialog patterns;
-  `prefers-reduced-motion` honoured globally.
-
-### Gaps this roadmap targets
-
-- **Missing base primitives:** Select/Combobox, Tabs, Tooltip, Switch/Toggle, Checkbox, Radio,
-  DatePicker, Popover, Pagination, Breadcrumb, Progress, Slider, standalone Alert. Today these
-  are re-implemented ad hoc inside organisms → inconsistency risk.
-- **Shell/routing:** `src/App.jsx` is ~4,200 lines with **no router library**; sub-state
-  (selected item, active tab, filters, open panels) is **not deep-linkable** and resets on reload.
-- **Uneven polish:** AI surfaces + cockpits are ★★★★★; Compliance, Service Desk, Marketplace,
-  Trash, Report Builder are ★★☆–★★★ (functional but bare).
-- **Token debt:** `z-[]` and arbitrary spacing are still **WARN**, not BLOCK; `App.jsx` carries
-  `text-[10px]` exemptions pending `text-2xs/3xs` tokens.
-- **Inclusivity headroom:** no colour-blind-safe chart palette, no high-contrast theme, charts
-  lack a screen-reader data-table fallback.
-
-### Governance guardrails every item obeys (CLAUDE.md / rule books)
-
-- **Build to the active iteration, never ahead** (Orch §6 — iter 20 complete).
-- **Earns its place** (RB-20 §1): every item names the gap it closes.
-- **Tokens, never literals; one `apiClient`; WCAG 2.1 AA** (RB-30).
-- **Stop-and-ask** items (data model / new capability / AI budget / `App.jsx` structural change)
-  are flagged, not assumed (Orch §5).
+**Not** a new visual language, not a token rework, not a feature change — the Feature Parity Ledger
+(RB-20 §1) holds. Visual target = the **"Calm Cockpit"** direction (navy primary, single orange
+accent, Lucide, expand-in-place, persona "Today", role-based nav); brand origin
+`docs/brand/brand-and-identity.md`.
 
 ---
 
-## Theme 1 — Design-system depth
+## 1. Current-state scorecard (evidence, 2026-06-14 scan)
 
-**1.1 Complete the primitive set (highest leverage).** Add the missing atoms/molecules as
-governed `cva`+`cn` components, each with all five states (default · hover · focus-visible ·
-active · disabled) + a11y + dark mode + RTL: `Select`/`Combobox`, `Tabs`, `Tooltip`, `Switch`,
-`Checkbox`, `Radio`, `Popover`, `DatePicker`, `Pagination`, `Breadcrumb`, `Progress`, `Slider`,
-`Alert`.
-*Gap:* removes ad-hoc re-implementations (e.g. the inline sprint combobox in `reports-view.jsx`,
-density radios in `board-view.jsx`); guarantees consistent focus rings, keyboard nav, RTL.
-*How:* mirror `button.jsx`; reuse `dropdown`/`panel` z-tokens.
+| Dimension | State | Evidence (approx.) |
+|---|---|---|
+| Tokens (colour/space/radius/z/width) | ✅ Canonical, enforced | only **3 raw hex** repo-wide (`organisms/status-management-tab.jsx`) |
+| Three-zone shell | ✅ Canonical | `templates/three-zone-layout.jsx`, app-wide |
+| Modal / FormField / Empty / Skeleton / Toast / ErrorBoundary | ✅ Exist, a11y-correct | `components/works/**` |
+| Dark mode | ✅ Universal | `dark:` pairs everywhere |
+| **Shared `Card`** | ❌ Missing | ~85 hand-rolled card blocks across 29+ views |
+| **Shared `Tabs`** | ❌ Missing | tab bars rebuilt per view |
+| **Shared `DataTable`** | ❌ Missing | hand-rolled `<table>` per view |
+| **Shared `PageHeader`** | ❌ Missing | headers hand-coded; `h1` scale varies |
+| Content width | ⚠️ Drifted | ~10 distinct `max-w-*`; RB-30 sanctions only `max-w-7xl` + `max-w-[880px]` |
+| Page padding | ⚠️ Drifted | `p-4 / p-6 / p-8` mixed at page level |
+| `Modal` adoption | ⚠️ Low | ~5 / 95 views; others build inline dialogs |
+| `Button` adoption | ⚠️ Mixed | ~55 inline `<button>` vs ~114 `<Button>` |
+| Error / Loading states | ⚠️ Partial | error ~29/95, loading ~19/95 |
+| Control labelling (a11y) | ⚠️ Partial | systematic `aria-label`/`htmlFor` ~29/95 |
+| `cva` adoption | ⚠️ Low | 4/~101 components |
+| Storybook coverage | ⚠️ Low | 4/~101 components |
+| Routing / deep-link | ❌ Missing | `App.jsx` syncs URL by hand; sub-state lost on reload |
+| Inclusivity (colour-blind / high-contrast / SR charts) | ❌ Missing | charts colour-only; no HC theme |
 
-**1.2 Elevation & density as first-class specs.** Document a 3-level elevation ramp
-(`shadow-sm/md/lg` → resting / hover / overlay) and a global **density mode**
-(compact / comfortable / spacious) — generalize the board's existing density toggle into a
-workspace/user preference consumed via a `useDensity()` hook + token-driven padding scale.
-*Gap:* data-dense DISCOM users want compact; today only the board offers it.
-
-**1.3 Micro-interaction & motion choreography.** Standardize entrance/exit on panels, modals,
-toasts, accordions using `duration-base` + `out-quint`; reserve `spring` for press/drag
-affordances. Add optimistic-update shimmer and a success check-morph on save.
-*Gap:* purposeful motion is in RB-30 but applied unevenly — codify a motion "recipe."
-
-**1.4 Token additions:** `text-2xs` / `text-3xs` (retire the `App.jsx` `text-[10px]` exemption);
-a focus-ring token alias; categorical chart-palette tokens (see Theme 4 / Colours).
-
----
-
-## Theme 2 — Navigation & shell
-
-**2.1 Adopt a real router with deep-linkable state.** Introduce React Router (or TanStack
-Router) so view + sub-state (selected item, active tab, filters, panel-open) live in the URL.
-*Gap:* `App.jsx` syncs the URL by hand and loses sub-state on reload; breaks shareable links and
-back/forward. *Note:* large refactor → its own planned task; **stop-and-ask before starting**
-(touches the `App.jsx` monolith / TD-003).
-
-**2.2 Breadcrumbs in the top context bar.** A token-driven `Breadcrumb` showing
-mode → surface → record, reflecting RB-30's "current location always indicated, no dead ends."
-*Gap:* deep surfaces (cockpit tabs, settings sub-views, detail panels) give no path-back cue.
-
-**2.3 Command palette → action layer.** Extend `command-palette.jsx` beyond navigation + search
-to **actions** (create item, change status, assign, run saved view, toggle theme) plus
-recent/frequent items.
-*Gap:* it is already the ⌘K spine; promoting it to a verb layer is the biggest power-user win.
-
-**2.4 Persisted view state & saved layouts.** Persist filters, sort, density, collapsed rails,
-and open tab per surface (URL + per-user server pref) so context survives reload and is shareable.
+> **Read the metric correctly:** the target is **zero hand-rolled cards/tables/headers/dialogs in
+> `views/`**, not "100% `cva`". `cva` matters for *stateful* components only.
 
 ---
 
-## Theme 3 — Data surfaces
+## 2. Definition of done (exit criteria)
 
-**3.1 A premium DataTable primitive.** One governed table: sticky header, column
-resize/reorder/show-hide, multi-sort, row selection + bulk bar (reuse `z-bulkbar`), inline edit,
-density-aware, **virtualized** for large sets, with skeleton/empty/error states.
-*Gap:* BQL results, reports, and admin lists each render bespoke tables — unify them.
-
-**3.2 Board & list scale.** Virtual scrolling for 1000+ card boards/backlogs; lazy-load
-off-screen charts via `IntersectionObserver` in long dashboards.
-*Gap:* RB-40 §5 NFR budgets (board drag-drop P95 150 ms; dashboard render P95 1500 ms) won't
-hold at scale otherwise.
-
-**3.3 Richer analytics.** Add comparison charts (plan-vs-actual, period-over-period),
-capacity/utilization heatmaps, and a Sankey for workflow/status-flow — **extend** the existing
-pivot-chart engine (`src/lib/pivot*.js`, `molecules/*-chart.jsx`), don't fork it. Interactive
-legend with series show/hide; consistent drill-through into a DataTable.
-
-**3.4 Detail-panel polish.** Inline-edit affordances, presence cursors inside the panel, and a
-"what changed since you last viewed" diff on the Activity tab.
+A surface is **converged** when: (1) it renders through one `PageLayout` (shell → `PageHeader` →
+content) with exactly one of the two sanctioned widths + one padding rhythm; (2) no hand-rolled
+card/table/tab-bar/dialog/icon-button — all from `components/works/**`; (3) every data region
+handles **default · loading · empty (with next action) · error (what + what-next) · partial**, and
+every control has the five interaction states (RB-30 §1); (4) zero raw hex/arbitrary values;
+(5) every control labelled, keyboard-operable, visible focus, WCAG 2.1 AA, **no `eslint-disable`**;
+(6) light + dark verified. A surface is **premium** when, on top of converged, it meets its Part-B
+items (density, motion, deep-link, inclusivity) where applicable.
 
 ---
 
-## Theme 4 — AI & inclusivity
+## 3. The unified primitive library (build once, in `cva`+`cn()`, dark-complete, a11y, RTL, Storybook)
 
-**4.1 Deeper, honest AI surfaces.** Extend AI assists (title/description suggestions, task
-breakdown, duplicate detection) — every one **routes through the AI Control Plane** with a
-visible verdict badge (already the `aiVerdictLabel` pattern) and a documented deterministic
-fallback. *Governance:* RB-40 §2 — **no fallback documented = it does not ship**; AI budget/scope
-is a **stop-and-ask** surface.
-
-**4.2 Streaming & affordances.** Token-streaming responses, "thinking" states, stop/regenerate,
-and a cached-vs-live indicator — consistent across AI Studio, conversational dashboards, and
-comment summarize.
-
-**4.3 Inclusivity — raise the floor to WCAG 2.2 AA (iter 20 Cap A target).**
-- **Colour-blind-safe categorical chart palette** (Deuter/Protan/Tritan-aware) as selectable
-  tokens; never encode meaning by colour alone — pair with shape/label.
-- **High-contrast theme** as a third mode beside light/dark.
-- **Screen-reader chart fallback:** every chart exposes an accessible `<table>` of its data.
-- Audit `neutral-400`-as-text misuse (the RB-30 contrast rule the linter can't catch).
-
----
-
-## Cross-cutting — Colours & visual specs
-
-- **Keep the brand spine:** `brand-navy` primary; `brand-orange` as the single, sparing CTA
-  accent (RB-30 §2). Do **not** broaden the accent palette.
-- **Add, in tokens only:** categorical chart palette (6–8 hues, colour-blind-safe);
-  high-contrast theme variables; `text-2xs` / `text-3xs` type tokens. All via
-  `tailwind.config.js` — never raw hex in components (guardrail BLOCK).
-- **Spec hygiene:** flip the `z-[]` and arbitrary-spacing guardrails from **WARN → BLOCK** once
-  the baseline is clean — this *is* a premium-consistency lever.
+| Primitive | Part | Replaces / Adds |
+|---|---|---|
+| `Card` (`elevated`/`outlined`/`flat`) | A | ~85 inline card blocks; header/body/footer slots |
+| `PageHeader` | A | per-view headers; title + breadcrumb slot + actions slot; one `h1` scale |
+| `Tabs` | A | per-view tab bars; roving-tabindex, `aria-selected`, active indicator |
+| `DataTable` (+ head/body/row/cell) | A→B | hand-rolled `<table>`; **B adds** sticky header, multi-sort, column resize/reorder/show-hide, row-select + bulk bar (`z-bulkbar`), inline edit, density-aware, **virtualized** |
+| `IconButton` | A | icon-only `<button>`s; enforced `aria-label`; sizes 16/20/24 |
+| `Drawer` / `SidePanel` | A | inline right-panels; wraps shell overlay + collapse |
+| `Confirm` (over `Modal`) | A | ad-hoc confirm dialogs; pairs with `useDialog()` |
+| Form set: `Checkbox` `Radio` `Toggle/Switch` `Select`/`Combobox` | A | raw inputs; completes the `FormField` family |
+| `Badge` consolidation | A | status/priority/role/meta badges → one `Badge variant` |
+| `Tooltip` | B | new; hover/focus, delay, `aria-describedby` |
+| `Popover` | B | new; generic anchored overlay (`z-dropdown`/`z-panel`) |
+| `DatePicker` | B | new; keyboard + locale + RTL |
+| `Pagination` | B | new; list endpoints (RB-10 §4) |
+| `Breadcrumb` | B | new; mode → surface → record (Nav theme) |
+| `Progress` | B | new; determinate/indeterminate |
+| `Slider` | B | new |
+| `Alert` (standalone) | B | new; inline banner, semantic tones |
 
 ---
 
-## Surface-by-surface polish pass (the "even out" list)
+## Part A — Converge & Lock (the "last 40%")
 
-Bring the thin surfaces up to the cockpit/dashboard bar using the new primitives + states:
-**Compliance** (`compliance-view.jsx`), **Service Desk / Support Inbox**, **Marketplace**,
-**Report Builder**, **Trash**, **Developer Portal**. Each gets: real empty/loading/error states,
-the DataTable, breadcrumbs, and a consistent header/action layout.
+### A-WS1 · Fill the missing shared primitives *(highest leverage)*
+Build the **Part-A** rows above (Card, PageHeader, Tabs, DataTable base, IconButton, Drawer,
+Confirm, form set, Badge). Each deletes dozens of hand-rolled copies. (Deferred items A4/C5/E3 in
+`UX-PROGRESS.md`.)
 
----
+### A-WS2 · Standardise the page skeleton
+One `PageLayout` composes shell → `PageHeader` → content wrapper exposing only two widths
+(`width="dashboard"` → `max-w-7xl`, `width="reading"` → `max-w-[880px]`) and one padding rhythm.
+Views stop hand-setting width/padding/headers — this is what makes pages *feel* the same.
 
-## Prioritization (impact × effort, governance-aware)
+### A-WS3 · Adopt across all ~95 views *(mechanical convergence)*
+View-by-view via the proven **extract-loop** (byte-identical extract → ESLint `no-undef` proves the
+prop set → RTL test → live smoke on real data → small squash-merge). Per view: swap inline
+cards/buttons/tables/tabs/dialogs for primitives; add missing loading/empty/error + `aria-label`s;
+remove legacy `eslint-disable`. **Start with the 4 exemplars** (~20% of view code, all patterns):
+`pm-view.jsx` · `bql-view.jsx` · `admin-ops-view.jsx` · `compliance-view.jsx`.
 
-**Wave P0 — foundation (low risk, high leverage, mostly token/component work):**
-1.1 primitives · 1.4 token additions · 4.3 colour-blind palette + chart SR fallback · flip
-z-index/spacing guardrails to BLOCK. *Slots cleanly into a polish iteration.*
-
-**Wave P1 — surface evenness & power UX:**
-2.2 breadcrumbs · 2.3 command-palette actions · 3.1 DataTable · 1.2 density · the surface polish
-pass.
-
-**Wave P2 — structural & scale (each its own planned task; some stop-and-ask):**
-2.1 router / deep-linking (touches `App.jsx`; **stop-and-ask**) · 3.2 virtualization ·
-3.3 advanced analytics · 4.1–4.2 deeper AI (**stop-and-ask** on budget / Control-Plane scope).
-
----
-
-## Key files referenced (none modified by this document)
-
-- `works-frontend/tailwind.config.js` — token home for all colour/type/motion additions
-- `works-frontend/src/components/works/button.jsx` — canonical `cva`+`cn` pattern to mirror
-- `works-frontend/src/components/works/{atoms,molecules,organisms}/` — where new primitives land
-- `works-frontend/src/App.jsx` — the monolith targeted by router/deep-linking (P2)
-- `works-frontend/src/lib/pivot*.js`, `molecules/*-chart.jsx` — analytics engine to extend
-- `eslint.config.js`, `scripts/guardrails.sh` — the gate that keeps all of this consistent
+### A-WS4 · Lock it so it cannot regress
+Wire each rule to a check (Orchestrator §0):
+- **New structural guardrails** (`eslint.config.js` / `guardrails.sh`, scoped to `views/`): ban raw
+  `<table>`, inline card-chrome cluster, raw `<button>`; restrict page-level `max-w-*` to the two
+  sanctioned values; warn on a data view with no empty/error branch.
+- **Re-enable guardrails on 100% of `views/`** — delete every remaining `eslint-disable`.
+- **Storybook → visual regression** (Chromatic or equiv.); ≥ 50 stories.
+- **One-page `docs/COMPONENT-SYSTEM.md`**: when `cva` vs `cn()`; atom/molecule/organism; per-component
+  a11y checklist; icon sizes 16/20/24/32; token notes (e.g. `neutral-400` = placeholder/disabled
+  only, never readable text).
 
 ---
 
-## How each item gets built later (Definition of Done reminder)
+## Part B — Elevate (premium depth on the converged base)
 
-Every implementation item carries its own DoD (RB-05 Stage 3/6): tests prove behaviour ·
-tokens not literals · WCAG AA · unauthorized + cross-tenant tests where data is touched ·
-NFR budget on hot paths (RB-40 §5) · CI green. AI and structural items additionally require a
-Deepak checkpoint per the stop-and-ask tags above.
+### Theme 1 — Design-system depth
+- **1.1 Premium primitives:** the **Part-B** rows above (Tooltip, Popover, DatePicker, Pagination,
+  Breadcrumb, Progress, Slider, Alert).
+- **1.2 Elevation & density:** 3-level elevation ramp (`shadow-sm/md/lg` → resting/hover/overlay) +
+  a global **density mode** (compact/comfortable/spacious) via a `useDensity()` hook + token-driven
+  padding scale (generalize the board's existing toggle). *Gap:* data-dense DISCOM users want
+  compact; today only the board offers it.
+- **1.3 Motion choreography:** standardize panel/modal/toast/accordion entrance-exit on
+  `duration-base` + `out-quint`; reserve `spring` for press/drag; add optimistic-update shimmer +
+  success check-morph. Codify a motion "recipe."
+- **1.4 Token additions:** `text-2xs`/`text-3xs` (retire `App.jsx` `text-[10px]` exemption);
+  focus-ring alias; categorical chart-palette tokens (see §Colours).
+
+### Theme 2 — Navigation & shell
+- **2.1 Real router + deep-linkable state** (React Router / TanStack): view + sub-state (selected
+  item, active tab, filters, panel-open) in the URL. *Large refactor → its own task;
+  **stop-and-ask** (touches `App.jsx` / TD-003).*
+- **2.2 Breadcrumbs** in the top context bar (uses the `Breadcrumb` primitive).
+- **2.3 Command palette → action layer:** extend `command-palette.jsx` to actions (create, change
+  status, assign, run saved view, toggle theme) + recent/frequent.
+- **2.4 Persisted view state:** filters/sort/density/collapsed-rails/open-tab per surface
+  (URL + per-user pref) so context survives reload and is shareable.
+
+### Theme 3 — Data surfaces
+- **3.1 Premium `DataTable`** (the Part-B upgrade of the converged table): virtualization, multi-sort,
+  column ops, bulk bar, inline edit, density-aware. Unifies BQL results, reports, admin lists.
+- **3.2 Board & list scale:** virtual scroll for 1000+ cards; lazy-load off-screen charts
+  (`IntersectionObserver`). *Holds RB-40 §5 NFR budgets.*
+- **3.3 Richer analytics:** comparison charts (plan-vs-actual, period-over-period),
+  capacity/utilization heatmaps, workflow Sankey — **extend** the pivot engine
+  (`src/lib/pivot*.js`, `molecules/*-chart.jsx`); interactive legend; drill-through into `DataTable`.
+- **3.4 Detail-panel polish:** inline-edit affordances, presence cursors in panel, "what changed
+  since you last viewed" diff on the Activity tab.
+
+### Theme 4 — AI & inclusivity
+- **4.1 Deeper, honest AI:** title/description suggestions, task breakdown, duplicate detection —
+  each **routes through the AI Control Plane** with a visible verdict badge (`aiVerdictLabel`) and a
+  documented deterministic fallback. *RB-40 §2: no fallback documented = it does not ship; AI
+  budget/scope is **stop-and-ask**.*
+- **4.2 Streaming affordances:** token-streaming, "thinking" states, stop/regenerate, cached-vs-live
+  indicator — consistent across AI Studio, conversational dashboards, comment summarize.
+- **4.3 Inclusivity → WCAG 2.2 AA (iter 20 Cap A):** colour-blind-safe categorical chart palette
+  (never colour-only — pair shape/label); **high-contrast theme** as a third mode; **screen-reader
+  chart fallback** (every chart exposes an accessible `<table>`); audit `neutral-400`-as-text misuse.
+
+---
+
+## Colours & visual specs (cross-cutting)
+- **Keep the brand spine:** `brand-navy` primary; `brand-orange` the single sparing CTA accent
+  (RB-30 §2) — do **not** broaden the accent palette.
+- **Add, in tokens only:** categorical chart palette (6–8 hues, colour-blind-safe); high-contrast
+  theme variables; `text-2xs`/`text-3xs`. All via `tailwind.config.js` — never raw hex (guardrail
+  BLOCK).
+- **Spec hygiene:** flip `z-[]` + arbitrary-spacing guardrails **WARN → BLOCK** once baseline clean.
+
+---
+
+## Unified sequencing (one ordered program)
+
+| Phase | Scope | Notes |
+|---|---|---|
+| **0 — Prove (days)** | A-WS1 start: `Card` + `PageHeader` + `Tabs`; 3 structural lint rules (warn-only); pilot-migrate the 4 exemplar views | foundation |
+| **1 — Core primitives (1–2 wk)** | A-WS1 finish: `DataTable` base + `Drawer` + `IconButton` + form set + `Badge`; A-WS2 `PageLayout`; migrate ~20 data-heavy views; token adds `text-2xs/3xs` | |
+| **2 — Breadth (2–3 wk)** | A-WS3 remaining views; app-wide loading/empty/error + `aria-label` sweep; A-WS4 Storybook + visual regression; build Part-B premium primitives (Tooltip/Popover/Pagination/Breadcrumb/Progress/Slider/Alert/DatePicker) | |
+| **3 — Harden + Premium P0 (ongoing)** | A-WS4 flip lint to error, remove all `eslint-disable`, `React.lazy` per route, dark-contrast audit; **Premium P0:** inclusivity (colour-blind palette, HC theme, SR charts), elevation/density spec, motion choreography, guardrail WARN→BLOCK | base now premium-ready |
+| **4 — Premium P1** | breadcrumbs (2.2), command-palette actions (2.3), premium `DataTable` (3.1), density preference (1.2), surface polish pass | builds on converged base |
+| **5 — Premium P2 (stop-and-ask)** | router/deep-linking (2.1, `App.jsx`), board virtualization (3.2), richer analytics (3.3), deeper/streaming AI (4.1–4.2) | each its own gated task |
+
+Each step is a **small, single-purpose, lint-clean PR** through RB-05 — no big-bang rewrite, no
+feature change.
+
+---
+
+## Tracking & metrics (drive to zero / 100%)
+inline card blocks in `views/` → **0** · raw `<table>` / raw `<button>` in `views/` → **0** ·
+distinct page-level `max-w-*` → **2** · views with full loading/empty/error → **100%** · views with
+`eslint-disable` → **0** · Storybook stories → **≥ 50** w/ visual-regression · plus Part-B: charts
+with SR fallback → 100%, themes shipped → light/dark/high-contrast. Logged newest-first in
+`docs/UX-PROGRESS.md`, tagged `[consistency]` / `[premium]`.
+
+---
+
+## Governance & references
+Canonical design law: RB-30 (`ai-rules/rulebooks/30-DESIGN.md`) — this program *adopts* it. Process:
+RB-05 (every migration a gated PR; scope discipline RB-10 §9 / RB-20). Tenant/AI/NFR: RB-40 (§2 AI
+fallback, §5 NFR budgets). DoD per item: tests prove behaviour · tokens not literals · WCAG AA ·
+unauthorized + cross-tenant tests where data is touched · NFR budget on hot paths · CI green;
+AI + structural items need a Deepak checkpoint (stop-and-ask). History:
+`docs/UX-CODEBASE-ANALYSIS.md`, `docs/UX-PROGRESS.md`; absorbed: `docs/DESIGN-CONSISTENCY-PROGRAM.md`.
+
+---
+
+*One product, one design system, enforced by machines not memory — converge the last 40% onto it,
+then elevate it to premium, and keep it there.*

@@ -1,7 +1,6 @@
 package com.bcits.works;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,15 +49,15 @@ public class KpiService {
     private final MetricSnapshotRepository snapshots;
     private final MetricShareRepository shares;
     private final AiControlPlaneService controlPlane;
-    private final JdbcTemplate jdbc;
     private final BqlCompiler bqlCompiler;
+    private final BqlQueryExecutor bqlExecutor;
     private final RbacService rbac;
     private final ObjectMapper json = new ObjectMapper();
 
     public KpiService(WorkItemRepository workItems, ProjectRepository projects, TeamRepository teams,
                       MetricDefinitionRepository definitions, MetricSnapshotRepository snapshots,
                       MetricShareRepository shares, AiControlPlaneService controlPlane,
-                      JdbcTemplate jdbc, BqlCompiler bqlCompiler, RbacService rbac) {
+                      BqlCompiler bqlCompiler, BqlQueryExecutor bqlExecutor, RbacService rbac) {
         this.workItems = workItems;
         this.projects = projects;
         this.teams = teams;
@@ -66,8 +65,8 @@ public class KpiService {
         this.snapshots = snapshots;
         this.shares = shares;
         this.controlPlane = controlPlane;
-        this.jdbc = jdbc;
         this.bqlCompiler = bqlCompiler;
+        this.bqlExecutor = bqlExecutor;
         this.rbac = rbac;
     }
 
@@ -530,17 +529,10 @@ public class KpiService {
             if (def.getBqlFormula() == null || def.getBqlFormula().isBlank()) continue;
             if (defsByKey.containsKey(def.getMetricKey()) && updated.stream().anyMatch(m -> m.key().equals(def.getMetricKey()))) continue;
             try {
-                // Compile under the caller's field-security context (defs already filtered above);
-                // a sensitive-field formula would throw here for an under-tier caller (RB-40 §1).
-                BqlCompiler.Compiled compiled = bqlCompiler.compileFor(def.getBqlFormula(), ctx);
-                // work_items has no workspace_id column — scope through projects (unified idiom, RB-40 §1).
-                String countSql = "SELECT COUNT(*) FROM work_items WHERE deleted_at IS NULL"
-                    + " AND project_id IN (SELECT id FROM projects WHERE workspace_id = ?)"
-                    + (compiled.sql().isBlank() ? "" : " AND (" + compiled.sql() + ")");
-                List<Object> params = new ArrayList<>();
-                params.add(workspaceId);
-                params.addAll(compiled.params());
-                long count = jdbc.queryForObject(countSql, Long.class, params.toArray());
+                // Compile + execute the workspace-scoped count centrally (RB-40 §1, advances #243);
+                // compiling under the caller's field-security context means a sensitive-field formula
+                // throws here for an under-tier caller (defs already filtered above).
+                long count = bqlExecutor.countScoped(workspaceId, def.getBqlFormula(), ctx);
                 boolean hib = Boolean.TRUE.equals(def.getHigherIsBetter());
                 String status = evaluateStatus(count, def.getTarget(), hib);
                 custom.add(new MetricValue(def.getMetricKey(), def.getName(), count,

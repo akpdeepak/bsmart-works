@@ -35,13 +35,12 @@ class KpiServiceTest {
     private final MetricSnapshotRepository snapshots = mock(MetricSnapshotRepository.class);
     private final MetricShareRepository shares = mock(MetricShareRepository.class);
     private final AiControlPlaneService controlPlane = mock(AiControlPlaneService.class);
-    private final org.springframework.jdbc.core.JdbcTemplate jdbc =
-        mock(org.springframework.jdbc.core.JdbcTemplate.class);
     private final BqlCompiler bqlCompiler = mock(BqlCompiler.class);
+    private final BqlQueryExecutor bqlExecutor = mock(BqlQueryExecutor.class);
     private final RbacService rbac = mock(RbacService.class);
 
     private final KpiService kpi = new KpiService(workItems, projects, teams, definitions,
-        snapshots, shares, controlPlane, jdbc, bqlCompiler, rbac);
+        snapshots, shares, controlPlane, bqlCompiler, bqlExecutor, rbac);
 
     // By default, return an empty definitions list so applyTargetsAndCustomMetrics is a no-op.
     { when(definitions.findByWorkspaceIdOrderByNameAsc(WS)).thenReturn(List.of()); }

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -34,12 +35,10 @@ class AutomationServiceTest {
     private final EventService events = mock(EventService.class);
     private final WebhookService webhooks = mock(WebhookService.class);
     private final AiControlPlaneService controlPlane = mock(AiControlPlaneService.class);
-    private final org.springframework.jdbc.core.JdbcTemplate jdbc =
-        mock(org.springframework.jdbc.core.JdbcTemplate.class);
-    private final BqlCompiler bqlCompiler = mock(BqlCompiler.class);
+    private final BqlQueryExecutor bqlExecutor = mock(BqlQueryExecutor.class);
 
     private final AutomationService svc = new AutomationService(rules, runs, workItems, projects,
-        comments, events, webhooks, controlPlane, jdbc, bqlCompiler);
+        comments, events, webhooks, controlPlane, bqlExecutor);
 
     private WorkItem item(String id, String priority, String type, String status) {
         WorkItem w = new WorkItem();
@@ -110,6 +109,9 @@ class AutomationServiceTest {
         when(projects.findByWorkspaceId(WS)).thenReturn(List.of(project()));
         when(workItems.findByProjectId("PROJ-1")).thenReturn(List.of(
             item("A", "High", "Bug", "Todo"), item("B", "Low", "Task", "Todo")));
+        // The scoped BQL match runs through the executor: only item A satisfies `priority = High`.
+        when(bqlExecutor.matchesItem("A", "priority = High")).thenReturn(true);
+        when(bqlExecutor.matchesItem("B", "priority = High")).thenReturn(false);
 
         AutomationService.Preview preview = svc.test(WS, "AUTO-1");
 
@@ -130,6 +132,8 @@ class AutomationServiceTest {
         rule.setActions("[{\"type\":\"SET_STATUS\",\"params\":{\"status\":\"In Progress\"}}]");
         when(rules.findByWorkspaceIdAndEnabledTrueAndTriggerType(eq(WS), eq("ITEM_CREATED")))
             .thenReturn(List.of(rule));
+        // The triggering item matches the rule's BQL condition via the scoped executor.
+        when(bqlExecutor.matchesItem("INC-1", "type = Incident")).thenReturn(true);
 
         WorkItem triggering = item("INC-1", "Critical", "Incident", "Todo");
         int fired = svc.evaluateForItem(WS, "ITEM_CREATED", triggering, ACTOR);
@@ -156,33 +160,43 @@ class AutomationServiceTest {
     void conditionMatchesBql_emptyConditionMatchesAll() {
         assertThat(svc.conditionMatchesBql(item("A", "High", "Bug", "Todo"), "")).isTrue();
         assertThat(svc.conditionMatchesBql(item("A", "High", "Bug", "Todo"), null)).isTrue();
+        // Empty/blank short-circuits before the executor — no scoped query is run.
+        verify(bqlExecutor, never()).matchesItem(any(), any());
     }
 
     @Test
-    void conditionMatchesBql_delegatesToBqlCompilerAndChecksCount() {
+    void conditionMatchesBql_delegatesToExecutorAndReturnsMatch() {
         WorkItem w = item("WEB-1", "High", "Bug", "Todo");
-        when(bqlCompiler.compile("priority = High", null))
-            .thenReturn(new BqlCompiler.Compiled("priority = ?", List.of("High")));
-        when(jdbc.queryForObject(any(String.class), eq(Long.class), any(Object[].class)))
-            .thenReturn(1L);
+        when(bqlExecutor.matchesItem("WEB-1", "priority = High")).thenReturn(true);
         assertThat(svc.conditionMatchesBql(w, "priority = High")).isTrue();
+        verify(bqlExecutor).matchesItem("WEB-1", "priority = High");
     }
 
     @Test
-    void conditionMatchesBql_returnsFalseWhenCountIsZero() {
+    void conditionMatchesBql_returnsFalseWhenExecutorReportsNoMatch() {
         WorkItem w = item("WEB-1", "High", "Bug", "Todo");
-        when(bqlCompiler.compile("priority = Low", null))
-            .thenReturn(new BqlCompiler.Compiled("priority = ?", List.of("Low")));
-        when(jdbc.queryForObject(any(String.class), eq(Long.class), any(Object[].class)))
-            .thenReturn(0L);
+        when(bqlExecutor.matchesItem("WEB-1", "priority = Low")).thenReturn(false);
         assertThat(svc.conditionMatchesBql(w, "priority = Low")).isFalse();
     }
 
     @Test
-    void conditionMatchesBql_fallsBackToLegacyOnBqlException() {
+    void conditionMatchesBql_fallsBackToLegacyOnCompileFailure() {
         WorkItem w = item("WEB-1", "High", "Bug", "Todo");
-        when(bqlCompiler.compile(any(), any())).thenThrow(new RuntimeException("parse error"));
-        assertThat(svc.conditionMatchesBql(w, "priority = High")).isTrue();
-        assertThat(svc.conditionMatchesBql(w, "priority = Low")).isFalse();
+        // A BqlException is a compile failure — degrade to the legacy in-memory matcher (RB-40 §2).
+        when(bqlExecutor.matchesItem(eq("WEB-1"), any()))
+            .thenThrow(new BqlException("unparseable"));
+        assertThat(svc.conditionMatchesBql(w, "priority = High")).isTrue();   // legacy says High==High
+        assertThat(svc.conditionMatchesBql(w, "priority = Low")).isFalse();   // legacy says High!=Low
+    }
+
+    @Test
+    void conditionMatchesBql_propagatesRuntimeErrorsInsteadOfSilentFallback() {
+        WorkItem w = item("WEB-1", "High", "Bug", "Todo");
+        // A non-compile error (e.g. a DB fault) must NOT be masked as a non-match — it propagates,
+        // so a genuine fault is surfaced rather than silently degrading the rule (narrowed catch).
+        when(bqlExecutor.matchesItem(eq("WEB-1"), any()))
+            .thenThrow(new IllegalStateException("db down"));
+        assertThatThrownBy(() -> svc.conditionMatchesBql(w, "priority = High"))
+            .isInstanceOf(IllegalStateException.class);
     }
 }

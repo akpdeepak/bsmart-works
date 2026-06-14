@@ -17,8 +17,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Asserts the two templates the spec names — Monthly executive summary and Customer status — are
  * returned by the repository method behind {@code GET /api/v1/reports/templates}
  * ({@link ReportRepository#findByIsTemplateTrueOrderByNameAsc()}), with the section structure
- * enriched in V84 (KPI grid + velocity/trend chart + narrative + risk summary; customer health +
- * SLA + open-requests table + narrative). Validates the migration is forward-only and valid SQL.
+ * made insightful in V88 (KPI grid + pivot-backed charts + table + narrative prompts; the templates
+ * now drive the shared pivot engine rather than count-only charts). Validates the migration is
+ * forward-only and valid SQL.
  */
 @Tag("integration")
 @Testcontainers
@@ -54,36 +55,38 @@ class ReportTemplateSeedIT {
     }
 
     @Test
-    void monthlyExecutiveSummaryHasKpiTrendNarrativeAndRiskSections() {
+    void monthlyExecutiveSummaryHasKpiPivotChartsAndNarrativeSections() {
         Report exec = templateNamed("Monthly executive summary");
         String sections = exec.getSections();
         // Whitespace-insensitive for the structural `"type":"x"` checks — the stored JSON may be
         // pretty-printed (`"type": "kpi"`); the section shape is what matters, not the spacing.
         String compact = sections.replaceAll("\\s+", "");
 
-        // KPI grid + velocity/trend chart + executive narrative + risk summary.
+        // V88: KPI grid + pivot-backed charts (status/type/assignee/priority) + executive + risk narrative.
         assertThat(compact).contains("\"type\":\"kpi\"");
-        assertThat(sections).contains("Velocity & delivery trend");
-        assertThat(compact).contains("\"type\":\"chart\"");
+        assertThat(compact).contains("\"type\":\"pivot\"");
+        assertThat(sections).contains("Work by status");
         assertThat(sections).contains("Executive summary");
         assertThat(sections).contains("Risk summary");
-        // Section shape matches the seed contract: chartType + dimension on charts.
+        // Pivot sections carry a guided spec with chartType + dimensions (drives the shared pivot engine).
+        assertThat(compact).contains("\"sourceKind\":\"guided\"");
         assertThat(sections).contains("\"chartType\"");
-        assertThat(sections).contains("\"dimension\"");
+        assertThat(sections).contains("\"dimensions\"");
     }
 
     @Test
-    void customerStatusHasHealthSlaTableAndNarrativeSections() {
+    void customerStatusHasKpiPivotTableAndNarrativeSections() {
         Report customer = templateNamed("Customer status");
         String sections = customer.getSections();
         String compact = sections.replaceAll("\\s+", "");
 
-        // Customer health + SLA + open-requests table + narrative.
-        assertThat(sections).contains("Customer health");
-        assertThat(sections).contains("Within SLA");
-        assertThat(sections).contains("SLA at risk");
-        assertThat(compact).contains("\"type\":\"table\"");
+        // V88: KPI grid + open-by-status/priority pivots + open-requests table + customer narrative.
+        assertThat(compact).contains("\"type\":\"kpi\"");
         assertThat(sections).contains("Open requests");
+        assertThat(sections).contains("At risk (overdue)");
+        assertThat(compact).contains("\"type\":\"pivot\"");
+        assertThat(compact).contains("\"type\":\"table\"");
         assertThat(compact).contains("\"type\":\"narrative\"");
+        assertThat(sections).contains("Summary for the customer");
     }
 }

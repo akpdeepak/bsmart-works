@@ -53,7 +53,7 @@ public class WorkflowRuleEngine {
         if (fromStatus == null || toStatus == null || fromStatus.equals(toStatus)) return;
         findTransition(workItemId, fromStatus, toStatus, wsId).ifPresent(trans -> {
             evaluateConditions(trans.getConditions(), workItemId, userId, wsId);
-            evaluateValidators(trans.getValidators(), workItemId);
+            evaluateValidators(trans.getValidators(), workItemId, wsId);
         });
     }
 
@@ -65,7 +65,7 @@ public class WorkflowRuleEngine {
                                       String userId, String wsId) {
         if (fromStatus == null || toStatus == null || fromStatus.equals(toStatus)) return;
         findTransition(workItemId, fromStatus, toStatus, wsId)
-                .ifPresent(trans -> runPostFunctions(trans.getPostFunctions(), workItemId, userId));
+                .ifPresent(trans -> runPostFunctions(trans.getPostFunctions(), workItemId, userId, wsId));
     }
 
     // ── Rule lookup ──────────────────────────────────────────────────────────────
@@ -126,7 +126,7 @@ public class WorkflowRuleEngine {
                     String fieldKey = (String) cond.get("fieldKey");
                     String expected  = (String) cond.get("value");
                     if (fieldKey != null && expected != null) {
-                        String actual = getCustomFieldValue(workItemId, fieldKey);
+                        String actual = getCustomFieldValue(workItemId, fieldKey, wsId);
                         if (!expected.equals(actual)) {
                             throw ApiException.badRequest("TRANSITION_CONDITION_FAILED",
                                     "Transition condition not met: field '" + fieldKey + "' must equal '" + expected + "'.");
@@ -140,7 +140,7 @@ public class WorkflowRuleEngine {
 
     // ── Validator evaluation ─────────────────────────────────────────────────────
 
-    private void evaluateValidators(String validatorsJson, String workItemId) {
+    private void evaluateValidators(String validatorsJson, String workItemId, String wsId) {
         for (Map<String, Object> v : parseRules(validatorsJson)) {
             String type = (String) v.get("type");
             switch (type != null ? type : "") {
@@ -154,7 +154,7 @@ public class WorkflowRuleEngine {
                 case "REQUIRE_FIELD" -> {
                     String fieldKey = (String) v.get("fieldKey");
                     if (fieldKey != null) {
-                        String val = getCustomFieldValue(workItemId, fieldKey);
+                        String val = getCustomFieldValue(workItemId, fieldKey, wsId);
                         if (val == null || val.isBlank()) {
                             throw ApiException.badRequest("VALIDATOR_FAILED",
                                     "Field '" + fieldKey + "' must be filled in before this transition.");
@@ -168,7 +168,7 @@ public class WorkflowRuleEngine {
 
     // ── Post-function execution ──────────────────────────────────────────────────
 
-    private void runPostFunctions(String postFunctionsJson, String workItemId, String userId) {
+    private void runPostFunctions(String postFunctionsJson, String workItemId, String userId, String wsId) {
         for (Map<String, Object> pf : parseRules(postFunctionsJson)) {
             String type = (String) pf.get("type");
             try {
@@ -176,7 +176,7 @@ public class WorkflowRuleEngine {
                     case "SET_FIELD" -> {
                         String fieldKey = (String) pf.get("fieldKey");
                         String value    = (String) pf.get("value");
-                        if (fieldKey != null) upsertCustomField(workItemId, fieldKey, value);
+                        if (fieldKey != null) upsertCustomField(workItemId, fieldKey, value, wsId);
                     }
                     case "ASSIGN_TO_CURRENT_USER" ->
                         jdbc.update("UPDATE work_items SET assignee_id = ? WHERE id = ?",
@@ -210,13 +210,13 @@ public class WorkflowRuleEngine {
         catch (Exception e) { return null; }
     }
 
-    private String getCustomFieldValue(String workItemId, String fieldKey) {
+    private String getCustomFieldValue(String workItemId, String fieldKey, String wsId) {
         try {
             return jdbc.queryForObject(
                 "SELECT fv.value_text FROM work_item_field_value fv " +
                 "JOIN field_def fd ON fd.id = fv.field_def_id " +
-                "WHERE fv.work_item_id = ? AND fd.field_key = ?",
-                String.class, workItemId, fieldKey);
+                "WHERE fv.work_item_id = ? AND fd.field_key = ? AND fd.workspace_id = ?",
+                String.class, workItemId, fieldKey, wsId);
         } catch (Exception e) { return null; }
     }
 
@@ -225,10 +225,12 @@ public class WorkflowRuleEngine {
         catch (Exception e) { return 0; }
     }
 
-    private void upsertCustomField(String workItemId, String fieldKey, String value) {
+    private void upsertCustomField(String workItemId, String fieldKey, String value, String wsId) {
         String fieldDefId = null;
         try {
-            fieldDefId = jdbc.queryForObject("SELECT id FROM field_def WHERE field_key = ?", String.class, fieldKey);
+            fieldDefId = jdbc.queryForObject(
+                "SELECT id FROM field_def WHERE field_key = ? AND workspace_id = ?",
+                String.class, fieldKey, wsId);
         } catch (Exception e) { return; }
         if (fieldDefId == null) return;
         String id = "FV-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();

@@ -8,9 +8,11 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -159,6 +161,97 @@ class WorkflowRuleEngineTest {
         engine.executePostFunctions(ITEM_ID, "Open", "Done", USER_ID, WS_ID);
 
         verify(jdbc).update(contains("UPDATE work_items SET assignee_id"), eq(USER_ID), eq(ITEM_ID));
+    }
+
+    // ── FIELD_EQUALS condition — workspace-scoped field lookup (RB-40 §1) ─────
+
+    @Test
+    void condition_fieldEquals_passesWhenFieldMatchesExpectedValueInWorkspace() {
+        setupTransition("""
+            [{"type":"FIELD_EQUALS","fieldKey":"priority","value":"HIGH"}]
+            """, "[]", "[]");
+        // getCustomFieldValue must scope field_def by workspace_id — return "HIGH" only for WS_ID.
+        when(jdbc.queryForObject(contains("fd.workspace_id"), eq(String.class),
+                eq(ITEM_ID), eq("priority"), eq(WS_ID))).thenReturn("HIGH");
+
+        assertThatCode(() -> engine.enforceTransitionRules(ITEM_ID, "Open", "Done", USER_ID, WS_ID))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void condition_fieldEquals_failsWhenFieldValueDoesNotMatch() {
+        setupTransition("""
+            [{"type":"FIELD_EQUALS","fieldKey":"priority","value":"HIGH"}]
+            """, "[]", "[]");
+        when(jdbc.queryForObject(contains("fd.workspace_id"), eq(String.class),
+                eq(ITEM_ID), eq("priority"), eq(WS_ID))).thenReturn("LOW");
+
+        assertThatThrownBy(() -> engine.enforceTransitionRules(ITEM_ID, "Open", "Done", USER_ID, WS_ID))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("priority");
+    }
+
+    // ── REQUIRE_FIELD validator — workspace-scoped field lookup (RB-40 §1) ───
+
+    @Test
+    void validator_requireField_passesWhenFieldFilledInWorkspace() {
+        setupTransition("[]", """
+            [{"type":"REQUIRE_FIELD","fieldKey":"resolution"}]
+            """, "[]");
+        when(jdbc.queryForObject(contains("fd.workspace_id"), eq(String.class),
+                eq(ITEM_ID), eq("resolution"), eq(WS_ID))).thenReturn("Fixed");
+
+        assertThatCode(() -> engine.enforceTransitionRules(ITEM_ID, "Open", "Done", USER_ID, WS_ID))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void validator_requireField_failsWhenFieldBlankInWorkspace() {
+        setupTransition("[]", """
+            [{"type":"REQUIRE_FIELD","fieldKey":"resolution"}]
+            """, "[]");
+        when(jdbc.queryForObject(contains("fd.workspace_id"), eq(String.class),
+                eq(ITEM_ID), eq("resolution"), eq(WS_ID))).thenReturn(null);
+
+        assertThatThrownBy(() -> engine.enforceTransitionRules(ITEM_ID, "Open", "Done", USER_ID, WS_ID))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("resolution");
+    }
+
+    // ── SET_FIELD post-function — workspace-scoped field_def lookup (RB-40 §1) ─
+
+    @Test
+    void postFunction_setField_scopesFieldDefLookupToWorkspace() {
+        setupTransition("[]", "[]", """
+            [{"type":"SET_FIELD","fieldKey":"stage","value":"review"}]
+            """);
+        // upsertCustomField must SELECT id FROM field_def WHERE field_key=? AND workspace_id=?
+        when(jdbc.queryForObject(contains("workspace_id"), eq(String.class),
+                eq("stage"), eq(WS_ID))).thenReturn("FD-001");
+
+        engine.executePostFunctions(ITEM_ID, "Open", "Done", USER_ID, WS_ID);
+
+        // The upsert must follow through with the resolved field def id.
+        // Signature: update(sql, generatedId, workItemId, fieldDefId, value, createdAt, updatedAt)
+        verify(jdbc).update(contains("work_item_field_value"), any(), eq(ITEM_ID), eq("FD-001"),
+                eq("review"), any(), any());
+    }
+
+    @Test
+    void postFunction_setField_noOpWhenFieldDefNotFoundInWorkspace() {
+        setupTransition("[]", "[]", """
+            [{"type":"SET_FIELD","fieldKey":"nonexistent","value":"x"}]
+            """);
+        // field_def not found in this workspace — queryForObject throws → upsert must NOT run.
+        when(jdbc.queryForObject(contains("workspace_id"), eq(String.class),
+                eq("nonexistent"), eq(WS_ID))).thenThrow(new RuntimeException("not found"));
+
+        assertThatCode(() -> engine.executePostFunctions(ITEM_ID, "Open", "Done", USER_ID, WS_ID))
+                .doesNotThrowAnyException();
+
+        // The INSERT/UPSERT for work_item_field_value must never execute.
+        verify(jdbc, never()).update(contains("work_item_field_value"),
+                eq(ITEM_ID), eq("nonexistent"), eq("x"));
     }
 
     // ── Unknown rule types → silently skipped ─────────────────────────────────

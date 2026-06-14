@@ -115,9 +115,31 @@ public class KpiService {
 
     // ── Public value types ───────────────────────────────────────────────────────
 
-    /** {@code status} is ON_TRACK / AT_RISK / OFF_TRACK when a numeric target is set; null otherwise. */
+    /**
+     * Sprint-over-sprint comparison context for a metric (Cap L "trends"): the immediately preceding
+     * snapshot's value, the signed delta, the period it was taken, and whether the movement is an
+     * improvement given the metric's {@code higherIsBetter} polarity. Null on a {@link MetricValue}
+     * when there is no prior snapshot to compare against (honest empty — RB-20 §4).
+     */
+    public record MetricTrend(double previousValue, double delta, String previousPeriod,
+                              String direction, boolean improving) { }
+
+    /**
+     * {@code status} is ON_TRACK / AT_RISK / OFF_TRACK when a numeric target is set; null otherwise.
+     * {@code trend} carries the vs-last-period comparison when snapshot history exists, else null.
+     */
     public record MetricValue(String key, String label, double value, String unit,
-                              boolean higherIsBetter, int sampleSize, String status) { }
+                              boolean higherIsBetter, int sampleSize, String status, MetricTrend trend) {
+        /** Convenience for the (common) no-trend construction. */
+        public MetricValue(String key, String label, double value, String unit,
+                           boolean higherIsBetter, int sampleSize, String status) {
+            this(key, label, value, unit, higherIsBetter, sampleSize, status, null);
+        }
+
+        MetricValue withTrend(MetricTrend t) {
+            return new MetricValue(key, label, value, unit, higherIsBetter, sampleSize, status, t);
+        }
+    }
 
     public record Layer(String scopeLevel, String scopeId, String label, List<MetricValue> metrics,
                         String privacyNote) { }
@@ -141,8 +163,8 @@ public class KpiService {
         String note = target.equals(requesterId)
             ? "Private — visible only to you unless you choose to share."
             : "Shared with you voluntarily by the owner.";
-        return applyTargetsAndCustomMetrics(workspaceId, requesterId,
-            new Layer("INDIVIDUAL", target, "Personal", metrics, note));
+        return applyTrends(workspaceId, applyTargetsAndCustomMetrics(workspaceId, requesterId,
+            new Layer("INDIVIDUAL", target, "Personal", metrics, note)));
     }
 
     static List<MetricValue> personalMetrics(List<WorkItem> items) {
@@ -161,9 +183,9 @@ public class KpiService {
             .filter(x -> x.getId().equals(teamId)).findFirst()
             .orElseThrow(() -> ApiException.notFound("Team", teamId));
         List<WorkItem> items = teamItems(workspaceId, t);
-        return applyTargetsAndCustomMetrics(workspaceId, callerId,
+        return applyTrends(workspaceId, applyTargetsAndCustomMetrics(workspaceId, callerId,
             new Layer("TEAM", teamId, t.getName(), aggregateMetrics(items),
-                "Aggregated — no individual breakdown (privacy by design.)"));
+                "Aggregated — no individual breakdown (privacy by design.)")));
     }
 
     public Layer project(String workspaceId, String callerId, String projectId) {
@@ -171,9 +193,9 @@ public class KpiService {
             .filter(x -> x.getId().equals(projectId)).findFirst()
             .orElseThrow(() -> ApiException.notFound("Project", projectId));
         List<WorkItem> items = workItems.findByProjectId(projectId);
-        return applyTargetsAndCustomMetrics(workspaceId, callerId,
+        return applyTrends(workspaceId, applyTargetsAndCustomMetrics(workspaceId, callerId,
             new Layer("PROJECT", projectId, p.getName(), aggregateMetrics(items),
-                "Aggregated across the project's contributing teams."));
+                "Aggregated across the project's contributing teams.")));
     }
 
     /** Manager view: aggregated metrics per team. Deliberately accepts no <i>target</i> user id —
@@ -181,17 +203,17 @@ public class KpiService {
      *  {@code callerId} only drives field-level security on custom metrics, never a drill-down. */
     public List<Layer> manager(String workspaceId, String callerId) {
         return teams.findByWorkspaceIdOrderByNameAsc(workspaceId).stream()
-            .map(t -> applyTargetsAndCustomMetrics(workspaceId, callerId,
+            .map(t -> applyTrends(workspaceId, applyTargetsAndCustomMetrics(workspaceId, callerId,
                 new Layer("TEAM", t.getId(), t.getName(), aggregateMetrics(teamItems(workspaceId, t)),
-                    "Aggregated — individual engineer comparison is unavailable by design.")))
+                    "Aggregated — individual engineer comparison is unavailable by design."))))
             .collect(Collectors.toList());
     }
 
     public Layer org(String workspaceId, String callerId) {
         List<WorkItem> items = scopedItems(workspaceId);
-        return applyTargetsAndCustomMetrics(workspaceId, callerId,
+        return applyTrends(workspaceId, applyTargetsAndCustomMetrics(workspaceId, callerId,
             new Layer("ORG", null, "Organization", aggregateMetrics(items),
-                "Organization-wide rollup — fully aggregated."));
+                "Organization-wide rollup — fully aggregated.")));
     }
 
     /**
@@ -242,13 +264,13 @@ public class KpiService {
     public Distribution distribution(String workspaceId, String scopeLevel, String scopeId) {
         List<WorkItem> items = scopeItems(workspaceId, scopeLevel, scopeId);
         List<WorkItem> done = items.stream().filter(KpiService::isDone).collect(Collectors.toList());
-        List<Double> hours = done.stream().map(KpiService::ageHours).collect(Collectors.toList());
+        List<Double> hours = done.stream().map(KpiService::cycleHours).collect(Collectors.toList());
         double median = MetricFormula.median(hours);
         double p85 = MetricFormula.percentile(hours, 85);
         int[] edges = {24, 72, 168, 336};   // 1d, 3d, 1w, 2w
         List<Integer> buckets = bucketize(hours, edges);
         List<String> outliers = done.stream()
-            .filter(w -> ageHours(w) > p85 && p85 > 0)
+            .filter(w -> cycleHours(w) > p85 && p85 > 0)
             .map(WorkItem::getId).limit(20).collect(Collectors.toList());
         return new Distribution(median, p85, buckets, outliers);
     }
@@ -424,7 +446,7 @@ public class KpiService {
 
     static double cycleTimeP85(List<WorkItem> items) {
         List<Double> hours = items.stream().filter(KpiService::isDone)
-            .map(KpiService::ageHours).collect(Collectors.toList());
+            .map(KpiService::cycleHours).collect(Collectors.toList());
         return MetricFormula.percentile(hours, 85);
     }
 
@@ -476,11 +498,22 @@ public class KpiService {
         return out;
     }
 
-    private static double ageHours(WorkItem w) {
+    /**
+     * Cycle time in hours: how long the item took, not how old it is. For a <b>done</b> item we
+     * measure from creation to the moment it last changed status ({@code statusChangedAt}, V74) — the
+     * completion timestamp proxy — so a finished item's cycle time is stable and never grows with
+     * wall-clock time. For an item that is still open (or that predates the status-timestamp backfill
+     * and so has no {@code statusChangedAt}) we measure to now, giving its current age-in-flight.
+     * This is the fix for the "cycle time keeps climbing forever" defect (RB-20 §4 honest metrics).
+     */
+    static double cycleHours(WorkItem w) {
         if (w.getCreatedAt() == null) {
             return 0;
         }
-        return Math.max(0, Duration.between(w.getCreatedAt(), OffsetDateTime.now()).toHours());
+        OffsetDateTime end = (isDone(w) && w.getStatusChangedAt() != null)
+            ? w.getStatusChangedAt()
+            : OffsetDateTime.now();
+        return Math.max(0, Duration.between(w.getCreatedAt(), end).toHours());
     }
 
     private static MetricValue metric(String key, double value, int sampleSize) {
@@ -498,6 +531,55 @@ public class KpiService {
         if (ratio >= 1.0) return "ON_TRACK";
         if (ratio >= 0.75) return "AT_RISK";
         return "OFF_TRACK";
+    }
+
+    /**
+     * Builds the vs-last-period trend for a metric from its two most recent <i>distinct</i> snapshot
+     * periods (Cap L trends). Pure given the period-ascending snapshot list, so it is unit-testable in
+     * isolation (RB-10 §7). Returns null when there is no earlier period to compare against — the
+     * caller renders an honest "no comparison yet" rather than a fabricated zero (RB-20 §4).
+     */
+    static MetricTrend trendFor(List<MetricSnapshot> ascendingByPeriod, double currentValue,
+                                boolean higherIsBetter) {
+        if (ascendingByPeriod == null || ascendingByPeriod.isEmpty()) {
+            return null;
+        }
+        // The latest snapshot is "now"; the one before it (a different period) is the comparison base.
+        MetricSnapshot latest = ascendingByPeriod.get(ascendingByPeriod.size() - 1);
+        MetricSnapshot prior = null;
+        for (int i = ascendingByPeriod.size() - 2; i >= 0; i--) {
+            if (!ascendingByPeriod.get(i).getPeriod().equals(latest.getPeriod())) {
+                prior = ascendingByPeriod.get(i);
+                break;
+            }
+        }
+        if (prior == null) {
+            return null;
+        }
+        double previous = prior.getValue();
+        double delta = MetricFormula.round1(currentValue - previous);
+        String direction = delta > 0 ? "UP" : delta < 0 ? "DOWN" : "FLAT";
+        // "Improving" depends on polarity: more velocity is good, more cycle-time is not.
+        boolean improving = delta == 0 ? false : (higherIsBetter == (delta > 0));
+        return new MetricTrend(MetricFormula.round1(previous), delta, prior.getPeriod(), direction, improving);
+    }
+
+    /**
+     * Enriches a layer's catalog metrics with vs-last-period trends from snapshot history (Cap L).
+     * Snapshots are keyed by metricKey + scopeLevel + scopeId, so the comparison stays within the same
+     * scope; a layer with no history (e.g. a brand-new workspace, or a scope the snapshot scheduler
+     * does not yet cover) simply carries no trends. Workspace-scoped (RB-40 §1).
+     */
+    private Layer applyTrends(String workspaceId, Layer layer) {
+        String scopeId = layer.scopeId() == null ? "" : layer.scopeId();
+        List<MetricValue> withTrends = layer.metrics().stream().map(mv -> {
+            List<MetricSnapshot> hist = snapshots
+                .findByWorkspaceIdAndMetricKeyAndScopeLevelAndScopeIdOrderByPeriodAsc(
+                    workspaceId, mv.key(), layer.scopeLevel(), scopeId);
+            MetricTrend trend = trendFor(hist, mv.value(), mv.higherIsBetter());
+            return trend == null ? mv : mv.withTrend(trend);
+        }).collect(Collectors.toList());
+        return new Layer(layer.scopeLevel(), layer.scopeId(), layer.label(), withTrends, layer.privacyNote());
     }
 
     /**
@@ -521,7 +603,7 @@ public class KpiService {
             if (def == null || def.getTarget() == null) return mv;
             String status = evaluateStatus(mv.value(), def.getTarget(), mv.higherIsBetter());
             return new MetricValue(mv.key(), mv.label(), mv.value(), mv.unit(),
-                mv.higherIsBetter(), mv.sampleSize(), status);
+                mv.higherIsBetter(), mv.sampleSize(), status, mv.trend());
         }).collect(Collectors.toList());
 
         // Append custom metrics with bqlFormula (unification layer: BQL in KPI definitions, RB-10 §6).

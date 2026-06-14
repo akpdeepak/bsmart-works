@@ -95,6 +95,7 @@ So nothing is lost or assumed, the complete scope captured across the originatin
 | **HEART + activation funnel** first milestone | Roadmap **Part F** | Milestone 1 |
 | **Premium program** (Converge & Lock → Elevate) | Roadmap **Part H** | Milestones 0, 3, 4, 5 |
 | **Reconciliation / combined order** | Roadmap **Part I** | The milestone ordering below |
+| **UI visual craft / premium aesthetic** | Roadmap **Part H Theme 5** | Milestones 3–4 (WI-41…WI-47) |
 
 ---
 
@@ -105,7 +106,8 @@ Milestones run in order (M0 → M5). The combined order follows roadmap **Part I
 **differentiators**, then **stop-and-ask platform** items.
 
 **Status key:** `☐` not started · `◐` in progress · `✅` done · `⛔` blocked · `⏸` deferred/stop-and-ask
-· **⚠️** = stop-and-ask before executing.
+· **⚠️** = stop-and-ask before executing · **🎨** = benefits from designer / Figma input (confirm the
+visual source before building).
 
 ### Milestone 0 — Foundation: primitives + page skeleton  *(Premium Phase 0–1 · roadmap §H.4)*
 
@@ -152,6 +154,10 @@ Milestones run in order (M0 → M5). The combined order follows roadmap **Part I
 | WI-24 | Motion choreography recipe (panel/modal/toast/accordion on `duration-base`+`out-quint`; optimistic shimmer; success check-morph) | H.5 1.3 | — | ☐ | |
 | WI-25 | Performance pass: TanStack Query adoption + virtual scrolling (`@tanstack/react-virtual`) + prefetch-on-hover + CI perf budget (Doherty < 400 ms) | D H2 #6; H.5 3.2 | WI-16 | ☐ | |
 | WI-26 | Notification center + toast queue/stacking + preferences UI (mute/snooze/quiet-hours) | D H2 #9 | WI-20 | ☐ | |
+| WI-41 | **Typography system** — tokenized type scale (display/title/heading/body/caption/overline + mono), line-height, tracking, weights, reading measure, vertical rhythm; applied via `PageHeader`/`Card`/prose (subsumes `text-2xs/3xs`) | H.5 5.1 | WI-04, WI-05 | ☐ | |
+| WI-42 | **Iconography system** — Lucide, sizes 16/20/24/32, one-icon-one-meaning; audit + converge usage across views; add icon guardrail | H.5 5.2 | WI-04 | ☐ | |
+| WI-43 | **Visual source-of-truth** — reference mockups (Figma/in-repo) for elevated surfaces + `docs/VISUAL-SPEC.md`, linked to the brand doc | H.5 5.7 | — | ☐ 🎨 | |
+| WI-44 | **Visual design-review practice** + per-surface "premium bar" visual-QA checklist, wired to Storybook/Chromatic | H.5 5.6 | WI-19 | ☐ | |
 
 ### Milestone 4 — Differentiators  *(Benchmark Horizon 3 ≈ Premium Part B · roadmap §D-H3 + H.5)*
 
@@ -166,6 +172,9 @@ Milestones run in order (M0 → M5). The combined order follows roadmap **Part I
 | WI-33 | Premium `DataTable` upgrade: virtualization, multi-sort, column ops, inline edit, density-aware | H.5 3.1; D H3 #13/#14 | WI-04, WI-25 | ☐ | |
 | WI-34 | Richer analytics: comparison charts, capacity/utilization heatmaps, workflow Sankey, drill-through into `DataTable` | H.5 3.3 | WI-33 | ☐ | |
 | WI-35 | Command palette → action layer + breadcrumbs in context bar + persisted per-surface view state | H.5 2.2–2.4; D H4 #18 | WI-20 | ☐ | |
+| WI-45 | **Illustration & imagery system** — on-brand spot illustrations for empty/onboarding/error/success + zero-data; avatar system (initials→colour→image); image guidelines | H.5 5.3 | WI-20 | ☐ 🎨 | |
+| WI-46 | **Aesthetic + visual-hierarchy polish pass** on the top 5 surfaces (Today, board, detail, knowledge, reports) — optical alignment, balance, focal point, hover/active/focus craft | H.5 5.4 | WI-17, WI-44 | ☐ | |
+| WI-47 | **Signature / peak-end moments** — restrained delight for sprint-complete, item-done, onboarding milestone, first value (motion + visual reward) | H.5 5.5; C.1 | WI-24 | ☐ | |
 
 ### Milestone 5 — Platform maturity & stop-and-ask  *(Premium Phase 5 / Benchmark Horizon 4 · roadmap §H.5 + D-H4)*
 
@@ -235,6 +244,10 @@ For every work-item:
   - Inclusivity: charts with SR fallback → **100%**; themes shipped → **light / dark / high-contrast**.
   - Engagement/perf: HEART dashboard live; activation funnel instrumented; hot-path response
     < **400 ms** (Doherty) under the NFR budget.
+  - Visual craft (Theme 5): typography fully tokenized (no ad-hoc `text-[*]`); iconography consistent
+    (sizes 16/20/24/32, one-icon-one-meaning — guardrail green); illustration/avatar coverage for
+    empty/onboarding/error/success → **100%**; top-5 surfaces pass the premium-bar checklist; visual
+    design-review cadence established.
 
 ---
 

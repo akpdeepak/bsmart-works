@@ -551,12 +551,42 @@ Build once, in `cva`+`cn()`, dark-complete, a11y, RTL, with a Storybook story.
   pair shape/label); **high-contrast theme** as a third mode; **screen-reader chart fallback** (every
   chart exposes an accessible `<table>`); audit `neutral-400`-as-text misuse.
 
+**Theme 5 — UI visual craft & aesthetic elevation** *(the "make it premium, not just consistent" layer)*
+
+Convergence (Part A) makes the UI *consistent*; this theme makes it *beautiful*. Craft, not features —
+the Feature Parity Ledger (RB-20 §1) still holds. (**🎨** = benefits from designer / Figma input;
+confirm the visual source before building. Everything else is in-code against the token system.)
+- **5.1 Typography system:** a complete, tokenized type scale (display / title / heading / body /
+  caption / overline + mono) with line-height, tracking, weight (Inter 300/400/600/700), reading
+  measure, and vertical rhythm; applied through `PageHeader` / `Card` / prose. Subsumes the
+  `text-2xs/3xs` token add (1.4). *A real type ramp is the fastest "premium" signal.*
+- **5.2 Iconography system:** Lucide only; canonical sizes 16/20/24/32; one-icon-one-meaning mapping
+  (CLAUDE.md §4.23); **audit + converge actual usage across views**; add a guardrail against
+  mis-sized / off-meaning icons.
+- **5.3 Illustration & imagery layer** 🎨: a restrained, on-brand spot-illustration set for empty
+  states, onboarding, errors, success, and zero-data dashboards; a coherent **avatar system**
+  (initials → colour → image); image-usage guidelines. *Lifts the functional empty-state formula into
+  brand-grade visuals.*
+- **5.4 Aesthetic + visual-hierarchy polish pass** on the top 5 surfaces (Today/dashboard, board,
+  work-item detail, knowledge, reports): optical alignment, spacing balance, clear focal point,
+  scannability, hover/active/focus craft — pixel-level, on surfaces already converged onto the
+  primitives.
+- **5.5 Signature / peak-end moments:** design the restrained delight moments within the Calm Cockpit
+  (sprint complete, item done, onboarding milestone, first value) — motion + visual reward that respect
+  "operational, not playful." (Engagement: Peak-End rule, Part C.1.)
+- **5.6 Visual design-review practice:** a recurring pixel-craft critique + a per-surface **"premium
+  bar" visual-QA checklist**, wired to Storybook + Chromatic visual regression (A-WS4). Makes craft
+  repeatable, not heroic.
+- **5.7 Visual source-of-truth** 🎨: reference mockups (Figma or in-repo reference screenshots) for the
+  elevated surfaces, linked from `docs/brand/brand-and-identity.md`; a short `docs/VISUAL-SPEC.md`.
+
 ### H.6 Colours & visual specs (cross-cutting)
 
 - **Keep the brand spine:** `brand-navy` primary; `brand-orange` the single sparing CTA accent
   (RB-30 §2) — do **not** broaden the accent palette.
 - **Add, in tokens only:** categorical chart palette (6–8 hues, colour-blind-safe); high-contrast theme
-  variables; `text-2xs`/`text-3xs`. All via `tailwind.config.js` — never raw hex (guardrail BLOCK).
+  variables; the full typographic scale (Theme 5.1) incl. `text-2xs`/`text-3xs`. All via
+  `tailwind.config.js` — never raw hex (guardrail BLOCK).
 - **Spec hygiene:** flip `z-[]` + arbitrary-spacing guardrails **WARN → BLOCK** once baseline clean.
 
 ### H.7 Unified sequencing (one ordered program)
@@ -566,8 +596,8 @@ Build once, in `cva`+`cn()`, dark-complete, a11y, RTL, with a Storybook story.
 | **0 — Prove (days)** | A-WS1 start: `Card` + `PageHeader` + `Tabs`; 3 structural lint rules (warn-only); pilot-migrate the 4 exemplar views | foundation |
 | **1 — Core primitives (1–2 wk)** | A-WS1 finish: `DataTable` base + `Drawer` + `IconButton` + form set + `Badge`; A-WS2 `PageLayout`; migrate ~20 data-heavy views; token adds `text-2xs/3xs` | |
 | **2 — Breadth (2–3 wk)** | A-WS3 remaining views; app-wide loading/empty/error + `aria-label` sweep; A-WS4 Storybook + visual regression; build Part-B premium primitives | |
-| **3 — Harden + Premium P0 (ongoing)** | A-WS4 flip lint to error, remove all `eslint-disable`, `React.lazy` per route, dark-contrast audit; **Premium P0:** inclusivity (colour-blind palette, HC theme, SR charts), elevation/density spec, motion choreography, guardrail WARN→BLOCK | base now premium-ready |
-| **4 — Premium P1** | breadcrumbs (2.2), command-palette actions (2.3), premium `DataTable` (3.1), density preference (1.2), surface polish pass | builds on converged base |
+| **3 — Harden + Premium P0 (ongoing)** | A-WS4 flip lint to error, remove all `eslint-disable`, `React.lazy` per route, dark-contrast audit; **Premium P0:** inclusivity (colour-blind palette, HC theme, SR charts), elevation/density spec, motion choreography, guardrail WARN→BLOCK; **visual craft (Theme 5):** typography system, iconography sweep, visual-review practice + visual source-of-truth | base now premium-ready |
+| **4 — Premium P1** | breadcrumbs (2.2), command-palette actions (2.3), premium `DataTable` (3.1), density preference (1.2); **visual craft (Theme 5):** illustration & avatar system, aesthetic + hierarchy polish on the top-5 surfaces, signature/peak-end moments | builds on converged base |
 | **5 — Premium P2 (stop-and-ask)** | router/deep-linking (2.1, `App.jsx`), board virtualization (3.2), richer analytics (3.3), deeper/streaming AI (4.1–4.2) | each its own gated task |
 
 Each step is a **small, single-purpose, lint-clean PR** through RB-05 — no big-bang rewrite, no
@@ -578,8 +608,11 @@ feature change.
 inline card blocks in `views/` → **0** · raw `<table>` / raw `<button>` in `views/` → **0** · distinct
 page-level `max-w-*` → **2** · views with full loading/empty/error → **100%** · views with
 `eslint-disable` → **0** · Storybook stories → **≥ 50** w/ visual-regression · charts with SR fallback
-→ **100%** · themes shipped → **light/dark/high-contrast**. Logged newest-first in
-`docs/UX-PROGRESS.md`, tagged `[consistency]` / `[premium]`.
+→ **100%** · themes shipped → **light/dark/high-contrast**. **Visual craft (Theme 5):** typography
+fully tokenized (no ad-hoc `text-[*]`) · iconography consistent (sizes 16/20/24/32, one-icon-one-meaning
+— guardrail green) · illustration/avatar coverage for empty/onboarding/error/success → **100%** ·
+top-5 surfaces pass the premium-bar visual-QA checklist · visual design-review cadence established.
+Logged newest-first in `docs/UX-PROGRESS.md`, tagged `[consistency]` / `[premium]`.
 
 ### H.9 Governance & references
 
@@ -638,6 +671,9 @@ Premium Part A (Converge & Lock)  ── the foundation: one system, locked, no 
   regression) — without it, every gain drifts back.
 - The complete **primitive library** spec (Part-A + Part-B) and the `PageLayout` skeleton.
 - **Inclusivity to WCAG 2.2 AA** (colour-blind palette, high-contrast theme, SR chart fallback).
+- The **UI visual-craft / aesthetic-elevation** layer (Theme 5: typography system, iconography sweep,
+  illustration & avatars, aesthetic polish, peak-end moments, visual-review practice) — premium *feel*,
+  not just premium *system*.
 
 **Recommended combined order:** Premium **Phase 0–1** (foundation: primitives + `PageLayout` + 4
 exemplars) → **Part F** (stand up HEART + funnel, so everything after is measured) → **Horizon 1**

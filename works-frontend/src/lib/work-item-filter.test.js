@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   filterItems, sortItems, buildFilterOptions, countActiveFilters, hasActiveFilters,
-  EMPTY_FILTERS, DEFAULT_SORT, UNASSIGNED,
+  normalizeSavedFilter, EMPTY_FILTERS, DEFAULT_SORT, UNASSIGNED,
 } from './work-item-filter';
 
 const items = [
@@ -71,6 +71,25 @@ describe('buildFilterOptions', () => {
     expect(opts.assignees.find(a => a.id === 'u1').label).toBe('Alice');
     expect(opts.types.sort()).toEqual(['Bug', 'Task']);
     expect(opts.priorities).toEqual(['CRITICAL', 'HIGH', 'LOW']);
+  });
+});
+
+describe('normalizeSavedFilter', () => {
+  it('maps legacy sprint quick-filter shapes to the current model', () => {
+    expect(normalizeSavedFilter({ type: 'mine' })).toMatchObject({ mine: true });
+    expect(normalizeSavedFilter({ type: 'priority', value: 'HIGH' })).toMatchObject({ priorities: ['HIGH'] });
+    expect(normalizeSavedFilter({ type: 'itemType', value: 'BUG' })).toMatchObject({ types: ['BUG'] });
+    expect(normalizeSavedFilter({ type: 'blockers' })).toMatchObject({ priorities: ['CRITICAL'] });
+  });
+
+  it('passes through the current shape and fills missing keys', () => {
+    const out = normalizeSavedFilter({ search: 'x', types: ['Bug'] });
+    expect(out).toEqual({ search: 'x', assignees: [], types: ['Bug'], priorities: [], mine: false });
+  });
+
+  it('returns empty filters for null / garbage', () => {
+    expect(normalizeSavedFilter(null)).toEqual(EMPTY_FILTERS);
+    expect(normalizeSavedFilter('nope')).toEqual(EMPTY_FILTERS);
   });
 });
 

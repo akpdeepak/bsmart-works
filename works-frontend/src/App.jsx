@@ -65,6 +65,7 @@ import { reportError, setToastEmitter } from '@/lib/report-error';
 import { layoutToWidgets } from '@/lib/today-layouts';
 import { useCardPrefs } from '@/hooks/useCardPrefs';
 import { buildStatusResolver } from '@/lib/status-config';
+import { EMPTY_FILTERS, DEFAULT_SORT, filterItems, sortItems, normalizeSavedFilter } from '@/lib/work-item-filter';
 import { buildFieldPrefsResolver, saveTypeFieldPrefs } from '@/lib/type-field-prefs';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { isIconComponent, onPressKey, renderMd } from '@/lib/utils';
@@ -272,7 +273,9 @@ export default function App() {
   const [sprintItems, setSprintItems]   = useState([]);
   const [sprintReport, setSprintReport] = useState(null);
   const [savedFilters, setSavedFilters] = useState([]);
-  const [activeFilter, setActiveFilter] = useState(null);
+  // Sprint board filter/sort — the shared Deliver filter model (same bar as Board/Backlog).
+  const [sprintFilters, setSprintFilters] = useState(EMPTY_FILTERS);
+  const [sprintSort, setSprintSort] = useState(DEFAULT_SORT);
   const [swimlaneBy, setSwimlaneBy]     = useState('none');
   const [isSprintOpen, setIsSprintOpen] = useState(false);
   const [newSprint, setNewSprint]       = useState({ name: '', goal: '', startDate: '', endDate: '', capacity: 40 });
@@ -2513,18 +2516,12 @@ export default function App() {
     if (!saveFilterName.trim()) return;
     api.raw(`/saved-filters?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, {
       method: 'POST',
-      body: JSON.stringify({ name: saveFilterName, filterJson: JSON.stringify(activeFilter), isShared: false })
+      body: JSON.stringify({ name: saveFilterName, filterJson: JSON.stringify(sprintFilters), isShared: false })
     }).then(r => r.json()).then(f => { setSavedFilters(prev => [...prev, f]); setSaveFilterName(''); setShowSaveFilter(false); });
   };
 
-  const applyFilter = (items) => {
-    if (!activeFilter) return items;
-    if (activeFilter.type === 'mine') return items.filter(i => i.assigneeId === currentUser.id);
-    if (activeFilter.type === 'priority') return items.filter(i => i.priority === activeFilter.value);
-    if (activeFilter.type === 'itemType') return items.filter(i => i.type === activeFilter.value);
-    if (activeFilter.type === 'blockers') return items.filter(i => i.priority === 'CRITICAL' || i.type === 'INCIDENT');
-    return items;
-  };
+  // Filter + sort the sprint board with the shared Deliver model (replaces the old quick-filter chips).
+  const applyFilter = (items) => sortItems(filterItems(items, sprintFilters, currentUser?.id), sprintSort);
 
   // LINKS
   const handleAddLink = () => {
@@ -3393,7 +3390,8 @@ export default function App() {
               sprintMetrics={sprintMetrics}
               sprintMetricsLoading={sprintMetricsLoading}
               swimlaneBy={swimlaneBy}
-              activeFilter={activeFilter}
+              sprintFilters={sprintFilters}
+              sprintSort={sprintSort}
               savedFilters={savedFilters}
               showSaveFilter={showSaveFilter}
               saveFilterName={saveFilterName}
@@ -3404,7 +3402,8 @@ export default function App() {
               currentUser={currentUser}
               setActiveSprint={setActiveSprint}
               setSwimlaneBy={setSwimlaneBy}
-              setActiveFilter={setActiveFilter}
+              setSprintFilters={setSprintFilters}
+              setSprintSort={setSprintSort}
               setShowSaveFilter={setShowSaveFilter}
               setSaveFilterName={setSaveFilterName}
               setSprintItems={setSprintItems}

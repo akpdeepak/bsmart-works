@@ -63,6 +63,17 @@ public class EmailService {
             "View item: http://localhost:5173");
     }
 
+    /** Called when a CRITICAL impediment breaches its SLA. Gated on notify_sla_breach (V53). */
+    @Async
+    public void sendSlaBreachEmail(String recipientUserId, String title, long ageDays, String link) {
+        if (!pref(recipientUserId, "notify_sla_breach")) return;
+        send(recipientUserId,
+            "🚨 SLA breach: " + title,
+            "A critical impediment has been open " + ageDays + " day(s) unresolved and has "
+            + "breached its SLA:\n\n\"" + title + "\"\n\n"
+            + "Assign an owner or escalate it: http://localhost:5173" + (link == null ? "" : link));
+    }
+
     /** Email verification link sent at signup. Always sent (not preference-gated). */
     @Async
     public void sendVerificationEmail(String toEmail, String fullName, String verifyUrl) {
@@ -84,6 +95,15 @@ public class EmailService {
             "(it expires in 60 minutes):\n\n" +
             resetUrl + "\n\n" +
             "If you didn't request this, you can safely ignore this email — your password won't change.");
+    }
+
+    /** Periodic saved-view subscription summary — "your view X has N matching items". */
+    @Async
+    public void sendSubscriptionEmail(String recipientUserId, String viewName, int matchCount, String link) {
+        send(recipientUserId,
+            "Subscription: " + viewName,
+            "Your saved view \"" + viewName + "\" currently has " + matchCount
+                + " matching item" + (matchCount == 1 ? "" : "s") + ".\n\nOpen it: " + link);
     }
 
     // ---- helpers ----

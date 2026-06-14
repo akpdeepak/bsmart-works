@@ -25,6 +25,24 @@ export default function AiStudioView({ workspaceId, onToast }) {
     { id: 'ask', label: 'Ask', icon: Sparkles },
   ];
 
+  // Arrow-key navigation across the tabs (WCAG tab pattern): Left/Right/Home/End move and select.
+  function onTabKeyDown(e) {
+    const idx = TABS.findIndex((t) => t.id === tab);
+    if (idx < 0) return;
+    const moves = {
+      ArrowRight: (idx + 1) % TABS.length,
+      ArrowLeft: (idx - 1 + TABS.length) % TABS.length,
+      Home: 0,
+      End: TABS.length - 1,
+    };
+    if (!(e.key in moves)) return;
+    e.preventDefault();
+    const nextId = TABS[moves[e.key]].id;
+    setTab(nextId);
+    const el = typeof document !== 'undefined' && document.getElementById(`aistudio-tab-${nextId}`);
+    if (el && typeof el.focus === 'function') el.focus();
+  }
+
   return (
     <div className="flex h-full flex-col p-6">
       <div className="mb-4">
@@ -36,21 +54,27 @@ export default function AiStudioView({ workspaceId, onToast }) {
 
       <div role="tablist" aria-label="AI Studio sections"
         className="mb-5 flex gap-1 border-b border-neutral-200 dark:border-neutral-700">
-        {TABS.map((t) => (
-          <button key={t.id} role="tab" aria-selected={tab === t.id} type="button"
-            onClick={() => setTab(t.id)}
-            className={`flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-              tab === t.id
-                ? 'border-brand-navy text-brand-navy dark:text-white'
-                : 'border-transparent text-neutral-600 hover:text-neutral-800 dark:text-neutral-400'
-            }`}>
-            <t.icon className="h-4 w-4" aria-hidden="true" />
-            {t.label}
-          </button>
-        ))}
+        {TABS.map((t) => {
+          const selected = tab === t.id;
+          return (
+            <button key={t.id} id={`aistudio-tab-${t.id}`} role="tab" aria-selected={selected}
+              aria-controls={`aistudio-panel-${t.id}`} tabIndex={selected ? 0 : -1} type="button"
+              onKeyDown={onTabKeyDown}
+              onClick={() => setTab(t.id)}
+              className={`flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+                selected
+                  ? 'border-brand-navy text-brand-navy dark:text-white'
+                  : 'border-transparent text-neutral-600 hover:text-neutral-800 dark:text-neutral-400'
+              }`}>
+              <t.icon className="h-4 w-4" aria-hidden="true" />
+              {t.label}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="min-h-0 flex-1">
+      <div className="min-h-0 flex-1" id={`aistudio-panel-${tab}`} role="tabpanel"
+        aria-labelledby={`aistudio-tab-${tab}`}>
         {tab === 'assistants' && <AssistantsPanel workspaceId={workspaceId} notify={notify} />}
         {tab === 'agents' && <AgentsPanel workspaceId={workspaceId} notify={notify} />}
         {tab === 'ask' && <AskPanel workspaceId={workspaceId} notify={notify} />}

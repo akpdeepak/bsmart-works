@@ -45,6 +45,7 @@ import { PresenceBar } from '@/components/works/organisms/presence-bar';
 import { ShortcutsHelp } from '@/components/works/organisms/shortcuts-help';
 import { ConflictResolver } from '@/components/works/organisms/conflict-resolver';
 import { StatusPage } from '@/components/works/organisms/status-page';
+import { PublicDashboardEmbed } from '@/components/works/organisms/public-dashboard-embed';
 import { PushSettingsPanel } from '@/components/works/organisms/push-settings-panel';
 import { connectRealtime, sendPresence, leavePresence } from '@/lib/realtime';
 import { queueDraft, removeDraft, pendingDrafts, syncDrafts } from '@/lib/offline';
@@ -299,8 +300,6 @@ export default function App() {
   const [roles, setRoles]                   = useState([]);
   const [bqlQuery, setBqlQuery]           = useState('');
   const [bqlResults, setBqlResults]       = useState([]);
-  const [bqlFilters, setBqlFilters]       = useState([]);
-  const [bqlFilterName, setBqlFilterName] = useState('');
   const [bqlError, setBqlError]           = useState('');
   const [workItemTypes, setWorkItemTypes]   = useState({ builtIn: [], custom: [] });
   const [permMatrix, setPermMatrix]         = useState(null);
@@ -363,7 +362,7 @@ export default function App() {
   const [smTab, setSmTab]                       = useState('impediments'); // impediments | standup | risk | planning | retro | review | patterns
   const [poTab, setPoTab]                       = useState('roadmap');     // roadmap | ideas | feedback | okr | releasenotes | stakeholders
   const [impediments, setImpediments]           = useState([]);
-  const [newImpediment, setNewImpediment]       = useState({ title: '', severity: 'MEDIUM', category: '', description: '' });
+  const [newImpediment, setNewImpediment]       = useState({ title: '', raiseType: 'IMPEDIMENT', severity: 'MEDIUM', category: '', description: '' });
   const [standups, setStandups]                 = useState([]);
   const [activeStandup, setActiveStandup]       = useState(null); // { session, entries }
   const [standupDraft, setStandupDraft]         = useState({ yesterday: '', today: '', blockers: '' });
@@ -381,6 +380,10 @@ export default function App() {
   const [varianceSprintId, setVarianceSprintId] = useState('');
   const [varianceResult, setVarianceResult]     = useState(null);
   const [cockpitContext, setCockpitContext]     = useState(null); // { roleKey, tier, canManageSprints, canCreateItems, activeSprint, liveCeremony }
+  const [cockpitLoading, setCockpitLoading]     = useState({});   // tab key -> bool, drives loading skeletons
+  const [coachTips, setCoachTips]               = useState(null); // { roleKey, tips, narrative, meta }
+  const [digest, setDigest]                     = useState(null); // { sprint, rag, deliveryRate, ... } executive Health lens
+  const [retroClusters, setRetroClusters]       = useState(null); // { retroId, themes, narrative, meta }
   const [ceremonies, setCeremonies]             = useState([]);   // [{ session, counts }]
   const [activeCeremony, setActiveCeremony]     = useState(null); // { session, attendance, counts }
   const [newCeremony, setNewCeremony]           = useState({ ceremonyType: 'STANDUP', scheduledAt: '' });
@@ -771,8 +774,10 @@ export default function App() {
     fetchUserRole();
     fetchBranding();
     fetchWipLimits();
-    // Load custom field definitions for card rendering and the field picker.
-    api.send(`/custom-field-definitions?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
+    // Load custom field definitions for card rendering and the field picker. Unified onto field_def
+    // (Option B): cards and the detail panel share one definition store; values arrive on each work
+    // item as `fieldValues` (batch-attached by the backend), keyed by field_def id.
+    api.send(`/field-defs?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
       .then(defs => setCustomFieldDefs(Array.isArray(defs) ? defs : []))
       .catch(() => setCustomFieldDefs([]));
     // Load per-type status configuration (seeds workspace defaults server-side on first read).
@@ -1047,10 +1052,22 @@ export default function App() {
     api.send(`/work-items/${itemId}`, {
       method: 'PUT',
       body: JSON.stringify({ ...item, status: newStatus })
-    }).catch(() => {
-      // Revert on failure
-      setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: item.status } : i));
-      showToast('Failed to update status', 'error');
+    }).then(saved => {
+      // Adopt the saved item so derived fields (e.g. statusChangedAt for the lapse badge) reflect
+      // the server rather than the optimistic guess.
+      setWorkItems(prev => prev.map(i => i.id === itemId ? saved : i));
+    }).catch(err => {
+      if (err?.status === 409) {
+        // Concurrent edit: pull the authoritative item instead of leaving the stale optimistic move.
+        api.raw(`/work-items/${itemId}`).then(r => (r.ok ? r.json() : null)).then(fresh => {
+          setWorkItems(prev => prev.map(i => i.id === itemId ? (fresh || { ...i, status: item.status }) : i));
+        }).catch(() => setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: item.status } : i)));
+        showToast('This item changed elsewhere — refreshed to the latest', 'error');
+      } else {
+        // Revert on failure
+        setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: item.status } : i));
+        showToast('Failed to update status', 'error');
+      }
     });
   };
 
@@ -1179,7 +1196,7 @@ export default function App() {
   // ── Iteration 6 — custom dashboards ──────────────────────────────────────────
   function fetchCustomDashboards() {
     api.raw(`/dashboards`)
-      .then(r => r.json()).then(d => setCustomDashboards(Array.isArray(d) ? d : [])).catch(reportError);
+      .then(r => r.json()).then(d => setCustomDashboards(Array.isArray(d) ? d : (d?.items || []))).catch(reportError);
   }
 
   function openDashboard(id) {
@@ -1228,6 +1245,23 @@ export default function App() {
       .catch(() => showToast('Failed to create dashboard', 'error'));
   }
 
+  // Cap J — accept an AI-suggested starter dashboard: create the dashboard, then add its proposed
+  // widgets via the existing widget endpoints (INSIGHTS-AI-ALIGNMENT-REVIEW §2.2). The widget set is
+  // the deterministic role-based starter set the panel previewed; returns a promise the panel awaits.
+  function acceptDashboardSuggestion(suggestion) {
+    const widgets = (suggestion && suggestion.widgets) || [];
+    return api.send(`/dashboards`, { method: 'POST', body: JSON.stringify({ name: (suggestion && suggestion.name) || 'Suggested dashboard', scope: 'PERSONAL', workspaceId: activeWorkspaceId }) })
+      .then(async (d) => {
+        for (const w of widgets) {
+          const body = { widgetType: w.widgetType, title: w.title, config: JSON.stringify(w.config || {}), gridW: w.gridW || 4, gridH: 2 };
+          await api.send(`/dashboards/${d.id}/widgets`, { method: 'POST', body: JSON.stringify(body) });
+        }
+        fetchCustomDashboards();
+        openDashboard(d.id);
+        return d;
+      });
+  }
+
   function deleteDashboard(id) {
     api.send(`/dashboards/${id}`, { method: 'DELETE' })
       .then(() => { showToast('Dashboard deleted'); setSelectedDashboard(null); fetchCustomDashboards(); })
@@ -1236,7 +1270,7 @@ export default function App() {
 
   // ── Iteration 6 — custom reports ─────────────────────────────────────────────
   function fetchReports() {
-    api.raw(`/reports`).then(r => r.json()).then(d => setReports(Array.isArray(d) ? d : [])).catch(reportError);
+    api.raw(`/reports`).then(r => r.json()).then(d => setReports(Array.isArray(d) ? d : (d?.items || []))).catch(reportError);
   }
   function fetchReportTemplates() {
     api.raw(`/reports/templates`).then(r => r.json()).then(d => setReportTemplates(Array.isArray(d) ? d : [])).catch(reportError);
@@ -1494,6 +1528,7 @@ export default function App() {
     const defaults = {
       kpi:       { title: 'Open items', config: { metric: 'count', filter: { open: true } } },
       chart:     { title: 'By status', config: { chartType: 'bar', dimension: 'status' } },
+      pivot:     { title: 'Custom chart', config: { spec: null } },
       table:     { title: 'Work items', config: { limit: 20 } },
       narrative: { title: 'Summary', config: { text: '' } },
     };
@@ -1651,23 +1686,32 @@ export default function App() {
     api.raw(`/permission-schemes/roles`, { method: 'POST', body: JSON.stringify({ ...newRoleForm, workspaceId: activeWorkspaceId }) })
       .then(r => r.json()).then(() => { fetchRoles(); fetchPermMatrix(); setShowRoleForm(false); setNewRoleForm({ name: '', tier: 2 }); }).catch(reportError);
   }
-  function runBql() {
+  function runBql(opts) {
     setBqlError('');
-    api.raw(`/bql/execute`, { method: 'POST', body: JSON.stringify({ query: bqlQuery }) })
+    const o = opts && typeof opts === 'object' ? opts : {};
+    // An explicit query (saved-view / history / shared-link run) avoids the stale-closure read of
+    // bqlQuery when the editor was just set in the same tick.
+    const query = typeof o.query === 'string' ? o.query : bqlQuery;
+    // Running a saved view goes through its audited run endpoint (RB-20 §5) instead of the ad-hoc
+    // /bql/execute path, so the named run is recorded; results flow into the same table.
+    if (o.savedViewId) {
+      const size = Number.isFinite(o.size) ? o.size : 100;
+      api.raw(`/saved-views/${encodeURIComponent(o.savedViewId)}/run`
+        + `?workspaceId=${encodeURIComponent(activeWorkspaceId)}&size=${size}`, { method: 'POST' })
+        .then(r => r.json()).then(d => {
+          if (d.error || d.message) { setBqlError(d.message || d.error); setBqlResults([]); }
+          else setBqlResults(Array.isArray(d) ? d : []);
+        }).catch(err => setBqlError(err.message));
+      return;
+    }
+    const body = { query, workspaceId: activeWorkspaceId };
+    if (typeof o.sort === 'string' && o.sort) body.sort = o.sort;
+    if (Number.isFinite(o.size)) body.size = String(o.size);
+    api.raw(`/bql/execute`, { method: 'POST', body: JSON.stringify(body) })
       .then(r => r.json()).then(d => {
         if (d.error) { setBqlError(d.error); setBqlResults([]); }
         else setBqlResults(Array.isArray(d) ? d : []);
       }).catch(err => setBqlError(err.message));
-  }
-  function fetchBqlFilters() {
-    api.raw(`/bql/filters`)
-      .then(r => r.json()).then(d => setBqlFilters(Array.isArray(d) ? d : [])).catch(reportError);
-  }
-  function saveBqlFilter() {
-    if (!bqlFilterName.trim() || !bqlQuery.trim()) return;
-    api.raw(`/bql/filters`, { method: 'POST', body: JSON.stringify({ name: bqlFilterName, query: bqlQuery, isShared: false }) })
-      .then(r => r.json()).then(f => { setBqlFilters(prev => [f, ...prev]); setBqlFilterName(''); showToast('Filter saved'); })
-      .catch(() => showToast('Failed to save filter', 'error'));
   }
 
   // ---- Iteration 4 fetches ----
@@ -1693,7 +1737,16 @@ export default function App() {
     };
     const ep = endpoints[type];
     if (!ep) return;
-    api.raw(`/${ep}`, { method: 'POST', body: JSON.stringify({ ...payload, projectId: pmProjectId, workspaceId: activeWorkspaceId }) })
+    // Boundary validation (defence-in-depth beyond the disabled Create button): a PM artifact
+    // must belong to a team and carry a non-empty title, else the POST silently mis-scopes.
+    if (!pmProjectId) { showToast('Select a team before adding an artifact', 'error'); return; }
+    if (!payload.title || !payload.title.trim()) { showToast('Title is required', 'error'); return; }
+    // The shared form binds the primary input to `title`, but a Stakeholder's identity field is
+    // `name` (and its free text is `notes`) — map them so the register shows a real name, not blank.
+    const body = type === 'stakeholder'
+      ? { ...payload, name: payload.name || payload.title, notes: payload.notes || payload.description }
+      : payload;
+    api.raw(`/${ep}`, { method: 'POST', body: JSON.stringify({ ...body, projectId: pmProjectId, workspaceId: activeWorkspaceId }) })
       .then(r => r.json()).then(() => {
         setPmFormOpen(null); setPmForm({});
         if (type === 'risk')        { fetchRisks(pmProjectId); fetchRaidDashboard(pmProjectId); }
@@ -2030,11 +2083,35 @@ export default function App() {
   }
 
   // ── Iteration 15 — Scrum Master Cockpit (Cap V) ──────────────────────────────
+  // Clear per-sprint analysis so the active-sprint auto-load re-fires for the new project
+  // (stale results would otherwise suppress the reload).
+  function resetCockpitAnalysis() {
+    setRiskPanel(null); setVarianceResult(null); setReviewResult(null);
+    setPatternsResult(null); setPlanningResult(null);
+    setRiskSprintId(''); setVarianceSprintId(''); setReviewSprintId('');
+  }
   function openCockpit() {
     setView('smcockpit');
     const pid = i15ProjectId || (projects[0] && projects[0].id) || '';
     setI15ProjectId(pid);
-    if (pid) { fetchCockpitContext(pid); fetchCeremonies(pid); fetchMyDay(pid); fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
+    resetCockpitAnalysis();
+    if (pid) { fetchCockpitContext(pid); fetchCoachTips(pid); fetchDigest(pid); fetchCeremonies(pid); fetchMyDay(pid); fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
+  }
+  function fetchCoachTips(pid) {
+    setCoachTips(null);
+    api.send(`/cockpit/pro-tips?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: pid }) })
+      .then(d => setCoachTips(d && Array.isArray(d.tips) ? d : null)).catch(() => setCoachTips(null));
+  }
+  function fetchDigest(pid) {
+    setDigest(null);
+    api.raw(`/cockpit/digest?workspaceId=${activeWorkspaceId}&projectId=${pid}`).then(r => r.json())
+      .then(d => setDigest(d && d.rag ? d : null)).catch(() => setDigest(null));
+  }
+  function clusterRetro() {
+    if (!activeRetro?.session?.id) return;
+    api.send(`/cockpit/retro-cluster?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ retroId: activeRetro.session.id }) })
+      .then(d => { setRetroClusters(d && Array.isArray(d.themes) ? d : null); if (d?.meta?.fallback) showToast('Retro clustering used fallback (keyword themes).', 'info'); })
+      .catch(() => showToast('Retro clustering failed', 'error'));
   }
   function fetchMyDay(pid) {
     api.raw(`/cockpit/my-day?projectId=${pid}`).then(r => r.json())
@@ -2092,7 +2169,7 @@ export default function App() {
   function createImpediment() {
     if (!newImpediment.title.trim()) { showToast('Title is required', 'error'); return; }
     api.send(`/impediments`, { method: 'POST', body: JSON.stringify({ ...newImpediment, projectId: i15ProjectId }) })
-      .then(() => { showToast('Impediment raised'); setNewImpediment({ title: '', severity: 'MEDIUM', category: '', description: '' }); fetchImpediments(i15ProjectId); })
+      .then(() => { showToast('Raised'); setNewImpediment({ title: '', raiseType: 'IMPEDIMENT', severity: 'MEDIUM', category: '', description: '' }); fetchImpediments(i15ProjectId); })
       .catch(() => showToast('Failed to raise impediment', 'error'));
   }
   function updateImpediment(imp, patch) {
@@ -2136,6 +2213,7 @@ export default function App() {
       .catch(() => showToast('Failed to create retro', 'error'));
   }
   function openRetro(id) {
+    setRetroClusters(null);
     api.raw(`/retros/${id}`).then(r => r.json()).then(d => setActiveRetro(d)).catch(reportError);
   }
   function addRetroNote(columnKey) {
@@ -2152,28 +2230,42 @@ export default function App() {
     api.send(`/retros/notes/${noteId}/convert`, { method: 'POST', body: JSON.stringify({}) })
       .then(() => { showToast('Action item created'); openRetro(activeRetro.session.id); }).catch(() => showToast('Failed', 'error'));
   }
+  function setTabLoading(tab, on) { setCockpitLoading(l => ({ ...l, [tab]: on })); }
   function runSprintPlanning() {
+    setTabLoading('planning', true);
     api.send(`/cockpit/sprint-planning?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId, timeOffPoints: Number(planningTimeOff) || 0 }) })
-      .then(d => setPlanningResult(d)).catch(() => showToast('Planning helper failed', 'error'));
+      .then(d => setPlanningResult(d)).catch(() => showToast('Planning helper failed', 'error'))
+      .finally(() => setTabLoading('planning', false));
   }
-  function runRiskPanel() {
-    if (!riskSprintId) { showToast('Select a sprint', 'error'); return; }
-    api.raw(`/cockpit/risk-panel?workspaceId=${activeWorkspaceId}&sprintId=${riskSprintId}`).then(r => r.json())
-      .then(d => setRiskPanel(d)).catch(() => showToast('Risk panel failed', 'error'));
+  function runRiskPanel(sprintId = riskSprintId) {
+    if (!sprintId) { showToast('Select a sprint', 'error'); return; }
+    setRiskSprintId(sprintId);
+    setTabLoading('risk', true);
+    api.raw(`/cockpit/risk-panel?workspaceId=${activeWorkspaceId}&sprintId=${sprintId}`).then(r => r.json())
+      .then(d => setRiskPanel(d)).catch(() => showToast('Risk panel failed', 'error'))
+      .finally(() => setTabLoading('risk', false));
   }
-  function runVariance() {
-    if (!varianceSprintId) { showToast('Select a sprint', 'error'); return; }
-    api.raw(`/cockpit/variance?workspaceId=${activeWorkspaceId}&sprintId=${varianceSprintId}`).then(r => r.json())
-      .then(d => setVarianceResult(d)).catch(() => showToast('Variance analysis failed', 'error'));
+  function runVariance(sprintId = varianceSprintId) {
+    if (!sprintId) { showToast('Select a sprint', 'error'); return; }
+    setVarianceSprintId(sprintId);
+    setTabLoading('variance', true);
+    api.raw(`/cockpit/variance?workspaceId=${activeWorkspaceId}&sprintId=${sprintId}`).then(r => r.json())
+      .then(d => setVarianceResult(d)).catch(() => showToast('Variance analysis failed', 'error'))
+      .finally(() => setTabLoading('variance', false));
   }
-  function runReviewPrep() {
-    if (!reviewSprintId) { showToast('Select a sprint', 'error'); return; }
-    api.send(`/cockpit/review-prep?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ sprintId: reviewSprintId }) })
-      .then(d => setReviewResult(d)).catch(() => showToast('Review prep failed', 'error'));
+  function runReviewPrep(sprintId = reviewSprintId) {
+    if (!sprintId) { showToast('Select a sprint', 'error'); return; }
+    setReviewSprintId(sprintId);
+    setTabLoading('review', true);
+    api.send(`/cockpit/review-prep?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ sprintId }) })
+      .then(d => setReviewResult(d)).catch(() => showToast('Review prep failed', 'error'))
+      .finally(() => setTabLoading('review', false));
   }
   function runPatterns() {
+    setTabLoading('patterns', true);
     api.send(`/cockpit/patterns?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId }) })
-      .then(d => setPatternsResult(d)).catch(() => showToast('Pattern detection failed', 'error'));
+      .then(d => setPatternsResult(d)).catch(() => showToast('Pattern detection failed', 'error'))
+      .finally(() => setTabLoading('patterns', false));
   }
 
   // ── Iteration 15 — Product Owner Workspace (Cap W) ───────────────────────────
@@ -2493,8 +2585,13 @@ export default function App() {
   const userName = u => users.find(x => x.id === u)?.fullName || '';
   const myItems  = workItems.filter(i => i.assigneeId === currentUser?.id);
 
-  // Public, unauthenticated, read-only dashboard embed (?share=<token>) — short-circuits
-  // before the auth gate so it renders without a login (iteration 6).
+  // Public, unauthenticated, read-only dashboard embed — short-circuits before the auth gate so it
+  // renders without a login (iteration 6, Cap J). Two equivalent entry points to the same view:
+  //   • ?share=<token>           — the shareable "open in a tab" public link.
+  //   • /embed/dashboard/<token> — the chrome-less iframe surface (no header) for portals/status
+  //     pages; this path is what nginx serves with the narrow framing allowance (frame-ancestors).
+  const embedMatch = window.location.pathname.match(/^\/embed\/dashboard\/([^/?#]+)/);
+  if (embedMatch) return <PublicDashboardEmbed token={decodeURIComponent(embedMatch[1])} embedded />;
   const shareToken = new URLSearchParams(window.location.search).get('share');
   if (shareToken) return <PublicDashboardEmbed token={shareToken} />;
 
@@ -2731,7 +2828,6 @@ export default function App() {
       case 'reportbuilder': setSelectedReport(null); fetchReports(); fetchReportTemplates(); break;
       case 'releases': fetchReleases(); break;
       case 'settings3': fetchWorkflows(); fetchFieldDefs(); fetchRoles(); fetchWorkItemTypes(); break;
-      case 'bql': fetchBqlFilters(); break;
       case 'knowledge': fetchKnowledgeSpaces(); setKnowledgeTab('spaces'); setSelectedSpace(null); setSelectedArticle(null); break;
       case 'compliance': setComplianceTab('dashboard'); setRuleBuilder(null); fetchComplianceDashboard(); fetchComplianceRules(); fetchComplianceViolations(); break;
       case 'service': setServiceTab('queues'); setServiceQueue('open'); fetchServiceRequests('open'); break;
@@ -3159,6 +3255,7 @@ export default function App() {
               userName={userName}
               projectMetrics={projectMetrics}
               projectMetricsLoading={projectMetricsLoading}
+              statusResolver={statusResolver}
             />
           )}
 
@@ -3215,6 +3312,7 @@ export default function App() {
               fetchNotifications={fetchNotifications}
               fetchUnreadCount={fetchUnreadCount}
               setUnreadCount={setUnreadCount}
+              onError={reportError}
             />
           )}
 
@@ -3298,6 +3396,7 @@ export default function App() {
               selectedSprintId={selectedSprintId}
               sprintReport={sprintReport}
               scopeChanges={scopeChanges}
+              activeWorkspaceId={activeWorkspaceId}
               setSelectedSprintId={setSelectedSprintId}
               fetchSprintReport={fetchSprintReport}
             />
@@ -3426,18 +3525,18 @@ export default function App() {
             <BqlView
               bqlQuery={bqlQuery}
               bqlError={bqlError}
-              bqlFilterName={bqlFilterName}
-              bqlFilters={bqlFilters}
               bqlResults={bqlResults}
               workItems={workItems}
               activeWorkspaceId={activeWorkspaceId}
               aiCapabilities={aiCapabilities}
+              nameMaps={{
+                users: Object.fromEntries(users.map(u => [u.id, u.fullName || u.email])),
+                projects: Object.fromEntries(projects.map(p => [p.id, p.name])),
+                sprints: Object.fromEntries(sprints.map(s => [s.id, s.name])),
+              }}
               setBqlQuery={setBqlQuery}
-              setBqlFilterName={setBqlFilterName}
               setSelectedItem={setSelectedItem}
               runBql={runBql}
-              saveBqlFilter={saveBqlFilter}
-              fetchBqlFilters={fetchBqlFilters}
             />
           )}
 
@@ -3548,6 +3647,10 @@ export default function App() {
               sprints={sprints}
               velocityData={velocityData}
               currentUser={currentUser}
+              activeWorkspaceId={activeWorkspaceId}
+              aiCapabilities={aiCapabilities}
+              dashboardRole={dashboardRole}
+              acceptDashboardSuggestion={acceptDashboardSuggestion}
               createDashboard={createDashboard}
               openDashboard={openDashboard}
               deleteDashboard={deleteDashboard}
@@ -3581,6 +3684,7 @@ export default function App() {
               reportSchedules={reportSchedules}
               scheduleForm={scheduleForm}
               workItems={workItems}
+              activeWorkspaceId={activeWorkspaceId}
               createBlankReport={createBlankReport}
               createReportFromTemplate={createReportFromTemplate}
               openReport={openReport}
@@ -3649,6 +3753,8 @@ export default function App() {
               rejectArticle={rejectArticle}
               articleChildren={articleChildren}
               fetchArticleChildren={fetchArticleChildren}
+              workspaceId={activeWorkspaceId}
+              aiCapabilities={aiCapabilities}
             />
           )}
 
@@ -3749,6 +3855,14 @@ export default function App() {
               setVarianceSprintId={setVarianceSprintId}
               varianceResult={varianceResult}
               runVariance={runVariance}
+              coachTips={coachTips}
+              fetchCoachTips={fetchCoachTips}
+              cockpitLoading={cockpitLoading}
+              resetCockpitAnalysis={resetCockpitAnalysis}
+              digest={digest}
+              fetchDigest={fetchDigest}
+              retroClusters={retroClusters}
+              clusterRetro={clusterRetro}
               setPlanningTimeOff={setPlanningTimeOff}
               runSprintPlanning={runSprintPlanning}
               setActiveRetro={setActiveRetro}
@@ -4178,80 +4292,9 @@ function getTimeOfDay() {
 // ReportSectionControls + ReportSectionCard extracted to
 // src/components/works/organisms/report-section-card.jsx (TD-003).
 
-// Iteration 6 — public, read-only embed of a shared dashboard. Rendered before the auth
-// gate from ?share=<token>; fetches the token-scoped public endpoint and renders the widgets
-// from the server aggregate (no app shell, no auth, no drill).
-function PublicDashboardEmbed({ token }) {
-  const [data, setData] = useState(null);
-  const [status, setStatus] = useState('loading'); // loading | ok | error
-  useEffect(() => {
-    let alive = true;
-    api.raw(`/public/dashboards/${encodeURIComponent(token)}`)
-      .then(r => { if (!r.ok) throw new Error('not found'); return r.json(); })
-      .then(d => { if (alive) { setData(d); setStatus('ok'); } })
-      .catch(() => { if (alive) setStatus('error'); });
-    return () => { alive = false; };
-  }, [token]);
-
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 font-sans" aria-busy="true" aria-label="Loading dashboard">
-        <header className="bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-7 w-7 rounded-md" />
-            <Skeleton className="h-4 w-40" />
-          </div>
-          <Skeleton className="h-5 w-20 rounded-full" />
-        </header>
-        <main className="p-6">
-          <div className="grid grid-cols-12 gap-4 max-w-7xl mx-auto">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="col-span-12 sm:col-span-6 lg:col-span-4">
-                <Skeleton className="h-40 w-full rounded-xl" />
-              </div>
-            ))}
-          </div>
-        </main>
-      </div>
-    );
-  }
-  if (status === 'error' || !data) {
-    return (
-      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center font-sans p-6">
-        <div className="text-center max-w-sm">
-          <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Dashboard unavailable</p>
-          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">This share link is invalid or has been revoked.</p>
-        </div>
-      </div>
-    );
-  }
-  const widgets = data.widgets || [];
-  return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 font-sans">
-      <header className="bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3 min-w-0">
-          <Logo />
-          <span className="text-sm font-semibold text-neutral-900 dark:text-white truncate">{data.name}</span>
-        </div>
-        <span className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-700 rounded-full px-2 py-0.5 flex-shrink-0">Read-only</span>
-      </header>
-      <main className="p-6">
-        {widgets.length === 0 ? (
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">This dashboard has no widgets.</p>
-        ) : (
-          <div className="grid grid-cols-12 gap-4 max-w-7xl mx-auto">
-            {widgets.map(w => (
-              <DashboardWidgetCard key={w.id} widget={w} workItems={[]} aggregate={data.aggregate} editMode={false} />
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
-  );
-}
-
-// DashboardWidgetCard extracted to src/components/works/organisms/dashboard-widget-card.jsx (TD-003).
-// Imported at the top of this file; used here by PublicDashboardEmbed.
+// PublicDashboardEmbed (iteration 6, Cap J) extracted to
+// src/components/works/organisms/public-dashboard-embed.jsx — imported at the top of this file and
+// rendered before the auth gate from ?share=<token> or /embed/dashboard/<token>.
 
 // B27 — AI-assisted compliance rule suggestion. Sends a natural-language prompt to the AI
 // which returns suggested rules; the user can adopt one directly into the rule builder.

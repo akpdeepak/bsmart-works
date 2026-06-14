@@ -31,9 +31,10 @@ class ProjectServiceTest {
     private final EventService eventService = mock(EventService.class);
     private final RbacService rbac = mock(RbacService.class);
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
+    private final CurrentWorkspace currentWorkspace = mock(CurrentWorkspace.class);
 
     private final ProjectService service =
-            new ProjectService(projectRepository, userRepository, eventService, rbac, jdbc);
+            new ProjectService(projectRepository, userRepository, eventService, rbac, jdbc, currentWorkspace);
 
     private Project project(String id, String wsId) {
         Project p = new Project();

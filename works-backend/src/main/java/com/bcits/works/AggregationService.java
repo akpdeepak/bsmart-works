@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 /**
@@ -13,8 +14,14 @@ import java.util.stream.Collectors;
  * dashboard/report scope into a parameterised SQL predicate over work_items. No I/O, so it
  * is unit-testable in isolation; the controller performs the actual queries.
  *
- * Scopes: PERSONAL (my assigned items) · PROJECT (one project) · TEAM (the team's projects)
- * · ORG (a whole workspace, else everything).
+ * <p><b>Tenant boundary is NOT this service's job.</b> The predicate returned here only
+ * <i>narrows within</i> a workspace; the controller always AND-composes it with a mandatory
+ * {@code project_id IN (workspace projects)} predicate after proving the caller's membership and
+ * {@code view_items} permission (RB-40 §1, RB-10 §2). So a {@code projectId}/{@code teamId} that
+ * resolves outside the caller's workspace can never leak rows — the workspace predicate excludes it.
+ *
+ * Scopes (narrowing only): PERSONAL (my assigned items) · PROJECT (one project) · TEAM (the team's
+ * projects) · ORG (no extra narrowing — the workspace predicate is the whole scope).
  */
 @Service
 public class AggregationService {
@@ -35,13 +42,14 @@ public class AggregationService {
     }
 
     /**
-     * Build the scope predicate. {@code teamProjectIds} is the resolved project list for a
-     * TEAM scope (the controller loads the team and parses it); all values are bound, never
-     * concatenated, so this is injection-safe.
+     * Build the within-workspace narrowing predicate. {@code teamProjectIds} is the resolved
+     * project list for a TEAM scope (the controller loads the team and parses it); all values are
+     * bound, never concatenated, so this is injection-safe. ORG returns {@code 1 = 1} because the
+     * controller's mandatory workspace predicate already bounds it to a single tenant.
      */
     public ScopeFilter resolve(String scope, String userId, String projectId,
-                               List<String> teamProjectIds, String workspaceId) {
-        String s = scope == null ? "ORG" : scope.toUpperCase();
+                               List<String> teamProjectIds) {
+        String s = scope == null ? "ORG" : scope.toUpperCase(Locale.ROOT);
         switch (s) {
             case "PERSONAL":
                 return new ScopeFilter("assignee_id = ?", new Object[]{ userId == null ? "" : userId });
@@ -54,13 +62,8 @@ public class AggregationService {
                 String placeholders = teamProjectIds.stream().map(x -> "?").collect(Collectors.joining(","));
                 return new ScopeFilter("project_id IN (" + placeholders + ")", new ArrayList<>(teamProjectIds).toArray());
             case "ORG":
-                if (workspaceId != null && !workspaceId.isBlank()) {
-                    return new ScopeFilter("project_id IN (SELECT id FROM projects WHERE workspace_id = ?)",
-                        new Object[]{ workspaceId });
-                }
-                return new ScopeFilter("1 = 1", new Object[]{});
             default:
-                return new ScopeFilter("1 = 1", new Object[]{});
+                return new ScopeFilter("1 = 1", new Object[]{});  // workspace predicate (controller) is the scope
         }
     }
 }

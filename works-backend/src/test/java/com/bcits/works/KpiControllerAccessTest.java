@@ -54,8 +54,8 @@ class KpiControllerAccessTest {
         assertThatThrownBy(() -> controller.team(FOREIGN_WS, "TEAM-1")).isInstanceOf(ApiException.class);
         assertThatThrownBy(() -> controller.manager(FOREIGN_WS)).isInstanceOf(ApiException.class);
         assertThatThrownBy(() -> controller.org(FOREIGN_WS)).isInstanceOf(ApiException.class);
-        verify(kpi, never()).team(anyString(), anyString());
-        verify(kpi, never()).manager(anyString());
+        verify(kpi, never()).team(anyString(), anyString(), anyString());
+        verify(kpi, never()).manager(anyString(), anyString());
     }
 
     @Test

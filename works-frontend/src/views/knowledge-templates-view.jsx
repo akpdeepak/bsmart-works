@@ -4,6 +4,7 @@ import { Button } from '@/components/works/button';
 import { Field } from '@/components/works/field';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { templatesClient, extractionClient } from '@/lib/knowledge-advanced';
+import { KnowAiPanel } from '@/components/knowledge/KnowAiPanel';
 
 // Advanced Knowledge — Document templates + AI structured-data extraction (iteration-20 Cap I).
 // Self-fetching like DeveloperWorkspace: the parent supplies workspaceId + an optional toast handler.
@@ -67,6 +68,12 @@ export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onT
           Reusable document templates and AI structured-data extraction.
         </p>
       </div>
+
+      {workspaceId && (
+        <div className="mb-6">
+          <KnowAiPanel workspaceId={workspaceId} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ── Templates library ── */}

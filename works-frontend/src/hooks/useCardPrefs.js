@@ -10,7 +10,13 @@ function load() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed.visibleFields)) return parsed;
+      if (Array.isArray(parsed.visibleFields)) {
+        // Custom card fields were unified onto field_def (Option B). The id is unchanged — only the
+        // pref-key prefix moved cfd_ -> fd_ — so rewrite any legacy keys in place once on load.
+        parsed.visibleFields = parsed.visibleFields.map(k =>
+          typeof k === 'string' && k.startsWith('cfd_') ? `fd_${k.slice(4)}` : k);
+        return parsed;
+      }
     }
   } catch { /* ignore */ }
   return { visibleFields: DEFAULT_VISIBLE };
@@ -29,7 +35,7 @@ function save(prefs) {
  *             'storyPoints' | 'tags' | 'description' | 'startDate' |
  *             'reporter' | 'severity' | 'environment' | 'fixedInVersion' |
  *             'regressionRisk' | 'slaTarget' | 'slaBreachFlag' | 'businessImpact'
- *   custom:   'cfd_<id>'
+ *   custom:   'fd_<id>'   (a field_def id; values come from work_item_field_value)
  */
 export function useCardPrefs() {
   const [prefs, setPrefs] = useState(load);

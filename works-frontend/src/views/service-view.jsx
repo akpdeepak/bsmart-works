@@ -214,7 +214,7 @@ export default function ServiceView({
                       ? <p className="text-sm text-neutral-500">No comments yet.</p>
                       : serviceCsat.responses.slice(0, 10).map(r => (
                         <div key={r.id} className="flex items-center gap-3 py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
-                          <span className="text-brand-orange text-sm inline-flex items-center" aria-label={`Rated ${r.rating} of 5`}>{Array.from({ length: 5 }).map((_, si) => <Star key={si} className={`h-3.5 w-3.5 ${si < r.rating ? 'fill-current' : ''}`} aria-hidden="true" />)}</span>
+                          <span role="img" className="text-brand-orange text-sm inline-flex items-center" aria-label={`Rated ${r.rating} of 5`}>{Array.from({ length: 5 }).map((_, si) => <Star key={si} className={`h-3.5 w-3.5 ${si < r.rating ? 'fill-current' : ''}`} aria-hidden="true" />)}</span>
                           <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-200 truncate">{r.comment || '—'}</span>
                         </div>
                       ))}

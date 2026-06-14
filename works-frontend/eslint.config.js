@@ -97,7 +97,16 @@ const worksA11yRules = {
 // no works-*), and (b) scripts/guardrails.sh (no gray-*, arbitrary-value checks). Revisit if
 // the plugin ships an ESLint-10-compatible build.
 
-export default defineConfig([globalIgnores(['dist']), vitestTestConfig, {
+// Playwright E2E + its config run under Node (process, etc.) but also use browser globals
+// (window/localStorage inside page.addInitScript callbacks). Give those files both.
+const e2eNodeConfig = {
+  files: ['e2e/**/*.js', 'playwright.config.js'],
+  languageOptions: {
+    globals: { ...globals.node, ...globals.browser },
+  },
+}
+
+export default defineConfig([globalIgnores(['dist']), vitestTestConfig, e2eNodeConfig, {
   files: ['**/*.{js,jsx}'],
   extends: [
     js.configs.recommended,

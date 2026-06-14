@@ -865,9 +865,12 @@ export default function Settings3View({
                               <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{fd.name}</span>
                               <span className="ml-2 text-xs font-mono text-neutral-600 dark:text-neutral-400">{fd.fieldType}</span>
                             </div>
-                            <input type="checkbox" checked={visible} className="w-4 h-4 accent-brand-navy"
-                              onChange={() => showToast('Toggle field visibility in Field Visibility tab')}
-                              title="Toggle visibility" />
+                            {/* Visibility is owned by the Field Visibility tab, not editable here.
+                                Show it as an honest read-only status instead of a checkbox that
+                                looks toggleable but only fires a "go elsewhere" toast (dead control). */}
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded ${visible ? 'bg-semantic-success-surface text-semantic-success' : 'bg-neutral-100 dark:bg-neutral-600 text-neutral-600 dark:text-neutral-300'}`}>
+                              {visible ? 'Visible' : 'Hidden'}
+                            </span>
                             <span className="text-xs text-neutral-600 dark:text-neutral-400">#{idx + 1}</span>
                           </div>
                         );

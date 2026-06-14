@@ -8,6 +8,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+  // Dev server: proxy /api → the backend so the app works behind a single forwarded port
+  // (a browser previewing :5173 can't reach the container's :8080 directly). Activates only when
+  // the app uses a relative API base (VITE_API_BASE_URL=/api/v1); the default absolute base for
+  // plain local dev is unaffected.
+  server: {
+    host: true,
+    port: 5173,
+    proxy: {
+      '/api': { target: 'http://localhost:8080', changeOrigin: true },
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')

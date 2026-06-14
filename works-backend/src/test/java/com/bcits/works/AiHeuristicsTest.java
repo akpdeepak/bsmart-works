@@ -143,12 +143,33 @@ class AiHeuristicsTest {
     // ── generation templates ──────────────────────────────────────────────────────
 
     @Test
-    void renderTemplate_and_blankScaffold_differ() {
+    void renderTemplate_knownKindsReturnScaffold() {
         assertThat(AiHeuristics.renderTemplate("ac", "OTP login", Map.of())).contains("Acceptance criteria");
+        assertThat(AiHeuristics.renderTemplate("acceptance_criteria", "login", Map.of())).contains("Acceptance criteria");
         assertThat(AiHeuristics.renderTemplate("test_cases", "x", Map.of())).contains("cross-tenant");
-        assertThat(AiHeuristics.renderTemplate("story", "", Map.of())).contains("the requested capability");
+        assertThat(AiHeuristics.renderTemplate("tests", "x", Map.of())).contains("cross-tenant");
+        assertThat(AiHeuristics.renderTemplate("comment", "ticket", Map.of())).contains("review and follow up");
+        assertThat(AiHeuristics.renderTemplate("article", "topic", Map.of())).contains("Overview");
+        assertThat(AiHeuristics.renderTemplate("release_notes", "v2", Map.of())).contains("Highlights");
         assertThat(AiHeuristics.blankScaffold("ac")).doesNotContain("Given a valid request");
         assertThat(AiHeuristics.blankScaffold("comment")).isEmpty();
+    }
+
+    @Test
+    void renderTemplate_unknownKindThrows400() {
+        // Audit finding #17: callers that send an unrecognised kind (e.g. 'sprint_plan', 'standup_draft')
+        // must receive a 400 immediately instead of silently getting the user-story scaffold.
+        org.springframework.http.HttpStatus expectedStatus = org.springframework.http.HttpStatus.BAD_REQUEST;
+        for (String bad : new String[]{"sprint_plan", "standup_draft", "completely_unknown_kind", "story"}) {
+            var ex = org.junit.jupiter.api.Assertions.assertThrows(
+                ApiException.class,
+                () -> AiHeuristics.renderTemplate(bad, "some topic", Map.of()),
+                "Expected ApiException for kind=" + bad
+            );
+            assertThat(ex.getStatus()).isEqualTo(expectedStatus);
+            assertThat(ex.getCode()).isEqualTo("UNKNOWN_GENERATION_KIND");
+            assertThat(ex.getMessage()).contains(bad);
+        }
     }
 
     // ── tokenization / overlap / matches ─────────────────────────────────────────

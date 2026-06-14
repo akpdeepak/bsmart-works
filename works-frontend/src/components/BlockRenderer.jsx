@@ -19,7 +19,7 @@ function CalloutView({ block }) {
   const v = CALLOUT_VARIANTS[block.metadata?.variant] || CALLOUT_VARIANTS.info;
   const Icon = v.Icon;
   return (
-    <div className={cn('rounded-md border p-3 flex gap-3', v.box)}>
+    <div className={cn('rounded-md border-l-2 p-3 flex gap-3', v.box)}>
       <Icon aria-hidden="true" className={cn('h-5 w-5 shrink-0 mt-0.5', v.accent)} />
       <p className="text-sm text-neutral-900 dark:text-neutral-100 whitespace-pre-wrap">{block.content}</p>
     </div>
@@ -181,13 +181,13 @@ function OneBlock({ block, allBlocks, workspaceId }) {
     case 'paragraph':
       return <div className="text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMd(block.content || '') }} />;
     case 'heading1':
-      return <h2 id={block.id} className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 scroll-mt-4">{block.content}</h2>;
+      return <h2 id={block.id} className="mt-8 text-2xl font-bold text-neutral-900 dark:text-neutral-100 scroll-mt-4">{block.content}</h2>;
     case 'heading2':
-      return <h3 id={block.id} className="text-xl font-semibold text-neutral-900 dark:text-neutral-100 scroll-mt-4">{block.content}</h3>;
+      return <h3 id={block.id} className="mt-6 text-xl font-semibold text-neutral-900 dark:text-neutral-100 scroll-mt-4">{block.content}</h3>;
     case 'heading3':
-      return <h4 id={block.id} className="text-base font-semibold text-neutral-900 dark:text-neutral-100 scroll-mt-4">{block.content}</h4>;
+      return <h4 id={block.id} className="mt-5 text-base font-semibold text-neutral-900 dark:text-neutral-100 scroll-mt-4">{block.content}</h4>;
     case 'quote':
-      return <blockquote className="border-l-4 border-brand-navy-tint pl-3 text-sm italic text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">{block.content}</blockquote>;
+      return <blockquote className="my-2 border-l-2 border-brand-navy-tint pl-4 text-sm italic text-neutral-600 dark:text-neutral-300 whitespace-pre-wrap">{block.content}</blockquote>;
     case 'callout':
       return <CalloutView block={block} />;
     case 'checklist':
@@ -202,7 +202,7 @@ function OneBlock({ block, allBlocks, workspaceId }) {
     case 'toc':
       return <TocView allBlocks={allBlocks} />;
     case 'code':
-      return <pre className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 p-3 text-sm font-mono text-neutral-900 dark:text-neutral-100 overflow-x-auto whitespace-pre-wrap">{block.content}</pre>;
+      return <pre className="rounded-md ring-1 ring-neutral-800 bg-neutral-900 p-3.5 text-sm font-mono text-neutral-100 overflow-x-auto whitespace-pre-wrap">{block.content}</pre>;
     case 'divider':
       return <hr className="border-neutral-300 dark:border-neutral-600" aria-label="Divider" />;
     case 'sheet':

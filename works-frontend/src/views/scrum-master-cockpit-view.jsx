@@ -22,7 +22,7 @@ import { PatternsTab } from './scrum-cockpit/patterns-tab';
 // and handlers; this renders the tabbed cockpit.
 export default function ScrumMasterCockpitView({
   i15ProjectId, projects, smTab, impediments, newImpediment, activeStandup, standups,
-  standupDraft, sprints, riskSprintId, riskPanel, planningTimeOff, planningResult, activeSprint,
+  standupDraft, sprints, riskSprintId, riskPanel, planningTimeOff, planningResult,
   retros, activeRetro, newRetro, retroNoteDraft, reviewSprintId, reviewResult, patternsResult,
   users, aiCapabilities, aiLoading, activeWorkspaceId,
   cockpitContext, ceremonies, activeCeremony, newCeremony, currentUserId,

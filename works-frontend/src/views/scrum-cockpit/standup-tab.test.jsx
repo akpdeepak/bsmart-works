@@ -31,7 +31,7 @@ vi.mock('@/lib/ai', async () => {
 });
 
 // A minimal aiAction that mirrors App.jsx: calls the API function, then the success callback.
-async function aiAction(_key, apiFn, onSuccess, _disabledMsg) {
+async function aiAction(_key, apiFn, onSuccess) {
   const res = await apiFn();
   onSuccess(res);
 }

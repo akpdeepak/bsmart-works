@@ -41,7 +41,8 @@ public class KnowledgeSpaceController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         int limit = Math.min(Math.max(size, 1), 200);
-        return knowledgeSpaceRepository.findAllByOrderByNameAsc(
+        // Workspace-scoped (RB-40 §1): only spaces in the caller's workspaces, never every tenant's.
+        return knowledgeSpaceRepository.findAllScopedToUser(authenticatedUser.id(),
                 PageRequest.of(Math.max(page, 0), limit)).getContent();
     }
 
@@ -57,6 +58,9 @@ public class KnowledgeSpaceController {
                                            @RequestParam(required = false) String status,
                                            @RequestParam(defaultValue = "0") int page,
                                            @RequestParam(defaultValue = "50") int size) {
+        // Workspace-scoped (RB-40 §1): resolve the space and require membership before listing.
+        KnowledgeSpace space = knowledgeSpaceRepository.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), space.getWorkspaceId(), "view_items");
         int limit = Math.min(Math.max(size, 1), 200);
         PageRequest pr = PageRequest.of(Math.max(page, 0), limit);
         return status != null

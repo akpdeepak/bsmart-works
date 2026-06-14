@@ -193,6 +193,10 @@ The compressed "what each product is actually good at," across the three lenses 
 | **Trello** | Card momentum; lovable simplicity; Butler nudges | Drag-drop as the whole model; inline card create; near-zero learning curve | Radical simplicity — start trivial, reveal power (progressive complexity) |
 | **AirBNB** | Trust through visual quality, photography, micro-delight | One consistent component everywhere (DLS) | Design Language System — pioneered design tokens + components; design that earns trust |
 | **Uber** | Real-time status reassurance ("where's my driver") | Operational clarity under pressure; maps/live data; state-machine UX | Base design system; motion conveys state; built for global scale (a11y + i18n) |
+| **Notion** | Flexible, low-chrome canvas; "everything is a block" | Slash (`/`) menu; one dataset → many views (table/board/calendar/gallery); templates | Composability — the same primitives recombine into any surface |
+| **Linear** | Crafted minimalism that *feels* fast | Speed as a feature (<400 ms); keyboard-first; optimistic everywhere; instant nav | Opinionated · fast · beautiful — the bar for a premium PM tool |
+| **Asana** | Task-complete celebration delight; goals give meaning | Multi-view work (list/board/timeline/calendar); My Tasks; rules | Clarity + peak-end delight without losing professionalism |
+| **Figma** | Real-time multiplayer (live cursors / presence) | Components / variants / auto-layout; in-canvas comments | Multiplayer collaboration + the design system *is* the source of truth |
 
 ---
 
@@ -226,7 +230,7 @@ Every engagement technique below is filtered through this inversion.
 | **Zeigarnik effect** — open loops nag | Jira badges, email drafts | Persistent "assigned to me / awaiting you" counts; auto-saved drafts; "left in review" reminders |
 | **Variable feedback (ethical)** | feeds | A personalized "Today" that surfaces genuinely *different, relevant* items each visit — relevance, not randomness |
 | **Social proof / reciprocity** | LinkedIn, Confluence | @mentions, comment reactions, "N teammates viewing" presence — light social signals that pull collaboration |
-| **Peak-End rule** — judged by peak + finish | Apple, Duolingo | Design the *moment of completion* (sprint complete, item done) within the calm aesthetic |
+| **Peak-End rule** — judged by peak + finish | Apple, Duolingo, **Asana** (task-complete celebration) | Design the *moment of completion* (sprint complete, item done) within the calm aesthetic |
 | **Von Restorff (isolation) effect** | — | Already embodied: single-orange-accent rule (one CTA stands out). Keep it disciplined |
 
 **bSmart-specific:** the plumbing exists (SSE presence, notifications, the `events` store, role
@@ -332,9 +336,9 @@ config layer, the design-token system).
 |---|---|---|---|---|
 | 10 | **AI-native UX** — contextual + proactive + streaming + a canvas | AI is architecturally excellent (Control Plane, fallbacks) but *reactive*; the benchmarks make AI ambient | Inline "draft description / fill fields" in detail panel; proactive Today nudges ("5 overdue — bulk-reschedule?"); **stream** AI token-by-token; an **Artifacts-style** side canvas for AI-built reports/articles — all on the existing capability + fallback layer (RB-40 §2) | **ChatGPT/Claude** (streaming, Artifacts), **MS Copilot** (contextual) |
 | 11 | **Content-first detail + narrative activity feed** | Detail shell is 2-column (PR #217) but the Details *tab* is a dense field-grid and Activity is a raw event dump | Lead with title/description prose at reading width; render `events` as human sentences ("Rahul moved this to In Progress · 2h ago") | **Claude** (editorial), **Confluence**, **MS Word** (document surface) |
-| 12 | **Real-time collaborative knowledge editor + inline comments + templates** | `BlockEditor.jsx` is rich but single-author — no presence/conflict; no page templates | SSE-driven presence + soft-lock/merge; inline block comments; seed article templates (PRD, runbook, retro) | **Confluence**, **Notion**, **MS Word** (track-changes / comments / styles / templates) |
+| 12 | **Real-time collaborative knowledge editor + inline comments + templates** | `BlockEditor.jsx` is rich but single-author — no presence/conflict; no page templates | SSE-driven presence + soft-lock/merge; inline block comments; seed article templates (PRD, runbook, retro) | **Confluence**, **Notion**, **Figma** (multiplayer presence), **MS Word** (track-changes / comments / styles / templates) |
 | 13 | **Search overhaul** — standalone surface + full-text body + facets | Search is modal-only and title/id-only; no article-body or comment search | Dedicated search page with facets (type/space/date/status) + full-text over items + articles; keep ⌘K as the quick entry | **Jira/Confluence search** |
-| 14 | **Board swimlanes/grouping + bulk-change preview wizard** | Board is fixed to 3 status columns; bulk edit is one-field-flat with no preview | Group-by assignee/type/epic/release swimlanes; a bulk wizard that previews the diff before commit | **Jira** |
+| 14 | **Board swimlanes/grouping + bulk-change preview wizard** | Board is fixed to 3 status columns; bulk edit is one-field-flat with no preview | Group-by assignee/type/epic/release swimlanes; a bulk wizard that previews the diff before commit | **Jira**, **Asana** / **Notion** (one dataset, many views) |
 | 15 | **Visual builders + live preview** (workflow, chart, permission matrix, field layout) | Admin config is form/table-heavy; admins write BQL by hand for simple charts (Tesler's Law violated) | Drag-drop workflow states/transitions; visual metric/dimension chart picker over BQL; live preview of layout/visibility changes | **Jira workflow editor**, **MS** |
 
 ### Horizon 4 — Platform maturity

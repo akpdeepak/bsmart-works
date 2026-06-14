@@ -89,7 +89,7 @@ So nothing is lost or assumed, the complete scope captured across the originatin
 | Source thread | Where it lives now | In the ledger as |
 |---|---|---|
 | **Doc-pack assessment** ("AI-Optional, Metadata-Driven Work OS" pack) | Decision: **do not implement** — already built & surpassed; one real gap = tenant branding | *Context only* (not executable here); branding tracked separately if pursued |
-| **Benchmark study** of ChatGPT/Claude/Meta/LinkedIn/Jira/Confluence/MS Word/Trello/AirBNB/Uber (+ Linear/Notion/Gmail as supporting exemplars) | Roadmap **Part B** (design DNA) | Informs every WI ("borrowed from") |
+| **Benchmark study** of ChatGPT/Claude/Meta/LinkedIn/Jira/Confluence/MS Word/Trello/AirBNB/Uber/Notion/Linear/Asana/Figma (+ Gmail/Superhuman as supporting exemplars) | Roadmap **Part B** (design DNA) | Informs every WI ("borrowed from") |
 | **Engagement / productivity / principles / frameworks / methods / practices** | Roadmap **Part C** (behavioral, productivity, design principles, frameworks, methods, practices) | Milestone 1 (measurement) + woven through |
 | **Benchmark feature roadmap** (Horizons 1–4) | Roadmap **Part D** | Milestones 2, 4, 5 |
 | **HEART + activation funnel** first milestone | Roadmap **Part F** | Milestone 1 |

@@ -1876,10 +1876,13 @@ export default function App() {
       .catch(() => showToast('Failed to create article', 'error'));
   }
 
-  function updateArticle(id, patch) {
-    api.send(`/articles/${id}`, { method: 'PUT', body: JSON.stringify(patch) })
-      .then(d => { setSelectedArticle(d); showToast('Article saved'); fetchKnowledgeArticles(selectedSpace?.id); })
-      .catch(() => showToast('Failed to save article', 'error'));
+  function updateArticle(id, patch, opts = {}) {
+    // silent = quiet autosave (block-editor debounce): persist without a toast, list refetch, or
+    // replacing selectedArticle — the editor already holds the latest state optimistically. Returns
+    // the promise so callers can react to save completion.
+    return api.send(`/articles/${id}`, { method: 'PUT', body: JSON.stringify(patch) })
+      .then(d => { if (!opts.silent) { setSelectedArticle(d); showToast('Article saved'); fetchKnowledgeArticles(selectedSpace?.id); } return d; })
+      .catch((e) => { if (!opts.silent) showToast('Failed to save article', 'error'); throw e; });
   }
 
   // Publishing workflow: DRAFT → IN_REVIEW → PUBLISHED → ARCHIVED.

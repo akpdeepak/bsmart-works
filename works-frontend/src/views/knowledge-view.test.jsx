@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { expectNoA11yViolations } from '@/test/a11y';
 import KnowledgeView from './knowledge-view';
 
@@ -76,6 +76,58 @@ describe('KnowledgeView', () => {
         selectedArticle={{ id: 'A1', title: 'Doc', status: 'DRAFT', content: 'hi' }} />,
     );
     expect(screen.getByRole('textbox', { name: /add a comment/i })).toBeInTheDocument();
+  });
+
+  // ── UAT: Know Studio editing flow ──────────────────────────────────────────────
+
+  it('opens a block-format article in the block editor (syncs the format toggle)', () => {
+    const setArticleContentFormat = vi.fn();
+    const blocks = JSON.stringify([{ id: 'b1', type: 'heading1', content: 'Title', metadata: {} }]);
+    render(
+      <KnowledgeView {...baseProps} editingArticle articleContentFormat="markdown"
+        setArticleContentFormat={setArticleContentFormat}
+        selectedSpace={{ id: 'S1', name: 'Ops' }}
+        selectedArticle={{ id: 'A1', title: 'Doc', status: 'DRAFT', contentFormat: 'blocks', contentBlocks: blocks }} />,
+    );
+    // The editor opens in the article's own format instead of the stale markdown default.
+    expect(setArticleContentFormat).toHaveBeenCalledWith('blocks');
+  });
+
+  it('autosaves block edits quietly after a debounce, not on every keystroke', () => {
+    vi.useFakeTimers();
+    try {
+      const updateArticle = vi.fn(() => Promise.resolve({}));
+      const blocks = JSON.stringify([{ id: 'b1', type: 'paragraph', content: '', metadata: {} }]);
+      render(
+        <KnowledgeView {...baseProps} editingArticle articleContentFormat="blocks"
+          updateArticle={updateArticle}
+          selectedSpace={{ id: 'S1', name: 'Ops' }}
+          selectedArticle={{ id: 'A1', title: 'Doc', status: 'DRAFT', contentFormat: 'blocks', contentBlocks: blocks }} />,
+      );
+      const para = screen.getByLabelText('Paragraph content');
+      fireEvent.change(para, { target: { value: 'h' } });
+      fireEvent.change(para, { target: { value: 'he' } });
+      fireEvent.change(para, { target: { value: 'hel' } });
+      // Debounced: no PUT yet despite three keystrokes, and the status shows progress.
+      expect(updateArticle).not.toHaveBeenCalled();
+      expect(screen.getByText('Saving…')).toBeInTheDocument();
+      act(() => { vi.advanceTimersByTime(900); });
+      // Exactly one quiet (silent) save, marked as block format.
+      expect(updateArticle).toHaveBeenCalledTimes(1);
+      expect(updateArticle).toHaveBeenCalledWith('A1', expect.objectContaining({ contentFormat: 'blocks' }), { silent: true });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('renders block-format articles in read mode via BlockRenderer', () => {
+    const blocks = JSON.stringify([{ id: 'b1', type: 'callout', content: 'Heads up', metadata: { variant: 'info' } }]);
+    render(
+      <KnowledgeView {...baseProps} editingArticle={false}
+        selectedSpace={{ id: 'S1', name: 'Ops' }}
+        selectedArticle={{ id: 'A1', title: 'Doc', status: 'PUBLISHED', contentFormat: 'blocks', contentBlocks: blocks }} />,
+    );
+    expect(screen.getByText('Heads up')).toBeInTheDocument();
   });
 
   it('has no serious a11y violations on the spaces list', async () => {

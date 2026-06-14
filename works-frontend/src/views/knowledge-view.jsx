@@ -1,3 +1,4 @@
+import { useRef, useState, useEffect } from 'react';
 import { Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -78,6 +79,27 @@ export default function KnowledgeView({
 }) {
   const aiGenEnabled = capabilityEnabled(aiCapabilities, 'generation');
   const aiAssist = makeAiAssist(workspaceId, aiGenEnabled);
+  // Block-editor autosave: persist quietly ~900ms after the last change instead of PUT-on-every-
+  // keystroke (which previously fired a toast + version + list refetch per character). The visible
+  // status reassures the user; the explicit "Save Changes" button still does an immediate save.
+  const saveTimer = useRef(null);
+  const [blockSaveStatus, setBlockSaveStatus] = useState('idle'); // idle | saving | saved
+  const scheduleBlockSave = (id, patch) => {
+    setBlockSaveStatus('saving');
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      Promise.resolve(updateArticle(id, patch, { silent: true }))
+        .then(() => setBlockSaveStatus('saved'))
+        .catch(() => setBlockSaveStatus('idle'));
+    }, 900);
+  };
+  useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current); }, []);
+  // Open the editor in the article's own format — otherwise a block-format article opened for edit
+  // showed the empty markdown box (its block content looked missing). Syncs when the article changes.
+  useEffect(() => {
+    if (selectedArticle?.id) setArticleContentFormat(selectedArticle.contentFormat === 'blocks' ? 'blocks' : 'markdown');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedArticle?.id]);
   // Open a cited article if it's already loaded in a list (full object); otherwise leave the user in
   // place rather than render a stub with no content.
   const openArticleById = (id) => {
@@ -326,30 +348,35 @@ export default function KnowledgeView({
                         <textarea id="article-content" rows={20} className="input resize-none font-mono text-sm w-full"
                           value={selectedArticle.content || ''}
                           onChange={e => setSelectedArticle(a => ({ ...a, content: e.target.value }))}
-                          onBlur={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, templateType: selectedArticle.templateType })}
+                          onBlur={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, contentFormat: 'markdown', templateType: selectedArticle.templateType })}
                           placeholder="Write your article content here... Supports Markdown formatting." />
                       </div>
                     ) : (
                       <div>
-                        <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-2">Content (Block editor)</span>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Content (Block editor)</span>
+                          {blockSaveStatus === 'saving' && <span className="text-2xs text-neutral-400" aria-live="polite">Saving…</span>}
+                          {blockSaveStatus === 'saved' && <span className="text-2xs text-semantic-success" aria-live="polite">Saved</span>}
+                        </div>
                         <BlockEditor
+                          key={selectedArticle.id}
                           aiAssist={aiAssist}
                           workspaceId={workspaceId}
                           blocks={(() => { try { return JSON.parse(selectedArticle.contentBlocks || '[]'); } catch { return []; } })()}
                           onChange={blocks => {
                             const json = JSON.stringify(blocks);
-                            setSelectedArticle(a => ({ ...a, contentBlocks: json }));
-                            updateArticle(selectedArticle.id, { contentBlocks: json, templateType: selectedArticle.templateType });
+                            setSelectedArticle(a => ({ ...a, contentBlocks: json, contentFormat: 'blocks' }));
+                            scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
                           }}
                         />
                       </div>
                     )}
-                    <Button variant="action" onClick={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, contentBlocks: selectedArticle.contentBlocks, templateType: selectedArticle.templateType })}>
+                    <Button variant="action" onClick={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, contentBlocks: selectedArticle.contentBlocks, contentFormat: articleContentFormat, templateType: selectedArticle.templateType })}>
                       Save Changes
                     </Button>
                   </div>
                 ) : (
-                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <div className="prose prose-sm max-w-reading dark:prose-invert">
                     {(() => {
                       // Block-format articles (content_format='blocks') render via BlockRenderer —
                       // until now they showed nothing in read mode. Markdown articles keep renderMd.

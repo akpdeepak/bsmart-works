@@ -49,10 +49,13 @@ class KpiFieldSecurityTest {
     private final org.springframework.jdbc.core.JdbcTemplate jdbc =
         mock(org.springframework.jdbc.core.JdbcTemplate.class);
     private final BqlCompiler bqlCompiler = new BqlCompiler();   // real compiler — gate is exercised
+    // Real executor over the real compiler so the field-security gate fires end to end (RB-40 §1);
+    // jdbc is mocked because these tests assert the metric is dropped before any query runs.
+    private final BqlQueryExecutor bqlExecutor = new BqlQueryExecutor(bqlCompiler, jdbc);
     private final RbacService rbac = mock(RbacService.class);
 
     private final KpiService kpi = new KpiService(workItems, projects, teams, definitions,
-        snapshots, shares, controlPlane, jdbc, bqlCompiler, rbac);
+        snapshots, shares, controlPlane, bqlCompiler, bqlExecutor, rbac);
 
     KpiFieldSecurityTest() {
         when(rbac.getUserTier(LOW, WS)).thenReturn(2);    // MEMBER

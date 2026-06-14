@@ -27,7 +27,7 @@ export const MESSAGES = {
   en: {
     'app.tagline': 'Where work gets done',
     'nav.home': 'Home',
-    'nav.myWork': 'My Work',
+    'nav.myWork': 'My Works',
     'nav.board': 'Board',
     'nav.backlog': 'Backlog',
     'nav.sprint': 'Active Sprint',
@@ -206,7 +206,7 @@ export const MESSAGES = {
     'insights.dashboards.addCustomChart': 'Add custom chart',
     'insights.dashboards.editChart': 'Edit chart',
     // Report Builder
-    'insights.reportBuilder.title': 'Report builder',
+    'insights.reportBuilder.title': 'Report Builder',
     'insights.reportBuilder.subtitle': 'Compose full-page reports from sections — KPIs, charts, tables and narrative.',
     'insights.reportBuilder.new': 'New report',
     'insights.reportBuilder.startFromTemplate': 'Start from a template',
@@ -271,7 +271,7 @@ export const MESSAGES = {
     'nav.developer': 'Developer',
     'nav.releases': 'Releases',
     'nav.teams': 'Teams',
-    'nav.reportBuilder': 'Report builder',
+    'nav.reportBuilder': 'Report Builder',
     'nav.performance': 'Performance',
     'nav.serviceDesk': 'Service Desk',
     'nav.supportInbox': 'Support Inbox',
@@ -312,7 +312,7 @@ export const MESSAGES = {
     'nav.mode.service': 'Service',
     'nav.mode.know': 'Know',
     'nav.mode.extend': 'Extend',
-    'nav.mode.setup': 'Settings',
+    'nav.mode.setup': 'Setup',
     // Nav: workspace switcher + footer + aria labels
     'nav.workspaces': 'Workspaces',
     'nav.workspacesLoadError': 'Couldn’t load your workspaces.',

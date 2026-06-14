@@ -15,7 +15,7 @@ describe('SidebarNav', () => {
   it('renders expanded with workspace name and nav labels', () => {
     render(<SidebarNav {...defaultProps} />);
     expect(screen.getByText('BCITS Works')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Home$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Today$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Backlog/i })).toBeInTheDocument();
   });
 
@@ -38,9 +38,9 @@ describe('SidebarNav', () => {
     expect(screen.getByText('5')).toBeInTheDocument();
   });
 
-  it('renders the full destination set (Service Desk, Automations, SM Cockpit, Performance)', () => {
+  it('renders the full destination set (Service Desk, Automations, Sprint Cockpit, Performance)', () => {
     render(<SidebarNav {...defaultProps} />);
-    for (const label of ['Service Desk', 'Automations', 'SM Cockpit', 'Performance', 'Compliance', 'Dashboards']) {
+    for (const label of ['Service Desk', 'Automations', 'Sprint Cockpit', 'Performance', 'Compliance', 'Dashboards']) {
       expect(screen.getByRole('button', { name: new RegExp(label, 'i') })).toBeInTheDocument();
     }
   });

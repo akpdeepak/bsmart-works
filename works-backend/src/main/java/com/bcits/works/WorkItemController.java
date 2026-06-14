@@ -2,6 +2,8 @@ package com.bcits.works;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -29,6 +31,8 @@ import java.util.Set;
 @RequestMapping("/api/v1/work-items")
 public class WorkItemController {
 
+    private static final Logger log = LoggerFactory.getLogger(WorkItemController.class);
+
     private final WorkItemRepository repository;
     private final EventService eventService;
     private final JdbcTemplate jdbc;
@@ -45,6 +49,7 @@ public class WorkItemController {
     private final BoardWipLimitService wipLimits;
     private final WorkItemBulkService bulkService;
     private final WatcherService watcherService;
+    private final AutomationService automations;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
@@ -57,7 +62,8 @@ public class WorkItemController {
                               StatusConfigService statusConfig,
                               BoardWipLimitService wipLimits,
                               WorkItemBulkService bulkService,
-                              WatcherService watcherService) {
+                              WatcherService watcherService,
+                              AutomationService automations) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
@@ -74,6 +80,7 @@ public class WorkItemController {
         this.wipLimits = wipLimits;
         this.bulkService = bulkService;
         this.watcherService = watcherService;
+        this.automations = automations;
     }
 
     // ── Watchers (followers) ─────────────────────────────────────────────────────
@@ -459,6 +466,15 @@ public class WorkItemController {
         eventService.record(saved.getId(), "WORK_ITEM_CREATED", userId,
                 "{\"title\":\"" + saved.getTitle() + "\",\"type\":\"" + saved.getType() + "\"}");
 
+        // Fire ITEM_CREATED automations (non-fatal — a rule failure must not roll back the save).
+        if (wsId != null) {
+            try {
+                automations.evaluateForItem(wsId, AutomationCatalog.TR_ITEM_CREATED, saved, userId);
+            } catch (Exception ex) {
+                log.warn("Automation evaluation failed after create of {}: {}", saved.getId(), ex.getMessage());
+            }
+        }
+
         // Notify assignee (in-app + email)
         if (saved.getAssigneeId() != null && !saved.getAssigneeId().equals(userId)) {
             createNotification(saved.getAssigneeId(), "ASSIGNED",
@@ -672,6 +688,24 @@ public class WorkItemController {
                 String actorName = userRepository.findById(userId != null ? userId : "").map(User::getFullName).orElse("Someone");
                 String ref = saved.getAutoId() != null ? saved.getAutoId() : saved.getId();
                 watcherService.notifyWatchers(id, actorName + " updated " + ref + " — " + saved.getTitle(), notified);
+            }
+            // Fire event-driven automations after save (non-fatal — failures must not roll back).
+            if (wsId != null) {
+                try {
+                    if (!java.util.Objects.equals(oldStatus, saved.getStatus())) {
+                        automations.evaluateForItem(wsId, AutomationCatalog.TR_STATUS_CHANGED, saved, userId);
+                    }
+                    if (!java.util.Objects.equals(oldAssignee, saved.getAssigneeId())) {
+                        automations.evaluateForItem(wsId, AutomationCatalog.TR_ITEM_ASSIGNED, saved, userId);
+                    }
+                    // ITEM_UPDATED fires for any other field change (title, priority, description, etc.)
+                    if (java.util.Objects.equals(oldStatus, saved.getStatus())
+                            && java.util.Objects.equals(oldAssignee, saved.getAssigneeId())) {
+                        automations.evaluateForItem(wsId, AutomationCatalog.TR_ITEM_UPDATED, saved, userId);
+                    }
+                } catch (Exception ex) {
+                    log.warn("Automation evaluation failed after update of {}: {}", saved.getId(), ex.getMessage());
+                }
             }
 
             attachTags(saved);

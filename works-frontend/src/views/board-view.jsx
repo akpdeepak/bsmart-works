@@ -16,14 +16,14 @@ import { cn } from '@/lib/utils';
 import { absoluteDate } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 
-// Columns are the three fixed categories; items land by their status's category (resolved per
-// type), so custom statuses (Triaged, On Hold, …) appear in the right column. `labelKey` resolves
-// the localized header at render (the catalogue is the single source — RB-30 §7).
-const COLUMNS = [
-  { key: 'todo',        labelKey: 'deliver.board.colTodo',       dot: 'bg-neutral-400',     limitKey: 'todoLimit' },
-  { key: 'in_progress', labelKey: 'deliver.board.colInProgress', dot: 'bg-brand-navy-tint',  limitKey: 'inProgressLimit' },
-  { key: 'done',        labelKey: 'deliver.board.colDone',       dot: 'bg-semantic-success', limitKey: 'doneLimit' },
+// Fallback columns — used when no workflow is loaded. One column per category.
+// When the active workflow is loaded, the `columns` prop provides one column per workflow status.
+const FALLBACK_COLUMNS = [
+  { key: 'todo',        name: 'Todo',        category: 'TO_DO',       labelKey: 'deliver.board.colTodo',       dot: 'bg-neutral-400',     limitKey: 'todoLimit' },
+  { key: 'in_progress', name: 'In Progress', category: 'IN_PROGRESS', labelKey: 'deliver.board.colInProgress', dot: 'bg-brand-navy-tint',  limitKey: 'inProgressLimit' },
+  { key: 'done',        name: 'Done',        category: 'DONE',        labelKey: 'deliver.board.colDone',       dot: 'bg-semantic-success', limitKey: 'doneLimit' },
 ];
+
 
 const DENSITY = [
   { key: 'compact',     labelKey: 'deliver.board.density.compact' },
@@ -73,9 +73,24 @@ export default function BoardView({
   currentUserId = null,
   users = [],
   onBulkEdit,
+  // Workflow-derived columns (one per workflow status); falls back to FALLBACK_COLUMNS.
+  columns: columnsProp,
 }) {
   const { t } = useI18n();
-  const columns = COLUMNS;
+  // When the parent supplies workflow-derived columns, use them. Otherwise fall back to the
+  // three fixed category columns so the board always renders something.
+  const workflowColumns = Array.isArray(columnsProp) && columnsProp.length > 0 ? columnsProp : null;
+  // Normalised column list for rendering. Each entry always has: name, dot, limitKey,
+  // plus either `labelKey` (fallback) or a literal `label` (workflow-derived).
+  const columns = workflowColumns
+    ? workflowColumns.map(col => ({
+        ...col,
+        key:      col.name, // unique column identity
+        label:    col.name, // display label is the status name
+        dot:      col.dot || 'bg-neutral-400',
+        limitKey: col.limitKey || 'todoLimit',
+      }))
+    : FALLBACK_COLUMNS;
   const densityPad = DENSITY_PAD;
   const iv = cardPrefs?.isVisible ?? (() => true);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -99,10 +114,18 @@ export default function BoardView({
       .then(() => clearSelection())
       .finally(() => setBulkBusy(false));
   };
-  // Resolve an item's board category (per-type status config; legacy-safe fallback).
-  const catOf = (item) => statusResolver
-    ? statusResolver.categoryOf(item.type, item.status)
-    : statusToCategory(item.status);
+  // Resolve which column an item belongs to.
+  // • Workflow columns: match by exact status name (each workflow status is its own column).
+  // • Fallback columns: match by category (todo / in_progress / done).
+  const catOf = (item) => {
+    if (workflowColumns) {
+      // Each column IS a specific status — bucket by exact name match.
+      return item.status;
+    }
+    return statusResolver
+      ? statusResolver.categoryOf(item.type, item.status)
+      : statusToCategory(item.status);
+  };
   // Apply the shared filter model once; columns then group + sort the visible subset.
   const visibleItems = filterItems(workItems, filters, currentUserId);
 
@@ -186,19 +209,34 @@ export default function BoardView({
       ) : (
         <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
           {columns.map(col => {
-            const colItems = sortItems(visibleItems.filter(i => catOf(i) === col.key), sort);
+            // When workflow columns are active, bucket by exact status name match.
+            // When fallback columns are active, bucket by category key.
+            const colItems = sortItems(
+              visibleItems.filter(i => catOf(i) === col.key),
+              sort,
+            );
             const wipLimit = wipLimits[col.limitKey] ?? null;
             const overWip = wipLimit != null && colItems.length > wipLimit;
+            // Category-based column background (design tokens — RB-30 §1).
+            const colBg = col.category === 'IN_PROGRESS'
+              ? 'bg-brand-navy/5 dark:bg-neutral-800'
+              : col.category === 'DONE'
+                ? 'bg-semantic-success/5 dark:bg-neutral-800'
+                : 'bg-neutral-100 dark:bg-neutral-800';
             return (
               <div key={col.key}
-                className={`flex-1 min-w-56 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3 ${overWip ? 'ring-1 ring-semantic-danger/40' : ''}`}
+                className={`flex-1 min-w-56 flex flex-col ${colBg} rounded-xl p-3 ${overWip ? 'ring-1 ring-semantic-danger/40' : ''}`}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, col.key)}>
                 <div className="mb-3 px-1">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${col.dot}`}></span>
-                      <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{t(col.labelKey)}</h3>
+                      <span className={`w-2 h-2 rounded-full ${col.dot}`}
+                        style={col.color ? { backgroundColor: col.color } : undefined}
+                        aria-hidden="true" />
+                      <h3 className="text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider">
+                        {col.label ?? t(col.labelKey)}
+                      </h3>
                     </div>
                     <BoardWipBadge count={colItems.length} limit={wipLimit}
                       canEdit={can('manage_projects')} onSet={(next) => setWipLimit(col.limitKey, next)} />
@@ -234,7 +272,17 @@ export default function BoardView({
                   ))}
                 </div>
 
-                <button onClick={() => { setNewItem(p => ({ ...p, status: statusResolver?.firstStatusOfCategory(p.type, col.key) || p.status })); setIsCreateOpen(true); }}
+                <button onClick={() => {
+                  // Workflow columns: col.name IS the concrete target status.
+                  // Category fallback: resolve the first status of the category via statusResolver.
+                  setNewItem(p => ({
+                    ...p,
+                    status: workflowColumns
+                      ? col.name
+                      : (statusResolver?.firstStatusOfCategory(p.type, col.key) || p.status),
+                  }));
+                  setIsCreateOpen(true);
+                }}
                   className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-700 rounded-lg transition-colors">
                   <span>+</span> {t('deliver.board.addItem')}
                 </button>

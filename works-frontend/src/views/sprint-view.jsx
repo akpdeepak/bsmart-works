@@ -208,8 +208,15 @@ export default function SprintView({
                     showToast(t('deliver.sprint.itemChangedElsewhere'), 'error');
                     if (activeSprint) fetchSprintItems(activeSprint.id);
                   } else {
+                    // Revert the optimistic move.
                     setSprintItems(prev => prev.map(i => i.id === itemId ? { ...i, status: item.status } : i));
-                    reportError(err);
+                    // Surface workflow-transition rejections as specific messages.
+                    const code = err?.code || err?.body?.code;
+                    if (code === 'VALIDATOR_FAILED' || code === 'TRANSITION_CONDITION_FAILED') {
+                      showToast(`${t('deliver.board.statusChangeBlocked')}: ${err.message || t('deliver.board.transitionNotAllowed')}`, 'error');
+                    } else {
+                      reportError(err);
+                    }
                   }
                 });
             }}

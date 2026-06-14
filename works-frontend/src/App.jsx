@@ -304,6 +304,10 @@ export default function App() {
   const [activeWorkspaceId, setActiveWorkspaceId] =
     useState(() => localStorage.getItem('bSmartActiveWorkspace') || 'WS-001');
 
+  // Board columns derived from the active workflow — one column per workflow status.
+  // Falls back to the three fixed category columns when no workflow is loaded.
+  const [boardColumns, setBoardColumns] = useState(null); // null = loading not yet triggered
+
   // Iteration 3 — Workflows, Custom Fields, Permissions, BQL
   const [workflows, setWorkflows]           = useState([]);
   const [fieldDefs, setFieldDefs]           = useState([]);
@@ -1103,9 +1107,16 @@ export default function App() {
         }).catch(() => setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: item.status } : i)));
         showToast('This item changed elsewhere — refreshed to the latest', 'error');
       } else {
-        // Revert on failure
+        // Revert the optimistic move.
         setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: item.status } : i));
-        showToast('Failed to update status', 'error');
+        // Surface workflow-transition rejections as specific messages (WorkflowRuleEngine returns
+        // VALIDATOR_FAILED or TRANSITION_CONDITION_FAILED with a descriptive message).
+        const code = err?.code || err?.body?.code;
+        if (code === 'VALIDATOR_FAILED' || code === 'TRANSITION_CONDITION_FAILED') {
+          showToast(`Status change blocked: ${err.message || 'transition not allowed'}`, 'error');
+        } else {
+          showToast('Failed to update status', 'error');
+        }
       }
     });
   };
@@ -1663,6 +1674,37 @@ export default function App() {
     const q = projectId ? `?projectId=${projectId}` : '';
     api.raw(`/workflows${q}`)
       .then(r => r.json()).then(d => setWorkflows(Array.isArray(d) ? d : [])).catch(reportError);
+  }
+  /**
+   * Fetch the active workflow for the board and derive one column per workflow status, ordered
+   * by position. Falls back to null (which board-view renders as the three fixed category columns)
+   * when no workflow is found or the fetch fails.
+   */
+  function fetchActiveWorkflow(projectId) {
+    const q = projectId ? `?projectId=${projectId}` : '';
+    api.raw(`/workflows${q}`)
+      .then(r => r.json())
+      .then(list => {
+        const all = Array.isArray(list) ? list : [];
+        // Prefer the first default workflow; fall back to the first available one.
+        const wf = all.find(w => w.isDefault) || all[0] || null;
+        if (!wf) { setBoardColumns(null); return; }
+        // Load the full workflow detail to get the ordered statuses list.
+        return api.raw(`/workflows/${wf.id}`)
+          .then(r => r.json())
+          .then(detail => {
+            const statuses = Array.isArray(detail?.statuses)
+              ? [...detail.statuses].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+              : [];
+            if (!statuses.length) { setBoardColumns(null); return; }
+            setBoardColumns(statuses.map(s => ({
+              name:     s.name,
+              category: s.category, // 'TO_DO' | 'IN_PROGRESS' | 'DONE'
+              color:    s.color || null,
+            })));
+          });
+      })
+      .catch(() => setBoardColumns(null));
   }
   function fetchFieldDefs(projectId) {
     const q = projectId ? `?projectId=${projectId}` : '';
@@ -2624,11 +2666,25 @@ export default function App() {
       .then(r => r.json()).then(p => setProjects(prev => prev.map(x => x.id === p.id ? p : x)));
   };
 
-  const columns = [
-    { name: 'Todo',        dot: 'bg-neutral-400',     limitKey: 'todoLimit' },
-    { name: 'In Progress', dot: 'bg-brand-navy-tint',  limitKey: 'inProgressLimit' },
-    { name: 'Done',        dot: 'bg-semantic-success', limitKey: 'doneLimit' },
+  // Map workflow category → dot-color token so board column headers are category-colored.
+  const CATEGORY_DOT = { TO_DO: 'bg-neutral-400', IN_PROGRESS: 'bg-brand-navy-tint', DONE: 'bg-semantic-success' };
+  // Map workflow category → WIP limit key (for backward compatibility with wipLimits).
+  const CATEGORY_LIMIT_KEY = { TO_DO: 'todoLimit', IN_PROGRESS: 'inProgressLimit', DONE: 'doneLimit' };
+  // Derive board columns from the active workflow statuses; fall back to three fixed category columns.
+  const FALLBACK_COLUMNS = [
+    { name: 'Todo',        category: 'TO_DO',       dot: 'bg-neutral-400',     limitKey: 'todoLimit' },
+    { name: 'In Progress', category: 'IN_PROGRESS', dot: 'bg-brand-navy-tint',  limitKey: 'inProgressLimit' },
+    { name: 'Done',        category: 'DONE',        dot: 'bg-semantic-success', limitKey: 'doneLimit' },
   ];
+  const columns = boardColumns
+    ? boardColumns.map(s => ({
+        name:     s.name,
+        category: s.category,
+        dot:      CATEGORY_DOT[s.category] || 'bg-neutral-400',
+        color:    s.color || null,
+        limitKey: CATEGORY_LIMIT_KEY[s.category] || 'todoLimit',
+      }))
+    : FALLBACK_COLUMNS;
 
   // densityPad moved to board-view.jsx (TD-003)
   const userName = u => users.find(x => x.id === u)?.fullName || '';
@@ -2870,7 +2926,8 @@ export default function App() {
       case 'myworks': fetchNotifications(); break;
       case 'notifications': fetchNotifications(); break;
       case 'backlog': fetchBacklog(); fetchSprints(); fetchSavedFilters(); break;
-      case 'sprint': fetchSprints(); fetchSavedFilters(); break;
+      case 'board':  fetchActiveWorkflow(selectedProjectId || undefined); break;
+      case 'sprint': fetchSprints(); fetchSavedFilters(); fetchActiveWorkflow(selectedProjectId || undefined); break;
       case 'reports': fetchSprints(); fetchVelocityData(); break;
       case 'dashboards': setSelectedDashboard(null); fetchCustomDashboards(); fetchTeams(); break;
       case 'reportbuilder': setSelectedReport(null); fetchReports(); fetchReportTemplates(); break;
@@ -3296,6 +3353,7 @@ export default function App() {
               onBulkEdit={handleBulkEdit}
               onCustomFieldCreated={def => setCustomFieldDefs(prev => [...prev, def])}
               totalWorkItemCount={totalWorkItemCount}
+              columns={columns}
             />
           )}
           {/* PROJECTS */}

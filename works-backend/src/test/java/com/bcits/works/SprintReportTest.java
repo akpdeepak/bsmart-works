@@ -3,7 +3,6 @@ package com.bcits.works;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -12,7 +11,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -23,7 +21,7 @@ import static org.mockito.Mockito.when;
  * B05: Sprint report tests — burndown signal, velocity calculation, and workspace isolation
  * for both the report and velocity endpoints (RB-40 §1, RB-05 Stage 3).
  *
- * <p>Uses the pure unit-test pattern (mocked repos + JdbcTemplate, no DB) consistent with
+ * <p>Uses the pure unit-test pattern (mocked repos + {@link SprintDao}, no DB) consistent with
  * {@link SprintControllerAccessTest} and {@link KpiServiceTest}.
  */
 @Tag("unit")
@@ -38,13 +36,13 @@ class SprintReportTest {
     private final SprintRepository sprintRepository = mock(SprintRepository.class);
     private final WorkItemRepository workItemRepository = mock(WorkItemRepository.class);
     private final EventService eventService = mock(EventService.class);
-    private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
+    private final SprintDao sprintDao = mock(SprintDao.class);
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
     private final StatusConfigService statusConfig = mock(StatusConfigService.class);
 
     private final SprintController controller = new SprintController(
-            sprintRepository, workItemRepository, eventService, jdbc, authenticatedUser, rbac, statusConfig);
+            sprintRepository, workItemRepository, eventService, sprintDao, authenticatedUser, rbac, statusConfig);
 
     private Sprint sprintA;
     private Sprint sprintB;
@@ -109,7 +107,7 @@ class SprintReportTest {
             itemRow("WI-3", "T3", "In Progress", "Bug",   3, "u2"),
             itemRow("WI-4", "T4", "Todo",        "Story", 5, null)
         );
-        when(jdbc.queryForList(contains("sprint_id"), eq(SPRINT_A))).thenReturn(items);
+        when(sprintDao.reportItems(eq(SPRINT_A))).thenReturn(items);
 
         Map<String, Object> report = controller.getSprintReport(SPRINT_A);
 
@@ -130,7 +128,7 @@ class SprintReportTest {
             itemRow("WI-1", "T1", "Done", "Story", 5, "u1"),
             itemRow("WI-2", "T2", "Done", "Story", 8, "u2")
         );
-        when(jdbc.queryForList(contains("sprint_id"), eq(SPRINT_A))).thenReturn(items);
+        when(sprintDao.reportItems(eq(SPRINT_A))).thenReturn(items);
 
         Map<String, Object> report = controller.getSprintReport(SPRINT_A);
 
@@ -156,7 +154,7 @@ class SprintReportTest {
             itemRow("WI-2", "T2", "Shipped", "Story", 3, "u1"),
             itemRow("WI-3", "T3", "Todo",    "Story", 2, null)
         );
-        when(jdbc.queryForList(contains("sprint_id"), eq(SPRINT_A))).thenReturn(items);
+        when(sprintDao.reportItems(eq(SPRINT_A))).thenReturn(items);
 
         Map<String, Object> report = controller.getSprintReport(SPRINT_A);
 
@@ -170,7 +168,7 @@ class SprintReportTest {
     @Test
     void sprintReport_noItems_yields0Rates() {
         when(sprintRepository.findById(SPRINT_A)).thenReturn(Optional.of(sprintA));
-        when(jdbc.queryForList(contains("sprint_id"), eq(SPRINT_A))).thenReturn(List.of());
+        when(sprintDao.reportItems(eq(SPRINT_A))).thenReturn(List.of());
 
         Map<String, Object> report = controller.getSprintReport(SPRINT_A);
 
@@ -196,7 +194,7 @@ class SprintReportTest {
     void velocityChart_donePointsCountOnlyDoneItems() {
         when(sprintRepository.findAllScopedToUser(CALLER)).thenReturn(List.of(sprintA));
         // 2 done (6+4=10 pts), 1 in-progress (5 pts — must NOT count in donePoints)
-        when(jdbc.queryForList(contains("sprint_id"), eq(SPRINT_A))).thenReturn(List.of(
+        when(sprintDao.velocityItems(eq(SPRINT_A))).thenReturn(List.of(
             velocityRow("Done",        6),
             velocityRow("Done",        4),
             velocityRow("In Progress", 5)
@@ -216,10 +214,10 @@ class SprintReportTest {
     @Test
     void velocityChart_multiSprint_eachSprintComputedIndependently() {
         when(sprintRepository.findAllScopedToUser(CALLER)).thenReturn(List.of(sprintA, sprintB));
-        when(jdbc.queryForList(contains("sprint_id"), eq(SPRINT_A))).thenReturn(List.of(
+        when(sprintDao.velocityItems(eq(SPRINT_A))).thenReturn(List.of(
             velocityRow("Done", 8)
         ));
-        when(jdbc.queryForList(contains("sprint_id"), eq(SPRINT_B))).thenReturn(List.of(
+        when(sprintDao.velocityItems(eq(SPRINT_B))).thenReturn(List.of(
             velocityRow("Done", 12),
             velocityRow("Done",  3)
         ));
@@ -246,7 +244,7 @@ class SprintReportTest {
     void velocityChart_usesWorkspaceScopedQuery_andEachSprintCountsOnlyItsOwnItems() {
         // Caller only belongs to workspace A — findAllScopedToUser returns only sprintA
         when(sprintRepository.findAllScopedToUser(CALLER)).thenReturn(List.of(sprintA));
-        when(jdbc.queryForList(contains("sprint_id"), eq(SPRINT_A))).thenReturn(List.of(
+        when(sprintDao.velocityItems(eq(SPRINT_A))).thenReturn(List.of(
             velocityRow("Done", 10)
         ));
 
@@ -269,10 +267,10 @@ class SprintReportTest {
     void velocityChart_eachSprintOnlyQueriesItsOwnSprintId() {
         when(sprintRepository.findAllScopedToUser(CALLER)).thenReturn(List.of(sprintA, sprintB));
         // Sprint A has data; sprint B returns nothing (cross-workspace isolation)
-        when(jdbc.queryForList(contains("sprint_id"), eq(SPRINT_A))).thenReturn(List.of(
+        when(sprintDao.velocityItems(eq(SPRINT_A))).thenReturn(List.of(
             velocityRow("Done", 10)
         ));
-        when(jdbc.queryForList(contains("sprint_id"), eq(SPRINT_B))).thenReturn(List.of());
+        when(sprintDao.velocityItems(eq(SPRINT_B))).thenReturn(List.of());
 
         List<Map<String, Object>> chart = controller.getVelocityChart();
 

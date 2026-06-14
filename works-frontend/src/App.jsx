@@ -3598,7 +3598,11 @@ export default function App() {
 
           {/* ITERATION 12 — Performance (KPI framework with privacy guardrails) */}
           {view === 'performance' && (
-            <PerformancePanel workspaceId={activeWorkspaceId} can={can} onToast={showToast} />
+            <PerformancePanel
+              workspaceId={activeWorkspaceId}
+              aiCapabilities={aiCapabilities}
+              onOpenItem={(id) => api.send(`/work-items/${encodeURIComponent(id)}`).then((it) => { if (it) setSelectedItem(it); }).catch(reportError)}
+            />
           )}
 
           {/* ITERATION 11 — AI Control (AI Control Plane settings; mockup 09) */}

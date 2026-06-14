@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import BacklogView from './backlog-view';
 
 const noop = () => {};
@@ -50,5 +50,31 @@ describe('BacklogView', () => {
     render(<BacklogView {...baseProps} />);
     expect(screen.getByRole('button', { name: /\+ add item/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /\+ new sprint/i })).toBeInTheDocument();
+  });
+
+  it('renders the shared filter/sort bar', () => {
+    render(<BacklogView {...baseProps} />);
+    expect(screen.getByRole('searchbox', { name: /search items/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /my items/i })).toBeInTheDocument();
+  });
+
+  const items = [
+    { id: 'WI-1', title: 'Fix login', type: 'Bug', status: 'Todo', priority: 'HIGH', storyPoints: 3, assigneeId: 'u1', parentId: null },
+    { id: 'WI-2', title: 'Write docs', type: 'Task', status: 'Todo', priority: 'LOW', storyPoints: 2, assigneeId: 'u2', parentId: null },
+  ];
+
+  it('text search narrows the backlog list', () => {
+    render(<BacklogView {...baseProps} backlogItems={items} workItems={items} currentUserId="u1" />);
+    expect(screen.getByText('Fix login')).toBeInTheDocument();
+    expect(screen.getByText('Write docs')).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('searchbox', { name: /search items/i }), { target: { value: 'docs' } });
+    expect(screen.queryByText('Fix login')).not.toBeInTheDocument();
+    expect(screen.getByText('Write docs')).toBeInTheDocument();
+  });
+
+  it('shows a no-matches message when filters exclude everything', () => {
+    render(<BacklogView {...baseProps} backlogItems={items} workItems={items} currentUserId="u1" />);
+    fireEvent.change(screen.getByRole('searchbox', { name: /search items/i }), { target: { value: 'zzz-nope' } });
+    expect(screen.getByText(/no items match/i)).toBeInTheDocument();
   });
 });

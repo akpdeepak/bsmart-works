@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Sparkles, X, BookmarkPlus, Bookmark, Check, AlertCircle, Plus, Trash2, SlidersHorizontal, Link2, Clock, Bell } from 'lucide-react';
+import { Sparkles, X, BookmarkPlus, Bookmark, Check, AlertCircle, Plus, Trash2, SlidersHorizontal, Link2, Clock, Bell, Play, Terminal, Database, Search, LayoutGrid } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { savedViewsClient } from '@/lib/saved-views';
 import { Button } from '@/components/works/button';
@@ -307,58 +307,78 @@ export default function BqlView({
   };
 
   return (
-    <div className="p-8 max-w-5xl">
-      <h1 className="text-2xl font-bold text-brand-navy mb-1">{t('insights.bql.title')}</h1>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">{t('insights.bql.subtitle')}</p>
+    <div className="mx-auto max-w-5xl space-y-5 p-6 sm:p-8">
+      {/* Header */}
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-brand-navy dark:text-neutral-50">{t('insights.bql.title')}</h1>
+          <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">{t('insights.bql.subtitle')}</p>
+        </div>
+        {schema?.fields?.length > 0 && (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-medium text-neutral-500 shadow-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400">
+            <Database aria-hidden="true" className="h-3.5 w-3.5 text-brand-navy-tint" />
+            {schema.fields.length} fields queryable
+          </span>
+        )}
+      </header>
 
       {/* Iteration 10 Cap O — NL→BQL translation panel */}
       {aiOn && (
-        <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-4 mb-4 flex gap-3 items-start">
-          <Sparkles aria-hidden="true" className="h-4 w-4 text-brand-navy mt-2 shrink-0" />
-          <div className="flex-1">
-            <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-200 mb-1">{t('insights.bql.askPlainEnglish')}</p>
-            <div className="flex gap-2">
-              <label htmlFor="nl-query" className="sr-only">Plain-English filter query</label>
-              <input
-                id="nl-query"
-                type="text"
-                className="input flex-1 text-sm"
-                placeholder="e.g. open bugs assigned to me this week"
-                value={nlText}
-                onChange={e => setNlText(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') translateNl(); }}
-                aria-describedby={nlMeta ? 'nl-meta' : undefined}
-              />
-              <Button variant="secondary" onClick={translateNl} loading={nlBusy} disabled={!nlText.trim()}>
-                Translate to BQL
-              </Button>
+        <div className="overflow-hidden rounded-xl border border-brand-navy-tint/30 bg-gradient-to-br from-brand-navy/5 to-transparent shadow-sm dark:border-brand-navy-tint/40 dark:from-brand-navy-tint/10">
+          <div className="flex items-start gap-3 p-4">
+            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-navy/10 text-brand-navy dark:bg-brand-navy-tint/20 dark:text-brand-navy-tint">
+              <Sparkles aria-hidden="true" className="h-4 w-4" />
+            </span>
+            <div className="flex-1">
+              <p className="mb-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-200">{t('insights.bql.askPlainEnglish')}</p>
+              <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+                <label htmlFor="nl-query" className="sr-only">Plain-English filter query</label>
+                <input
+                  id="nl-query"
+                  type="text"
+                  className="input flex-1 text-sm"
+                  placeholder="e.g. open bugs assigned to me this week"
+                  value={nlText}
+                  onChange={e => setNlText(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') translateNl(); }}
+                  aria-describedby={nlMeta ? 'nl-meta' : undefined}
+                />
+                <Button variant="secondary" leftIcon={<Sparkles aria-hidden="true" className="h-3.5 w-3.5" />}
+                  onClick={translateNl} loading={nlBusy} disabled={!nlText.trim()}>
+                  Translate
+                </Button>
+              </div>
+              {nlMeta && (
+                <p id="nl-meta" className="mt-1.5 text-xs text-neutral-500">
+                  {nlMeta.fallback ? 'Translated using keyword matching (AI off or over budget).' : 'AI translation applied.'}
+                  {' '}Confidence: <strong className="text-neutral-700 dark:text-neutral-300">{nlMeta.confidence}</strong>. Review the query below before running.
+                </p>
+              )}
             </div>
-            {nlMeta && (
-              <p id="nl-meta" className="text-xs text-neutral-500 mt-1">
-                {nlMeta.fallback ? 'Translated using keyword matching (AI off or over budget).' : 'AI translation applied.'}
-                {' '}Confidence: <strong>{nlMeta.confidence}</strong>. Review the query below before running.
-              </p>
-            )}
           </div>
         </div>
       )}
 
-      <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 mb-4">
-        <div className="mb-3">
-          <div className="flex items-center justify-between">
-            <label htmlFor="bql-query" className="text-xs font-semibold text-neutral-600 uppercase tracking-wider">Query</label>
-            {/* Live validation indicator */}
-            {validation && (
-              validation.valid
-                ? <span className="flex items-center gap-1 text-xs text-semantic-success"><Check aria-hidden="true" className="h-3.5 w-3.5" /> Valid</span>
-                : <span className="flex items-center gap-1 text-xs text-semantic-danger"><AlertCircle aria-hidden="true" className="h-3.5 w-3.5" /> {validation.error}</span>
-            )}
+      {/* Query console */}
+      <section className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-md dark:border-neutral-700 dark:bg-neutral-800">
+        <div className="flex items-center justify-between gap-3 border-b border-neutral-100 px-5 py-3 dark:border-neutral-700/60">
+          <div className="flex items-center gap-2">
+            <Terminal aria-hidden="true" className="h-4 w-4 text-brand-navy-tint" />
+            <label htmlFor="bql-query" className="text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-300">Query</label>
           </div>
-          <div className="relative mt-2">
+          {validation && (
+            validation.valid
+              ? <span className="inline-flex items-center gap-1 rounded-full bg-semantic-success-surface px-2.5 py-1 text-xs font-medium text-semantic-success"><Check aria-hidden="true" className="h-3.5 w-3.5" /> Valid</span>
+              : <span className="inline-flex max-w-xs items-center gap-1 rounded-full bg-semantic-danger-surface px-2.5 py-1 text-xs font-medium text-semantic-danger"><AlertCircle aria-hidden="true" className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{validation.error}</span></span>
+          )}
+        </div>
+
+        <div className="p-5">
+          <div className="relative">
             <textarea
               id="bql-query"
               ref={queryRef}
-              className="input w-full font-mono text-sm resize-none"
+              className="input w-full resize-none rounded-lg bg-neutral-50/60 font-mono text-sm leading-relaxed focus:bg-white focus:ring-2 focus:ring-brand-navy-tint/30 dark:bg-neutral-900/40 dark:focus:bg-neutral-900"
               rows={3}
               placeholder={'status = Open AND (priority = High OR priority = Critical)\nassignee = currentUser() AND createdAt >= startOfWeek()\ndueDate < today() AND status NOT IN (Done, Cancelled)'}
               value={bqlQuery}
@@ -368,13 +388,13 @@ export default function BqlView({
               aria-autocomplete="list"
             />
             {ac.open && (
-              <ul role="listbox" className="absolute left-0 right-0 mt-1 z-overlay max-h-56 overflow-y-auto bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg py-1 text-sm">
+              <ul role="listbox" className="absolute left-0 right-0 z-dropdown mt-1 max-h-60 overflow-y-auto rounded-lg border border-neutral-200 bg-white py-1 text-sm shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
                 {ac.options.map((opt, i) => (
                   <li key={opt} role="option" aria-selected={i === ac.index}>
                     <button type="button"
                       // onMouseDown (not onClick) so it fires before the textarea blur closes the list.
                       onMouseDown={e => { e.preventDefault(); acceptSuggestion(opt); }}
-                      className={`flex w-full items-center px-3 py-1.5 text-left font-mono ${i === ac.index ? 'bg-neutral-100 dark:bg-neutral-700 text-brand-navy' : 'text-neutral-700 dark:text-neutral-200'}`}>
+                      className={`flex w-full items-center px-3 py-1.5 text-left font-mono transition-colors ${i === ac.index ? 'bg-brand-navy/5 text-brand-navy dark:bg-brand-navy-tint/20 dark:text-neutral-50' : 'text-neutral-700 hover:bg-neutral-50 dark:text-neutral-200 dark:hover:bg-neutral-700/50'}`}>
                       {opt}
                     </button>
                   </li>
@@ -383,70 +403,79 @@ export default function BqlView({
             )}
           </div>
           {validation && !validation.valid && validation.position >= 0 && (
-            <p className="text-xs text-semantic-danger mt-2 font-mono">At position {validation.position}: {validation.error}</p>
+            <p className="mt-2 font-mono text-xs text-semantic-danger">At position {validation.position}: {validation.error}</p>
           )}
-          {bqlError && <p className="text-xs text-semantic-danger mt-2 font-mono">{bqlError}</p>}
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="action" onClick={() => runQuery()}>Run Query (Ctrl+Enter)</Button>
-          <Button variant="secondary" leftIcon={<SlidersHorizontal aria-hidden="true" className="h-3.5 w-3.5" />}
-            onClick={() => setBuilderOpen(o => !o)} aria-expanded={builderOpen}>
-            Visual builder
-          </Button>
-          <Button variant="ghost" leftIcon={<Link2 aria-hidden="true" className="h-3.5 w-3.5" />}
-            onClick={copyLink} disabled={!bqlQuery.trim()} title="Copy a shareable link to this query">
-            Copy link
-          </Button>
-          {schema?.groupable?.length > 0 && (
-            <label className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400 ml-auto">
-              Group by
-              <select className="input text-xs py-1" value={groupBy}
-                onChange={e => runGroup(e.target.value)} aria-label="Group results by field">
-                <option value="">none</option>
-                {schema.groupable.map(g => {
-                  const alias = (schema.fields || []).find(f => f.column === g)?.alias || g;
-                  return <option key={g} value={alias}>{alias}</option>;
-                })}
-              </select>
-            </label>
-          )}
-        </div>
+          {bqlError && <p className="mt-2 font-mono text-xs text-semantic-danger">{bqlError}</p>}
 
-        {/* Recent queries — quick re-run (JIRA lacks query history; addresses a JQL pain point) */}
-        {history.length > 0 && (
-          <div className="mt-3 flex items-start gap-2 text-xs">
-            <Clock aria-hidden="true" className="h-3.5 w-3.5 text-neutral-400 mt-1 shrink-0" />
-            <div className="flex flex-wrap gap-1">
-              {history.map(q => (
-                <button key={q} type="button"
-                  onClick={() => { setBqlQuery(q); runQuery({ query: q }); }}
-                  title={q}
-                  className="font-mono max-w-xs truncate bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded px-1.5 py-0.5 text-neutral-600 dark:text-neutral-300 hover:border-brand-navy hover:text-brand-navy transition-colors">
-                  {q}
-                </button>
-              ))}
+          {/* Action bar */}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Button variant="action" leftIcon={<Play aria-hidden="true" className="h-3.5 w-3.5" />} onClick={() => runQuery()}>Run Query</Button>
+            <span className="mr-1 hidden items-center gap-1 text-neutral-400 sm:inline-flex"><Kbd>⌘</Kbd><Kbd>↵</Kbd></span>
+            <span className="mx-1 hidden h-5 w-px bg-neutral-200 dark:bg-neutral-700 sm:block" />
+            <Button variant="secondary" leftIcon={<SlidersHorizontal aria-hidden="true" className="h-3.5 w-3.5" />}
+              onClick={() => setBuilderOpen(o => !o)} aria-expanded={builderOpen}>
+              Visual builder
+            </Button>
+            <Button variant="ghost" leftIcon={<Link2 aria-hidden="true" className="h-3.5 w-3.5" />}
+              onClick={copyLink} disabled={!bqlQuery.trim()} title="Copy a shareable link to this query">
+              Copy link
+            </Button>
+            {schema?.groupable?.length > 0 && (
+              <label className="ml-auto flex items-center gap-2 text-xs font-medium text-neutral-600 dark:text-neutral-400">
+                <LayoutGrid aria-hidden="true" className="h-3.5 w-3.5 text-neutral-400" />
+                Group by
+                <select className="input w-auto py-1 text-xs" value={groupBy}
+                  onChange={e => runGroup(e.target.value)} aria-label="Group results by field">
+                  <option value="">none</option>
+                  {schema.groupable.map(g => {
+                    const alias = (schema.fields || []).find(f => f.column === g)?.alias || g;
+                    return <option key={g} value={alias}>{alias}</option>;
+                  })}
+                </select>
+              </label>
+            )}
+          </div>
+
+          {/* Recent queries — quick re-run (JIRA lacks query history; addresses a JQL pain point) */}
+          {history.length > 0 && (
+            <div className="mt-4 flex items-start gap-2 text-xs">
+              <span className="mt-1 inline-flex shrink-0 items-center gap-1 font-semibold uppercase tracking-wide text-neutral-400">
+                <Clock aria-hidden="true" className="h-3.5 w-3.5" /> Recent
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {history.map(q => (
+                  <button key={q} type="button"
+                    onClick={() => { setBqlQuery(q); runQuery({ query: q }); }}
+                    title={q}
+                    className="max-w-xs truncate rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1 font-mono text-neutral-600 transition-all hover:-translate-y-px hover:border-brand-navy hover:text-brand-navy hover:shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
+                    {q}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Schema-driven reference — click any token to insert it (autocomplete-by-click) */}
-        {schema && (
-          <div className="mt-3 space-y-1.5 text-xs">
-            <ChipRow label="Fields" items={schema.fields?.map(f => f.alias) || []} onPick={insertToken} />
-            <ChipRow label="Operators" items={schema.operators || []} onPick={insertToken} />
-            <ChipRow label="Functions" items={schema.functions || []} onPick={insertToken} />
-          </div>
-        )}
-      </div>
+          {/* Schema-driven reference — click any token to insert it (autocomplete-by-click) */}
+          {schema && (
+            <div className="mt-4 space-y-2 rounded-lg border border-neutral-100 bg-neutral-50/60 p-3 text-xs dark:border-neutral-700/60 dark:bg-neutral-900/40">
+              <ChipRow label="Fields" items={schema.fields?.map(f => f.alias) || []} onPick={insertToken} />
+              <ChipRow label="Operators" items={schema.operators || []} onPick={insertToken} />
+              <ChipRow label="Functions" items={schema.functions || []} onPick={insertToken} />
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* Visual builder (P3 / RB-40 §2 manual fallback) */}
       {builderOpen && (
-        <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-5 mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-200 uppercase tracking-wider">Visual builder</p>
+        <div className="rounded-xl border border-brand-navy-tint/30 bg-white p-5 shadow-sm dark:border-brand-navy-tint/40 dark:bg-neutral-800">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-neutral-700 dark:text-neutral-200">
+              <SlidersHorizontal aria-hidden="true" className="h-3.5 w-3.5 text-brand-navy-tint" /> Visual builder
+            </p>
             <label className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
               Join with
-              <select className="input text-xs py-1" value={connector} onChange={e => setConnector(e.target.value)} aria-label="Join clauses with">
+              <select className="input w-auto py-1 text-xs" value={connector} onChange={e => setConnector(e.target.value)} aria-label="Join clauses with">
                 <option value="AND">AND</option>
                 <option value="OR">OR</option>
               </select>
@@ -459,13 +488,13 @@ export default function BqlView({
               return (
                 <div key={i} className="flex items-center gap-2">
                   <label className="sr-only" htmlFor={`b-field-${i}`}>Field</label>
-                  <select id={`b-field-${i}`} className="input text-sm flex-1" value={row.field}
+                  <select id={`b-field-${i}`} className="input flex-1 text-sm" value={row.field}
                     onChange={e => updateRow(i, { field: e.target.value })}>
                     <option value="">field…</option>
                     {(schema?.fields || []).map(f => <option key={f.alias} value={f.alias}>{f.alias}</option>)}
                   </select>
                   <label className="sr-only" htmlFor={`b-op-${i}`}>Operator</label>
-                  <select id={`b-op-${i}`} className="input text-sm" value={row.op}
+                  <select id={`b-op-${i}`} className="input w-auto text-sm" value={row.op}
                     onChange={e => updateRow(i, { op: e.target.value })}>
                     {(schema?.operators || ['=', '!=', '>', '<', '>=', '<=']).map(op => <option key={op} value={op}>{op}</option>)}
                   </select>
@@ -474,7 +503,7 @@ export default function BqlView({
                       ? (
                         <>
                           <label className="sr-only" htmlFor={`b-val-${i}`}>Value</label>
-                          <select id={`b-val-${i}`} className="input text-sm flex-1" value={row.value}
+                          <select id={`b-val-${i}`} className="input flex-1 text-sm" value={row.value}
                             onChange={e => updateRow(i, { value: e.target.value })}>
                             <option value="">value…</option>
                             {opts.map(o => <option key={o} value={o}>{o}</option>)}
@@ -484,13 +513,13 @@ export default function BqlView({
                       : (
                         <>
                           <label className="sr-only" htmlFor={`b-val-${i}`}>Value</label>
-                          <input id={`b-val-${i}`} className="input text-sm flex-1" placeholder={SET_OPS.includes(row.op) ? 'a, b, c' : 'value'}
+                          <input id={`b-val-${i}`} className="input flex-1 text-sm" placeholder={SET_OPS.includes(row.op) ? 'a, b, c' : 'value'}
                             value={row.value} onChange={e => updateRow(i, { value: e.target.value })} />
                         </>
                       )
                   )}
                   <button type="button" onClick={() => removeRow(i)} disabled={rows.length === 1}
-                    className="text-neutral-300 hover:text-semantic-danger disabled:opacity-30 disabled:cursor-not-allowed p-1"
+                    className="rounded-md p-1.5 text-neutral-300 transition-colors hover:bg-semantic-danger-surface hover:text-semantic-danger disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
                     aria-label={`Remove clause ${i + 1}`}>
                     <Trash2 aria-hidden="true" className="h-4 w-4" />
                   </button>
@@ -498,7 +527,7 @@ export default function BqlView({
               );
             })}
           </div>
-          <div className="flex items-center gap-2 mt-3">
+          <div className="mt-3 flex items-center gap-2">
             <Button variant="ghost" size="sm" leftIcon={<Plus aria-hidden="true" className="h-3.5 w-3.5" />} onClick={addRow}>
               Add clause
             </Button>
@@ -508,14 +537,16 @@ export default function BqlView({
       )}
 
       {/* Saved views (Cap R) — filter + column config stored as a named view */}
-      <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl px-5 py-3 mb-4">
+      <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-800">
         <div className="flex items-center gap-3">
-          <Bookmark aria-hidden="true" className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
+            <Bookmark aria-hidden="true" className="h-4 w-4" />
+          </span>
           <label htmlFor="view-name" className="sr-only">View name</label>
           <input
             id="view-name"
             className="input flex-1 text-sm"
-            placeholder="View name…"
+            placeholder="Save this query as a named view…"
             value={viewName}
             onChange={e => setViewName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') saveView(); }}
@@ -532,23 +563,23 @@ export default function BqlView({
               return (
                 // Sibling controls (not nested buttons) — load, subscribe, delete — for a11y (RB-30 §6).
                 <div key={v.id}
-                  className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg pl-3 pr-2 py-1.5 text-sm hover:border-brand-navy transition-colors group">
+                  className="group flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 py-1.5 pl-3 pr-2 text-sm transition-all hover:border-brand-navy hover:shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
                   <button type="button" onClick={() => loadSavedView(v)}
-                    className="flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded-sm"
+                    className="flex items-center gap-1.5 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
                     aria-label={`Load view: ${v.name}`}>
-                    <Bookmark aria-hidden="true" className="h-3.5 w-3.5 text-brand-navy flex-shrink-0" />
+                    <Bookmark aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-brand-navy" />
                     <span className="font-medium text-neutral-900 dark:text-neutral-100">{v.name}</span>
-                    {v.isShared && <span className="text-xs text-neutral-500">shared</span>}
+                    {v.isShared && <span className="rounded bg-semantic-info-surface px-1.5 py-0.5 text-2xs font-medium uppercase tracking-wide text-semantic-info">shared</span>}
                   </button>
                   <button type="button" onClick={() => toggleSubscribe(v)}
-                    className={`${subscribed ? 'text-brand-navy' : 'text-neutral-300 hover:text-brand-navy'} transition-colors`}
+                    className={`rounded-md p-1 transition-colors ${subscribed ? 'text-brand-navy' : 'text-neutral-300 hover:text-brand-navy'}`}
                     aria-label={subscribed ? `Unsubscribe from ${v.name}` : `Subscribe to ${v.name} (daily summary)`}
                     aria-pressed={subscribed}
                     title={subscribed ? 'Subscribed — daily summary' : 'Subscribe — daily summary'}>
                     <Bell className={`h-3.5 w-3.5 ${subscribed ? 'fill-brand-navy' : ''}`} aria-hidden="true" />
                   </button>
                   <button type="button" onClick={() => deleteView(v.id)}
-                    className="text-neutral-300 hover:text-semantic-danger opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="rounded-md p-1 text-neutral-300 opacity-0 transition-opacity hover:text-semantic-danger group-hover:opacity-100"
                     aria-label={`Remove view ${v.name}`}>
                     <X className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
@@ -561,30 +592,32 @@ export default function BqlView({
 
       {/* Board / group-by breakdown — count per bucket, click a lane to drill into it. */}
       {groups && (
-        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 mb-4">
-          <p className="text-xs font-semibold text-neutral-600 uppercase tracking-wider mb-3">
-            Grouped by {groupBy} {groupBusy && <span className="text-neutral-400">· loading…</span>}
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-800">
+          <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-300">
+            <LayoutGrid aria-hidden="true" className="h-3.5 w-3.5 text-brand-navy-tint" />
+            Grouped by {groupBy} {groupBusy && <span className="font-normal normal-case tracking-normal text-neutral-400">· loading…</span>}
           </p>
           {groups.length === 0 && !groupBusy && (
             <p className="text-sm text-neutral-600 dark:text-neutral-400">No matching items to group.</p>
           )}
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {(() => {
               const max = groups.reduce((m, g) => Math.max(m, Number(g.count) || 0), 0) || 1;
               return groups.map(g => {
                 const count = Number(g.count) || 0;
+                const pct = Math.round((count / max) * 100);
                 return (
                   <button key={g.value || '∅'} type="button" onClick={() => drillInto(g.value)}
-                    className="flex w-full items-center gap-3 text-left group"
+                    className="group flex w-full items-center gap-3 rounded-md p-1 text-left transition-colors hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:hover:bg-neutral-900/50"
                     aria-label={`Filter to ${groupLabel(g.value)} (${count} items)`}>
-                    <span className="w-40 shrink-0 truncate text-sm text-neutral-900 dark:text-neutral-100 group-hover:text-brand-navy">
+                    <span className="w-40 shrink-0 truncate text-sm font-medium text-neutral-900 group-hover:text-brand-navy dark:text-neutral-100">
                       {groupLabel(g.value)}
                     </span>
-                    <span className="flex-1 h-5 bg-neutral-100 dark:bg-neutral-900 rounded-sm overflow-hidden">
-                      <span className="block h-full bg-brand-navy-tint/70 group-hover:bg-brand-navy"
-                        style={{ width: `${Math.round((count / max) * 100)}%` }} />
+                    <span className="h-6 flex-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-900">
+                      <span className="block h-full rounded-full bg-gradient-to-r from-brand-navy-tint to-brand-navy transition-all duration-base group-hover:opacity-90"
+                        style={{ width: `${Math.max(pct, 4)}%` }} />
                     </span>
-                    <span className="w-10 shrink-0 text-right font-mono text-sm text-neutral-600 dark:text-neutral-400">
+                    <span className="w-12 shrink-0 text-right font-mono text-sm font-semibold text-neutral-700 dark:text-neutral-300">
                       {count}
                     </span>
                   </button>
@@ -610,11 +643,24 @@ export default function BqlView({
         />
       )}
       {bqlResults.length === 0 && bqlQuery && !bqlError && (
-        <div className="text-center py-12 text-neutral-600 dark:text-neutral-400">
-          <p className="text-sm">No results. Run the query to see results.</p>
+        <div className="flex flex-col items-center rounded-xl border border-dashed border-neutral-200 bg-white py-14 text-center dark:border-neutral-700 dark:bg-neutral-800">
+          <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-300 dark:bg-neutral-900 dark:text-neutral-600">
+            <Search aria-hidden="true" className="h-6 w-6" />
+          </span>
+          <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">No results yet</p>
+          <p className="mt-1 text-xs text-neutral-500">Run the query above to see matching work items.</p>
         </div>
       )}
     </div>
+  );
+}
+
+// A small keyboard-cap chip for showing shortcuts.
+function Kbd({ children }) {
+  return (
+    <kbd className="inline-flex items-center justify-center rounded border border-neutral-300 bg-neutral-50 px-1 py-0.5 font-mono text-2xs font-medium text-neutral-500 shadow-sm dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+      {children}
+    </kbd>
   );
 }
 
@@ -623,11 +669,11 @@ function ChipRow({ label, items, onPick }) {
   if (!items || items.length === 0) return null;
   return (
     <div className="flex items-start gap-2">
-      <span className="font-semibold text-neutral-600 dark:text-neutral-400 shrink-0 pt-0.5">{label}:</span>
+      <span className="w-16 shrink-0 pt-1 font-semibold uppercase tracking-wide text-neutral-400">{label}</span>
       <div className="flex flex-wrap gap-1">
         {items.map(token => (
           <button key={token} type="button" onClick={() => onPick(token)}
-            className="font-mono bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded px-1.5 py-0.5 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:text-brand-navy transition-colors"
+            className="rounded-md border border-neutral-200 bg-white px-1.5 py-0.5 font-mono text-neutral-700 transition-all hover:-translate-y-px hover:border-brand-navy hover:text-brand-navy hover:shadow-sm active:translate-y-0 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
             aria-label={`Insert ${token}`}>
             {token}
           </button>

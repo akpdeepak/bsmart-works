@@ -42,7 +42,7 @@ class WorkItemTenantScopeTest {
     private final WorkItemController controller = new WorkItemController(
             repository, eventService, jdbc, notificationRepository, userRepository, emailService,
             batchService, authenticatedUser, rbac, dodChecklists, extensions, workflowRules,
-            statusConfig, wipLimits, mock(WorkItemBulkService.class), mock(WatcherService.class));
+            statusConfig, wipLimits, mock(WorkItemBulkService.class), mock(WatcherService.class), mock(AutomationService.class));
 
     @Test
     @SuppressWarnings("unchecked")

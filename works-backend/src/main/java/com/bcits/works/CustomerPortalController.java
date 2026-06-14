@@ -46,6 +46,7 @@ public class CustomerPortalController {
     private final WorkItemRepository workItemRepository;
     private final ProjectRepository projectRepository;
     private final JdbcTemplate jdbc;
+    private final AutomationService automations;
 
     public CustomerPortalController(CustomerContext customerContext, RequestTypeRepository requestTypes,
                                     ServiceRequestRepository requests, ServiceRequestService requestService,
@@ -53,7 +54,7 @@ public class CustomerPortalController {
                                     CustomerAccountRepository accounts, CustomerSlaTierRepository slaTiers,
                                     EventService eventService,
                                     WorkItemRepository workItemRepository, ProjectRepository projectRepository,
-                                    JdbcTemplate jdbc) {
+                                    JdbcTemplate jdbc, AutomationService automations) {
         this.customerContext = customerContext;
         this.requestTypes = requestTypes;
         this.requests = requests;
@@ -66,6 +67,7 @@ public class CustomerPortalController {
         this.workItemRepository = workItemRepository;
         this.projectRepository = projectRepository;
         this.jdbc = jdbc;
+        this.automations = automations;
     }
 
     // ── Request types + forms ─────────────────────────────────────────────────────────
@@ -280,6 +282,8 @@ public class CustomerPortalController {
             eventService.recordInWorkspace(workspaceId, savedWi.getId(), "WORK_ITEM_CREATED_FROM_PORTAL",
                 saved.getSubmittedBy(), Map.of("serviceRequestId", saved.getId(), "projectId", defaultProject.getId()));
             log.info("[PORTAL] Auto-created WorkItem {} linked to service request {}", savedWi.getId(), saved.getId());
+            // Fire ITEM_CREATED automations (non-fatal — contained within the surrounding catch).
+            automations.evaluateForItem(workspaceId, AutomationCatalog.TR_ITEM_CREATED, savedWi, saved.getSubmittedBy());
         } catch (Exception ex) {
             log.warn("[PORTAL] Could not auto-create WorkItem for service request {}: {}", saved.getId(), ex.getMessage());
         }

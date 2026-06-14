@@ -46,6 +46,8 @@ import static com.bcits.works.AiHeuristics.str;
 @Service
 public class AiAssistService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AiAssistService.class);
+
     private final AiControlPlaneService controlPlane;
     private final WorkItemRepository workItems;
     private final ProjectRepository projects;
@@ -56,11 +58,12 @@ public class AiAssistService {
     private final CommentRepository comments;
     private final EventService events;
     private final RbacService rbac;
+    private final AutomationService automations;
 
     public AiAssistService(AiControlPlaneService controlPlane, WorkItemRepository workItems,
                            ProjectRepository projects, UserRepository users, ArticleRepository articles,
                            KnowledgeSpaceRepository spaces, TeamRepository teams, CommentRepository comments,
-                           EventService events, RbacService rbac) {
+                           EventService events, RbacService rbac, AutomationService automations) {
         this.controlPlane = controlPlane;
         this.workItems = workItems;
         this.projects = projects;
@@ -71,6 +74,7 @@ public class AiAssistService {
         this.comments = comments;
         this.events = events;
         this.rbac = rbac;
+        this.automations = automations;
     }
 
     // ── Shared result envelope ───────────────────────────────────────────────────
@@ -141,6 +145,12 @@ public class AiAssistService {
                 WorkItem saved = workItems.save(w);
                 events.record(saved.getId(), "WORK_ITEM_CREATED", userId,
                     Map.of("title", nv(saved.getTitle()), "via", "ai_command_bar"));
+                // Fire ITEM_CREATED automations (non-fatal — must not abort the AI plan execution).
+                try {
+                    automations.evaluateForItem(workspaceId, AutomationCatalog.TR_ITEM_CREATED, saved, userId);
+                } catch (Exception ex) {
+                    log.warn("Automation evaluation failed after AI-created item {}: {}", saved.getId(), ex.getMessage());
+                }
                 return Map.of("action", type.name(), "ok", true, "id", saved.getId());
             }
             case ASSIGN -> {

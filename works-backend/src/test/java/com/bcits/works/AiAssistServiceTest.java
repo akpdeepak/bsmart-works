@@ -122,8 +122,10 @@ class AiAssistServiceTest {
     private final EventService events = mock(EventService.class);
     private final RbacService rbac = mock(RbacService.class);
 
+    private final AutomationService automations = mock(AutomationService.class);
+
     private final AiAssistService assist = new AiAssistService(
-        cp, workItems, projects, users, articles, spaces, teams, comments, events, rbac);
+        cp, workItems, projects, users, articles, spaces, teams, comments, events, rbac, automations);
 
     private void aiOn() {
         when(cp.invoke(any())).thenAnswer(i -> {

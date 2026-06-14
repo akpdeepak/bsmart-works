@@ -28,7 +28,9 @@ class IntegrationServiceTest {
     private final ProjectRepository projects = mock(ProjectRepository.class);
     private final EventService events = mock(EventService.class);
 
-    private final IntegrationService svc = new IntegrationService(connections, workItems, projects, events);
+    private final AutomationService automations = mock(AutomationService.class);
+
+    private final IntegrationService svc = new IntegrationService(connections, workItems, projects, events, automations);
 
     private Project project(String id) {
         Project p = new Project();

@@ -2,6 +2,8 @@ package com.bcits.works;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,18 +23,23 @@ import java.util.stream.Collectors;
 @Service
 public class IntegrationService {
 
+    private static final Logger log = LoggerFactory.getLogger(IntegrationService.class);
+
     private final IntegrationConnectionRepository connections;
     private final WorkItemRepository workItems;
     private final ProjectRepository projects;
     private final EventService events;
+    private final AutomationService automations;
     private final ObjectMapper json = new ObjectMapper();
 
     public IntegrationService(IntegrationConnectionRepository connections, WorkItemRepository workItems,
-                              ProjectRepository projects, EventService events) {
+                              ProjectRepository projects, EventService events,
+                              AutomationService automations) {
         this.connections = connections;
         this.workItems = workItems;
         this.projects = projects;
         this.events = events;
+        this.automations = automations;
     }
 
     public List<Map<String, Object>> providers() {
@@ -116,6 +123,12 @@ public class IntegrationService {
         WorkItem saved = workItems.save(w);
         events.recordInWorkspace(workspaceId, saved.getId(), "WORK_ITEM_CREATED", creatorId,
             Map.of("via", "email_connector", "title", saved.getTitle()));
+        // Fire ITEM_CREATED automations (non-fatal — must not roll back the ingest).
+        try {
+            automations.evaluateForItem(workspaceId, AutomationCatalog.TR_ITEM_CREATED, saved, creatorId);
+        } catch (Exception ex) {
+            log.warn("Automation evaluation failed after email-connector ingest of {}: {}", saved.getId(), ex.getMessage());
+        }
         return saved;
     }
 

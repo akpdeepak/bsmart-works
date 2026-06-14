@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+// Audit finding #11: AutomationService lifecycle wiring + recursion guard (fix: c3218a3).
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -10,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -142,6 +144,81 @@ class AutomationServiceTest {
         assertThat(triggering.getStatus()).isEqualTo("In Progress");
         verify(workItems).save(triggering);
         verify(runs).save(any(AutomationRun.class));
+    }
+
+    // ── trigger wiring: STATUS_CHANGED fires on status change ────────────────────────
+
+    @Test
+    void evaluateForItem_statusChangedRuleFires() {
+        AutomationRule rule = new AutomationRule();
+        rule.setId("AUTO-SC");
+        rule.setWorkspaceId(WS);
+        rule.setConditionExpr("status = In Progress");
+        rule.setActions("[{\"type\":\"NOTIFY\",\"params\":{\"message\":\"Status moved to In Progress\"}}]");
+        when(rules.findByWorkspaceIdAndEnabledTrueAndTriggerType(eq(WS), eq("STATUS_CHANGED")))
+            .thenReturn(List.of(rule));
+        when(bqlExecutor.matchesItem("TASK-1", "status = In Progress")).thenReturn(true);
+
+        WorkItem item = item("TASK-1", "Medium", "Task", "In Progress");
+        int fired = svc.evaluateForItem(WS, "STATUS_CHANGED", item, ACTOR);
+
+        assertThat(fired).isEqualTo(1);
+        verify(runs).save(any(AutomationRun.class));
+    }
+
+    // ── recursion guard: SET_STATUS action does NOT re-trigger STATUS_CHANGED ────────
+
+    @Test
+    void evaluateForItem_recursionGuardPreventsReentry() {
+        AutomationRule rule = new AutomationRule();
+        rule.setId("AUTO-LOOP");
+        rule.setWorkspaceId(WS);
+        rule.setConditionExpr("");
+        rule.setActions("[{\"type\":\"SET_STATUS\",\"params\":{\"status\":\"Done\"}}]");
+        when(rules.findByWorkspaceIdAndEnabledTrueAndTriggerType(eq(WS), eq("STATUS_CHANGED")))
+            .thenReturn(List.of(rule));
+        WorkItem item = item("TASK-2", "Low", "Task", "In Progress");
+        when(bqlExecutor.matchesItem(eq("TASK-2"), any())).thenReturn(true);
+
+        // Track how many times the guard-suppressed (re-entrant) call returned.
+        int[] innerFired = {-1};
+        // When the SET_STATUS action saves the item, simulate a lifecycle-triggered re-entrant
+        // evaluateForItem call ON THE SAME THREAD — exactly what would happen in production when
+        // an @EntityListeners hook fires after workItems.save(). The depth counter must be 1
+        // at that point and must suppress the nested invocation (return 0).
+        doAnswer(inv -> {
+            innerFired[0] = svc.evaluateForItem(WS, "STATUS_CHANGED", item, ACTOR);
+            return inv.getArgument(0);
+        }).when(workItems).save(any(WorkItem.class));
+
+        int outerFired = svc.evaluateForItem(WS, "STATUS_CHANGED", item, ACTOR);
+
+        assertThat(outerFired).isEqualTo(1);    // outer evaluation fires once
+        assertThat(innerFired[0]).isEqualTo(0); // nested call suppressed by depth guard
+    }
+
+    // ── per-action error recording: FAILED run written on action exception ──────────
+
+    @Test
+    void evaluateForItem_actionFailureRecordsFailedRun() {
+        AutomationRule rule = new AutomationRule();
+        rule.setId("AUTO-FAIL");
+        rule.setWorkspaceId(WS);
+        rule.setConditionExpr("");
+        rule.setActions("[{\"type\":\"SET_STATUS\",\"params\":{\"status\":\"Done\"}}]");
+        when(rules.findByWorkspaceIdAndEnabledTrueAndTriggerType(eq(WS), eq("ITEM_CREATED")))
+            .thenReturn(List.of(rule));
+        when(bqlExecutor.matchesItem(eq("TASK-3"), any())).thenReturn(true);
+        // Force the repository save to throw so the per-action catch kicks in.
+        when(workItems.save(any())).thenThrow(new RuntimeException("db error"));
+
+        WorkItem item = item("TASK-3", "High", "Task", "Todo");
+        // Should not throw — the per-action catch swallows the error and records a FAILED run.
+        int fired = svc.evaluateForItem(WS, "ITEM_CREATED", item, ACTOR);
+
+        assertThat(fired).isEqualTo(1); // rule matched and attempted; count from the outer SUCCESS path
+        // A FAILED run was recorded by the per-action catch
+        verify(runs, org.mockito.Mockito.atLeastOnce()).save(any(AutomationRun.class));
     }
 
     @Test

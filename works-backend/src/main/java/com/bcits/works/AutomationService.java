@@ -22,11 +22,23 @@ import java.util.stream.Collectors;
  * recorded in the append-only audit log (RB-20 §5). The condition matcher is a safe field predicate
  * (no SQL, no code) and is pure + static so it is unit-testable (RB-10 §7). The AI rule-suggestion
  * surface routes through the one control plane and falls back to the template library (RB-40 §2).
+ *
+ * <p>Re-entrancy guard: {@link #evaluateForItem} actions (e.g. SET_STATUS) write back to the item
+ * and record events, which would re-trigger the same method through the lifecycle call sites. A
+ * {@link ThreadLocal} depth counter stops any second invocation within the same thread so the
+ * engine evaluates exactly once per lifecycle event, never recursively.
  */
 @Service
 public class AutomationService {
 
     private static final Logger log = LoggerFactory.getLogger(AutomationService.class);
+
+    /**
+     * Recursion guard: incremented on entry to {@link #evaluateForItem}, decremented on exit.
+     * Any nested call (e.g. an action that saves an item and fires another lifecycle hook) sees
+     * depth {@literal >} 0 and returns immediately, preventing infinite self-trigger loops.
+     */
+    private static final ThreadLocal<Integer> AUTOMATION_DEPTH = ThreadLocal.withInitial(() -> 0);
 
     private final AutomationRuleRepository rules;
     private final AutomationRunRepository runs;
@@ -169,63 +181,84 @@ public class AutomationService {
         return new Preview(ruleId, matches.size(), matches.stream().map(WorkItem::getId).limit(20).toList(), false);
     }
 
-    /** Engine hook: evaluate all enabled rules for a trigger against the triggering item. */
+    /**
+     * Engine hook: evaluate all enabled rules for a trigger against the triggering item.
+     *
+     * <p>Protected by a re-entrancy guard: if an action (e.g. SET_STATUS) causes another
+     * lifecycle write that calls back into this method, the depth counter prevents recursion.
+     */
     @Transactional
     public int evaluateForItem(String workspaceId, String triggerType, WorkItem item, String actorId) {
-        List<AutomationRule> matching = rules.findByWorkspaceIdAndEnabledTrueAndTriggerType(
-            workspaceId, normalizeTrigger(triggerType));
-        int fired = 0;
-        for (AutomationRule rule : matching) {
-            if (conditionMatchesBql(item, rule.getConditionExpr())) {
-                executeActions(workspaceId, item, rule, actorId);
-                rule.setRunCount((rule.getRunCount() == null ? 0 : rule.getRunCount()) + 1);
-                rule.setLastRunAt(OffsetDateTime.now());
-                rules.save(rule);
-                recordRun(workspaceId, rule.getId(), "SUCCESS",
-                    triggerType + " on " + item.getId(), 1, false, null);
-                fired++;
-            }
+        if (AUTOMATION_DEPTH.get() > 0) {
+            log.debug("Automation re-entrancy suppressed for trigger {} on item {}", triggerType, item.getId());
+            return 0;
         }
-        return fired;
+        AUTOMATION_DEPTH.set(AUTOMATION_DEPTH.get() + 1);
+        try {
+            List<AutomationRule> matching = rules.findByWorkspaceIdAndEnabledTrueAndTriggerType(
+                workspaceId, normalizeTrigger(triggerType));
+            int fired = 0;
+            for (AutomationRule rule : matching) {
+                if (conditionMatchesBql(item, rule.getConditionExpr())) {
+                    executeActions(workspaceId, item, rule, actorId);
+                    rule.setRunCount((rule.getRunCount() == null ? 0 : rule.getRunCount()) + 1);
+                    rule.setLastRunAt(OffsetDateTime.now());
+                    rules.save(rule);
+                    recordRun(workspaceId, rule.getId(), "SUCCESS",
+                        triggerType + " on " + item.getId(), 1, false, null);
+                    fired++;
+                }
+            }
+            return fired;
+        } finally {
+            AUTOMATION_DEPTH.set(AUTOMATION_DEPTH.get() - 1);
+        }
     }
 
     private void executeActions(String workspaceId, WorkItem item, AutomationRule rule, String actorId) {
         for (Map<String, Object> action : parseActions(rule.getActions())) {
             String type = str(action.get("type")).toUpperCase(Locale.ROOT);
             Map<String, Object> params = asMap(action.get("params"));
-            switch (type) {
-                case AutomationCatalog.AC_SET_STATUS -> {
-                    String old = item.getStatus();
-                    item.setStatus(str(params.getOrDefault("status", item.getStatus())));
-                    workItems.save(item);
-                    events.recordDiff(item.getId(), "STATUS_CHANGED", actorId, "status", old, item.getStatus());
+            try {
+                switch (type) {
+                    case AutomationCatalog.AC_SET_STATUS -> {
+                        String old = item.getStatus();
+                        item.setStatus(str(params.getOrDefault("status", item.getStatus())));
+                        workItems.save(item);
+                        events.recordDiff(item.getId(), "STATUS_CHANGED", actorId, "status", old, item.getStatus());
+                    }
+                    case AutomationCatalog.AC_SET_PRIORITY -> {
+                        item.setPriority(str(params.getOrDefault("priority", item.getPriority())));
+                        workItems.save(item);
+                        events.record(item.getId(), "PRIORITY_CHANGED", actorId, Map.of("via", "automation"));
+                    }
+                    case AutomationCatalog.AC_ASSIGN -> {
+                        item.setAssigneeId(str(params.get("assigneeId")));
+                        workItems.save(item);
+                        events.recordDiff(item.getId(), "ASSIGNED", actorId, "assignee", null, item.getAssigneeId());
+                    }
+                    case AutomationCatalog.AC_ADD_COMMENT -> {
+                        Comment c = new Comment();
+                        c.setWorkItemId(item.getId());
+                        c.setAuthorId(actorId);
+                        c.setBody(str(params.getOrDefault("body", "Automated update.")));
+                        c.setCreatedAt(OffsetDateTime.now());
+                        comments.save(c);
+                        events.record(item.getId(), "COMMENT_ADDED", actorId, Map.of("via", "automation"));
+                    }
+                    case AutomationCatalog.AC_NOTIFY ->
+                        events.record(item.getId(), "AUTOMATION_NOTIFY", actorId,
+                            Map.of("ruleId", rule.getId(), "message", str(params.getOrDefault("message", ""))));
+                    case AutomationCatalog.AC_POST_WEBHOOK ->
+                        webhooks.enqueue(workspaceId, "automation." + rule.getId(),
+                            Map.of("ruleId", rule.getId(), "workItemId", item.getId()));
+                    default -> { /* unknown action types are dropped at normalize time */ }
                 }
-                case AutomationCatalog.AC_SET_PRIORITY -> {
-                    item.setPriority(str(params.getOrDefault("priority", item.getPriority())));
-                    workItems.save(item);
-                    events.record(item.getId(), "PRIORITY_CHANGED", actorId, Map.of("via", "automation"));
-                }
-                case AutomationCatalog.AC_ASSIGN -> {
-                    item.setAssigneeId(str(params.get("assigneeId")));
-                    workItems.save(item);
-                    events.recordDiff(item.getId(), "ASSIGNED", actorId, "assignee", null, item.getAssigneeId());
-                }
-                case AutomationCatalog.AC_ADD_COMMENT -> {
-                    Comment c = new Comment();
-                    c.setWorkItemId(item.getId());
-                    c.setAuthorId(actorId);
-                    c.setBody(str(params.getOrDefault("body", "Automated update.")));
-                    c.setCreatedAt(OffsetDateTime.now());
-                    comments.save(c);
-                    events.record(item.getId(), "COMMENT_ADDED", actorId, Map.of("via", "automation"));
-                }
-                case AutomationCatalog.AC_NOTIFY ->
-                    events.record(item.getId(), "AUTOMATION_NOTIFY", actorId,
-                        Map.of("ruleId", rule.getId(), "message", str(params.getOrDefault("message", ""))));
-                case AutomationCatalog.AC_POST_WEBHOOK ->
-                    webhooks.enqueue(workspaceId, "automation." + rule.getId(),
-                        Map.of("ruleId", rule.getId(), "workItemId", item.getId()));
-                default -> { /* unknown action types are dropped at normalize time */ }
+            } catch (Exception ex) {
+                log.error("Automation action {} failed for rule {} on item {}: {}",
+                    type, rule.getId(), item.getId(), ex.getMessage(), ex);
+                recordRun(workspaceId, rule.getId(), "FAILED",
+                    type + " on " + item.getId(), 0, false, ex.getMessage());
             }
         }
     }

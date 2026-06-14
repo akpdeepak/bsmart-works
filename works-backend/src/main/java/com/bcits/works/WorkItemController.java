@@ -179,23 +179,9 @@ public class WorkItemController {
         return ResponseEntity.ok().headers(headers).body(items);
     }
 
-    // Single work item by id (added iteration 14 — the IDE extensions, the `works` CLI and the
-    // Developer Workspace "open item" all fetch one item by id). Tenant-scoped via MEMBER_PROJECTS
-    // (RB-40 §1): an item outside the caller's workspaces is indistinguishable from a missing one.
-    @GetMapping("/{id}")
-    public WorkItem getWorkItem(@PathVariable String id) {
-        String userId = authenticatedUser.id();
-        List<WorkItem> items = jdbc.query(
-            "SELECT * FROM work_items WHERE id = ? AND deleted_at IS NULL AND " + MEMBER_PROJECTS,
-            this::mapRow, id, userId);
-        if (items.isEmpty()) throw ApiException.notFound("Work item", id); {
-        attachTagsBatch(items);
-        attachFieldValuesBatch(items);
-        }
-        attachStarred(items, userId);
-        return items.get(0);
-    }
-
+    // Trash — soft-deleted items recoverable within 30 days. Must be declared before /{id} so the
+    // literal path /trash is unambiguous (belt-and-suspenders — Spring already prefers literal
+    // paths, but explicit ordering removes any ambiguity). Workspace-scoped via MEMBER_PROJECTS.
     @GetMapping("/trash")
     public List<WorkItem> getTrash(@RequestParam(defaultValue = "0") int page,
                                    @RequestParam(defaultValue = "50") int size) {
@@ -211,18 +197,32 @@ public class WorkItemController {
         return items;
     }
 
+    // Single work item by id (added iteration 14 — the IDE extensions, the `works` CLI and the
+    // Developer Workspace "open item" all fetch one item by id). Tenant-scoped via MEMBER_PROJECTS
+    // (RB-40 §1): an item outside the caller's workspaces is indistinguishable from a missing one.
+    @GetMapping("/{id}")
+    public WorkItem getWorkItem(@PathVariable String id) {
+        String userId = authenticatedUser.id();
+        List<WorkItem> items = jdbc.query(
+            "SELECT * FROM work_items WHERE id = ? AND deleted_at IS NULL AND " + MEMBER_PROJECTS,
+            this::mapRow, id, userId);
+        if (items.isEmpty()) throw ApiException.notFound("Work item", id);
+        attachTagsBatch(items);
+        attachFieldValuesBatch(items);
+        attachStarred(items, userId);
+        return items.get(0);
+    }
+
     @PutMapping("/{id}/restore")
     public WorkItem restoreFromTrash(@PathVariable String id) {
         String userId = authenticatedUser.id();
         String wsId = rbac.workspaceForWorkItem(id);
-        if (wsId == null) throw ApiException.notFound("Work item", id); {
+        if (wsId == null) throw ApiException.notFound("Work item", id);
         rbac.require(userId, wsId, "delete_items");   // same right that trashed it
-        }
         jdbc.update("UPDATE work_items SET deleted_at = NULL, deleted_by = NULL WHERE id = ?", id);
         var opt = repository.findById(id);
-        if (opt.isEmpty()) throw ApiException.notFound("Work item", id); {
+        if (opt.isEmpty()) throw ApiException.notFound("Work item", id);
         attachTags(opt.get());
-        }
         return opt.get();
     }
 

@@ -59,3 +59,24 @@ describe('DashboardWidgetCard drill context (§3.4)', () => {
     expect(onDrill).not.toHaveBeenCalled();
   });
 });
+
+describe('DashboardWidgetCard PIVOT — server-resolved (embed) path', () => {
+  const PIVOT = {
+    id: 'p-1', widgetType: 'PIVOT', title: 'Custom chart', gridW: 6,
+    config: JSON.stringify({ spec: { chartType: 'bar', sourceKind: 'guided', measures: [{ field: '*', agg: 'COUNT' }], dimensions: ['status'] } }),
+  };
+
+  it('renders a pre-resolved pivot directly — no workspaceId needed, no client query', () => {
+    const resolved = { dimensions: ['status'], measures: ['count_all'], rows: [{ status: 'Open', count_all: 4 }] };
+    render(<DashboardWidgetCard widget={PIVOT} workItems={[]} resolvedPivot={resolved} />);
+    // The bar chart renders the resolved row; never the "no workspace selected" embed error.
+    expect(screen.getByText('Open')).toBeInTheDocument();
+    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.queryByText(/no workspace/i)).not.toBeInTheDocument();
+  });
+
+  it('surfaces a per-widget resolution error from the server', () => {
+    render(<DashboardWidgetCard widget={PIVOT} workItems={[]} resolvedPivot={{ error: 'Could not parse query.' }} />);
+    expect(screen.getByText(/could not parse query/i)).toBeInTheDocument();
+  });
+});

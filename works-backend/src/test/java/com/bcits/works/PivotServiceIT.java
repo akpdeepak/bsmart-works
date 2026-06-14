@@ -209,6 +209,25 @@ class PivotServiceIT {
         assertThat(((Number) b.rows().get(0).get("count_all")).longValue()).isEqualTo(6);
     }
 
+    @Test
+    void resolveForWorkspace_isWorkspaceScoped_withoutRbac_andHidesSensitiveFields() {
+        // The unauthenticated public-embed path: no per-user RBAC gate, but the workspace predicate
+        // is the entire scope — WS A's own count (4), never WS B's (6) (RB-40 §1).
+        PivotService.PivotResult a = service.resolveForWorkspace(WS_A,
+            spec(List.of(), new PivotSpec.Measure("*", PivotSpec.Agg.COUNT)));
+        assertThat(((Number) a.rows().get(0).get("count_all")).longValue()).isEqualTo(4);
+
+        PivotService.PivotResult b = service.resolveForWorkspace(WS_B,
+            spec(List.of(), new PivotSpec.Measure("*", PivotSpec.Agg.COUNT)));
+        assertThat(((Number) b.rows().get(0).get("count_all")).longValue()).isEqualTo(6);
+
+        // A non-sensitive context: a leadership-only field is rejected, so a public viewer can never
+        // see more than a non-privileged member would (field-level security still applies).
+        assertThatThrownBy(() -> service.resolveForWorkspace(WS_A,
+            spec(List.of(), new PivotSpec.Measure("businessValue", PivotSpec.Agg.SUM))))
+            .isInstanceOf(BqlException.class);
+    }
+
     // ── Field-level security (RB-40 §1 mandatory) ───────────────────────────────────────
 
     @Test

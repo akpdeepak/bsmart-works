@@ -59,6 +59,9 @@ export function PublicDashboardEmbed({ token, embedded = false }) {
     );
   }
   const widgets = data.widgets || [];
+  // PIVOT widgets are pre-resolved server-side (workspace from the token — RB-40 §1) and keyed by
+  // widget id; pass each one through so the embed renders pivots without an authenticated workspace.
+  const pivots = data.pivots || {};
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 font-sans">
       {/* Chrome-less in an iframe (`embedded`): the host page owns the title bar, so we drop the
@@ -80,7 +83,8 @@ export function PublicDashboardEmbed({ token, embedded = false }) {
         ) : (
           <div className="grid grid-cols-12 gap-4 max-w-7xl mx-auto">
             {widgets.map(w => (
-              <DashboardWidgetCard key={w.id} widget={w} workItems={[]} aggregate={data.aggregate} editMode={false} />
+              <DashboardWidgetCard key={w.id} widget={w} workItems={[]} aggregate={data.aggregate} editMode={false}
+                resolvedPivot={pivots[w.id]} />
             ))}
           </div>
         )}

@@ -189,6 +189,10 @@ The compressed "what each product is actually good at," across the three lenses 
 | **Jira** | Momentum (boards visibly moving); notifications/mentions | Inline quick-add, JQL saved filters, bulk ops, keyboard | Make work visible; configurable to the team |
 | **Confluence** | Real-time co-presence; @mentions; comments | Templates, page tree, inline editing | Collaboration as the default state |
 | **Microsoft (Office / Copilot)** | Copilot contextual prompts; familiarity / habit | Ribbon (recognition > recall), templates, deep keyboard | Fluent: *Coherent · Inclusive · Adaptive*; "solve for one, extend to many" |
+| **Microsoft Word** | Familiarity + autosave trust | Rich editing; styles & templates; track-changes & comments; outline nav; find/replace | The document *is* the surface; review & collaboration are first-class |
+| **Trello** | Card momentum; lovable simplicity; Butler nudges | Drag-drop as the whole model; inline card create; near-zero learning curve | Radical simplicity — start trivial, reveal power (progressive complexity) |
+| **AirBNB** | Trust through visual quality, photography, micro-delight | One consistent component everywhere (DLS) | Design Language System — pioneered design tokens + components; design that earns trust |
+| **Uber** | Real-time status reassurance ("where's my driver") | Operational clarity under pressure; maps/live data; state-machine UX | Base design system; motion conveys state; built for global scale (a11y + i18n) |
 
 ---
 
@@ -238,6 +242,7 @@ dashboards) but none of the *behavioral design* on top. Highest-leverage: the **
 | **Flow-state preservation (no interruption)** | Linear, Notion | ⚠️ Modal-first creation breaks flow → inline quick-add; ambient (not modal) notifications |
 | **Conservation of complexity (Tesler's Law)** | Jira (JQL *and* visual builder) | ⚠️ You expose BQL but no visual builder → casual users carry the complexity. Add visual builders over BQL |
 | **Smart defaults > configuration** | Gmail, MS | ⚠️ Powerful config, blank-slate defaults → ship opinionated template defaults |
+| **Radical simplicity / progressive complexity** | Trello | Start trivial (a board + cards), reveal power on demand — the lowest learning curve → fastest activation |
 | **Batching** | Jira bulk ops, Gmail | ✅ Bulk bar exists → add a preview-the-change wizard |
 | **Keyboard-first** | Linear, Superhuman | ⚠️ Global shortcuts strong; **list-level `j/k/e/n`** missing |
 | **Optimistic UI** | Meta, Linear | ⚠️ Happy-path only → add rollback on failure |
@@ -285,7 +290,7 @@ measurable, not vibes.
 
 | Practice | Benchmark | bSmart |
 |---|---|---|
-| **Component-driven dev + Storybook** | Atlassian, MS | ⚠️ Installed, ≈4% coverage → make it the design-system shop window |
+| **Component-driven dev + Storybook** | Atlassian, MS, **AirBNB (DLS)** | ⚠️ Installed, ≈4% coverage → make it the design-system shop window |
 | **Design Ops / system governance** | All | ✅ Rule-enforcement exists; add *visual* governance (Storybook + Chromatic, already configured) |
 | **Telemetry-informed design** | Meta, MS | ❌ Instrument everything (within DPDP, RB-40) |
 | **Continuous discovery (dual-track)** | SVPG teams | ❌ Add a discovery track beside delivery |
@@ -306,7 +311,7 @@ config layer, the design-token system).
 
 | # | What | Why | How | Borrowed from |
 |---|---|---|---|---|
-| 1 | **First-run onboarding + project templates** | #1 gap; new users hit a blank app and churn. Templates convert "blank slate" → "value in 60s" (the North Star) | Setup wizard (workspace → template → invite); ship Scrum / Kanban / Bug-tracking / RAID seed templates via the existing `Workflow`+`FieldDef`+`Dashboard` config layer; a completeness checklist widget on Today | **Jira** (templates), **LinkedIn** (completeness) |
+| 1 | **First-run onboarding + project templates** | #1 gap; new users hit a blank app and churn. Templates convert "blank slate" → "value in 60s" (the North Star) | Setup wizard (workspace → template → invite); ship Scrum / Kanban / Bug-tracking / RAID seed templates via the existing `Workflow`+`FieldDef`+`Dashboard` config layer; a completeness checklist widget on Today | **Jira** (templates), **LinkedIn** (completeness), **Trello** (zero-friction first board) |
 | 2 | **Inline quick-add on lists** | Modal-per-create kills flow and loses list context; capture cost should be ≈0 | Press `N`/`+` → editable row at top of backlog/board; Enter saves, Esc cancels; keep the dialog as the power path | **Jira backlog**, **Linear** |
 | 3 | **List-level keyboard rhythm** (`j/k/e/n/Enter`) | Global `g+x` shortcuts are strong but the *list* isn't a keyboard surface; power users live in lists | Extend `lib/shortcuts.js` with a focused-list context; wire selection state in board/backlog/my-works | **Linear**, **Jira**, **Gmail** |
 | 4 | **Surface saved views** | Backend done (`lib/saved-views.js`) but invisible — pure waste | Render saved views as first-class sidebar items per list section, with rename/delete/reorder | **Jira** (saved filters/JQL) |
@@ -326,8 +331,8 @@ config layer, the design-token system).
 | # | What | Why | How | Borrowed from |
 |---|---|---|---|---|
 | 10 | **AI-native UX** — contextual + proactive + streaming + a canvas | AI is architecturally excellent (Control Plane, fallbacks) but *reactive*; the benchmarks make AI ambient | Inline "draft description / fill fields" in detail panel; proactive Today nudges ("5 overdue — bulk-reschedule?"); **stream** AI token-by-token; an **Artifacts-style** side canvas for AI-built reports/articles — all on the existing capability + fallback layer (RB-40 §2) | **ChatGPT/Claude** (streaming, Artifacts), **MS Copilot** (contextual) |
-| 11 | **Content-first detail + narrative activity feed** | Detail shell is 2-column (PR #217) but the Details *tab* is a dense field-grid and Activity is a raw event dump | Lead with title/description prose at reading width; render `events` as human sentences ("Rahul moved this to In Progress · 2h ago") | **Claude** (editorial), **Confluence** |
-| 12 | **Real-time collaborative knowledge editor + inline comments + templates** | `BlockEditor.jsx` is rich but single-author — no presence/conflict; no page templates | SSE-driven presence + soft-lock/merge; inline block comments; seed article templates (PRD, runbook, retro) | **Confluence**, **Notion** |
+| 11 | **Content-first detail + narrative activity feed** | Detail shell is 2-column (PR #217) but the Details *tab* is a dense field-grid and Activity is a raw event dump | Lead with title/description prose at reading width; render `events` as human sentences ("Rahul moved this to In Progress · 2h ago") | **Claude** (editorial), **Confluence**, **MS Word** (document surface) |
+| 12 | **Real-time collaborative knowledge editor + inline comments + templates** | `BlockEditor.jsx` is rich but single-author — no presence/conflict; no page templates | SSE-driven presence + soft-lock/merge; inline block comments; seed article templates (PRD, runbook, retro) | **Confluence**, **Notion**, **MS Word** (track-changes / comments / styles / templates) |
 | 13 | **Search overhaul** — standalone surface + full-text body + facets | Search is modal-only and title/id-only; no article-body or comment search | Dedicated search page with facets (type/space/date/status) + full-text over items + articles; keep ⌘K as the quick entry | **Jira/Confluence search** |
 | 14 | **Board swimlanes/grouping + bulk-change preview wizard** | Board is fixed to 3 status columns; bulk edit is one-field-flat with no preview | Group-by assignee/type/epic/release swimlanes; a bulk wizard that previews the diff before commit | **Jira** |
 | 15 | **Visual builders + live preview** (workflow, chart, permission matrix, field layout) | Admin config is form/table-heavy; admins write BQL by hand for simple charts (Tesler's Law violated) | Drag-drop workflow states/transitions; visual metric/dimension chart picker over BQL; live preview of layout/visibility changes | **Jira workflow editor**, **MS** |
@@ -587,7 +592,8 @@ Build once, in `cva`+`cn()`, dark-complete, a11y, RTL, with a Storybook story.
   global **density mode** (compact/comfortable/spacious) via a `useDensity()` hook + token-driven
   padding scale (generalize the board's existing toggle). *Data-dense DISCOM users want compact.*
 - **1.3 Motion choreography:** standardize panel/modal/toast/accordion entrance-exit on `duration-base`
-  + `out-quint`; reserve `spring` for press/drag; optimistic-update shimmer + success check-morph.
+  + `out-quint`; reserve `spring` for press/drag; optimistic-update shimmer + success check-morph —
+  motion should *convey state* (**Uber Base**).
 - **1.4 Token additions:** `text-2xs`/`text-3xs` (retire the `App.jsx` `text-[10px]` exemption);
   focus-ring alias; categorical chart-palette tokens.
 
@@ -627,7 +633,9 @@ Build once, in `cva`+`cn()`, dark-complete, a11y, RTL, with a Storybook story.
 Convergence (Part A) makes the UI *consistent*; this theme makes it *beautiful* — **across every surface,
 view, pop-up, and button, enforced by the Premium Bar (H.2.1)**. Craft, not features — the Feature Parity
 Ledger (RB-20 §1) still holds. (**🎨** = benefits from designer / Figma input; confirm the visual source
-before building. Everything else is in-code against the token system.)
+before building. Everything else is in-code against the token system.) Reference exemplars for this
+layer: **AirBNB** (Design Language System — tokens, illustration, trust-through-craft) and **Uber**
+(Base — motion conveys state, real-time clarity).
 - **5.1 Typography system:** a complete, tokenized type scale (display / title / heading / body /
   caption / overline + mono) with line-height, tracking, weight (Inter 300/400/600/700), reading
   measure, and vertical rhythm; applied through `PageHeader` / `Card` / prose. Subsumes the

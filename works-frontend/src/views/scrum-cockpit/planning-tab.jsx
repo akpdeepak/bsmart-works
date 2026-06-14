@@ -4,36 +4,21 @@ import { Field } from '@/components/works/field';
 import { StatCard } from '@/components/works/stat-card';
 import { AiMetaBadge } from '@/components/works/ai-meta-badge';
 import { EmptyState } from '@/components/works/atoms/empty-state';
-import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { CockpitSkeleton } from './cockpit-skeleton';
 
+// Note: the "AI Sprint Plan" button that previously called aiClient.generate with the unknown
+// kind 'sprint_plan' has been removed. The real AI-backed capacity suggestion is delivered by
+// the "Suggest commit" button via /cockpit/sprint-planning (runSprintPlanning), which returns
+// planningResult.narrative already powered by AiControlPlane. Calling generate() with an
+// unrecognised kind silently returned the user-story scaffold — audit finding #17.
 export function PlanningTab({
-  planningTimeOff, setPlanningTimeOff, runSprintPlanning, aiCapabilities, aiLoading, aiAction,
-  activeWorkspaceId, activeSprint, planningResult, cockpitLoading, showToast,
+  planningTimeOff, setPlanningTimeOff, runSprintPlanning, planningResult, cockpitLoading,
 }) {
   return (
     <div>
       <div className="flex items-end gap-2 mb-4 flex-wrap">
         <Field label="Time off (points)"><input type="number" className="input text-sm w-28" value={planningTimeOff} onChange={e => setPlanningTimeOff(e.target.value)} /></Field>
         <Button variant="action" onClick={runSprintPlanning}>Suggest commit</Button>
-        {anyCapabilityEnabled(aiCapabilities) && (
-          <Button
-            variant="secondary"
-            disabled={!!aiLoading['sprint-plan']}
-            onClick={() => aiAction(
-              'sprint-plan',
-              () => aiClient.generate(activeWorkspaceId, 'sprint_plan', { sprintId: activeSprint?.id, timeOffPoints: Number(planningTimeOff) || 0 }),
-              res => {
-                const suggestion = res?.draft || '';
-                if (suggestion) showToast(`AI sprint plan: ${suggestion.slice(0, 120)}`, 'info');
-                if (res?.meta?.fallback) showToast('AI sprint planning used fallback (capacity calc).', 'info');
-              },
-              'Enable AI for sprint planning suggestions',
-            )}
-          >
-            {aiLoading['sprint-plan'] ? 'Planning…' : '✦ AI Sprint Plan'}
-          </Button>
-        )}
       </div>
       {cockpitLoading.planning && !planningResult ? <CockpitSkeleton />
         : !planningResult ? <EmptyState icon={LayoutDashboard} title="Sprint planning helper" subtitle="Capacity from rolling velocity, an AI-suggested commit, and the refined-item list." />

@@ -263,9 +263,8 @@ export default function ScrumMasterCockpitView({
       {tab === 'planning' && (
         <PlanningTab
           planningTimeOff={planningTimeOff} setPlanningTimeOff={setPlanningTimeOff}
-          runSprintPlanning={runSprintPlanning} aiCapabilities={aiCapabilities} aiLoading={aiLoading}
-          aiAction={aiAction} activeWorkspaceId={activeWorkspaceId} activeSprint={activeSprint}
-          planningResult={planningResult} cockpitLoading={cockpitLoading} showToast={showToast}
+          runSprintPlanning={runSprintPlanning} planningResult={planningResult}
+          cockpitLoading={cockpitLoading}
         />
       )}
 

@@ -262,6 +262,15 @@ final class AiHeuristics {
 
     // ── Generation templates ──────────────────────────────────────────────────────
 
+    /**
+     * Returns a deterministic template scaffold for a known generation {@code kind}.
+     * Throws {@link ApiException} (HTTP 400) for any unrecognised kind so that
+     * mis-wired callers surface an explicit error instead of silently receiving a
+     * user-story scaffold (audit finding #17).
+     *
+     * <p>Known kinds: {@code ac} / {@code acceptance_criteria}, {@code test_cases} /
+     * {@code tests}, {@code comment}, {@code article}, {@code release_notes}.
+     */
     static String renderTemplate(String kind, String topic, Map<String, Object> ctx) {
         String t = nv(topic).isBlank() ? "the requested capability" : topic;
         return switch (kind) {
@@ -276,7 +285,9 @@ final class AiHeuristics {
             case "comment" -> "Thanks for the update on " + t + ". I'll review and follow up shortly.";
             case "article" -> "# " + t + "\n\n## Overview\n_Describe the topic._\n\n## Steps\n1. \n2. \n\n## References\n- ";
             case "release_notes" -> "## Release notes\n\n### Highlights\n- " + t + "\n\n### Fixes\n- ";
-            default -> "As a user, I want " + t + ", so that I get value.\n\nAcceptance criteria:\n- \n- ";
+            default -> throw ApiException.badRequest("UNKNOWN_GENERATION_KIND",
+                "Unknown generation kind: " + kind
+                + ". Valid kinds: ac, acceptance_criteria, test_cases, tests, comment, article, release_notes.");
         };
     }
 

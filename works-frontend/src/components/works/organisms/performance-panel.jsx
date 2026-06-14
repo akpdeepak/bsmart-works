@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck, Lock, Sparkles, TrendingUp, TrendingDown, Minus, Brain } from 'lucide-react';
-import { kpiClient } from '@/lib/kpi';
+import { ShieldCheck, Lock, Sparkles, TrendingUp, TrendingDown, Minus, Brain, ArrowUpRight, ArrowDownRight, HeartPulse } from 'lucide-react';
+import { kpiClient, trendTone, trendDelta } from '@/lib/kpi';
 import { api } from '@/lib/apiClient';
 import { useProjects } from '@/hooks/queries/useProjects';
 import { Badge } from '@/components/works/atoms/badge';
@@ -40,28 +40,126 @@ const STATUS_META = {
   OFF_TRACK: { label: 'Off track', icon: TrendingDown, tone: 'text-semantic-danger', bg: 'bg-semantic-danger/10' },
 };
 
+// Trend tone → text colour token (meaning never rests on colour alone — every trend also carries a
+// directional glyph + a labelled "vs last period" sentence, RB-30 §6 / WCAG-AA).
+const TREND_TONE_CLASS = {
+  success: 'text-semantic-success',
+  danger: 'text-semantic-danger',
+  neutral: 'text-neutral-600 dark:text-neutral-400',
+};
+
+function MetricTrend({ trend }) {
+  const { t } = useI18n();
+  if (!trend) {
+    return <p className="mt-1 text-xs text-neutral-400 dark:text-neutral-500">{t('insights.performance.noTrend')}</p>;
+  }
+  const tone = trendTone(trend);
+  const delta = trendDelta(trend);
+  const Icon = trend.direction === 'UP' ? ArrowUpRight : trend.direction === 'DOWN' ? ArrowDownRight : Minus;
+  return (
+    <p className={`mt-1 flex items-center gap-1 text-xs font-medium ${TREND_TONE_CLASS[tone]}`}>
+      <Icon aria-hidden="true" className="h-3 w-3" />
+      <span>{delta}</span>
+      <span className="font-normal text-neutral-600 dark:text-neutral-400">{t('insights.performance.vsLastPeriod')}</span>
+    </p>
+  );
+}
+
 function MetricCard({ metric }) {
+  const { t } = useI18n();
   const sm = metric.status ? STATUS_META[metric.status] : null;
   const StatusIcon = sm?.icon;
+  // n=0 is an honest empty per-metric, not a misleading zero (RB-20 §4, RB-30 §6).
+  const noData = !metric.sampleSize;
   return (
     <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
       <div className="flex items-start justify-between gap-1 mb-1">
         <p className="text-xs font-semibold uppercase tracking-wide text-neutral-600">{metric.label}</p>
-        {sm && (
+        {sm && !noData && (
           <span className={`flex items-center gap-0.5 rounded px-1.5 py-0.5 text-xs font-semibold ${sm.tone} ${sm.bg}`} aria-label={sm.label}>
             {StatusIcon && <StatusIcon aria-hidden="true" className="h-3 w-3" />}
             {sm.label}
           </span>
         )}
       </div>
-      <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-        {metric.value}
-        {metric.unit === 'percent' && '%'}
-      </p>
-      <p className="mt-0.5 text-xs text-neutral-600">
-        {metric.unit !== 'percent' && metric.unit} · n={metric.sampleSize}
-      </p>
+      {noData ? (
+        <>
+          <p className="text-2xl font-bold text-neutral-300 dark:text-neutral-600" aria-hidden="true">—</p>
+          <p className="mt-0.5 text-xs text-neutral-600">{t('insights.performance.noData')}</p>
+        </>
+      ) : (
+        <>
+          <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+            {metric.value}
+            {metric.unit === 'percent' && '%'}
+          </p>
+          <p className="mt-0.5 text-xs text-neutral-600">
+            {metric.unit !== 'percent' && metric.unit} · n={metric.sampleSize}
+          </p>
+          <MetricTrend trend={metric.trend} />
+        </>
+      )}
     </div>
+  );
+}
+
+// Band (percent) → semantic token, matching the backend KpiService.band() thresholds (≥80 healthy,
+// ≥60 watch, else risk). Kept in lockstep with healthTone() so colour never contradicts the label.
+function bandFor(percent) {
+  if (percent >= 80) return 'healthy';
+  return percent >= 60 ? 'watch' : 'risk';
+}
+const BAND_TONE = { healthy: 'success', watch: 'warning', risk: 'danger' };
+
+function HealthGauge({ labelKey, percent }) {
+  const { t } = useI18n();
+  const band = bandFor(percent);
+  return (
+    <div className="rounded-lg border border-neutral-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
+      <div className="mb-1 flex items-center justify-between gap-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-600">{t(labelKey)}</p>
+        <Badge tone={BAND_TONE[band]}>{t(`insights.performance.${band}`)}</Badge>
+      </div>
+      <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{Math.round(percent)}%</p>
+      {/* Track + fill; the fill width encodes the value, the badge above carries the band in text. */}
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
+        <div
+          className={`h-full rounded-full bg-semantic-${BAND_TONE[band]}`}
+          style={{ width: `${Math.max(0, Math.min(100, percent))}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Team-health composite (Cap L): predictability, scope stability, flow efficiency + an overall, each
+// banded good/watch/risk. Surfaced on the Team view, where the metrics resolve to a single team.
+function TeamHealthComposite({ health }) {
+  const { t } = useI18n();
+  if (!health) return null;
+  const overallBand = bandFor(health.overall);
+  return (
+    <section
+      aria-labelledby="team-health-heading"
+      className="mb-6 rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900"
+    >
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 id="team-health-heading" className="flex items-center gap-1.5 text-base font-semibold text-neutral-900 dark:text-neutral-100">
+          <HeartPulse aria-hidden="true" className="h-4 w-4 text-brand-navy-tint" />
+          {t('insights.performance.teamHealth')}
+        </h3>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-neutral-600">{t('insights.performance.overall')}</span>
+          <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{Math.round(health.overall)}</span>
+          <Badge tone={BAND_TONE[overallBand]}>{t(`insights.performance.${overallBand}`)}</Badge>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <HealthGauge labelKey="insights.performance.predictability" percent={health.predictability} />
+        <HealthGauge labelKey="insights.performance.scopeStability" percent={health.scopeStability} />
+        <HealthGauge labelKey="insights.performance.flowEfficiency" percent={health.flowEfficiency} />
+      </div>
+    </section>
   );
 }
 
@@ -75,7 +173,7 @@ function LayerView({ layer, aiOn, anomalyBusy, anomalyResult, onExplainAnomaly }
         {layer.privacyNote && (
           <Badge tone="info" className="gap-1">
             <Lock aria-hidden="true" className="h-3 w-3" />
-            Aggregated
+            {t('insights.performance.aggregated')}
           </Badge>
         )}
       </div>
@@ -136,6 +234,8 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem 
   // result never paints under a new scope, and so the effect never calls setState synchronously
   // (react-hooks/set-state-in-effect) — it only resolves in the async continuation.
   const [distByScope, setDistByScope] = useState({}); // scopeKey → { data } | { error }
+  // Team-health composite per team id (Cap L). Keyed so a stale result never paints under a new team.
+  const [healthByTeam, setHealthByTeam] = useState({}); // teamId → { data } | { error }
 
   // Projects come from the shared ONE-Source hook. `data` is undefined while loading; normalize to
   // null so the loading-vs-"no projects" distinction below is preserved.
@@ -224,6 +324,19 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem 
 
   const distEntry = distScopeKey ? distByScope[distScopeKey] : null;
 
+  // Team-health composite (Cap L) — only the Team layer resolves to a single team. setState only in
+  // the async continuation (react-hooks/set-state-in-effect).
+  useEffect(() => {
+    if (!workspaceId || layer !== 'TEAM' || !teamId) return undefined;
+    let active = true;
+    kpiClient.health(workspaceId, teamId)
+      .then((h) => { if (active) setHealthByTeam((prev) => ({ ...prev, [teamId]: { data: h } })); })
+      .catch((e) => { if (active) setHealthByTeam((prev) => ({ ...prev, [teamId]: { error: e.message || 'health' } })); });
+    return () => { active = false; };
+  }, [workspaceId, layer, teamId]);
+
+  const healthEntry = layer === 'TEAM' && teamId ? healthByTeam[teamId] : null;
+
   const noTeam = layer === 'TEAM' && teams !== null && teams.length === 0;
   const noProject = layer === 'PROJECT' && projects !== null && projects.length === 0;
   const noEntity = noTeam || noProject;
@@ -308,6 +421,11 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem 
 
       {error && !loading && (
         <div className="rounded-lg bg-semantic-danger-surface p-4 text-sm text-semantic-danger">{error}</div>
+      )}
+
+      {/* Team-health composite — Team layer only; resolves to one team (Cap L). */}
+      {!loading && !error && layer === 'TEAM' && !noEntity && healthEntry?.data && (
+        <TeamHealthComposite health={healthEntry.data} />
       )}
 
       {!loading && !error && data?.single && (

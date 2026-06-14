@@ -234,6 +234,109 @@ class KpiServiceTest {
             .ifPresent(m -> assertThat(m.status()).isEqualTo("ON_TRACK"));
     }
 
+    // ── cycle time uses completion, not wall-clock age (honest-metrics fix) ──────────
+
+    @Test
+    void cycleHours_doneItem_measuresToStatusChange_notNow() {
+        // A done item created 10 days ago but completed 2 days after creation must report ~48h of
+        // cycle time, NOT its 10-day age — otherwise cycle time climbs forever (RB-20 §4).
+        WorkItem w = new WorkItem();
+        w.setStatus("Done");
+        w.setCreatedAt(OffsetDateTime.now().minusDays(10));
+        w.setStatusChangedAt(OffsetDateTime.now().minusDays(8)); // completed 2 days after creation
+        double hours = KpiService.cycleHours(w);
+        assertThat(hours).isBetween(46.0, 50.0);
+    }
+
+    @Test
+    void cycleHours_openItem_measuresAgeToNow() {
+        // An in-flight item has no completion timestamp to anchor to → age-in-flight to now.
+        WorkItem w = new WorkItem();
+        w.setStatus("In Progress");
+        w.setCreatedAt(OffsetDateTime.now().minusHours(30));
+        assertThat(KpiService.cycleHours(w)).isBetween(28.0, 32.0);
+    }
+
+    @Test
+    void cycleHours_doneItemWithoutStatusTimestamp_fallsBackToAge() {
+        // Items predating the V74 status-timestamp backfill have no statusChangedAt → fall back to age.
+        WorkItem w = new WorkItem();
+        w.setStatus("Done");
+        w.setCreatedAt(OffsetDateTime.now().minusHours(50));
+        w.setStatusChangedAt(null);
+        assertThat(KpiService.cycleHours(w)).isBetween(48.0, 52.0);
+    }
+
+    // ── vs-last-period trend from snapshot history (Cap L trends) ────────────────────
+
+    private MetricSnapshot snap(String period, double value) {
+        MetricSnapshot s = new MetricSnapshot();
+        s.setMetricKey(MetricCatalog.VELOCITY);
+        s.setScopeLevel("ORG");
+        s.setPeriod(period);
+        s.setValue(value);
+        return s;
+    }
+
+    @Test
+    void trendFor_higherIsBetter_risingIsImproving() {
+        var hist = List.of(snap("2026-06-01T10", 30.0), snap("2026-06-02T10", 42.0));
+        KpiService.MetricTrend t = KpiService.trendFor(hist, 42.0, true);
+        assertThat(t).isNotNull();
+        assertThat(t.delta()).isEqualTo(12.0);
+        assertThat(t.previousValue()).isEqualTo(30.0);
+        assertThat(t.direction()).isEqualTo("UP");
+        assertThat(t.improving()).isTrue();
+        assertThat(t.previousPeriod()).isEqualTo("2026-06-01T10");
+    }
+
+    @Test
+    void trendFor_lowerIsBetter_risingIsWorsening() {
+        var hist = List.of(snap("2026-06-01T10", 20.0), snap("2026-06-02T10", 35.0));
+        KpiService.MetricTrend t = KpiService.trendFor(hist, 35.0, false); // e.g. cycle time up = bad
+        assertThat(t.direction()).isEqualTo("UP");
+        assertThat(t.improving()).isFalse();
+    }
+
+    @Test
+    void trendFor_skipsSamePeriodAndNeedsAPrior() {
+        // Only one distinct period → no comparison base → null (honest "no comparison yet").
+        assertThat(KpiService.trendFor(List.of(snap("2026-06-02T10", 42.0)), 42.0, true)).isNull();
+        assertThat(KpiService.trendFor(List.of(), 42.0, true)).isNull();
+        // Repeated latest period collapses to the same period; the earlier distinct one is the base.
+        var hist = List.of(snap("2026-06-01T10", 30.0), snap("2026-06-02T10", 40.0), snap("2026-06-02T11", 42.0));
+        KpiService.MetricTrend t = KpiService.trendFor(hist, 42.0, true);
+        assertThat(t.previousPeriod()).isEqualTo("2026-06-02T10");
+        assertThat(t.delta()).isEqualTo(2.0);
+    }
+
+    @Test
+    void org_attachesTrendFromSnapshotHistory() {
+        when(projects.findByWorkspaceId(WS)).thenReturn(List.of(project()));
+        when(workItems.findByProjectId("PROJ-1")).thenReturn(List.of(
+            item("A-1", ME, "Done", 5, "Story"), item("A-2", ME, "Done", 3, "Story")));
+        // ORG velocity history: 4 → current 8 (rising; higher is better → improving).
+        when(snapshots.findByWorkspaceIdAndMetricKeyAndScopeLevelAndScopeIdOrderByPeriodAsc(
+            WS, MetricCatalog.VELOCITY, "ORG", ""))
+            .thenReturn(List.of(snap("2026-06-01T10", 4.0), snap("2026-06-02T10", 8.0)));
+
+        KpiService.Layer layer = kpi.org(WS, ME);
+
+        KpiService.MetricValue velocity = layer.metrics().stream()
+            .filter(m -> m.key().equals(MetricCatalog.VELOCITY)).findFirst().orElseThrow();
+        assertThat(velocity.trend()).isNotNull();
+        assertThat(velocity.trend().direction()).isEqualTo("UP");
+        assertThat(velocity.trend().improving()).isTrue();
+    }
+
+    @Test
+    void trendFor_flatWhenUnchanged() {
+        var hist = List.of(snap("2026-06-01T10", 42.0), snap("2026-06-02T10", 42.0));
+        KpiService.MetricTrend t = KpiService.trendFor(hist, 42.0, true);
+        assertThat(t.direction()).isEqualTo("FLAT");
+        assertThat(t.improving()).isFalse();
+    }
+
     // ── tenant isolation: /distribution project scope (RB-40 §1) ───────────────────
 
     @Test

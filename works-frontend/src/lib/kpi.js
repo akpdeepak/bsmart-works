@@ -25,6 +25,10 @@ export const kpiClient = {
     api.send(`/kpi/health?workspaceId=${ws(workspaceId)}&teamId=${encodeURIComponent(teamId)}`),
   distribution: (workspaceId, scopeLevel = 'ORG', scopeId) =>
     api.send(`/kpi/distribution?workspaceId=${ws(workspaceId)}&scopeLevel=${encodeURIComponent(scopeLevel)}${scopeId ? `&scopeId=${encodeURIComponent(scopeId)}` : ''}`),
+  // Snapshot history for one metric — the sprint-over-sprint trend series (Cap L); empty when the
+  // snapshot scheduler does not yet cover this scope.
+  history: (workspaceId, metricKey, scopeLevel = 'ORG', scopeId) =>
+    api.send(`/kpi/history?workspaceId=${ws(workspaceId)}&metricKey=${encodeURIComponent(metricKey)}&scopeLevel=${encodeURIComponent(scopeLevel)}${scopeId ? `&scopeId=${encodeURIComponent(scopeId)}` : ''}`),
   narrative: (workspaceId, teamId, aiInContext = true) =>
     api.send(`/kpi/narrative?workspaceId=${ws(workspaceId)}`, { method: 'POST', body: { teamId, aiInContext } }),
 
@@ -43,4 +47,21 @@ export function healthTone(band) {
   if (band === 'healthy') return 'success';
   if (band === 'watch') return 'warning';
   return 'danger';
+}
+
+// A metric trend ({ previousValue, delta, previousPeriod, direction, improving }) → semantic token.
+// A flat or absent trend is neutral; otherwise the polarity-aware `improving` flag (computed
+// server-side from higherIsBetter) decides success vs danger so colour never contradicts meaning.
+export function trendTone(trend) {
+  if (!trend || trend.direction === 'FLAT') return 'neutral';
+  return trend.improving ? 'success' : 'danger';
+}
+
+// Human-readable, sign-carrying delta for a trend, e.g. "+3.0" / "-1.5" / "0". Pure number shaping
+// only — the unit and "vs last period" framing are added by the caller via i18n.
+export function trendDelta(trend) {
+  if (!trend || typeof trend.delta !== 'number') return '';
+  const rounded = Math.round(trend.delta * 10) / 10;
+  if (rounded === 0) return '0';
+  return rounded > 0 ? `+${rounded}` : `${rounded}`;
 }

@@ -4,7 +4,7 @@ import { StatCard } from '@/components/works/stat-card';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
-import { onPressKey } from '@/lib/utils';
+import { onPressKey, getTimeOfDay as getGreeting } from '@/lib/utils';
 import { TIER } from '@/lib/nav-model';
 import { DonutChart, BarChart, SegmentBar, DayBars, PairedBars } from '@/components/works/molecules';
 import { TodayCanvas } from '@/components/works/organisms/today-canvas';
@@ -119,12 +119,6 @@ function TodayHeader({ greeting, firstName, rolePill, subtitle, cta, onCta }) {
       {cta && <Button variant="action" onClick={onCta}>{cta}</Button>}
     </div>
   );
-}
-
-// Shared greeting helper
-function getGreeting() {
-  const h = new Date().getHours();
-  return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
 }
 
 // ── Role tab bar (Admin/Owner only) ───────────────────────────────────────────

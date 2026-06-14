@@ -105,21 +105,80 @@ function newBlock(type) {
 
 // ── Existing block renderers ────────────────────────────────────────────────────
 
-function ParagraphBlock({ block, onChange, focused }) {
+// Slash-command insert: typing "/" (optionally followed by a filter, e.g. "/cal") at the start of
+// an otherwise-empty paragraph opens a block picker that REPLACES this paragraph with the chosen
+// block — the Notion-style shortcut. It reuses BLOCK_TYPES so it never drifts from the Add-block
+// menu, and the fully-accessible Add-block button remains the primary path.
+const SLASH_RE = /^\/(\S*)$/;
+
+function ParagraphBlock({ block, onChange, onReplace, focused }) {
+  const slashOpen = typeof onReplace === 'function' && SLASH_RE.test(block.content);
+  const query = slashOpen ? block.content.slice(1).toLowerCase() : '';
+  const matches = slashOpen
+    ? BLOCK_TYPES.filter((t) => t.type !== 'paragraph'
+        && (t.label.toLowerCase().includes(query) || t.type.includes(query)))
+    : [];
+
+  const [active, setActive] = useState(0);
+  // Track which exact text the menu was dismissed for, so editing the text re-opens it.
+  // Derived during render — no effect needed (React "you might not need an effect").
+  const [dismissedFor, setDismissedFor] = useState(null);
+
+  const menuOpen = slashOpen && matches.length > 0 && dismissedFor !== block.content;
+  // Clamp the highlight as the filtered list shrinks (no reset effect required).
+  const activeIndex = Math.min(active, Math.max(0, matches.length - 1));
+
+  const onKeyDown = (e) => {
+    if (!menuOpen) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => (a + 1) % matches.length); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => (a + matches.length - 1) % matches.length); }
+    else if (e.key === 'Enter') { e.preventDefault(); onReplace(matches[activeIndex].type); }
+    else if (e.key === 'Escape') { e.preventDefault(); setDismissedFor(block.content); }
+  };
+
   return (
-    <textarea
-      aria-label="Paragraph content"
-      value={block.content}
-      onChange={(e) => onChange({ content: e.target.value })}
-      rows={3}
-      className={cn(
-        'w-full resize-y bg-transparent text-sm text-neutral-900 dark:text-neutral-100',
-        'border border-neutral-200 dark:border-neutral-700 rounded-md px-3 py-2',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2',
-        focused && 'border-brand-navy-tint',
+    <div className="relative">
+      <textarea
+        aria-label="Paragraph content"
+        value={block.content}
+        onChange={(e) => onChange({ content: e.target.value })}
+        onKeyDown={onKeyDown}
+        rows={3}
+        className={cn(
+          'w-full resize-y bg-transparent text-sm text-neutral-900 dark:text-neutral-100',
+          'border border-neutral-200 dark:border-neutral-700 rounded-md px-3 py-2',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2',
+          focused && 'border-brand-navy-tint',
+        )}
+        placeholder="Start typing, or “/” to insert a block…"
+      />
+      {menuOpen && (
+        <div
+          role="listbox"
+          aria-label="Insert block"
+          className="absolute left-0 top-full mt-1 z-dropdown max-h-64 w-64 overflow-auto rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 py-1 shadow-lg"
+        >
+          {matches.map(({ type, label, Icon }, i) => (
+            <button
+              key={type}
+              type="button"
+              role="option"
+              aria-selected={i === activeIndex}
+              onMouseDown={(e) => e.preventDefault()}
+              onMouseEnter={() => setActive(i)}
+              onClick={() => onReplace(type)}
+              className={cn(
+                'flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm text-neutral-700 dark:text-neutral-300',
+                i === activeIndex ? 'bg-neutral-50 dark:bg-neutral-800' : 'hover:bg-neutral-50 dark:hover:bg-neutral-800',
+              )}
+            >
+              <Icon aria-hidden="true" className="h-4 w-4 text-neutral-400 shrink-0" />
+              {label}
+            </button>
+          ))}
+        </div>
       )}
-      placeholder="Start typing…"
-    />
+    </div>
   );
 }
 
@@ -143,16 +202,17 @@ function HeadingBlock({ block, onChange, level }) {
 }
 
 function CodeBlock({ block, onChange }) {
+  // A distinct dark slab in both themes — code reads as code, set apart from prose.
   return (
-    <div className="rounded-md overflow-hidden border border-neutral-200 dark:border-neutral-700">
-      <div className="bg-neutral-100 dark:bg-neutral-800 px-3 py-1 text-xs text-neutral-500 font-mono">Code</div>
+    <div className="rounded-md overflow-hidden ring-1 ring-neutral-800">
+      <div className="bg-neutral-800 px-3 py-1 text-xs text-neutral-400 font-mono">Code</div>
       <textarea
         aria-label="Code block content"
         value={block.content}
         onChange={(e) => onChange({ content: e.target.value })}
         rows={5}
         spellCheck={false}
-        className="w-full font-mono text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 px-3 py-2 resize-y focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2"
+        className="w-full font-mono text-sm bg-neutral-900 text-neutral-100 placeholder:text-neutral-500 px-3.5 py-2.5 resize-y focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40"
         placeholder="// paste code here…"
       />
     </div>
@@ -301,7 +361,7 @@ function CalloutBlock({ block, onChange }) {
   const v = CALLOUT_VARIANTS[variant] || CALLOUT_VARIANTS.info;
   const Icon = v.Icon;
   return (
-    <div className={cn('rounded-md border p-3 flex gap-3', v.box)}>
+    <div className={cn('rounded-md border-l-2 p-3 flex gap-3', v.box)}>
       <Icon aria-hidden="true" className={cn('h-5 w-5 shrink-0 mt-0.5', v.accent)} />
       <div className="flex-1 space-y-2">
         <label className="sr-only" htmlFor={`callout-variant-${block.id}`}>Callout style</label>
@@ -958,7 +1018,7 @@ function AiComposeBar({ aiAssist, onInsert }) {
 
 // ── Block wrapper ───────────────────────────────────────────────────────────────
 
-function Block({ block, index, total, focused, onFocus, onChange, onMove, onDelete, allBlocks, aiAssist, workspaceId }) {
+function Block({ block, index, total, focused, onFocus, onChange, onMove, onDelete, onReplace, allBlocks, aiAssist, workspaceId }) {
   const wrapRef = useRef(null);
 
   const handleKeyDown = (e) => {
@@ -1025,7 +1085,7 @@ function Block({ block, index, total, focused, onFocus, onChange, onMove, onDele
       </div>
 
       {/* Block content */}
-      {block.type === 'paragraph' && <ParagraphBlock block={block} onChange={onChange} focused={focused} />}
+      {block.type === 'paragraph' && <ParagraphBlock block={block} onChange={onChange} onReplace={onReplace} focused={focused} />}
       {block.type === 'heading1' && <HeadingBlock block={block} onChange={onChange} level={1} />}
       {block.type === 'heading2' && <HeadingBlock block={block} onChange={onChange} level={2} />}
       {block.type === 'heading3' && <HeadingBlock block={block} onChange={onChange} level={3} />}
@@ -1172,6 +1232,12 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
     setFocusedIndex(next.length - 1);
   };
 
+  // Slash-command: swap a paragraph in place for the chosen block type (drops the "/query" text).
+  const replaceBlock = (index, type) => {
+    emit(blocks.map((b, i) => (i === index ? newBlock(type) : b)));
+    setFocusedIndex(index);
+  };
+
   const stats = docStats(blocks);
 
   return (
@@ -1188,6 +1254,7 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
             onChange={(patch) => updateBlock(index, patch)}
             onMove={moveBlock}
             onDelete={deleteBlock}
+            onReplace={(type) => replaceBlock(index, type)}
             allBlocks={blocks}
             aiAssist={aiAssist}
             workspaceId={workspaceId}

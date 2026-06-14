@@ -6,11 +6,13 @@ import { Info, AlertTriangle, CheckSquare } from 'lucide-react';
 
 // Callout / panel variants — Confluence-style info / note / warning panels. Meaning is carried by
 // an icon + a text label, never colour alone (RB-30 §6). Token surfaces via opacity, no raw hex.
+// Borderless treatment: a faint 5% tint + a single 2px left accent bar (the consumer supplies
+// `border-l-2`); `box` carries the left-border colour + tint so editor and renderer stay in sync.
 export const CALLOUT_VARIANTS = {
-  info: { label: 'Info', Icon: Info, box: 'border-brand-navy-tint/40 bg-brand-navy-tint/5', accent: 'text-brand-navy dark:text-brand-amber' },
-  success: { label: 'Success', Icon: CheckSquare, box: 'border-semantic-success/40 bg-semantic-success-surface', accent: 'text-semantic-success' },
-  warning: { label: 'Warning', Icon: AlertTriangle, box: 'border-semantic-warning/40 bg-semantic-warning-surface', accent: 'text-semantic-warning' },
-  danger: { label: 'Danger', Icon: AlertTriangle, box: 'border-semantic-danger/40 bg-semantic-danger-surface', accent: 'text-semantic-danger' },
+  info: { label: 'Info', Icon: Info, box: 'border-l-brand-navy-tint bg-brand-navy-tint/5', accent: 'text-brand-navy dark:text-brand-amber' },
+  success: { label: 'Success', Icon: CheckSquare, box: 'border-l-semantic-success bg-semantic-success/5', accent: 'text-semantic-success' },
+  warning: { label: 'Warning', Icon: AlertTriangle, box: 'border-l-semantic-warning bg-semantic-warning/5', accent: 'text-semantic-warning' },
+  danger: { label: 'Danger', Icon: AlertTriangle, box: 'border-l-semantic-danger bg-semantic-danger/5', accent: 'text-semantic-danger' },
 };
 
 // Sticky-note surfaces for the whiteboard block — token classes only.

@@ -3685,6 +3685,7 @@ export default function App() {
               setBqlQuery={setBqlQuery}
               setSelectedItem={setSelectedItem}
               runBql={runBql}
+              notify={showToast}
             />
           )}
 

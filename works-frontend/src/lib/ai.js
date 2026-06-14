@@ -4,6 +4,7 @@
 // so callers always get a usable response — `meta.fallback` says whether AI actually ran.
 
 import { api } from '@/lib/apiClient';
+import { DEFAULT_PAGE_SIZE } from '@/lib/pagination';
 
 const ws = (workspaceId) => encodeURIComponent(workspaceId);
 
@@ -16,7 +17,7 @@ export const aiClient = {
   budget: (workspaceId) => api.send(`/ai/budget?workspaceId=${ws(workspaceId)}`),
   setBudget: (workspaceId, monthlyCapCents) =>
     api.send(`/ai/budget?workspaceId=${ws(workspaceId)}`, { method: 'PUT', body: { monthlyCapCents } }),
-  auditLog: (workspaceId, page = 0, size = 50) =>
+  auditLog: (workspaceId, page = 0, size = DEFAULT_PAGE_SIZE) =>
     api.send(`/ai/invocations?workspaceId=${ws(workspaceId)}&page=${page}&size=${size}`),
   settings: (workspaceId) => api.send(`/ai/settings?workspaceId=${ws(workspaceId)}`),
   setSettings: (workspaceId, body) =>

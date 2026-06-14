@@ -14,6 +14,7 @@ import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { Skeleton } from '@/components/works/atoms/skeleton';
 import { securityClient } from '@/lib/security';
+import { DEFAULT_PAGE_SIZE } from '@/lib/pagination';
 import { registerPasskey, passkeysSupported } from '@/lib/passkey';
 import { exportRowsToCsv } from '@/lib/export';
 
@@ -110,7 +111,7 @@ export function SecurityCenter({ workspaceId, can, onToast }) {
       securityClient.settings(workspaceId),
       securityClient.policies(workspaceId),
       securityClient.anomalies(workspaceId, 'OPEN'),
-      securityClient.auditLog(workspaceId, { size: 50 }),
+      securityClient.auditLog(workspaceId, { size: DEFAULT_PAGE_SIZE }),
       securityClient.verifyAuditLog(workspaceId),
       securityClient.evidence(workspaceId),
       securityClient.pentests(workspaceId),

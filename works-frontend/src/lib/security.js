@@ -4,6 +4,7 @@
 // write) and workspace scoping, so the UI gating here is convenience, not the real guard.
 
 import { api } from '@/lib/apiClient';
+import { DEFAULT_PAGE_SIZE } from '@/lib/pagination';
 
 const ws = (workspaceId) => encodeURIComponent(workspaceId);
 const q = (s) => encodeURIComponent(s ?? '');
@@ -27,7 +28,7 @@ export const securityClient = {
       + `&role=${q(role)}&ip=${q(ip)}&country=${q(country)}&deviceTrusted=${!!deviceTrusted}`),
 
   // ── Audit log (tamper-evident) ─────────────────────────────────────────────
-  auditLog: (workspaceId, { action = '', actor = '', query = '', page = 0, size = 50 } = {}) =>
+  auditLog: (workspaceId, { action = '', actor = '', query = '', page = 0, size = DEFAULT_PAGE_SIZE } = {}) =>
     api.send(`/security/audit-log?workspaceId=${ws(workspaceId)}`
       + `&action=${q(action)}&actor=${q(actor)}&q=${q(query)}&page=${page}&size=${size}`),
   verifyAuditLog: (workspaceId) => api.send(`/security/audit-log/verify?workspaceId=${ws(workspaceId)}`),

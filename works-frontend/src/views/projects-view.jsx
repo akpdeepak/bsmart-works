@@ -2,6 +2,7 @@ import { TrendingUp, Activity } from 'lucide-react';
 import { Folder } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { statusToCategory } from '@/components/works/status';
 import { useI18n } from '@/lib/i18n';
 
@@ -9,6 +10,7 @@ import { useI18n } from '@/lib/i18n';
 // equivalent to a JIRA project. Work item IDs are workspace-scoped (EP-0001 is unique
 // across all teams). B20: teamMetrics is { [teamId]: { velocity, completionPct, cycleTimeDays } }.
 export default function ProjectsView({
+  loading = false,
   projects,
   workItems,
   setIsProjectOpen,
@@ -19,6 +21,13 @@ export default function ProjectsView({
   statusResolver,
 }) {
   const { t } = useI18n();
+  if (loading && projects.length === 0) {
+    return (
+      <div className="p-8 max-w-4xl">
+        <ListSkeleton rows={4} />
+      </div>
+    );
+  }
   // "Done" is resolved from the item's status category, not a literal string, so teams using
   // custom / renamed done statuses still show accurate completion.
   const isDone = (item) => (statusResolver

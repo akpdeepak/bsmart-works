@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { BarChart2, AlertTriangle, ChevronDown, Search, Target, CalendarDays, ShieldAlert } from 'lucide-react';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { StatusBadge } from '@/components/works/status-badge';
 import { PriorityBadge } from '@/components/works/priority-badge';
@@ -220,6 +221,7 @@ function pace(startDate, endDate, completionRate, t) {
 // a pivot-backed insight strip + a comprehensive single-sprint report (searchable picker, pace,
 // breakdowns, at-risk) so a reader gets the full picture of a sprint (RB-20 §4).
 export default function ReportsView({
+  loading = false,
   velocityData,
   sprints,
   selectedSprintId,
@@ -255,6 +257,13 @@ export default function ReportsView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sprints, selectedSprintId]);
 
+  if (loading && sprints.length === 0) {
+    return (
+      <div className="p-8 max-w-5xl">
+        <ListSkeleton rows={4} />
+      </div>
+    );
+  }
   return (
     <div className="p-8 max-w-5xl">
       <h1 className="text-2xl font-bold text-brand-navy dark:text-white mb-1">{t('insights.reports.title')}</h1>

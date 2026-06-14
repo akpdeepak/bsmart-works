@@ -2,12 +2,14 @@ import { Map as MapIcon, Lightbulb, Send, Target, FileText, Megaphone, ChevronUp
 import { Button } from '@/components/works/button';
 import { Field } from '@/components/works/field';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { AiMetaBadge } from '@/components/works/ai-meta-badge';
 
 // Product Owner Workspace — extracted from the App.jsx monolith (UX finding A3/H2). Behaviour-
 // preserving: the parent owns all roadmap/idea/feedback/OKR/release-note state and handlers; this
 // renders the six-tab cockpit.
 export default function PoWorkspaceView({
+  loading = false,
   i15ProjectId, projects, poTab, roadmapThemes, newTheme, ideas, newIdea, feedbackItems,
   feedbackClusters, newFeedback, objectives, activeObjective, newObjective, newKr,
   releaseNotesName, releaseNotesResult, setI15ProjectId, setPoTab, setNewTheme, setNewIdea,
@@ -16,6 +18,13 @@ export default function PoWorkspaceView({
   createFeedback, openObjective, updateKrProgress, addKeyResult, createObjective,
   runReleaseNotes, fetchStakeholders,
 }) {
+  if (loading && projects.length === 0) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto w-full">
+        <ListSkeleton rows={4} />
+      </div>
+    );
+  }
   return (
             <div className="flex flex-col h-full overflow-y-auto p-6 max-w-7xl mx-auto w-full">
               <div className="flex items-center justify-between mb-5">

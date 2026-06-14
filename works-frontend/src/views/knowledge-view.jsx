@@ -32,6 +32,7 @@ function articleText(article) {
  * remain in App.jsx because they live outside this block in the original code.
  */
 export default function KnowledgeView({
+  loading = false,
   knowledgeSearch,
   knowledgeTab,
   knowledgeSpaces,
@@ -80,6 +81,9 @@ export default function KnowledgeView({
   workspaceId,
   aiCapabilities = [],
 }) {
+  // `loading` is the global fetch flag from App.jsx; treat it as a fallback for the
+  // more granular space-loading flag so the first visit gets a skeleton, not an empty state.
+  const spacesLoading = loading || knowledgeSpacesLoading;
   const aiGenEnabled = capabilityEnabled(aiCapabilities, 'generation');
   const aiAssist = makeAiAssist(workspaceId, aiGenEnabled);
   // Block-editor autosave: persist quietly ~900ms after the last change instead of PUT-on-every-
@@ -146,7 +150,7 @@ export default function KnowledgeView({
         </div>
         {/* Space list */}
         <div className="flex-1 overflow-y-auto px-2 pb-2">
-          {knowledgeSpacesLoading && knowledgeSpaces.length === 0 ? (
+          {spacesLoading && knowledgeSpaces.length === 0 ? (
             <div className="space-y-1.5 px-1 py-2" aria-busy="true" aria-label="Loading spaces">
               {[0, 1, 2].map(i => <div key={i} className="h-8 rounded-lg animate-pulse bg-neutral-100 dark:bg-neutral-800" />)}
             </div>

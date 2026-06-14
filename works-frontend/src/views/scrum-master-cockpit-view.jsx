@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Lightbulb, Sparkles } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { useI18n } from '@/lib/i18n';
+import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import {
   CEREMONY_LABELS, ROLE_TABS, RUN_TABS, INSIGHTS_TABS,
   TIP_TONE, RAG_TONE, RAG_DOT,
@@ -22,6 +23,7 @@ import { PatternsTab } from './scrum-cockpit/patterns-tab';
 // into one component per tab (this file is the thin tab-router shell). The parent owns all state
 // and handlers; this renders the tabbed cockpit.
 export default function ScrumMasterCockpitView({
+  loading = false,
   i15ProjectId, projects, smTab, impediments, newImpediment, activeStandup, standups,
   standupDraft, sprints, riskSprintId, riskPanel, planningTimeOff, planningResult,
   retros, activeRetro, newRetro, retroNoteDraft, reviewSprintId, reviewResult, patternsResult,
@@ -97,6 +99,13 @@ export default function ScrumMasterCockpitView({
     setTabTouched(false);
   }, [i15ProjectId]);
 
+  if (loading && projects.length === 0 && sprints.length === 0) {
+    return (
+      <div className="p-6">
+        <ListSkeleton rows={4} />
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col h-full overflow-y-auto p-6 max-w-7xl mx-auto w-full">
       <div className="flex items-center justify-between mb-5">

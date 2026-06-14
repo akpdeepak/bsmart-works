@@ -179,6 +179,11 @@ export const MESSAGES = {
     'insights.reports.done': 'done',
     'insights.reports.points': 'pts',
     'insights.reports.predictability': 'Predictability',
+    'insights.reports.atAGlance': 'At a glance',
+    'insights.reports.pointsDelivered': 'Points delivered',
+    'insights.reports.timeElapsed': 'Time elapsed',
+    'insights.reports.items': 'items',
+    'insights.reports.acrossSprints': 'Across all sprints',
     // Dashboards
     'insights.dashboards.title': 'Dashboards',
     'insights.dashboards.subtitle': 'Build your own views — add widgets, arrange the grid, save.',

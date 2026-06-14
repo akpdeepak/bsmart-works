@@ -45,8 +45,17 @@ describe('ReportsView', () => {
       />,
     );
     expect(screen.getByText('Total Items')).toBeInTheDocument();
-    expect(screen.getByText('Completion')).toBeInTheDocument();
-    // Velocity card now shows delivered/committed points without the unit suffix.
+    // "Completion" now appears on both the at-a-glance ring and the KPI card.
+    expect(screen.getAllByText('Completion').length).toBeGreaterThanOrEqual(1);
+    // Velocity card shows delivered/committed points without the unit suffix.
     expect(screen.getByText('12/20')).toBeInTheDocument();
+    // The visual at-a-glance ring section is present.
+    expect(screen.getByText('At a glance')).toBeInTheDocument();
+  });
+
+  it('renders the sprint picker at the top, before the report', () => {
+    render(<ReportsView {...baseProps} sprints={[{ id: 'S1', name: 'Sprint 1', status: 'ACTIVE' }]} />);
+    // The picker is the primary control — present without a report loaded.
+    expect(screen.getByRole('button', { name: /pick a sprint/i })).toBeInTheDocument();
   });
 });

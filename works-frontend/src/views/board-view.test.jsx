@@ -118,4 +118,74 @@ describe('BoardView', () => {
     render(<BoardView {...baseProps} workItems={twoItems} totalWorkItemCount={null} />);
     expect(screen.queryByText(/of/i)).not.toBeInTheDocument();
   });
+
+  // ── Workflow-driven column tests (audit finding #12) ────────────────────────
+
+  it('falls back to three category columns when no columns prop is supplied', () => {
+    render(<BoardView {...baseProps} />);
+    // Default i18n keys resolve to the en locale values
+    expect(screen.getByText('TO DO')).toBeInTheDocument();
+    expect(screen.getByText('IN PROGRESS')).toBeInTheDocument();
+    expect(screen.getByText('DONE')).toBeInTheDocument();
+  });
+
+  it('falls back to three category columns when an empty columns array is supplied', () => {
+    render(<BoardView {...baseProps} columns={[]} />);
+    expect(screen.getByText('TO DO')).toBeInTheDocument();
+    expect(screen.getByText('IN PROGRESS')).toBeInTheDocument();
+    expect(screen.getByText('DONE')).toBeInTheDocument();
+  });
+
+  it('renders one column per workflow status when columns prop is provided', () => {
+    const workflowColumns = [
+      { name: 'Backlog',     category: 'TO_DO',       dot: 'bg-neutral-400',     limitKey: 'todoLimit' },
+      { name: 'Triaged',     category: 'TO_DO',       dot: 'bg-neutral-400',     limitKey: 'todoLimit' },
+      { name: 'In Dev',      category: 'IN_PROGRESS', dot: 'bg-brand-navy-tint',  limitKey: 'inProgressLimit' },
+      { name: 'In Review',   category: 'IN_PROGRESS', dot: 'bg-brand-navy-tint',  limitKey: 'inProgressLimit' },
+      { name: 'Released',    category: 'DONE',        dot: 'bg-semantic-success', limitKey: 'doneLimit' },
+    ];
+    render(<BoardView {...baseProps} columns={workflowColumns} />);
+    // Column headers are rendered with CSS uppercase — match the original status name text.
+    expect(screen.getByText('Backlog')).toBeInTheDocument();
+    expect(screen.getByText('Triaged')).toBeInTheDocument();
+    expect(screen.getByText('In Dev')).toBeInTheDocument();
+    expect(screen.getByText('In Review')).toBeInTheDocument();
+    expect(screen.getByText('Released')).toBeInTheDocument();
+    // Default three-category i18n headers must NOT appear
+    expect(screen.queryByText('TO DO')).not.toBeInTheDocument();
+    expect(screen.queryByText('IN PROGRESS')).not.toBeInTheDocument();
+    expect(screen.queryByText('DONE')).not.toBeInTheDocument();
+  });
+
+  it('items appear in the correct workflow column by exact status name', () => {
+    const workflowColumns = [
+      { name: 'Triaged',   category: 'TO_DO',       dot: 'bg-neutral-400',     limitKey: 'todoLimit' },
+      { name: 'In Dev',    category: 'IN_PROGRESS', dot: 'bg-brand-navy-tint',  limitKey: 'inProgressLimit' },
+      { name: 'Released',  category: 'DONE',        dot: 'bg-semantic-success', limitKey: 'doneLimit' },
+    ];
+    const items = [
+      { id: 'WI-A', title: 'Alpha task', type: 'Task', status: 'Triaged',  assigneeId: null, tags: [], starred: false },
+      { id: 'WI-B', title: 'Beta task',  type: 'Task', status: 'In Dev',   assigneeId: null, tags: [], starred: false },
+      { id: 'WI-C', title: 'Gamma task', type: 'Task', status: 'Released', assigneeId: null, tags: [], starred: false },
+    ];
+    render(<BoardView {...baseProps} workItems={items} columns={workflowColumns} />);
+    expect(screen.getByText('Alpha task')).toBeInTheDocument();
+    expect(screen.getByText('Beta task')).toBeInTheDocument();
+    expect(screen.getByText('Gamma task')).toBeInTheDocument();
+  });
+
+  it('items with a custom status not in any workflow column are not shown in wrong column', () => {
+    // A 3-column workflow; item has status 'Unknown' not in any column
+    const workflowColumns = [
+      { name: 'Todo',       category: 'TO_DO',       dot: 'bg-neutral-400',     limitKey: 'todoLimit' },
+      { name: 'In Dev',     category: 'IN_PROGRESS', dot: 'bg-brand-navy-tint',  limitKey: 'inProgressLimit' },
+      { name: 'Done',       category: 'DONE',        dot: 'bg-semantic-success', limitKey: 'doneLimit' },
+    ];
+    const items = [
+      { id: 'WI-X', title: 'Orphan item', type: 'Task', status: 'Unknown', assigneeId: null, tags: [], starred: false },
+    ];
+    render(<BoardView {...baseProps} workItems={items} columns={workflowColumns} />);
+    // The item should not be visible (status 'Unknown' matches no column)
+    expect(screen.queryByText('Orphan item')).not.toBeInTheDocument();
+  });
 });

@@ -6,6 +6,7 @@ import { Button } from '@/components/works/button';
 import { capabilityEnabled } from '@/lib/ai';
 import { NULLARY_OPS, SET_OPS, rowToClause, suggestions, applySuggestion } from '@/lib/bql-builder';
 import BqlResultsTable from '@/views/bql-results-table';
+import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { useI18n } from '@/lib/i18n';
 
 const HISTORY_KEY = 'bql.history';
@@ -32,6 +33,7 @@ export default function BqlView({
   setSelectedItem,
   runBql,
   notify = () => {},
+  bqlLoading = false,
 }) {
   const { t } = useI18n();
   // Iteration 10 Cap O — NL→BQL translation (first AI surface)
@@ -644,6 +646,13 @@ export default function BqlView({
         </div>
       )}
 
+      {/* Loading — skeleton rows while a query runs and we have nothing to show yet (RB-30 §6). */}
+      {bqlLoading && !groups && bqlResults.length === 0 && (
+        <div aria-busy="true" className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-800">
+          <ListSkeleton rows={6} />
+        </div>
+      )}
+
       {/* Results — JIRA-style navigator: sortable columns, column chooser, CSV export */}
       {!groups && bqlResults.length > 0 && (
         <BqlResultsTable
@@ -658,7 +667,7 @@ export default function BqlView({
           canShowMore={bqlResults.length >= resultSize && resultSize < 500}
         />
       )}
-      {bqlResults.length === 0 && bqlQuery && !bqlError && (
+      {!bqlLoading && bqlResults.length === 0 && bqlQuery && !bqlError && (
         <div className="flex flex-col items-center rounded-xl border border-dashed border-neutral-200 bg-white py-14 text-center dark:border-neutral-700 dark:bg-neutral-800">
           <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-300 dark:bg-neutral-900 dark:text-neutral-600">
             <Search aria-hidden="true" className="h-6 w-6" />

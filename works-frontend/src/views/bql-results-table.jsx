@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowUp, ArrowDown, Columns3, Download, Check, X } from 'lucide-react';
+import { ArrowUp, ArrowDown, Columns3, Download, Check, X, Rows3 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
@@ -28,12 +28,20 @@ const STORAGE_KEY = 'bql.navigator.columns';
 // ID columns → which nameMaps lookup resolves them to a human-readable name (JIRA shows names, not ids).
 const ID_MAP = { assignee_id: 'users', created_by: 'users', project_id: 'projects', sprint_id: 'sprints' };
 
+const DENSITY_KEY = 'bql.navigator.density';
+
 function loadVisible() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (Array.isArray(saved) && saved.length) return saved;
   } catch { /* ignore */ }
   return DEFAULT_VISIBLE;
+}
+
+function loadDensity() {
+  try {
+    return localStorage.getItem(DENSITY_KEY) === 'compact' ? 'compact' : 'comfortable';
+  } catch { return 'comfortable'; }
 }
 
 function cellText(col, item, nameMaps) {
@@ -63,10 +71,19 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
   const [bulkAction, setBulkAction] = useState('priority');
   const [bulkValue, setBulkValue] = useState('');
   const [bulkBusy, setBulkBusy] = useState(false);
+  // Row density (JIRA-style): comfortable (default) vs compact, persisted across sessions.
+  const [density, setDensity] = useState(loadDensity);
 
   const cols = COLUMNS.filter(c => visibleKeys.includes(c.key));
   const [sortKey, sortDir] = (sort || 'created_at desc').split(/\s+/);
   const bulkEnabled = typeof onBulk === 'function';
+  const cellPad = density === 'compact' ? 'px-3 py-1.5' : 'px-4 py-2.5';
+
+  const toggleDensity = () => setDensity(d => {
+    const next = d === 'compact' ? 'comfortable' : 'compact';
+    try { localStorage.setItem(DENSITY_KEY, next); } catch { /* ignore */ }
+    return next;
+  });
 
   const toggleRow = (id) => setSelected(prev => {
     const next = new Set(prev);
@@ -128,6 +145,11 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
           {results.length} result{results.length !== 1 ? 's' : ''}
         </span>
         <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" leftIcon={<Rows3 aria-hidden="true" className="h-3.5 w-3.5" />}
+            onClick={toggleDensity} aria-pressed={density === 'compact'}
+            title={density === 'compact' ? 'Comfortable rows' : 'Compact rows'}>
+            {density === 'compact' ? 'Comfortable' : 'Compact'}
+          </Button>
           <Button variant="ghost" size="sm" leftIcon={<Download aria-hidden="true" className="h-3.5 w-3.5" />}
             onClick={exportCsv} disabled={results.length === 0}>Export CSV</Button>
           <div className="relative">
@@ -198,7 +220,7 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
               )}
               {cols.map(col => (
                 <th key={col.key} scope="col"
-                  className={`px-4 py-2.5 text-left font-semibold ${col.sort ? 'cursor-pointer select-none transition-colors hover:text-brand-navy' : ''}`}
+                  className={`${cellPad} text-left font-semibold ${col.sort ? 'cursor-pointer select-none transition-colors hover:text-brand-navy' : ''}`}
                   onClick={() => headerClick(col)}
                   aria-sort={col.sort && sortKey === col.sort ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}>
                   <span className="inline-flex items-center gap-1">
@@ -223,7 +245,7 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
                   </td>
                 )}
                 {cols.map((col, ci) => (
-                  <td key={col.key} className={`px-4 py-2.5 text-neutral-900 dark:text-neutral-100 ${col.grow ? 'font-medium' : ''} ${col.date ? 'whitespace-nowrap text-neutral-600 dark:text-neutral-400' : ''}`}>
+                  <td key={col.key} className={`${cellPad} text-neutral-900 dark:text-neutral-100 ${col.grow ? 'font-medium' : ''} ${col.date ? 'whitespace-nowrap text-neutral-600 dark:text-neutral-400' : ''}`}>
                     {ci === 0 ? (
                       // The first cell is the row's open affordance — a real button so it works by
                       // mouse AND keyboard without making the whole <tr> an interactive control

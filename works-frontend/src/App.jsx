@@ -315,6 +315,7 @@ export default function App() {
   const [bqlQuery, setBqlQuery]           = useState('');
   const [bqlResults, setBqlResults]       = useState([]);
   const [bqlError, setBqlError]           = useState('');
+  const [bqlLoading, setBqlLoading]       = useState(false);
   const [workItemTypes, setWorkItemTypes]   = useState({ builtIn: [], custom: [] });
   const [permMatrix, setPermMatrix]         = useState(null);
   const [settings3Tab, setSettings3Tab]     = useState('workflows'); // workflows | fields | permissions | types
@@ -1799,6 +1800,7 @@ export default function App() {
   }
   function runBql(opts) {
     setBqlError('');
+    setBqlLoading(true);
     const o = opts && typeof opts === 'object' ? opts : {};
     // An explicit query (saved-view / history / shared-link run) avoids the stale-closure read of
     // bqlQuery when the editor was just set in the same tick.
@@ -1812,7 +1814,8 @@ export default function App() {
         .then(r => r.json()).then(d => {
           if (d.error || d.message) { setBqlError(d.message || d.error); setBqlResults([]); }
           else setBqlResults(Array.isArray(d) ? d : []);
-        }).catch(err => setBqlError(err.message));
+        }).catch(err => setBqlError(err.message))
+        .finally(() => setBqlLoading(false));
       return;
     }
     const body = { query, workspaceId: activeWorkspaceId };
@@ -1822,7 +1825,8 @@ export default function App() {
       .then(r => r.json()).then(d => {
         if (d.error) { setBqlError(d.error); setBqlResults([]); }
         else setBqlResults(Array.isArray(d) ? d : []);
-      }).catch(err => setBqlError(err.message));
+      }).catch(err => setBqlError(err.message))
+      .finally(() => setBqlLoading(false));
   }
 
   // ---- Iteration 4 fetches ----
@@ -3701,6 +3705,7 @@ export default function App() {
               setSelectedItem={setSelectedItem}
               runBql={runBql}
               notify={showToast}
+              bqlLoading={bqlLoading}
             />
           )}
 

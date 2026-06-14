@@ -252,8 +252,14 @@ public class SprintController {
         if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
             throw ApiException.notFound("Sprint", id);
         }
+        // Enriched item set drives the report's breakdowns (by type / assignee / priority) and the
+        // at-risk list — assignee resolved to a display name, plus priority + due date (RB-20 §4:
+        // the report should show the full picture, not just counts).
         List<Map<String, Object>> items = jdbc.queryForList(
-            "SELECT id, title, status, type, story_points, assignee_id FROM work_items WHERE sprint_id = ?", id);
+            "SELECT wi.id, wi.title, wi.status, wi.type, wi.story_points, wi.assignee_id, "
+            + "wi.priority, wi.due_date, u.full_name AS assignee_name "
+            + "FROM work_items wi LEFT JOIN users u ON u.id = wi.assignee_id "
+            + "WHERE wi.sprint_id = ?", id);
 
         // Bucket by resolved status category (not literal "Done"/"In Progress"/"Todo") so workspaces
         // with renamed/custom statuses report accurate completion (RB-20 §4); cached per type.

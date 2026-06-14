@@ -57,13 +57,18 @@ public class SupportChatService {
     private final ChatMessageRepository messages;
     private final AiControlPlaneService controlPlane;
     private final EventService events;
+    private final RbacService rbac;
+    private final NotificationBatchService notificationBatch;
 
     public SupportChatService(ChatConversationRepository conversations, ChatMessageRepository messages,
-                              AiControlPlaneService controlPlane, EventService events) {
+                              AiControlPlaneService controlPlane, EventService events,
+                              RbacService rbac, NotificationBatchService notificationBatch) {
         this.conversations = conversations;
         this.messages = messages;
         this.controlPlane = controlPlane;
         this.events = events;
+        this.rbac = rbac;
+        this.notificationBatch = notificationBatch;
     }
 
     // ── Result envelope ──────────────────────────────────────────────────────────
@@ -113,7 +118,14 @@ public class SupportChatService {
         if (RESOLVED.equals(convo.getStatus())) {
             convo.setStatus(OPEN);
         }
-        appended.addAll(autoRespond(convo, body, customerId));
+        // Skip AI auto-response when a human agent has already taken the thread — firing the AI
+        // auto-responder on an escalated/agent-owned conversation wastes AI budget (RB-40 §2) and
+        // creates confusing double-replies from two "senders".
+        boolean alreadyEscalated = ESCALATED.equals(convo.getStatus());
+        boolean agentAssigned = convo.getAssignedAgentId() != null;
+        if (!alreadyEscalated && !agentAssigned) {
+            appended.addAll(autoRespond(convo, body, customerId));
+        }
         return new ChatResult(convo, appended);
     }
 
@@ -301,6 +313,16 @@ public class SupportChatService {
         setStatus(convo, ESCALATED);
         events.recordInWorkspace(convo.getWorkspaceId(), convo.getId(), "CHAT_ESCALATED", actorId,
             Map.of("reason", nv(reason)));
+        // Notify all workspace members who can handle customer service (RB-10 §2: RBAC in the
+        // service layer). The notification batch window (5 min) deduplicates rapid-fire escalations
+        // on the same conversation (e.g. AI fallback + customer also requesting human).
+        String link = "/support/inbox/" + convo.getId();
+        String subject = nv(convo.getSubject());
+        String notifMessage = "Chat escalated: " + (subject.isBlank() ? convo.getId() : subject);
+        List<String> recipients = rbac.getMembersWithPermission(convo.getWorkspaceId(), "work_service");
+        for (String recipientId : recipients) {
+            notificationBatch.createIfNotBatched(recipientId, "CHAT_ESCALATED", notifMessage, link);
+        }
     }
 
     private void setStatus(ChatConversation convo, String status) {

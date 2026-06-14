@@ -15,6 +15,13 @@ import { portalChatClient, chatStatusTone, chatStatusLabel } from '@/lib/support
 //   workspaceId  — the serving workspace (for symmetry / future use; the token already scopes it)
 //   accountId    — optional customer account id
 //   customerName — optional display name attached to the first message
+//
+// Persistence: the active conversation id is stored in localStorage under the key below so a
+// returning customer can resume their thread without losing agent replies that arrived while the
+// widget was unmounted.
+const STORAGE_KEY = 'bsmart_chat_convo_id';
+const POLL_INTERVAL_MS = 8000;
+
 export function SupportChatWidget({ token, workspaceId, accountId, customerName }) {
   const [open, setOpen] = useState(false);
   const [conversation, setConversation] = useState(null);
@@ -26,6 +33,7 @@ export function SupportChatWidget({ token, workspaceId, accountId, customerName 
   const client = portalChatClient(token);
   const inputRef = useRef(null);
   const listEndRef = useRef(null);
+  const pollRef = useRef(null);
 
   const escalated = conversation?.status === 'ESCALATED';
 
@@ -42,7 +50,45 @@ export function SupportChatWidget({ token, workspaceId, accountId, customerName 
   const apply = useCallback((res) => {
     setConversation(res.conversation);
     setMessages(Array.isArray(res.messages) ? res.messages : []);
+    // Persist the conversation id so a returning customer can resume this thread.
+    if (res.conversation?.id) {
+      try { localStorage.setItem(STORAGE_KEY, res.conversation.id); } catch { /* storage unavailable */ }
+    }
   }, []);
+
+  // On mount, attempt to resume an existing conversation from localStorage. This ensures that
+  // agent replies received while the widget was unmounted (e.g. the customer navigated away) are
+  // loaded when they return. Only runs once per mount.
+  useEffect(() => {
+    let storedId;
+    try { storedId = localStorage.getItem(STORAGE_KEY); } catch { /* ignore */ }
+    if (!storedId || !token) return;
+    client.getConversation(storedId)
+      .then(apply)
+      .catch(() => {
+        // Stale id (conversation deleted / different workspace token) — clear it silently.
+        try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally runs once on mount
+
+  // While the panel is open and a conversation exists, poll every 8 s for agent replies.
+  // The poll is cleared on close or unmount so it does not keep running in the background.
+  useEffect(() => {
+    if (!open || !conversation?.id) {
+      clearInterval(pollRef.current);
+      return undefined;
+    }
+    const convoId = conversation.id;
+    pollRef.current = setInterval(() => {
+      client.getConversation(convoId)
+        .then(apply)
+        .catch(() => { /* best-effort; errors are silent so the UX is not disrupted */ });
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(pollRef.current);
+  // client is re-created from `token` each render; exclude it to avoid restart on every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, conversation?.id, apply]);
 
   const send = useCallback(async () => {
     const text = draft.trim();

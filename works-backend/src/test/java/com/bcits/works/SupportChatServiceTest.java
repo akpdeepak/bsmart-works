@@ -3,12 +3,18 @@ package com.bcits.works;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -58,8 +64,11 @@ class SupportChatServiceTest {
     private final ChatMessageRepository messages = mock(ChatMessageRepository.class);
     private final AiControlPlaneService cp = mock(AiControlPlaneService.class);
     private final EventService events = mock(EventService.class);
+    private final RbacService rbac = mock(RbacService.class);
+    private final NotificationBatchService notificationBatch = mock(NotificationBatchService.class);
 
-    private final SupportChatService service = new SupportChatService(conversations, messages, cp, events);
+    private final SupportChatService service =
+        new SupportChatService(conversations, messages, cp, events, rbac, notificationBatch);
 
     private void aiOn() {
         when(cp.invoke(any())).thenAnswer(i -> {
@@ -158,5 +167,42 @@ class SupportChatServiceTest {
 
         ChatConversation resolved = service.resolve("ws", "agent-7", "CHAT-1");
         assertThat(resolved.getStatus()).isEqualTo("RESOLVED");
+    }
+
+    @Test
+    void escalate_notifiesWorkspaceMembersWithWorkServicePermission() {
+        // Arrange: AI fallback triggers escalation; one member has the work_service permission.
+        aiFallback();
+        when(rbac.getMembersWithPermission("ws", "work_service")).thenReturn(List.of("user-1"));
+
+        // Act: start a conversation — the fallback path escalates and should notify.
+        service.startConversation("ws", "ACC-1", "cust-1", "Asha", "Billing help", "my bill seems wrong");
+
+        // Assert: the notification was created exactly once for user-1.
+        verify(notificationBatch).createIfNotBatched(
+            eq("user-1"),
+            eq("CHAT_ESCALATED"),
+            contains("Billing help"),
+            contains("/support/inbox/"));
+    }
+
+    @Test
+    void postCustomerMessage_skipsAutoRespondWhenEscalated() {
+        // Arrange: an already-escalated conversation — AI should not fire again.
+        when(conversations.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(messages.save(any())).thenAnswer(i -> i.getArgument(0));
+        ChatConversation convo = new ChatConversation();
+        convo.setId("CHAT-2");
+        convo.setWorkspaceId("ws");
+        convo.setStatus("ESCALATED");
+        when(conversations.findByWorkspaceIdAndId("ws", "CHAT-2")).thenReturn(Optional.of(convo));
+
+        // Act
+        var result = service.postCustomerMessage("ws", "CHAT-2", "cust-1", "Any update?");
+
+        // Assert: only the customer message appended — no AI reply, no control-plane call.
+        assertThat(result.newMessages()).hasSize(1);
+        assertThat(result.newMessages().get(0).getSenderType()).isEqualTo("CUSTOMER");
+        verify(cp, never()).invoke(any());
     }
 }

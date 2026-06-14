@@ -3,6 +3,9 @@ package com.bcits.works;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
  * Role-based access control service.
  * Tier hierarchy: VIEWER(1) < MEMBER(2) < LEAD(3) < ADMIN(4) < OWNER(5)
@@ -105,5 +108,26 @@ public class RbacService {
         // MEMBER tier can edit own items
         return canDo(userId, wsId, "edit_own_items")
                 && (userId.equals(itemCreatorId) || userId.equals(itemAssigneeId));
+    }
+
+    /**
+     * Return the user-ids of all workspace members whose role tier meets the minimum for
+     * {@code permission}. Used for fan-out notifications (e.g. CHAT_ESCALATED) where the
+     * producer does not know the specific recipient ids in advance.
+     * Workspace-scoped (RB-40 §1) — the query is bounded to the given workspaceId.
+     */
+    public List<String> getMembersWithPermission(String workspaceId, String permission) {
+        try {
+            Integer minTier = jdbc.queryForObject(
+                "SELECT min_tier FROM permissions WHERE id = ?", Integer.class, permission);
+            if (minTier == null) return Collections.emptyList();
+            return jdbc.queryForList(
+                "SELECT wm.user_id FROM workspace_members wm "
+                + "JOIN roles r ON r.id = wm.role_id "
+                + "WHERE wm.workspace_id = ? AND r.tier >= ?",
+                String.class, workspaceId, minTier);
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
     }
 }

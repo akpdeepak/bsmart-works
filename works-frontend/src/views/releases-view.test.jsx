@@ -46,6 +46,31 @@ describe('ReleasesView', () => {
     expect(screen.getByText('1/1 done')).toBeInTheDocument();
   });
 
+  it('filters the add-to-release picker by the search box', () => {
+    const selected = { id: 'REL-1', name: 'v1 launch', version: '1.0', status: 'IN_PROGRESS' };
+    render(
+      <ReleasesView
+        {...baseProps}
+        releases={[selected]}
+        selectedRelease={selected}
+        releaseItems={[]}
+        workItems={[
+          { id: 'WRK-1', title: 'Login page', type: 'Story', status: 'Todo' },
+          { id: 'WRK-2', title: 'Billing export', type: 'Story', status: 'Todo' },
+        ]}
+      />,
+    );
+    // Both candidates visible initially.
+    expect(screen.getByText('Login page')).toBeInTheDocument();
+    expect(screen.getByText('Billing export')).toBeInTheDocument();
+    // Searching narrows to the match.
+    fireEvent.change(screen.getByLabelText('Search work items to add to this release'), {
+      target: { value: 'billing' },
+    });
+    expect(screen.queryByText('Login page')).not.toBeInTheDocument();
+    expect(screen.getByText('Billing export')).toBeInTheDocument();
+  });
+
   it('opens the new-release flow from the empty-state CTA', () => {
     const setIsReleaseOpen = vi.fn();
     render(<ReleasesView {...baseProps} setIsReleaseOpen={setIsReleaseOpen} />);

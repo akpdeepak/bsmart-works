@@ -128,7 +128,7 @@ to make the gate non-optional; the checks do the enforcing.
 | No inline `fetch`/`axios` (one `apiClient`) | ESLint `no-restricted-imports`/`-syntax` | save · pre-commit · CI |
 | WCAG 2.1 AA | `eslint-plugin-jsx-a11y` | save · pre-commit · CI |
 | RBAC in service (not controller); Flyway-only; package layout | `scripts/guardrails.sh` | pre-commit · CI |
-| **Every repository query workspace-scoped** | **`guardrails.sh` tenant-scope check — TO BE ADDED (RB-40)** | pre-commit · CI |
+| **Every repository query workspace-scoped** | `guardrails.sh`: repo `@Query` SELECT scope (BLOCK) + raw-`JdbcTemplate` `work_items` scope-signal tripwire (WARN). Full guarantee = central Hibernate tenant filter, **still TO BE ADDED (#243, RB-40)** | pre-commit · CI |
 | Java style | Checkstyle (`failOnViolation=true`; baseline clean as of 2026-06-08 — TD-005 closed) | `./mvnw verify` · CI |
 | Backend behavior + coverage | JUnit 5 + JaCoCo gate | CI |
 | Frontend behavior | Vitest + React Testing Library | pre-commit · CI |
@@ -178,7 +178,7 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   Cap X + Admin Operations Center Cap Y), **17** (Universal Customization Engine Cap R), **18**
   (Mobile + Real-time + Performance Cap S), **19** (Enterprise Security + Compliance Certifications
   Cap T), and the Compliance/Service iterations (7–9).
-- **Flyway high-water mark:** **V76** (`V76__backfill_parent_links.sql`; note: V16 was
+- **Flyway high-water mark:** **V86** (`V86__bql_subscriptions.sql`; note: V16 was
   skipped, V23 does not exist; V50–V53 are iterations 16/17/19/18's migrations; V54–V57 are
   iteration 20's advanced-AI / marketplace / knowledge / customer-chat migrations; V58 = user locale
   + perf indexes; V59 = block-editor + SCIM; V60 = custom domains; V61–V65 = compliance escalation,
@@ -191,8 +191,25 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   on workflow_status — per-status lapse thresholds for the work-item status engine; V74 =
   status_changed_at on work_items — drives the time-in-status lapse indicator; V75 =
   attachment_type + url on attachments — Files section accepts external links/webpages; V76 =
-  backfill parent_id into work_item_links as PARENT links — hierarchy surfaced in the Links section).
-- **Next migration:** **`V77__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+  backfill parent_id into work_item_links as PARENT links — hierarchy surfaced in the Links
+  section; V77 = project_team_members — per-project team roles (V70 role_key vocabulary) for the
+  role-adaptive Sprint Cockpit; V78 = ceremony_sessions + ceremony_attendees — first-class sprint
+  ceremonies with per-member attendance; V79 = type_field_prefs — per-type field visibility on the
+  detail surface; V80 = unify card custom fields onto field_def + work_item_field_value — one
+  definition store and one value store, EXPAND phase, old custom_field_definitions table +
+  work_items.custom_fields JSONB left in place for a later contract migration to drop; V81 =
+  raise_type on impediments — role-filtered cockpit Raise model (impediment/risk/dependency/
+  scope-change/decision-needed/escalation); V82 = value_date on work_item_field_value — typed date
+  projection so BQL can range-query custom date fields; V83 = drop bql_filter (contract phase) —
+  saved queries unified onto saved_views, legacy rows migrated then table dropped; V84 = enrich
+  Monthly-executive-summary + Customer-status report templates (Cap J) — forward-only UPDATE of the
+  two V38-seeded rows to the full spec section set: exec = KPI grid + velocity/trend chart +
+  narrative + risk summary; customer = customer health + SLA + open-requests table + narrative;
+  V85 = bql_run_audit — append-only audit of saved-view / subscription BQL runs ("saved/automated
+  runs only"; ad-hoc /bql/execute is not audited, automations keep their own automation_runs log);
+  V86 = bql_subscriptions — per-user saved-view subscriptions (DAILY/WEEKLY, in-app + email), each
+  delivery an audited workspace-scoped run).
+- **Next migration:** **`V87__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

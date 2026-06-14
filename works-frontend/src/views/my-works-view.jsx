@@ -8,18 +8,19 @@ import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { LapseBadge } from '@/components/works/atoms/lapse-badge';
 import { computeLapse } from '@/lib/status-lapse';
+import { useI18n } from '@/lib/i18n';
 
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
-// Tune this surface here — no JSX diving needed.
+// Tune this surface here — no JSX diving needed. Sort pill labels resolve via i18n `labelKey`.
 const CONFIG = {
   activityLimit: 20,            // max rows shown in the Recent Activity tab
   dueDateWarnDays: 3,           // days ahead at which the due-date label turns orange
   activitySortField: 'updatedAt', // sort key for activity; falls back to 'id'
   assignedSortDefault: 'priority', // default sort for the Assigned tab
   sortOptions: [                // pills rendered above the Assigned list
-    { key: 'priority', label: 'Priority' },
-    { key: 'dueDate',  label: 'Due date' },
-    { key: 'recent',   label: 'Recent'   },
+    { key: 'priority', labelKey: 'deliver.myWorks.sort.priority' },
+    { key: 'dueDate',  labelKey: 'deliver.myWorks.sort.dueDate' },
+    { key: 'recent',   labelKey: 'deliver.myWorks.sort.recent' },
   ],
 };
 
@@ -32,27 +33,28 @@ const PRIORITY_DOT   = {
   LOW:      'bg-neutral-200',
 };
 
-// Returns a short relative time string: "2h ago", "3d ago", or a short date past 7 days.
-function relativeTime(dateStr) {
+// Returns a short, localized relative time string: "2h ago", "3d ago", or a short date past 7 days.
+function relativeTime(dateStr, t) {
   if (!dateStr) return '';
   const m = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
-  if (m < 1) return 'just now';
-  if (m < 60) return `${m}m ago`;
+  if (m < 1) return t('deliver.myWorks.justNow');
+  if (m < 60) return `${m}${t('deliver.myWorks.minutesAgoSuffix')}`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
+  if (h < 24) return `${h}${t('deliver.myWorks.hoursAgoSuffix')}`;
   const d = Math.floor(h / 24);
-  return d < 7 ? `${d}d ago` : new Date(dateStr).toLocaleDateString();
+  return d < 7 ? `${d}${t('deliver.myWorks.daysAgoSuffix')}` : new Date(dateStr).toLocaleDateString();
 }
 
-// Returns { text, urgent } for a due date, or null if none.
-function dueDateMeta(dateStr) {
+// Returns { text, urgent } for a due date, or null if none. `t` localizes the relative labels;
+// the absolute (>warn-window) branch keeps the locale-aware numeric date.
+function dueDateMeta(dateStr, t) {
   if (!dateStr) return null;
   const days = Math.ceil(
     (new Date(dateStr).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000
   );
-  if (days < 0) return { text: `${Math.abs(days)}d overdue`, urgent: true };
-  if (days === 0) return { text: 'Due today', urgent: true };
-  if (days <= CONFIG.dueDateWarnDays) return { text: `Due in ${days}d`, urgent: false };
+  if (days < 0) return { text: `${Math.abs(days)}${t('deliver.myWorks.overdueSuffix')}`, urgent: true };
+  if (days === 0) return { text: t('deliver.myWorks.dueTodayLabel'), urgent: true };
+  if (days <= CONFIG.dueDateWarnDays) return { text: `${t('deliver.myWorks.dueInPrefix')}${days}${t('deliver.myWorks.dueInSuffix')}`, urgent: false };
   return { text: new Date(dateStr).toLocaleDateString(), urgent: false };
 }
 
@@ -76,7 +78,8 @@ function sortItems(items, by) {
 
 // Shared work-item row — used across Assigned, Starred, and Activity tabs.
 function WorkRow({ item, onSelect, onPressKey, starred = false, compact = false, iv = () => true, statusResolver = null }) {
-  const due = dueDateMeta(item.dueDate);
+  const { t } = useI18n();
+  const due = dueDateMeta(item.dueDate, t);
   const dotColor = PRIORITY_DOT[item.priority] || PRIORITY_DOT.MEDIUM;
   const statusCat = statusResolver ? statusResolver.categoryOf(item.type, item.status) : statusToCategory(item.status);
   const lapse = computeLapse(item.statusChangedAt, statusResolver?.metaFor(item.type, item.status) ?? null);
@@ -132,6 +135,7 @@ export default function MyWorksView({
   cardPrefs,
   statusResolver,
 }) {
+  const { t } = useI18n();
   const [sort, setSort] = useState(CONFIG.assignedSortDefault);
   const iv = cardPrefs?.isVisible ?? (() => true);
 
@@ -152,33 +156,33 @@ export default function MyWorksView({
   const sortedItems = sortItems(myItems, sort);
 
   const tabs = [
-    { key: 'assigned', label: 'Assigned', count: myItems.length },
-    { key: 'starred',  label: 'Starred',  count: starredItems.length },
-    { key: 'mentions', label: 'Mentions', count: mentions.length },
-    { key: 'activity', label: 'Activity' },
+    { key: 'assigned', label: t('deliver.myWorks.tab.assigned'), count: myItems.length },
+    { key: 'starred',  label: t('deliver.myWorks.tab.starred'),  count: starredItems.length },
+    { key: 'mentions', label: t('deliver.myWorks.tab.mentions'), count: mentions.length },
+    { key: 'activity', label: t('deliver.myWorks.tab.activity') },
   ];
 
   return (
     <div className="p-8 max-w-4xl">
-      <h1 className="text-2xl font-bold text-brand-navy mb-1">My Works</h1>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">Your personal workspace</p>
+      <h1 className="text-2xl font-bold text-brand-navy mb-1">{t('deliver.myWorks.title')}</h1>
+      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">{t('deliver.myWorks.subtitle')}</p>
 
       {/* Tab bar */}
       <div role="tablist" className="flex gap-1 mb-5 border-b border-neutral-200 dark:border-neutral-700">
-        {tabs.map(t => (
+        {tabs.map(tab => (
           <button
-            key={t.key}
+            key={tab.key}
             role="tab"
-            aria-selected={myWorksTab === t.key}
-            onClick={() => setMyWorksTab(t.key)}
+            aria-selected={myWorksTab === tab.key}
+            onClick={() => setMyWorksTab(tab.key)}
             className={cn(
               'text-sm font-medium px-4 py-2 border-b-2 transition-colors',
-              myWorksTab === t.key
+              myWorksTab === tab.key
                 ? 'border-brand-navy text-brand-navy'
                 : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
             )}
           >
-            {t.label}{t.count != null ? ` (${t.count})` : ''}
+            {tab.label}{tab.count != null ? ` (${tab.count})` : ''}
           </button>
         ))}
       </div>
@@ -186,13 +190,13 @@ export default function MyWorksView({
       {/* Assigned */}
       {myWorksTab === 'assigned' && (
         myItems.length === 0
-          ? <EmptyState icon={User} title="Nothing assigned to you"
-              subtitle="Work items assigned to you will appear here."
-              action={<Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(true)}>Create a work item</Button>} />
+          ? <EmptyState icon={User} title={t('deliver.myWorks.assignedEmptyTitle')}
+              subtitle={t('deliver.myWorks.assignedEmptySubtitle')}
+              action={<Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(true)}>{t('deliver.myWorks.createWorkItem')}</Button>} />
           : <>
               {/* Sort pills */}
               <div className="flex items-center gap-1.5 mb-3">
-                <span className="text-xs text-neutral-600 dark:text-neutral-400">Sort:</span>
+                <span className="text-xs text-neutral-600 dark:text-neutral-400">{t('deliver.myWorks.sort')}</span>
                 {CONFIG.sortOptions.map(s => (
                   <button
                     key={s.key}
@@ -204,7 +208,7 @@ export default function MyWorksView({
                         : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
                     )}
                   >
-                    {s.label}
+                    {t(s.labelKey)}
                   </button>
                 ))}
               </div>
@@ -219,8 +223,8 @@ export default function MyWorksView({
       {/* Starred */}
       {myWorksTab === 'starred' && (
         starredItems.length === 0
-          ? <EmptyState icon={Star} title="No starred items"
-              subtitle="Star work items to keep them handy. Click the star on any card or in the detail panel." />
+          ? <EmptyState icon={Star} title={t('deliver.myWorks.starredEmptyTitle')}
+              subtitle={t('deliver.myWorks.starredEmptySubtitle')} />
           : <div className="space-y-2">
               {starredItems.map(item => (
                 <WorkRow key={item.id} item={item} onSelect={setSelectedItem} onPressKey={onPressKey} starred iv={iv} statusResolver={statusResolver} />
@@ -231,8 +235,8 @@ export default function MyWorksView({
       {/* Mentions */}
       {myWorksTab === 'mentions' && (
         mentions.length === 0
-          ? <EmptyState icon={AtSign} title="No mentions yet"
-              subtitle="When someone @mentions you in a comment, it will appear here." />
+          ? <EmptyState icon={AtSign} title={t('deliver.myWorks.mentionsEmptyTitle')}
+              subtitle={t('deliver.myWorks.mentionsEmptySubtitle')} />
           : <div className="space-y-2">
               {mentions.map(n => {
                 const linkedItem = n.itemId ? workItems.find(i => i.id === n.itemId) : null;
@@ -251,7 +255,7 @@ export default function MyWorksView({
                   >
                     <p className="text-sm text-neutral-900 dark:text-neutral-100">{n.message}</p>
                     <div className="flex items-center justify-between mt-1">
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400">{relativeTime(n.createdAt)}</p>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400">{relativeTime(n.createdAt, t)}</p>
                       {linkedItem && (
                         <span className="text-xs text-brand-navy-tint font-medium flex items-center gap-1">
                           {linkedItem.id} <ArrowRight className="h-3 w-3" aria-hidden="true" />
@@ -267,16 +271,16 @@ export default function MyWorksView({
       {/* Activity */}
       {myWorksTab === 'activity' && (
         activityItems.length === 0
-          ? <EmptyState icon={ClipboardList} title="No recent activity"
-              subtitle="Items you create or are assigned to will show here."
-              action={<Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(true)}>Create a work item</Button>} />
+          ? <EmptyState icon={ClipboardList} title={t('deliver.myWorks.activityEmptyTitle')}
+              subtitle={t('deliver.myWorks.activityEmptySubtitle')}
+              action={<Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(true)}>{t('deliver.myWorks.createWorkItem')}</Button>} />
           : <div className="space-y-2">
               {activityItems.map(i => (
                 <WorkRow key={i.id} item={i} onSelect={setSelectedItem} onPressKey={onPressKey} compact iv={iv} statusResolver={statusResolver} />
               ))}
               {activityOverflow > 0 && (
                 <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center pt-2">
-                  Showing {CONFIG.activityLimit} most recent · {activityOverflow} more
+                  {t('deliver.myWorks.showingPrefix')}{CONFIG.activityLimit}{t('deliver.myWorks.mostRecent')}{activityOverflow}{t('deliver.myWorks.more')}
                 </p>
               )}
             </div>

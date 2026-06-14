@@ -61,6 +61,22 @@ class ReleaseControllerAccessTest {
     }
 
     @Test
+    void createRelease_deniedForProjectOutsideCallersWorkspace() {
+        // projectId comes from the request body; a caller with no access to that project's workspace
+        // must not be able to create a release in it (RB-40 §1).
+        Release incoming = new Release();
+        incoming.setProjectId("PROJ-B");
+        incoming.setName("New");
+        incoming.setVersion("2.0.0");
+
+        assertThatThrownBy(() -> controller.createRelease(incoming))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+
+        verify(releaseRepository, never()).save(any());
+    }
+
+    @Test
     void getRelease_unknownIdReturnsNotFound() {
         when(releaseRepository.findById("REL-missing")).thenReturn(Optional.empty());
 
@@ -106,5 +122,57 @@ class ReleaseControllerAccessTest {
         assertThatThrownBy(() -> controller.deleteRelease("REL-missing"))
                 .isInstanceOf(ApiException.class)
                 .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void getReleaseItems_crossTenantReturnsNotFound() {
+        when(releaseRepository.findById("REL-1")).thenReturn(Optional.of(releaseInForeignWorkspace()));
+
+        // Previously unscoped: any caller could read another tenant's release items by id.
+        assertThatThrownBy(() -> controller.getReleaseItems("REL-1"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+
+        verify(jdbc, never()).queryForList(any(String.class), any(Object[].class));
+    }
+
+    @Test
+    void addItemToRelease_crossTenantReturnsNotFound() {
+        when(releaseRepository.findById("REL-1")).thenReturn(Optional.of(releaseInForeignWorkspace()));
+
+        assertThatThrownBy(() -> controller.addItemToRelease("REL-1", "WI-1"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+
+        verify(jdbc, never()).update(any(String.class), any(Object[].class));
+    }
+
+    @Test
+    void addItemToRelease_deniedWhenItemBelongsToAnotherWorkspace() {
+        // Caller can manage this release, but the item lives in a different workspace — must not be linked.
+        Release own = new Release();
+        own.setId("REL-2");
+        own.setProjectId("PROJ-A");
+        when(releaseRepository.findById("REL-2")).thenReturn(Optional.of(own));
+        when(rbac.workspaceForProject("PROJ-A")).thenReturn("ws-A");
+        when(rbac.getUserTier(CALLER, "ws-A")).thenReturn(2);
+        when(rbac.workspaceForWorkItem("WI-foreign")).thenReturn(FOREIGN_WS);
+
+        assertThatThrownBy(() -> controller.addItemToRelease("REL-2", "WI-foreign"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+
+        verify(jdbc, never()).update(any(String.class), any(Object[].class));
+    }
+
+    @Test
+    void removeItemFromRelease_crossTenantReturnsNotFound() {
+        when(releaseRepository.findById("REL-1")).thenReturn(Optional.of(releaseInForeignWorkspace()));
+
+        assertThatThrownBy(() -> controller.removeItemFromRelease("REL-1", "WI-1"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+
+        verify(jdbc, never()).update(any(String.class), any(Object[].class));
     }
 }

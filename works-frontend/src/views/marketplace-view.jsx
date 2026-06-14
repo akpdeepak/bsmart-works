@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Package, Plug, Check, Trash2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -15,9 +15,24 @@ export default function MarketplaceView({ workspaceId }) {
   const [error, setError] = useState(null);
   const [pending, setPending] = useState(null); // listing being installed (scope-approval open)
   const [approvedScopes, setApprovedScopes] = useState([]);
+  const dialogCloseRef = useRef(null);
+
+  const closeDialog = useCallback(() => { setPending(null); setApprovedScopes([]); }, []);
+
+  // Move focus into the scope-approval dialog when it opens and close it on Escape (keyboard
+  // operability + focus management, RB-30 §6).
+  useEffect(() => {
+    if (!pending) return undefined;
+    if (dialogCloseRef.current && typeof dialogCloseRef.current.focus === 'function') {
+      dialogCloseRef.current.focus();
+    }
+    const onKey = (e) => { if (e.key === 'Escape') closeDialog(); };
+    if (typeof document !== 'undefined') document.addEventListener('keydown', onKey);
+    return () => { if (typeof document !== 'undefined') document.removeEventListener('keydown', onKey); };
+  }, [pending, closeDialog]);
 
   const load = useCallback(async () => {
-    if (!workspaceId) return;
+    if (!workspaceId) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {
@@ -57,8 +72,7 @@ export default function MarketplaceView({ workspaceId }) {
         listingId: pending.id,
         grantedScopes: approvedScopes,
       });
-      setPending(null);
-      setApprovedScopes([]);
+      closeDialog();
       await load();
     } catch (e) {
       setError(e.message || 'Install failed.');
@@ -213,7 +227,7 @@ export default function MarketplaceView({ workspaceId }) {
               )}
             </fieldset>
             <div className="flex items-center justify-end gap-2">
-              <Button variant="secondary" size="sm" onClick={() => { setPending(null); setApprovedScopes([]); }}>
+              <Button ref={dialogCloseRef} variant="secondary" size="sm" onClick={closeDialog}>
                 Cancel
               </Button>
               <Button variant="action" size="sm" onClick={confirmInstall}>

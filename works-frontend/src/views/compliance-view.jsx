@@ -105,7 +105,7 @@ export default function ComplianceView({
         {/* ── DASHBOARD ── */}
         {complianceTab === 'dashboard' && (
           !complianceDashboard ? (
-            <div aria-busy="true" aria-label="Loading compliance dashboard">
+            <div role="status" aria-busy="true" aria-label="Loading compliance dashboard">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 {[...Array(4)].map((_, i) => (
                   <div key={i} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 animate-pulse">
@@ -286,7 +286,7 @@ export default function ComplianceView({
                     onChange={() => selectAllViolations(allSelected ? [] : selectableViolations)}
                   />
                 )}
-                <select value={violationFilter} onChange={e => { setViolationFilter(e.target.value); fetchComplianceViolations(e.target.value); }} className="input text-xs py-1">
+                <select aria-label="Filter violations by status" value={violationFilter} onChange={e => { setViolationFilter(e.target.value); fetchComplianceViolations(e.target.value); }} className="input text-xs py-1">
                   <option value="">All statuses</option>
                   <option value="OPEN">Open</option>
                   <option value="ACKNOWLEDGED">Acknowledged</option>

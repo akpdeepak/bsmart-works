@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CustomizationView } from './customization-view';
 import { configClient, writePath, toggleIn, normalizeDoc } from '@/lib/customization';
+import { expectNoA11yViolations } from '@/test/a11y';
 
 vi.mock('@/lib/customization', async () => {
   const actual = await vi.importActual('@/lib/customization');
@@ -77,5 +78,33 @@ describe('CustomizationView', () => {
     await waitFor(() => expect(configClient.versions).toHaveBeenCalledWith('WS-1'));
     expect(await screen.findByText(/change tz/i)).toBeInTheDocument();
     expect(screen.getByText('MANUAL')).toBeInTheDocument();
+  });
+
+  // Regression: the impact-confirmation modal must be keyboard-operable (RB-30 §6) — focus moves
+  // into it on open and Escape dismisses it.
+  it('opens the impact dialog and closes it with the Escape key', async () => {
+    configClient.templates.mockResolvedValue([
+      { id: 'TPL-1', name: 'Onboarding', description: 'starter', document: LIVE.document, createdAt: '2026-06-01T10:00:00Z' },
+    ]);
+    configClient.impact.mockResolvedValue({ affectedItems: 2, affectedUsers: 1, affectedAutomations: 0, warnings: [], changes: [] });
+
+    render(<CustomizationView workspaceId="WS-1" canManage onToast={() => {}} />);
+    await screen.findByText(/Live version 3/i);
+    fireEvent.click(screen.getByRole('button', { name: /Templates/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Apply$/i }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    // Focus landed on the Cancel button inside the dialog.
+    expect(screen.getByRole('button', { name: /Cancel/i })).toHaveFocus();
+
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('has no serious accessibility violations on the Settings tab', async () => {
+    const { container } = render(<CustomizationView workspaceId="WS-1" canManage onToast={() => {}} />);
+    await screen.findByText(/Live version 3/i);
+    await expectNoA11yViolations(container);
   });
 });

@@ -7,6 +7,7 @@ import java.util.List;
 
 public interface ActionItemRepository extends JpaRepository<ActionItem, String> {
     List<ActionItem> findByProjectIdAndDeletedAtIsNull(String projectId);
+    List<ActionItem> findByProjectIdAndWorkspaceIdAndDeletedAtIsNull(String projectId, String workspaceId);
     List<ActionItem> findBySourceMeetingIdAndDeletedAtIsNull(String sourceMeetingId);
     List<ActionItem> findByOwnerIdAndDeletedAtIsNull(String ownerId);
 

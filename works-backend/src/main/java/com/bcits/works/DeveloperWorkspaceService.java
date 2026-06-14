@@ -1,10 +1,8 @@
 package com.bcits.works;
 
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -28,7 +26,7 @@ import java.util.Map;
 @Service
 public class DeveloperWorkspaceService {
 
-    private final JdbcTemplate jdbc;
+    private final DeveloperWorkspaceDao dao;
     private final PullRequestRepository pullRequests;
     private final PullRequestReviewerRepository reviewers;
     private final CodeLinkRepository codeLinks;
@@ -38,12 +36,12 @@ public class DeveloperWorkspaceService {
     private final RbacService rbac;
     private final AiControlPlaneService controlPlane;
 
-    public DeveloperWorkspaceService(JdbcTemplate jdbc, PullRequestRepository pullRequests,
+    public DeveloperWorkspaceService(DeveloperWorkspaceDao dao, PullRequestRepository pullRequests,
                                      PullRequestReviewerRepository reviewers, CodeLinkRepository codeLinks,
                                      FocusModeService focusMode, CodeContextService codeContext,
                                      CalendarSyncService calendarSync,
                                      RbacService rbac, AiControlPlaneService controlPlane) {
-        this.jdbc = jdbc;
+        this.dao = dao;
         this.pullRequests = pullRequests;
         this.reviewers = reviewers;
         this.codeLinks = codeLinks;
@@ -104,68 +102,15 @@ public class DeveloperWorkspaceService {
     public Map<String, Object> home(String workspaceId, String userId) {
         rbac.require(userId, workspaceId, "view_items");
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("todaysWork", todaysWork(workspaceId, userId));
+        out.put("todaysWork", dao.todaysWork(workspaceId, userId));
         out.put("reviewQueue", reviewQueueRows(workspaceId, userId));
-        out.put("blockers", blockers(workspaceId, userId));
+        out.put("blockers", dao.blockers(workspaceId, userId));
         out.put("focusBlocks", focusMode.list(workspaceId, userId).stream().map(b -> Map.<String, Object>of(
             "id", b.getId(), "title", b.getTitle(), "startsAt", b.getStartsAt(),
             "endsAt", b.getEndsAt(), "status", b.getStatus(), "allowP0", b.isAllowP0())).toList());
         out.put("focusStatus", focusMode.status(userId));
-        out.put("recentActivity", recentActivity(userId));
+        out.put("recentActivity", dao.recentActivity(userId));
         return out;
-    }
-
-    private List<Map<String, Object>> todaysWork(String workspaceId, String userId) {
-        return jdbc.query(
-            "SELECT wi.id, wi.title, wi.status, wi.type, wi.priority FROM work_items wi " +
-            "JOIN projects p ON p.id = wi.project_id " +
-            "WHERE p.workspace_id = ? AND wi.assignee_id = ? AND wi.deleted_at IS NULL " +
-            "AND LOWER(wi.status) NOT IN ('done','resolved','closed') " +
-            "ORDER BY CASE WHEN LOWER(wi.status) LIKE '%progress%' THEN 0 ELSE 1 END, wi.priority, wi.id",
-            (rs, i) -> {
-                Map<String, Object> m = new LinkedHashMap<>();
-                m.put("id", rs.getString("id"));
-                m.put("title", rs.getString("title"));
-                m.put("status", rs.getString("status"));
-                m.put("type", rs.getString("type"));
-                m.put("priority", rs.getString("priority"));
-                return m;
-            }, workspaceId, userId);
-    }
-
-    private List<Map<String, Object>> blockers(String workspaceId, String userId) {
-        // Items assigned to the user that are blocked by another, still-open item.
-        return jdbc.query(
-            "SELECT wi.id, wi.title, wi.status, l.target_id AS blocked_by, t.title AS blocker_title " +
-            "FROM work_items wi " +
-            "JOIN projects p ON p.id = wi.project_id " +
-            "JOIN work_item_links l ON l.source_id = wi.id AND l.link_type = 'BLOCKED_BY' " +
-            "JOIN work_items t ON t.id = l.target_id " +
-            "WHERE p.workspace_id = ? AND wi.assignee_id = ? AND wi.deleted_at IS NULL " +
-            "AND LOWER(t.status) NOT IN ('done','resolved','closed') " +
-            "ORDER BY wi.id",
-            (rs, i) -> {
-                Map<String, Object> m = new LinkedHashMap<>();
-                m.put("id", rs.getString("id"));
-                m.put("title", rs.getString("title"));
-                m.put("status", rs.getString("status"));
-                m.put("blockedBy", rs.getString("blocked_by"));
-                m.put("blockerTitle", rs.getString("blocker_title"));
-                return m;
-            }, workspaceId, userId);
-    }
-
-    private List<Map<String, Object>> recentActivity(String userId) {
-        return jdbc.query(
-            "SELECT aggregate_id, event_type, occurred_at FROM events " +
-            "WHERE actor_id = ? ORDER BY occurred_at DESC LIMIT 12",
-            (rs, i) -> {
-                Map<String, Object> m = new LinkedHashMap<>();
-                m.put("aggregateId", rs.getString("aggregate_id"));
-                m.put("eventType", rs.getString("event_type"));
-                m.put("occurredAt", rs.getObject("occurred_at"));
-                return m;
-            }, userId);
     }
 
     // ── Code review queue (ranked) ─────────────────────────────────────────────────
@@ -179,8 +124,7 @@ public class DeveloperWorkspaceService {
             if (!"OPEN".equals(pr.getStatus()) && !"DRAFT".equals(pr.getStatus())) continue;
             String priority = null;
             if (pr.getWorkItemId() != null) {
-                priority = jdbc.query("SELECT priority FROM work_items WHERE id = ?",
-                    rs -> rs.next() ? rs.getString(1) : null, pr.getWorkItemId());
+                priority = dao.workItemPriority(pr.getWorkItemId());
             }
             long ageHours = pr.getCreatedAt() == null ? 0 : ChronoUnit.HOURS.between(pr.getCreatedAt(), now);
             int size = (pr.getAdditions() == null ? 0 : pr.getAdditions())
@@ -219,35 +163,15 @@ public class DeveloperWorkspaceService {
 
     public Map<String, Object> velocity(String workspaceId, String userId) {
         rbac.require(userId, workspaceId, "view_items");
-        Integer assigned = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM work_items wi JOIN projects p ON p.id = wi.project_id " +
-            "WHERE p.workspace_id = ? AND wi.assignee_id = ? AND wi.deleted_at IS NULL",
-            Integer.class, workspaceId, userId);
-        Integer done = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM work_items wi JOIN projects p ON p.id = wi.project_id " +
-            "WHERE p.workspace_id = ? AND wi.assignee_id = ? AND wi.deleted_at IS NULL " +
-            "AND LOWER(wi.status) IN ('done','resolved','closed')",
-            Integer.class, workspaceId, userId);
-        Double cycleDays = jdbc.queryForObject(
-            "SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (wi.updated_at - wi.created_at)) / 86400.0), 0) " +
-            "FROM work_items wi JOIN projects p ON p.id = wi.project_id " +
-            "WHERE p.workspace_id = ? AND wi.assignee_id = ? AND wi.deleted_at IS NULL " +
-            "AND LOWER(wi.status) IN ('done','resolved','closed')",
-            Double.class, workspaceId, userId);
-        Integer throughput14 = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM work_items wi JOIN projects p ON p.id = wi.project_id " +
-            "WHERE p.workspace_id = ? AND wi.assignee_id = ? AND wi.deleted_at IS NULL " +
-            "AND LOWER(wi.status) IN ('done','resolved','closed') AND wi.updated_at >= ?",
-            Integer.class, workspaceId, userId, OffsetDateTime.now(ZoneOffset.UTC).minusDays(14));
+        DeveloperWorkspaceDao.VelocityCounts v = dao.velocity(workspaceId, userId);
 
-        int a = assigned == null ? 0 : assigned, d = done == null ? 0 : done;
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("private", true);                          // never surfaced to a manager (RB-20 §4)
-        m.put("assigned", a);
-        m.put("completed", d);
-        m.put("completionRate", completionRate(d, a));
-        m.put("avgCycleTimeDays", Math.round((cycleDays == null ? 0 : cycleDays) * 10.0) / 10.0);
-        m.put("throughputLast14Days", throughput14 == null ? 0 : throughput14);
+        m.put("assigned", v.assigned());
+        m.put("completed", v.done());
+        m.put("completionRate", completionRate(v.done(), v.assigned()));
+        m.put("avgCycleTimeDays", Math.round(v.cycleDays() * 10.0) / 10.0);
+        m.put("throughputLast14Days", v.throughput14());
         return m;
     }
 
@@ -257,24 +181,15 @@ public class DeveloperWorkspaceService {
         rbac.require(userId, workspaceId, "view_items");
         OffsetDateTime since = OffsetDateTime.now().minusHours(36);
 
-        List<String> yesterday = jdbc.queryForList(
-            "SELECT wi.id || ': ' || wi.title FROM work_items wi JOIN projects p ON p.id = wi.project_id " +
-            "WHERE p.workspace_id = ? AND wi.assignee_id = ? AND wi.deleted_at IS NULL " +
-            "AND LOWER(wi.status) IN ('done','resolved','closed') AND wi.updated_at >= ? ORDER BY wi.updated_at DESC",
-            String.class, workspaceId, userId, since);
+        List<String> yesterday = dao.standupYesterday(workspaceId, userId, since);
         // Commits the engineer landed recently feed "yesterday" too (git activity, Cap U).
         codeLinks.findByWorkspaceIdAndAuthorIdOrderByCreatedAtDesc(workspaceId, userId).stream()
             .filter(cl -> "COMMIT".equals(cl.getKind()) && cl.getCreatedAt() != null && cl.getCreatedAt().isAfter(since))
             .limit(5).forEach(cl -> yesterday.add("commit " + cl.getRef() + " — " + nv(cl.getMessage())));
 
-        List<String> today = jdbc.queryForList(
-            "SELECT wi.id || ': ' || wi.title FROM work_items wi JOIN projects p ON p.id = wi.project_id " +
-            "WHERE p.workspace_id = ? AND wi.assignee_id = ? AND wi.deleted_at IS NULL " +
-            "AND LOWER(wi.status) NOT IN ('done','resolved','closed') " +
-            "ORDER BY CASE WHEN LOWER(wi.status) LIKE '%progress%' THEN 0 ELSE 1 END, wi.id",
-            String.class, workspaceId, userId);
+        List<String> today = dao.standupToday(workspaceId, userId);
 
-        List<Map<String, Object>> blockerRows = blockers(workspaceId, userId);
+        List<Map<String, Object>> blockerRows = dao.blockers(workspaceId, userId);
         List<String> blocked = blockerRows.stream()
             .map(b -> b.get("id") + " blocked by " + b.get("blockedBy") + " (" + b.get("blockerTitle") + ")").toList();
 

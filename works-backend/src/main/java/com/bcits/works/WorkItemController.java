@@ -42,6 +42,7 @@ public class WorkItemController {
     private final WorkflowRuleEngine workflowRules;
     private final StatusConfigService statusConfig;
     private final BoardWipLimitService wipLimits;
+    private final WorkItemBulkService bulkService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
@@ -52,7 +53,8 @@ public class WorkItemController {
                               ExtensionExecutionService extensions,
                               WorkflowRuleEngine workflowRules,
                               StatusConfigService statusConfig,
-                              BoardWipLimitService wipLimits) {
+                              BoardWipLimitService wipLimits,
+                              WorkItemBulkService bulkService) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
@@ -67,6 +69,24 @@ public class WorkItemController {
         this.workflowRules = workflowRules;
         this.statusConfig = statusConfig;
         this.wipLimits = wipLimits;
+        this.bulkService = bulkService;
+    }
+
+    @Operation(summary = "Bulk-edit work items",
+        description = "Applies one field change (assignee, priority, addLabel, removeLabel) to many "
+            + "items at once. Each item is re-checked for edit rights and audited; items the caller "
+            + "may not edit are skipped. Status is not a bulk field (it must run the DoD + workflow "
+            + "gates per item). Returns the per-item outcome.")
+    @PostMapping("/bulk")
+    public WorkItemBulkService.BulkResult bulkEdit(@Valid @RequestBody Map<String, Object> body) {
+        String userId = authenticatedUser.id();
+        Object rawIds = body.get("ids");
+        List<String> ids = rawIds instanceof List<?> list
+            ? list.stream().filter(java.util.Objects::nonNull).map(Object::toString).toList()
+            : List.of();
+        String action = body.get("action") == null ? null : body.get("action").toString();
+        String value = body.get("value") == null ? null : body.get("value").toString();
+        return bulkService.apply(userId, ids, action, value);
     }
 
     // Tenant-isolation predicate (RB-40 §1): an item is visible only when its project lives in a
@@ -94,6 +114,7 @@ public class WorkItemController {
                 this::mapRow, userId, limit, offset);
         }
         attachTagsBatch(items);
+        attachFieldValuesBatch(items);
         attachStarred(items, userId);
         return items;
     }
@@ -109,6 +130,7 @@ public class WorkItemController {
             this::mapRow, id, userId);
         if (items.isEmpty()) throw ApiException.notFound("Work item", id); {
         attachTagsBatch(items);
+        attachFieldValuesBatch(items);
         }
         attachStarred(items, userId);
         return items.get(0);
@@ -125,6 +147,7 @@ public class WorkItemController {
             + "AND " + MEMBER_PROJECTS + " ORDER BY deleted_at DESC LIMIT ? OFFSET ?",
             this::mapRow, userId, limit, offset);
         attachTagsBatch(items);
+        attachFieldValuesBatch(items);
         return items;
     }
 
@@ -169,6 +192,7 @@ public class WorkItemController {
             + "WHERE si.user_id = ? AND wi.deleted_at IS NULL ORDER BY si.created_at DESC LIMIT ? OFFSET ?",
             this::mapRow, userId, limit, offset);
         attachTagsBatch(items);
+        attachFieldValuesBatch(items);
         items.forEach(i -> i.setStarred(true));
         return items;
     }
@@ -195,6 +219,7 @@ public class WorkItemController {
             return w;
         }, userId, userId, pattern, pattern, pattern);
         attachTagsBatch(items);
+        attachFieldValuesBatch(items);
         return items;
     }
 
@@ -310,8 +335,9 @@ public class WorkItemController {
      *  a client cannot request another user's items (the old, ignored userId param is removed). */
     @GetMapping("/my")
     public List<WorkItem> myWorkItems() {
-        List<WorkItem> items = repository.findByAssigneeId(authenticatedUser.id());
+        List<WorkItem> items = repository.findMyItemsScoped(authenticatedUser.id());
         attachTagsBatch(items);
+        attachFieldValuesBatch(items);
         return items;
     }
 
@@ -587,9 +613,15 @@ public class WorkItemController {
 
     @DeleteMapping("/{id}/permanent")
     public ResponseEntity<Void> permanentDelete(@PathVariable String id) {
+        String userId = authenticatedUser.id();
         var opt = repository.findById(id);
         if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build();
         var item = opt.get();
+        // RBAC + tenant scoping (RB-40 §1): a permanent purge is the most destructive op on a work
+        // item and must be gated exactly like the soft delete above. Without this, any authenticated
+        // user could purge any item (and its comments/links/attachments) from any workspace by ID.
+        String wsId = rbac.workspaceForProject(item.getProjectId());
+        if (wsId != null) rbac.require(userId, wsId, "delete_items");
         jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);
         jdbc.update("DELETE FROM comments WHERE work_item_id = ?", id);
         jdbc.update("DELETE FROM work_item_links WHERE source_id = ? OR target_id = ?", id, id);
@@ -735,6 +767,33 @@ public class WorkItemController {
                           .add(rs.getString("tag")),
             ids.toArray());
         items.forEach(i -> i.setTags(tagsByItem.getOrDefault(i.getId(), new java.util.ArrayList<>())));
+    }
+
+    /**
+     * Attach unified custom-field values (field_def → value) to a list of items in one query, so
+     * cards can show custom fields without an N+1. Mirrors {@link #attachTagsBatch}. The value is the
+     * first non-null of text / number / json, as a display string.
+     */
+    private void attachFieldValuesBatch(List<WorkItem> items) {
+        if (items.isEmpty()) return;
+        List<String> ids = items.stream().map(WorkItem::getId).toList();
+        String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
+        java.util.Map<String, java.util.Map<String, Object>> byItem = new java.util.HashMap<>();
+        jdbc.query(
+            "SELECT work_item_id, field_def_id, value_text, value_number, value_json #>> '{}' AS value_json_text "
+            + "FROM work_item_field_value WHERE work_item_id IN (" + placeholders + ")",
+            (org.springframework.jdbc.core.RowCallbackHandler) rs -> {
+                Object v = rs.getString("value_text");
+                if (v == null) {
+                    Object n = rs.getObject("value_number");
+                    v = n != null ? n.toString() : null;
+                }
+                if (v == null) v = rs.getString("value_json_text");
+                byItem.computeIfAbsent(rs.getString("work_item_id"), k -> new java.util.HashMap<>())
+                      .put(rs.getString("field_def_id"), v);
+            },
+            ids.toArray());
+        items.forEach(i -> i.setFieldValues(byItem.getOrDefault(i.getId(), new java.util.HashMap<>())));
     }
 
     private void saveTags(String workItemId, List<String> tags) {

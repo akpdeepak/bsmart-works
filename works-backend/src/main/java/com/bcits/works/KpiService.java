@@ -32,6 +32,17 @@ public class KpiService {
     private static final String DONE = "done";
     private static final List<String> WIP_STATUSES = List.of("in progress", "in review", "doing", "qa", "testing");
 
+    /**
+     * Tier at/above which leadership-sensitive fields (e.g. {@code businessValue}) are visible —
+     * the same field-level-security convention BQL uses ({@code BqlController.SENSITIVE_FIELD_MIN_TIER}),
+     * reused here so a custom metric can never become a back-door into a sensitive field a lower-tier
+     * caller may not see (RB-40 §1, spec 06 §5.5).
+     */
+    static final int SENSITIVE_FIELD_MIN_TIER = 3; // LEAD+
+
+    /** Sentinel caller for trusted backend jobs (no human user) — full field visibility (RB-40 §1). */
+    private static final String SYSTEM_CALLER = "__system__";
+
     private final WorkItemRepository workItems;
     private final ProjectRepository projects;
     private final TeamRepository teams;
@@ -41,12 +52,13 @@ public class KpiService {
     private final AiControlPlaneService controlPlane;
     private final JdbcTemplate jdbc;
     private final BqlCompiler bqlCompiler;
+    private final RbacService rbac;
     private final ObjectMapper json = new ObjectMapper();
 
     public KpiService(WorkItemRepository workItems, ProjectRepository projects, TeamRepository teams,
                       MetricDefinitionRepository definitions, MetricSnapshotRepository snapshots,
                       MetricShareRepository shares, AiControlPlaneService controlPlane,
-                      JdbcTemplate jdbc, BqlCompiler bqlCompiler) {
+                      JdbcTemplate jdbc, BqlCompiler bqlCompiler, RbacService rbac) {
         this.workItems = workItems;
         this.projects = projects;
         this.teams = teams;
@@ -56,6 +68,49 @@ public class KpiService {
         this.controlPlane = controlPlane;
         this.jdbc = jdbc;
         this.bqlCompiler = bqlCompiler;
+        this.rbac = rbac;
+    }
+
+    /** True when the caller's workspace tier may see leadership-sensitive fields (field-level security). */
+    private boolean canSeeSensitive(String workspaceId, String userId) {
+        if (SYSTEM_CALLER.equals(userId)) {
+            return true; // trusted backend job, no human caller
+        }
+        return userId != null && rbac.getUserTier(userId, workspaceId) >= SENSITIVE_FIELD_MIN_TIER;
+    }
+
+    /**
+     * Does this definition reference any field the caller's tier may not see? A custom metric carries
+     * field references in two places — its {@code sourceField} (built-in column alias) and its
+     * {@code bqlFormula} (a BQL expression). Both are resolved through the closed
+     * {@link BqlFieldRegistry} allow-list under the caller's field-security context; if either touches
+     * a sensitive field the caller cannot see, the metric is field-restricted (RB-40 §1).
+     */
+    private boolean referencesForbiddenField(MetricDefinition def, BqlContext ctx) {
+        String src = def.getSourceField();
+        if (src != null && !src.isBlank()) {
+            try {
+                BqlFieldRegistry.resolve(src, ctx);
+            } catch (BqlException e) {
+                // Unknown source fields are tolerated (custom catalog keys); only a *forbidden*
+                // (sensitive, gated) field restricts the metric.
+                if (e.getMessage() != null && e.getMessage().startsWith("Field not permitted")) {
+                    return true;
+                }
+            }
+        }
+        String formula = def.getBqlFormula();
+        if (formula != null && !formula.isBlank()) {
+            try {
+                bqlCompiler.compileFor(formula, ctx);
+            } catch (BqlException e) {
+                if (e.getMessage() != null && e.getMessage().startsWith("Field not permitted")) {
+                    return true;
+                }
+                // A malformed formula is not a field-security failure — leave it to the compile path.
+            }
+        }
+        return false;
     }
 
     // ── Public value types ───────────────────────────────────────────────────────
@@ -86,7 +141,7 @@ public class KpiService {
         String note = target.equals(requesterId)
             ? "Private — visible only to you unless you choose to share."
             : "Shared with you voluntarily by the owner.";
-        return applyTargetsAndCustomMetrics(workspaceId,
+        return applyTargetsAndCustomMetrics(workspaceId, requesterId,
             new Layer("INDIVIDUAL", target, "Personal", metrics, note));
     }
 
@@ -101,38 +156,52 @@ public class KpiService {
 
     // ── Team / Project / Org aggregated views (no individual breakdown) ────────────
 
-    public Layer team(String workspaceId, String teamId) {
+    public Layer team(String workspaceId, String callerId, String teamId) {
         Team t = teams.findByWorkspaceIdOrderByNameAsc(workspaceId).stream()
             .filter(x -> x.getId().equals(teamId)).findFirst()
             .orElseThrow(() -> ApiException.notFound("Team", teamId));
         List<WorkItem> items = teamItems(workspaceId, t);
-        return applyTargetsAndCustomMetrics(workspaceId,
+        return applyTargetsAndCustomMetrics(workspaceId, callerId,
             new Layer("TEAM", teamId, t.getName(), aggregateMetrics(items),
                 "Aggregated — no individual breakdown (privacy by design.)"));
     }
 
-    public Layer project(String workspaceId, String projectId) {
+    public Layer project(String workspaceId, String callerId, String projectId) {
         Project p = projects.findByWorkspaceId(workspaceId).stream()
             .filter(x -> x.getId().equals(projectId)).findFirst()
             .orElseThrow(() -> ApiException.notFound("Project", projectId));
         List<WorkItem> items = workItems.findByProjectId(projectId);
-        return applyTargetsAndCustomMetrics(workspaceId,
+        return applyTargetsAndCustomMetrics(workspaceId, callerId,
             new Layer("PROJECT", projectId, p.getName(), aggregateMetrics(items),
                 "Aggregated across the project's contributing teams."));
     }
 
-    /** Manager view: aggregated metrics per team. Deliberately accepts no user id — there is no API
-     *  path to an individual's numbers from here (RB-40 §1, commitment 4). */
-    public List<Layer> manager(String workspaceId) {
+    /** Manager view: aggregated metrics per team. Deliberately accepts no <i>target</i> user id —
+     *  there is no API path to an individual's numbers from here (RB-40 §1, commitment 4). The
+     *  {@code callerId} only drives field-level security on custom metrics, never a drill-down. */
+    public List<Layer> manager(String workspaceId, String callerId) {
         return teams.findByWorkspaceIdOrderByNameAsc(workspaceId).stream()
-            .map(t -> new Layer("TEAM", t.getId(), t.getName(), aggregateMetrics(teamItems(workspaceId, t)),
-                "Aggregated — individual engineer comparison is unavailable by design."))
+            .map(t -> applyTargetsAndCustomMetrics(workspaceId, callerId,
+                new Layer("TEAM", t.getId(), t.getName(), aggregateMetrics(teamItems(workspaceId, t)),
+                    "Aggregated — individual engineer comparison is unavailable by design.")))
             .collect(Collectors.toList());
     }
 
-    public Layer org(String workspaceId) {
+    public Layer org(String workspaceId, String callerId) {
         List<WorkItem> items = scopedItems(workspaceId);
-        return applyTargetsAndCustomMetrics(workspaceId,
+        return applyTargetsAndCustomMetrics(workspaceId, callerId,
+            new Layer("ORG", null, "Organization", aggregateMetrics(items),
+                "Organization-wide rollup — fully aggregated."));
+    }
+
+    /**
+     * System ORG rollup for trusted backend jobs (e.g. the snapshot scheduler) that run with no user
+     * context. It computes over the full, unrestricted field set — there is no human caller whose
+     * field-level visibility could leak — so it never applies the sensitive-field filter (RB-40 §1).
+     */
+    public Layer orgForSystem(String workspaceId) {
+        List<WorkItem> items = scopedItems(workspaceId);
+        return applyTargetsAndCustomMetrics(workspaceId, SYSTEM_CALLER,
             new Layer("ORG", null, "Organization", aggregateMetrics(items),
                 "Organization-wide rollup — fully aggregated."));
     }
@@ -211,14 +280,32 @@ public class KpiService {
             "privateByDefault", m.privateByDefault())).collect(Collectors.toList());
     }
 
-    public List<MetricDefinition> listDefinitions(String workspaceId) {
-        return definitions.findByWorkspaceIdOrderByNameAsc(workspaceId);
+    /**
+     * Metric definitions visible to the caller. Field-level security (RB-40 §1): a definition built
+     * over a sensitive field (its {@code sourceField} or {@code bqlFormula}) is filtered out for a
+     * caller whose tier is below {@link #SENSITIVE_FIELD_MIN_TIER} — listing must not leak the
+     * existence of sensitive-field-based metrics to low-tier callers.
+     */
+    public List<MetricDefinition> listDefinitions(String workspaceId, String callerId) {
+        BqlContext ctx = BqlContext.forUser(callerId, canSeeSensitive(workspaceId, callerId));
+        return definitions.findByWorkspaceIdOrderByNameAsc(workspaceId).stream()
+            .filter(d -> !referencesForbiddenField(d, ctx))
+            .collect(Collectors.toList());
     }
 
     @Transactional
     public MetricDefinition createDefinition(String workspaceId, String creatorId, MetricDefinition def) {
         // Safe formula + privacy validation: custom metrics aggregate only, never INDIVIDUAL.
         MetricFormula.validateDefinition(def.getPrimitive(), def.getScopeLevel());
+        // Field-level security (RB-40 §1): a creator may not define a metric over a sensitive field
+        // their own tier cannot see — that would launder a forbidden field into an aggregate they
+        // (and every lower tier) can then read.
+        BqlContext ctx = BqlContext.forUser(creatorId, canSeeSensitive(workspaceId, creatorId));
+        if (referencesForbiddenField(def, ctx)) {
+            throw ApiException.forbidden(
+                "This metric references a field your role is not permitted to query "
+                + "(field-level security, RB-40 §1).");
+        }
         def.setId("MD-" + shortId());
         def.setWorkspaceId(workspaceId);
         def.setPrimitive(MetricFormula.normalizePrimitive(def.getPrimitive()));
@@ -417,8 +504,14 @@ public class KpiService {
      * Applies workspace-level targets to produce ON_TRACK/AT_RISK/OFF_TRACK status on each metric,
      * and appends any custom BQL-formula metrics defined for this workspace (RB-10 §6).
      */
-    private Layer applyTargetsAndCustomMetrics(String workspaceId, Layer layer) {
-        List<MetricDefinition> defs = definitions.findByWorkspaceIdOrderByNameAsc(workspaceId);
+    private Layer applyTargetsAndCustomMetrics(String workspaceId, String callerId, Layer layer) {
+        // Field-level security (RB-40 §1): compile and surface custom metrics under the caller's own
+        // field-visibility context, so a metric built over a sensitive field is silently dropped for
+        // a caller whose tier cannot see that field — reusing the BQL field-security gate, not a copy.
+        BqlContext ctx = BqlContext.forUser(callerId, canSeeSensitive(workspaceId, callerId));
+        List<MetricDefinition> defs = definitions.findByWorkspaceIdOrderByNameAsc(workspaceId).stream()
+            .filter(d -> !referencesForbiddenField(d, ctx))
+            .collect(Collectors.toList());
         Map<String, MetricDefinition> defsByKey = defs.stream()
             .collect(Collectors.toMap(MetricDefinition::getMetricKey, d -> d, (a, b) -> a));
 
@@ -437,8 +530,12 @@ public class KpiService {
             if (def.getBqlFormula() == null || def.getBqlFormula().isBlank()) continue;
             if (defsByKey.containsKey(def.getMetricKey()) && updated.stream().anyMatch(m -> m.key().equals(def.getMetricKey()))) continue;
             try {
-                BqlCompiler.Compiled compiled = bqlCompiler.compile(def.getBqlFormula(), null);
-                String countSql = "SELECT COUNT(*) FROM work_items WHERE workspace_id = ? AND deleted_at IS NULL"
+                // Compile under the caller's field-security context (defs already filtered above);
+                // a sensitive-field formula would throw here for an under-tier caller (RB-40 §1).
+                BqlCompiler.Compiled compiled = bqlCompiler.compileFor(def.getBqlFormula(), ctx);
+                // work_items has no workspace_id column — scope through projects (unified idiom, RB-40 §1).
+                String countSql = "SELECT COUNT(*) FROM work_items WHERE deleted_at IS NULL"
+                    + " AND project_id IN (SELECT id FROM projects WHERE workspace_id = ?)"
                     + (compiled.sql().isBlank() ? "" : " AND (" + compiled.sql() + ")");
                 List<Object> params = new ArrayList<>();
                 params.add(workspaceId);

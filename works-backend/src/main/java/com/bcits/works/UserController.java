@@ -17,10 +17,10 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/users")
 public class UserController {
 
-    // Iteration 20 (Cap A — localization): the 10 shipped UI languages. The server validates the
-    // preference so a stored locale always maps to a bundle the frontend can load.
-    static final Set<String> SUPPORTED_LOCALES =
-        Set.of("en", "hi", "es", "fr", "de", "pt", "ja", "zh", "ar", "ko");
+    // Iteration 20 (Cap A — localization): the shipped UI languages. The canonical list lives in
+    // SupportedLocales (ONE Source); kept here as an alias for call sites and tests. The server
+    // validates the preference so a stored locale always maps to a bundle the frontend can load.
+    static final Set<String> SUPPORTED_LOCALES = SupportedLocales.CODES;
 
     private final UserRepository userRepository;
     private final AuthenticatedUser authenticatedUser;
@@ -54,7 +54,7 @@ public class UserController {
         return userRepository.findById(uid).map(u -> Map.of(
                 "id", u.getId(), "fullName", u.getFullName(), "email", u.getEmail(),
                 "locale", u.getLocale()
-        )).orElse(Map.of("id", uid, "fullName", "Unknown", "email", "", "locale", "en"));
+        )).orElse(Map.of("id", uid, "fullName", "Unknown", "email", "", "locale", SupportedLocales.DEFAULT));
     }
 
     public record LocaleRequest(String locale) { }

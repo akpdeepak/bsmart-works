@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import PmView from './pm-view';
 
 const noop = () => {};
@@ -67,5 +67,24 @@ describe('PmView', () => {
   it('renders project selector', () => {
     render(<PmView {...baseProps} />);
     expect(screen.getByRole('combobox')).toBeInTheDocument();
+  });
+
+  it('surfaces a save status for meeting notes instead of saving silently', async () => {
+    const selected = { id: 'MTG-1', title: 'Kickoff', meetingType: 'GENERAL' };
+    render(
+      <PmView
+        {...baseProps}
+        pmProjectId="PRJ-1"
+        projects={[{ id: 'PRJ-1', name: 'Apollo' }]}
+        pmTab="meeting-detail"
+        selectedMeeting={selected}
+        meetingNotes={[]}
+      />,
+    );
+    const agenda = screen.getByPlaceholderText('Enter agenda...');
+    fireEvent.change(agenda, { target: { value: 'Discuss roadmap' } });
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
+    fireEvent.blur(agenda);
+    expect(await screen.findByText('Saved')).toBeInTheDocument();
   });
 });

@@ -31,7 +31,7 @@ describe('BoardView', () => {
 
   it('shows three kanban columns', () => {
     render(<BoardView {...baseProps} />);
-    expect(screen.getByText('TODO')).toBeInTheDocument();
+    expect(screen.getByText('TO DO')).toBeInTheDocument();
     expect(screen.getByText('IN PROGRESS')).toBeInTheDocument();
     expect(screen.getByText('DONE')).toBeInTheDocument();
   });

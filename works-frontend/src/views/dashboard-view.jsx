@@ -4,7 +4,7 @@ import { StatCard } from '@/components/works/stat-card';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
-import { onPressKey } from '@/lib/utils';
+import { onPressKey, getTimeOfDay as getGreeting } from '@/lib/utils';
 import { TIER } from '@/lib/nav-model';
 import { DonutChart, BarChart, SegmentBar, DayBars, PairedBars } from '@/components/works/molecules';
 import { TodayCanvas } from '@/components/works/organisms/today-canvas';
@@ -119,12 +119,6 @@ function TodayHeader({ greeting, firstName, rolePill, subtitle, cta, onCta }) {
       {cta && <Button variant="action" onClick={onCta}>{cta}</Button>}
     </div>
   );
-}
-
-// Shared greeting helper
-function getGreeting() {
-  const h = new Date().getHours();
-  return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
 }
 
 // ── Role tab bar (Admin/Owner only) ───────────────────────────────────────────
@@ -626,7 +620,7 @@ const SCRUM_MASTER_REGISTRY = {
             <span className="text-neutral-600 dark:text-neutral-400">Time elapsed</span>
             <span className="font-semibold text-neutral-900 dark:text-neutral-100">{ctx.timebox.timePct}%</span>
           </div>
-          <MiniBar value={ctx.timebox.timePct} max={100} color="bg-neutral-400" />
+          <MiniBar value={ctx.timebox.timePct} max={100} color="bg-brand-navy-tint" />
           <div className="flex items-center justify-between text-xs">
             <span className="text-neutral-600 dark:text-neutral-400">Scope done</span>
             <span className="font-semibold text-neutral-900 dark:text-neutral-100">{ctx.timebox.scopePct}%</span>
@@ -711,7 +705,7 @@ function ScrumMasterToday({ data, currentUser, setView, layout, builtinLayout, e
 // Focus: "What's the backlog and release state?" — grooming, release radar, features
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const PCOLOR = { CRITICAL: 'bg-semantic-danger', HIGH: 'bg-semantic-warning', MEDIUM: 'bg-brand-navy', LOW: 'bg-neutral-400' };
+const PCOLOR = { CRITICAL: 'bg-semantic-danger', HIGH: 'bg-semantic-warning', MEDIUM: 'bg-brand-navy', LOW: 'bg-neutral-300' };
 
 const PRODUCT_OWNER_REGISTRY = {
   stat: (ctx, w) => {
@@ -783,7 +777,7 @@ const PRODUCT_OWNER_REGISTRY = {
                   <span className="font-medium text-neutral-700 dark:text-neutral-300">{p.priority}</span>
                   <span className="text-neutral-500">{p.count}</span>
                 </div>
-                <MiniBar value={p.count || 0} max={ctx.maxPri} color={PCOLOR[p.priority] || 'bg-neutral-400'} />
+                <MiniBar value={p.count || 0} max={ctx.maxPri} color={PCOLOR[p.priority] || 'bg-neutral-300'} />
               </div>
             ))}
             <p className="pt-1 text-xs text-neutral-500">{ctx.totalBacklog} total items</p>

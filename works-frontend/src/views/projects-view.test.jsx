@@ -34,6 +34,25 @@ describe('ProjectsView', () => {
     expect(screen.getByText('50% complete')).toBeInTheDocument();
   });
 
+  it('counts custom done-category statuses via the status resolver', () => {
+    // A workflow that renames its done status to "Shipped" must still roll up as complete.
+    const statusResolver = {
+      categoryOf: (_type, status) => (status === 'Shipped' ? 'done' : 'todo'),
+    };
+    render(
+      <ProjectsView
+        {...baseProps}
+        statusResolver={statusResolver}
+        projects={[{ id: 'PRJ-1', name: 'Apollo', keyPrefix: 'AP' }]}
+        workItems={[
+          { id: 'W1', projectId: 'PRJ-1', type: 'STORY', status: 'Shipped' },
+          { id: 'W2', projectId: 'PRJ-1', type: 'STORY', status: 'Backlog' },
+        ]}
+      />,
+    );
+    expect(screen.getByText('50% complete')).toBeInTheDocument();
+  });
+
   it('opens the new-project flow from the header button', () => {
     const setIsProjectOpen = vi.fn();
     render(<ProjectsView {...baseProps} setIsProjectOpen={setIsProjectOpen} />);

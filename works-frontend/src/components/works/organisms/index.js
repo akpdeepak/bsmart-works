@@ -30,3 +30,7 @@ export { ConflictResolver } from './conflict-resolver';
 export { ShortcutsHelp } from './shortcuts-help';
 export { StatusPage } from './status-page';
 export { PushSettingsPanel } from './push-settings-panel';
+// Multi-dimensional pivot widgets — one dispatcher + one shared builder, reused across
+// Dashboards, the Report Builder and Reports (RB-10 §2/§6: one source of truth, server-scoped).
+export { PivotChart } from './pivot-chart';
+export { WidgetBuilder } from './widget-builder';

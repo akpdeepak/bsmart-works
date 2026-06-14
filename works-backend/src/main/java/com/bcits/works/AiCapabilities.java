@@ -36,6 +36,8 @@ public final class AiCapabilities {
     public static final String SPRINT_PLAN        = "sprint_plan";        // Cap V — sprint planning commit suggestion (I15-S01)
     public static final String SPRINT_REVIEW      = "sprint_review";      // Cap V — sprint review prep draft (I15-S06)
     public static final String SPRINT_PATTERNS    = "sprint_patterns";    // Cap V — cross-sprint pattern detection (I15-S07)
+    public static final String COCKPIT_PROTIPS    = "cockpit_protips";    // Cap V — role-targeted cockpit coaching tips
+    public static final String RETRO_CLUSTER      = "retro_cluster";      // Cap V — retro note theme clustering
     public static final String BACKLOG_REFINE     = "backlog_refine";     // Cap W — backlog refinement ranking (I15-S09)
     public static final String FEEDBACK_CLUSTER   = "feedback_cluster";   // Cap W — customer-feedback theme clustering (I15-S11)
     public static final String RELEASE_NOTES      = "release_notes";      // Cap W — release-notes auto-draft (I15-S13)
@@ -47,6 +49,8 @@ public final class AiCapabilities {
     public static final String CONVERSATIONAL_DASHBOARD = "conversational_dashboard"; // Cap O — NL → dashboard widget spec
     public static final String STRUCTURED_EXTRACTION  = "structured_extraction";  // Cap I — structured-data extraction from text
     public static final String SUPPORT_CHAT           = "support_chat";           // Cap N — customer-chat tier-1 auto-response
+    public static final String DASHBOARD_SUMMARY      = "dashboard_summary";      // Cap J — chart/dashboard summary + anomaly
+    public static final String DASHBOARD_SUGGESTION   = "dashboard_suggestion";   // Cap J — AI-suggested starter dashboard (role + context)
 
     /** Description of each capability and its deterministic fallback, surfaced to the UI panel. */
     public record Descriptor(String id, String label, AiModelTier defaultTier, String fallback) { }
@@ -96,6 +100,13 @@ public final class AiCapabilities {
         new Descriptor(SPRINT_PATTERNS, "Cross-sprint pattern detection", AiModelTier.SONNET,
             "Falls back to the frequency tables — recurring impediment categories and repeated "
             + "estimation misses — shown without an interpretive narrative."),
+        new Descriptor(COCKPIT_PROTIPS, "Cockpit coach pro-tips", AiModelTier.HAIKU,
+            "Falls back to the deterministic rule-based tips computed from cockpit signals (stale items, "
+            + "unassigned work, SLA breaches, attendance rate, recurring raise categories, open retro "
+            + "actions) — shown as-is, without narrative polish."),
+        new Descriptor(RETRO_CLUSTER, "Retro theme clustering", AiModelTier.HAIKU,
+            "Falls back to deterministic keyword bucketing of retro notes into fixed themes (process, "
+            + "people, tooling, quality, communication, planning) with note and vote counts."),
         new Descriptor(BACKLOG_REFINE, "Backlog refinement ranking", AiModelTier.SONNET,
             "Falls back to the deterministic weighted score (value / effort / strategic-fit) and the "
             + "needs-detail flags, presented in the manual backlog view."),
@@ -121,7 +132,13 @@ public final class AiCapabilities {
         new Descriptor(STRUCTURED_EXTRACTION, "Structured data extraction", AiModelTier.HAIKU,
             "Falls back to deterministic pattern extraction (dates, ids, emails, key: value lines) from the text."),
         new Descriptor(SUPPORT_CHAT, "Customer-chat tier-1 assistant", AiModelTier.HAIKU,
-            "Falls back to a canned acknowledgement and automatic escalation to a human agent — no customer waits on AI.")
+            "Falls back to a canned acknowledgement and automatic escalation to a human agent — no customer waits on AI."),
+        new Descriptor(DASHBOARD_SUMMARY, "Dashboard / chart summary + anomaly explanation", AiModelTier.HAIKU,
+            "Falls back to a deterministic structured digest of the already-rendered series — largest bucket, "
+            + "notable deltas and statistical outliers — with the charts shown standalone."),
+        new Descriptor(DASHBOARD_SUGGESTION, "AI-suggested starter dashboard", AiModelTier.HAIKU,
+            "Falls back to the deterministic role-based starter set of widgets — the existing template/widget "
+            + "gallery defaults the user can accept as-is.")
     );
 
     private static final Map<String, Descriptor> BY_ID =

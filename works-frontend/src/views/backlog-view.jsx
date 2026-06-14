@@ -4,6 +4,9 @@ import { EmptyState } from '@/components/works/atoms/empty-state';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { PriorityBadge } from '@/components/works/priority-badge';
 import { Avatar } from '@/components/works/atoms/avatar';
+import { statusToCategory } from '@/components/works/status';
+import { useI18n } from '@/lib/i18n';
+import { absoluteDate } from '@/lib/format';
 
 /**
  * BacklogView — product backlog with epic rail, sprint sections, drag-drop reorder.
@@ -33,9 +36,15 @@ export default function BacklogView({
   // circular extraction (the component has deep App-specific deps).
   SprintItemList,
   cardPrefs,
-  customFieldDefs = [],
+  statusResolver,
 }) {
+  const { t } = useI18n();
   const iv = cardPrefs?.isVisible ?? (() => true);
+  // An item counts as "done" by its status's resolved board category, not a literal "Done"
+  // string — so custom / renamed done statuses (Completed, Closed, …) roll up correctly.
+  const isDone = (item) => (statusResolver
+    ? statusResolver.categoryOf(item.type, item.status)
+    : statusToCategory(item.status)) === 'done';
   const onPressKey = (e) => { if (e.key === 'Enter' || e.key === ' ') e.currentTarget.click(); };
 
   return (
@@ -44,14 +53,14 @@ export default function BacklogView({
         {/* Epic panel — sticky left rail with per-epic progress */}
         <aside className="hidden lg:block w-56 flex-shrink-0">
           <div className="sticky top-6 rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-800">
-            <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-neutral-600">Epics</p>
+            <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-neutral-600">{t('deliver.backlog.epics')}</p>
             {workItems.filter(i => i.type === 'EPIC').length === 0 ? (
-              <p className="px-1 text-xs text-neutral-600 dark:text-neutral-400">No epics yet.</p>
+              <p className="px-1 text-xs text-neutral-600 dark:text-neutral-400">{t('deliver.backlog.noEpics')}</p>
             ) : (
               <ul className="space-y-1">
                 {workItems.filter(i => i.type === 'EPIC').map(epic => {
                   const kids = workItems.filter(i => i.parentId === epic.id);
-                  const done = kids.filter(i => i.status === 'Done').length;
+                  const done = kids.filter(isDone).length;
                   const pct = kids.length ? Math.round((done / kids.length) * 100) : 0;
                   return (
                     <li key={epic.id}>
@@ -61,7 +70,7 @@ export default function BacklogView({
                         <span className="mt-1 block h-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-700">
                           <span className="block h-full rounded-full bg-semantic-success" style={{ width: `${pct}%` }} />
                         </span>
-                        <span className="mt-0.5 block text-xs text-neutral-600 dark:text-neutral-400">{done}/{kids.length} done · {pct}%</span>
+                        <span className="mt-0.5 block text-xs text-neutral-600 dark:text-neutral-400">{done}/{kids.length} {t('deliver.backlog.doneSuffix')} · {pct}%</span>
                       </button>
                     </li>
                   );
@@ -74,16 +83,16 @@ export default function BacklogView({
         <div className="min-w-0 flex-1 max-w-5xl">
           <div className="flex justify-between items-center mb-5">
             <div>
-              <h1 className="text-xl font-bold text-brand-navy">Backlog</h1>
-              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{backlogItems.length} items not in any sprint</p>
+              <h1 className="text-xl font-bold text-brand-navy">{t('deliver.backlog.title')}</h1>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{backlogItems.length} {t('deliver.backlog.itemsNotInSprint')}</p>
             </div>
             <div className="flex gap-2 items-center">
               <label className="flex items-center gap-1.5 cursor-pointer mr-2">
                 <input type="checkbox" checked={refinementMode} onChange={e => setRefinementMode(e.target.checked)} className="w-3 h-3 accent-brand-navy" />
-                <span className="text-xs text-neutral-600 font-medium">Refinement mode</span>
+                <span className="text-xs text-neutral-600 font-medium">{t('deliver.backlog.refinementMode')}</span>
               </label>
-              <Button variant="secondary" size="sm" onClick={() => setIsSprintOpen(true)}>+ New Sprint</Button>
-              <Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>+ Add Item</Button>
+              <Button variant="secondary" size="sm" onClick={() => setIsSprintOpen(true)}>{t('deliver.backlog.newSprint')}</Button>
+              <Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>{t('deliver.backlog.addItem')}</Button>
             </div>
           </div>
 
@@ -111,9 +120,9 @@ export default function BacklogView({
                         </span>
                       </div>
                     )}
-                    {sprint.startDate && <span className="text-xs text-neutral-600 dark:text-neutral-400 hidden md:inline">{sprint.startDate} → {sprint.endDate}</span>}
-                    {sprint.status === 'PLANNING' && <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'ACTIVE')}>Start Sprint</Button>}
-                    {sprint.status === 'ACTIVE' && <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'COMPLETED')}>Complete</Button>}
+                    {sprint.startDate && <span className="text-xs text-neutral-600 dark:text-neutral-400 hidden md:inline">{absoluteDate(sprint.startDate)} → {absoluteDate(sprint.endDate)}</span>}
+                    {sprint.status === 'PLANNING' && <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'ACTIVE')}>{t('deliver.backlog.startSprint')}</Button>}
+                    {sprint.status === 'ACTIVE' && <Button size="sm" variant="secondary" onClick={() => handleSprintStatusChange(sprint.id, 'COMPLETED')}>{t('deliver.backlog.complete')}</Button>}
                   </div>
                 </div>
                 <SprintItemList sprintId={sprint.id} users={users} onMoveToBacklog={(id) => handleMoveToBacklog(id, sprint.id)} onSelect={setSelectedItem} />
@@ -124,11 +133,11 @@ export default function BacklogView({
           {/* Backlog items with drag-drop reorder */}
           <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900">
-              <h3 className="font-semibold text-neutral-900">Backlog</h3>
-              <span className="text-xs text-neutral-600 dark:text-neutral-400">{backlogItems.length} items</span>
+              <h3 className="font-semibold text-neutral-900">{t('deliver.backlog.title')}</h3>
+              <span className="text-xs text-neutral-600 dark:text-neutral-400">{backlogItems.length} {t('deliver.backlog.items')}</span>
             </div>
             {backlogItems.length === 0
-              ? <EmptyState icon={FileText} title="Backlog is empty" subtitle="Create work items to add them to the backlog." action={<Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>Add to backlog</Button>} />
+              ? <EmptyState icon={FileText} title={t('deliver.backlog.emptyTitle')} subtitle={t('deliver.backlog.emptySubtitle')} action={<Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>{t('deliver.backlog.addToBacklog')}</Button>} />
               : backlogItems.map((item) => (
                 <div key={item.id}
                   draggable onDragStart={(e) => handleBacklogDragStart(e, item.id)}
@@ -149,20 +158,20 @@ export default function BacklogView({
                       <input type="number" min={0} max={100} value={item.storyPoints || 0}
                         onChange={e => handleRefinementUpdate(item.id, 'storyPoints', parseInt(e.target.value) || 0)}
                         className="w-14 text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-300 rounded px-1.5 py-1 focus:outline-none text-center"
-                        placeholder="pts" />
+                        placeholder={t('deliver.backlog.ptsPlaceholder')} />
                     </div>
                   ) : (
                     <>
                       {iv('priority') && <PriorityBadge priority={item.priority} />}
                       {iv('storyPoints') && (item.storyPoints > 0) && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
-                      {iv('dueDate') && item.dueDate && <span className="text-xs text-semantic-warning">{item.dueDate}</span>}
+                      {iv('dueDate') && item.dueDate && <span className="text-xs text-semantic-warning">{absoluteDate(item.dueDate)}</span>}
                     </>
                   )}
                   {iv('assignee') && item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}
                   {sprints.filter(s => s.status !== 'COMPLETED').length > 0 && (
                     <select className="opacity-0 group-hover:opacity-100 text-xs border border-neutral-200 rounded px-1 py-0.5 text-neutral-600 transition-opacity"
                       onChange={e => e.target.value && handleMoveToSprint(item.id, e.target.value)} defaultValue="">
-                      <option value="" disabled>→ Sprint</option>
+                      <option value="" disabled>{t('deliver.backlog.toSprint')}</option>
                       {sprints.filter(s => s.status !== 'COMPLETED').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                   )}

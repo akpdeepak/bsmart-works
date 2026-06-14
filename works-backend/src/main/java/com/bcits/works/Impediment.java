@@ -22,6 +22,7 @@ public class Impediment {
     @NotBlank private String title;
     @Column(columnDefinition = "TEXT") private String description;
     private String category;
+    private String raiseType = "IMPEDIMENT"; // IMPEDIMENT | RISK | DEPENDENCY | SCOPE_CHANGE | DECISION_NEEDED | ESCALATION
     private String severity = "MEDIUM";   // LOW | MEDIUM | HIGH | CRITICAL
     private String status = "OPEN";       // OPEN | IN_PROGRESS | ESCALATED | RESOLVED
     private String ownerId;
@@ -34,8 +35,14 @@ public class Impediment {
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
     private OffsetDateTime deletedAt;
+    // Derived per request, never stored: SLA flag for CRITICAL raises left unresolved > 1 day.
+    @jakarta.persistence.Transient private boolean slaBreached;
 
     public String getId() { return id; }
+    public String getRaiseType() { return raiseType; }
+    public void setRaiseType(String raiseType) { this.raiseType = raiseType; }
+    public boolean isSlaBreached() { return slaBreached; }
+    public void setSlaBreached(boolean slaBreached) { this.slaBreached = slaBreached; }
     public void setId(String id) { this.id = id; }
     public String getWorkspaceId() { return workspaceId; }
     public void setWorkspaceId(String workspaceId) { this.workspaceId = workspaceId; }

@@ -20,12 +20,19 @@ import java.util.Map;
 public class Iteration15AiController {
 
     private final Iteration15AiService service;
+    private final SprintVarianceService varianceService;
+    private final CockpitCoachService coachService;
+    private final CockpitDigestService digestService;
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
 
-    public Iteration15AiController(Iteration15AiService service, AuthenticatedUser authenticatedUser,
-                                   RbacService rbac) {
+    public Iteration15AiController(Iteration15AiService service, SprintVarianceService varianceService,
+                                   CockpitCoachService coachService, CockpitDigestService digestService,
+                                   AuthenticatedUser authenticatedUser, RbacService rbac) {
         this.service = service;
+        this.varianceService = varianceService;
+        this.coachService = coachService;
+        this.digestService = digestService;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
     }
@@ -67,6 +74,30 @@ public class Iteration15AiController {
     public Map<String, Object> riskPanel(@RequestParam String workspaceId, @RequestParam String sprintId) {
         String userId = requireMember(workspaceId);
         return service.midSprintRiskPanel(workspaceId, userId, sprintId);
+    }
+
+    @GetMapping("/cockpit/digest")
+    public Map<String, Object> digest(@RequestParam String workspaceId, @RequestParam String projectId) {
+        String userId = requireMember(workspaceId);
+        return digestService.digest(workspaceId, userId, projectId);
+    }
+
+    @PostMapping("/cockpit/pro-tips")
+    public Map<String, Object> proTips(@RequestParam String workspaceId, @RequestBody Map<String, Object> body) {
+        String userId = requireMember(workspaceId);
+        return coachService.proTips(workspaceId, userId, str(body, "projectId"), inContext(body));
+    }
+
+    @PostMapping("/cockpit/retro-cluster")
+    public Map<String, Object> retroCluster(@RequestParam String workspaceId, @RequestBody Map<String, Object> body) {
+        String userId = requireMember(workspaceId);
+        return coachService.clusterRetro(workspaceId, userId, str(body, "retroId"), inContext(body));
+    }
+
+    @GetMapping("/cockpit/variance")
+    public Map<String, Object> variance(@RequestParam String workspaceId, @RequestParam String sprintId) {
+        String userId = requireMember(workspaceId);
+        return varianceService.variance(workspaceId, userId, sprintId);
     }
 
     @PostMapping("/cockpit/review-prep")

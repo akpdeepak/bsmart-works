@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { expectNoA11yViolations } from '@/test/a11y';
 import TrashView from './trash-view';
 
 const noop = () => {};
@@ -39,5 +40,13 @@ describe('TrashView', () => {
     render(<TrashView {...baseProps} permanentDelete={permanentDelete} trashItems={[{ id: 'WRK-9', title: 'X', type: 'Task' }]} />);
     fireEvent.click(screen.getByRole('button', { name: 'Delete permanently' }));
     expect(permanentDelete).toHaveBeenCalledWith('WRK-9');
+  });
+
+  it('has no serious a11y violations', async () => {
+    const { container } = render(
+      <TrashView {...baseProps}
+        trashItems={[{ id: 'WRK-9', title: 'Old task', type: 'Task', deletedAt: '2026-06-01' }]} />,
+    );
+    await expectNoA11yViolations(container);
   });
 });

@@ -8,6 +8,9 @@ import java.util.List;
 public interface DependencyRepository extends JpaRepository<Dependency, String> {
     List<Dependency> findByProjectIdAndDeletedAtIsNull(String projectId);
 
+    /** Bounded to a project within its owning workspace (RB-40 §1) — a foreign projectId cannot leak rows. */
+    List<Dependency> findByProjectIdAndWorkspaceIdAndDeletedAtIsNull(String projectId, String workspaceId);
+
     /** Workspace-scoped fallback (RB-40 §1): only dependencies in workspaces the caller belongs to. */
     @Query(nativeQuery = true,
            value = "SELECT * FROM dependency WHERE deleted_at IS NULL " +

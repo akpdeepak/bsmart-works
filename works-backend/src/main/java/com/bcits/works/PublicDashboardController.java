@@ -24,38 +24,45 @@ public class PublicDashboardController {
 
     private final DashboardRepository dashboardRepository;
     private final DashboardWidgetRepository widgetRepository;
-    private final AggregationService aggregationService;
     private final JdbcTemplate jdbc;
 
     public PublicDashboardController(DashboardRepository dashboardRepository,
                                      DashboardWidgetRepository widgetRepository,
-                                     AggregationService aggregationService, JdbcTemplate jdbc) {
+                                     JdbcTemplate jdbc) {
         this.dashboardRepository = dashboardRepository;
         this.widgetRepository = widgetRepository;
-        this.aggregationService = aggregationService;
         this.jdbc = jdbc;
     }
 
     @GetMapping("/dashboards/{token}")
     public ResponseEntity<Map<String, Object>> getByToken(@PathVariable String token) {
         if (token == null || token.isBlank()) return ResponseEntity.notFound().build();
+        // System / unfiltered escape hatch (RB-40 §1): this endpoint is unauthenticated and resolves
+        // the workspace from the share token itself, not the caller — so the central tenant filter
+        // (which keys off the authenticated caller's workspace) must be off. The explicit
+        // workspace_id predicate below remains the entire scope.
+        return TenantScope.callAsSystem(() -> getByTokenInternal(token));
+    }
+
+    private ResponseEntity<Map<String, Object>> getByTokenInternal(String token) {
         return dashboardRepository.findByShareToken(token)
             .map(d -> {
                 Map<String, Object> out = new LinkedHashMap<>();
                 out.put("name", d.getName());
                 out.put("layoutCols", d.getLayoutCols());
                 out.put("widgets", widgetRepository.findByDashboardIdOrderByPositionAsc(d.getId()));
-                AggregationService.ScopeFilter f =
-                    aggregationService.resolve("ORG", null, null, List.of(), d.getWorkspaceId());
-                out.put("aggregate", buildAggregate(f));
+                // ORG aggregate, scoped to THIS dashboard's workspace (taken from the token, never
+                // the caller — RB-40 §1). The workspace predicate is the whole scope.
+                out.put("aggregate", buildAggregate(d.getWorkspaceId()));
                 return ResponseEntity.ok(out);
             })
             .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    private Map<String, Object> buildAggregate(AggregationService.ScopeFilter filter) {
-        String where = filter.sql() + " AND deleted_at IS NULL";
-        Object[] params = filter.params();
+    private Map<String, Object> buildAggregate(String workspaceId) {
+        String where = "deleted_at IS NULL "
+            + "AND project_id IN (SELECT id FROM projects WHERE workspace_id = ?)";
+        Object[] params = new Object[]{ workspaceId };
         Long total = jdbc.queryForObject("SELECT COUNT(*) FROM work_items WHERE " + where, Long.class, params);
         Map<String, Object> agg = new LinkedHashMap<>();
         agg.put("scope", "ORG");

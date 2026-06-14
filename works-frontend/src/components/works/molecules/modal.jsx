@@ -24,7 +24,7 @@ const SIZES = {
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-export function Modal({ title, onClose, children, size = 'md', className }) {
+export function Modal({ title, onClose, children, size = 'md', className, initialFocus }) {
   const dialogRef = React.useRef(null);
   const titleId = React.useId();
 
@@ -35,8 +35,13 @@ export function Modal({ title, onClose, children, size = 'md', className }) {
     body.style.overflow = 'hidden'; // scroll lock
 
     const node = dialogRef.current;
-    const initial = node?.querySelectorAll(FOCUSABLE)[0] ?? node;
+    // Prefer an explicit target (e.g. a prompt's text field) so focus is deterministic; otherwise
+    // fall back to the first focusable node (usually the close button) — unchanged default.
+    const initial = initialFocus?.current ?? node?.querySelectorAll(FOCUSABLE)[0] ?? node;
     initial?.focus();
+    // Select existing text only for an explicitly-targeted field, so a prompt's default value is
+    // easy to overtype. Never alters the default (close-button) focus path.
+    if (initialFocus?.current && typeof initial?.select === 'function') initial.select();
 
     function onKeyDown(e) {
       if (e.key === 'Escape') {
@@ -67,7 +72,9 @@ export function Modal({ title, onClose, children, size = 'md', className }) {
       body.style.overflow = prevOverflow;
       if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
     };
-  }, [onClose]);
+    // initialFocus is a stable ref (or undefined); listed to satisfy exhaustive-deps without
+    // adding re-runs.
+  }, [onClose, initialFocus]);
 
   return (
     <div className="fixed inset-0 z-modal flex items-center justify-center p-4">

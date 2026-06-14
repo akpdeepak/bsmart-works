@@ -4,6 +4,7 @@ import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { Settings } from 'lucide-react';
 import { ALL_TYPES, CATEGORIES, resolveTypeIcon } from '@/lib/work-item-types';
+import { useDialog } from '@/lib/dialog';
 import { cn } from '@/lib/utils';
 
 // Category + outcome vocabularies (backend-canonical values → friendly labels).
@@ -36,6 +37,7 @@ const hrs = (v) => (v === null || v === undefined ? '' : String(v));
  * /workflows/{id}/statuses CRUD endpoints.
  */
 export default function StatusManagementTab({ api, workspaceId, reportError }) {
+  const { confirm } = useDialog();
   const [configs, setConfigs] = useState(null); // null = loading
   const [selectedType, setSelectedType] = useState(ALL_TYPES[0]?.typeKey ?? null);
   const [adding, setAdding] = useState(false);
@@ -70,8 +72,14 @@ export default function StatusManagementTab({ api, workspaceId, reportError }) {
   const patchStatus = (s, patch) => mutate(() =>
     api.send(`/workflows/${wfId}/statuses/${s.id}`, { method: 'PUT', body: { ...s, ...patch } }));
 
-  const deleteStatus = (s) => {
-    if (!window.confirm(`Delete status "${s.name}"? Items currently in this status keep their value until moved.`)) return;
+  const deleteStatus = async (s) => {
+    const ok = await confirm({
+      title: 'Delete status',
+      message: `Delete status "${s.name}"? Items currently in this status keep their value until moved.`,
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    });
+    if (!ok) return;
     mutate(() => api.send(`/workflows/${wfId}/statuses/${s.id}`, { method: 'DELETE' }).catch((e) => {
       // DELETE returns 204 (no body) — api.send tries to parse JSON; treat empty as success.
       if (e?.status && e.status !== 204) throw e;

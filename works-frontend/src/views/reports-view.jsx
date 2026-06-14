@@ -153,6 +153,32 @@ function BreakdownList({ title, rows, max }) {
   );
 }
 
+// Circular progress gauge — an at-a-glance infographic for a single percentage (completion,
+// points delivered, time elapsed). Pure SVG; coloured via currentColor + a text-token class so it
+// stays token-only (RB-30 §2) and dark-mode aware; accessible via role=img + aria-label.
+function RingGauge({ value, label, sublabel, tone = 'navy' }) {
+  const pct = Math.max(0, Math.min(100, Math.round(value || 0)));
+  const r = 30;
+  const circ = 2 * Math.PI * r;
+  const toneText = {
+    navy: 'text-brand-navy-tint', success: 'text-semantic-success',
+    orange: 'text-brand-orange', warning: 'text-semantic-warning', danger: 'text-semantic-danger',
+  }[tone] || 'text-brand-navy-tint';
+  return (
+    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 flex flex-col items-center text-center"
+      role="img" aria-label={`${label}: ${pct}%`}>
+      <svg viewBox="0 0 72 72" className="h-20 w-20" aria-hidden="true">
+        <circle cx="36" cy="36" r={r} fill="none" strokeWidth="8" stroke="currentColor" className="text-neutral-100 dark:text-neutral-700" />
+        <circle cx="36" cy="36" r={r} fill="none" strokeWidth="8" strokeLinecap="round" stroke="currentColor" className={toneText}
+          strokeDasharray={circ} strokeDashoffset={circ - (pct / 100) * circ} transform="rotate(-90 36 36)" />
+        <text x="36" y="41" textAnchor="middle" fontSize="17" fontWeight="700" fill="currentColor" className="text-neutral-900 dark:text-neutral-100">{pct}%</text>
+      </svg>
+      <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 mt-1">{label}</p>
+      {sublabel && <p className="text-xs text-neutral-500 dark:text-neutral-400">{sublabel}</p>}
+    </div>
+  );
+}
+
 const isDone = (it) => statusToCategory(it.status) === 'done';
 const isBlocked = (it) => statusToCategory(it.status) === 'blocked';
 const pts = (it) => (it.story_points ? Number(it.story_points) : 0);
@@ -218,42 +244,8 @@ export default function ReportsView({
 
   return (
     <div className="p-8 max-w-5xl">
-      <h1 className="text-2xl font-bold text-brand-navy mb-1">{t('insights.reports.title')}</h1>
+      <h1 className="text-2xl font-bold text-brand-navy dark:text-white mb-1">{t('insights.reports.title')}</h1>
       <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">{t('insights.reports.subtitle')}</p>
-
-      <ReportPivotStrip workspaceId={activeWorkspaceId} />
-
-      {/* VELOCITY CHART — multi-sprint comparison */}
-      {velocityData.length > 0 && (
-        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 mb-6">
-          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">{t('insights.reports.velocityAll')}</h3>
-          <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-4">{t('insights.reports.velocityHint')}</p>
-          <div className="flex items-end gap-3 overflow-x-auto pb-2">
-            {velocityData.map((s) => {
-              const maxVal = Math.max(...velocityData.map(x => Math.max(x.capacity || 0, x.totalPoints, 1)));
-              const capH = Math.round(((s.capacity || 0) / maxVal) * 120);
-              const doneH = Math.round((s.donePoints / maxVal) * 120);
-              const totalH = Math.round((s.totalPoints / maxVal) * 120);
-              return (
-                <div key={s.sprintId} className="flex flex-col items-center gap-1 min-w-20">
-                  <div className="flex items-end gap-1 h-32">
-                    <div className="flex flex-col justify-end h-32"><div className="w-5 rounded-t bg-neutral-200 dark:bg-neutral-600" style={{ height: `${capH}px` }} title={`Capacity: ${s.capacity}pt`}></div></div>
-                    <div className="flex flex-col justify-end h-32"><div className="w-5 rounded-t bg-brand-navy-tint" style={{ height: `${totalH}px` }} title={`Committed: ${s.totalPoints}pt`}></div></div>
-                    <div className="flex flex-col justify-end h-32"><div className="w-5 rounded-t bg-semantic-success" style={{ height: `${doneH}px` }} title={`Delivered: ${s.donePoints}pt`}></div></div>
-                  </div>
-                  <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center leading-tight max-w-20 truncate">{s.sprintName.replace('Sprint ', 'S').replace(' — ', ' ')}</p>
-                  <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${s.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'}`}>{s.status}</span>
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex items-center gap-4 mt-3 text-xs text-neutral-600 dark:text-neutral-400">
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-neutral-200 dark:bg-neutral-600 inline-block"></span>{t('insights.reports.capacity')}</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-brand-navy-tint inline-block"></span>{t('insights.reports.committed')}</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-semantic-success inline-block"></span>{t('insights.reports.delivered')}</span>
-          </div>
-        </div>
-      )}
 
       {sprints.length === 0
         ? <EmptyState icon={BarChart2} title={t('insights.reports.emptyTitle')} subtitle={t('insights.reports.emptySubtitle')} />
@@ -299,6 +291,22 @@ export default function ReportsView({
                       </div>
                     </div>
                   )}
+                </div>
+
+                {/* At a glance — visual ring gauges for the headline progress signals */}
+                <div>
+                  <h3 className="text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400 font-semibold mb-2">{t('insights.reports.atAGlance')}</h3>
+                  <div className={`grid grid-cols-2 ${p ? 'md:grid-cols-3' : ''} gap-3`}>
+                    <RingGauge value={sprintReport.completionRate} tone="success"
+                      label={t('insights.reports.completion')} sublabel={`${sprintReport.doneItems}/${sprintReport.totalItems}`} />
+                    <RingGauge value={sprintReport.velocityRate} tone="orange"
+                      label={t('insights.reports.pointsDelivered')} sublabel={`${sprintReport.donePoints}/${sprintReport.totalPoints} ${t('insights.reports.points')}`} />
+                    {p && (
+                      <RingGauge value={p.timePct} tone={p.tone === 'danger' ? 'danger' : 'navy'}
+                        label={t('insights.reports.timeElapsed')}
+                        sublabel={p.ended ? t('insights.reports.sprintEnded') : `${p.remaining} ${t('insights.reports.daysLeft')}`} />
+                    )}
+                  </div>
                 </div>
 
                 {/* KPI cards */}
@@ -446,6 +454,42 @@ export default function ReportsView({
             )}
           </>
       }
+
+      {/* Workspace context — across all sprints, shown below the selected-sprint report. */}
+      <div className="mt-8 pt-6 border-t border-neutral-200 dark:border-neutral-700">
+        <h2 className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-4">{t('insights.reports.acrossSprints')}</h2>
+        {velocityData.length > 0 && (
+          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 mb-6">
+            <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">{t('insights.reports.velocityAll')}</h3>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-4">{t('insights.reports.velocityHint')}</p>
+            <div className="flex items-end gap-3 overflow-x-auto pb-2">
+              {velocityData.map((s) => {
+                const maxVal = Math.max(...velocityData.map(x => Math.max(x.capacity || 0, x.totalPoints, 1)));
+                const capH = Math.round(((s.capacity || 0) / maxVal) * 120);
+                const doneH = Math.round((s.donePoints / maxVal) * 120);
+                const totalH = Math.round((s.totalPoints / maxVal) * 120);
+                return (
+                  <div key={s.sprintId} className="flex flex-col items-center gap-1 min-w-20">
+                    <div className="flex items-end gap-1 h-32">
+                      <div className="flex flex-col justify-end h-32"><div className="w-5 rounded-t bg-neutral-200 dark:bg-neutral-600" style={{ height: `${capH}px` }} title={`Capacity: ${s.capacity}pt`}></div></div>
+                      <div className="flex flex-col justify-end h-32"><div className="w-5 rounded-t bg-brand-navy-tint" style={{ height: `${totalH}px` }} title={`Committed: ${s.totalPoints}pt`}></div></div>
+                      <div className="flex flex-col justify-end h-32"><div className="w-5 rounded-t bg-semantic-success" style={{ height: `${doneH}px` }} title={`Delivered: ${s.donePoints}pt`}></div></div>
+                    </div>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center leading-tight max-w-20 truncate">{s.sprintName.replace('Sprint ', 'S').replace(' — ', ' ')}</p>
+                    <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${s.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'}`}>{s.status}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-4 mt-3 text-xs text-neutral-600 dark:text-neutral-400">
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-neutral-200 dark:bg-neutral-600 inline-block"></span>{t('insights.reports.capacity')}</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-brand-navy-tint inline-block"></span>{t('insights.reports.committed')}</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-semantic-success inline-block"></span>{t('insights.reports.delivered')}</span>
+            </div>
+          </div>
+        )}
+        <ReportPivotStrip workspaceId={activeWorkspaceId} />
+      </div>
     </div>
   );
 }

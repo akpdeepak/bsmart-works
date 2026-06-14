@@ -7,6 +7,7 @@ import App from './App.jsx'
 import CustomerPortal from './CustomerPortal.jsx'
 import { ErrorBoundary } from './components/works/error-boundary.jsx'
 import { I18nProvider } from './lib/i18n.jsx'
+import { DialogProvider } from './lib/dialog.jsx'
 import { registerServiceWorker } from './lib/sw-register'
 
 // Register the PWA service worker for offline support + installability (iteration 18, Cap S).
@@ -21,7 +22,9 @@ createRoot(document.getElementById('root')).render(
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>
         <I18nProvider>
-          {isPortal ? <CustomerPortal /> : <App />}
+          <DialogProvider>
+            {isPortal ? <CustomerPortal /> : <App />}
+          </DialogProvider>
         </I18nProvider>
       </ErrorBoundary>
     </QueryClientProvider>

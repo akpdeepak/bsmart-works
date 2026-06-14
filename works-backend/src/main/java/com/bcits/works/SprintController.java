@@ -3,7 +3,6 @@ package com.bcits.works;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,7 +16,6 @@ import jakarta.validation.Valid;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -32,19 +30,19 @@ public class SprintController {
     private final SprintRepository sprintRepository;
     private final WorkItemRepository workItemRepository;
     private final EventService eventService;
-    private final JdbcTemplate jdbc;
+    private final SprintDao sprintDao;
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
     private final StatusConfigService statusConfig;
 
     public SprintController(SprintRepository sprintRepository, WorkItemRepository workItemRepository,
-                            EventService eventService, JdbcTemplate jdbc,
+                            EventService eventService, SprintDao sprintDao,
                             AuthenticatedUser authenticatedUser, RbacService rbac,
                             StatusConfigService statusConfig) {
         this.sprintRepository = sprintRepository;
         this.workItemRepository = workItemRepository;
         this.eventService = eventService;
-        this.jdbc = jdbc;
+        this.sprintDao = sprintDao;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
         this.statusConfig = statusConfig;
@@ -86,13 +84,7 @@ public class SprintController {
         // avoid an N+1 (previously one SUM query per sprint).
         if (!sprints.isEmpty()) {
             List<String> sprintIds = sprints.stream().map(Sprint::getId).toList();
-            String placeholders = String.join(",", Collections.nCopies(sprintIds.size(), "?"));
-            Map<String, Integer> usedBySprint = new HashMap<>();
-            jdbc.query(
-                "SELECT sprint_id, COALESCE(SUM(story_points), 0) AS pts FROM work_items "
-                    + "WHERE sprint_id IN (" + placeholders + ") AND deleted_at IS NULL GROUP BY sprint_id",
-                rs -> { usedBySprint.put(rs.getString("sprint_id"), rs.getInt("pts")); },
-                sprintIds.toArray());
+            Map<String, Integer> usedBySprint = sprintDao.usedPointsBySprint(sprintIds);
             sprints.forEach(s -> s.setUsedPoints(usedBySprint.getOrDefault(s.getId(), 0)));
         }
         return sprints;
@@ -148,7 +140,7 @@ public class SprintController {
         String wsId = rbac.workspaceForProject(existing.getProjectId());
         if (wsId != null) rbac.require(userId, wsId, "manage_sprints");
         // Move items back to backlog
-        jdbc.update("UPDATE work_items SET sprint_id = NULL WHERE sprint_id = ?", id);
+        sprintDao.clearSprintFromItems(id);
         sprintRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
@@ -163,21 +155,7 @@ public class SprintController {
         if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
             throw ApiException.notFound("Sprint", id);
         }
-        return jdbc.query(
-            "SELECT * FROM work_items WHERE sprint_id = ? ORDER BY backlog_order ASC",
-            (rs, row) -> {
-                WorkItem w = new WorkItem();
-                w.setId(rs.getString("id"));
-                w.setTitle(rs.getString("title"));
-                w.setStatus(rs.getString("status"));
-                w.setType(rs.getString("type"));
-                w.setAssigneeId(rs.getString("assignee_id"));
-                w.setSprintId(rs.getString("sprint_id"));
-                w.setStoryPoints(rs.getObject("story_points") != null ? rs.getInt("story_points") : 0);
-                w.setPriority(rs.getString("priority"));
-                w.setParentId(rs.getString("parent_id"));
-                return w;
-            }, id);
+        return sprintDao.itemsForSprint(id);
     }
 
     // Move item into sprint
@@ -190,7 +168,7 @@ public class SprintController {
         rbac.require(userId, wsId, "manage_sprints");
         // The item must live in the sprint's workspace — never pull another tenant's item in (RB-40 §1).
         if (!wsId.equals(rbac.workspaceForWorkItem(itemId))) throw ApiException.notFound("Work item", itemId);
-        jdbc.update("UPDATE work_items SET sprint_id = ? WHERE id = ?", id, itemId);
+        sprintDao.assignItemToSprint(id, itemId);
         return Map.of("message", "Item added to sprint");
     }
 
@@ -202,7 +180,7 @@ public class SprintController {
         String wsId = rbac.workspaceForProject(sprint.getProjectId());
         if (wsId == null) throw ApiException.notFound("Sprint", id);
         rbac.require(userId, wsId, "manage_sprints");
-        jdbc.update("UPDATE work_items SET sprint_id = NULL WHERE id = ? AND sprint_id = ?", itemId, id);
+        sprintDao.removeItemFromSprint(itemId, id);
         return Map.of("message", "Item moved to backlog");
     }
 
@@ -216,8 +194,7 @@ public class SprintController {
         List<Map<String, Object>> result = new ArrayList<>();
         for (Sprint sprint : sprints) {
             String wsId = rbac.workspaceForProject(sprint.getProjectId());
-            List<Map<String, Object>> items = jdbc.queryForList(
-                "SELECT status, story_points, type FROM work_items WHERE sprint_id = ?", sprint.getId());
+            List<Map<String, Object>> items = sprintDao.velocityItems(sprint.getId());
             int totalPoints = items.stream()
                     .mapToInt(i -> i.get("story_points") != null
                             ? ((Number) i.get("story_points")).intValue() : 0)
@@ -255,11 +232,7 @@ public class SprintController {
         // Enriched item set drives the report's breakdowns (by type / assignee / priority) and the
         // at-risk list — assignee resolved to a display name, plus priority + due date (RB-20 §4:
         // the report should show the full picture, not just counts).
-        List<Map<String, Object>> items = jdbc.queryForList(
-            "SELECT wi.id, wi.title, wi.status, wi.type, wi.story_points, wi.assignee_id, "
-            + "wi.priority, wi.due_date, u.full_name AS assignee_name "
-            + "FROM work_items wi LEFT JOIN users u ON u.id = wi.assignee_id "
-            + "WHERE wi.sprint_id = ?", id);
+        List<Map<String, Object>> items = sprintDao.reportItems(id);
 
         // Bucket by resolved status category (not literal "Done"/"In Progress"/"Todo") so workspaces
         // with renamed/custom statuses report accurate completion (RB-20 §4); cached per type.
@@ -297,24 +270,10 @@ public class SprintController {
     @GetMapping("/{id}/scope-changes")
     public List<Map<String, Object>> getScopeChanges(@PathVariable String id) {
         // Items added (sprint_id changed TO this sprint after sprint started)
-        List<Map<String, Object>> added = jdbc.queryForList(
-            "SELECT e.occurred_at, 'ADDED' as change_type, e.aggregate_id as work_item_id, " +
-            "       wi.title, wi.type, u.full_name as actor_name " +
-            "FROM events e " +
-            "LEFT JOIN work_items wi ON wi.id = e.aggregate_id " +
-            "LEFT JOIN users u ON u.id = e.actor_id " +
-            "WHERE e.field_name = 'sprint_id' AND e.new_value = ? " +
-            "ORDER BY e.occurred_at ASC", id);
+        List<Map<String, Object>> added = sprintDao.scopeChangesAdded(id);
 
         // Items removed (sprint_id changed FROM this sprint)
-        List<Map<String, Object>> removed = jdbc.queryForList(
-            "SELECT e.occurred_at, 'REMOVED' as change_type, e.aggregate_id as work_item_id, " +
-            "       wi.title, wi.type, u.full_name as actor_name " +
-            "FROM events e " +
-            "LEFT JOIN work_items wi ON wi.id = e.aggregate_id " +
-            "LEFT JOIN users u ON u.id = e.actor_id " +
-            "WHERE e.field_name = 'sprint_id' AND e.old_value = ? " +
-            "ORDER BY e.occurred_at ASC", id);
+        List<Map<String, Object>> removed = sprintDao.scopeChangesRemoved(id);
 
         List<Map<String, Object>> all = new ArrayList<>(added);
         all.addAll(removed);

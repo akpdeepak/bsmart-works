@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { Star, SquarePen, X } from 'lucide-react';
 import { BoardWipBadge } from '@/components/works/organisms/board-wip-badge';
+import { WorkItemFilterBar } from '@/components/works/organisms/work-item-filter-bar';
+import { filterItems, sortItems, EMPTY_FILTERS, DEFAULT_SORT } from '@/lib/work-item-filter';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { Avatar } from '@/components/works/atoms/avatar';
 import { CardFieldsPopover } from '@/components/works/organisms/card-fields-popover';
@@ -63,22 +66,31 @@ export default function BoardView({
   onCustomFieldCreated,
   workspaceId,
   statusResolver,
+  currentUserId = null,
 }) {
   const { t } = useI18n();
   const columns = COLUMNS;
   const densityPad = DENSITY_PAD;
   const iv = cardPrefs?.isVisible ?? (() => true);
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [sort, setSort] = useState(DEFAULT_SORT);
   // Resolve an item's board category (per-type status config; legacy-safe fallback).
   const catOf = (item) => statusResolver
     ? statusResolver.categoryOf(item.type, item.status)
     : statusToCategory(item.status);
+  // Apply the shared filter model once; columns then group + sort the visible subset.
+  const visibleItems = filterItems(workItems, filters, currentUserId);
 
   return (
     <div className="p-6 h-full flex flex-col">
       <div className="flex justify-between items-center mb-5">
         <div>
           <h1 className="text-xl font-bold text-brand-navy">{t('deliver.board.title')}</h1>
-          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{workItems.length} {t('deliver.board.itemsTotal')}</p>
+          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
+            {visibleItems.length === workItems.length
+              ? `${workItems.length} ${t('deliver.board.itemsTotal')}`
+              : `${visibleItems.length} / ${workItems.length} ${t('deliver.board.itemsTotal')}`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {/* Fields popover */}
@@ -100,6 +112,17 @@ export default function BoardView({
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="mb-4">
+        <WorkItemFilterBar
+          items={workItems}
+          filters={filters}
+          onFiltersChange={setFilters}
+          sort={sort}
+          onSortChange={setSort}
+          userName={userName}
+        />
       </div>
 
       {loading ? (
@@ -127,7 +150,7 @@ export default function BoardView({
       ) : (
         <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
           {columns.map(col => {
-            const colItems = workItems.filter(i => catOf(i) === col.key);
+            const colItems = sortItems(visibleItems.filter(i => catOf(i) === col.key), sort);
             const wipLimit = wipLimits[col.limitKey] ?? null;
             const overWip = wipLimit != null && colItems.length > wipLimit;
             return (

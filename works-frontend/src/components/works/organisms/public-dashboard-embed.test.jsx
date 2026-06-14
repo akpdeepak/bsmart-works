@@ -17,7 +17,11 @@ const SAMPLE = {
   widgets: [
     { id: 1, widgetType: 'SCORECARD', title: 'Open items', config: '{"filter":{"open":true}}', gridW: 3 },
     { id: 2, widgetType: 'STATUS_BAR', title: 'By status', config: '{}', gridW: 6 },
+    { id: 3, widgetType: 'PIVOT', title: 'Custom chart', config: '{"spec":{"chartType":"bar","sourceKind":"guided","measures":[{"field":"*","agg":"COUNT"}],"dimensions":["status"]}}', gridW: 6 },
   ],
+  // The server pre-resolves PIVOT widgets (workspace from the token) and ships them keyed by id, so
+  // the embed renders them without an authenticated workspace context (the public-embed PIVOT gap).
+  pivots: { 3: { dimensions: ['status'], measures: ['count_all'], rows: [{ status: 'Open', count_all: 7 }] } },
   aggregate: { scope: 'ORG', total: 12, byStatus: [{ label: 'Open', value: 12 }], byType: [], byPriority: [], recent: [] },
 };
 
@@ -36,6 +40,19 @@ describe('PublicDashboardEmbed', () => {
     // The shareable (non-embedded) surface shows its read-only header + the dashboard name.
     expect(screen.getByText('Customer Status')).toBeInTheDocument();
     expect(screen.getByText(/read-only/i)).toBeInTheDocument();
+  });
+
+  it('renders a PIVOT widget from the server-resolved pivots — no "no workspace" error (embed gap fix)', async () => {
+    api.raw.mockReturnValue(mockResponse(SAMPLE));
+
+    render(<PublicDashboardEmbed token="abc123" embedded />);
+
+    expect(await screen.findByText('Custom chart')).toBeInTheDocument();
+    // The pre-resolved bar chart renders its status row from data.pivots[3] — assert on the chart's
+    // own text-alternative label (the SCORECARD also contains "Open", so scope to the bar chart).
+    expect(await screen.findByLabelText(/bar chart: open 7/i)).toBeInTheDocument();
+    // …and never falls back to the "no workspace selected" error the embed previously hit.
+    expect(screen.queryByText(/no workspace/i)).not.toBeInTheDocument();
   });
 
   it('renders chrome-less when embedded — no header chrome, name only for screen readers', async () => {

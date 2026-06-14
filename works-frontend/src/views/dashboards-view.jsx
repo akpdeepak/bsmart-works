@@ -13,6 +13,7 @@ import { capabilityEnabled } from '@/lib/ai';
 import { DashboardAiSummary } from '@/components/works/organisms/dashboard-ai-summary';
 import { useI18n } from '@/lib/i18n';
 import { absoluteDate } from '@/lib/format';
+import { EXTRA_WIDGET_PRESETS, EXTRA_WIDGET_CATEGORIES } from '@/lib/dashboard-metrics';
 
 // Status breakdown of the items already on screen — the chartable series the AI summary band reads.
 // Built from data the client already rendered (no re-query); empty when there is nothing to chart.
@@ -25,15 +26,18 @@ function statusSeries(items) {
   return Array.from(counts, ([label, value]) => ({ label, value }));
 }
 
-const EXTRA_WIDGET_CATEGORIES = ['Agile', 'Performance', 'AI', 'Compliance'];
-const EXTRA_WIDGET_PRESETS = [
-  { category: 'Agile', type: 'VELOCITY_CHART', config: {}, title: 'Velocity', w: 4 },
-  { category: 'Agile', type: 'BURNDOWN', config: {}, title: 'Burndown', w: 6 },
-  { category: 'Agile', type: 'CUMFLOW', config: {}, title: 'Cumulative flow', w: 6 },
-  { category: 'Performance', type: 'CYCLE_TIME', config: {}, title: 'Cycle time', w: 4 },
-  { category: 'Performance', type: 'THROUGHPUT', config: {}, title: 'Throughput', w: 4 },
-  { category: 'AI', type: 'AI_USAGE', config: {}, title: 'AI usage', w: 4 },
-  { category: 'Compliance', type: 'SLA_HEALTH', config: {}, title: 'SLA health', w: 6 },
+// Opinionated starter set for a brand-new dashboard (RB-20 §3 — defaults for the 80%). Every widget
+// renders real, workspace-scoped data with no configuration: at-a-glance counts, distribution, the
+// active sprint, and the most-recent items. One click → a useful dashboard, not a blank canvas.
+const STARTER_WIDGETS = [
+  { type: 'SCORECARD', config: { filter: { open: true } }, title: 'Open items', w: 3 },
+  { type: 'SCORECARD', config: { filter: { overdue: true } }, title: 'Overdue', w: 3 },
+  { type: 'SCORECARD', config: { filter: { highPriority: true, open: true } }, title: 'High priority (open)', w: 3 },
+  { type: 'SCORECARD', config: { filter: { blocked: true } }, title: 'Blocked', w: 3 },
+  { type: 'STATUS_BAR', config: {}, title: 'Items by status', w: 6 },
+  { type: 'PIE', config: { dimension: 'priority' }, title: 'Items by priority', w: 6 },
+  { type: 'SPRINT_HEALTH', config: {}, title: 'Sprint health', w: 6 },
+  { type: 'ITEM_LIST', config: { filter: { open: true }, limit: 6 }, title: 'Open work items', w: 6 },
 ];
 
 /**
@@ -106,6 +110,12 @@ export default function DashboardsView({
       updateDashboardWidgetConfig(editingPivot, { ...cfg, spec });
     }
     setEditingPivot(null);
+  };
+
+  // One-click "start from a template": drop the opinionated starter set onto an empty dashboard
+  // (RB-20 §3). Each call persists through the parent handler; the dashboard reloads with the set.
+  const addStarterWidgets = () => {
+    STARTER_WIDGETS.forEach((w) => addDashboardWidget(w.type, w.config, w.title, w.w));
   };
 
   return (
@@ -273,7 +283,12 @@ export default function DashboardsView({
             {(selectedDashboard.widgets || []).length === 0 ? (
               <EmptyState icon={Puzzle} title={t('insights.dashboards.emptyWidgetsTitle')}
                 subtitle={t('insights.dashboards.emptyWidgetsSubtitle')}
-                action={<Button variant="action" onClick={() => setDashboardEditMode(true)}>{t('insights.dashboards.editDashboard')}</Button>} />
+                action={
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <Button variant="action" onClick={addStarterWidgets}>Start from a template</Button>
+                    <Button variant="secondary" onClick={() => setDashboardEditMode(true)}>{t('insights.dashboards.editDashboard')}</Button>
+                  </div>
+                } />
             ) : (
               <div id="dashboard-export-area" className="grid grid-cols-12 gap-4">
                 {selectedDashboard.widgets.map(w => (

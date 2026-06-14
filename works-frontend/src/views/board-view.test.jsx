@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import BoardView from './board-view';
 
 const noop = () => {};
@@ -54,5 +54,33 @@ describe('BoardView', () => {
     expect(screen.getByRole('button', { name: /compact/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /comfortable/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /spacious/i })).toBeInTheDocument();
+  });
+
+  it('renders the filter/sort bar', () => {
+    render(<BoardView {...baseProps} />);
+    expect(screen.getByRole('searchbox', { name: /search items/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /my items/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/sort by/i)).toBeInTheDocument();
+  });
+
+  const twoItems = [
+    { id: 'WI-1', title: 'Fix login bug', type: 'Bug', status: 'Todo', priority: 'HIGH', assigneeId: 'u1', tags: [], starred: false },
+    { id: 'WI-2', title: 'Write the docs', type: 'Task', status: 'Todo', priority: 'LOW', assigneeId: 'u2', tags: [], starred: false },
+  ];
+
+  it('text search narrows the visible cards', () => {
+    render(<BoardView {...baseProps} workItems={twoItems} currentUserId="u1" />);
+    expect(screen.getByText('Fix login bug')).toBeInTheDocument();
+    expect(screen.getByText('Write the docs')).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('searchbox', { name: /search items/i }), { target: { value: 'login' } });
+    expect(screen.getByText('Fix login bug')).toBeInTheDocument();
+    expect(screen.queryByText('Write the docs')).not.toBeInTheDocument();
+  });
+
+  it('"My items" shows only the current user\'s items', () => {
+    render(<BoardView {...baseProps} workItems={twoItems} currentUserId="u1" />);
+    fireEvent.click(screen.getByRole('button', { name: /my items/i }));
+    expect(screen.getByText('Fix login bug')).toBeInTheDocument();
+    expect(screen.queryByText('Write the docs')).not.toBeInTheDocument();
   });
 });

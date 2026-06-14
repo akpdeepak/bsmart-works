@@ -26,7 +26,7 @@ vi.mock('@/lib/kpi', async () => {
     ...actual,
     kpiClient: {
       personal: vi.fn(), org: vi.fn(), manager: vi.fn(), team: vi.fn(), project: vi.fn(),
-      distribution: vi.fn(), shares: vi.fn(), share: vi.fn(), unshare: vi.fn(),
+      distribution: vi.fn(), health: vi.fn(), shares: vi.fn(), share: vi.fn(), unshare: vi.fn(),
     },
   };
 });
@@ -34,6 +34,10 @@ vi.mock('@/lib/kpi', async () => {
 vi.mock('@/lib/apiClient', () => ({ api: { send: vi.fn() } }));
 
 const DISTRIBUTION = { median: 36, p85: 200, buckets: [2, 5, 3, 1, 0], outliers: ['WI-101', 'WI-102'] };
+const HEALTH = {
+  teamId: 'TEAM-1', predictability: 85, scopeStability: 70, flowEfficiency: 40, overall: 65,
+  bands: ['predictability:healthy', 'scopeStability:watch', 'flowEfficiency:risk'],
+};
 const USERS = [
   { id: 'u-1', fullName: 'Alice Admin', email: 'alice@x.io' },
   { id: 'u-2', fullName: 'Bob Builder', email: 'bob@x.io' },
@@ -45,7 +49,10 @@ const PERSONAL = {
 };
 const TEAM_LAYER = {
   scopeLevel: 'TEAM', scopeId: 'TEAM-1', label: 'WEB Portal Team', privacyNote: 'aggregated',
-  metrics: [{ key: 'velocity', label: 'Velocity', value: 42, unit: 'points', sampleSize: 5 }],
+  metrics: [{
+    key: 'velocity', label: 'Velocity', value: 42, unit: 'points', sampleSize: 5, higherIsBetter: true,
+    trend: { previousValue: 30, delta: 12, previousPeriod: '2026-06-01T10', direction: 'UP', improving: true },
+  }],
 };
 const PROJECT_LAYER = {
   scopeLevel: 'PROJECT', scopeId: 'PROJ-1', label: 'Web Portal', privacyNote: 'aggregated',
@@ -68,6 +75,7 @@ beforeEach(() => {
   kpiClient.team.mockResolvedValue(TEAM_LAYER);
   kpiClient.project.mockResolvedValue(PROJECT_LAYER);
   kpiClient.distribution.mockResolvedValue(DISTRIBUTION);
+  kpiClient.health.mockResolvedValue(HEALTH);
   kpiClient.shares.mockResolvedValue([]);
   kpiClient.share.mockImplementation((_ws, viewerUserId) =>
     Promise.resolve({ id: 'SH-1', workspaceId: 'ws-1', ownerUserId: 'me', viewerUserId }));
@@ -144,6 +152,51 @@ describe('PerformancePanel', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Team' }));
     await waitFor(() => expect(kpiClient.team).toHaveBeenCalled());
     expect(screen.queryByText('Share my metrics with…')).not.toBeInTheDocument();
+  });
+
+  it('renders the vs-last-period trend on a metric that carries one', async () => {
+    renderWith(<PerformancePanel workspaceId="ws-1" />);
+    await screen.findByText('Throughput');
+    fireEvent.click(screen.getByRole('tab', { name: 'Team' }));
+    await waitFor(() => expect(kpiClient.team).toHaveBeenCalledWith('ws-1', 'TEAM-1'));
+    expect(await screen.findByText('+12')).toBeInTheDocument();
+    expect(screen.getByText('vs last period')).toBeInTheDocument();
+  });
+
+  it('shows an honest "no prior period" note when a metric has no trend', async () => {
+    // The default PERSONAL throughput metric carries no `trend` field.
+    renderWith(<PerformancePanel workspaceId="ws-1" />);
+    expect(await screen.findByText('No prior period to compare yet.')).toBeInTheDocument();
+  });
+
+  it('shows an honest empty per-metric card when the sample size is zero', async () => {
+    kpiClient.personal.mockResolvedValue({
+      ...PERSONAL,
+      metrics: [{ key: 'throughput', label: 'Throughput', value: 0, unit: 'count', sampleSize: 0 }],
+    });
+    renderWith(<PerformancePanel workspaceId="ws-1" />);
+    await screen.findByText('Throughput');
+    expect(await screen.findByText('No data yet')).toBeInTheDocument();
+  });
+
+  it('renders the team-health composite with banded gauges on the Team layer', async () => {
+    renderWith(<PerformancePanel workspaceId="ws-1" />);
+    await screen.findByText('Throughput');
+    fireEvent.click(screen.getByRole('tab', { name: 'Team' }));
+    await waitFor(() => expect(kpiClient.health).toHaveBeenCalledWith('ws-1', 'TEAM-1'));
+    expect(await screen.findByText('Team health')).toBeInTheDocument();
+    expect(screen.getByText('Predictability')).toBeInTheDocument();
+    expect(screen.getByText('Scope stability')).toBeInTheDocument();
+    expect(screen.getByText('Flow efficiency')).toBeInTheDocument();
+    // Bands: predictability 85 → Healthy, flow efficiency 40 → Risk.
+    expect(screen.getByText('Healthy')).toBeInTheDocument();
+    expect(screen.getByText('Risk')).toBeInTheDocument();
+  });
+
+  it('does not render the team-health composite on the Individual layer', async () => {
+    renderWith(<PerformancePanel workspaceId="ws-1" />);
+    await screen.findByText('Throughput');
+    expect(screen.queryByText('Team health')).not.toBeInTheDocument();
   });
 
   it('renders an AiMetaBadge on the Explain-anomaly output (§2.4)', async () => {

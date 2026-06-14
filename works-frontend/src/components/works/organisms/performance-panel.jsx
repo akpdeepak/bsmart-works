@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ShieldCheck, Lock, Sparkles, TrendingUp, TrendingDown, Minus, Brain } from 'lucide-react';
 import { kpiClient } from '@/lib/kpi';
 import { api } from '@/lib/apiClient';
+import { useProjects } from '@/hooks/queries/useProjects';
 import { Badge } from '@/components/works/atoms/badge';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { Button } from '@/components/works/button';
@@ -127,7 +128,6 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem 
   const [error, setError] = useState(null);
   // null = not yet loaded; [] = loaded-but-empty (lets us distinguish loading from "no entities").
   const [teams, setTeams] = useState(null);
-  const [projects, setProjects] = useState(null);
   const [teamId, setTeamId] = useState('');
   const [projectId, setProjectId] = useState('');
   const [anomalyBusy, setAnomalyBusy] = useState(null); // metricKey currently explaining
@@ -136,6 +136,13 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem 
   // result never paints under a new scope, and so the effect never calls setState synchronously
   // (react-hooks/set-state-in-effect) — it only resolves in the async continuation.
   const [distByScope, setDistByScope] = useState({}); // scopeKey → { data } | { error }
+
+  // Projects come from the shared ONE-Source hook. `data` is undefined while loading; normalize to
+  // null so the loading-vs-"no projects" distinction below is preserved.
+  const projects = useProjects(workspaceId).data ?? null;
+  // The effective selection defaults to the first project until the user picks one explicitly — a
+  // pure derivation (no default-selection effect, so no synchronous setState in an effect).
+  const effectiveProjectId = projectId || projects?.[0]?.id || '';
 
   const aiOn = anyCapabilityEnabled(aiCapabilities);
 
@@ -154,24 +161,22 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem 
       .finally(() => setAnomalyBusy(null));
   };
 
-  // Load the team + project lists once per workspace so the Team/Project selectors have options and a
-  // default. setState only in the async continuation (react-hooks/set-state-in-effect).
+  // Load the team list once per workspace so the Team selector has options and a default. setState
+  // only in the async continuation (react-hooks/set-state-in-effect). Projects come from the shared
+  // useProjects hook (above); their default selection is handled in the effect below.
   useEffect(() => {
     if (!workspaceId) return undefined;
     let active = true;
     const enc = encodeURIComponent(workspaceId);
-    Promise.all([
-      Promise.resolve().then(() => api.send(`/teams?workspaceId=${enc}`)).catch(() => []),
-      Promise.resolve().then(() => api.send(`/projects?workspaceId=${enc}`)).catch(() => []),
-    ]).then(([t, p]) => {
-      if (!active) return;
-      const ts = Array.isArray(t) ? t : [];
-      const ps = Array.isArray(p) ? p : [];
-      setTeams(ts);
-      setProjects(ps);
-      setTeamId((cur) => cur || ts[0]?.id || '');
-      setProjectId((cur) => cur || ps[0]?.id || '');
-    });
+    Promise.resolve()
+      .then(() => api.send(`/teams?workspaceId=${enc}`))
+      .catch(() => [])
+      .then((t) => {
+        if (!active) return;
+        const ts = Array.isArray(t) ? t : [];
+        setTeams(ts);
+        setTeamId((cur) => cur || ts[0]?.id || '');
+      });
     return () => { active = false; };
   }, [workspaceId]);
 
@@ -188,20 +193,20 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem 
       if (!teamId) return () => { active = false; };
       fetcher = kpiClient.team(workspaceId, teamId).then((r) => ({ single: r }));
     } else if (layer === 'PROJECT') {
-      if (!projectId) return () => { active = false; };
-      fetcher = kpiClient.project(workspaceId, projectId).then((r) => ({ single: r }));
+      if (!effectiveProjectId) return () => { active = false; };
+      fetcher = kpiClient.project(workspaceId, effectiveProjectId).then((r) => ({ single: r }));
     } else return () => { active = false; };
     fetcher
       .then((next) => { if (active) { setData(next); setError(null); } })
       .catch((e) => { if (active) setError(e.message || 'Could not load metrics.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [workspaceId, layer, teamId, projectId]);
+  }, [workspaceId, layer, teamId, effectiveProjectId]);
 
   // Cycle-time distribution histogram (§3.7). MANAGER is a multi-team rollup with no single scope,
   // so it has no distribution; the other layers map cleanly to the backend's scopeLevel/scopeId.
   // setState happens only in the async continuation (react-hooks/set-state-in-effect).
-  const distScopeId = layer === 'TEAM' ? teamId : layer === 'PROJECT' ? projectId : undefined;
+  const distScopeId = layer === 'TEAM' ? teamId : layer === 'PROJECT' ? effectiveProjectId : undefined;
   const distNeedsId = layer === 'TEAM' || layer === 'PROJECT';
   const distScopeKey = layer === 'MANAGER' ? null : `${layer}:${distScopeId || ''}`;
   useEffect(() => {
@@ -223,7 +228,7 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem 
   const noProject = layer === 'PROJECT' && projects !== null && projects.length === 0;
   const noEntity = noTeam || noProject;
   const selectorItems = layer === 'TEAM' ? teams : layer === 'PROJECT' ? projects : null;
-  const selectorValue = layer === 'TEAM' ? teamId : projectId;
+  const selectorValue = layer === 'TEAM' ? teamId : effectiveProjectId;
 
   return (
     <div className="p-8 max-w-7xl">

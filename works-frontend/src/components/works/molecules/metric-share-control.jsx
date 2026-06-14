@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { UserPlus, X, Share2 } from 'lucide-react';
 import { kpiClient } from '@/lib/kpi';
-import { api } from '@/lib/apiClient';
+import { useWorkspaceUsers } from '@/hooks/queries/useWorkspaceUsers';
 import { Button } from '@/components/works/button';
 
 // Molecule — voluntary individual metric-sharing control (Cap L, iteration 12; spec §3.8).
@@ -13,25 +13,23 @@ import { Button } from '@/components/works/button';
 
 export function MetricShareControl({ workspaceId }) {
   const [shares, setShares] = useState(null); // null = loading; [] = loaded-empty
-  const [members, setMembers] = useState([]);
   const [error, setError] = useState(null);
   const [selected, setSelected] = useState('');
   const [adding, setAdding] = useState(false);
   const [revoking, setRevoking] = useState(null); // viewerUserId being revoked
 
-  // Load current shares + the workspace member list (for the viewer picker) once per workspace.
+  // The workspace member list (for the viewer picker) comes from the shared ONE-Source hook.
+  const members = useWorkspaceUsers(workspaceId).data || [];
+
+  // Load the current shares once per workspace (kpiClient is the source for sharing state).
   useEffect(() => {
     if (!workspaceId) return undefined;
     let active = true;
-    const enc = encodeURIComponent(workspaceId);
-    Promise.all([
-      Promise.resolve().then(() => kpiClient.shares(workspaceId)),
-      Promise.resolve().then(() => api.send(`/users?workspaceId=${enc}`)).catch(() => []),
-    ])
-      .then(([s, u]) => {
+    Promise.resolve()
+      .then(() => kpiClient.shares(workspaceId))
+      .then((s) => {
         if (!active) return;
         setShares(Array.isArray(s) ? s : []);
-        setMembers(Array.isArray(u) ? u : []);
         setError(null);
       })
       .catch((e) => { if (active) { setError(e.message || 'Could not load shares.'); setShares([]); } });

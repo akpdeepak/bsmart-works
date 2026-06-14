@@ -27,17 +27,20 @@ public class Iteration15AiService {
     private final AiControlPlaneService controlPlane;
     private final JdbcTemplate jdbc;
     private final SprintRepository sprints;
+    private final SprintDao sprintDao;
     private final ImpedimentRepository impediments;
     private final CustomerFeedbackRepository feedback;
     private final RbacService rbac;
 
     public Iteration15AiService(AiControlPlaneService controlPlane, JdbcTemplate jdbc,
-                                SprintRepository sprints, ImpedimentRepository impediments,
+                                SprintRepository sprints, SprintDao sprintDao,
+                                ImpedimentRepository impediments,
                                 CustomerFeedbackRepository feedback, RbacService rbac) {
         this.controlPlane = controlPlane;
         this.jdbc = jdbc;
         this.impediments = impediments;
         this.sprints = sprints;
+        this.sprintDao = sprintDao;
         this.feedback = feedback;
         this.rbac = rbac;
     }
@@ -65,7 +68,7 @@ public class Iteration15AiService {
     public Map<String, Object> sprintPlanningHelper(String workspaceId, String userId, String projectId,
                                                     Integer timeOffPoints, boolean inContext) {
         assertProjectInWorkspace(workspaceId, projectId);
-        int avgVelocity = averageVelocity(projectId);
+        int avgVelocity = sprintDao.averageVelocity(projectId);
         int capacity = Math.max(0, avgVelocity - (timeOffPoints == null ? 0 : timeOffPoints));
 
         // Refined, ready backlog items (have points + description), ranked by priority then points.
@@ -105,17 +108,6 @@ public class Iteration15AiService {
             }
         }
         return out;
-    }
-
-    private int averageVelocity(String projectId) {
-        List<Map<String, Object>> done = jdbc.queryForList(
-            "SELECT s.id, COALESCE(SUM(CASE WHEN wi.status = 'Done' THEN wi.story_points ELSE 0 END),0) AS done_points "
-            + "FROM sprints s LEFT JOIN work_items wi ON wi.sprint_id = s.id AND wi.deleted_at IS NULL "
-            + "WHERE s.project_id = ? AND s.status = 'COMPLETED' GROUP BY s.id ORDER BY s.created_at DESC LIMIT 3",
-            projectId);
-        if (done.isEmpty()) return 0;
-        long sum = done.stream().mapToLong(m -> ((Number) m.get("done_points")).longValue()).sum();
-        return (int) Math.round((double) sum / done.size());
     }
 
     // ── Cap V · Mid-sprint risk panel (I15-S04, deterministic) ───────────────────

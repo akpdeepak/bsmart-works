@@ -147,6 +147,28 @@ describe('i18n — Deliver surfaces + navigation shell (issue #275)', () => {
     }
   });
 
+  it('Sprint Cockpit shell + retro labels are translated across all 9 non-en locales', () => {
+    // Keys whose translations genuinely differ from English in every locale (proper nouns like
+    // "Scrum master"/"Retro" are intentionally kept verbatim in some locales, so they're excluded).
+    const sampleKeys = [
+      'deliver.cockpit.title',
+      'deliver.cockpit.roleDesc.default',
+      'deliver.cockpit.mode.run',
+      'deliver.cockpit.tab.health',
+      'deliver.cockpit.tab.variance',
+      'deliver.cockpit.retro.START',
+      'deliver.cockpit.raise',
+    ];
+    for (const locale of ['hi', 'es', 'fr', 'de', 'pt', 'ja', 'zh', 'ar', 'ko']) {
+      for (const key of sampleKeys) {
+        const translated = translate(locale, key);
+        expect(MESSAGES[locale][key]).toBeDefined();
+        expect(translated).not.toBe(translate('en', key));
+        expect(translated.trim()).not.toBe('');
+      }
+    }
+  });
+
   it('falls back to English when a Deliver-adjacent key is not externalized to a locale (never blank)', () => {
     // `sprint.goal` was never translated to the non-en catalogs (it pre-dates this increment and is
     // out of the externalized Deliver set), so the fallback path resolves to the English string.

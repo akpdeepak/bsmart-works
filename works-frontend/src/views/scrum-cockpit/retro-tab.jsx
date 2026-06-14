@@ -3,12 +3,14 @@ import { Button } from '@/components/works/button';
 import { Field } from '@/components/works/field';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { api } from '@/lib/apiClient';
+import { useI18n } from '@/lib/i18n';
 import { RETRO_COLUMNS } from './_shared';
 
 export function RetroTab({
   activeRetro, retros, openRetro, newRetro, setNewRetro, createRetro, setActiveRetro, clusterRetro,
   retroClusters, retroNoteDraft, setRetroNoteDraft, addRetroNote, voteRetroNote, convertRetroNote,
 }) {
+  const { t } = useI18n();
   return (
     <div>
       {!activeRetro ? (
@@ -74,7 +76,7 @@ export function RetroTab({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {RETRO_COLUMNS[activeRetro.session.template].map(col => (
               <div key={col.key} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3">
-                <h4 className="font-semibold text-sm mb-2 text-neutral-900 dark:text-neutral-100">{col.label}</h4>
+                <h4 className="font-semibold text-sm mb-2 text-neutral-900 dark:text-neutral-100">{t(`deliver.cockpit.retro.${col.key}`)}</h4>
                 <div className="space-y-2 mb-2">
                   {activeRetro.notes.filter(n => n.columnKey === col.key).map(n => (
                     <div key={n.id} className="bg-neutral-50 dark:bg-neutral-700 rounded-md p-2">

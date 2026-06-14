@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Lightbulb, Sparkles } from 'lucide-react';
 import { Button } from '@/components/works/button';
+import { useI18n } from '@/lib/i18n';
 import {
-  CEREMONY_LABELS, TAB_LABELS, ROLE_TABS, ROLE_LABELS, RUN_TABS, INSIGHTS_TABS,
+  CEREMONY_LABELS, ROLE_TABS, RUN_TABS, INSIGHTS_TABS,
   TIP_TONE, RAG_TONE, RAG_DOT,
 } from './scrum-cockpit/_shared';
 import { HealthTab } from './scrum-cockpit/health-tab';
@@ -43,6 +44,7 @@ export default function ScrumMasterCockpitView({
   setReviewSprintId, runReviewPrep, runPatterns,
   showToast, aiAction,
 }) {
+  const { t } = useI18n();
   const [tabTouched, setTabTouched] = useState(false); // has the user picked a tab this session?
   const roleKey = cockpitContext?.roleKey || 'scrum-master';
   // Until the context loads, keep the classic full cockpit — the server gates every action anyway.
@@ -100,14 +102,11 @@ export default function ScrumMasterCockpitView({
       <div className="flex items-center justify-between mb-5">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Sprint Cockpit</h1>
-            <span className="text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-md bg-brand-navy/10 text-brand-navy dark:bg-neutral-700 dark:text-neutral-200">{ROLE_LABELS[roleKey] || roleKey}</span>
+            <h1 className="text-2xl font-bold text-brand-navy dark:text-white">{t('deliver.cockpit.title')}</h1>
+            <span className="text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-md bg-brand-navy/10 text-brand-navy dark:bg-neutral-700 dark:text-neutral-200">{t(`deliver.cockpit.role.${roleKey}`)}</span>
           </div>
           <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            {roleKey === 'developer' ? 'Your standup, your blockers, your retro actions — in one place.'
-              : roleKey === 'product-owner' ? 'Planning, review prep and delivery patterns for the sprint.'
-              : roleKey === 'executive' ? 'Sprint health, risk and outcomes at a glance.'
-              : 'Run the sprint — ceremonies, standup, impediments, risk, retro and review in one place.'}
+            {t(`deliver.cockpit.roleDesc.${['developer', 'product-owner', 'executive'].includes(roleKey) ? roleKey : 'default'}`)}
           </p>
         </div>
         <select className="input text-sm py-1.5" value={i15ProjectId} aria-label="Project"
@@ -186,17 +185,17 @@ export default function ScrumMasterCockpitView({
       <div className="flex items-center justify-between gap-3 mb-3">
         {hasBothModes ? (
           <div className="inline-flex rounded-lg border border-neutral-200 dark:border-neutral-700 p-0.5" role="tablist" aria-label="Cockpit mode">
-            {[['run', 'Run'], ['insights', 'Insights']].map(([m, label]) => (
+            {['run', 'insights'].map((m) => (
               <button key={m} role="tab" aria-selected={mode === m}
                 onClick={() => selectTab(m === 'insights' ? insightsTabs[0] : runTabs[0])}
                 className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${mode === m ? 'bg-brand-navy text-white' : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100'}`}>
-                {label}
+                {t(`deliver.cockpit.mode.${m}`)}
               </button>
             ))}
           </div>
         ) : <span />}
         {visibleTabs.includes('impediments') && cockpitContext?.canCreateItems && (
-          <Button variant="action" onClick={() => selectTab('impediments')}>+ Raise</Button>
+          <Button variant="action" onClick={() => selectTab('impediments')}>+ {t('deliver.cockpit.raise')}</Button>
         )}
       </div>
 
@@ -204,7 +203,7 @@ export default function ScrumMasterCockpitView({
         {shownTabs.map(k => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => selectTab(k)}
             className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === k ? 'border-brand-navy text-brand-navy dark:text-white' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'}`}>
-            {TAB_LABELS[k]}
+            {t(`deliver.cockpit.tab.${k}`)}
           </button>
         ))}
       </div>

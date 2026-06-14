@@ -2,7 +2,8 @@ package com.bcits.works;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,8 @@ import java.util.stream.Collectors;
 @Service
 public class AutomationService {
 
+    private static final Logger log = LoggerFactory.getLogger(AutomationService.class);
+
     private final AutomationRuleRepository rules;
     private final AutomationRunRepository runs;
     private final WorkItemRepository workItems;
@@ -33,15 +36,14 @@ public class AutomationService {
     private final EventService events;
     private final WebhookService webhooks;
     private final AiControlPlaneService controlPlane;
-    private final JdbcTemplate jdbc;
-    private final BqlCompiler bqlCompiler;
+    private final BqlQueryExecutor bqlExecutor;
     private final ObjectMapper json = new ObjectMapper();
 
     public AutomationService(AutomationRuleRepository rules, AutomationRunRepository runs,
                              WorkItemRepository workItems, ProjectRepository projects,
                              CommentRepository comments, EventService events,
                              WebhookService webhooks, AiControlPlaneService controlPlane,
-                             JdbcTemplate jdbc, BqlCompiler bqlCompiler) {
+                             BqlQueryExecutor bqlExecutor) {
         this.rules = rules;
         this.runs = runs;
         this.workItems = workItems;
@@ -50,8 +52,7 @@ public class AutomationService {
         this.events = events;
         this.webhooks = webhooks;
         this.controlPlane = controlPlane;
-        this.jdbc = jdbc;
-        this.bqlCompiler = bqlCompiler;
+        this.bqlExecutor = bqlExecutor;
     }
 
     // ── CRUD ─────────────────────────────────────────────────────────────────────
@@ -262,23 +263,22 @@ public class AutomationService {
     // ══════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Evaluate a safe field-predicate condition against a work item. Empty condition matches all.
-     * Evaluates an automation condition by compiling it through the unified BQL layer (RB-10 §6)
-     * and executing a workspace-scoped COUNT(*) against the database. Falls back to the legacy
-     * in-memory matcher if BQL compilation or query execution fails.
+     * Evaluate an automation condition against a work item. Empty condition matches all. The
+     * condition compiles through the unified BQL layer and runs a workspace-scoped, per-item
+     * COUNT(*) via {@link BqlQueryExecutor} (RB-10 §6, RB-40 §1).
+     *
+     * <p>Fallback is for <b>compile failure only</b>: a malformed condition ({@link BqlException})
+     * degrades to the legacy in-memory matcher with a logged warning, so a bad rule still evaluates
+     * deterministically rather than failing the run (RB-40 §2). Runtime / DB errors are <b>not</b>
+     * swallowed — they propagate so a genuine fault is surfaced rather than masked as a non-match.
      */
     boolean conditionMatchesBql(WorkItem item, String expr) {
         if (expr == null || expr.isBlank()) return true;
         try {
-            BqlCompiler.Compiled c = bqlCompiler.compileFor(expr, BqlContext.trusted(null));
-            if (c.sql().isBlank()) return true;
-            String sql = "SELECT COUNT(*) FROM work_items WHERE id = ? AND deleted_at IS NULL AND (" + c.sql() + ")";
-            List<Object> params = new ArrayList<>();
-            params.add(item.getId());
-            params.addAll(c.params());
-            Long count = jdbc.queryForObject(sql, Long.class, params.toArray());
-            return count != null && count > 0;
-        } catch (Exception e) {
+            return bqlExecutor.matchesItem(item.getId(), expr);
+        } catch (BqlException e) {
+            log.warn("BQL condition '{}' failed to compile; falling back to legacy matcher: {}",
+                expr, e.getMessage());
             return conditionMatches(item, expr);
         }
     }

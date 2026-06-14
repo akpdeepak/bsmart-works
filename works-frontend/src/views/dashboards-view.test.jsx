@@ -184,6 +184,49 @@ describe('DashboardsView — share + embed surface (Cap J)', () => {
   });
 });
 
+describe('DashboardsView — empty open dashboard "start from a template" (RB-20 §3 defaults)', () => {
+  const emptyOpen = {
+    ...baseProps,
+    activeWorkspaceId: 'ws-1',
+    selectedDashboard: { id: 'd1', name: 'New dashboard', widgets: [], scope: 'PERSONAL' },
+  };
+
+  it('offers a Start-from-a-template CTA that drops a multi-widget starter set in one click', () => {
+    const addDashboardWidget = vi.fn();
+    render(<DashboardsView {...emptyOpen} addDashboardWidget={addDashboardWidget} />);
+    const cta = screen.getByRole('button', { name: /start from a template/i });
+    expect(cta).toBeInTheDocument();
+    fireEvent.click(cta);
+    // The opinionated starter set adds several real, no-config widgets (not a blank canvas).
+    expect(addDashboardWidget.mock.calls.length).toBeGreaterThanOrEqual(6);
+    const types = addDashboardWidget.mock.calls.map(c => c[0]);
+    expect(types).toContain('SCORECARD');
+    expect(types).toContain('STATUS_BAR');
+  });
+});
+
+describe('DashboardsView — widget library (canonical presets, no dead controls)', () => {
+  const editOpen = {
+    ...baseProps,
+    activeWorkspaceId: 'ws-1',
+    dashboardEditMode: true,
+    selectedDashboard: { id: 'd1', name: 'My dash', widgets: [], scope: 'PERSONAL' },
+  };
+
+  it('offers a real Cumulative-flow widget that maps to CUMULATIVE_FLOW (CUMFLOW typo fixed)', () => {
+    const addDashboardWidget = vi.fn();
+    render(<DashboardsView {...editOpen} addDashboardWidget={addDashboardWidget} />);
+    fireEvent.click(screen.getByRole('button', { name: /cumulative flow/i }));
+    expect(addDashboardWidget).toHaveBeenCalledWith('CUMULATIVE_FLOW', expect.anything(), 'Cumulative flow', expect.anything());
+  });
+
+  it('no longer offers the dead AI-usage / SLA-health presets (never rendered real data)', () => {
+    render(<DashboardsView {...editOpen} />);
+    expect(screen.queryByRole('button', { name: /^ai usage$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^sla health$/i })).not.toBeInTheDocument();
+  });
+});
+
 describe('DashboardsView — AI summary band (dashboard_summary gate)', () => {
   const openProps = {
     ...baseProps,

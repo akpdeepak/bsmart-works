@@ -73,7 +73,22 @@ public class PivotService {
      */
     public PivotResult resolve(String workspaceId, String userId, PivotSpec spec) {
         rbac.require(userId, workspaceId, "view_items");
-        return resolveInternal(workspaceId, userId, spec);
+        return resolveInternal(workspaceId, contextFor(userId, workspaceId), spec);
+    }
+
+    /**
+     * Resolve one pivot for a workspace <b>without</b> the per-user RBAC gate — for the
+     * unauthenticated public-dashboard embed only (RB-40 §1). There the share <em>token</em> is the
+     * authorization and the workspace is resolved from the token, never a caller; the mandatory
+     * {@link #WORKSPACE_SCOPE} workspace predicate remains the entire scope. A non-sensitive context
+     * is used so leadership-sensitive fields stay hidden — a public viewer can never see more than a
+     * non-privileged member would. Must only be called inside {@code TenantScope.callAsSystem}.
+     *
+     * @throws ApiException on a bad spec or an over-limit request
+     * @throws BqlException on an unknown/forbidden field or unparseable filter
+     */
+    public PivotResult resolveForWorkspace(String workspaceId, PivotSpec spec) {
+        return resolveInternal(workspaceId, BqlContext.forUser(null, false), spec);
     }
 
     /** Resolve many pivots in one pass; a failed entry carries its error, never aborting the rest. */
@@ -87,10 +102,11 @@ public class PivotService {
         if (specs == null) {
             return out;
         }
+        BqlContext ctx = contextFor(userId, workspaceId);
         for (Map.Entry<String, PivotSpec> e : specs.entrySet()) {
             try {
                 out.add(new PivotBatchResult(e.getKey(),
-                    resolveInternal(workspaceId, userId, e.getValue()), null));
+                    resolveInternal(workspaceId, ctx, e.getValue()), null));
             } catch (ApiException | BqlException ex) {
                 out.add(new PivotBatchResult(e.getKey(), null, ex.getMessage()));
             }
@@ -100,7 +116,7 @@ public class PivotService {
 
     // ── Resolution (no membership gate — callers above authorize first) ────────────────
 
-    private PivotResult resolveInternal(String workspaceId, String userId, PivotSpec spec) {
+    private PivotResult resolveInternal(String workspaceId, BqlContext ctx, PivotSpec spec) {
         if (spec == null) {
             throw ApiException.badRequest("INVALID_PIVOT", "A pivot spec is required.", "spec");
         }
@@ -117,8 +133,6 @@ public class PivotService {
             throw ApiException.badRequest("TOO_MANY_DIMENSIONS",
                 "A pivot supports at most " + MAX_DIMENSIONS + " dimensions.", "dimensions");
         }
-
-        BqlContext ctx = contextFor(userId, workspaceId);
 
         // Resolve every dimension/measure column ONLY through the allow-list + field-security gate.
         List<DimCol> dims = new ArrayList<>();

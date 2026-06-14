@@ -35,7 +35,12 @@ import java.util.UUID;
 public class AttachmentController {
 
     private static final Logger log = LoggerFactory.getLogger(AttachmentController.class);
-    private static final Path UPLOAD_DIR = Paths.get(System.getProperty("user.home"), ".bsmart-works", "uploads");
+
+    /** Upload directory — overridable via APP_ATTACHMENTS_DIR env var or app.attachments.dir property.
+     *  Default keeps dev parity with the previous hardcoded path. In containerised deployments
+     *  mount a named Docker volume and set APP_ATTACHMENTS_DIR to that path (see docker-compose.deploy.yml). */
+    @Value("${app.attachments.dir:${user.home}/.bsmart-works/uploads}")
+    private String uploadDir;
 
     /** Maximum upload size in bytes. Configurable via app property; defaults to 20 MB. */
     @Value("${app.attachments.max-size-bytes:20971520}")
@@ -60,7 +65,16 @@ public class AttachmentController {
         this.jdbc = jdbc;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
-        try { Files.createDirectories(UPLOAD_DIR); } catch (IOException e) { /* ignore */ }
+    }
+
+    @jakarta.annotation.PostConstruct
+    void initUploadDir() {
+        try {
+            Files.createDirectories(Paths.get(uploadDir));
+            log.info("[ATTACHMENTS] Upload directory: {}", uploadDir);
+        } catch (IOException e) {
+            log.warn("[ATTACHMENTS] Could not create upload directory {}: {}", uploadDir, e.getMessage());
+        }
     }
 
     /** Resolve the work item's workspace and require the caller is a member (RB-40 §1). 404 hides
@@ -151,7 +165,7 @@ public class AttachmentController {
         // 4. Store file
         String originalName = StringUtils.cleanPath(file.getOriginalFilename() != null ? file.getOriginalFilename() : "file");
         String storedName   = UUID.randomUUID() + "_" + originalName;
-        Path dest = UPLOAD_DIR.resolve(storedName);
+        Path dest = Paths.get(uploadDir).resolve(storedName);
         Files.copy(file.getInputStream(), dest, StandardCopyOption.REPLACE_EXISTING);
 
         jdbc.update(
@@ -171,7 +185,7 @@ public class AttachmentController {
             "SELECT file_name, mime_type, storage_path FROM attachments WHERE id = ? AND work_item_id = ?", id, workItemId);
         if (rows.isEmpty()) return ResponseEntity.notFound().build();
         Map<String, Object> row = rows.get(0);
-        Path filePath = UPLOAD_DIR.resolve((String) row.get("storage_path"));
+        Path filePath = Paths.get(uploadDir).resolve((String) row.get("storage_path"));
         org.springframework.core.io.Resource resource = new org.springframework.core.io.FileSystemResource(filePath);
         if (!resource.exists()) return ResponseEntity.notFound().build();
         String mime = (String) row.get("mime_type");
@@ -191,7 +205,7 @@ public class AttachmentController {
             "SELECT storage_path FROM attachments WHERE id = ? AND work_item_id = ?",
             String.class, id, workItemId);
         paths.stream().filter(p -> p != null && !p.isBlank())  // URL attachments have no stored file
-            .forEach(p -> { try { Files.deleteIfExists(UPLOAD_DIR.resolve(p)); } catch (IOException ignored) {} });
+            .forEach(p -> { try { Files.deleteIfExists(Paths.get(uploadDir).resolve(p)); } catch (IOException ignored) {} });
         jdbc.update("DELETE FROM attachments WHERE id = ? AND work_item_id = ?", id, workItemId);
         return ResponseEntity.noContent().build();
     }

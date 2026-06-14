@@ -7,6 +7,14 @@ Format: What · Why accepted · Impact · Trigger to fix.
 
 ## Architecture debt
 
+### WRK-ARCH-08 — Migrate attachment storage to S3/blob store
+- **Status:** OPEN | **Priority:** Medium
+- **What:** Local filesystem via `app.attachments.dir` (docker volume on deploy via `bsmart_uploads` named volume)
+- **Why accepted:** File uploads work correctly with a named Docker volume for single-instance deploys; S3 migration is not required until horizontal scaling
+- **Impact:** Attachments live on the backend container's local disk (or a mounted volume); multi-instance horizontal scaling is blocked because instances cannot share a local filesystem volume
+- **Target:** S3-compatible object store (AWS S3 or MinIO) for HA multi-instance deployments with CDN-served attachments
+- **Trigger:** When scaling to multiple backend instances or needing CDN-served attachments; also required before the AWS/ECS target-infra rollout (RB-40 §5)
+
 ### TD-001 — Flat package structure (`com.bcits.works`) — **CLOSED 2026-06-08**
 - **What:** All Java classes were in `com.example.demo`; renamed to `com.bcits.works` (flat)
 - **Resolved:** Package rename completed in PR on branch `claude/prompt-a-U1rt5`

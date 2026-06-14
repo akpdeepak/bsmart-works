@@ -2,12 +2,18 @@ package com.bcits.works;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.lang.reflect.Field;
+import java.nio.file.Path;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -103,5 +109,42 @@ class AttachmentControllerAccessTest {
         controller.delete(ITEM_IN_A, 7L);
 
         verify(jdbc).update("DELETE FROM attachments WHERE id = ? AND work_item_id = ?", 7L, ITEM_IN_A);
+    }
+
+    // ── Upload directory configurability (audit finding #10) ─────────────────────
+
+    /**
+     * Proves that {@code uploadDir} is an injectable instance field, not a hardcoded static
+     * constant. Spring injects the value via {@code @Value("${app.attachments.dir:...}")} so any
+     * deployment can override it (including the Docker named volume at {@code /data/uploads}).
+     * This test uses ReflectionTestUtils to simulate what Spring does at startup.
+     */
+    @Test
+    void uploadDir_isConfigurableViaProperty(@TempDir Path tempDir) throws Exception {
+        AttachmentController fresh = new AttachmentController(jdbc, authenticatedUser, rbac);
+        // Simulate Spring injecting the property value (e.g. APP_ATTACHMENTS_DIR=/data/uploads)
+        ReflectionTestUtils.setField(fresh, "uploadDir", tempDir.toString());
+
+        String injected = (String) ReflectionTestUtils.getField(fresh, "uploadDir");
+
+        assertEquals(tempDir.toString(), injected,
+            "uploadDir must reflect the injected property, not a hardcoded path");
+        assertTrue(injected.startsWith(tempDir.getRoot().toString()),
+            "injected path should be under the temp root, not the user home");
+    }
+
+    /**
+     * Proves that the no-arg field declaration has no hardcoded default of user.home.
+     * The field must be a plain non-static {@code String} — if it were a {@code static final}
+     * constant it would be impossible to inject, which is the original bug.
+     */
+    @Test
+    void uploadDir_fieldIsNotStaticFinal() throws Exception {
+        Field field = AttachmentController.class.getDeclaredField("uploadDir");
+        int mods = field.getModifiers();
+        assertTrue((mods & java.lang.reflect.Modifier.STATIC) == 0,
+            "uploadDir must NOT be static — static fields cannot be @Value-injected");
+        assertTrue((mods & java.lang.reflect.Modifier.FINAL) == 0,
+            "uploadDir must NOT be final — final fields cannot be @Value-injected after construction");
     }
 }

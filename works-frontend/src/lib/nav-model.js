@@ -114,7 +114,7 @@ export const MODES = [
     { id: 'marketplace',     label: 'Marketplace',      labelKey: 'nav.marketplace',     Icon: Package },
     { id: 'developerportal', label: 'Developer Portal', labelKey: 'nav.developerPortal', Icon: Code2 },
   ] },
-  { id: 'setup', label: 'Settings', labelKey: 'nav.mode.setup', Icon: Settings, surfaces: [
+  { id: 'setup', label: 'Setup', labelKey: 'nav.mode.setup', Icon: Settings, surfaces: [
     { id: 'workspace',     label: 'Settings',           labelKey: 'nav.settings',        Icon: Settings },
     { id: 'settings3',     label: 'Workflows & Fields', labelKey: 'nav.workflowsFields', Icon: SlidersHorizontal },
     { id: 'aicontrol',     label: 'AI Control',         labelKey: 'nav.aiControl',       Icon: Sparkles },

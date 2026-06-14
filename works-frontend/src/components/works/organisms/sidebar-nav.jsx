@@ -25,7 +25,7 @@ import { useI18n } from '@/lib/i18n';
 // ─── Nav item data ────────────────────────────────────────────────────────────
 
 const NAV_SECTIONS = [
-  { id: null, items: [{ id: 'dashboard', label: 'Home', icon: Home, i18nKey: 'nav.home' }] },
+  { id: null, items: [{ id: 'dashboard', label: 'Today', icon: Home, i18nKey: 'nav.today' }] },
   { id: 'my-work', label: 'My Work', labelKey: 'nav.section.myWork', items: [
     { id: 'myworks',       label: 'My Works',      icon: User, i18nKey: 'nav.myWork' },
     { id: 'notifications', label: 'Notifications', icon: Bell, i18nKey: 'nav.notifications' },
@@ -41,7 +41,7 @@ const NAV_SECTIONS = [
   { id: 'insights', label: 'Insights', labelKey: 'nav.section.insights', items: [
     { id: 'reports',       label: 'Reports',        icon: BarChart2, i18nKey: 'nav.reports' },
     { id: 'dashboards',    label: 'Dashboards',     icon: LayoutDashboard, i18nKey: 'nav.dashboards' },
-    { id: 'reportbuilder', label: 'Report builder', icon: FileText, i18nKey: 'nav.reportBuilder' },
+    { id: 'reportbuilder', label: 'Report Builder', icon: FileText, i18nKey: 'nav.reportBuilder' },
     { id: 'performance',   label: 'Performance',    icon: TrendingUp, i18nKey: 'nav.performance' },
   ] },
   { id: 'service', label: 'Service & Compliance', labelKey: 'nav.section.serviceCompliance', items: [
@@ -51,7 +51,7 @@ const NAV_SECTIONS = [
     { id: 'compliance',   label: 'Compliance',    icon: ShieldCheck, i18nKey: 'nav.compliance' },
   ] },
   { id: 'cockpits', label: 'Cockpits', labelKey: 'nav.section.cockpits', items: [
-    { id: 'smcockpit',   label: 'SM Cockpit',   icon: Gauge, i18nKey: 'nav.smCockpit' },
+    { id: 'smcockpit',   label: 'Sprint Cockpit', icon: Gauge, i18nKey: 'nav.sprintCockpit' },
     { id: 'poworkspace', label: 'PO Workspace', icon: MapIcon, i18nKey: 'nav.poWorkspace' },
     { id: 'leadership',  label: 'Leadership',   icon: Crown, i18nKey: 'nav.leadership' },
     { id: 'adminops',    label: 'Admin Ops',    icon: ShieldHalf, i18nKey: 'nav.adminOps' },

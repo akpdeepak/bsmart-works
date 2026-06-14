@@ -1,9 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PerformancePanel } from './performance-panel';
 import { kpiClient } from '@/lib/kpi';
 import { api } from '@/lib/apiClient';
 import { aiClient } from '@/lib/ai';
+
+// PerformancePanel reads the project list via useProjects (TanStack Query), so each render needs a
+// fresh QueryClient/provider — fresh so there is no cache bleed between tests.
+function renderWith(ui) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+}
 
 vi.mock('@/lib/ai', async () => {
   const actual = await vi.importActual('@/lib/ai');
@@ -72,21 +80,21 @@ beforeEach(() => {
 
 describe('PerformancePanel', () => {
   it('shows the personal layer with a privacy message by default', async () => {
-    render(<PerformancePanel workspaceId="ws-1" />);
+    renderWith(<PerformancePanel workspaceId="ws-1" />);
     await waitFor(() => expect(kpiClient.personal).toHaveBeenCalledWith('ws-1'));
     expect(await screen.findByText('Throughput')).toBeInTheDocument();
     expect(screen.getByText(/private metrics/i)).toBeInTheDocument();
   });
 
   it('shows the manager privacy guardrail callout when switching to Manager', async () => {
-    render(<PerformancePanel workspaceId="ws-1" />);
+    renderWith(<PerformancePanel workspaceId="ws-1" />);
     fireEvent.click(await screen.findByRole('tab', { name: 'Manager' }));
     await waitFor(() => expect(kpiClient.manager).toHaveBeenCalledWith('ws-1'));
     expect(await screen.findByText(/comparison is unavailable by design/i)).toBeInTheDocument();
   });
 
   it('loads team metrics with a team selector when switching to Team', async () => {
-    render(<PerformancePanel workspaceId="ws-1" />);
+    renderWith(<PerformancePanel workspaceId="ws-1" />);
     await screen.findByText('Throughput');
     fireEvent.click(screen.getByRole('tab', { name: 'Team' }));
     await waitFor(() => expect(kpiClient.team).toHaveBeenCalledWith('ws-1', 'TEAM-1'));
@@ -96,7 +104,7 @@ describe('PerformancePanel', () => {
   });
 
   it('refetches team metrics when a different team is selected', async () => {
-    render(<PerformancePanel workspaceId="ws-1" />);
+    renderWith(<PerformancePanel workspaceId="ws-1" />);
     await screen.findByText('Throughput');
     fireEvent.click(screen.getByRole('tab', { name: 'Team' }));
     await waitFor(() => expect(kpiClient.team).toHaveBeenCalledWith('ws-1', 'TEAM-1'));
@@ -105,7 +113,7 @@ describe('PerformancePanel', () => {
   });
 
   it('loads project metrics when switching to Project', async () => {
-    render(<PerformancePanel workspaceId="ws-1" />);
+    renderWith(<PerformancePanel workspaceId="ws-1" />);
     await screen.findByText('Throughput');
     fireEvent.click(screen.getByRole('tab', { name: 'Project' }));
     await waitFor(() => expect(kpiClient.project).toHaveBeenCalledWith('ws-1', 'PROJ-1'));
@@ -114,7 +122,7 @@ describe('PerformancePanel', () => {
 
   it('renders the cycle-time distribution histogram with an outlier drill on the Individual layer', async () => {
     const onOpenItem = vi.fn();
-    render(<PerformancePanel workspaceId="ws-1" onOpenItem={onOpenItem} />);
+    renderWith(<PerformancePanel workspaceId="ws-1" onOpenItem={onOpenItem} />);
     await waitFor(() => expect(kpiClient.distribution).toHaveBeenCalledWith('ws-1', 'INDIVIDUAL', undefined));
     expect(await screen.findByText('Cycle-time distribution')).toBeInTheDocument();
     expect(await screen.findByText(/Outliers — slower than P85 \(2\)/)).toBeInTheDocument();
@@ -123,7 +131,7 @@ describe('PerformancePanel', () => {
   });
 
   it('does not render a histogram on the Manager rollup layer', async () => {
-    render(<PerformancePanel workspaceId="ws-1" />);
+    renderWith(<PerformancePanel workspaceId="ws-1" />);
     await screen.findByText('Throughput');
     fireEvent.click(screen.getByRole('tab', { name: 'Manager' }));
     await waitFor(() => expect(kpiClient.manager).toHaveBeenCalledWith('ws-1'));
@@ -131,7 +139,7 @@ describe('PerformancePanel', () => {
   });
 
   it('shows the metric-sharing control only on the Individual layer', async () => {
-    render(<PerformancePanel workspaceId="ws-1" />);
+    renderWith(<PerformancePanel workspaceId="ws-1" />);
     expect(await screen.findByText('Share my metrics with…')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('tab', { name: 'Team' }));
     await waitFor(() => expect(kpiClient.team).toHaveBeenCalled());
@@ -139,7 +147,7 @@ describe('PerformancePanel', () => {
   });
 
   it('renders an AiMetaBadge on the Explain-anomaly output (§2.4)', async () => {
-    render(<PerformancePanel workspaceId="ws-1" aiCapabilities={AI_CAPS} />);
+    renderWith(<PerformancePanel workspaceId="ws-1" aiCapabilities={AI_CAPS} />);
     fireEvent.click(await screen.findByRole('button', { name: /Explain Throughput anomaly/i }));
     await waitFor(() => expect(aiClient.explainAnomaly).toHaveBeenCalled());
     expect(await screen.findByText('Throughput is within the normal range.')).toBeInTheDocument();
@@ -150,7 +158,7 @@ describe('PerformancePanel', () => {
     aiClient.explainAnomaly.mockResolvedValue({
       explanation: 'No AI — value shown as-is.', meta: { usedAi: false, fallback: true, tier: 'none', policyState: 'DISABLED_WORKSPACE' },
     });
-    render(<PerformancePanel workspaceId="ws-1" aiCapabilities={AI_CAPS} />);
+    renderWith(<PerformancePanel workspaceId="ws-1" aiCapabilities={AI_CAPS} />);
     fireEvent.click(await screen.findByRole('button', { name: /Explain Throughput anomaly/i }));
     expect(await screen.findByText(/AI off — showing deterministic result/i)).toBeInTheDocument();
     expect(screen.getByText('Deterministic fallback')).toBeInTheDocument();
@@ -158,7 +166,7 @@ describe('PerformancePanel', () => {
 
   it('surfaces the budget notice when AI is on and the workspace is degraded (§2.5)', async () => {
     aiClient.budget.mockResolvedValue({ percent: 90, degraded: true, disabled: false });
-    render(<PerformancePanel workspaceId="ws-1" aiCapabilities={AI_CAPS} />);
+    renderWith(<PerformancePanel workspaceId="ws-1" aiCapabilities={AI_CAPS} />);
     expect(await screen.findByText(/cheaper tier/i)).toBeInTheDocument();
   });
 });

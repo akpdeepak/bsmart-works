@@ -2,6 +2,7 @@
 // All HTTP via the single apiClient (CLAUDE.md §3).
 
 import { api } from '@/lib/apiClient';
+import { DEFAULT_PAGE_SIZE } from '@/lib/pagination';
 
 const ws = (workspaceId) => encodeURIComponent(workspaceId);
 
@@ -24,7 +25,7 @@ export const integrationsClient = {
     api.send(`/webhooks?workspaceId=${ws(workspaceId)}`, { method: 'POST', body: sub }),
   deleteWebhook: (workspaceId, id) =>
     api.send(`/webhooks/${encodeURIComponent(id)}?workspaceId=${ws(workspaceId)}`, { method: 'DELETE' }),
-  deliveries: (workspaceId, page = 0, size = 50) =>
+  deliveries: (workspaceId, page = 0, size = DEFAULT_PAGE_SIZE) =>
     api.send(`/webhooks/deliveries?workspaceId=${ws(workspaceId)}&page=${page}&size=${size}`),
   redeliver: (workspaceId, id) =>
     api.send(`/webhooks/deliveries/${encodeURIComponent(id)}/redeliver?workspaceId=${ws(workspaceId)}`, { method: 'POST' }),

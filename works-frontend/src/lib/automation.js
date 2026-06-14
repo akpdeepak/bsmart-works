@@ -3,6 +3,7 @@
 // items without mutating anything.
 
 import { api } from '@/lib/apiClient';
+import { DEFAULT_PAGE_SIZE } from '@/lib/pagination';
 
 const ws = (workspaceId) => encodeURIComponent(workspaceId);
 
@@ -22,7 +23,7 @@ export const automationClient = {
     api.send(`/automations/${encodeURIComponent(id)}/test?workspaceId=${ws(workspaceId)}`, { method: 'POST' }),
   run: (workspaceId, id) =>
     api.send(`/automations/${encodeURIComponent(id)}/run?workspaceId=${ws(workspaceId)}`, { method: 'POST' }),
-  runs: (workspaceId, page = 0, size = 50) =>
+  runs: (workspaceId, page = 0, size = DEFAULT_PAGE_SIZE) =>
     api.send(`/automations/runs?workspaceId=${ws(workspaceId)}&page=${page}&size=${size}`),
   suggest: (workspaceId) =>
     api.send(`/automations/suggest?workspaceId=${ws(workspaceId)}`, { method: 'POST', body: {} }),

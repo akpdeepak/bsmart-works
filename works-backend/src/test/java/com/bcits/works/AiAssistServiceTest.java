@@ -23,27 +23,27 @@ class AiAssistServiceTest {
 
     @Test
     void heuristicPriority_mapsSeverityKeywords() {
-        assertThat(AiAssistService.heuristicPriority("Production outage", "")).isEqualTo("Critical");
-        assertThat(AiAssistService.heuristicPriority("Login bug", "error on submit")).isEqualTo("High");
-        assertThat(AiAssistService.heuristicPriority("Fix typo", "")).isEqualTo("Low");
-        assertThat(AiAssistService.heuristicPriority("Add a settings page", "")).isEqualTo("Medium");
+        assertThat(AiHeuristics.heuristicPriority("Production outage", "")).isEqualTo("Critical");
+        assertThat(AiHeuristics.heuristicPriority("Login bug", "error on submit")).isEqualTo("High");
+        assertThat(AiHeuristics.heuristicPriority("Fix typo", "")).isEqualTo("Low");
+        assertThat(AiHeuristics.heuristicPriority("Add a settings page", "")).isEqualTo("Medium");
     }
 
     @Test
     void detectType_and_detectStatus() {
         // Canonical uppercase keys (V68 type redesign) — these are persisted on create.
-        assertThat(AiAssistService.detectType("login crash bug")).isEqualTo("BUG");
-        assertThat(AiAssistService.detectType("as a user i want")).isEqualTo("STORY");
-        assertThat(AiAssistService.detectType("plain task")).isEqualTo("TASK");
-        assertThat(AiAssistService.detectStatus("move to in progress")).isEqualTo("In Progress");
-        assertThat(AiAssistService.detectStatus("mark done")).isEqualTo("Done");
-        assertThat(AiAssistService.detectStatus("nothing here")).isNull();
+        assertThat(AiHeuristics.detectType("login crash bug")).isEqualTo("BUG");
+        assertThat(AiHeuristics.detectType("as a user i want")).isEqualTo("STORY");
+        assertThat(AiHeuristics.detectType("plain task")).isEqualTo("TASK");
+        assertThat(AiHeuristics.detectStatus("move to in progress")).isEqualTo("In Progress");
+        assertThat(AiHeuristics.detectStatus("mark done")).isEqualTo("Done");
+        assertThat(AiHeuristics.detectStatus("nothing here")).isNull();
     }
 
     @Test
     void parseSteps_splitsMultiActionEnglishCommand() {
         // The iteration-11 multi-action example.
-        var steps = AiAssistService.parseSteps(
+        var steps = AiHeuristics.parseSteps(
             "Find P0 bugs assigned to me, move WEB-12 to In Progress and add comment Starting work today");
         assertThat(steps).hasSize(3);
         assertThat(steps.get(0).action()).isEqualTo(AiAssistService.ActionType.FIND.name());
@@ -55,7 +55,7 @@ class AiAssistServiceTest {
     @Test
     void parseSteps_understandsHinglishAssign() {
         // 'Bug WEB-1247 ko Rahul ko assign karo' — the multilingual command example.
-        var steps = AiAssistService.parseSteps("Bug WEB-1247 ko Rahul ko assign karo");
+        var steps = AiHeuristics.parseSteps("Bug WEB-1247 ko Rahul ko assign karo");
         assertThat(steps).hasSize(1);
         assertThat(steps.get(0).action()).isEqualTo(AiAssistService.ActionType.ASSIGN.name());
         assertThat(steps.get(0).params()).containsEntry("workItemId", "WEB-1247");
@@ -63,14 +63,14 @@ class AiAssistServiceTest {
 
     @Test
     void parseSteps_createExtractsEmailAndType() {
-        var steps = AiAssistService.parseSteps("Create bug: portal login fails, email priya@bcits.com");
+        var steps = AiHeuristics.parseSteps("Create bug: portal login fails, email priya@bcits.com");
         assertThat(steps.get(0).action()).isEqualTo(AiAssistService.ActionType.CREATE_ITEM.name());
         assertThat(steps.get(0).params()).containsEntry("type", "BUG");
     }
 
     @Test
     void parseSteps_unknownCommandFallsBack() {
-        var steps = AiAssistService.parseSteps("");
+        var steps = AiHeuristics.parseSteps("");
         assertThat(steps).hasSize(1);
         assertThat(steps.get(0).action()).isEqualTo(AiAssistService.ActionType.UNKNOWN.name());
     }
@@ -79,34 +79,34 @@ class AiAssistServiceTest {
     void rankSimilar_ranksByWordOverlap() {
         WorkItem a = item("WEB-1", "login page broken", "");
         WorkItem b = item("WEB-2", "dashboard chart colour", "");
-        var ranked = AiAssistService.rankSimilar(List.of(a, b), "login broken", 5);
+        var ranked = AiHeuristics.rankSimilar(List.of(a, b), "login broken", 5);
         assertThat(ranked).first().isEqualTo(a);
     }
 
     @Test
     void biggestSwingIndex_findsLargestDelta() {
-        assertThat(AiAssistService.biggestSwingIndex(List.of(10.0, 11.0, 4.0, 5.0))).isEqualTo(2);
-        assertThat(AiAssistService.biggestSwingIndex(List.of(5.0))).isEqualTo(-1);
-        assertThat(AiAssistService.biggestSwingIndex(List.of(5.0, 5.0, 5.0))).isEqualTo(-1);
+        assertThat(AiHeuristics.biggestSwingIndex(List.of(10.0, 11.0, 4.0, 5.0))).isEqualTo(2);
+        assertThat(AiHeuristics.biggestSwingIndex(List.of(5.0))).isEqualTo(-1);
+        assertThat(AiHeuristics.biggestSwingIndex(List.of(5.0, 5.0, 5.0))).isEqualTo(-1);
     }
 
     @Test
     void slaRisk_scalesWithPriorityAndAge() {
-        assertThat(AiAssistService.slaRisk("Critical", 5)).isEqualTo("HIGH");
-        assertThat(AiAssistService.slaRisk("Low", 1)).isEqualTo("LOW");
-        assertThat(AiAssistService.slaRisk("Medium", 60)).isEqualTo("MEDIUM");
+        assertThat(AiHeuristics.slaRisk("Critical", 5)).isEqualTo("HIGH");
+        assertThat(AiHeuristics.slaRisk("Low", 1)).isEqualTo("LOW");
+        assertThat(AiHeuristics.slaRisk("Medium", 60)).isEqualTo("MEDIUM");
     }
 
     @Test
     void renderTemplate_and_blankScaffold_differ() {
-        assertThat(AiAssistService.renderTemplate("ac", "OTP login", Map.of())).contains("Acceptance criteria");
-        assertThat(AiAssistService.renderTemplate("test_cases", "x", Map.of())).contains("cross-tenant");
-        assertThat(AiAssistService.blankScaffold("ac")).doesNotContain("Given a valid request");
+        assertThat(AiHeuristics.renderTemplate("ac", "OTP login", Map.of())).contains("Acceptance criteria");
+        assertThat(AiHeuristics.renderTemplate("test_cases", "x", Map.of())).contains("cross-tenant");
+        assertThat(AiHeuristics.blankScaffold("ac")).doesNotContain("Given a valid request");
     }
 
     @Test
     void tokenize_dropsStopwordsAndShortTokens() {
-        assertThat(AiAssistService.tokenize("the login is broken")).containsExactly("login", "broken");
+        assertThat(AiHeuristics.tokenize("the login is broken")).containsExactly("login", "broken");
     }
 
     // ── orchestration with a mocked control plane ────────────────────────────────
@@ -234,48 +234,48 @@ class AiAssistServiceTest {
 
     @Test
     void deterministicNlToBql_emptyTextReturnsEmpty() {
-        assertThat(AiAssistService.deterministicNlToBql("")).isEmpty();
+        assertThat(AiHeuristics.deterministicNlToBql("")).isEmpty();
     }
 
     @Test
     void deterministicNlToBql_mapsInProgressStatusKeyword() {
-        String bql = AiAssistService.deterministicNlToBql("in progress items");
+        String bql = AiHeuristics.deterministicNlToBql("in progress items");
         assertThat(bql).contains("status").contains("In Progress");
     }
 
     @Test
     void deterministicNlToBql_mapsHighPriorityKeyword() {
-        String bql = AiAssistService.deterministicNlToBql("high priority items");
+        String bql = AiHeuristics.deterministicNlToBql("high priority items");
         assertThat(bql).contains("priority").contains("High");
     }
 
     @Test
     void deterministicNlToBql_mapsUrgentToCritical() {
-        String bql = AiAssistService.deterministicNlToBql("urgent tasks");
+        String bql = AiHeuristics.deterministicNlToBql("urgent tasks");
         assertThat(bql).contains("priority").contains("Critical");
     }
 
     @Test
     void deterministicNlToBql_mapsBugTypeKeyword() {
-        String bql = AiAssistService.deterministicNlToBql("find bugs");
+        String bql = AiHeuristics.deterministicNlToBql("find bugs");
         assertThat(bql).contains("type").contains("BUG");
     }
 
     @Test
     void deterministicNlToBql_mapsAssignedToMeKeyword() {
-        String bql = AiAssistService.deterministicNlToBql("items assigned to me");
+        String bql = AiHeuristics.deterministicNlToBql("items assigned to me");
         assertThat(bql).contains("assignee = currentUser()");
     }
 
     @Test
     void deterministicNlToBql_mapsOverdueKeyword() {
-        String bql = AiAssistService.deterministicNlToBql("overdue items");
+        String bql = AiHeuristics.deterministicNlToBql("overdue items");
         assertThat(bql).contains("dueDate").contains("today");
     }
 
     @Test
     void deterministicNlToBql_mapsTodayKeyword() {
-        String bql = AiAssistService.deterministicNlToBql("created today");
+        String bql = AiHeuristics.deterministicNlToBql("created today");
         assertThat(bql).contains("today");
     }
 
@@ -289,7 +289,7 @@ class AiAssistServiceTest {
                 "unassigned overdue items",
                 "items created this week",
                 "critical bugs created today")) {
-            String bql = AiAssistService.deterministicNlToBql(phrase);
+            String bql = AiHeuristics.deterministicNlToBql(phrase);
             // Must not throw — proves the dialects are unified.
             BqlCompiler.Compiled c = compiler.compile(bql, "user-1");
             assertThat(c.sql()).isNotNull();
@@ -298,7 +298,7 @@ class AiAssistServiceTest {
 
     @Test
     void deterministicNlToBql_combinesMultipleClauses() {
-        String bql = AiAssistService.deterministicNlToBql("in progress high priority bugs assigned to me");
+        String bql = AiHeuristics.deterministicNlToBql("in progress high priority bugs assigned to me");
         assertThat(bql).contains("status").contains("priority").contains("type").contains("assignee = currentUser()");
     }
 

@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -175,18 +176,24 @@ class AutomationServiceTest {
         rule.setActions("[{\"type\":\"SET_STATUS\",\"params\":{\"status\":\"Done\"}}]");
         when(rules.findByWorkspaceIdAndEnabledTrueAndTriggerType(eq(WS), eq("STATUS_CHANGED")))
             .thenReturn(List.of(rule));
-        // Simulate: inside the action we call evaluateForItem again (same thread).
-        // The guard must suppress that nested call.
         WorkItem item = item("TASK-2", "Low", "Task", "In Progress");
         when(bqlExecutor.matchesItem(eq("TASK-2"), any())).thenReturn(true);
 
-        // First call fires; if the guard works, the action's internal save would not re-enter.
-        int outerFired = svc.evaluateForItem(WS, "STATUS_CHANGED", item, ACTOR);
-        // Simulate a nested call as would happen from a lifecycle hook inside the action:
-        int innerFired = svc.evaluateForItem(WS, "STATUS_CHANGED", item, ACTOR);
+        // Track how many times the guard-suppressed (re-entrant) call returned.
+        int[] innerFired = {-1};
+        // When the SET_STATUS action saves the item, simulate a lifecycle-triggered re-entrant
+        // evaluateForItem call ON THE SAME THREAD — exactly what would happen in production when
+        // an @EntityListeners hook fires after workItems.save(). The depth counter must be 1
+        // at that point and must suppress the nested invocation (return 0).
+        doAnswer(inv -> {
+            innerFired[0] = svc.evaluateForItem(WS, "STATUS_CHANGED", item, ACTOR);
+            return inv.getArgument(0);
+        }).when(workItems).save(any(WorkItem.class));
 
-        assertThat(outerFired).isEqualTo(1);  // outer evaluation fires once
-        assertThat(innerFired).isEqualTo(0);  // nested call suppressed by guard
+        int outerFired = svc.evaluateForItem(WS, "STATUS_CHANGED", item, ACTOR);
+
+        assertThat(outerFired).isEqualTo(1);    // outer evaluation fires once
+        assertThat(innerFired[0]).isEqualTo(0); // nested call suppressed by depth guard
     }
 
     // ── per-action error recording: FAILED run written on action exception ──────────

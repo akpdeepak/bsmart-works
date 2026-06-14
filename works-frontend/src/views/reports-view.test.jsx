@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ReportsView from './reports-view';
 
 const noop = () => {};
@@ -57,5 +57,25 @@ describe('ReportsView', () => {
     render(<ReportsView {...baseProps} sprints={[{ id: 'S1', name: 'Sprint 1', status: 'ACTIVE' }]} />);
     // The picker is the primary control — present without a report loaded.
     expect(screen.getByRole('button', { name: /pick a sprint/i })).toBeInTheDocument();
+  });
+
+  it('auto-selects the ACTIVE sprint on first load', async () => {
+    const fetchSprintReport = vi.fn();
+    const setSelectedSprintId = vi.fn();
+    render(<ReportsView {...baseProps}
+      sprints={[{ id: 'S1', name: 'Sprint 1', status: 'COMPLETED' }, { id: 'S2', name: 'Sprint 2', status: 'ACTIVE' }]}
+      setSelectedSprintId={setSelectedSprintId} fetchSprintReport={fetchSprintReport} />);
+    await waitFor(() => expect(fetchSprintReport).toHaveBeenCalledWith('S2'));
+    expect(setSelectedSprintId).toHaveBeenCalledWith('S2');
+  });
+
+  it('does not override an already-selected sprint', async () => {
+    const fetchSprintReport = vi.fn();
+    render(<ReportsView {...baseProps} selectedSprintId="S1"
+      sprints={[{ id: 'S1', name: 'Sprint 1', status: 'COMPLETED' }, { id: 'S2', name: 'Sprint 2', status: 'ACTIVE' }]}
+      fetchSprintReport={fetchSprintReport} />);
+    // Give the deferred effect a tick; it must NOT auto-fetch since a sprint is already chosen.
+    await new Promise((r) => setTimeout(r, 10));
+    expect(fetchSprintReport).not.toHaveBeenCalled();
   });
 });

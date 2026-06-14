@@ -242,6 +242,19 @@ export default function ReportsView({
   const p = sprintReport ? pace(sprintReport.sprint?.startDate, sprintReport.sprint?.endDate, sprintReport.completionRate, t) : null;
   const toneCls = { success: 'text-semantic-success', danger: 'text-semantic-danger', neutral: 'text-brand-navy dark:text-brand-navy-tint' };
 
+  // Default the report to the ACTIVE sprint (else the most recent) on first load, so the surface
+  // opens on a meaningful report instead of an empty "pick a sprint" prompt. Guarded on no current
+  // selection, so it never overrides a sprint the user has chosen. Deferred a tick to keep the
+  // parent state update / fetch out of the effect's synchronous body.
+  useEffect(() => {
+    if (selectedSprintId || sprints.length === 0) return undefined;
+    const active = sprints.find((s) => s.status === 'ACTIVE') || sprints[0];
+    if (!active) return undefined;
+    const tid = setTimeout(() => { setSelectedSprintId(active.id); fetchSprintReport(active.id); }, 0);
+    return () => clearTimeout(tid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sprints, selectedSprintId]);
+
   return (
     <div className="p-8 max-w-5xl">
       <h1 className="text-2xl font-bold text-brand-navy dark:text-white mb-1">{t('insights.reports.title')}</h1>

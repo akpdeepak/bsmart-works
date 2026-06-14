@@ -3,13 +3,13 @@ package com.bcits.works;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -32,13 +32,13 @@ class SprintControllerAccessTest {
     private final SprintRepository sprintRepository = mock(SprintRepository.class);
     private final WorkItemRepository workItemRepository = mock(WorkItemRepository.class);
     private final EventService eventService = mock(EventService.class);
-    private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
+    private final SprintDao sprintDao = mock(SprintDao.class);
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
     private final StatusConfigService statusConfig = mock(StatusConfigService.class);
 
     private final SprintController controller = new SprintController(
-            sprintRepository, workItemRepository, eventService, jdbc, authenticatedUser, rbac, statusConfig);
+            sprintRepository, workItemRepository, eventService, sprintDao, authenticatedUser, rbac, statusConfig);
 
     SprintControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);
@@ -118,7 +118,7 @@ class SprintControllerAccessTest {
                 .isInstanceOf(ApiException.class)
                 .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
 
-        verify(jdbc, never()).update(any(String.class), any(Object[].class));
+        verify(sprintDao, never()).assignItemToSprint(anyString(), anyString());
     }
 
     @Test
@@ -135,7 +135,7 @@ class SprintControllerAccessTest {
                 .isInstanceOf(ApiException.class)
                 .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
 
-        verify(jdbc, never()).update(any(String.class), any(Object[].class));
+        verify(sprintDao, never()).assignItemToSprint(anyString(), anyString());
     }
 
     @Test
@@ -146,6 +146,6 @@ class SprintControllerAccessTest {
                 .isInstanceOf(ApiException.class)
                 .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
 
-        verify(jdbc, never()).update(any(String.class), any(Object[].class));
+        verify(sprintDao, never()).removeItemFromSprint(anyString(), anyString());
     }
 }

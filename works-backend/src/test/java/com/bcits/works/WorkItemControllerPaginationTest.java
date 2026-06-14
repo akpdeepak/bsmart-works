@@ -55,10 +55,12 @@ class WorkItemControllerPaginationTest {
     private final StatusConfigService statusCfg   = mock(StatusConfigService.class);
     private final BoardWipLimitService wip        = mock(BoardWipLimitService.class);
 
+    private final WatcherService watchers          = mock(WatcherService.class);
+
     private final WorkItemController controller = new WorkItemController(
             repository, eventService, jdbc, notifRepo, userRepository,
             emailService, batch, auth, rbac, dod, ext, wfRules, statusCfg, wip,
-            mock(WorkItemBulkService.class));
+            mock(WorkItemBulkService.class), watchers);
 
     WorkItemControllerPaginationTest() {
         when(auth.id()).thenReturn(CALLER);
@@ -139,7 +141,7 @@ class WorkItemControllerPaginationTest {
         verify(jdbc).query(
                 org.mockito.ArgumentMatchers.and(
                     org.mockito.ArgumentMatchers.contains("created_at DESC"),
-                    org.mockito.ArgumentMatchers.not(org.mockito.ArgumentMatchers.contains("created_at ASC"))
+                    org.mockito.AdditionalMatchers.not(org.mockito.ArgumentMatchers.contains("created_at ASC"))
                 ),
                 any(RowMapper.class),
                 eq(CALLER), eq(200), eq(0));

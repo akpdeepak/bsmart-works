@@ -52,7 +52,7 @@ import { PushSettingsPanel } from '@/components/works/organisms/push-settings-pa
 import { connectRealtime, sendPresence, leavePresence } from '@/lib/realtime';
 import { queueDraft, removeDraft, pendingDrafts, syncDrafts } from '@/lib/offline';
 import { queryClient } from '@/lib/query-client';
-import { viewToPath, pathToView } from '@/lib/routes';
+import { viewToPath, pathToView, parseEntityRoute } from '@/lib/routes';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
@@ -547,11 +547,20 @@ export default function App() {
 
   // Deep-link load: when signed in on a non-default URL, run that view's data fetch once (the
   // same side-effects a nav click would trigger), so a refreshed/shared link arrives populated.
+  // Also handles entity deep-links: /items/:id opens the detail panel for that work item.
   useEffect(() => {
     if (!currentUser || didInitRoute.current) return;
     didInitRoute.current = true;
-    const v = pathToView(window.location.pathname);
-    if (v && v !== 'dashboard' && navigateRef.current) navigateRef.current(v);
+    const pathname = window.location.pathname;
+    const v = pathToView(pathname);
+    if (v && v !== 'dashboard' && navigateRef.current) { navigateRef.current(v); return; }
+    const entity = parseEntityRoute(pathname);
+    if (entity?.kind === 'work-item') {
+      // workItems may not be loaded yet; set a stub so the detail panel fetches the full item.
+      // queueMicrotask defers the setState out of the synchronous effect body (react-hooks/set-state-in-effect).
+      const entityId = entity.id;
+      queueMicrotask(() => setSelectedItem(prev => prev?.id === entityId ? prev : { id: entityId }));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
@@ -561,8 +570,20 @@ export default function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    if (!selectedItem) return;
+    if (!selectedItem) {
+      // When the panel is closed, restore the view's canonical URL if we were on an entity URL.
+      if (parseEntityRoute(window.location.pathname)) {
+        const path = viewToPath(view) || '/';
+        window.history.pushState({ view }, '', path);
+      }
+      return;
+    }
     const id = selectedItem.id;
+    // Push the entity deep-link URL so the panel is shareable / refresh-stable (audit #28).
+    const entityPath = `/items/${id}`;
+    if (window.location.pathname !== entityPath) {
+      window.history.pushState({ entity: id }, '', entityPath);
+    }
     // Keep detail drawer controls aligned with the selected work item.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTagInput((selectedItem.tags || []).join(', '));
@@ -658,14 +679,22 @@ export default function App() {
 
   // Back/forward: drive the view from the URL, routing through navigate so the target view's data
   // loads (by now the workspace is ready, so its fetches are safe).
+  // Entity deep-links (/items/:id) open the detail panel without changing the view.
   useEffect(() => {
     function onPop() {
-      const v = pathToView(window.location.pathname) || 'dashboard';
+      const pathname = window.location.pathname;
+      const entity = parseEntityRoute(pathname);
+      if (entity?.kind === 'work-item') {
+        setSelectedItem(prev => prev?.id === entity.id ? prev : { id: entity.id });
+        return;
+      }
+      const v = pathToView(pathname) || 'dashboard';
+      if (selectedItem) setSelectedItem(null); // close panel when navigating away via back
       if (navigateRef.current) navigateRef.current(v); else setView(v);
     }
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, []);
+  }, [selectedItem]);
 
   // Track recently viewed items
   useEffect(() => {
@@ -872,7 +901,7 @@ export default function App() {
   }
 
   function fetchNotifications() {
-    api.raw(`/notifications?userId=${currentUser.id}`)
+    api.raw(`/notifications?userId=${currentUser.id}&page=0&size=50`)
       .then(r => r.json()).then(d => setNotifications(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
@@ -3262,6 +3291,7 @@ export default function App() {
               setMyWorksTab={setMyWorksTab}
               setSelectedItem={setSelectedItem}
               setIsCreateOpen={setIsCreateOpen}
+              setView={setView}
               onPressKey={onPressKey}
               cardPrefs={cardPrefs}
               statusResolver={statusResolver}
@@ -3361,11 +3391,13 @@ export default function App() {
             <NotificationsView
               loading={loading}
               notifications={notifications}
+              setNotifications={setNotifications}
               unreadCount={unreadCount}
               currentUser={currentUser}
               fetchNotifications={fetchNotifications}
               fetchUnreadCount={fetchUnreadCount}
               setUnreadCount={setUnreadCount}
+              setView={setView}
               onError={reportError}
             />
           )}

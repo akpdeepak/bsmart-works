@@ -10,6 +10,7 @@ import { statusToCategory } from '@/components/works/status';
 import { LapseBadge } from '@/components/works/atoms/lapse-badge';
 import { computeLapse } from '@/lib/status-lapse';
 import { useI18n } from '@/lib/i18n';
+import { pathToView } from '@/lib/routes';
 
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 // Tune this surface here — no JSX diving needed. Sort pill labels resolve via i18n `labelKey`.
@@ -133,6 +134,7 @@ export default function MyWorksView({
   setMyWorksTab,
   setSelectedItem,
   setIsCreateOpen,
+  setView,
   onPressKey,
   cardPrefs,
   statusResolver,
@@ -251,17 +253,23 @@ export default function MyWorksView({
           : <div className="space-y-2">
               {mentions.map(n => {
                 const linkedItem = n.itemId ? workItems.find(i => i.id === n.itemId) : null;
+                const linkView = (!linkedItem && n.link) ? pathToView(n.link) : null;
+                const isClickable = Boolean(linkedItem || linkView);
+                function handleMentionClick() {
+                  if (linkedItem) { setSelectedItem(linkedItem); return; }
+                  if (linkView && setView) setView(linkView);
+                }
                 return (
                   <div
                     key={n.id}
-                    role={linkedItem ? 'button' : undefined}
-                    tabIndex={linkedItem ? 0 : undefined}
-                    onClick={linkedItem ? () => setSelectedItem(linkedItem) : undefined}
-                    onKeyDown={linkedItem ? onPressKey : undefined}
+                    role={isClickable ? 'button' : undefined}
+                    tabIndex={isClickable ? 0 : undefined}
+                    onClick={isClickable ? handleMentionClick : undefined}
+                    onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleMentionClick(); } } : undefined}
                     className={cn(
                       'bg-white dark:bg-neutral-800 border rounded-lg p-4',
                       !n.read ? 'border-brand-navy-tint/30' : 'border-neutral-200 dark:border-neutral-700',
-                      linkedItem && 'cursor-pointer transition-shadow hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40'
+                      isClickable && 'cursor-pointer transition-shadow hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40'
                     )}
                   >
                     <p className="text-sm text-neutral-900 dark:text-neutral-100">{n.message}</p>

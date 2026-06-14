@@ -83,14 +83,11 @@ function TodayHeader({ greeting, firstName, rolePill, subtitle, cta, onCta }) {
   );
 }
 
-// Shared greeting helper. This module exports the shared Today atoms plus this one helper; the
-// helper is tightly coupled to the dashboard surfaces, so we keep it here and waive the
-// component-only fast-refresh rule (repo pattern — see src/lib/i18n.jsx).
+// Shared greeting helper — single source in lib/utils (ONE Source; the same logic was duplicated
+// here and in App.jsx before the consolidation). This module also exports the Today atoms, so we
+// waive the component-only fast-refresh rule for this re-export (repo pattern — see src/lib/i18n.jsx).
 // eslint-disable-next-line react-refresh/only-export-components
-export function getGreeting() {
-  const h = new Date().getHours();
-  return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
-}
+export { getTimeOfDay as getGreeting } from '@/lib/utils';
 
 // ── Today surface — header + edit toolbar + canvas ─────────────────────────────
 // Wraps every role's Today: renders the fixed header, the customize/edit controls, and the

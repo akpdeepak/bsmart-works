@@ -275,7 +275,11 @@ export function WorkItemDetailPanel({
             <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 p-3 space-y-3">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 dark:border-neutral-600 bg-white dark:bg-neutral-800 pl-2.5 pr-1 py-1">
-                  <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: statusMeta?.color || '#94A3B8' }} aria-hidden="true" />
+                  <span
+                    className={`h-2.5 w-2.5 rounded-full flex-shrink-0${statusMeta?.color ? '' : ' bg-neutral-300'}`}
+                    style={statusMeta?.color ? { backgroundColor: statusMeta.color } : undefined}
+                    aria-hidden="true"
+                  />
                   <select aria-label="Status" value={selectedItem.status}
                     onChange={e => { const u = { ...selectedItem, status: e.target.value }; setSelectedItem(u); handleUpdateItem(u); }}
                     className="text-sm font-medium bg-transparent border-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded cursor-pointer text-neutral-900 dark:text-neutral-100">

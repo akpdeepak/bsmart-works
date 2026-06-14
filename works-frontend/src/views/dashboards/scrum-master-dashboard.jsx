@@ -91,7 +91,7 @@ const SCRUM_MASTER_REGISTRY = {
             <span className="text-neutral-600 dark:text-neutral-400">Time elapsed</span>
             <span className="font-semibold text-neutral-900 dark:text-neutral-100">{ctx.timebox.timePct}%</span>
           </div>
-          <MiniBar value={ctx.timebox.timePct} max={100} color="bg-neutral-400" />
+          <MiniBar value={ctx.timebox.timePct} max={100} color="bg-brand-navy-tint" />
           <div className="flex items-center justify-between text-xs">
             <span className="text-neutral-600 dark:text-neutral-400">Scope done</span>
             <span className="font-semibold text-neutral-900 dark:text-neutral-100">{ctx.timebox.scopePct}%</span>

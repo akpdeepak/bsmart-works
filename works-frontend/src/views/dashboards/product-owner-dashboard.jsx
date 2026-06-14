@@ -9,7 +9,7 @@ import { TodayCard, HealthRing, MiniBar, Empty, TodaySurface, getGreeting } from
 // Focus: "What's the backlog and release state?" — grooming, release radar, features
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const PCOLOR = { CRITICAL: 'bg-semantic-danger', HIGH: 'bg-semantic-warning', MEDIUM: 'bg-brand-navy', LOW: 'bg-neutral-400' };
+const PCOLOR = { CRITICAL: 'bg-semantic-danger', HIGH: 'bg-semantic-warning', MEDIUM: 'bg-brand-navy', LOW: 'bg-neutral-300' };
 
 const PRODUCT_OWNER_REGISTRY = {
   stat: (ctx, w) => {
@@ -81,7 +81,7 @@ const PRODUCT_OWNER_REGISTRY = {
                   <span className="font-medium text-neutral-700 dark:text-neutral-300">{p.priority}</span>
                   <span className="text-neutral-500">{p.count}</span>
                 </div>
-                <MiniBar value={p.count || 0} max={ctx.maxPri} color={PCOLOR[p.priority] || 'bg-neutral-400'} />
+                <MiniBar value={p.count || 0} max={ctx.maxPri} color={PCOLOR[p.priority] || 'bg-neutral-300'} />
               </div>
             ))}
             <p className="pt-1 text-xs text-neutral-500">{ctx.totalBacklog} total items</p>

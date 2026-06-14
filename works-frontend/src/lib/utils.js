@@ -24,6 +24,16 @@ export function onPressKey(e) {
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); }
 }
 
+// Coarse time-of-day bucket ('morning' | 'afternoon' | 'evening') for greetings. Single home so
+// the dashboard greeting and any other surface share one definition (was duplicated in App.jsx and
+// dashboard-view.jsx).
+export function getTimeOfDay() {
+  const h = new Date().getHours();
+  if (h < 12) return 'morning';
+  if (h < 17) return 'afternoon';
+  return 'evening';
+}
+
 // Render user-supplied Markdown-lite text to sanitised HTML for dangerouslySetInnerHTML.
 // Only **bold**, *italic*, `code`, list bullets, and newlines are supported.
 // DOMPurify strips everything else (RB-10 §8 — never inject unsanitised user content).

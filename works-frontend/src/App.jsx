@@ -3245,6 +3245,7 @@ export default function App() {
               customFieldDefs={customFieldDefs}
               statusResolver={statusResolver}
               workspaceId={activeWorkspaceId}
+              currentUserId={currentUser?.id}
               onCustomFieldCreated={def => setCustomFieldDefs(prev => [...prev, def])}
             />
           )}

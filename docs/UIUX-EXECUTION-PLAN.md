@@ -98,6 +98,18 @@ So nothing is lost or assumed, the complete scope captured across the originatin
 | **UI visual craft / premium aesthetic** | Roadmap **Part H Theme 5** | Milestones 3–4 (WI-41…WI-49) |
 | **Premium everywhere** (the Premium Bar as a universal merge gate, 100% surface coverage) | Roadmap **Part H §H.2.1** | WI-44 (define) · WI-48 (enforce + track) · WI-46/WI-49 (apply to 100%) |
 
+### 4.1 Related & input docs (cross-links)
+
+These feed specific work-items or constrain all of them. Full roles in the roadmap's **document map** (§2).
+
+| Doc | Relationship | Applies to |
+|-----|--------------|-----------|
+| `docs/A11Y.md` | WCAG 2.2 AA audit framework (lint → axe → Storybook → manual) — *how* a11y is validated | WI-22 (remediation); WI-44 / WI-48 (Premium Bar enforcement) |
+| `docs/I18N.md` | i18n runtime + pattern (10 langs, RTL) — a **prerequisite for every UI surface** | All WIs touching UI text |
+| `docs/KNOW-STUDIO.md` (spec) + `plans/KNOW-STUDIO-PLAN.md` (build order) | Definitive surface spec + build order for the knowledge editor / block ecosystem | WI-29 |
+| `plans/sprint-cockpit-ux-plan.md` | Sprint-Cockpit UX — **iteration-15 parallel work, out of this ledger** | Log in `UX-PROGRESS.md` if it lands; don't pull in |
+| `docs/brand/brand-and-identity.md` · RB-30 | Canonical brand + design law this program adopts | Every WI (reference, don't restate) |
+
 ---
 
 ## 5. The execution ledger
@@ -226,6 +238,9 @@ For every work-item:
 - **Premium everywhere is a merge gate.** Every UI surface — every view, pop-up, drawer, menu, toast,
   and every button/state — must pass **the Premium Bar (roadmap §H.2.1)** before merge. No surface is
   exempt and nothing ships "to be polished later." New/changed surfaces add a visual-regression story.
+- **Every UI surface is i18n-ready and a11y-verified.** Externalize strings per `docs/I18N.md`
+  (use `t()`, never hand-format — `lib/format.js`); validate accessibility per `docs/A11Y.md` (axe
+  harness in tests). Both are part of the Premium Bar (roadmap §H.2.1).
 - **Tokens, not literals.** No raw hex/px/`gray-*`/arbitrary `z-[]`/`p-[]` (guardrails BLOCK).
 - **Verify locally** before merge; do not rely on CI alone; **never merge onto a red `main`** —
   surface the unrelated breakage and wait/park (history: PR #319/#325 blocked by an unrelated

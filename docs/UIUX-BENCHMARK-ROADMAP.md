@@ -33,7 +33,7 @@
 ## Table of contents
 
 1. [Executive summary](#1-executive-summary)
-2. [How to read this document](#2-how-to-read-this-document)
+2. [How to read this document](#2-how-to-read-this-document) — incl. the **document map & canonical sources**
 3. [Part A — Current-state scorecard (code-grounded)](#part-a--current-state-scorecard-code-grounded)
 4. [Part B — Benchmark design DNA](#part-b--benchmark-design-dna)
 5. [Part C — Design philosophy & engagement framework layer](#part-c--design-philosophy--engagement-framework-layer)
@@ -89,6 +89,31 @@ The three highest-leverage moves, in order:
 Precedence note (RB-00 / SOURCE-OF-TRUTH): where this document and the code disagree on *how it is
 built today*, the code wins (Part A is kept honest). Where they disagree on *what we are building
 toward*, this roadmap is the target.
+
+---
+
+### Canonical sources & document map
+
+To prevent confusion or conflict, here is **every UI/UX doc and its single role.** Read top-down:
+law → brand → this program → logs / specs / pointers.
+
+| Doc | Role | Authority |
+|-----|------|-----------|
+| `ai-rules/rulebooks/30-DESIGN.md` (**RB-30**) | **Canonical design law** — tokens, layout shell, five states, a11y, typography, motion, z-index, iconography, content | **Highest.** This program *adopts* RB-30 and never contradicts it (generated into `CLAUDE.md` §4/§22). |
+| `docs/brand/brand-and-identity.md` (+ `brand/README.md`) | **Canonical brand** — logo, colour rationale, "Calm Cockpit" direction, UX principles, naming, white-label | **High.** Referenced here; the visual target originates here. |
+| **`docs/UIUX-BENCHMARK-ROADMAP.md`** (this doc) | **The reference roadmap** — applies RB-30 + brand across the benchmark, behavioral, measurement, and premium/visual-craft layers | The *what / why / how*. |
+| **`docs/UIUX-EXECUTION-PLAN.md`** | **The live execution layer** — status ledger (WI-01…WI-49), session triggers, resume protocol | The *what's done / what's next*. |
+| `docs/UX-PROGRESS.md` | Append-only progress log (newest-first) | The shared log. |
+| `docs/UX-CODEBASE-ANALYSIS.md` | Historical baseline audit (2026-06-05) — *why* the program exists | Reference only. |
+| `docs/A11Y.md` · `docs/I18N.md` | Topic frameworks the program depends on (WCAG 2.2 AA audit; i18n runtime) | Reference. |
+| `docs/KNOW-STUDIO.md` · `plans/KNOW-STUDIO-PLAN.md` | Surface spec + build order for the knowledge editor — input to WI-29 | Surface plan. |
+| `plans/sprint-cockpit-ux-plan.md` | Sprint-Cockpit UX (iteration-15, **parallel / out-of-scope** here) | Reference. |
+| `docs/PREMIUM-UX-ROADMAP.md` · `docs/DESIGN-CONSISTENCY-PROGRAM.md` | **Superseded → pointers** to Part H | Redirect only. |
+
+**Precedence (per `ai-rules/SOURCE-OF-TRUTH.md`):** for *how it is built today*, the **code / `CLAUDE.md`
+wins**; for *what must be true going forward*, **RB-30 + the specs win**; this roadmap is the program that
+closes the gap. **Reference, don't restate:** where this doc lists tokens / states / rules, they are
+RB-30's — cited to *apply* them across surfaces, not to redefine them.
 
 ---
 
@@ -423,6 +448,12 @@ a **convergence + elevation** program, never a redesign or a token rework:
 
 Visual target = the **"Calm Cockpit"** direction (navy primary, single orange accent, Lucide,
 expand-in-place, persona "Today", role-based nav). Brand origin: `docs/brand/brand-and-identity.md`.
+
+> **Relationship to the design law:** RB-30 (`ai-rules/rulebooks/30-DESIGN.md`) owns the design *law*
+> (tokens, five states, a11y, shell, typography, motion, z-index, iconography); the brand spec owns the
+> *identity*. This program **adopts both and never restates or overrides them** — where it lists rules
+> (e.g. the Premium Bar §H.2.1), it does so to *apply* them across surfaces, citing RB-30 as canonical.
+> Convergence = wiring RB-30's law into reusable primitives across 100% of views.
 
 ### H.1 Convergence scorecard (design-system lens, 2026-06-14)
 

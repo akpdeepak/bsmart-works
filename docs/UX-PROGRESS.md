@@ -1,7 +1,11 @@
 # UX Overhaul — Progress Log
 
-Companion to `docs/UX-CODEBASE-ANALYSIS.md` (the roadmap). Tracks what has shipped to
-`main` so the state is always legible. Newest first.
+The append-only progress log for UI/UX work. Companion to
+[`UIUX-BENCHMARK-ROADMAP.md`](./UIUX-BENCHMARK-ROADMAP.md) (the reference roadmap) and
+[`UIUX-EXECUTION-PLAN.md`](./UIUX-EXECUTION-PLAN.md) (the live status ledger — work-items WI-01…WI-49;
+the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2026-06-05 baseline
+audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
+`[consistency]` / `[premium]` / `[benchmark]`.
 
 > Verification norm: CI runner is degraded, so each change is verified **locally** before
 > merge — `vite build` + `vitest` + `eslint` (changed component files) +

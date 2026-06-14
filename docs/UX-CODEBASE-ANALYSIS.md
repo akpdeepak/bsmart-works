@@ -1,5 +1,10 @@
 # bSmart Works — UI/UX Holistic Analysis & Improvement Plan
 
+> **Historical baseline (2026-06-05).** This is the original diagnostic audit that *justified* the
+> UI/UX program. Its findings are now incorporated into [`UIUX-BENCHMARK-ROADMAP.md`](./UIUX-BENCHMARK-ROADMAP.md)
+> (the current reference roadmap, Parts A–G) and tracked in [`UIUX-EXECUTION-PLAN.md`](./UIUX-EXECUTION-PLAN.md)
+> (the live ledger). Read this for *why* the program exists; read those two for *what to do now*.
+
 > Verified against the live codebase on branch `claude/ui-ux-codebase-analysis` (synced from
 > `origin/main`, head `b488570`). Every finding below carries `file:line` evidence. Measured against
 > the design rulebook **RB-30**, the brand spec (`docs/brand/brand-and-identity.md`), the iteration

@@ -31,6 +31,7 @@ export default function BqlView({
   setBqlQuery,
   setSelectedItem,
   runBql,
+  notify = () => {},
 }) {
   const { t } = useI18n();
   // Iteration 10 Cap O — NL→BQL translation (first AI surface)
@@ -41,6 +42,7 @@ export default function BqlView({
   const [viewName, setViewName] = useState('');
   const [viewSaving, setViewSaving] = useState(false);
   const [subscriptions, setSubscriptions] = useState([]); // saved-view subscriptions for this user
+  const [subBusy, setSubBusy] = useState(() => new Set()); // view ids with an in-flight subscribe toggle
 
   // P3 — editor assists
   const [schema, setSchema] = useState(null); // { fields, operators, functions, enums }
@@ -137,7 +139,12 @@ export default function BqlView({
     api.send('/work-items/bulk', {
       method: 'POST',
       body: JSON.stringify({ ids, action, value }),
-    }).then(() => runQuery());
+    }).then(res => {
+      const updated = res?.updated?.length ?? 0;
+      const skipped = res?.skipped?.length ?? 0;
+      notify(skipped ? `Updated ${updated}, skipped ${skipped}` : `Updated ${updated} item${updated === 1 ? '' : 's'}`);
+      return runQuery();
+    }).catch(() => notify('Bulk edit failed', 'error'));
 
   // Drill into a bucket: AND the bucket onto the query and switch back to the flat table.
   const drillInto = (value) => {
@@ -161,7 +168,9 @@ export default function BqlView({
     if (bqlQuery.trim()) params.set('bql', bqlQuery.trim());
     if (sort) params.set('bqlSort', sort);
     const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
-    navigator.clipboard?.writeText(url).catch(() => {});
+    Promise.resolve(navigator.clipboard?.writeText(url))
+      .then(() => notify('Link copied to clipboard'))
+      .catch(() => notify('Could not copy link', 'error'));
   };
 
   // ── Inline autocomplete (caret-aware, schema-driven) ──────────────────────────────
@@ -240,16 +249,21 @@ export default function BqlView({
   }, [activeWorkspaceId]);
 
   // Toggle a daily, in-app + email subscription to a saved view (the manage UI can refine later).
+  // Tracks an in-flight set so the bell can show a busy/disabled state and confirm via a toast.
   const toggleSubscribe = (v) => {
-    if (!activeWorkspaceId) return;
+    if (!activeWorkspaceId || subBusy.has(v.id)) return;
     const existing = subscriptionFor(v.id);
+    setSubBusy(prev => new Set(prev).add(v.id));
     const req = existing
       ? api.send(`/bql-subscriptions/${encodeURIComponent(existing.id)}?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, { method: 'DELETE' })
       : api.send(`/bql-subscriptions?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, {
         method: 'POST',
         body: JSON.stringify({ savedViewId: v.id, frequency: 'DAILY', channels: 'BOTH' }),
       });
-    req.then(refreshSubscriptions).catch(() => {});
+    req
+      .then(() => { refreshSubscriptions(); notify(existing ? 'Unsubscribed' : 'Subscribed — daily summary'); })
+      .catch(() => notify('Subscription update failed', 'error'))
+      .finally(() => setSubBusy(prev => { const n = new Set(prev); n.delete(v.id); return n; }));
   };
 
   // Live validation — debounced; surfaces parse/field errors before the user runs the query.
@@ -572,11 +586,13 @@ export default function BqlView({
                     {v.isShared && <span className="rounded bg-semantic-info-surface px-1.5 py-0.5 text-2xs font-medium uppercase tracking-wide text-semantic-info">shared</span>}
                   </button>
                   <button type="button" onClick={() => toggleSubscribe(v)}
-                    className={`rounded-md p-1 transition-colors ${subscribed ? 'text-brand-navy' : 'text-neutral-300 hover:text-brand-navy'}`}
+                    disabled={subBusy.has(v.id)}
+                    className={`rounded-md p-1 transition-colors disabled:opacity-50 ${subscribed ? 'text-brand-navy' : 'text-neutral-300 hover:text-brand-navy'}`}
                     aria-label={subscribed ? `Unsubscribe from ${v.name}` : `Subscribe to ${v.name} (daily summary)`}
                     aria-pressed={subscribed}
+                    aria-busy={subBusy.has(v.id)}
                     title={subscribed ? 'Subscribed — daily summary' : 'Subscribe — daily summary'}>
-                    <Bell className={`h-3.5 w-3.5 ${subscribed ? 'fill-brand-navy' : ''}`} aria-hidden="true" />
+                    <Bell className={`h-3.5 w-3.5 ${subBusy.has(v.id) ? 'animate-pulse' : ''} ${subscribed ? 'fill-brand-navy' : ''}`} aria-hidden="true" />
                   </button>
                   <button type="button" onClick={() => deleteView(v.id)}
                     className="rounded-md p-1 text-neutral-300 opacity-0 transition-opacity hover:text-semantic-danger group-hover:opacity-100"

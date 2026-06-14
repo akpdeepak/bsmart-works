@@ -16,9 +16,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Seeded report templates (Cap J, S05) against real Postgres with the Flyway migrations applied.
  * Asserts the two templates the spec names — Monthly executive summary and Customer status — are
  * returned by the repository method behind {@code GET /api/v1/reports/templates}
- * ({@link ReportRepository#findByIsTemplateTrueOrderByNameAsc()}), with the section structure
- * enriched in V84 (KPI grid + velocity/trend chart + narrative + risk summary; customer health +
- * SLA + open-requests table + narrative). Validates the migration is forward-only and valid SQL.
+ * ({@link ReportRepository#findByIsTemplateTrueOrderByNameAsc()}), with the pivot-backed section
+ * structure set in V88 (KPI grid + pivot charts + executive narrative + risk summary; customer
+ * KPIs + pivot charts + open-requests table + narrative). Validates the migration is forward-only
+ * and valid SQL.
  */
 @Tag("integration")
 @Testcontainers
@@ -54,36 +55,41 @@ class ReportTemplateSeedIT {
     }
 
     @Test
-    void monthlyExecutiveSummaryHasKpiTrendNarrativeAndRiskSections() {
+    void monthlyExecutiveSummaryHasKpiPivotNarrativeAndRiskSections() {
         Report exec = templateNamed("Monthly executive summary");
         String sections = exec.getSections();
-        // Whitespace-insensitive for the structural `"type":"x"` checks — the stored JSON may be
-        // pretty-printed (`"type": "kpi"`); the section shape is what matters, not the spacing.
+        // Whitespace-insensitive for the structural `"type":"x"` checks — JSONB normalises the
+        // stored JSON (no spaces, keys reordered); the section shape is what matters, not spacing.
         String compact = sections.replaceAll("\\s+", "");
 
-        // KPI grid + velocity/trend chart + executive narrative + risk summary.
+        // V88 made the template pivot-backed: a KPI grid + pivot charts + executive narrative + risk.
         assertThat(compact).contains("\"type\":\"kpi\"");
-        assertThat(sections).contains("Velocity & delivery trend");
-        assertThat(compact).contains("\"type\":\"chart\"");
+        assertThat(sections).contains("Total items");
+        assertThat(compact).contains("\"type\":\"pivot\"");
+        assertThat(sections).contains("Work by status");
+        assertThat(sections).contains("Workload by assignee");
+        assertThat(compact).contains("\"type\":\"narrative\"");
         assertThat(sections).contains("Executive summary");
         assertThat(sections).contains("Risk summary");
-        // Section shape matches the seed contract: chartType + dimension on charts.
+        // Pivot section shape: chartType + dimensions on the shared pivot spec.
         assertThat(sections).contains("\"chartType\"");
-        assertThat(sections).contains("\"dimension\"");
+        assertThat(sections).contains("\"dimensions\"");
     }
 
     @Test
-    void customerStatusHasHealthSlaTableAndNarrativeSections() {
+    void customerStatusHasKpiPivotTableAndNarrativeSections() {
         Report customer = templateNamed("Customer status");
         String sections = customer.getSections();
         String compact = sections.replaceAll("\\s+", "");
 
-        // Customer health + SLA + open-requests table + narrative.
-        assertThat(sections).contains("Customer health");
-        assertThat(sections).contains("Within SLA");
-        assertThat(sections).contains("SLA at risk");
-        assertThat(compact).contains("\"type\":\"table\"");
+        // V88: KPI grid (open / resolved / at-risk) + pivot charts + open-requests table + narrative.
+        assertThat(compact).contains("\"type\":\"kpi\"");
         assertThat(sections).contains("Open requests");
+        assertThat(sections).contains("At risk (overdue)");
+        assertThat(compact).contains("\"type\":\"pivot\"");
+        assertThat(sections).contains("Open by status");
+        assertThat(compact).contains("\"type\":\"table\"");
         assertThat(compact).contains("\"type\":\"narrative\"");
+        assertThat(sections).contains("Summary for the customer");
     }
 }

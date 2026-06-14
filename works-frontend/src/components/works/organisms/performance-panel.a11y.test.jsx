@@ -1,10 +1,18 @@
 import { describe, it, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PerformancePanel } from './performance-panel';
 import { kpiClient } from '@/lib/kpi';
 import { api } from '@/lib/apiClient';
 import { aiClient } from '@/lib/ai';
 import { expectNoA11yViolations } from '@/test/a11y';
+
+// PerformancePanel reads the project list via useProjects (TanStack Query), so each render needs a
+// fresh QueryClient/provider — fresh so there is no cache bleed between tests.
+function renderWith(ui) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+}
 
 vi.mock('@/lib/ai', async () => {
   const actual = await vi.importActual('@/lib/ai');
@@ -55,14 +63,14 @@ beforeEach(() => {
 
 describe('PerformancePanel a11y', () => {
   it('Individual layer (default, with histogram + sharing) has no serious/critical violations', async () => {
-    const { container } = render(<PerformancePanel workspaceId="ws-1" aiCapabilities={AI_CAPS} />);
+    const { container } = renderWith(<PerformancePanel workspaceId="ws-1" aiCapabilities={AI_CAPS} />);
     await screen.findByText('Throughput');
     await screen.findByText('Cycle-time distribution');
     await expectNoA11yViolations(container);
   });
 
   it('Manager privacy-guardrail layer has no serious/critical violations', async () => {
-    const { container } = render(<PerformancePanel workspaceId="ws-1" />);
+    const { container } = renderWith(<PerformancePanel workspaceId="ws-1" />);
     await screen.findByText('Throughput');
     fireEvent.click(screen.getByRole('tab', { name: 'Manager' }));
     await waitFor(() => expect(kpiClient.manager).toHaveBeenCalled());
@@ -70,7 +78,7 @@ describe('PerformancePanel a11y', () => {
   });
 
   it('Explain-anomaly output (AI badge) has no serious/critical violations', async () => {
-    const { container } = render(<PerformancePanel workspaceId="ws-1" aiCapabilities={AI_CAPS} />);
+    const { container } = renderWith(<PerformancePanel workspaceId="ws-1" aiCapabilities={AI_CAPS} />);
     fireEvent.click(await screen.findByRole('button', { name: /Explain Throughput anomaly/i }));
     await screen.findByText('Within range.');
     await expectNoA11yViolations(container);

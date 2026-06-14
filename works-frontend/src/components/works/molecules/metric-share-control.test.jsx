@@ -1,8 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MetricShareControl } from './metric-share-control';
 import { kpiClient } from '@/lib/kpi';
 import { api } from '@/lib/apiClient';
+
+// MetricShareControl reads the workspace member list via useWorkspaceUsers (TanStack Query), so each
+// render needs a fresh QueryClient/provider — fresh so there is no cache bleed between tests.
+function renderWith(ui) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+}
 
 vi.mock('@/lib/kpi', async () => {
   const actual = await vi.importActual('@/lib/kpi');
@@ -30,20 +38,20 @@ beforeEach(() => {
 
 describe('MetricShareControl', () => {
   it('shows the empty state when nothing is shared yet', async () => {
-    render(<MetricShareControl workspaceId="ws-1" />);
+    renderWith(<MetricShareControl workspaceId="ws-1" />);
     await waitFor(() => expect(kpiClient.shares).toHaveBeenCalledWith('ws-1'));
     expect(await screen.findByText(/not sharing your metrics with anyone yet/i)).toBeInTheDocument();
   });
 
   it('lists existing shares by member name', async () => {
     kpiClient.shares.mockResolvedValue([{ viewerUserId: 'u-1' }]);
-    render(<MetricShareControl workspaceId="ws-1" />);
+    renderWith(<MetricShareControl workspaceId="ws-1" />);
     expect(await screen.findByText('Alice Admin')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Revoke metric sharing with Alice Admin/ })).toBeInTheDocument();
   });
 
   it('adds a viewer and shows them in the list', async () => {
-    render(<MetricShareControl workspaceId="ws-1" />);
+    renderWith(<MetricShareControl workspaceId="ws-1" />);
     await screen.findByText(/not sharing your metrics/i);
     fireEvent.change(screen.getByLabelText('Add viewer'), { target: { value: 'u-2' } });
     fireEvent.click(screen.getByRole('button', { name: 'Share' }));
@@ -53,7 +61,7 @@ describe('MetricShareControl', () => {
 
   it('revokes a share and removes it from the list', async () => {
     kpiClient.shares.mockResolvedValue([{ viewerUserId: 'u-1' }]);
-    render(<MetricShareControl workspaceId="ws-1" />);
+    renderWith(<MetricShareControl workspaceId="ws-1" />);
     await screen.findByText('Alice Admin');
     fireEvent.click(screen.getByRole('button', { name: /Revoke metric sharing with Alice Admin/ }));
     await waitFor(() => expect(kpiClient.unshare).toHaveBeenCalledWith('ws-1', 'u-1'));
@@ -64,13 +72,13 @@ describe('MetricShareControl', () => {
 
   it('surfaces an error if loading shares fails', async () => {
     kpiClient.shares.mockRejectedValue(new Error('Boom'));
-    render(<MetricShareControl workspaceId="ws-1" />);
+    renderWith(<MetricShareControl workspaceId="ws-1" />);
     expect(await screen.findByRole('alert')).toHaveTextContent('Boom');
   });
 
   it('disables the viewer picker once everyone is already shared with', async () => {
     kpiClient.shares.mockResolvedValue([{ viewerUserId: 'u-1' }, { viewerUserId: 'u-2' }]);
-    render(<MetricShareControl workspaceId="ws-1" />);
+    renderWith(<MetricShareControl workspaceId="ws-1" />);
     await screen.findByText('Alice Admin');
     expect(screen.getByLabelText('Add viewer')).toBeDisabled();
     expect(screen.getByText('No one left to add')).toBeInTheDocument();

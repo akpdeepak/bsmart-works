@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.Map;
 import java.util.Optional;
@@ -45,13 +44,13 @@ class KnowledgeTenantIsolationTest {
     private final ArticleDiffService diffService = mock(ArticleDiffService.class);
     private final EventService eventService = mock(EventService.class);
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
-    private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
+    private final ArticleDao articleDao = mock(ArticleDao.class);
     private final KnowledgeSpaceRepository spaceRepository = mock(KnowledgeSpaceRepository.class);
     private final RbacService rbac = mock(RbacService.class);
 
     private final ArticleController articles = new ArticleController(
         articleRepository, articleVersionRepository, articleCommentRepository, workflowService,
-        analyticsService, diffService, eventService, authenticatedUser, jdbc, spaceRepository, rbac);
+        analyticsService, diffService, eventService, authenticatedUser, articleDao, spaceRepository, rbac);
     private final KnowledgeSpaceController spaces = new KnowledgeSpaceController(
         spaceRepository, articleRepository, eventService, authenticatedUser, rbac);
 
@@ -97,31 +96,31 @@ class KnowledgeTenantIsolationTest {
     @Test
     void getArticleLinks_deniedForForeignTenant_noRead() {
         assertForbidden(() -> articles.getArticleLinks(ARTICLE));
-        verifyNoInteractions(jdbc);
+        verifyNoInteractions(articleDao);
     }
 
     @Test
     void getAnalytics_deniedForForeignTenant_noRead() {
         assertForbidden(() -> articles.getAnalytics(ARTICLE));
-        verifyNoInteractions(jdbc, articleCommentRepository);
+        verifyNoInteractions(articleDao, articleCommentRepository);
     }
 
     @Test
     void voteHelpful_deniedForForeignTenant_noMutation() {
         assertForbidden(() -> articles.voteHelpful(ARTICLE));
-        verifyNoInteractions(jdbc);
+        verifyNoInteractions(articleDao);
     }
 
     @Test
     void linkWorkItem_deniedForForeignTenant_noMutation() {
         assertForbidden(() -> articles.linkWorkItem(ARTICLE, Map.of("workItemId", "WRK-1")));
-        verifyNoInteractions(jdbc);
+        verifyNoInteractions(articleDao);
     }
 
     @Test
     void unlinkWorkItem_deniedForForeignTenant_noMutation() {
         assertForbidden(() -> articles.unlinkWorkItem(ARTICLE, "WRK-1"));
-        verifyNoInteractions(jdbc);
+        verifyNoInteractions(articleDao);
     }
 
     @Test

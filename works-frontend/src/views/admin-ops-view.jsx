@@ -15,6 +15,7 @@ import { EmptyState } from '@/components/works/atoms/empty-state';
 import { Skeleton } from '@/components/works/atoms/skeleton';
 import { adminOpsClient } from '@/lib/adminOps';
 import { formatNumber, smartDate } from '@/lib/format';
+import { DEFAULT_PAGE_SIZE } from '@/lib/pagination';
 
 const TABS = [
   { id: 'health', label: 'Health', Icon: Activity },
@@ -85,7 +86,7 @@ export default function AdminOpsView({ workspaceId, onToast }) {
       seats: () => adminOpsClient.licenseSeats(workspaceId),
       aicost: () => adminOpsClient.aiCost(workspaceId),
       audit: async () => ({
-        log: await adminOpsClient.auditLog(workspaceId, { size: 50 }),
+        log: await adminOpsClient.auditLog(workspaceId, { size: DEFAULT_PAGE_SIZE }),
         eventTypes: await adminOpsClient.auditEventTypes(workspaceId),
         saved: await adminOpsClient.savedQueries(workspaceId),
       }),
@@ -355,7 +356,7 @@ function AuditTab({ workspaceId, data, onChanged, notify }) {
 
   async function run() {
     setBusy(true);
-    try { setRows(await adminOpsClient.auditLog(workspaceId, { ...filters, size: 50 })); }
+    try { setRows(await adminOpsClient.auditLog(workspaceId, { ...filters, size: DEFAULT_PAGE_SIZE })); }
     catch (e) { notify(e.message || 'Query failed', 'error'); }
     finally { setBusy(false); }
   }

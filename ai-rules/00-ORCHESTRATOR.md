@@ -169,7 +169,7 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   Cap X + Admin Operations Center Cap Y), **17** (Universal Customization Engine Cap R), **18**
   (Mobile + Real-time + Performance Cap S), **19** (Enterprise Security + Compliance Certifications
   Cap T), and the Compliance/Service iterations (7–9).
-- **Flyway high-water mark:** **V86** (`V86__bql_subscriptions.sql`; note: V16 was
+- **Flyway high-water mark:** **V87** (`V87__backfill_seed_work_item_event_history.sql`; note: V16 was
   skipped, V23 does not exist; V50–V53 are iterations 16/17/19/18's migrations; V54–V57 are
   iteration 20's advanced-AI / marketplace / knowledge / customer-chat migrations; V58 = user locale
   + perf indexes; V59 = block-editor + SCIM; V60 = custom domains; V61–V65 = compliance escalation,
@@ -199,8 +199,15 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   V85 = bql_run_audit — append-only audit of saved-view / subscription BQL runs ("saved/automated
   runs only"; ad-hoc /bql/execute is not audited, automations keep their own automation_runs log);
   V86 = bql_subscriptions — per-user saved-view subscriptions (DAILY/WEEKLY, in-app + email), each
-  delivery an audited workspace-scoped run).
-- **Next migration:** **`V87__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+  delivery an audited workspace-scoped run; V87 = backfill_seed_work_item_event_history — synthesizes
+  WORK_ITEM_CREATED + STATUS_CHANGED events for the ~356 seed work items that were bulk-inserted
+  without writing to the append-only events log, so the Activity feed and status-timeline flow
+  metrics render for them; idempotent (NOT EXISTS / "backfill":"V87" marker guards), tenant-scoped
+  via INNER JOIN to projects, data-only/forward-only); V88 = insightful_report_templates — UPDATEs the
+  three seeded report templates (exec-monthly / customer / release) to pivot-backed section sets
+  (KPI grid + status/type/priority/workload-by-assignee pivot charts + open-work table + narrative),
+  so "Use template" produces a genuinely useful report; forward-only data UPDATE.
+- **Next migration:** **`V89__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

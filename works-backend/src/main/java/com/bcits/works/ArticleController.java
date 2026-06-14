@@ -1,7 +1,6 @@
 package com.bcits.works;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,7 +28,7 @@ public class ArticleController {
     private final ArticleDiffService diffService;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
-    private final JdbcTemplate jdbc;
+    private final ArticleDao articleDao;
     private final KnowledgeSpaceRepository knowledgeSpaceRepository;
     private final RbacService rbac;
 
@@ -40,7 +39,7 @@ public class ArticleController {
                               ArticleAnalyticsService analyticsService,
                               ArticleDiffService diffService,
                               EventService eventService, AuthenticatedUser authenticatedUser,
-                              JdbcTemplate jdbc,
+                              ArticleDao articleDao,
                               KnowledgeSpaceRepository knowledgeSpaceRepository,
                               RbacService rbac) {
         this.articleRepository = articleRepository;
@@ -51,7 +50,7 @@ public class ArticleController {
         this.diffService = diffService;
         this.eventService = eventService;
         this.authenticatedUser = authenticatedUser;
-        this.jdbc = jdbc;
+        this.articleDao = articleDao;
         this.knowledgeSpaceRepository = knowledgeSpaceRepository;
         this.rbac = rbac;
     }
@@ -80,18 +79,13 @@ public class ArticleController {
     // (per-article views/votes/citations/stale live on /{id}/analytics; this is workspace-wide).
     @GetMapping("/analytics/search-terms")
     public List<Map<String, Object>> topSearchTerms(@RequestParam(defaultValue = "20") int limit) {
-        return jdbc.queryForList(
-            "SELECT term, search_count, last_searched_at FROM article_search_terms " +
-            "ORDER BY search_count DESC, last_searched_at DESC LIMIT ?", Math.min(limit, 100));
+        return articleDao.topSearchTerms(limit);
     }
 
     private void recordSearchTerm(String raw) {
         String term = analyticsService.normalizeSearchTerm(raw);
         if (term == null) return;
-        jdbc.update(
-            "INSERT INTO article_search_terms (term, search_count, last_searched_at) VALUES (?, 1, NOW()) " +
-            "ON CONFLICT (term) DO UPDATE SET search_count = article_search_terms.search_count + 1, last_searched_at = NOW()",
-            term);
+        articleDao.recordSearchTerm(term);
     }
 
     @GetMapping("/{id}")
@@ -99,7 +93,7 @@ public class ArticleController {
         Article article = articleRepository.findById(id).orElseThrow();
         requireArticleAccess(article);
         // increment view count
-        jdbc.update("UPDATE articles SET view_count = view_count + 1 WHERE id = ?", id);
+        articleDao.incrementViewCount(id);
         article.setViewCount(article.getViewCount() + 1);
         return article;
     }
@@ -161,11 +155,7 @@ public class ArticleController {
     @GetMapping("/{id}/links")
     public List<Map<String, Object>> getArticleLinks(@PathVariable String id) {
         requireArticleById(id);
-        return jdbc.queryForList(
-            "SELECT l.work_item_id, l.link_type, w.title as work_item_title, w.type as work_item_type, w.status " +
-            "FROM article_work_item_links l " +
-            "LEFT JOIN work_items w ON w.id = l.work_item_id " +
-            "WHERE l.article_id = ? ORDER BY l.created_at DESC", id);
+        return articleDao.articleLinks(id);
     }
 
     @GetMapping("/{id}/analytics")
@@ -189,9 +179,7 @@ public class ArticleController {
     }
 
     private long countCitations(String articleId) {
-        Long n = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM article_work_item_links WHERE article_id = ?", Long.class, articleId);
-        return n == null ? 0 : n;
+        return articleDao.countCitations(articleId);
     }
 
     @PostMapping
@@ -307,9 +295,9 @@ public class ArticleController {
 
     @PostMapping("/{id}/vote")
     public Article voteHelpful(@PathVariable String id) {
-        Article a = requireArticleById(id);
-        jdbc.update("UPDATE articles SET helpful_votes = helpful_votes + 1 WHERE id = ?", id);
-        return articleRepository.findById(a.getId()).orElseThrow();
+        requireArticleById(id);
+        articleDao.incrementHelpfulVotes(id);
+        return articleRepository.findById(id).orElseThrow();
     }
 
     @PostMapping("/{id}/links")
@@ -319,16 +307,14 @@ public class ArticleController {
         requireArticleById(id);
         String workItemId = body.get("workItemId");
         String linkType = body.getOrDefault("linkType", "RELATED");
-        jdbc.update("INSERT INTO article_work_item_links (article_id, work_item_id, link_type, created_by, created_at) " +
-                    "VALUES (?, ?, ?, ?, NOW()) ON CONFLICT (article_id, work_item_id) DO NOTHING",
-                    id, workItemId, linkType, userId);
+        articleDao.linkWorkItem(id, workItemId, linkType, userId);
         return Map.of("message", "Link created");
     }
 
     @DeleteMapping("/{id}/links/{workItemId}")
     public ResponseEntity<Void> unlinkWorkItem(@PathVariable String id, @PathVariable String workItemId) {
         requireArticleById(id);
-        jdbc.update("DELETE FROM article_work_item_links WHERE article_id = ? AND work_item_id = ?", id, workItemId);
+        articleDao.unlinkWorkItem(id, workItemId);
         return ResponseEntity.noContent().build();
     }
 

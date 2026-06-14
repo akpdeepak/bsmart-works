@@ -1,3 +1,4 @@
+import { useRef, useState, useEffect } from 'react';
 import { Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -73,20 +74,50 @@ export default function KnowledgeView({
   rejectArticle,
   articleChildren = [],
   fetchArticleChildren,
+  fetchArticleDetail,
+  knowledgeSpacesLoading = false,
+  knowledgeArticlesLoading = false,
   workspaceId,
   aiCapabilities = [],
 }) {
   const aiGenEnabled = capabilityEnabled(aiCapabilities, 'generation');
   const aiAssist = makeAiAssist(workspaceId, aiGenEnabled);
-  // Open a cited article if it's already loaded in a list (full object); otherwise leave the user in
-  // place rather than render a stub with no content.
-  const openArticleById = (id) => {
-    const found = [...(knowledgeArticles || []), ...(knowledgeSearchResults || [])].find((a) => a.id === id);
-    if (!found) return;
-    setSelectedArticle(found);
+  // Block-editor autosave: persist quietly ~900ms after the last change instead of PUT-on-every-
+  // keystroke (which previously fired a toast + version + list refetch per character). The visible
+  // status reassures the user; the explicit "Save Changes" button still does an immediate save.
+  const saveTimer = useRef(null);
+  const [blockSaveStatus, setBlockSaveStatus] = useState('idle'); // idle | saving | saved
+  const scheduleBlockSave = (id, patch) => {
+    setBlockSaveStatus('saving');
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      Promise.resolve(updateArticle(id, patch, { silent: true }))
+        .then(() => setBlockSaveStatus('saved'))
+        .catch(() => setBlockSaveStatus('idle'));
+    }, 900);
+  };
+  useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current); }, []);
+  // Open the editor in the article's own format — otherwise a block-format article opened for edit
+  // showed the empty markdown box (its block content looked missing). Syncs when the article changes.
+  useEffect(() => {
+    if (selectedArticle?.id) setArticleContentFormat(selectedArticle.contentFormat === 'blocks' ? 'blocks' : 'markdown');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedArticle?.id]);
+  // Open an article: render the (complete) list snapshot instantly, then fetch the full detail —
+  // which is the only call that increments the server-side view count (P1 fix). One helper so every
+  // open site (list, search, sub-articles, citations) behaves identically.
+  const selectArticle = (art) => {
+    if (!art) return;
+    setSelectedArticle(art);
     setEditingArticle(false);
     setArticlePanel(null);
-    fetchArticleChildren?.(id);
+    fetchArticleChildren?.(art.id);
+    fetchArticleDetail?.(art.id);
+  };
+  // Open a cited article if it's already loaded in a list; otherwise leave the user in place.
+  const openArticleById = (id) => {
+    const found = [...(knowledgeArticles || []), ...(knowledgeSearchResults || [])].find((a) => a.id === id);
+    if (found) selectArticle(found);
   };
   return (
     <div className="flex h-full overflow-hidden">
@@ -115,9 +146,13 @@ export default function KnowledgeView({
         </div>
         {/* Space list */}
         <div className="flex-1 overflow-y-auto px-2 pb-2">
-          {knowledgeSpaces.length === 0 && (
+          {knowledgeSpacesLoading && knowledgeSpaces.length === 0 ? (
+            <div className="space-y-1.5 px-1 py-2" aria-busy="true" aria-label="Loading spaces">
+              {[0, 1, 2].map(i => <div key={i} className="h-8 rounded-lg animate-pulse bg-neutral-100 dark:bg-neutral-800" />)}
+            </div>
+          ) : knowledgeSpaces.length === 0 ? (
             <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center py-6">No spaces yet. Create one to get started.</p>
-          )}
+          ) : null}
           {knowledgeSpaces.map(space => (
             <div key={space.id}>
               <button onClick={() => { setSelectedSpace(space); setSelectedArticle(null); setEditingArticle(false); setKnowledgeTab('space'); fetchKnowledgeArticles(space.id); }}
@@ -157,7 +192,7 @@ export default function KnowledgeView({
                 ) : (
                   <div className="space-y-2">
                     {knowledgeSearchResults.map(art => (
-                      <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); fetchArticleChildren?.(art.id); }} role="button" tabIndex={0} onKeyDown={onPressKey}
+                      <div key={art.id} onClick={() => selectArticle(art)} role="button" tabIndex={0} onKeyDown={onPressKey}
                         className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
@@ -191,13 +226,17 @@ export default function KnowledgeView({
                     )}
                   </div>
                 </div>
-                {knowledgeArticles.length === 0 ? (
+                {knowledgeArticlesLoading && knowledgeArticles.length === 0 ? (
+                  <div className="space-y-2" aria-busy="true" aria-label="Loading articles">
+                    {[0, 1, 2, 3].map(i => <div key={i} className="h-20 rounded-xl animate-pulse bg-neutral-100 dark:bg-neutral-800" />)}
+                  </div>
+                ) : knowledgeArticles.length === 0 ? (
                   <EmptyState icon={FileIcon} title={selectedSpace ? `No articles in ${selectedSpace.name}` : 'No articles'} subtitle="Create your first article to capture knowledge for the team."
                     action={selectedSpace && <Button variant="action" onClick={() => setIsArticleFormOpen(true)}>Write Article</Button>} />
                 ) : (
                   <div className="space-y-2">
                     {knowledgeArticles.map(art => (
-                      <div key={art.id} onClick={() => { setSelectedArticle(art); setEditingArticle(false); setArticlePanel(null); fetchArticleChildren?.(art.id); }} role="button" tabIndex={0} onKeyDown={onPressKey}
+                      <div key={art.id} onClick={() => selectArticle(art)} role="button" tabIndex={0} onKeyDown={onPressKey}
                         className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
@@ -326,30 +365,35 @@ export default function KnowledgeView({
                         <textarea id="article-content" rows={20} className="input resize-none font-mono text-sm w-full"
                           value={selectedArticle.content || ''}
                           onChange={e => setSelectedArticle(a => ({ ...a, content: e.target.value }))}
-                          onBlur={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, templateType: selectedArticle.templateType })}
+                          onBlur={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, contentFormat: 'markdown', templateType: selectedArticle.templateType })}
                           placeholder="Write your article content here... Supports Markdown formatting." />
                       </div>
                     ) : (
                       <div>
-                        <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-2">Content (Block editor)</span>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Content (Block editor)</span>
+                          {blockSaveStatus === 'saving' && <span className="text-2xs text-neutral-400" aria-live="polite">Saving…</span>}
+                          {blockSaveStatus === 'saved' && <span className="text-2xs text-semantic-success" aria-live="polite">Saved</span>}
+                        </div>
                         <BlockEditor
+                          key={selectedArticle.id}
                           aiAssist={aiAssist}
                           workspaceId={workspaceId}
                           blocks={(() => { try { return JSON.parse(selectedArticle.contentBlocks || '[]'); } catch { return []; } })()}
                           onChange={blocks => {
                             const json = JSON.stringify(blocks);
-                            setSelectedArticle(a => ({ ...a, contentBlocks: json }));
-                            updateArticle(selectedArticle.id, { contentBlocks: json, templateType: selectedArticle.templateType });
+                            setSelectedArticle(a => ({ ...a, contentBlocks: json, contentFormat: 'blocks' }));
+                            scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
                           }}
                         />
                       </div>
                     )}
-                    <Button variant="action" onClick={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, contentBlocks: selectedArticle.contentBlocks, templateType: selectedArticle.templateType })}>
+                    <Button variant="action" onClick={() => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: selectedArticle.content, contentBlocks: selectedArticle.contentBlocks, contentFormat: articleContentFormat, templateType: selectedArticle.templateType })}>
                       Save Changes
                     </Button>
                   </div>
                 ) : (
-                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <div className="prose prose-sm max-w-reading dark:prose-invert">
                     {(() => {
                       // Block-format articles (content_format='blocks') render via BlockRenderer —
                       // until now they showed nothing in read mode. Markdown articles keep renderMd.
@@ -380,7 +424,7 @@ export default function KnowledgeView({
                   <div className="space-y-1">
                     {articleChildren.map(child => (
                       <button key={child.id}
-                        onClick={() => { setSelectedArticle(child); setEditingArticle(false); setArticlePanel(null); fetchArticleChildren?.(child.id); }}
+                        onClick={() => selectArticle(child)}
                         className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 text-sm text-brand-navy dark:text-blue-300 hover:underline">
                         <FileText className="h-3.5 w-3.5 flex-shrink-0 text-neutral-400" aria-hidden="true" />
                         <span className="truncate">{child.title}</span>

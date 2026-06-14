@@ -110,6 +110,7 @@ public class ArticleController {
     public List<ArticleVersion> getVersions(@PathVariable String id,
                                             @RequestParam(defaultValue = "0") int page,
                                             @RequestParam(defaultValue = "50") int size) {
+        requireArticleById(id);
         int limit = Math.min(Math.max(size, 1), 200);
         return articleVersionRepository.findByArticleIdOrderByVersionNumberDesc(id,
             PageRequest.of(Math.max(page, 0), limit)).getContent();
@@ -119,6 +120,7 @@ public class ArticleController {
     @GetMapping("/{id}/versions/{from}/diff/{to}")
     public Map<String, Object> diffVersions(@PathVariable String id,
                                             @PathVariable Integer from, @PathVariable Integer to) {
+        requireArticleById(id);
         ArticleVersion vFrom = articleVersionRepository.findByArticleIdAndVersionNumber(id, from).orElseThrow();
         ArticleVersion vTo = articleVersionRepository.findByArticleIdAndVersionNumber(id, to).orElseThrow();
         return Map.of(
@@ -137,7 +139,7 @@ public class ArticleController {
     @PostMapping("/{id}/versions/{versionNumber}/restore")
     public Article restoreVersion(@PathVariable String id, @PathVariable Integer versionNumber) {
         String userId = authenticatedUser.id();
-        Article a = articleRepository.findById(id).orElseThrow();
+        Article a = requireArticleById(id);
         ArticleVersion v = articleVersionRepository.findByArticleIdAndVersionNumber(id, versionNumber).orElseThrow();
         a.setTitle(v.getTitle());
         a.setContent(v.getContent());
@@ -152,12 +154,13 @@ public class ArticleController {
 
     @GetMapping("/{id}/links")
     public List<Map<String, Object>> getArticleLinks(@PathVariable String id) {
+        requireArticleById(id);
         return articleDao.articleLinks(id);
     }
 
     @GetMapping("/{id}/analytics")
     public Map<String, Object> getAnalytics(@PathVariable String id) {
-        Article a = articleRepository.findById(id).orElseThrow();
+        Article a = requireArticleById(id);
         long citations = countCitations(id);
         long openComments = articleCommentRepository.countByArticleIdAndResolvedFalse(id);
         long versions = articleVersionRepository.findByArticleIdOrderByVersionNumberDesc(id).size();
@@ -183,6 +186,11 @@ public class ArticleController {
     public Article createArticle(@Valid @RequestBody Article article) {
         String userId = authenticatedUser.id();
         validateBlockEditor(article);
+        // Workspace-scoped (RB-40 §1): the target space must belong to a workspace the caller is in,
+        // otherwise an article could be created inside another tenant's space.
+        KnowledgeSpace space = knowledgeSpaceRepository.findById(article.getSpaceId())
+                .orElseThrow(() -> ApiException.badRequest("SPACE_REQUIRED", "A valid spaceId is required.", "spaceId"));
+        rbac.require(userId, space.getWorkspaceId(), "view_items");
         article.setId("ART-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         article.setStatus(article.getStatus() != null ? article.getStatus() : "DRAFT");
         article.setContentFormat(article.getContentFormat() != null ? article.getContentFormat() : "markdown");
@@ -287,6 +295,7 @@ public class ArticleController {
 
     @PostMapping("/{id}/vote")
     public Article voteHelpful(@PathVariable String id) {
+        requireArticleById(id);
         articleDao.incrementHelpfulVotes(id);
         return articleRepository.findById(id).orElseThrow();
     }
@@ -295,6 +304,7 @@ public class ArticleController {
     public Map<String, String> linkWorkItem(@PathVariable String id,
                                              @Valid @RequestBody Map<String, String> body) {
         String userId = authenticatedUser.id();
+        requireArticleById(id);
         String workItemId = body.get("workItemId");
         String linkType = body.getOrDefault("linkType", "RELATED");
         articleDao.linkWorkItem(id, workItemId, linkType, userId);
@@ -303,6 +313,7 @@ public class ArticleController {
 
     @DeleteMapping("/{id}/links/{workItemId}")
     public ResponseEntity<Void> unlinkWorkItem(@PathVariable String id, @PathVariable String workItemId) {
+        requireArticleById(id);
         articleDao.unlinkWorkItem(id, workItemId);
         return ResponseEntity.noContent().build();
     }
@@ -320,6 +331,13 @@ public class ArticleController {
         KnowledgeSpace space = knowledgeSpaceRepository.findById(article.getSpaceId())
                 .orElseThrow(() -> ApiException.notFound("Article", article.getId()));
         rbac.require(authenticatedUser.id(), space.getWorkspaceId(), "view_items");
+    }
+
+    /** Load an article by id and enforce workspace access (RB-40 §1) before any read/mutation. */
+    private Article requireArticleById(String id) {
+        Article article = articleRepository.findById(id).orElseThrow(() -> ApiException.notFound("Article", id));
+        requireArticleAccess(article);
+        return article;
     }
 
     /** Validate: if content_format=blocks, content_blocks must be present and non-empty. */

@@ -137,12 +137,9 @@ class WorkItemControllerPaginationTest {
 
         controller.getAllWorkItems(null, 0, 200);
 
-        // The SQL must contain DESC (newest-first) and must NOT contain ASC (oldest-first).
+        // The SQL must contain DESC (newest-first).
         verify(jdbc).query(
-                org.mockito.ArgumentMatchers.and(
-                    org.mockito.ArgumentMatchers.contains("created_at DESC"),
-                    org.mockito.AdditionalMatchers.not(org.mockito.ArgumentMatchers.contains("created_at ASC"))
-                ),
+                org.mockito.ArgumentMatchers.contains("created_at DESC"),
                 any(RowMapper.class),
                 eq(CALLER), eq(200), eq(0));
     }

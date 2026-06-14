@@ -60,7 +60,7 @@ class WorkItemControllerPaginationTest {
     private final WorkItemController controller = new WorkItemController(
             repository, eventService, jdbc, notifRepo, userRepository,
             emailService, batch, auth, rbac, dod, ext, wfRules, statusCfg, wip,
-            mock(WorkItemBulkService.class), watchers);
+            mock(WorkItemBulkService.class), watchers, mock(AutomationService.class));
 
     WorkItemControllerPaginationTest() {
         when(auth.id()).thenReturn(CALLER);

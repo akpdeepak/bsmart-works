@@ -71,6 +71,33 @@ export function filterItems(items = [], filters = EMPTY_FILTERS, currentUserId =
   });
 }
 
+// Coerce a persisted saved-filter payload into the current filter shape. Accepts both the current
+// shape and the legacy sprint quick-filter shape ({type, value}) so existing saved_filters rows keep
+// working after the Sprint surface adopts the shared filter model.
+export function normalizeSavedFilter(raw) {
+  if (!raw || typeof raw !== 'object') return { ...EMPTY_FILTERS };
+  const isNewShape = 'assignees' in raw || 'types' in raw || 'priorities' in raw
+    || 'search' in raw || ('mine' in raw && !('type' in raw));
+  if (isNewShape) {
+    return {
+      search: raw.search || '',
+      assignees: Array.isArray(raw.assignees) ? raw.assignees : [],
+      types: Array.isArray(raw.types) ? raw.types : [],
+      priorities: Array.isArray(raw.priorities) ? raw.priorities : [],
+      mine: !!raw.mine,
+    };
+  }
+  const f = { ...EMPTY_FILTERS };
+  switch (raw.type) {
+    case 'mine': f.mine = true; break;
+    case 'priority': if (raw.value) f.priorities = [raw.value]; break;
+    case 'itemType': if (raw.value) f.types = [raw.value]; break;
+    case 'blockers': f.priorities = ['CRITICAL']; break; // best-effort map of the old blocker preset
+    default: break;
+  }
+  return f;
+}
+
 function cmp(a, b) { return a < b ? -1 : a > b ? 1 : 0; }
 
 // Sort an item list by the chosen field. `field: 'none'` preserves the incoming order (e.g. the

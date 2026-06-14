@@ -11,7 +11,8 @@ const baseProps = {
   sprintMetrics: null,
   sprintMetricsLoading: false,
   swimlaneBy: 'none',
-  activeFilter: null,
+  sprintFilters: { search: '', assignees: [], types: [], priorities: [], mine: false },
+  sprintSort: { field: 'none', dir: 'asc' },
   savedFilters: [],
   showSaveFilter: false,
   saveFilterName: '',
@@ -26,7 +27,8 @@ const baseProps = {
   currentUser: null,
   setActiveSprint: noop,
   setSwimlaneBy: noop,
-  setActiveFilter: noop,
+  setSprintFilters: noop,
+  setSprintSort: noop,
   setShowSaveFilter: noop,
   setSaveFilterName: noop,
   setSprintItems: noop,
@@ -65,10 +67,11 @@ describe('SprintView', () => {
     expect(screen.getByText('ACTIVE')).toBeInTheDocument();
   });
 
-  it('renders quick filter buttons', () => {
+  it('renders the shared filter/sort bar (unified across Deliver surfaces)', () => {
     const sprint = { id: 'S-1', name: 'Sprint 1', status: 'ACTIVE', startDate: null, endDate: null, capacity: 0 };
     render(<SprintView {...baseProps} activeSprint={sprint} sprints={[sprint]} />);
-    expect(screen.getByRole('button', { name: /all/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /mine/i })).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: /search items/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /my items/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/sort by/i)).toBeInTheDocument();
   });
 });

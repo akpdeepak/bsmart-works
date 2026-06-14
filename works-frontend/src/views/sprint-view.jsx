@@ -1,7 +1,9 @@
-import { Zap, Flame, ArrowUp, Bug, Star, Globe, Lock, Unlock, X } from 'lucide-react';
+import { Zap, Star, Globe, Lock, Unlock, X } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { SprintBoard } from '@/components/works/organisms/sprint-board';
+import { WorkItemFilterBar } from '@/components/works/organisms/work-item-filter-bar';
+import { normalizeSavedFilter, hasActiveFilters } from '@/lib/work-item-filter';
 import { api } from '@/lib/apiClient';
 import { useI18n } from '@/lib/i18n';
 import { absoluteDate } from '@/lib/format';
@@ -19,7 +21,8 @@ export default function SprintView({
   sprintMetrics,
   sprintMetricsLoading,
   swimlaneBy,
-  activeFilter,
+  sprintFilters,
+  sprintSort,
   savedFilters,
   showSaveFilter,
   saveFilterName,
@@ -30,7 +33,8 @@ export default function SprintView({
   currentUser,
   setActiveSprint,
   setSwimlaneBy,
-  setActiveFilter,
+  setSprintFilters,
+  setSprintSort,
   setShowSaveFilter,
   setSaveFilterName,
   setSprintItems,
@@ -122,64 +126,62 @@ export default function SprintView({
             ) : null}
           </div>
 
-          {/* Quick filters + Swimlane + Saved filters */}
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
-            {[
-              { labelKey: 'deliver.sprint.filter.all', filter: null },
-              { labelKey: 'deliver.sprint.filter.mine', filter: { type: 'mine' } },
-              { labelKey: 'deliver.sprint.filter.blockers', Icon: Flame, filter: { type: 'blockers' } },
-              { labelKey: 'deliver.sprint.filter.highPriority', Icon: ArrowUp, filter: { type: 'priority', value: 'HIGH' } },
-              { labelKey: 'deliver.sprint.filter.bugs', Icon: Bug, filter: { type: 'itemType', value: 'BUG' } },
-            ].map(f => (
-              <button key={f.labelKey} onClick={() => setActiveFilter(f.filter)}
-                className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${JSON.stringify(activeFilter) === JSON.stringify(f.filter) ? 'bg-brand-navy text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'}`}>
-                {f.Icon && <f.Icon className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />}{t(f.labelKey)}
-              </button>
-            ))}
-            {savedFilters.map(f => (
-              <div key={f.id} className="flex items-center gap-0.5">
-                <button onClick={() => setActiveFilter(JSON.parse(f.filterJson))}
-                  className={`text-xs px-2.5 py-1.5 rounded-l-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/10 text-semantic-success' : 'bg-brand-navy/10 text-brand-navy'} hover:opacity-80`}>
-                  {f.shared ? <Globe className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /> : <Star className="inline-block h-3.5 w-3.5 align-text-bottom fill-current" aria-hidden="true" />}{f.name}
-                </button>
-                {f.createdBy === currentUser?.id && (
-                  <button
-                    onClick={() => {
-                      api.send(`/saved-filters/${f.id}/share`, { method: 'PUT' })
-                        .then(() => fetchSavedFilters())
-                        .catch(reportError);
-                    }}
-                    title={f.shared ? t('deliver.sprint.makePrivate') : t('deliver.sprint.shareWithTeam')}
-                    className={`text-xs px-1.5 py-1.5 rounded-r-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/20 text-semantic-success hover:bg-semantic-success/30' : 'bg-neutral-100 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200'}`}>
-                    {f.shared ? <Unlock className="h-3.5 w-3.5" aria-hidden="true" /> : <Lock className="h-3.5 w-3.5" aria-hidden="true" />}
+          {/* Shared filter + sort bar (same model as Board/Backlog), saved filters, swimlane */}
+          <div className="mb-3 space-y-2">
+            <WorkItemFilterBar
+              items={sprintItems}
+              filters={sprintFilters}
+              onFiltersChange={setSprintFilters}
+              sort={sprintSort}
+              onSortChange={setSprintSort}
+              userName={(id) => users.find(u => u.id === id)?.fullName || id}
+            />
+            <div className="flex items-center gap-2 flex-wrap">
+              {savedFilters.map(f => (
+                <div key={f.id} className="flex items-center gap-0.5">
+                  <button onClick={() => setSprintFilters(normalizeSavedFilter(JSON.parse(f.filterJson)))}
+                    className={`text-xs px-2.5 py-1.5 rounded-l-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/10 text-semantic-success' : 'bg-brand-navy/10 text-brand-navy'} hover:opacity-80`}>
+                    {f.shared ? <Globe className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /> : <Star className="inline-block h-3.5 w-3.5 align-text-bottom fill-current" aria-hidden="true" />}{f.name}
                   </button>
-                )}
-              </div>
-            ))}
-            {activeFilter && (
-              <div className="flex items-center gap-1 ml-auto">
-                {!showSaveFilter
-                  ? <button onClick={() => setShowSaveFilter(true)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy">{t('deliver.sprint.saveFilter')}</button>
-                  : <div className="flex gap-1">
-                      <input type="text" value={saveFilterName} onChange={e => setSaveFilterName(e.target.value)}
-                        placeholder={t('deliver.sprint.filterName')} className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 rounded px-2 py-1 focus:outline-none" />
-                      <Button size="sm" variant="secondary" onClick={handleSaveFilter}>{t('common.save')}</Button>
-                      <button onClick={() => setShowSaveFilter(false)} className="text-xs text-neutral-600 dark:text-neutral-400 px-1" aria-label={t('deliver.sprint.cancelSaveFilter')}>
-                        <X className="h-3.5 w-3.5" aria-hidden="true" />
-                      </button>
-                    </div>
-                }
-              </div>
-            )}
-            <select value={swimlaneBy} onChange={e => setSwimlaneBy(e.target.value)}
-              className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 rounded-md px-2 py-1.5 focus:outline-none text-neutral-600 ml-auto">
-              <option value="none">{t('deliver.sprint.swimlane.none')}</option>
-              <option value="assignee">{t('deliver.sprint.swimlane.assignee')}</option>
-              <option value="type">{t('deliver.sprint.swimlane.type')}</option>
-              <option value="priority">{t('deliver.sprint.swimlane.priority')}</option>
-              <option value="epic">{t('deliver.sprint.swimlane.epic')}</option>
-              <option value="tag">{t('deliver.sprint.swimlane.tag')}</option>
-            </select>
+                  {f.createdBy === currentUser?.id && (
+                    <button
+                      onClick={() => {
+                        api.send(`/saved-filters/${f.id}/share`, { method: 'PUT' })
+                          .then(() => fetchSavedFilters())
+                          .catch(reportError);
+                      }}
+                      title={f.shared ? t('deliver.sprint.makePrivate') : t('deliver.sprint.shareWithTeam')}
+                      className={`text-xs px-1.5 py-1.5 rounded-r-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/20 text-semantic-success hover:bg-semantic-success/30' : 'bg-neutral-100 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200'}`}>
+                      {f.shared ? <Unlock className="h-3.5 w-3.5" aria-hidden="true" /> : <Lock className="h-3.5 w-3.5" aria-hidden="true" />}
+                    </button>
+                  )}
+                </div>
+              ))}
+              {hasActiveFilters(sprintFilters) && (
+                <div className="flex items-center gap-1">
+                  {!showSaveFilter
+                    ? <button onClick={() => setShowSaveFilter(true)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy">{t('deliver.sprint.saveFilter')}</button>
+                    : <div className="flex gap-1">
+                        <input type="text" value={saveFilterName} onChange={e => setSaveFilterName(e.target.value)}
+                          placeholder={t('deliver.sprint.filterName')} className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 rounded px-2 py-1 focus:outline-none" />
+                        <Button size="sm" variant="secondary" onClick={handleSaveFilter}>{t('common.save')}</Button>
+                        <button onClick={() => setShowSaveFilter(false)} className="text-xs text-neutral-600 dark:text-neutral-400 px-1" aria-label={t('deliver.sprint.cancelSaveFilter')}>
+                          <X className="h-3.5 w-3.5" aria-hidden="true" />
+                        </button>
+                      </div>
+                  }
+                </div>
+              )}
+              <select value={swimlaneBy} onChange={e => setSwimlaneBy(e.target.value)}
+                className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 rounded-md px-2 py-1.5 focus:outline-none text-neutral-600 ml-auto">
+                <option value="none">{t('deliver.sprint.swimlane.none')}</option>
+                <option value="assignee">{t('deliver.sprint.swimlane.assignee')}</option>
+                <option value="type">{t('deliver.sprint.swimlane.type')}</option>
+                <option value="priority">{t('deliver.sprint.swimlane.priority')}</option>
+                <option value="epic">{t('deliver.sprint.swimlane.epic')}</option>
+                <option value="tag">{t('deliver.sprint.swimlane.tag')}</option>
+              </select>
+            </div>
           </div>
 
           <SprintBoard items={applyFilter(sprintItems)} columns={columns} users={users}

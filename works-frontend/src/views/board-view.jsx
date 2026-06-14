@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Star, SquarePen, X } from 'lucide-react';
 import { BoardWipBadge } from '@/components/works/organisms/board-wip-badge';
 import { WorkItemFilterBar } from '@/components/works/organisms/work-item-filter-bar';
+import { BulkEditBar } from '@/components/works/organisms/bulk-edit-bar';
 import { filterItems, sortItems, EMPTY_FILTERS, DEFAULT_SORT } from '@/lib/work-item-filter';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { Avatar } from '@/components/works/atoms/avatar';
@@ -67,6 +68,8 @@ export default function BoardView({
   workspaceId,
   statusResolver,
   currentUserId = null,
+  users = [],
+  onBulkEdit,
 }) {
   const { t } = useI18n();
   const columns = COLUMNS;
@@ -74,6 +77,25 @@ export default function BoardView({
   const iv = cardPrefs?.isVisible ?? (() => true);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [sort, setSort] = useState(DEFAULT_SORT);
+  // Multi-select bulk edit (JIRA-style): pick cards, apply one change to all; the server re-checks
+  // edit rights per item (RB-40 §1). Selection is by id so it survives filter/sort re-renders.
+  const [selected, setSelected] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const bulkEnabled = typeof onBulkEdit === 'function';
+  const toggleSelect = (id) => setSelected((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const clearSelection = () => setSelected(new Set());
+  const applyBulk = (action, value) => {
+    const ids = [...selected];
+    if (!ids.length) return Promise.resolve();
+    setBulkBusy(true);
+    return Promise.resolve(onBulkEdit(action, value, ids))
+      .then(() => clearSelection())
+      .finally(() => setBulkBusy(false));
+  };
   // Resolve an item's board category (per-type status config; legacy-safe fallback).
   const catOf = (item) => statusResolver
     ? statusResolver.categoryOf(item.type, item.status)
@@ -124,6 +146,12 @@ export default function BoardView({
           userName={userName}
         />
       </div>
+
+      {bulkEnabled && selected.size > 0 && (
+        <div className="mb-4">
+          <BulkEditBar count={selected.size} users={users} busy={bulkBusy} onApply={applyBulk} onClear={clearSelection} />
+        </div>
+      )}
 
       {loading ? (
         <div className="flex gap-4 flex-1 overflow-x-auto pb-4" aria-busy="true" aria-label={t('deliver.board.loadingBoard')}>
@@ -191,6 +219,9 @@ export default function BoardView({
                       onEdit={setSelectedItem}
                       onDelete={handleDelete}
                       onDragStart={handleDragStart}
+                      selectable={bulkEnabled}
+                      selected={selected.has(item.id)}
+                      onToggleSelect={toggleSelect}
                     />
                   ))}
                 </div>
@@ -210,7 +241,7 @@ export default function BoardView({
 
 // ── Card sub-component ─────────────────────────────────────────────────────────
 
-function WorkCard({ item, category, density, densityPad, iv, userName, customFieldDefs, statusResolver, onStar, onEdit, onDelete, onDragStart }) {
+function WorkCard({ item, category, density, densityPad, iv, userName, customFieldDefs, statusResolver, onStar, onEdit, onDelete, onDragStart, selectable = false, selected = false, onToggleSelect }) {
   const { t } = useI18n();
   const due = dueLabel(item.dueDate, t);
   const customVisible = customFieldDefs.filter(d => iv(`fd_${d.id}`) && item.fieldValues?.[d.id] != null);
@@ -228,12 +259,24 @@ function WorkCard({ item, category, density, densityPad, iv, userName, customFie
       className={cn(
         'bg-white dark:bg-neutral-700 rounded-lg shadow-sm border cursor-grab hover:shadow-md transition-shadow group',
         densityPad[density],
-        item.starred ? 'border-brand-orange/40' : 'border-neutral-200 dark:border-neutral-600'
+        selected ? 'border-brand-navy ring-1 ring-brand-navy-tint/40' : item.starred ? 'border-brand-orange/40' : 'border-neutral-200 dark:border-neutral-600'
       )}
     >
       {/* Top row: ID + actions */}
       <div className="flex items-start justify-between mb-1.5">
-        <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.autoId || item.id}</span>
+        <div className="flex items-center gap-1.5 min-w-0">
+          {selectable && (
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => onToggleSelect(item.id)}
+              onClick={(e) => e.stopPropagation()}
+              aria-label={t('deliver.bulk.selectItem')}
+              className={cn('h-3.5 w-3.5 flex-shrink-0 accent-brand-navy cursor-pointer', selected ? '' : 'opacity-0 group-hover:opacity-100 transition-opacity')}
+            />
+          )}
+          <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.autoId || item.id}</span>
+        </div>
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={() => onStar(item)} title={item.starred ? t('deliver.board.unstar') : t('deliver.board.star')}
             className={`text-xs p-0.5 transition-colors ${item.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}`}>

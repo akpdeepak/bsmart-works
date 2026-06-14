@@ -993,6 +993,21 @@ export default function App() {
     }).catch(err => showToast(err.message, 'error'));
   };
 
+  // Bulk-edit selected items (assignee/priority/add|removeLabel). The server re-checks edit rights
+  // per item (RB-40 §1) and returns { requested, updated, skipped }; we refetch so every surface
+  // reflects the change and surface a summary toast. Returns a promise so the caller can clear state.
+  const handleBulkEdit = (action, value, ids) =>
+    api.send('/work-items/bulk', { method: 'POST', body: JSON.stringify({ ids, action, value }) })
+      .then(res => api.raw('/work-items').then(r => r.json()).then(items => {
+        setWorkItems(Array.isArray(items) ? items : []);
+        const updated = res?.updated?.length ?? 0;
+        const skipped = res?.skipped?.length ?? 0;
+        showToast(skipped > 0
+          ? `Updated ${updated} · skipped ${skipped} (no edit rights)`
+          : `Updated ${updated} item${updated === 1 ? '' : 's'}`);
+      }))
+      .catch(err => { showToast(err.message || 'Bulk edit failed', 'error'); throw err; });
+
   const handleMoveItem = (itemId, newParentId) => {
     api.send(`/work-items/${itemId}/parent`, {
       method: 'PATCH',
@@ -3263,6 +3278,8 @@ export default function App() {
               statusResolver={statusResolver}
               workspaceId={activeWorkspaceId}
               currentUserId={currentUser?.id}
+              users={users}
+              onBulkEdit={handleBulkEdit}
               onCustomFieldCreated={def => setCustomFieldDefs(prev => [...prev, def])}
             />
           )}

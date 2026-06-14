@@ -3363,6 +3363,7 @@ export default function App() {
               cardPrefs={cardPrefs}
               customFieldDefs={customFieldDefs}
               statusResolver={statusResolver}
+              currentUserId={currentUser?.id}
             />
           )}
 

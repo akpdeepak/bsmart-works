@@ -346,6 +346,7 @@ export const MESSAGES = {
     // Shared Deliver filter/sort bar (Board, Backlog, Sprint). English source; other locales
     // fall back to English until a localization pass externalizes them (translate() handles this).
     'deliver.filter.search': 'Search items…',
+    'deliver.filter.noMatches': 'No items match the current filters.',
     'deliver.filter.mine': 'My items',
     'deliver.filter.assignee': 'Assignee',
     'deliver.filter.type': 'Type',

@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { FileText } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { WorkItemFilterBar } from '@/components/works/organisms/work-item-filter-bar';
+import { filterItems, sortItems, EMPTY_FILTERS, DEFAULT_SORT } from '@/lib/work-item-filter';
 import { Skeleton, ListSkeleton } from '@/components/works/atoms/skeleton';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { PriorityBadge } from '@/components/works/priority-badge';
@@ -39,9 +42,16 @@ export default function BacklogView({
   SprintItemList,
   cardPrefs,
   statusResolver,
+  currentUserId = null,
 }) {
   const { t } = useI18n();
   const iv = cardPrefs?.isVisible ?? (() => true);
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [sort, setSort] = useState(DEFAULT_SORT);
+  const userName = (id) => users.find(u => u.id === id)?.fullName || id;
+  // Filter + sort the backlog list with the shared model (same bar as the Board). Sort defaults to
+  // 'Manual', preserving the drag-drop backlog_order until the user opts into a sort.
+  const visibleBacklog = sortItems(filterItems(backlogItems, filters, currentUserId), sort);
   // An item counts as "done" by its status's resolved board category, not a literal "Done"
   // string — so custom / renamed done statuses (Completed, Closed, …) roll up correctly.
   const isDone = (item) => (statusResolver
@@ -141,15 +151,33 @@ export default function BacklogView({
             );
           })}
 
+          {/* Filter + sort bar (shared with the Board) — scopes the backlog list below */}
+          <div className="mb-3">
+            <WorkItemFilterBar
+              items={backlogItems}
+              filters={filters}
+              onFiltersChange={setFilters}
+              sort={sort}
+              onSortChange={setSort}
+              userName={userName}
+            />
+          </div>
+
           {/* Backlog items with drag-drop reorder */}
           <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900">
               <h3 className="font-semibold text-neutral-900">{t('deliver.backlog.title')}</h3>
-              <span className="text-xs text-neutral-600 dark:text-neutral-400">{backlogItems.length} {t('deliver.backlog.items')}</span>
+              <span className="text-xs text-neutral-600 dark:text-neutral-400">
+                {visibleBacklog.length === backlogItems.length
+                  ? `${backlogItems.length} ${t('deliver.backlog.items')}`
+                  : `${visibleBacklog.length} / ${backlogItems.length} ${t('deliver.backlog.items')}`}
+              </span>
             </div>
             {backlogItems.length === 0
               ? <EmptyState icon={FileText} title={t('deliver.backlog.emptyTitle')} subtitle={t('deliver.backlog.emptySubtitle')} action={<Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>{t('deliver.backlog.addToBacklog')}</Button>} />
-              : backlogItems.map((item) => (
+              : visibleBacklog.length === 0
+              ? <p className="px-5 py-8 text-center text-sm text-neutral-600 dark:text-neutral-400">{t('deliver.filter.noMatches')}</p>
+              : visibleBacklog.map((item) => (
                 <div key={item.id}
                   draggable onDragStart={(e) => handleBacklogDragStart(e, item.id)}
                   onDragOver={(e) => { e.preventDefault(); setDragOverId(item.id); }}

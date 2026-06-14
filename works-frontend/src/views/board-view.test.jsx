@@ -98,4 +98,24 @@ describe('BoardView', () => {
     render(<BoardView {...baseProps} workItems={twoItems} currentUserId="u1" />);
     expect(screen.queryByRole('checkbox', { name: /select item/i })).not.toBeInTheDocument();
   });
+
+  // Audit Finding #7 — X-Total-Count / truncation indicator
+  it('shows no truncation warning when totalWorkItemCount equals loaded count', () => {
+    render(<BoardView {...baseProps} workItems={twoItems} totalWorkItemCount={2} />);
+    expect(screen.queryByText(/of 2/i)).not.toBeInTheDocument();
+  });
+
+  it('shows truncation warning when totalWorkItemCount exceeds loaded items', () => {
+    // Seed workspace has 319 items but only 200 are loaded (Audit Finding #7).
+    const items = Array.from({ length: 200 }, (_, i) => ({
+      id: `WI-${i}`, title: `Item ${i}`, type: 'Task', status: 'Todo', tags: [], starred: false,
+    }));
+    render(<BoardView {...baseProps} workItems={items} totalWorkItemCount={319} />);
+    expect(screen.getByText(/of 319/i)).toBeInTheDocument();
+  });
+
+  it('shows no truncation warning when totalWorkItemCount is null (header absent)', () => {
+    render(<BoardView {...baseProps} workItems={twoItems} totalWorkItemCount={null} />);
+    expect(screen.queryByText(/of/i)).not.toBeInTheDocument();
+  });
 });

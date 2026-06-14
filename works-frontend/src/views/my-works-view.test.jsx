@@ -115,4 +115,22 @@ describe('MyWorksView', () => {
     expect(screen.getByText('No recent activity')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create a work item' })).toBeInTheDocument();
   });
+
+  // Audit Finding #7 — myItems comes from /work-items/my, not filtered from workItems.
+  // The view renders items from the myItems prop directly; items that are only in workItems
+  // but not in myItems must NOT appear in the Assigned tab. This confirms the data path is
+  // the dedicated server-side-scoped fetch, not a client-side filter of the paginated set.
+  it('assigned tab shows only items from the myItems prop, not from workItems', () => {
+    const assignedItem  = makeItem({ id: 'MY-1',    title: 'My assigned task',  assigneeId: 'USR-1' });
+    const unrelatedItem = makeItem({ id: 'OTHER-1', title: 'Someone elses task', assigneeId: 'USR-2' });
+    render(
+      <MyWorksView
+        {...baseProps}
+        myItems={[assignedItem]}
+        workItems={[assignedItem, unrelatedItem]}
+      />
+    );
+    expect(screen.getByText('My assigned task')).toBeInTheDocument();
+    expect(screen.queryByText("Someone elses task")).not.toBeInTheDocument();
+  });
 });

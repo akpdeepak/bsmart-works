@@ -2,6 +2,7 @@ package com.bcits.works;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -95,28 +96,45 @@ public class WorkItemController {
         "project_id IN (SELECT p.id FROM projects p "
         + "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id WHERE wm.user_id = ?)";
 
-    @Operation(summary = "List work items", description = "Returns work items visible to the authenticated user (workspace-scoped). Paginated; default page=0 size=50 max=200.")
+    @Operation(summary = "List work items", description = "Returns work items visible to the authenticated user"
+        + " (workspace-scoped). Paginated; default page=0 size=200 max=500."
+        + " Response carries X-Total-Count (full filtered count) and X-Has-More (boolean).")
     @GetMapping
-    public List<WorkItem> getAllWorkItems(@RequestParam(required = false) String parentId,
+    public ResponseEntity<List<WorkItem>> getAllWorkItems(
+                                          @RequestParam(required = false) String parentId,
                                           @RequestParam(defaultValue = "0") int page,
-                                          @RequestParam(defaultValue = "50") int size) {
+                                          @RequestParam(defaultValue = "200") int size) {
         String userId = authenticatedUser.id();
-        int limit = Math.min(Math.max(size, 1), 200);
+        int limit = Math.min(Math.max(size, 1), 500);
         int offset = Math.max(page, 0) * limit;
         List<WorkItem> items;
+        long totalCount;
         if (parentId != null) {
             items = jdbc.query("SELECT * FROM work_items WHERE parent_id = ? AND deleted_at IS NULL "
-                + "AND " + MEMBER_PROJECTS + " ORDER BY created_at ASC LIMIT ? OFFSET ?",
+                + "AND " + MEMBER_PROJECTS + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
                 this::mapRow, parentId, userId, limit, offset);
+            Long cnt = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM work_items WHERE parent_id = ? AND deleted_at IS NULL "
+                + "AND " + MEMBER_PROJECTS,
+                Long.class, parentId, userId);
+            totalCount = cnt != null ? cnt : 0L;
         } else {
             items = jdbc.query("SELECT * FROM work_items WHERE deleted_at IS NULL "
-                + "AND " + MEMBER_PROJECTS + " ORDER BY created_at ASC LIMIT ? OFFSET ?",
+                + "AND " + MEMBER_PROJECTS + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
                 this::mapRow, userId, limit, offset);
+            Long cnt = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM work_items WHERE deleted_at IS NULL AND " + MEMBER_PROJECTS,
+                Long.class, userId);
+            totalCount = cnt != null ? cnt : 0L;
         }
         attachTagsBatch(items);
         attachFieldValuesBatch(items);
         attachStarred(items, userId);
-        return items;
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Total-Count", String.valueOf(totalCount));
+        headers.set("X-Has-More", String.valueOf(totalCount > (long) offset + items.size()));
+        headers.add("Access-Control-Expose-Headers", "X-Total-Count, X-Has-More");
+        return ResponseEntity.ok().headers(headers).body(items);
     }
 
     // Single work item by id (added iteration 14 — the IDE extensions, the `works` CLI and the
@@ -224,11 +242,13 @@ public class WorkItemController {
     }
 
     @GetMapping("/backlog")
-    public List<WorkItem> getBacklog(@RequestParam(required = false) String projectId) {
+    public List<WorkItem> getBacklog(@RequestParam(required = false) String projectId,
+                                     @RequestParam(defaultValue = "300") int size) {
         String userId = authenticatedUser.id();
+        int limit = Math.min(Math.max(size, 1), 1000);
         String sql = "SELECT * FROM work_items WHERE sprint_id IS NULL AND " + MEMBER_PROJECTS +
                 (projectId != null ? " AND project_id = ?" : "") +
-                " ORDER BY backlog_order ASC, created_at ASC";
+                " ORDER BY backlog_order ASC, created_at ASC LIMIT " + limit;
         return projectId != null
                 ? jdbc.query(sql, this::mapRow, userId, projectId)
                 : jdbc.query(sql, this::mapRow, userId);

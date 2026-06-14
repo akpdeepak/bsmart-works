@@ -40,7 +40,7 @@ class CommentControllerGetDeleteTest {
 
     private final CommentController controller = new CommentController(
             commentRepository, userRepository, notificationRepository,
-            eventService, emailService, authenticatedUser, rbac);
+            eventService, emailService, authenticatedUser, rbac, mock(WatcherService.class));
 
     CommentControllerGetDeleteTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

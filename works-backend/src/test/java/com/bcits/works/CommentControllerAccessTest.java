@@ -35,7 +35,7 @@ class CommentControllerAccessTest {
 
     private final CommentController controller = new CommentController(
             commentRepository, userRepository, notificationRepository,
-            eventService, emailService, authenticatedUser, rbac);
+            eventService, emailService, authenticatedUser, rbac, mock(WatcherService.class));
 
     CommentControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

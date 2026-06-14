@@ -1,5 +1,6 @@
 import { Star, X, CornerDownRight } from 'lucide-react';
 import { TypeBadge } from '@/components/works/work-item-type';
+import { WatchButton } from '@/components/works/organisms/watch-button';
 import { SaveToKnowButton } from '@/components/knowledge/SaveToKnowButton';
 import { DetailsTab } from './work-item-detail/details-tab';
 import { CommentsTab } from './work-item-detail/comments-tab';
@@ -69,6 +70,7 @@ export function WorkItemDetailPanel({
             })()}
           </div>
           <div className="flex gap-1">
+            <WatchButton itemId={selectedItem.id} />
             <button onClick={() => toggleStar(selectedItem)}
               title={selectedItem.starred ? 'Unstar' : 'Star this item'}
               className={`text-sm px-2 py-1 rounded transition-colors ${selectedItem.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}`}>

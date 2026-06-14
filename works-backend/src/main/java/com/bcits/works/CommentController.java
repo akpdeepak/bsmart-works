@@ -27,11 +27,12 @@ public class CommentController {
     private final EmailService emailService;
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
+    private final WatcherService watcherService;
 
     public CommentController(CommentRepository commentRepository, UserRepository userRepository,
                              NotificationRepository notificationRepository, EventService eventService,
                              EmailService emailService, AuthenticatedUser authenticatedUser,
-                             RbacService rbac) {
+                             RbacService rbac, WatcherService watcherService) {
         this.commentRepository = commentRepository;
         this.userRepository = userRepository;
         this.notificationRepository = notificationRepository;
@@ -39,6 +40,7 @@ public class CommentController {
         this.emailService = emailService;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
+        this.watcherService = watcherService;
     }
 
     /** Resolve the work item's workspace and require the caller is a member (RB-40 §1). 404 hides
@@ -127,6 +129,13 @@ public class CommentController {
                     });
             }
         }
+
+        // Commenter auto-watches; notify all watchers (except the commenter) that a comment landed.
+        // Excluding only the commenter keeps this path small — a mentioned user who also watches may
+        // get both a MENTION and a WATCH notification, which is acceptable.
+        watcherService.watch(workItemId, userId);
+        watcherService.notifyWatchers(workItemId, actorName + " commented on " + workItemId,
+                java.util.Set.of(userId));
 
         return saved;
     }

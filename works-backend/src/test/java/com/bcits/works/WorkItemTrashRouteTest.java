@@ -15,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -112,9 +113,10 @@ class WorkItemTrashRouteTest {
         // Simulate the JDBC query returning one trashed item.
         when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class)))
                 .thenReturn(List.of(trashed));
-        // attachTagsBatch / attachFieldValuesBatch call jdbc.query with vararg params — return empty.
-        when(jdbc.query(anyString(), any(org.springframework.jdbc.core.RowCallbackHandler.class), any(Object[].class)))
-                .thenAnswer(inv -> null);
+        // attachTagsBatch / attachFieldValuesBatch call jdbc.query(sql, RowCallbackHandler, args)
+        // which is void — use doNothing, not when().thenReturn().
+        doNothing().when(jdbc).query(anyString(),
+                any(org.springframework.jdbc.core.RowCallbackHandler.class), any(Object[].class));
 
         List<WorkItem> result = controller.getTrash(0, 50);
 

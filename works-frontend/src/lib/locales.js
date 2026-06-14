@@ -375,6 +375,10 @@ export const MESSAGES = {
     'deliver.bulk.apply': 'Apply',
     'deliver.bulk.clear': 'Clear',
     'deliver.bulk.selectItem': 'Select item',
+    // Watch/follow toggle (English source; other locales fall back pending the i18n pass).
+    'deliver.watch.watch': 'Watch',
+    'deliver.watch.unwatch': 'Unwatch',
+    'deliver.watch.watching': 'Watching',
     'deliver.board.dueToday': 'Due today',
     'deliver.board.overdueSuffix': 'd overdue',
     'deliver.board.dueInPrefix': 'Due in ',

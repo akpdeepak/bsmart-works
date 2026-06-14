@@ -43,6 +43,7 @@ public class WorkItemController {
     private final StatusConfigService statusConfig;
     private final BoardWipLimitService wipLimits;
     private final WorkItemBulkService bulkService;
+    private final WatcherService watcherService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
@@ -54,7 +55,8 @@ public class WorkItemController {
                               WorkflowRuleEngine workflowRules,
                               StatusConfigService statusConfig,
                               BoardWipLimitService wipLimits,
-                              WorkItemBulkService bulkService) {
+                              WorkItemBulkService bulkService,
+                              WatcherService watcherService) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
@@ -70,6 +72,46 @@ public class WorkItemController {
         this.statusConfig = statusConfig;
         this.wipLimits = wipLimits;
         this.bulkService = bulkService;
+        this.watcherService = watcherService;
+    }
+
+    // ── Watchers (followers) ─────────────────────────────────────────────────────
+    // A user watches an item to be notified on any field change or new comment. Access is gated like
+    // a read (tier >= 1 in the item's workspace); fan-out happens in updateWorkItem / addComment.
+
+    private String requireItemViewAccess(String userId, String workItemId) {
+        String wsId = rbac.workspaceForWorkItem(workItemId);
+        if (wsId == null || rbac.getUserTier(userId, wsId) < 1) {
+            throw ApiException.notFound("Work item", workItemId);
+        }
+        return wsId;
+    }
+
+    @Operation(summary = "Watch a work item", description = "The caller starts watching this item (idempotent).")
+    @PostMapping("/{id}/watch")
+    public Map<String, Object> watchItem(@PathVariable String id) {
+        String userId = authenticatedUser.id();
+        requireItemViewAccess(userId, id);
+        watcherService.watch(id, userId);
+        return Map.of("watching", true, "watchers", watcherService.watchers(id).size());
+    }
+
+    @Operation(summary = "Unwatch a work item", description = "The caller stops watching this item.")
+    @DeleteMapping("/{id}/watch")
+    public Map<String, Object> unwatchItem(@PathVariable String id) {
+        String userId = authenticatedUser.id();
+        requireItemViewAccess(userId, id);
+        watcherService.unwatch(id, userId);
+        return Map.of("watching", false, "watchers", watcherService.watchers(id).size());
+    }
+
+    @Operation(summary = "List watchers", description = "Returns the watcher user ids and whether the caller is watching.")
+    @GetMapping("/{id}/watchers")
+    public Map<String, Object> getWatchers(@PathVariable String id) {
+        String userId = authenticatedUser.id();
+        requireItemViewAccess(userId, id);
+        List<String> ids = watcherService.watchers(id);
+        return Map.of("watchers", ids, "watching", ids.contains(userId));
     }
 
     @Operation(summary = "Bulk-edit work items",
@@ -588,6 +630,28 @@ public class WorkItemController {
                         "You were assigned to: " + saved.getTitle(), "/items/" + saved.getId());
                 String actorName = userRepository.findById(userId != null ? userId : "").map(User::getFullName).orElse("Someone");
                 emailService.sendAssignmentEmail(newAssignee, actorName, saved.getId(), saved.getTitle());
+            }
+
+            // Watchers: the new assignee auto-watches; notify every watcher (except the actor and the
+            // just-notified assignee) on any field change. "Any field change" per the product decision.
+            java.util.Set<String> notified = new java.util.HashSet<>();
+            if (userId != null) notified.add(userId);
+            if (newAssignee != null && !newAssignee.equals(oldAssignee)) {
+                watcherService.watch(id, newAssignee);
+                notified.add(newAssignee); // already received the ASSIGNED notification above
+            }
+            boolean changed = !java.util.Objects.equals(oldStatus, saved.getStatus())
+                    || !java.util.Objects.equals(oldAssignee, saved.getAssigneeId())
+                    || !java.util.Objects.equals(oldPriority, saved.getPriority())
+                    || !java.util.Objects.equals(oldTitle, saved.getTitle())
+                    || !java.util.Objects.equals(oldDueDate, saved.getDueDate())
+                    || !java.util.Objects.equals(oldStoryPoints, saved.getStoryPoints())
+                    || !java.util.Objects.equals(oldDescription, saved.getDescription())
+                    || (updatedItem.getTags() != null && !oldTags.equals(updatedItem.getTags().stream().sorted().toList()));
+            if (changed) {
+                String actorName = userRepository.findById(userId != null ? userId : "").map(User::getFullName).orElse("Someone");
+                String ref = saved.getAutoId() != null ? saved.getAutoId() : saved.getId();
+                watcherService.notifyWatchers(id, actorName + " updated " + ref + " — " + saved.getTitle(), notified);
             }
 
             attachTags(saved);

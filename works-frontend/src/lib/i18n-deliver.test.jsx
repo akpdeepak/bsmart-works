@@ -127,6 +127,26 @@ describe('i18n — Deliver surfaces + navigation shell (issue #275)', () => {
     }
   });
 
+  it('deliver.filter / bulk / watch controls are translated across all 9 non-en locales', () => {
+    const sampleKeys = [
+      'deliver.filter.assignee',
+      'deliver.filter.sortBy',
+      'deliver.filter.noMatches',
+      'deliver.bulk.apply',
+      'deliver.bulk.action.assignee',
+      'deliver.watch.watch',
+      'deliver.watch.watching',
+    ];
+    for (const locale of ['hi', 'es', 'fr', 'de', 'pt', 'ja', 'zh', 'ar', 'ko']) {
+      for (const key of sampleKeys) {
+        const translated = translate(locale, key);
+        expect(MESSAGES[locale][key]).toBeDefined();        // present, not falling back
+        expect(translated).not.toBe(translate('en', key));  // genuinely localized
+        expect(translated.trim()).not.toBe('');             // never blank
+      }
+    }
+  });
+
   it('falls back to English when a Deliver-adjacent key is not externalized to a locale (never blank)', () => {
     // `sprint.goal` was never translated to the non-en catalogs (it pre-dates this increment and is
     // out of the externalized Deliver set), so the fallback path resolves to the English string.

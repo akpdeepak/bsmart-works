@@ -173,7 +173,7 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   Cap X + Admin Operations Center Cap Y), **17** (Universal Customization Engine Cap R), **18**
   (Mobile + Real-time + Performance Cap S), **19** (Enterprise Security + Compliance Certifications
   Cap T), and the Compliance/Service iterations (7–9).
-- **Flyway high-water mark:** **V87** (`V87__backfill_seed_work_item_event_history.sql`; note: V16 was
+- **Flyway high-water mark:** **V90** (`V90__sprint_member_capacities.sql`; note: V16 was
   skipped, V23 does not exist; V50–V53 are iterations 16/17/19/18's migrations; V54–V57 are
   iteration 20's advanced-AI / marketplace / knowledge / customer-chat migrations; V58 = user locale
   + perf indexes; V59 = block-editor + SCIM; V60 = custom domains; V61–V65 = compliance escalation,
@@ -210,8 +210,14 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   via INNER JOIN to projects, data-only/forward-only); V88 = insightful_report_templates — UPDATEs the
   three seeded report templates (exec-monthly / customer / release) to pivot-backed section sets
   (KPI grid + status/type/priority/workload-by-assignee pivot charts + open-work table + narrative),
-  so "Use template" produces a genuinely useful report; forward-only data UPDATE.
-- **Next migration:** **`V89__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+  so "Use template" produces a genuinely useful report; forward-only data UPDATE; V89 =
+  work_item_watchers — composite-PK follower rows (one per user per item) so a watcher is notified
+  on any field change or new comment; FK to work_items cascades on hard delete; V90 =
+  sprint_member_capacities — per-(sprint,member) capacity config (working-days override, time off,
+  focus factor) for the role-adaptive Sprint Cockpit Capacity tab; the story-points budget is
+  derived at read time from sprint working days × team velocity (not stored), so it always reflects
+  current velocity/headcount; tenant-scoped via workspace_id + a sprint FK that cascades on delete.
+- **Next migration:** **`V91__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

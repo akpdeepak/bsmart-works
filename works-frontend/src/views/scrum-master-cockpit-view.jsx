@@ -14,6 +14,7 @@ import { StandupTab } from './scrum-cockpit/standup-tab';
 import { RiskTab } from './scrum-cockpit/risk-tab';
 import { VarianceTab } from './scrum-cockpit/variance-tab';
 import { PlanningTab } from './scrum-cockpit/planning-tab';
+import { CapacityTab } from './scrum-cockpit/capacity-tab';
 import { RetroTab } from './scrum-cockpit/retro-tab';
 import { ReviewTab } from './scrum-cockpit/review-tab';
 import { PatternsTab } from './scrum-cockpit/patterns-tab';
@@ -39,6 +40,7 @@ export default function ScrumMasterCockpitView({
   setRiskSprintId, runRiskPanel,
   varianceSprintId, setVarianceSprintId, varianceResult, runVariance,
   setPlanningTimeOff, runSprintPlanning,
+  capacityBoard, fetchCapacity, saveMemberCapacity,
   setActiveRetro, openRetro, setNewRetro, createRetro,
   addRetroNote, setRetroNoteDraft, voteRetroNote, convertRetroNote,
   setReviewSprintId, runReviewPrep, runPatterns,
@@ -85,6 +87,8 @@ export default function ScrumMasterCockpitView({
       runReviewPrep(activeSprintId);
     } else if (tab === 'planning' && !planningResult && !cockpitLoading.planning) {
       runSprintPlanning();
+    } else if (tab === 'capacity' && activeSprintId && !capacityBoard && !cockpitLoading.capacity) {
+      fetchCapacity(activeSprintId);
     } else if (tab === 'patterns' && !patternsResult && !cockpitLoading.patterns) {
       runPatterns();
     }
@@ -264,6 +268,15 @@ export default function ScrumMasterCockpitView({
           planningTimeOff={planningTimeOff} setPlanningTimeOff={setPlanningTimeOff}
           runSprintPlanning={runSprintPlanning} planningResult={planningResult}
           cockpitLoading={cockpitLoading}
+        />
+      )}
+
+      {tab === 'capacity' && (
+        <CapacityTab
+          capacityBoard={capacityBoard}
+          cockpitLoading={cockpitLoading}
+          canManage={canManage}
+          saveMemberCapacity={(userId, patch) => saveMemberCapacity(activeSprintId, userId, patch)}
         />
       )}
 

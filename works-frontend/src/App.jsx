@@ -387,6 +387,7 @@ export default function App() {
   const [riskPanel, setRiskPanel]               = useState(null);
   const [planningResult, setPlanningResult]     = useState(null);
   const [planningTimeOff, setPlanningTimeOff]   = useState(0);
+  const [capacityBoard, setCapacityBoard]       = useState(null); // { members, teamCapacityPoints, ... } Capacity tab
   const [reviewSprintId, setReviewSprintId]     = useState('');
   const [reviewResult, setReviewResult]         = useState(null);
   const [patternsResult, setPatternsResult]     = useState(null);
@@ -2212,7 +2213,7 @@ export default function App() {
   // (stale results would otherwise suppress the reload).
   function resetCockpitAnalysis() {
     setRiskPanel(null); setVarianceResult(null); setReviewResult(null);
-    setPatternsResult(null); setPlanningResult(null);
+    setPatternsResult(null); setPlanningResult(null); setCapacityBoard(null);
     setRiskSprintId(''); setVarianceSprintId(''); setReviewSprintId('');
   }
   function openCockpit() {
@@ -2361,6 +2362,20 @@ export default function App() {
     api.send(`/cockpit/sprint-planning?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId, timeOffPoints: Number(planningTimeOff) || 0 }) })
       .then(d => setPlanningResult(d)).catch(() => showToast('Planning helper failed', 'error'))
       .finally(() => setTabLoading('planning', false));
+  }
+  function fetchCapacity(sprintId) {
+    if (!sprintId) return;
+    setTabLoading('capacity', true);
+    api.raw(`/cockpit/capacity?workspaceId=${activeWorkspaceId}&sprintId=${sprintId}`).then(r => r.json())
+      .then(d => setCapacityBoard(d && Array.isArray(d.members) ? d : null)).catch(() => showToast('Capacity board failed', 'error'))
+      .finally(() => setTabLoading('capacity', false));
+  }
+  function saveMemberCapacity(sprintId, userId, { workingDays, timeOffDays, focusFactor }) {
+    if (!sprintId) return;
+    setTabLoading('capacity', true);
+    api.send(`/cockpit/capacity?workspaceId=${activeWorkspaceId}`, { method: 'PUT', body: JSON.stringify({ sprintId, userId, workingDays, timeOffDays, focusFactor }) })
+      .then(d => setCapacityBoard(d && Array.isArray(d.members) ? d : null)).catch(() => showToast('Capacity update failed', 'error'))
+      .finally(() => setTabLoading('capacity', false));
   }
   function runRiskPanel(sprintId = riskSprintId) {
     if (!sprintId) { showToast('Select a sprint', 'error'); return; }
@@ -3976,6 +3991,9 @@ export default function App() {
               riskPanel={riskPanel}
               planningTimeOff={planningTimeOff}
               planningResult={planningResult}
+              capacityBoard={capacityBoard}
+              fetchCapacity={fetchCapacity}
+              saveMemberCapacity={saveMemberCapacity}
               activeSprint={activeSprint}
               retros={retros}
               activeRetro={activeRetro}

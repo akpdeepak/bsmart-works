@@ -59,8 +59,12 @@ public class StatusDurationController {
         return statusDurations.metricsForWorkItem(id, categoryResolver(nameToCategory));
     }
 
-    /** Status name → TODO | IN_PROGRESS | DONE; config first, then a heuristic for legacy values. */
-    private static Function<String, String> categoryResolver(Map<String, String> nameToCategory) {
+    /**
+     * Status name → TODO | IN_PROGRESS | DONE; config first, then a heuristic for legacy values.
+     * Package-private (not private) so its mapping is pinned by a unit test — the V87 backfill
+     * migration relies on the heuristic resolving 'Todo'/'In Progress'/'Done' correctly.
+     */
+    static Function<String, String> categoryResolver(Map<String, String> nameToCategory) {
         return name -> {
             if (name == null) return "TODO";
             String mapped = nameToCategory.get(name.toLowerCase());

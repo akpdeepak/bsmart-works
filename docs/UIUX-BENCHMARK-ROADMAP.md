@@ -464,6 +464,46 @@ control labelled, keyboard-operable, visible focus, WCAG 2.1 AA, **no `eslint-di
 dark verified. A surface is **premium** when, on top of converged, it meets its Part-B items
 (density, motion, deep-link, inclusivity) where applicable.
 
+### H.2.1 The Premium Bar — every surface, every element (universal merge gate)
+
+> **Premium UI is end-to-end: every layer, every surface, every view, every pop-up, every button — no
+> exceptions, no "polish it later."** "Premium everywhere" is achieved primarily by *baking premium into
+> the shared primitives* (every button/input/card/dialog is premium because it comes from the component)
+> and then *enforcing a coverage gate* — not by hand-polishing screens one by one. The bar below is the
+> **objective, testable acceptance standard appended to the Definition of Done of every UI surface**: a
+> surface does not merge until every applicable row passes, in light + dark + high-contrast.
+
+**Foundations — every surface**
+- Renders through `PageLayout` (shell → `PageHeader` → content); one sanctioned width; one padding rhythm.
+- Zero hand-rolled chrome — every card/table/tab/dialog/menu/button/input/badge from `components/works/**`.
+- Tokens only: no raw hex/px/arbitrary values; type from the scale (5.1); icons at canonical sizes (5.2).
+- One clear focal point; grid-aligned; consistent spacing rhythm; no orphaned or misaligned elements.
+
+**Every interactive element — buttons, links, rows, controls**
+- All five states crafted: default · hover · active · disabled · focus-visible ring.
+- ≥ 44×44 px target; fully keyboard-operable; `aria-label` on icon-only; state-change motion per the recipe (1.3).
+
+**Every overlay — modal · dialog · drawer · popover · tooltip · context-menu · command palette**
+- Correct z-layer; entrance/exit motion; focus trap + restore; Esc + click-outside; backdrop where applicable;
+  never clips; responsive on small screens.
+
+**Every data region — list · table · board · card · chart**
+- All states designed, never bare: default · loading (skeleton matching shape) · empty (illustration/icon + why
+  + next action) · error (what + what-next + retry) · partial.
+- Tables: sticky header, zebra, sort affordance. Charts: colour-blind-safe palette, legend, SR `<table>` fallback (4.3).
+
+**Every form**
+- Label + helper + inline error beneath the field (never toast-for-validation); sensible defaults; validation.
+
+**Content & feel**
+- Microcopy sentence-case, active voice, present tense; errors say what + what-next; dates/numbers via `lib/format`.
+- Optical polish (alignment, balance, no jank); a peak-end moment where the flow completes (5.5).
+
+> **Enforcement:** the Premium Bar is a **merge gate** (PR DoD), backed by structural guardrails (A-WS4)
+> and a per-surface visual-regression story (Chromatic), plus a **coverage tracker** driven to 100% across
+> the full surface inventory (every view, dialog, drawer, popover, menu, toast). Tracked in the execution
+> plan (WI-44 defines the bar, WI-48 enforces + tracks it, WI-46/WI-49 apply it to 100% of surfaces).
+
 ### H.3 The unified primitive library
 
 Build once, in `cva`+`cn()`, dark-complete, a11y, RTL, with a Storybook story.
@@ -553,9 +593,10 @@ Build once, in `cva`+`cn()`, dark-complete, a11y, RTL, with a Storybook story.
 
 **Theme 5 — UI visual craft & aesthetic elevation** *(the "make it premium, not just consistent" layer)*
 
-Convergence (Part A) makes the UI *consistent*; this theme makes it *beautiful*. Craft, not features —
-the Feature Parity Ledger (RB-20 §1) still holds. (**🎨** = benefits from designer / Figma input;
-confirm the visual source before building. Everything else is in-code against the token system.)
+Convergence (Part A) makes the UI *consistent*; this theme makes it *beautiful* — **across every surface,
+view, pop-up, and button, enforced by the Premium Bar (H.2.1)**. Craft, not features — the Feature Parity
+Ledger (RB-20 §1) still holds. (**🎨** = benefits from designer / Figma input; confirm the visual source
+before building. Everything else is in-code against the token system.)
 - **5.1 Typography system:** a complete, tokenized type scale (display / title / heading / body /
   caption / overline + mono) with line-height, tracking, weight (Inter 300/400/600/700), reading
   measure, and vertical rhythm; applied through `PageHeader` / `Card` / prose. Subsumes the
@@ -567,16 +608,19 @@ confirm the visual source before building. Everything else is in-code against th
   states, onboarding, errors, success, and zero-data dashboards; a coherent **avatar system**
   (initials → colour → image); image-usage guidelines. *Lifts the functional empty-state formula into
   brand-grade visuals.*
-- **5.4 Aesthetic + visual-hierarchy polish pass** on the top 5 surfaces (Today/dashboard, board,
-  work-item detail, knowledge, reports): optical alignment, spacing balance, clear focal point,
-  scannability, hover/active/focus craft — pixel-level, on surfaces already converged onto the
-  primitives.
+- **5.4 Premium sweep to the Premium Bar (H.2.1) across 100% of surfaces** — *every view, pop-up, menu,
+  toast, and state*, not a chosen few. Phased: the top-5 exemplars first (Today/dashboard, board,
+  work-item detail, knowledge, reports) to set the standard, then the full long tail of remaining
+  surfaces, dialogs, drawers, popovers, tooltips, menus, and empty/loading/error states — each cluster a
+  small PR, each gated by the per-surface premium-bar checklist. Pixel-level craft (optical alignment,
+  balance, focal point, scannability, hover/active/focus) on surfaces already converged onto the primitives.
 - **5.5 Signature / peak-end moments:** design the restrained delight moments within the Calm Cockpit
   (sprint complete, item done, onboarding milestone, first value) — motion + visual reward that respect
   "operational, not playful." (Engagement: Peak-End rule, Part C.1.)
-- **5.6 Visual design-review practice:** a recurring pixel-craft critique + a per-surface **"premium
-  bar" visual-QA checklist**, wired to Storybook + Chromatic visual regression (A-WS4). Makes craft
-  repeatable, not heroic.
+- **5.6 Visual design-review practice + enforcement:** the **Premium Bar (H.2.1) becomes a merge gate**
+  in the PR DoD; a per-surface premium-bar visual-QA checklist + a recurring pixel-craft critique; wired
+  to Storybook + Chromatic visual regression (A-WS4) so no surface ships — or regresses — below the bar.
+  Makes "premium everywhere" repeatable and enforced, not heroic.
 - **5.7 Visual source-of-truth** 🎨: reference mockups (Figma or in-repo reference screenshots) for the
   elevated surfaces, linked from `docs/brand/brand-and-identity.md`; a short `docs/VISUAL-SPEC.md`.
 
@@ -611,7 +655,9 @@ page-level `max-w-*` → **2** · views with full loading/empty/error → **100%
 → **100%** · themes shipped → **light/dark/high-contrast**. **Visual craft (Theme 5):** typography
 fully tokenized (no ad-hoc `text-[*]`) · iconography consistent (sizes 16/20/24/32, one-icon-one-meaning
 — guardrail green) · illustration/avatar coverage for empty/onboarding/error/success → **100%** ·
-top-5 surfaces pass the premium-bar visual-QA checklist · visual design-review cadence established.
+**100% of surfaces** — every view, dialog, drawer, popover, menu, and toast — pass the Premium Bar
+(H.2.1) with a visual-regression story (premium-everywhere coverage) · 100% of buttons/inputs via shared
+primitives · every data region has all 5 states · visual design-review cadence established.
 Logged newest-first in `docs/UX-PROGRESS.md`, tagged `[consistency]` / `[premium]`.
 
 ### H.9 Governance & references

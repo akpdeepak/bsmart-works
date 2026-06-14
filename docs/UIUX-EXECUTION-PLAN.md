@@ -95,7 +95,8 @@ So nothing is lost or assumed, the complete scope captured across the originatin
 | **HEART + activation funnel** first milestone | Roadmap **Part F** | Milestone 1 |
 | **Premium program** (Converge & Lock → Elevate) | Roadmap **Part H** | Milestones 0, 3, 4, 5 |
 | **Reconciliation / combined order** | Roadmap **Part I** | The milestone ordering below |
-| **UI visual craft / premium aesthetic** | Roadmap **Part H Theme 5** | Milestones 3–4 (WI-41…WI-47) |
+| **UI visual craft / premium aesthetic** | Roadmap **Part H Theme 5** | Milestones 3–4 (WI-41…WI-49) |
+| **Premium everywhere** (the Premium Bar as a universal merge gate, 100% surface coverage) | Roadmap **Part H §H.2.1** | WI-44 (define) · WI-48 (enforce + track) · WI-46/WI-49 (apply to 100%) |
 
 ---
 
@@ -157,7 +158,8 @@ visual source before building).
 | WI-41 | **Typography system** — tokenized type scale (display/title/heading/body/caption/overline + mono), line-height, tracking, weights, reading measure, vertical rhythm; applied via `PageHeader`/`Card`/prose (subsumes `text-2xs/3xs`) | H.5 5.1 | WI-04, WI-05 | ☐ | |
 | WI-42 | **Iconography system** — Lucide, sizes 16/20/24/32, one-icon-one-meaning; audit + converge usage across views; add icon guardrail | H.5 5.2 | WI-04 | ☐ | |
 | WI-43 | **Visual source-of-truth** — reference mockups (Figma/in-repo) for elevated surfaces + `docs/VISUAL-SPEC.md`, linked to the brand doc | H.5 5.7 | — | ☐ 🎨 | |
-| WI-44 | **Visual design-review practice** + per-surface "premium bar" visual-QA checklist, wired to Storybook/Chromatic | H.5 5.6 | WI-19 | ☐ | |
+| WI-44 | **Define the Premium Bar (roadmap §H.2.1)** — the objective per-element acceptance standard — + per-surface checklist + visual design-review practice; make it a PR **DoD merge-gate** | H.2.1, H.5 5.6 | WI-19 | ☐ | |
+| WI-48 | **Premium Bar enforcement & coverage tracker** — bake the bar into the PR DoD; per-surface visual-regression (Chromatic); a coverage ledger over the full surface inventory (all views + dialogs/drawers/popovers/menus/toasts) driven to **100%**; guardrails so no surface ships/regresses non-premium | H.2.1, H.5 5.6; A-WS4 | WI-44 | ☐ | |
 
 ### Milestone 4 — Differentiators  *(Benchmark Horizon 3 ≈ Premium Part B · roadmap §D-H3 + H.5)*
 
@@ -173,8 +175,9 @@ visual source before building).
 | WI-34 | Richer analytics: comparison charts, capacity/utilization heatmaps, workflow Sankey, drill-through into `DataTable` | H.5 3.3 | WI-33 | ☐ | |
 | WI-35 | Command palette → action layer + breadcrumbs in context bar + persisted per-surface view state | H.5 2.2–2.4; D H4 #18 | WI-20 | ☐ | |
 | WI-45 | **Illustration & imagery system** — on-brand spot illustrations for empty/onboarding/error/success + zero-data; avatar system (initials→colour→image); image guidelines | H.5 5.3 | WI-20 | ☐ 🎨 | |
-| WI-46 | **Aesthetic + visual-hierarchy polish pass** on the top 5 surfaces (Today, board, detail, knowledge, reports) — optical alignment, balance, focal point, hover/active/focus craft | H.5 5.4 | WI-17, WI-44 | ☐ | |
+| WI-46 | **Premium sweep — exemplars:** bring the top-5 surfaces (Today, board, detail, knowledge, reports) to the Premium Bar — sets the standard for the full sweep | H.5 5.4 | WI-17, WI-44 | ☐ | |
 | WI-47 | **Signature / peak-end moments** — restrained delight for sprint-complete, item-done, onboarding milestone, first value (motion + visual reward) | H.5 5.5; C.1 | WI-24 | ☐ | |
+| WI-49 | **Premium sweep — full coverage:** bring ALL remaining surfaces, views, pop-ups, drawers, popovers, tooltips, menus, toasts, and every empty/loading/error/partial state to the Premium Bar — *premium everywhere*; drive coverage to **100%** (one small PR per surface cluster) | H.2.1, H.5 5.4 | WI-46, WI-17, WI-48 | ☐ | |
 
 ### Milestone 5 — Platform maturity & stop-and-ask  *(Premium Phase 5 / Benchmark Horizon 4 · roadmap §H.5 + D-H4)*
 
@@ -220,6 +223,9 @@ For every work-item:
   concurrent agents ([[bsmart-concurrent-agents]]). Auto-clean the worktree when done.
 - **One small, single-purpose, lint-clean PR per work-item.** No big-bang rewrite.
 - **No feature removal / no behaviour change** — Feature Parity Ledger (RB-20 §1).
+- **Premium everywhere is a merge gate.** Every UI surface — every view, pop-up, drawer, menu, toast,
+  and every button/state — must pass **the Premium Bar (roadmap §H.2.1)** before merge. No surface is
+  exempt and nothing ships "to be polished later." New/changed surfaces add a visual-regression story.
 - **Tokens, not literals.** No raw hex/px/`gray-*`/arbitrary `z-[]`/`p-[]` (guardrails BLOCK).
 - **Verify locally** before merge; do not rely on CI alone; **never merge onto a red `main`** —
   surface the unrelated breakage and wait/park (history: PR #319/#325 blocked by an unrelated
@@ -246,8 +252,10 @@ For every work-item:
     < **400 ms** (Doherty) under the NFR budget.
   - Visual craft (Theme 5): typography fully tokenized (no ad-hoc `text-[*]`); iconography consistent
     (sizes 16/20/24/32, one-icon-one-meaning — guardrail green); illustration/avatar coverage for
-    empty/onboarding/error/success → **100%**; top-5 surfaces pass the premium-bar checklist; visual
-    design-review cadence established.
+    empty/onboarding/error/success → **100%**; visual design-review cadence established.
+  - **Premium-everywhere coverage:** **100%** of surfaces — every view + dialog/drawer/popover/menu/toast
+    — pass the Premium Bar (roadmap §H.2.1), each with a visual-regression story; 100% of buttons/inputs
+    via shared primitives; every data region has all five states (default/loading/empty/error/partial).
 
 ---
 

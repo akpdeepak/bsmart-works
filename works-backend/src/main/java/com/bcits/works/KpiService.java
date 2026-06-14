@@ -227,6 +227,29 @@ public class KpiService {
                 "Organization-wide rollup — fully aggregated."));
     }
 
+    /**
+     * System per-team rollups for the snapshot writer (TD-025). One aggregated TEAM layer per team,
+     * no human caller (full field set; the aggregate never exposes an individual — RB-40 §1). These
+     * carry a non-null {@code scopeId} (the team id) so their snapshot history reads back per team and
+     * the Team-layer trends light up. Not trend-enriched here — it writes the base series.
+     */
+    public List<Layer> teamsForSystem(String workspaceId) {
+        return teams.findByWorkspaceIdOrderByNameAsc(workspaceId).stream()
+            .map(t -> applyTargetsAndCustomMetrics(workspaceId, SYSTEM_CALLER,
+                new Layer("TEAM", t.getId(), t.getName(), aggregateMetrics(teamItems(workspaceId, t)),
+                    "Aggregated — individual engineer comparison is unavailable by design.")))
+            .collect(Collectors.toList());
+    }
+
+    /** System per-project rollups for the snapshot writer (TD-025), one PROJECT layer per project. */
+    public List<Layer> projectsForSystem(String workspaceId) {
+        return projects.findByWorkspaceId(workspaceId).stream()
+            .map(p -> applyTargetsAndCustomMetrics(workspaceId, SYSTEM_CALLER,
+                new Layer("PROJECT", p.getId(), p.getName(), aggregateMetrics(workItems.findByProjectId(p.getId())),
+                    "Aggregated across the project's contributing teams.")))
+            .collect(Collectors.toList());
+    }
+
     static List<MetricValue> aggregateMetrics(List<WorkItem> items) {
         List<MetricValue> out = new ArrayList<>();
         out.add(metric(MetricCatalog.VELOCITY, velocity(items), items.size()));

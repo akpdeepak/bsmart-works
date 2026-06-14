@@ -140,6 +140,31 @@ class KpiServiceTest {
         assertThat(n.text()).contains("Team health");
     }
 
+    @Test
+    void teamsAndProjectsForSystem_produceScopedLayersForTheSnapshotWriter() {
+        // TD-025: the scheduler now writes TEAM + PROJECT snapshots (not just ORG) so trends light up
+        // at every aggregated layer. These system rollups carry a non-null scopeId per scope.
+        Team t = new Team();
+        t.setId("TEAM-1");
+        t.setName("WEB");
+        t.setProjectIds("[\"PROJ-1\"]");
+        when(teams.findByWorkspaceIdOrderByNameAsc(WS)).thenReturn(List.of(t));
+        when(projects.findByWorkspaceId(WS)).thenReturn(List.of(project()));
+        when(workItems.findByProjectId("PROJ-1")).thenReturn(List.of(
+            item("A-1", ME, "Done", 3, "Story"), item("A-2", ME, "In Progress", 2, "Story")));
+
+        assertThat(kpi.teamsForSystem(WS)).singleElement().satisfies(l -> {
+            assertThat(l.scopeLevel()).isEqualTo("TEAM");
+            assertThat(l.scopeId()).isEqualTo("TEAM-1");
+            assertThat(l.metrics()).isNotEmpty();
+        });
+        assertThat(kpi.projectsForSystem(WS)).singleElement().satisfies(l -> {
+            assertThat(l.scopeLevel()).isEqualTo("PROJECT");
+            assertThat(l.scopeId()).isEqualTo("PROJ-1");
+            assertThat(l.metrics()).isNotEmpty();
+        });
+    }
+
     // ── pure computation helpers ─────────────────────────────────────────────────────
 
     @Test

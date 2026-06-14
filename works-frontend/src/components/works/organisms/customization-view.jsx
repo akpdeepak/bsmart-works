@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   SlidersHorizontal, History, LayoutTemplate, FlaskConical, FormInput, LayoutGrid, Code2,
   Download, Upload, RotateCcw, Plus, Trash2, Lock, Unlock, AlertTriangle, CheckCircle2, Save,
@@ -889,10 +889,24 @@ function BuilderShell({ title, description, canManage, saving, onSave, onAdd, ad
 // ── Impact dialog ────────────────────────────────────────────────────────────────
 function ImpactDialog({ impact, onCancel, onConfirm }) {
   const { report, title } = impact;
+  const cancelRef = useRef(null);
+  // a11y (RB-30 §6): a modal must be keyboard-operable — focus moves into it on open and Escape
+  // dismisses it. Without these the dialog could only be closed by tabbing to the Cancel button.
+  // The Escape listener lives on document (not the dialog node) because `role="dialog"` is a
+  // non-interactive element and jsx-a11y forbids key handlers on it.
+  useEffect(() => {
+    cancelRef.current?.focus();
+    const onKey = (e) => { if (e.key === 'Escape') onCancel(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onCancel]);
   return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center bg-neutral-900/40 p-4" role="dialog" aria-modal="true" aria-label="Impact analysis">
+    <div
+      className="fixed inset-0 z-modal flex items-center justify-center bg-neutral-900/40 p-4"
+      role="dialog" aria-modal="true" aria-labelledby="impact-dialog-title"
+    >
       <div className="w-full max-w-lg rounded-xl border border-neutral-200 bg-white p-5 shadow-lg dark:border-neutral-700 dark:bg-neutral-900">
-        <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">{title}</h3>
+        <h3 id="impact-dialog-title" className="text-lg font-bold text-neutral-900 dark:text-neutral-100">{title}</h3>
         <p className="mt-1 text-sm text-neutral-600">Impact analysis before this change lands:</p>
         <div className="mt-3 grid grid-cols-3 gap-3 text-center">
           <Stat n={report.affectedItems} label="Items" />
@@ -910,7 +924,7 @@ function ImpactDialog({ impact, onCancel, onConfirm }) {
         )}
         <p className="mt-3 text-xs text-neutral-600">{report.changes?.length || 0} field change(s) total.</p>
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" className={BTN_GHOST} onClick={onCancel}>Cancel</button>
+          <button ref={cancelRef} type="button" className={BTN_GHOST} onClick={onCancel}>Cancel</button>
           <button type="button" className={BTN_PRIMARY} onClick={onConfirm}><CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Continue</button>
         </div>
       </div>

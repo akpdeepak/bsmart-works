@@ -22,3 +22,12 @@ export { BarChart } from './bar-chart';
 export { SegmentBar } from './segment-bar';
 export { DayBars } from './day-bars';
 export { PairedBars } from './paired-bars';
+// Pivot chart library — the renderers that cover the 19 server chart types, dispatched by
+// <PivotChart/> (organisms). Each is domain-free and consumes a reshaped pivot result.
+export { LineChart } from './line-chart';
+export { StackedBarChart, GroupedBarChart, HeatmapChart, MatrixTable } from './matrix-chart';
+export { ScatterChart } from './scatter-chart';
+export { TreemapChart, FunnelChart } from './treemap-chart';
+export { Scorecard, Gauge, Sparkline } from './scalar-chart';
+export { ComboChart } from './combo-chart';
+export { PivotTable } from './pivot-table';

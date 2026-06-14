@@ -15,7 +15,7 @@ describe('UserMenu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
-  it('opens the menu showing identity, and fires Settings + Sign out callbacks', async () => {
+  it('opens the menu showing identity, and fires My account + Sign out callbacks', async () => {
     const onOpenSettings = vi.fn();
     const onLogout = vi.fn();
     const user = userEvent.setup();
@@ -27,7 +27,7 @@ describe('UserMenu', () => {
     expect(screen.getByText('deepak@bcits.com')).toBeInTheDocument();
     expect(screen.getByText('Owner')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('menuitem', { name: /settings/i }));
+    await user.click(screen.getByRole('menuitem', { name: /my account/i }));
     expect(onOpenSettings).toHaveBeenCalledOnce();
 
     await user.click(screen.getByRole('button', { name: /user menu/i }));

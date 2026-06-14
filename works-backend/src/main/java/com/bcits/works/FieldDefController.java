@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -97,11 +99,16 @@ public class FieldDefController {
 
     @PostMapping
     public FieldDef create(@Valid @RequestBody FieldDef fd) {
+        // Tenant scoping (RB-40 §1): a field def is workspace-owned data, so creating one must be
+        // gated by the caller's permission in *that* workspace. Previously this method ran with no
+        // RBAC or workspace check at all, so any authenticated caller could create a field def in
+        // any workspace. The other methods here scope by existing.getWorkspaceId(); create scopes
+        // by the workspaceId on the incoming record.
+        rbac.require(authenticatedUser.id(), fd.getWorkspaceId(), "view_items");
         fd.setId("FD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         fd.setCreatedAt(OffsetDateTime.now());
-        if (fd.getConfig() == null) fd.setConfig("{}"); {
+        if (fd.getConfig() == null) fd.setConfig("{}");
         return fieldDefRepo.save(fd);
-        }
     }
 
     @PutMapping("/{id}")
@@ -181,6 +188,12 @@ public class FieldDefController {
         if (body.containsKey("valueJson")) fv.setValueJson(body.get("valueJson") != null ? body.get("valueJson").toString() : null); {
         fv.setUpdatedAt(OffsetDateTime.now());
         }
+        // Keep the typed date projection in sync so BQL can range-query DATE custom fields (V82).
+        fieldDefRepo.findById(fieldDefId).ifPresent(fd -> {
+            if ("DATE".equalsIgnoreCase(fd.getFieldType())) {
+                fv.setValueDate(parseIsoDate(fv.getValueText()));
+            }
+        });
         return valueRepo.save(fv);
     }
 
@@ -188,5 +201,17 @@ public class FieldDefController {
     public ResponseEntity<Void> deleteValue(@PathVariable String workItemId, @PathVariable String fieldDefId) {
         valueRepo.findByWorkItemIdAndFieldDefId(workItemId, fieldDefId).ifPresent(valueRepo::delete);
         return ResponseEntity.noContent().build();
+    }
+
+    /** Parse an ISO date (optionally a longer timestamp) from its first 10 chars; null if not ISO. */
+    private static LocalDate parseIsoDate(String text) {
+        if (text == null || text.length() < 10) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(text.substring(0, 10));
+        } catch (DateTimeParseException e) {
+            return null;
+        }
     }
 }

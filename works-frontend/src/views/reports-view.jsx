@@ -1,30 +1,90 @@
+import { useEffect, useState } from 'react';
 import { BarChart2, AlertTriangle } from 'lucide-react';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
+import { PivotChart } from '@/components/works/organisms/pivot-chart';
+import { resolvePivotBatch } from '@/lib/pivot';
+import { useI18n } from '@/lib/i18n';
+import { absoluteDate } from '@/lib/format';
+
+// The pivot-backed insight tiles rendered at the top of Reports — same shared <PivotChart/> +
+// pivot client as Dashboards and the Report Builder, so all three surfaces render the engine
+// identically. Specs are grouped guided counts (workspace-scoped server-side, RB-40 §1).
+const REPORT_PIVOTS = {
+  byStatus: { spec: { source: { kind: 'guided', guided: {}, mode: 'group' }, measures: [{ field: '*', agg: 'COUNT' }], dimensions: ['status'], filters: null }, chartType: 'bar', titleKey: 'insights.reports.itemsByStatus' },
+  byType: { spec: { source: { kind: 'guided', guided: {}, mode: 'group' }, measures: [{ field: '*', agg: 'COUNT' }], dimensions: ['type'], filters: null }, chartType: 'donut', titleKey: 'insights.reports.itemsByType' },
+};
+
+function ReportPivotStrip({ workspaceId }) {
+  const { t } = useI18n();
+  const [state, setState] = useState({ loading: true, error: null, byId: {} });
+  useEffect(() => {
+    let alive = true;
+    if (!workspaceId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setState({ loading: false, error: null, byId: {} });
+      return undefined;
+    }
+    setState((s) => ({ ...s, loading: true, error: null }));
+    const items = Object.fromEntries(Object.entries(REPORT_PIVOTS).map(([id, v]) => [id, v.spec]));
+    resolvePivotBatch(workspaceId, items)
+      .then((rows) => {
+        if (!alive) return;
+        const byId = {};
+        (rows || []).forEach((r) => { byId[r.id] = r; });
+        setState({ loading: false, error: null, byId });
+      })
+      .catch((e) => { if (alive) setState({ loading: false, error: e.message || t('insights.reports.couldNotLoad'), byId: {} }); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId]);
+
+  if (!workspaceId) return null;
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      {Object.entries(REPORT_PIVOTS).map(([id, cfg]) => {
+        const entry = state.byId[id];
+        return (
+          <div key={id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
+            <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">{t(cfg.titleKey)}</h3>
+            <PivotChart type={cfg.chartType} result={entry?.data}
+              loading={state.loading} error={state.error || entry?.error} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 // Sprint Reports view — extracted from the App.jsx monolith (UX finding A3/H2). Behaviour-
-// preserving: the parent owns velocity/sprint/report data and the report fetcher.
+// preserving: the parent owns velocity/sprint/report data and the report fetcher. Now also
+// renders a pivot-backed insight strip via the shared multi-dimensional engine.
 export default function ReportsView({
   velocityData,
   sprints,
   selectedSprintId,
   sprintReport,
   scopeChanges,
+  activeWorkspaceId,
   setSelectedSprintId,
   fetchSprintReport,
 }) {
+  const { t } = useI18n();
   return (
     <div className="p-8 max-w-5xl">
-      <h1 className="text-2xl font-bold text-brand-navy mb-1">Sprint Reports</h1>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">Velocity, delivery, and scope tracking</p>
+      <h1 className="text-2xl font-bold text-brand-navy mb-1">{t('insights.reports.title')}</h1>
+      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">{t('insights.reports.subtitle')}</p>
+
+      <ReportPivotStrip workspaceId={activeWorkspaceId} />
 
       {/* VELOCITY CHART — multi-sprint comparison */}
       {velocityData.length > 0 && (
         <div className="bg-white border border-neutral-200 rounded-xl p-5 mb-6">
-          <h3 className="font-semibold text-neutral-900 mb-1">Velocity — All Sprints</h3>
-          <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-4">Committed capacity vs. delivered story points</p>
+          <h3 className="font-semibold text-neutral-900 mb-1">{t('insights.reports.velocityAll')}</h3>
+          <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-4">{t('insights.reports.velocityHint')}</p>
           <div className="flex items-end gap-3 overflow-x-auto pb-2">
             {velocityData.map((s) => {
               const maxVal = Math.max(...velocityData.map(x => Math.max(x.capacity || 0, x.totalPoints, 1)));
@@ -54,15 +114,15 @@ export default function ReportsView({
             })}
           </div>
           <div className="flex items-center gap-4 mt-3 text-xs text-neutral-600 dark:text-neutral-400">
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-neutral-200 inline-block"></span>Capacity</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-brand-navy-tint inline-block"></span>Committed</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-semantic-success inline-block"></span>Delivered</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-neutral-200 inline-block"></span>{t('insights.reports.capacity')}</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-brand-navy-tint inline-block"></span>{t('insights.reports.committed')}</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-semantic-success inline-block"></span>{t('insights.reports.delivered')}</span>
           </div>
         </div>
       )}
 
       {sprints.length === 0
-        ? <EmptyState icon={BarChart2} title="No sprints to report on" subtitle="Complete a sprint to see reports here." />
+        ? <EmptyState icon={BarChart2} title={t('insights.reports.emptyTitle')} subtitle={t('insights.reports.emptySubtitle')} />
         : <>
             <div className="flex gap-2 mb-5 flex-wrap">
               {sprints.map(s => (
@@ -77,10 +137,10 @@ export default function ReportsView({
                 {/* KPI cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {[
-                    { label: 'Total Items', value: sprintReport.totalItems, color: 'text-neutral-900' },
-                    { label: 'Completed', value: sprintReport.doneItems, color: 'text-semantic-success' },
-                    { label: 'Completion', value: `${sprintReport.completionRate}%`, color: 'text-brand-navy' },
-                    { label: 'Velocity', value: `${sprintReport.donePoints}/${sprintReport.totalPoints}pt`, color: 'text-brand-orange' },
+                    { label: t('insights.reports.totalItems'), value: sprintReport.totalItems, color: 'text-neutral-900' },
+                    { label: t('insights.reports.completed'), value: sprintReport.doneItems, color: 'text-semantic-success' },
+                    { label: t('insights.reports.completion'), value: `${sprintReport.completionRate}%`, color: 'text-brand-navy' },
+                    { label: t('insights.reports.velocity'), value: `${sprintReport.donePoints}/${sprintReport.totalPoints}pt`, color: 'text-brand-orange' },
                   ].map(card => (
                     <div key={card.label} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
                       <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-1">{card.label}</p>
@@ -91,7 +151,7 @@ export default function ReportsView({
 
                 {/* Burndown chart (visual) */}
                 <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                  <h3 className="font-semibold text-neutral-900 mb-4">Burndown — Commitment vs Delivery</h3>
+                  <h3 className="font-semibold text-neutral-900 mb-4">{t('insights.reports.burndownTitle')}</h3>
                   <div className="flex gap-3 mb-3 text-xs text-neutral-600 dark:text-neutral-400">
                     <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-semantic-success inline-block"></span>Done ({sprintReport.doneItems})</span>
                     <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-brand-navy-tint inline-block"></span>In Progress ({sprintReport.inProgressItems})</span>
@@ -117,13 +177,13 @@ export default function ReportsView({
                 {/* Commitment vs Delivery — story points comparison */}
                 {sprintReport.totalPoints > 0 && (
                   <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
-                    <h3 className="font-semibold text-neutral-900 mb-1">Commitment vs Delivery</h3>
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-4">Story points: what was committed vs what was delivered</p>
+                    <h3 className="font-semibold text-neutral-900 mb-1">{t('insights.reports.commitmentVsDelivery')}</h3>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-4">{t('insights.reports.commitmentHint')}</p>
                     <div className="space-y-3">
                       {[
-                        { label: 'Capacity', value: sprintReport.sprint?.capacity || 0, max: Math.max(sprintReport.sprint?.capacity || 0, sprintReport.totalPoints), color: 'bg-neutral-200' },
-                        { label: 'Committed', value: sprintReport.totalPoints, max: Math.max(sprintReport.sprint?.capacity || 0, sprintReport.totalPoints), color: 'bg-brand-navy-tint' },
-                        { label: 'Delivered', value: sprintReport.donePoints, max: Math.max(sprintReport.sprint?.capacity || 0, sprintReport.totalPoints), color: 'bg-semantic-success' },
+                        { label: t('insights.reports.capacity'), value: sprintReport.sprint?.capacity || 0, max: Math.max(sprintReport.sprint?.capacity || 0, sprintReport.totalPoints), color: 'bg-neutral-200' },
+                        { label: t('insights.reports.committed'), value: sprintReport.totalPoints, max: Math.max(sprintReport.sprint?.capacity || 0, sprintReport.totalPoints), color: 'bg-brand-navy-tint' },
+                        { label: t('insights.reports.delivered'), value: sprintReport.donePoints, max: Math.max(sprintReport.sprint?.capacity || 0, sprintReport.totalPoints), color: 'bg-semantic-success' },
                       ].map(row => (
                         <div key={row.label} className="flex items-center gap-3">
                           <span className="text-xs text-neutral-600 w-20 flex-shrink-0">{row.label}</span>
@@ -146,7 +206,7 @@ export default function ReportsView({
                 {/* Item outcomes */}
                 <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
                   <div className="px-5 py-3 border-b border-neutral-100 dark:border-neutral-700">
-                    <h3 className="font-semibold text-neutral-900">Item Outcomes</h3>
+                    <h3 className="font-semibold text-neutral-900">{t('insights.reports.itemOutcomes')}</h3>
                   </div>
                   <div className="divide-y divide-neutral-50 dark:divide-neutral-700">
                     {(sprintReport.items || []).map(item => (
@@ -164,11 +224,11 @@ export default function ReportsView({
                 {/* Scope-change timeline */}
                 <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
                   <div className="px-5 py-3 border-b border-neutral-100 dark:border-neutral-700 flex items-center justify-between">
-                    <h3 className="font-semibold text-neutral-900">Scope-Change Timeline</h3>
-                    <span className="text-xs text-neutral-600 dark:text-neutral-400">Items added/removed mid-sprint</span>
+                    <h3 className="font-semibold text-neutral-900">{t('insights.reports.scopeChangeTimeline')}</h3>
+                    <span className="text-xs text-neutral-600 dark:text-neutral-400">{t('insights.reports.scopeChangeHint')}</span>
                   </div>
                   {scopeChanges.length === 0 ? (
-                    <p className="text-xs text-neutral-600 text-center py-6">No scope changes — sprint stayed on plan</p>
+                    <p className="text-xs text-neutral-600 text-center py-6">{t('insights.reports.noScopeChanges')}</p>
                   ) : (
                     <div className="divide-y divide-neutral-50 dark:divide-neutral-700">
                       {scopeChanges.map((c, i) => (
@@ -179,7 +239,7 @@ export default function ReportsView({
                           {c.type && <TypeBadge type={c.type} compact />}
                           <span className="flex-1 text-sm text-neutral-900">{c.title || c.work_item_id}</span>
                           <span className="text-xs text-neutral-600 dark:text-neutral-400">{c.actor_name || 'System'}</span>
-                          <span className="text-xs text-neutral-300">{c.occurred_at ? new Date(c.occurred_at).toLocaleDateString() : ''}</span>
+                          <span className="text-xs text-neutral-300">{c.occurred_at ? absoluteDate(c.occurred_at) : ''}</span>
                         </div>
                       ))}
                     </div>
@@ -187,7 +247,7 @@ export default function ReportsView({
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-10">Select a sprint above to view its report.</p>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-10">{t('insights.reports.selectSprint')}</p>
             )}
           </>
       }

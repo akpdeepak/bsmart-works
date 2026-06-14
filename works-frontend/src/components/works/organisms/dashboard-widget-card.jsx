@@ -1,4 +1,7 @@
+import { useEffect, useState } from 'react';
 import { DonutChart, BarChart } from '@/components/works/molecules';
+import { PivotChart } from '@/components/works/organisms/pivot-chart';
+import { resolvePivot, buildPivotSpec } from '@/lib/pivot';
 import {
   filterItems as filterWidgetItems,
   statusBreakdown,
@@ -10,13 +13,44 @@ import {
 } from '@/lib/dashboard-metrics';
 
 /**
+ * PivotWidgetBody — renders a multi-dimensional PIVOT widget by resolving its saved PivotSpec
+ * through the shared pivot client (one apiClient, workspace-scoped server-side) and dispatching
+ * the result to <PivotChart/>. Self-contained five-state handling (loading / empty / error).
+ */
+function PivotWidgetBody({ config, workspaceId }) {
+  const [state, setState] = useState({ loading: true, error: null, result: null });
+  const specKey = JSON.stringify(config);
+
+  useEffect(() => {
+    let alive = true;
+    if (!workspaceId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setState({ loading: false, error: 'No workspace selected.', result: null });
+      return undefined;
+    }
+    setState((s) => ({ ...s, loading: true, error: null }));
+    resolvePivot(workspaceId, buildPivotSpec(config))
+      .then((result) => { if (alive) setState({ loading: false, error: null, result }); })
+      .catch((e) => { if (alive) setState({ loading: false, error: e.message || 'Could not load this widget.', result: null }); });
+    return () => { alive = false; };
+    // specKey captures the config object identity; config itself is intentionally excluded.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId, specKey]);
+
+  return (
+    <PivotChart type={config.chartType || 'pivot_table'} result={state.result}
+      loading={state.loading} error={state.error} className="mt-1" />
+  );
+}
+
+/**
  * DashboardWidgetCard — renders a single dashboard widget from the live work-item set.
  * Widget data is computed client-side from the config (metric + filter) so the
  * designer is fully functional without a per-widget query endpoint.
  *
  * Extracted from App.jsx (TD-003).
  */
-export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove, onResize, onConfigChange, onDrill, onDragStart, onDrop, sprints, velocity, currentUserId }) {
+export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove, onResize, onConfigChange, onDrill, onDragStart, onDrop, sprints, velocity, currentUserId, workspaceId, onEditPivot }) {
   let config = {};
   try { config = JSON.parse(widget.config || '{}'); } catch { config = {}; }
   const filter = config.filter || {};
@@ -34,9 +68,22 @@ export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, on
         .map(([label, value]) => ({ label, value }));
   const listItems = aggregate ? (aggregate.recent || []) : items;
   const span = Math.max(1, Math.min(widget.gridW || 4, 12));
-  // Drill needs the underlying item set, which the aggregate doesn't carry — disable it then.
-  const canDrill = !editMode && !!onDrill && !aggregate;
+  // Drill needs an underlying item set to list. The aggregate overrides only the *series*; the
+  // client-loaded `items` (workItems narrowed by the widget's own filter) are still available, so
+  // a widget is drillable whenever there are items to show — including server-aggregate widgets,
+  // as long as the client carries the matching rows (§3.4). A pure server aggregate with no client
+  // items can't list a slice, so drill stays off then.
+  const canDrill = !editMode && !!onDrill && items.length > 0;
   const drillBy = (label) => items.filter(i => (i[dimension] || 'None') === label);
+
+  // Every drill carries the widget's filter/dimension context so the modal lists exactly the
+  // underlying rows for the clicked slice — not the whole dashboard (§3.4). `value` is the slice
+  // (a status / dimension value); omit it for a whole-widget drill (e.g. the scorecard total).
+  const drill = (sliceItems, sliceLabel, value) => onDrill({
+    title: sliceLabel,
+    items: sliceItems,
+    filterContext: { baseFilter: filter, dimension, value: value ?? null },
+  });
 
   return (
     <div
@@ -56,6 +103,9 @@ export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, on
                 {w === 12 ? 'Full' : `${w}`}
               </button>
             ))}
+            {widget.widgetType === 'PIVOT' && onEditPivot && (
+              <button onClick={() => onEditPivot(widget)} className="text-xs text-brand-navy dark:text-brand-amber hover:underline ml-1">Edit chart</button>
+            )}
             <button onClick={onRemove} aria-label="Remove widget" className="text-xs text-semantic-danger hover:underline ml-1">Remove</button>
           </div>
         )}
@@ -76,7 +126,7 @@ export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, on
 
       {widget.widgetType === 'SCORECARD' && (
         canDrill ? (
-          <button type="button" onClick={() => onDrill({ title: widget.title || 'Items', items })}
+          <button type="button" onClick={() => drill(items, widget.title || 'Items')}
             className="text-3xl font-bold text-brand-navy dark:text-white rounded hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
             {scorecardCount}
           </button>
@@ -103,7 +153,7 @@ export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, on
               );
               return canDrill ? (
                 <button key={status} type="button" aria-label={`${status}: ${count} — show items`}
-                  onClick={() => onDrill({ title: `${widget.title || 'Items'} · Status: ${status}`, items: items.filter(i => (i.status || 'Unknown') === status) })}
+                  onClick={() => drill(items.filter(i => (i.status || 'Unknown') === status), `${widget.title || 'Items'} · Status: ${status}`, status)}
                   className="flex w-full items-center gap-2 rounded px-1 -mx-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors">
                   {row}
                 </button>
@@ -129,12 +179,18 @@ export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, on
 
       {widget.widgetType === 'PIE' && (
         <DonutChart data={chartData}
-          onSelect={canDrill ? (e => onDrill({ title: `${widget.title || 'Items'} · ${dimension}: ${e.label}`, items: drillBy(e.label) })) : undefined} />
+          onSelect={canDrill ? (e => drill(drillBy(e.label), `${widget.title || 'Items'} · ${dimension}: ${e.label}`, e.label)) : undefined} />
       )}
 
       {widget.widgetType === 'BAR' && (
         <BarChart data={chartData}
-          onSelect={canDrill ? (e => onDrill({ title: `${widget.title || 'Items'} · ${dimension}: ${e.label}`, items: drillBy(e.label) })) : undefined} />
+          onSelect={canDrill ? (e => drill(drillBy(e.label), `${widget.title || 'Items'} · ${dimension}: ${e.label}`, e.label)) : undefined} />
+      )}
+
+      {widget.widgetType === 'PIVOT' && (
+        config.spec
+          ? <PivotWidgetBody config={config.spec} workspaceId={workspaceId} />
+          : <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Configure this widget — turn on Edit and pick a source, measures and a chart type.</p>
       )}
 
       {(widget.widgetType === 'SPRINT_HEALTH' || widget.widgetType === 'BURNDOWN') && (() => {

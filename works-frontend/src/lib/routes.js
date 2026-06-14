@@ -38,6 +38,7 @@ export const VIEW_PATHS = {
   settings3: '/settings/workflows',
   customization: '/customization',
   workspace: '/settings',
+  account: '/account',
   trash: '/trash',
 };
 

@@ -36,6 +36,8 @@ import { WorkItemDetailPanel } from '@/components/works/organisms/work-item-deta
 import { AutomationsPanel } from '@/components/works/organisms/automations-panel';
 import { IntegrationsPanel } from '@/components/works/organisms/integrations-panel';
 import { SecurityCenter } from '@/components/works/organisms/security-center';
+import { AiComplianceSuggestion } from '@/components/works/organisms/ai-compliance-suggestion';
+import { SprintItemList } from '@/components/works/organisms/sprint-item-list';
 import { Modal } from '@/components/works/molecules/modal';
 import { Toast } from '@/components/works/atoms/toast';
 import { Skeleton } from '@/components/works/atoms/skeleton';
@@ -45,6 +47,7 @@ import { PresenceBar } from '@/components/works/organisms/presence-bar';
 import { ShortcutsHelp } from '@/components/works/organisms/shortcuts-help';
 import { ConflictResolver } from '@/components/works/organisms/conflict-resolver';
 import { StatusPage } from '@/components/works/organisms/status-page';
+import { PublicDashboardEmbed } from '@/components/works/organisms/public-dashboard-embed';
 import { PushSettingsPanel } from '@/components/works/organisms/push-settings-panel';
 import { connectRealtime, sendPresence, leavePresence } from '@/lib/realtime';
 import { queueDraft, removeDraft, pendingDrafts, syncDrafts } from '@/lib/offline';
@@ -57,9 +60,11 @@ import { ResetPasswordScreen } from '@/components/works/reset-password-screen';
 // DonutChart / BarChart moved to dashboard-widget-card.jsx + report-section-card.jsx (TD-003).
 // exportElementToPng / exportElementToPdf / exportRowsToCsv moved to export-buttons.jsx (TD-003).
 import { api } from '@/lib/apiClient';
+import { reportError, setToastEmitter } from '@/lib/report-error';
 import { layoutToWidgets } from '@/lib/today-layouts';
 import { useCardPrefs } from '@/hooks/useCardPrefs';
 import { buildStatusResolver } from '@/lib/status-config';
+import { buildFieldPrefsResolver, saveTypeFieldPrefs } from '@/lib/type-field-prefs';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { isIconComponent, onPressKey, renderMd } from '@/lib/utils';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -74,6 +79,7 @@ import { Avatar } from '@/components/works/atoms/avatar';
 import DashboardView from '@/views/dashboard-view';
 import BoardView from '@/views/board-view';
 import WorkspaceView from '@/views/workspace-view';
+import AccountView from '@/views/account-view';
 import PoWorkspaceView from '@/views/po-workspace-view';
 import LeadershipConsoleView from '@/views/leadership-console-view';
 import AdminOpsView from '@/views/admin-ops-view';
@@ -110,14 +116,10 @@ import { DashboardWidgetCard } from '@/components/works/organisms/dashboard-widg
 // EXTRA_WIDGET_PRESETS / EXTRA_WIDGET_CATEGORIES moved to dashboards-view.jsx (TD-003).
 
 // One error-presentation contract (findings F1/F2 in docs/UX-CODEBASE-ANALYSIS.md): failures are
-// never swallowed silently. `reportError` is registered with the live toast emitter from inside
-// App(); because there is a single toast slot, a burst of failures collapses to one message
-// rather than spamming. Transient/data errors surface here; form-field errors stay inline.
-let _emitToast = null;
-function reportError(e) {
-  if (e) { try { console.error('[bSmart]', e); } catch { /* noop */ } }
-  if (_emitToast) _emitToast('Something went wrong. Please try again.', 'error');
-}
+// never swallowed silently. `reportError` (now in lib/report-error.js) is wired to the live toast
+// emitter from inside App() via setToastEmitter(); because there is a single toast slot, a burst of
+// failures collapses to one message rather than spamming. Transient/data errors surface here;
+// form-field errors stay inline.
 
 const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
@@ -223,6 +225,24 @@ export default function App() {
   // status a work item stores (a string) to its category/color/clock across every surface.
   const [statusConfig, setStatusConfig] = useState([]);
   const statusResolver = useMemo(() => buildStatusResolver(statusConfig), [statusConfig]);
+  // Per-type field preferences — which fields show on the detail surface, per work-item type.
+  const [typeFieldPrefs, setTypeFieldPrefs] = useState([]);
+  const fieldPrefs = useMemo(() => buildFieldPrefsResolver(typeFieldPrefs), [typeFieldPrefs]);
+  // Toggle a field's visibility for a type (bulk-replaces that type's prefs server-side).
+  const handleToggleFieldPref = (typeKey, fieldKey, visible) => {
+    const forType = typeFieldPrefs
+      .filter(p => p.typeKey === typeKey && p.fieldKey !== fieldKey)
+      .map(p => ({ fieldKey: p.fieldKey, visible: p.visible, sortOrder: p.sortOrder }));
+    const next = [...forType, { fieldKey, visible }];
+    saveTypeFieldPrefs(api, activeWorkspaceId, typeKey, next)
+      .then(updated => setTypeFieldPrefs(Array.isArray(updated) ? updated : []))
+      .catch(reportError);
+  };
+  // Bulk-replace a type's field prefs (visibility + order) — used by the Settings field editor.
+  const handleSaveFieldPrefs = (typeKey, prefList) =>
+    saveTypeFieldPrefs(api, activeWorkspaceId, typeKey, prefList)
+      .then(updated => setTypeFieldPrefs(Array.isArray(updated) ? updated : []))
+      .catch(reportError);
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false); // off-canvas drawer under md (G1)
   const [subRailCollapsed, setSubRailCollapsed] = useState(false);
@@ -279,8 +299,6 @@ export default function App() {
   const [roles, setRoles]                   = useState([]);
   const [bqlQuery, setBqlQuery]           = useState('');
   const [bqlResults, setBqlResults]       = useState([]);
-  const [bqlFilters, setBqlFilters]       = useState([]);
-  const [bqlFilterName, setBqlFilterName] = useState('');
   const [bqlError, setBqlError]           = useState('');
   const [workItemTypes, setWorkItemTypes]   = useState({ builtIn: [], custom: [] });
   const [permMatrix, setPermMatrix]         = useState(null);
@@ -343,7 +361,7 @@ export default function App() {
   const [smTab, setSmTab]                       = useState('impediments'); // impediments | standup | risk | planning | retro | review | patterns
   const [poTab, setPoTab]                       = useState('roadmap');     // roadmap | ideas | feedback | okr | releasenotes | stakeholders
   const [impediments, setImpediments]           = useState([]);
-  const [newImpediment, setNewImpediment]       = useState({ title: '', severity: 'MEDIUM', category: '', description: '' });
+  const [newImpediment, setNewImpediment]       = useState({ title: '', raiseType: 'IMPEDIMENT', severity: 'MEDIUM', category: '', description: '' });
   const [standups, setStandups]                 = useState([]);
   const [activeStandup, setActiveStandup]       = useState(null); // { session, entries }
   const [standupDraft, setStandupDraft]         = useState({ yesterday: '', today: '', blockers: '' });
@@ -358,6 +376,17 @@ export default function App() {
   const [reviewResult, setReviewResult]         = useState(null);
   const [patternsResult, setPatternsResult]     = useState(null);
   const [riskSprintId, setRiskSprintId]         = useState('');
+  const [varianceSprintId, setVarianceSprintId] = useState('');
+  const [varianceResult, setVarianceResult]     = useState(null);
+  const [cockpitContext, setCockpitContext]     = useState(null); // { roleKey, tier, canManageSprints, canCreateItems, activeSprint, liveCeremony }
+  const [cockpitLoading, setCockpitLoading]     = useState({});   // tab key -> bool, drives loading skeletons
+  const [coachTips, setCoachTips]               = useState(null); // { roleKey, tips, narrative, meta }
+  const [digest, setDigest]                     = useState(null); // { sprint, rag, deliveryRate, ... } executive Health lens
+  const [retroClusters, setRetroClusters]       = useState(null); // { retroId, themes, narrative, meta }
+  const [ceremonies, setCeremonies]             = useState([]);   // [{ session, counts }]
+  const [activeCeremony, setActiveCeremony]     = useState(null); // { session, attendance, counts }
+  const [newCeremony, setNewCeremony]           = useState({ ceremonyType: 'STANDUP', scheduledAt: '' });
+  const [myDay, setMyDay]                       = useState(null); // { myItems, myImpediments, myActions, todayStandup, myStandupEntry }
   const [roadmapThemes, setRoadmapThemes]       = useState([]);
   const [newTheme, setNewTheme]                 = useState({ name: '', status: 'PLANNED', quarter: '', description: '' });
   const [ideas, setIdeas]                       = useState([]);
@@ -447,7 +476,7 @@ export default function App() {
   const [selectedViolations, setSelectedViolations] = useState([]);
   const [ruleBuilder, setRuleBuilder] = useState(null); // the rule being created/edited, or null
   const [ruleTestResult, setRuleTestResult] = useState(null);
-  const EMPTY_STATUS_METRICS = { durations: [], leadSeconds: null, cycleSeconds: null, completed: false, started: false };
+  const EMPTY_STATUS_METRICS = { durations: [], leadSeconds: null, cycleSeconds: null, leadRunning: false, cycleRunning: false };
   const [statusMetrics, setStatusMetrics] = useState(EMPTY_STATUS_METRICS);
   const [deleteUndoItem, setDeleteUndoItem] = useState(null);
   const deleteUndoTimer = useRef(null);
@@ -647,7 +676,7 @@ export default function App() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
-  _emitToast = showToast; // register the live emitter for module-level reportError (F1/F2)
+  setToastEmitter(showToast); // register the live emitter for reportError (lib/report-error.js)
 
   // Access guard — once the real role is known, bounce out of any surface this user can't see
   // (e.g. a deep link or stale URL into an admin area). Server RBAC already 403s the data; this
@@ -744,14 +773,20 @@ export default function App() {
     fetchUserRole();
     fetchBranding();
     fetchWipLimits();
-    // Load custom field definitions for card rendering and the field picker.
-    api.send(`/custom-field-definitions?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
+    // Load custom field definitions for card rendering and the field picker. Unified onto field_def
+    // (Option B): cards and the detail panel share one definition store; values arrive on each work
+    // item as `fieldValues` (batch-attached by the backend), keyed by field_def id.
+    api.send(`/field-defs?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
       .then(defs => setCustomFieldDefs(Array.isArray(defs) ? defs : []))
       .catch(() => setCustomFieldDefs([]));
     // Load per-type status configuration (seeds workspace defaults server-side on first read).
     api.send(`/status-config?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
       .then(cfg => setStatusConfig(Array.isArray(cfg) ? cfg : []))
       .catch(() => setStatusConfig([]));
+    // Load per-type field preferences (which detail-surface fields show per type).
+    api.send(`/type-field-prefs?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
+      .then(p => setTypeFieldPrefs(Array.isArray(p) ? p : []))
+      .catch(() => setTypeFieldPrefs([]));
     // Load AI capabilities for this workspace — drives hide/show of AI action buttons (RB-40 §2).
     aiClient.capabilities(activeWorkspaceId).then(caps => {
       setAiCapabilities(Array.isArray(caps) ? caps : []);
@@ -1016,10 +1051,22 @@ export default function App() {
     api.send(`/work-items/${itemId}`, {
       method: 'PUT',
       body: JSON.stringify({ ...item, status: newStatus })
-    }).catch(() => {
-      // Revert on failure
-      setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: item.status } : i));
-      showToast('Failed to update status', 'error');
+    }).then(saved => {
+      // Adopt the saved item so derived fields (e.g. statusChangedAt for the lapse badge) reflect
+      // the server rather than the optimistic guess.
+      setWorkItems(prev => prev.map(i => i.id === itemId ? saved : i));
+    }).catch(err => {
+      if (err?.status === 409) {
+        // Concurrent edit: pull the authoritative item instead of leaving the stale optimistic move.
+        api.raw(`/work-items/${itemId}`).then(r => (r.ok ? r.json() : null)).then(fresh => {
+          setWorkItems(prev => prev.map(i => i.id === itemId ? (fresh || { ...i, status: item.status }) : i));
+        }).catch(() => setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: item.status } : i)));
+        showToast('This item changed elsewhere — refreshed to the latest', 'error');
+      } else {
+        // Revert on failure
+        setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: item.status } : i));
+        showToast('Failed to update status', 'error');
+      }
     });
   };
 
@@ -1148,7 +1195,7 @@ export default function App() {
   // ── Iteration 6 — custom dashboards ──────────────────────────────────────────
   function fetchCustomDashboards() {
     api.raw(`/dashboards`)
-      .then(r => r.json()).then(d => setCustomDashboards(Array.isArray(d) ? d : [])).catch(reportError);
+      .then(r => r.json()).then(d => setCustomDashboards(Array.isArray(d) ? d : (d?.items || []))).catch(reportError);
   }
 
   function openDashboard(id) {
@@ -1197,6 +1244,23 @@ export default function App() {
       .catch(() => showToast('Failed to create dashboard', 'error'));
   }
 
+  // Cap J — accept an AI-suggested starter dashboard: create the dashboard, then add its proposed
+  // widgets via the existing widget endpoints (INSIGHTS-AI-ALIGNMENT-REVIEW §2.2). The widget set is
+  // the deterministic role-based starter set the panel previewed; returns a promise the panel awaits.
+  function acceptDashboardSuggestion(suggestion) {
+    const widgets = (suggestion && suggestion.widgets) || [];
+    return api.send(`/dashboards`, { method: 'POST', body: JSON.stringify({ name: (suggestion && suggestion.name) || 'Suggested dashboard', scope: 'PERSONAL', workspaceId: activeWorkspaceId }) })
+      .then(async (d) => {
+        for (const w of widgets) {
+          const body = { widgetType: w.widgetType, title: w.title, config: JSON.stringify(w.config || {}), gridW: w.gridW || 4, gridH: 2 };
+          await api.send(`/dashboards/${d.id}/widgets`, { method: 'POST', body: JSON.stringify(body) });
+        }
+        fetchCustomDashboards();
+        openDashboard(d.id);
+        return d;
+      });
+  }
+
   function deleteDashboard(id) {
     api.send(`/dashboards/${id}`, { method: 'DELETE' })
       .then(() => { showToast('Dashboard deleted'); setSelectedDashboard(null); fetchCustomDashboards(); })
@@ -1205,7 +1269,7 @@ export default function App() {
 
   // ── Iteration 6 — custom reports ─────────────────────────────────────────────
   function fetchReports() {
-    api.raw(`/reports`).then(r => r.json()).then(d => setReports(Array.isArray(d) ? d : [])).catch(reportError);
+    api.raw(`/reports`).then(r => r.json()).then(d => setReports(Array.isArray(d) ? d : (d?.items || []))).catch(reportError);
   }
   function fetchReportTemplates() {
     api.raw(`/reports/templates`).then(r => r.json()).then(d => setReportTemplates(Array.isArray(d) ? d : [])).catch(reportError);
@@ -1463,6 +1527,7 @@ export default function App() {
     const defaults = {
       kpi:       { title: 'Open items', config: { metric: 'count', filter: { open: true } } },
       chart:     { title: 'By status', config: { chartType: 'bar', dimension: 'status' } },
+      pivot:     { title: 'Custom chart', config: { spec: null } },
       table:     { title: 'Work items', config: { limit: 20 } },
       narrative: { title: 'Summary', config: { text: '' } },
     };
@@ -1620,23 +1685,32 @@ export default function App() {
     api.raw(`/permission-schemes/roles`, { method: 'POST', body: JSON.stringify({ ...newRoleForm, workspaceId: activeWorkspaceId }) })
       .then(r => r.json()).then(() => { fetchRoles(); fetchPermMatrix(); setShowRoleForm(false); setNewRoleForm({ name: '', tier: 2 }); }).catch(reportError);
   }
-  function runBql() {
+  function runBql(opts) {
     setBqlError('');
-    api.raw(`/bql/execute`, { method: 'POST', body: JSON.stringify({ query: bqlQuery }) })
+    const o = opts && typeof opts === 'object' ? opts : {};
+    // An explicit query (saved-view / history / shared-link run) avoids the stale-closure read of
+    // bqlQuery when the editor was just set in the same tick.
+    const query = typeof o.query === 'string' ? o.query : bqlQuery;
+    // Running a saved view goes through its audited run endpoint (RB-20 §5) instead of the ad-hoc
+    // /bql/execute path, so the named run is recorded; results flow into the same table.
+    if (o.savedViewId) {
+      const size = Number.isFinite(o.size) ? o.size : 100;
+      api.raw(`/saved-views/${encodeURIComponent(o.savedViewId)}/run`
+        + `?workspaceId=${encodeURIComponent(activeWorkspaceId)}&size=${size}`, { method: 'POST' })
+        .then(r => r.json()).then(d => {
+          if (d.error || d.message) { setBqlError(d.message || d.error); setBqlResults([]); }
+          else setBqlResults(Array.isArray(d) ? d : []);
+        }).catch(err => setBqlError(err.message));
+      return;
+    }
+    const body = { query, workspaceId: activeWorkspaceId };
+    if (typeof o.sort === 'string' && o.sort) body.sort = o.sort;
+    if (Number.isFinite(o.size)) body.size = String(o.size);
+    api.raw(`/bql/execute`, { method: 'POST', body: JSON.stringify(body) })
       .then(r => r.json()).then(d => {
         if (d.error) { setBqlError(d.error); setBqlResults([]); }
         else setBqlResults(Array.isArray(d) ? d : []);
       }).catch(err => setBqlError(err.message));
-  }
-  function fetchBqlFilters() {
-    api.raw(`/bql/filters`)
-      .then(r => r.json()).then(d => setBqlFilters(Array.isArray(d) ? d : [])).catch(reportError);
-  }
-  function saveBqlFilter() {
-    if (!bqlFilterName.trim() || !bqlQuery.trim()) return;
-    api.raw(`/bql/filters`, { method: 'POST', body: JSON.stringify({ name: bqlFilterName, query: bqlQuery, isShared: false }) })
-      .then(r => r.json()).then(f => { setBqlFilters(prev => [f, ...prev]); setBqlFilterName(''); showToast('Filter saved'); })
-      .catch(() => showToast('Failed to save filter', 'error'));
   }
 
   // ---- Iteration 4 fetches ----
@@ -1662,7 +1736,16 @@ export default function App() {
     };
     const ep = endpoints[type];
     if (!ep) return;
-    api.raw(`/${ep}`, { method: 'POST', body: JSON.stringify({ ...payload, projectId: pmProjectId, workspaceId: activeWorkspaceId }) })
+    // Boundary validation (defence-in-depth beyond the disabled Create button): a PM artifact
+    // must belong to a team and carry a non-empty title, else the POST silently mis-scopes.
+    if (!pmProjectId) { showToast('Select a team before adding an artifact', 'error'); return; }
+    if (!payload.title || !payload.title.trim()) { showToast('Title is required', 'error'); return; }
+    // The shared form binds the primary input to `title`, but a Stakeholder's identity field is
+    // `name` (and its free text is `notes`) — map them so the register shows a real name, not blank.
+    const body = type === 'stakeholder'
+      ? { ...payload, name: payload.name || payload.title, notes: payload.notes || payload.description }
+      : payload;
+    api.raw(`/${ep}`, { method: 'POST', body: JSON.stringify({ ...body, projectId: pmProjectId, workspaceId: activeWorkspaceId }) })
       .then(r => r.json()).then(() => {
         setPmFormOpen(null); setPmForm({});
         if (type === 'risk')        { fetchRisks(pmProjectId); fetchRaidDashboard(pmProjectId); }
@@ -1999,11 +2082,84 @@ export default function App() {
   }
 
   // ── Iteration 15 — Scrum Master Cockpit (Cap V) ──────────────────────────────
+  // Clear per-sprint analysis so the active-sprint auto-load re-fires for the new project
+  // (stale results would otherwise suppress the reload).
+  function resetCockpitAnalysis() {
+    setRiskPanel(null); setVarianceResult(null); setReviewResult(null);
+    setPatternsResult(null); setPlanningResult(null);
+    setRiskSprintId(''); setVarianceSprintId(''); setReviewSprintId('');
+  }
   function openCockpit() {
     setView('smcockpit');
     const pid = i15ProjectId || (projects[0] && projects[0].id) || '';
     setI15ProjectId(pid);
-    if (pid) { fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
+    resetCockpitAnalysis();
+    if (pid) { fetchCockpitContext(pid); fetchCoachTips(pid); fetchDigest(pid); fetchCeremonies(pid); fetchMyDay(pid); fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
+  }
+  function fetchCoachTips(pid) {
+    setCoachTips(null);
+    api.send(`/cockpit/pro-tips?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: pid }) })
+      .then(d => setCoachTips(d && Array.isArray(d.tips) ? d : null)).catch(() => setCoachTips(null));
+  }
+  function fetchDigest(pid) {
+    setDigest(null);
+    api.raw(`/cockpit/digest?workspaceId=${activeWorkspaceId}&projectId=${pid}`).then(r => r.json())
+      .then(d => setDigest(d && d.rag ? d : null)).catch(() => setDigest(null));
+  }
+  function clusterRetro() {
+    if (!activeRetro?.session?.id) return;
+    api.send(`/cockpit/retro-cluster?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ retroId: activeRetro.session.id }) })
+      .then(d => { setRetroClusters(d && Array.isArray(d.themes) ? d : null); if (d?.meta?.fallback) showToast('Retro clustering used fallback (keyword themes).', 'info'); })
+      .catch(() => showToast('Retro clustering failed', 'error'));
+  }
+  function fetchMyDay(pid) {
+    api.raw(`/cockpit/my-day?projectId=${pid}`).then(r => r.json())
+      .then(d => setMyDay(d && typeof d === 'object' ? d : null)).catch(() => setMyDay(null));
+  }
+  function submitMyStandup() {
+    const sid = myDay?.todayStandup?.id;
+    const eid = myDay?.myStandupEntry?.id;
+    if (!sid || !eid) return;
+    api.send(`/standups/${sid}/entries/${eid}/record`, { method: 'POST', body: JSON.stringify(standupDraft) })
+      .then(() => { setStandupDraft({ yesterday: '', today: '', blockers: '' }); fetchMyDay(i15ProjectId); showToast('Standup update recorded'); })
+      .catch(() => showToast('Failed to record your update', 'error'));
+  }
+  function fetchCockpitContext(pid) {
+    api.raw(`/cockpit/context?projectId=${pid}`).then(r => r.json())
+      .then(d => setCockpitContext(d && d.roleKey ? d : null)).catch(() => setCockpitContext(null));
+  }
+  function fetchCeremonies(pid) {
+    api.raw(`/ceremonies?projectId=${pid}`).then(r => r.json())
+      .then(d => setCeremonies(Array.isArray(d) ? d : [])).catch(() => setCeremonies([]));
+  }
+  function scheduleCeremony() {
+    const memberIds = (workspaceMembers.length ? workspaceMembers : users).map(m => m.id).filter(Boolean);
+    const scheduledAt = newCeremony.scheduledAt ? new Date(newCeremony.scheduledAt).toISOString() : null;
+    api.send(`/ceremonies`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId, ceremonyType: newCeremony.ceremonyType, scheduledAt, sprintId: cockpitContext?.activeSprint?.id || null, memberIds }) })
+      .then(d => { setActiveCeremony(d); setNewCeremony({ ceremonyType: 'STANDUP', scheduledAt: '' }); fetchCeremonies(i15ProjectId); showToast('Ceremony scheduled'); })
+      .catch(() => showToast('Failed to schedule ceremony', 'error'));
+  }
+  function openCeremony(id) {
+    api.raw(`/ceremonies/${id}`).then(r => r.json()).then(d => setActiveCeremony(d)).catch(reportError);
+  }
+  function startCeremony(id) {
+    api.send(`/ceremonies/${id}/start`, { method: 'POST' })
+      .then(d => { setActiveCeremony(d); fetchCeremonies(i15ProjectId); fetchCockpitContext(i15ProjectId); showToast('Ceremony is live'); })
+      .catch(() => showToast('Failed to start ceremony', 'error'));
+  }
+  function joinCeremony(id) {
+    api.send(`/ceremonies/${id}/join`, { method: 'POST' })
+      .then(d => { setActiveCeremony(d); fetchCeremonies(i15ProjectId); showToast('You joined the ceremony'); })
+      .catch(() => showToast('Failed to join — is the ceremony live?', 'error'));
+  }
+  function excuseCeremony(id, userId) {
+    api.send(`/ceremonies/${id}/excuse`, { method: 'POST', body: JSON.stringify({ userId }) })
+      .then(d => setActiveCeremony(d)).catch(() => showToast('Failed to excuse member', 'error'));
+  }
+  function completeCeremony(id) {
+    api.send(`/ceremonies/${id}/complete`, { method: 'POST' })
+      .then(d => { setActiveCeremony(d); fetchCeremonies(i15ProjectId); fetchCockpitContext(i15ProjectId); showToast('Ceremony complete — absentees recorded'); })
+      .catch(() => showToast('Failed to complete ceremony', 'error'));
   }
   function fetchImpediments(pid) {
     api.raw(`/impediments?projectId=${pid}`).then(r => r.json())
@@ -2012,7 +2168,7 @@ export default function App() {
   function createImpediment() {
     if (!newImpediment.title.trim()) { showToast('Title is required', 'error'); return; }
     api.send(`/impediments`, { method: 'POST', body: JSON.stringify({ ...newImpediment, projectId: i15ProjectId }) })
-      .then(() => { showToast('Impediment raised'); setNewImpediment({ title: '', severity: 'MEDIUM', category: '', description: '' }); fetchImpediments(i15ProjectId); })
+      .then(() => { showToast('Raised'); setNewImpediment({ title: '', raiseType: 'IMPEDIMENT', severity: 'MEDIUM', category: '', description: '' }); fetchImpediments(i15ProjectId); })
       .catch(() => showToast('Failed to raise impediment', 'error'));
   }
   function updateImpediment(imp, patch) {
@@ -2056,6 +2212,7 @@ export default function App() {
       .catch(() => showToast('Failed to create retro', 'error'));
   }
   function openRetro(id) {
+    setRetroClusters(null);
     api.raw(`/retros/${id}`).then(r => r.json()).then(d => setActiveRetro(d)).catch(reportError);
   }
   function addRetroNote(columnKey) {
@@ -2072,23 +2229,42 @@ export default function App() {
     api.send(`/retros/notes/${noteId}/convert`, { method: 'POST', body: JSON.stringify({}) })
       .then(() => { showToast('Action item created'); openRetro(activeRetro.session.id); }).catch(() => showToast('Failed', 'error'));
   }
+  function setTabLoading(tab, on) { setCockpitLoading(l => ({ ...l, [tab]: on })); }
   function runSprintPlanning() {
+    setTabLoading('planning', true);
     api.send(`/cockpit/sprint-planning?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId, timeOffPoints: Number(planningTimeOff) || 0 }) })
-      .then(d => setPlanningResult(d)).catch(() => showToast('Planning helper failed', 'error'));
+      .then(d => setPlanningResult(d)).catch(() => showToast('Planning helper failed', 'error'))
+      .finally(() => setTabLoading('planning', false));
   }
-  function runRiskPanel() {
-    if (!riskSprintId) { showToast('Select a sprint', 'error'); return; }
-    api.raw(`/cockpit/risk-panel?workspaceId=${activeWorkspaceId}&sprintId=${riskSprintId}`).then(r => r.json())
-      .then(d => setRiskPanel(d)).catch(() => showToast('Risk panel failed', 'error'));
+  function runRiskPanel(sprintId = riskSprintId) {
+    if (!sprintId) { showToast('Select a sprint', 'error'); return; }
+    setRiskSprintId(sprintId);
+    setTabLoading('risk', true);
+    api.raw(`/cockpit/risk-panel?workspaceId=${activeWorkspaceId}&sprintId=${sprintId}`).then(r => r.json())
+      .then(d => setRiskPanel(d)).catch(() => showToast('Risk panel failed', 'error'))
+      .finally(() => setTabLoading('risk', false));
   }
-  function runReviewPrep() {
-    if (!reviewSprintId) { showToast('Select a sprint', 'error'); return; }
-    api.send(`/cockpit/review-prep?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ sprintId: reviewSprintId }) })
-      .then(d => setReviewResult(d)).catch(() => showToast('Review prep failed', 'error'));
+  function runVariance(sprintId = varianceSprintId) {
+    if (!sprintId) { showToast('Select a sprint', 'error'); return; }
+    setVarianceSprintId(sprintId);
+    setTabLoading('variance', true);
+    api.raw(`/cockpit/variance?workspaceId=${activeWorkspaceId}&sprintId=${sprintId}`).then(r => r.json())
+      .then(d => setVarianceResult(d)).catch(() => showToast('Variance analysis failed', 'error'))
+      .finally(() => setTabLoading('variance', false));
+  }
+  function runReviewPrep(sprintId = reviewSprintId) {
+    if (!sprintId) { showToast('Select a sprint', 'error'); return; }
+    setReviewSprintId(sprintId);
+    setTabLoading('review', true);
+    api.send(`/cockpit/review-prep?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ sprintId }) })
+      .then(d => setReviewResult(d)).catch(() => showToast('Review prep failed', 'error'))
+      .finally(() => setTabLoading('review', false));
   }
   function runPatterns() {
+    setTabLoading('patterns', true);
     api.send(`/cockpit/patterns?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId }) })
-      .then(d => setPatternsResult(d)).catch(() => showToast('Pattern detection failed', 'error'));
+      .then(d => setPatternsResult(d)).catch(() => showToast('Pattern detection failed', 'error'))
+      .finally(() => setTabLoading('patterns', false));
   }
 
   // ── Iteration 15 — Product Owner Workspace (Cap W) ───────────────────────────
@@ -2408,8 +2584,13 @@ export default function App() {
   const userName = u => users.find(x => x.id === u)?.fullName || '';
   const myItems  = workItems.filter(i => i.assigneeId === currentUser?.id);
 
-  // Public, unauthenticated, read-only dashboard embed (?share=<token>) — short-circuits
-  // before the auth gate so it renders without a login (iteration 6).
+  // Public, unauthenticated, read-only dashboard embed — short-circuits before the auth gate so it
+  // renders without a login (iteration 6, Cap J). Two equivalent entry points to the same view:
+  //   • ?share=<token>           — the shareable "open in a tab" public link.
+  //   • /embed/dashboard/<token> — the chrome-less iframe surface (no header) for portals/status
+  //     pages; this path is what nginx serves with the narrow framing allowance (frame-ancestors).
+  const embedMatch = window.location.pathname.match(/^\/embed\/dashboard\/([^/?#]+)/);
+  if (embedMatch) return <PublicDashboardEmbed token={decodeURIComponent(embedMatch[1])} embedded />;
   const shareToken = new URLSearchParams(window.location.search).get('share');
   if (shareToken) return <PublicDashboardEmbed token={shareToken} />;
 
@@ -2646,13 +2827,13 @@ export default function App() {
       case 'reportbuilder': setSelectedReport(null); fetchReports(); fetchReportTemplates(); break;
       case 'releases': fetchReleases(); break;
       case 'settings3': fetchWorkflows(); fetchFieldDefs(); fetchRoles(); fetchWorkItemTypes(); break;
-      case 'bql': fetchBqlFilters(); break;
       case 'knowledge': fetchKnowledgeSpaces(); setKnowledgeTab('spaces'); setSelectedSpace(null); setSelectedArticle(null); break;
       case 'compliance': setComplianceTab('dashboard'); setRuleBuilder(null); fetchComplianceDashboard(); fetchComplianceRules(); fetchComplianceViolations(); break;
       case 'service': setServiceTab('queues'); setServiceQueue('open'); fetchServiceRequests('open'); break;
       case 'pm': if (projects.length) { const pid = projects[0].id; setPmProjectId(pid); fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); } break;
       case 'smcockpit': openCockpit(); break;
       case 'poworkspace': openPoWorkspace(); break;
+      case 'account': fetchNotifPrefs(); break;
       case 'workspace': fetchMembers(); fetchNotifPrefs(); fetchBranding(); break;
       case 'trash': fetchTrash(); break;
       case 'projects': fetchProjectMetrics(projects); break;
@@ -2939,7 +3120,7 @@ export default function App() {
               role={userRole.role}
               darkMode={darkMode}
               onToggleTheme={() => setDarkMode(d => !d)}
-              onOpenSettings={() => { setView('workspace'); fetchMembers(); fetchNotifPrefs(); fetchBranding(); }}
+              onOpenSettings={() => navigate('account')}
               onLogout={handleLogout}
             />
           </div>
@@ -3074,6 +3255,7 @@ export default function App() {
               userName={userName}
               projectMetrics={projectMetrics}
               projectMetricsLoading={projectMetricsLoading}
+              statusResolver={statusResolver}
             />
           )}
 
@@ -3131,6 +3313,7 @@ export default function App() {
               fetchNotifications={fetchNotifications}
               fetchUnreadCount={fetchUnreadCount}
               setUnreadCount={setUnreadCount}
+              onError={reportError}
             />
           )}
 
@@ -3215,12 +3398,28 @@ export default function App() {
               selectedSprintId={selectedSprintId}
               sprintReport={sprintReport}
               scopeChanges={scopeChanges}
+              activeWorkspaceId={activeWorkspaceId}
               setSelectedSprintId={setSelectedSprintId}
               fetchSprintReport={fetchSprintReport}
             />
           )}
 
-          {/* WORKSPACE SETTINGS */}
+          {/* MY ACCOUNT — tier VIEWER+; personal settings reachable by all members */}
+          {view === 'account' && (
+            <AccountView
+              currentUser={currentUser}
+              notifPrefs={notifPrefs}
+              mfaSetup={mfaSetup}
+              mfaSetupCode={mfaSetupCode}
+              mfaSetupMsg={mfaSetupMsg}
+              setMfaSetup={setMfaSetup}
+              setMfaSetupCode={setMfaSetupCode}
+              saveNotifPrefs={saveNotifPrefs}
+              handleMfaEnroll={handleMfaEnroll}
+              handleMfaConfirm={handleMfaConfirm}
+            />
+          )}
+          {/* WORKSPACE SETTINGS — tier ADMIN+ */}
           {view === 'workspace' && (
             <WorkspaceView
               workspaceMembers={workspaceMembers}
@@ -3228,10 +3427,6 @@ export default function App() {
               userRole={userRole}
               inviteEmail={inviteEmail}
               inviteMsg={inviteMsg}
-              notifPrefs={notifPrefs}
-              mfaSetup={mfaSetup}
-              mfaSetupCode={mfaSetupCode}
-              mfaSetupMsg={mfaSetupMsg}
               brandingColor={brandingColor}
               brandingDesc={brandingDesc}
               projects={projects}
@@ -3240,16 +3435,11 @@ export default function App() {
               projectMemberEmail={projectMemberEmail}
               projectMemberMsg={projectMemberMsg}
               setInviteEmail={setInviteEmail}
-              setMfaSetup={setMfaSetup}
-              setMfaSetupCode={setMfaSetupCode}
               setBrandingColor={setBrandingColor}
               setBrandingDesc={setBrandingDesc}
               setProjectMemberEmail={setProjectMemberEmail}
               handleRemoveMember={handleRemoveMember}
               handleInvite={handleInvite}
-              saveNotifPrefs={saveNotifPrefs}
-              handleMfaEnroll={handleMfaEnroll}
-              handleMfaConfirm={handleMfaConfirm}
               saveBranding={saveBranding}
               fetchProjectMembers={fetchProjectMembers}
               addProjectMember={addProjectMember}
@@ -3274,6 +3464,9 @@ export default function App() {
           {view === 'settings3' && (
             <Settings3View
               settings3Tab={settings3Tab}
+              fieldPrefs={fieldPrefs}
+              customFieldDefs={customFieldDefs}
+              onSaveFieldPrefs={handleSaveFieldPrefs}
               workflows={workflows}
               expandedWorkflowId={expandedWorkflowId}
               workflowDetail={workflowDetail}
@@ -3334,18 +3527,18 @@ export default function App() {
             <BqlView
               bqlQuery={bqlQuery}
               bqlError={bqlError}
-              bqlFilterName={bqlFilterName}
-              bqlFilters={bqlFilters}
               bqlResults={bqlResults}
               workItems={workItems}
               activeWorkspaceId={activeWorkspaceId}
               aiCapabilities={aiCapabilities}
+              nameMaps={{
+                users: Object.fromEntries(users.map(u => [u.id, u.fullName || u.email])),
+                projects: Object.fromEntries(projects.map(p => [p.id, p.name])),
+                sprints: Object.fromEntries(sprints.map(s => [s.id, s.name])),
+              }}
               setBqlQuery={setBqlQuery}
-              setBqlFilterName={setBqlFilterName}
               setSelectedItem={setSelectedItem}
               runBql={runBql}
-              saveBqlFilter={saveBqlFilter}
-              fetchBqlFilters={fetchBqlFilters}
             />
           )}
 
@@ -3457,6 +3650,10 @@ export default function App() {
               sprints={sprints}
               velocityData={velocityData}
               currentUser={currentUser}
+              activeWorkspaceId={activeWorkspaceId}
+              aiCapabilities={aiCapabilities}
+              dashboardRole={dashboardRole}
+              acceptDashboardSuggestion={acceptDashboardSuggestion}
               createDashboard={createDashboard}
               openDashboard={openDashboard}
               deleteDashboard={deleteDashboard}
@@ -3490,6 +3687,7 @@ export default function App() {
               reportSchedules={reportSchedules}
               scheduleForm={scheduleForm}
               workItems={workItems}
+              activeWorkspaceId={activeWorkspaceId}
               createBlankReport={createBlankReport}
               createReportFromTemplate={createReportFromTemplate}
               openReport={openReport}
@@ -3558,6 +3756,8 @@ export default function App() {
               rejectArticle={rejectArticle}
               articleChildren={articleChildren}
               fetchArticleChildren={fetchArticleChildren}
+              workspaceId={activeWorkspaceId}
+              aiCapabilities={aiCapabilities}
             />
           )}
 
@@ -3594,6 +3794,24 @@ export default function App() {
           {view === 'smcockpit' && (
             <ScrumMasterCockpitView
               i15ProjectId={i15ProjectId}
+              cockpitContext={cockpitContext}
+              ceremonies={ceremonies}
+              activeCeremony={activeCeremony}
+              newCeremony={newCeremony}
+              currentUserId={currentUser?.id}
+              myDay={myDay}
+              fetchMyDay={fetchMyDay}
+              submitMyStandup={submitMyStandup}
+              fetchCockpitContext={fetchCockpitContext}
+              fetchCeremonies={fetchCeremonies}
+              scheduleCeremony={scheduleCeremony}
+              openCeremony={openCeremony}
+              setActiveCeremony={setActiveCeremony}
+              setNewCeremony={setNewCeremony}
+              startCeremony={startCeremony}
+              joinCeremony={joinCeremony}
+              excuseCeremony={excuseCeremony}
+              completeCeremony={completeCeremony}
               smTab={smTab}
               impediments={impediments}
               newImpediment={newImpediment}
@@ -3636,6 +3854,18 @@ export default function App() {
               recordStandup={recordStandup}
               setRiskSprintId={setRiskSprintId}
               runRiskPanel={runRiskPanel}
+              varianceSprintId={varianceSprintId}
+              setVarianceSprintId={setVarianceSprintId}
+              varianceResult={varianceResult}
+              runVariance={runVariance}
+              coachTips={coachTips}
+              fetchCoachTips={fetchCoachTips}
+              cockpitLoading={cockpitLoading}
+              resetCockpitAnalysis={resetCockpitAnalysis}
+              digest={digest}
+              fetchDigest={fetchDigest}
+              retroClusters={retroClusters}
+              clusterRetro={clusterRetro}
               setPlanningTimeOff={setPlanningTimeOff}
               runSprintPlanning={runSprintPlanning}
               setActiveRetro={setActiveRetro}
@@ -3830,6 +4060,8 @@ export default function App() {
           maxUploadMb={MAX_UPLOAD_MB}
           activity={activity}
           statusMetrics={statusMetrics}
+          fieldPrefs={fieldPrefs}
+          onToggleFieldPref={handleToggleFieldPref}
           activityEventFilter={activityEventFilter}
           setActivityEventFilter={setActivityEventFilter}
           setActivity={setActivity}
@@ -4045,13 +4277,7 @@ export default function App() {
 
 // renderMd extracted to @/lib/utils (imported above). Imported as renderMd from utils (TD-003).
 
-// eslint-disable-next-line no-unused-vars
-function getTimeOfDay() {
-  const h = new Date().getHours();
-  if (h < 12) return 'morning';
-  if (h < 17) return 'afternoon';
-  return 'evening';
-}
+// getTimeOfDay moved to lib/utils.js (TD-003 / ONE Source — also de-duplicates dashboard-view.jsx).
 
 // StatCard, RoleBadge, Field and the onPressKey keyboard helper now live in
 // components/works/{stat-card,role-badge,field}.jsx and lib/utils.js (imported above).
@@ -4063,176 +4289,18 @@ function getTimeOfDay() {
 // ReportSectionControls + ReportSectionCard extracted to
 // src/components/works/organisms/report-section-card.jsx (TD-003).
 
-// Iteration 6 — public, read-only embed of a shared dashboard. Rendered before the auth
-// gate from ?share=<token>; fetches the token-scoped public endpoint and renders the widgets
-// from the server aggregate (no app shell, no auth, no drill).
-function PublicDashboardEmbed({ token }) {
-  const [data, setData] = useState(null);
-  const [status, setStatus] = useState('loading'); // loading | ok | error
-  useEffect(() => {
-    let alive = true;
-    api.raw(`/public/dashboards/${encodeURIComponent(token)}`)
-      .then(r => { if (!r.ok) throw new Error('not found'); return r.json(); })
-      .then(d => { if (alive) { setData(d); setStatus('ok'); } })
-      .catch(() => { if (alive) setStatus('error'); });
-    return () => { alive = false; };
-  }, [token]);
+// PublicDashboardEmbed (iteration 6, Cap J) extracted to
+// src/components/works/organisms/public-dashboard-embed.jsx — imported at the top of this file and
+// rendered before the auth gate from ?share=<token> or /embed/dashboard/<token>.
 
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 font-sans" aria-busy="true" aria-label="Loading dashboard">
-        <header className="bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-7 w-7 rounded-md" />
-            <Skeleton className="h-4 w-40" />
-          </div>
-          <Skeleton className="h-5 w-20 rounded-full" />
-        </header>
-        <main className="p-6">
-          <div className="grid grid-cols-12 gap-4 max-w-7xl mx-auto">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="col-span-12 sm:col-span-6 lg:col-span-4">
-                <Skeleton className="h-40 w-full rounded-xl" />
-              </div>
-            ))}
-          </div>
-        </main>
-      </div>
-    );
-  }
-  if (status === 'error' || !data) {
-    return (
-      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center font-sans p-6">
-        <div className="text-center max-w-sm">
-          <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Dashboard unavailable</p>
-          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">This share link is invalid or has been revoked.</p>
-        </div>
-      </div>
-    );
-  }
-  const widgets = data.widgets || [];
-  return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 font-sans">
-      <header className="bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3 min-w-0">
-          <Logo />
-          <span className="text-sm font-semibold text-neutral-900 dark:text-white truncate">{data.name}</span>
-        </div>
-        <span className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-700 rounded-full px-2 py-0.5 flex-shrink-0">Read-only</span>
-      </header>
-      <main className="p-6">
-        {widgets.length === 0 ? (
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">This dashboard has no widgets.</p>
-        ) : (
-          <div className="grid grid-cols-12 gap-4 max-w-7xl mx-auto">
-            {widgets.map(w => (
-              <DashboardWidgetCard key={w.id} widget={w} workItems={[]} aggregate={data.aggregate} editMode={false} />
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
-  );
-}
-
-// DashboardWidgetCard extracted to src/components/works/organisms/dashboard-widget-card.jsx (TD-003).
-// Imported at the top of this file; used here by PublicDashboardEmbed.
-
-// B27 — AI-assisted compliance rule suggestion. Sends a natural-language prompt to the AI
-// which returns suggested rules; the user can adopt one directly into the rule builder.
-// Fallback: when AI is off or over budget, the component is not rendered (hidden by the parent).
-function AiComplianceSuggestion({ workspaceId, onAdopt, onToast }) {
-  const [prompt, setPrompt] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState(null);
-
-  function handleSuggest() {
-    if (!prompt.trim()) return;
-    setLoading(true);
-    setSuggestions(null);
-    aiClient.suggestComplianceRules(workspaceId, prompt.trim())
-      .then(res => {
-        const rules = res?.suggestions || res?.rules || [];
-        setSuggestions(rules);
-        setLoading(false);
-        if (!rules.length) onToast('No rule suggestions returned — try a different prompt.', 'info');
-        if (res?.meta?.fallback) onToast('AI rule suggestion used fallback (template match).', 'info');
-      })
-      .catch(() => { setLoading(false); onToast('AI rule suggestion failed. Please try again.', 'error'); });
-  }
-
-  return (
-    <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-5">
-      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">✦ AI Rule Suggestions</h3>
-      <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3">
-        Describe a compliance concern in plain language — AI will suggest a BQL rule to encode it.
-        <span className="block mt-0.5 italic">Fallback: seeded templates below when AI is off.</span>
-      </p>
-      <div className="flex gap-2">
-        <input
-          id="ai-compliance-prompt"
-          className="input flex-1 text-sm"
-          placeholder="e.g. Incidents should be assigned within 2 hours of creation"
-          value={prompt}
-          onChange={e => setPrompt(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') handleSuggest(); }}
-          aria-label="Describe the compliance rule you need"
-        />
-        <Button variant="secondary" disabled={loading || !prompt.trim()} onClick={handleSuggest}>
-          {loading ? 'Thinking…' : 'Suggest'}
-        </Button>
-      </div>
-      {loading && (
-        <div className="mt-3 space-y-2" aria-busy="true" aria-label="Loading suggestions">
-          <div className="animate-pulse h-10 bg-neutral-100 dark:bg-neutral-700 rounded" aria-hidden="true" />
-          <div className="animate-pulse h-10 bg-neutral-100 dark:bg-neutral-700 rounded" aria-hidden="true" />
-        </div>
-      )}
-      {suggestions && suggestions.length > 0 && (
-        <ul className="mt-3 space-y-2">
-          {suggestions.map((s, i) => (
-            <li key={i} className="flex items-start gap-3 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{s.name || `Rule ${i + 1}`}</p>
-                {s.description && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{s.description}</p>}
-                {s.scopeBql && <p className="text-xs font-mono text-brand-navy mt-1 truncate">{s.scopeBql} ⟶ {s.assertionBql}</p>}
-              </div>
-              <Button variant="secondary" onClick={() => { onAdopt(s); onToast('Rule draft opened in the rule builder.'); }}>Adopt</Button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
+// AiComplianceSuggestion (B27) extracted to
+// src/components/works/organisms/ai-compliance-suggestion.jsx (TD-003 / ONE Function) — imported
+// above and passed to the compliance view as a prop.
 
 // DashboardDrillModal extracted to src/components/works/organisms/dashboard-drill-modal.jsx (TD-003).
 // PmArtifactList extracted to src/components/works/organisms/pm-artifact-list.jsx (TD-003).
 
-function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
-  const [items, setItems] = React.useState([]);
-  React.useEffect(() => {
-    api.raw(`/sprints/${sprintId}/items`)
-      .then(r => r.json()).then(d => setItems(Array.isArray(d) ? d : [])).catch(reportError);
-  }, [sprintId]);
-
-  if (items.length === 0) return <div className="px-5 py-4 text-sm text-neutral-600 text-center">No items in this sprint yet.</div>;
-  return (
-    <div className="divide-y divide-neutral-50 dark:divide-neutral-700">
-      {items.map(item => (
-        <div key={item.id} className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-700 group">
-          <TypeBadge type={item.type} compact />
-          <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
-          <span role="button" tabIndex={0} onKeyDown={onPressKey} className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => onSelect(item)}>{item.title}</span>
-          <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
-          {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
-          {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}
-          <button onClick={() => { onMoveToBacklog(item.id); setItems(prev => prev.filter(i => i.id !== item.id)); }}
-            className="opacity-0 group-hover:opacity-100 text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-opacity" aria-label="Move to backlog"><ArrowDown className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Backlog</button>
-        </div>
-      ))}
-    </div>
-  );
-}
+// SprintItemList extracted to src/components/works/organisms/sprint-item-list.jsx (TD-003 / ONE
+// Function) — imported above and passed to the sprint surfaces as a prop.
 
 // SprintBoard extracted to src/components/works/organisms/sprint-board.jsx (TD-003)

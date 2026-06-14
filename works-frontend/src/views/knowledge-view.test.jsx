@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { expectNoA11yViolations } from '@/test/a11y';
 import KnowledgeView from './knowledge-view';
 
 const noop = () => {};
@@ -61,5 +62,37 @@ describe('KnowledgeView', () => {
   it('renders All Articles shortcut button', () => {
     render(<KnowledgeView {...baseProps} />);
     expect(screen.getByRole('button', { name: /all articles/i })).toBeInTheDocument();
+  });
+
+  it('gives the article search input an accessible name', () => {
+    render(<KnowledgeView {...baseProps} />);
+    expect(screen.getByRole('textbox', { name: /search articles/i })).toBeInTheDocument();
+  });
+
+  it('gives the comment composer an accessible name', () => {
+    render(
+      <KnowledgeView {...baseProps} articlePanel="comments"
+        selectedSpace={{ id: 'S1', name: 'Ops' }}
+        selectedArticle={{ id: 'A1', title: 'Doc', status: 'DRAFT', content: 'hi' }} />,
+    );
+    expect(screen.getByRole('textbox', { name: /add a comment/i })).toBeInTheDocument();
+  });
+
+  it('has no serious a11y violations on the spaces list', async () => {
+    const { container } = render(
+      <KnowledgeView {...baseProps} can={() => true}
+        knowledgeSpaces={[{ id: 'S1', name: 'Ops', visibility: 'TEAM' }]} />,
+    );
+    await expectNoA11yViolations(container);
+  });
+
+  it('has no serious a11y violations on the article detail + comments panel', async () => {
+    const { container } = render(
+      <KnowledgeView {...baseProps} can={() => true} knowledgeTab="space" articlePanel="comments"
+        selectedSpace={{ id: 'S1', name: 'Ops' }}
+        selectedArticle={{ id: 'A1', title: 'Doc', status: 'DRAFT', content: 'hi', versionNumber: 1 }}
+        articleComments={[{ id: 'C1', body: 'note', authorName: 'A', resolved: false }]} />,
+    );
+    await expectNoA11yViolations(container);
   });
 });

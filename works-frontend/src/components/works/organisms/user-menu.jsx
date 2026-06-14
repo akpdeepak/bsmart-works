@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Settings, LogOut, Moon, Sun, ChevronDown } from 'lucide-react';
+import { User, LogOut, Moon, Sun, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Organism — topbar user menu (CLAUDE.md §4.19 atomic design; RB-30 §7 navigation chrome).
@@ -99,8 +99,8 @@ export function UserMenu({
                   onOpenSettings();
                 }}
               >
-                <Settings aria-hidden="true" className="h-4 w-4 text-neutral-400" />
-                Settings
+                <User aria-hidden="true" className="h-4 w-4 text-neutral-400" />
+                My account
               </button>
             )}
             {onToggleTheme && (

@@ -32,7 +32,7 @@ export default function TrashView({ loading = false, trashItems, restoreFromTras
               <div key={item.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 flex items-center gap-4">
                 <TypeBadge type={item.type} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-neutral-900 truncate">{item.title}</p>
+                  <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{item.title}</p>
                   <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">{item.id} · Deleted {item.deletedAt ? new Date(item.deletedAt).toLocaleDateString() : ''}</p>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">

@@ -12,13 +12,13 @@ const DURATIONS = [
   { status: 'Done', totalSeconds: 86400, timesEntered: 1 },
 ];
 
-// Lead 3d 8h (created → done), Cycle 2d 4h (in progress → done), completed.
+// Lead 3d 8h (To Do + In Progress), Cycle 2d 4h (In Progress); currently Done so both clocks paused.
 const METRICS = {
   durations: DURATIONS,
   leadSeconds: 288000,
   cycleSeconds: 187200,
-  completed: true,
-  started: true,
+  leadRunning: false,
+  cycleRunning: false,
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -38,14 +38,14 @@ describe('WorkItemStatusTimeline', () => {
     expect(screen.getByRole('img', { name: /Time in workflow 3d 8h/ })).toBeInTheDocument();
   });
 
-  it('shows "Not started" cycle time and a running lead time when not yet in progress', async () => {
+  it('shows a running lead time and a dash for cycle while still in To Do', async () => {
     api.send.mockResolvedValue({
       durations: [{ status: 'Todo', totalSeconds: 3600, timesEntered: 1 }],
-      leadSeconds: 3600, cycleSeconds: null, completed: false, started: false,
+      leadSeconds: 3600, cycleSeconds: 0, leadRunning: true, cycleRunning: false,
     });
     render(<WorkItemStatusTimeline workItemId="WRK-2" />);
-    expect(await screen.findByText('Not started')).toBeInTheDocument();
-    expect(screen.getByText('1h so far')).toBeInTheDocument(); // lead time, running
+    expect(await screen.findByText('1h so far')).toBeInTheDocument(); // lead time, running
+    expect(screen.getByText('—')).toBeInTheDocument();                // cycle: not in progress yet
   });
 
   it('notes when an item was returned to a status', async () => {

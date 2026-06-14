@@ -26,14 +26,17 @@ public class ProjectService {
     private final EventService eventService;
     private final RbacService rbac;
     private final JdbcTemplate jdbc;
+    private final CurrentWorkspace currentWorkspace;
 
     public ProjectService(ProjectRepository projectRepository, UserRepository userRepository,
-                          EventService eventService, RbacService rbac, JdbcTemplate jdbc) {
+                          EventService eventService, RbacService rbac, JdbcTemplate jdbc,
+                          CurrentWorkspace currentWorkspace) {
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
         this.eventService = eventService;
         this.rbac = rbac;
         this.jdbc = jdbc;
+        this.currentWorkspace = currentWorkspace;
     }
 
     private void requireMember(String callerId, String workspaceId) {
@@ -56,8 +59,15 @@ public class ProjectService {
     public List<Project> list(String callerId, String workspaceId) {
         if (workspaceId != null && !workspaceId.isBlank()) {
             requireMember(callerId, workspaceId);
+            // Defence-in-depth (RB-40 §1): bind the central tenant filter to this workspace so the
+            // read is narrowed even if the explicit predicate below were ever dropped. Additive —
+            // the filter can only confirm the same workspace, never widen the result.
+            currentWorkspace.bind(workspaceId);
             return projectRepository.findByWorkspaceId(workspaceId);
         }
+        // Cross-workspace case (all of the caller's workspaces): the central single-workspace filter
+        // must NOT be bound here — the explicit findByWorkspaceIdIn below is the scope, and binding a
+        // single workspace would wrongly drop the caller's other workspaces. Filter stays dormant.
         List<String> memberWorkspaces = jdbc.queryForList(
                 "SELECT workspace_id FROM workspace_members WHERE user_id = ?", String.class, callerId);
         if (memberWorkspaces.isEmpty()) return List.of(); {

@@ -106,7 +106,7 @@ export function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, on
                   <div className="space-y-2 flex-1">
                     {colItems.length === 0 && <div className="flex items-center justify-center py-6 border-2 border-dashed border-neutral-200 rounded-lg"><p className="text-xs text-neutral-300">Drop here</p></div>}
                     {colItems.map(item => {
-                      const customVisible = customFieldDefs.filter(d => iv(`cfd_${d.id}`) && item.customFields?.[d.id] != null);
+                      const customVisible = customFieldDefs.filter(d => iv(`fd_${d.id}`) && item.fieldValues?.[d.id] != null);
                       const lapse = computeLapse(item.statusChangedAt, statusResolver?.metaFor(item.type, item.status) ?? null);
                       const showLapse = itemCat(item) !== 'done' && (lapse.state === 'at_risk' || lapse.state === 'breached');
                       return (
@@ -141,7 +141,7 @@ export function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, on
                             <div className="flex flex-wrap gap-1 mt-1.5">
                               {customVisible.map(d => (
                                 <span key={d.id} className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded" title={d.name}>
-                                  {d.name}: {String(item.customFields[d.id])}
+                                  {d.name}: {String(item.fieldValues[d.id])}
                                 </span>
                               ))}
                             </div>

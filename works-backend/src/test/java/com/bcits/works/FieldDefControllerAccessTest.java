@@ -98,4 +98,32 @@ class FieldDefControllerAccessTest {
 
         verify(fieldDefRepo, never()).deleteById(any());
     }
+
+    // ── create ──────────────────────────────────────────────────────────────────
+    // create() previously ran with NO RBAC and NO workspace check, so any authenticated caller
+    // could create a field def in any workspace. It now scopes by the workspaceId on the new record.
+
+    @Test
+    void create_crossTenantReturnsForbiddenAndPersistsNothing() {
+        assertThatThrownBy(() -> controller.create(fieldDefInForeignWorkspace()))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+
+        verify(fieldDefRepo, never()).save(any());
+    }
+
+    @Test
+    void create_inOwnWorkspacePersists() {
+        FieldDef fd = new FieldDef();
+        fd.setWorkspaceId("ws-A");           // caller's own workspace — require() is a no-op on the mock
+        fd.setName("New field");
+        fd.setFieldType("TEXT");
+        when(fieldDefRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        FieldDef saved = controller.create(fd);
+
+        assertThat(saved.getId()).startsWith("FD-");
+        assertThat(saved.getWorkspaceId()).isEqualTo("ws-A");
+        verify(fieldDefRepo).save(any());
+    }
 }

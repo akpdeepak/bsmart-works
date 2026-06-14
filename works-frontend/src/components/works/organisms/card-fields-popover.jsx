@@ -75,11 +75,11 @@ export function CardFieldsPopover({ cardPrefs, workspaceId, customFieldDefs = []
     return () => document.removeEventListener('mousedown', handle);
   }, [open]);
 
-  const { prefs, isVisible, toggleField, addField, removeField, resetPrefs } = cardPrefs;
+  const { isVisible, toggleField, addField, removeField, resetPrefs } = cardPrefs;
 
   // Fields already visible on the card (default toggles + any added)
   const addedBuiltin = ADDABLE_FIELDS.filter(f => isVisible(f.key));
-  const addedCustom  = customFieldDefs.filter(d => isVisible(`cfd_${d.id}`));
+  const addedCustom  = customFieldDefs.filter(d => isVisible(`fd_${d.id}`));
 
   // Picker: built-in fields not yet visible
   const availableBuiltin = ADDABLE_FIELDS.filter(f => !isVisible(f.key));
@@ -96,16 +96,20 @@ export function CardFieldsPopover({ cardPrefs, workspaceId, customFieldDefs = []
     setSaving(true);
     setSaveError('');
     try {
+      // Unified onto field_def (Option B): card custom fields are now field_def rows, so their
+      // values are entered in the detail panel and shown on cards from the same store.
+      const opts = newType === 'SELECT' && newOptions.trim()
+        ? newOptions.split(',').map(s => s.trim()).filter(Boolean) : null;
       const payload = {
         workspaceId,
         name: newName.trim(),
         fieldType: newType,
-        options: newType === 'SELECT' && newOptions.trim()
-          ? JSON.stringify(newOptions.split(',').map(s => s.trim()).filter(Boolean))
-          : null,
+        fieldKey: `card_${newName.trim().toLowerCase().replace(/\W+/g, '_').slice(0, 40)}_${Date.now()}`,
+        config: opts ? JSON.stringify({ options: opts }) : '{}',
+        required: false,
       };
-      const def = await api.send('/custom-field-definitions', { method: 'POST', body: payload });
-      addField(`cfd_${def.id}`);
+      const def = await api.send('/field-defs', { method: 'POST', body: payload });
+      addField(`fd_${def.id}`);
       onCustomFieldCreated?.(def);
       setNewName('');
       setNewOptions('');
@@ -176,8 +180,8 @@ export function CardFieldsPopover({ cardPrefs, workspaceId, customFieldDefs = []
               ))}
               {addedCustom.map(d => (
                 <FieldToggle key={d.id} label={d.name} on removable
-                  onRemove={() => removeField(`cfd_${d.id}`)}
-                  onChange={() => toggleField(`cfd_${d.id}`)} />
+                  onRemove={() => removeField(`fd_${d.id}`)}
+                  onChange={() => toggleField(`fd_${d.id}`)} />
               ))}
             </div>
           </div>
@@ -254,16 +258,17 @@ export function CardFieldsPopover({ cardPrefs, workspaceId, customFieldDefs = []
               {tab === 'custom' && (
                 <form onSubmit={createCustomField} className="space-y-2.5">
                   <div>
-                    <label className="text-xs text-neutral-600 dark:text-neutral-400 block mb-1">Field name</label>
+                    <label htmlFor="cfd-new-name" className="text-xs text-neutral-600 dark:text-neutral-400 block mb-1">Field name</label>
                     <input
+                      id="cfd-new-name"
                       type="text" value={newName} onChange={e => setNewName(e.target.value)}
                       placeholder="e.g. Customer name, Region"
                       className="w-full text-xs px-2.5 py-1.5 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 outline-none focus:ring-1 focus:ring-brand-navy-tint/50"
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-neutral-600 dark:text-neutral-400 block mb-1">Field type</label>
-                    <div className="grid grid-cols-4 gap-1">
+                    <span className="text-xs text-neutral-600 dark:text-neutral-400 block mb-1">Field type</span>
+                    <div className="grid grid-cols-4 gap-1" role="group" aria-label="Field type">
                       {FIELD_TYPES.map(t => (
                         <button key={t} type="button" onClick={() => setNewType(t)}
                           className={cn(
@@ -279,8 +284,8 @@ export function CardFieldsPopover({ cardPrefs, workspaceId, customFieldDefs = []
                   </div>
                   {newType === 'SELECT' && (
                     <div>
-                      <label className="text-xs text-neutral-600 dark:text-neutral-400 block mb-1">Options <span className="text-neutral-400">(comma-separated)</span></label>
-                      <input type="text" value={newOptions} onChange={e => setNewOptions(e.target.value)}
+                      <label htmlFor="cfd-new-options" className="text-xs text-neutral-600 dark:text-neutral-400 block mb-1">Options <span className="text-neutral-400">(comma-separated)</span></label>
+                      <input id="cfd-new-options" type="text" value={newOptions} onChange={e => setNewOptions(e.target.value)}
                         placeholder="Option A, Option B, Option C"
                         className="w-full text-xs px-2.5 py-1.5 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 outline-none focus:ring-1 focus:ring-brand-navy-tint/50"
                       />

@@ -13,15 +13,20 @@ import {
 } from '@/lib/dashboard-metrics';
 
 /**
- * PivotWidgetBody — renders a multi-dimensional PIVOT widget by resolving its saved PivotSpec
- * through the shared pivot client (one apiClient, workspace-scoped server-side) and dispatching
- * the result to <PivotChart/>. Self-contained five-state handling (loading / empty / error).
+ * PivotWidgetBody — renders a multi-dimensional PIVOT widget. In the authenticated app it resolves
+ * the saved PivotSpec through the shared pivot client (one apiClient, workspace-scoped server-side).
+ * On the unauthenticated public embed there is no workspaceId, so the server pre-resolves the pivot
+ * and passes it in as `resolved` ({ dimensions, measures, rows } or { error }) — the card renders it
+ * directly, no client query. Self-contained five-state handling (loading / empty / error).
  */
-function PivotWidgetBody({ config, workspaceId }) {
-  const [state, setState] = useState({ loading: true, error: null, result: null });
+function PivotWidgetBody({ config, workspaceId, resolved }) {
+  // Pre-resolved (embed) path: no workspaceId, render the server result straight through.
+  const hasResolved = resolved !== undefined && resolved !== null;
+  const [state, setState] = useState({ loading: !hasResolved, error: null, result: null });
   const specKey = JSON.stringify(config);
 
   useEffect(() => {
+    if (hasResolved) return undefined; // server already resolved this widget — skip the client query
     let alive = true;
     if (!workspaceId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -35,8 +40,15 @@ function PivotWidgetBody({ config, workspaceId }) {
     return () => { alive = false; };
     // specKey captures the config object identity; config itself is intentionally excluded.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceId, specKey]);
+  }, [workspaceId, specKey, hasResolved]);
 
+  if (hasResolved) {
+    return (
+      <PivotChart type={config.chartType || 'pivot_table'}
+        result={resolved.error ? null : resolved} error={resolved.error || null}
+        loading={false} className="mt-1" />
+    );
+  }
   return (
     <PivotChart type={config.chartType || 'pivot_table'} result={state.result}
       loading={state.loading} error={state.error} className="mt-1" />
@@ -50,7 +62,7 @@ function PivotWidgetBody({ config, workspaceId }) {
  *
  * Extracted from App.jsx (TD-003).
  */
-export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove, onResize, onConfigChange, onDrill, onDragStart, onDrop, sprints, velocity, currentUserId, workspaceId, onEditPivot }) {
+export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, onRemove, onResize, onConfigChange, onDrill, onDragStart, onDrop, sprints, velocity, currentUserId, workspaceId, onEditPivot, resolvedPivot }) {
   let config = {};
   try { config = JSON.parse(widget.config || '{}'); } catch { config = {}; }
   const filter = config.filter || {};
@@ -189,7 +201,7 @@ export function DashboardWidgetCard({ widget, workItems, aggregate, editMode, on
 
       {widget.widgetType === 'PIVOT' && (
         config.spec
-          ? <PivotWidgetBody config={config.spec} workspaceId={workspaceId} />
+          ? <PivotWidgetBody config={config.spec} workspaceId={workspaceId} resolved={resolvedPivot} />
           : <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Configure this widget — turn on Edit and pick a source, measures and a chart type.</p>
       )}
 

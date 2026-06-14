@@ -37,6 +37,8 @@ export const SURFACE_TIER = {
   // Extend
   automations: TIER.LEAD, integrations: TIER.ADMIN, aistudio: TIER.ADMIN,
   marketplace: TIER.ADMIN, developerportal: TIER.ADMIN,
+  // Personal
+  account: TIER.VIEWER,
   // Set up
   workspace: TIER.ADMIN, settings3: TIER.ADMIN, aicontrol: TIER.ADMIN,
   customization: TIER.ADMIN, security: TIER.OWNER, trash: TIER.LEAD,
@@ -124,6 +126,7 @@ export const MODES = [
 
 // Satellite destinations — reachable via a lens / the BQL chip / ⌘K, but not pinned to a sub-rail.
 export const SATELLITES = [
+  { id: 'account',     label: 'My Account',   labelKey: 'nav.account',     Icon: User },
   { id: 'developer',   label: 'Developer',    labelKey: 'nav.developer',   Icon: Code },
   { id: 'poworkspace', label: 'PO Workspace', labelKey: 'nav.poWorkspace', Icon: MapIcon },
   { id: 'leadership',  label: 'Leadership',   labelKey: 'nav.leadership',  Icon: Crown },

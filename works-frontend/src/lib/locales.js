@@ -235,6 +235,7 @@ export const MESSAGES = {
     'nav.smCockpit': 'SM Cockpit',
     'nav.sprintCockpit': 'Sprint Cockpit',
     'nav.poWorkspace': 'PO Workspace',
+    'nav.account': 'My Account',
     'nav.leadership': 'Leadership',
     'nav.adminOps': 'Admin Ops',
     'nav.pmArtifacts': 'PM Artifacts',

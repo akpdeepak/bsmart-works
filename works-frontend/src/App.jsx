@@ -79,6 +79,7 @@ import { Avatar } from '@/components/works/atoms/avatar';
 import DashboardView from '@/views/dashboard-view';
 import BoardView from '@/views/board-view';
 import WorkspaceView from '@/views/workspace-view';
+import AccountView from '@/views/account-view';
 import PoWorkspaceView from '@/views/po-workspace-view';
 import LeadershipConsoleView from '@/views/leadership-console-view';
 import AdminOpsView from '@/views/admin-ops-view';
@@ -2832,6 +2833,7 @@ export default function App() {
       case 'pm': if (projects.length) { const pid = projects[0].id; setPmProjectId(pid); fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); } break;
       case 'smcockpit': openCockpit(); break;
       case 'poworkspace': openPoWorkspace(); break;
+      case 'account': fetchNotifPrefs(); break;
       case 'workspace': fetchMembers(); fetchNotifPrefs(); fetchBranding(); break;
       case 'trash': fetchTrash(); break;
       case 'projects': fetchProjectMetrics(projects); break;
@@ -3118,7 +3120,7 @@ export default function App() {
               role={userRole.role}
               darkMode={darkMode}
               onToggleTheme={() => setDarkMode(d => !d)}
-              onOpenSettings={() => { setView('workspace'); fetchMembers(); fetchNotifPrefs(); fetchBranding(); }}
+              onOpenSettings={() => navigate('account')}
               onLogout={handleLogout}
             />
           </div>
@@ -3399,7 +3401,22 @@ export default function App() {
             />
           )}
 
-          {/* WORKSPACE SETTINGS */}
+          {/* MY ACCOUNT — tier VIEWER+; personal settings reachable by all members */}
+          {view === 'account' && (
+            <AccountView
+              currentUser={currentUser}
+              notifPrefs={notifPrefs}
+              mfaSetup={mfaSetup}
+              mfaSetupCode={mfaSetupCode}
+              mfaSetupMsg={mfaSetupMsg}
+              setMfaSetup={setMfaSetup}
+              setMfaSetupCode={setMfaSetupCode}
+              saveNotifPrefs={saveNotifPrefs}
+              handleMfaEnroll={handleMfaEnroll}
+              handleMfaConfirm={handleMfaConfirm}
+            />
+          )}
+          {/* WORKSPACE SETTINGS — tier ADMIN+ */}
           {view === 'workspace' && (
             <WorkspaceView
               workspaceMembers={workspaceMembers}
@@ -3407,10 +3424,6 @@ export default function App() {
               userRole={userRole}
               inviteEmail={inviteEmail}
               inviteMsg={inviteMsg}
-              notifPrefs={notifPrefs}
-              mfaSetup={mfaSetup}
-              mfaSetupCode={mfaSetupCode}
-              mfaSetupMsg={mfaSetupMsg}
               brandingColor={brandingColor}
               brandingDesc={brandingDesc}
               projects={projects}
@@ -3419,16 +3432,11 @@ export default function App() {
               projectMemberEmail={projectMemberEmail}
               projectMemberMsg={projectMemberMsg}
               setInviteEmail={setInviteEmail}
-              setMfaSetup={setMfaSetup}
-              setMfaSetupCode={setMfaSetupCode}
               setBrandingColor={setBrandingColor}
               setBrandingDesc={setBrandingDesc}
               setProjectMemberEmail={setProjectMemberEmail}
               handleRemoveMember={handleRemoveMember}
               handleInvite={handleInvite}
-              saveNotifPrefs={saveNotifPrefs}
-              handleMfaEnroll={handleMfaEnroll}
-              handleMfaConfirm={handleMfaConfirm}
               saveBranding={saveBranding}
               fetchProjectMembers={fetchProjectMembers}
               addProjectMember={addProjectMember}

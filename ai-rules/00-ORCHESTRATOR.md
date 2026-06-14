@@ -203,8 +203,11 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   WORK_ITEM_CREATED + STATUS_CHANGED events for the ~356 seed work items that were bulk-inserted
   without writing to the append-only events log, so the Activity feed and status-timeline flow
   metrics render for them; idempotent (NOT EXISTS / "backfill":"V87" marker guards), tenant-scoped
-  via INNER JOIN to projects, data-only/forward-only).
-- **Next migration:** **`V88__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+  via INNER JOIN to projects, data-only/forward-only); V88 = insightful_report_templates — UPDATEs the
+  three seeded report templates (exec-monthly / customer / release) to pivot-backed section sets
+  (KPI grid + status/type/priority/workload-by-assignee pivot charts + open-work table + narrative),
+  so "Use template" produces a genuinely useful report; forward-only data UPDATE.
+- **Next migration:** **`V89__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

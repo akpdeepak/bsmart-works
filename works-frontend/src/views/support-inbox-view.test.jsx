@@ -17,6 +17,10 @@ vi.mock('@/lib/supportChat', () => ({
 
 vi.mock('@/lib/format', () => ({ smartDate: () => 'just now' }));
 
+// connectRealtime is a no-op in tests — the inbox SSE subscription is integration-tested
+// separately; here we only verify the view's data-fetch and interaction behaviour.
+vi.mock('@/lib/realtime', () => ({ connectRealtime: () => () => {} }));
+
 import SupportInboxView from './support-inbox-view';
 
 describe('SupportInboxView', () => {

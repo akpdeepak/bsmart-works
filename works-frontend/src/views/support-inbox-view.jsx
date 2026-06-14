@@ -5,6 +5,7 @@ import { Badge } from '@/components/works/atoms/badge';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { smartDate } from '@/lib/format';
 import { agentChatClient, chatStatusTone, chatStatusLabel } from '@/lib/supportChat';
+import { connectRealtime } from '@/lib/realtime';
 
 // Support inbox — the AGENT-side view for customer chat support (iteration 20, Cap N). Agents work
 // the conversation list (filterable by status), open a thread, claim it, reply, and resolve. Self-
@@ -42,6 +43,23 @@ export default function SupportInboxView({ workspaceId }) {
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadList(); }, [loadList]);
+
+  // Subscribe to CHAT_* SSE events so the inbox refreshes when a new chat arrives or a
+  // conversation is escalated — without requiring a manual page refresh. The realtime stream
+  // publishes an "event" SSE message with the eventType in the payload (see EventService); we
+  // reload the list on any CHAT_* event so all status tabs stay current (RB-10 §2 — one SSE
+  // connection pattern, same as App.jsx). The subscription is workspace-scoped (RB-40 §1).
+  useEffect(() => {
+    if (!workspaceId) return undefined;
+    const dispose = connectRealtime(workspaceId, {
+      event: (data) => {
+        if (typeof data?.eventType === 'string' && data.eventType.startsWith('CHAT_')) {
+          loadList();
+        }
+      },
+    });
+    return () => dispose?.();
+  }, [workspaceId, loadList]);
 
   const openThread = useCallback((id) => {
     setActiveId(id);

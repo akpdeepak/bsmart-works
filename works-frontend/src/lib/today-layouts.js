@@ -28,6 +28,7 @@ export const BUILTIN_TODAY_LAYOUTS = {
     { id: 'sm-stat-risk', type: 'stat', span: 3, spanSm: 6, config: { k: 'risk' } },
     { id: 'sm-stat-scope', type: 'stat', span: 3, spanSm: 6, config: { k: 'scope' } },
     { id: 'sm-stat-velocity', type: 'stat', span: 3, spanSm: 6, config: { k: 'velocity' } },
+    { id: 'sm-at-a-glance', type: 'at-a-glance', span: 12 },
     { id: 'sm-high-risk', type: 'high-risk', span: 8 },
     { id: 'sm-sprint-health', type: 'sprint-health', span: 4 },
     { id: 'sm-velocity', type: 'velocity', span: 6 },

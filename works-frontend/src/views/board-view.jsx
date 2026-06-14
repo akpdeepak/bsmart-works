@@ -58,6 +58,9 @@ export default function BoardView({
   handleDrop,
   handleDelete,
   toggleStar,
+  // X-Total-Count from the server — may exceed workItems.length when the workspace has more items
+  // than the loaded page. Passed from App.jsx to surface a "showing N of M" warning (Audit #7).
+  totalWorkItemCount = null,
   setWipLimit,
   can,
   userName,
@@ -112,6 +115,11 @@ export default function BoardView({
             {visibleItems.length === workItems.length
               ? `${workItems.length} ${t('deliver.board.itemsTotal')}`
               : `${visibleItems.length} / ${workItems.length} ${t('deliver.board.itemsTotal')}`}
+            {totalWorkItemCount !== null && totalWorkItemCount > workItems.length && (
+              <span className="ml-1 text-semantic-warning font-medium">
+                {`(${t('deliver.board.showing')} ${workItems.length} ${t('deliver.board.of')} ${totalWorkItemCount})`}
+              </span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">

@@ -179,6 +179,12 @@ export default function App() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount]   = useState(0);
   const [loading, setLoading]           = useState(true);
+  // X-Total-Count from the /work-items list response — actual server count, which may exceed the
+  // loaded array when size < total (Audit Finding #7). Used by board-view to surface a warning.
+  const [totalWorkItemCount, setTotalWorkItemCount] = useState(null);
+  // My Works — dedicated fetch from /work-items/my (server-side assignee scope) instead of
+  // client-filtering the paginated workItems array (Audit Finding #7).
+  const [myItems, setMyItems]           = useState([]);
 
   const [selectedItem, setSelectedItem] = useState(null);
   const [detailTab, setDetailTab]       = useState('details'); // details | activity | links | attachments
@@ -761,7 +767,13 @@ export default function App() {
   function fetchAll() {
     setLoading(true);
     Promise.all([
-      api.raw(`/work-items`).then(r => r.json()),
+      api.raw(`/work-items`).then(r => {
+        // Read X-Total-Count before consuming the body — headers are only available on the
+        // Response object, not after .json() resolves (Audit Finding #7).
+        const total = r.headers.get('X-Total-Count');
+        if (total !== null) setTotalWorkItemCount(Number(total));
+        return r.json();
+      }),
       api.raw(`/projects`).then(r => r.json()),
       api.raw(`/users?workspaceId=${encodeURIComponent(activeWorkspaceId)}`).then(r => r.json()),
     ]).then(([items, projs, usrs]) => {
@@ -773,6 +785,12 @@ export default function App() {
       setLoading(false);
       showToast('Failed to load data. Check your connection.', 'error');
     });
+    // Fetch items assigned to the current user via the dedicated /my endpoint (server-side
+    // assignee scope) — more accurate than filtering the paginated workItems array, which may
+    // miss items beyond the loaded page (Audit Finding #7).
+    api.send(`/work-items/my`)
+      .then(items => setMyItems(Array.isArray(items) ? items : []))
+      .catch(() => setMyItems([]));
     fetchUnreadCount();
     fetchUserRole();
     fetchBranding();
@@ -2617,7 +2635,6 @@ export default function App() {
 
   // densityPad moved to board-view.jsx (TD-003)
   const userName = u => users.find(x => x.id === u)?.fullName || '';
-  const myItems  = workItems.filter(i => i.assigneeId === currentUser?.id);
 
   // Public, unauthenticated, read-only dashboard embed — short-circuits before the auth gate so it
   // renders without a login (iteration 6, Cap J). Two equivalent entry points to the same view:
@@ -3281,6 +3298,7 @@ export default function App() {
               users={users}
               onBulkEdit={handleBulkEdit}
               onCustomFieldCreated={def => setCustomFieldDefs(prev => [...prev, def])}
+              totalWorkItemCount={totalWorkItemCount}
             />
           )}
           {/* PROJECTS */}

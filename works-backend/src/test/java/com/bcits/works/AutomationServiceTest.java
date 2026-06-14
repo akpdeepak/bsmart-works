@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+// Audit finding #11: AutomationService lifecycle wiring + recursion guard (fix: c3218a3).
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 

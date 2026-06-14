@@ -57,3 +57,15 @@ export function pathToView(pathname) {
   if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
   return PATH_VIEWS[p] || null;
 }
+
+// Entity route pattern — /items/:id
+const ENTITY_RE = /^\/items\/([^/]+)$/i;
+
+// Parses entity deep-link paths. Returns { kind: 'work-item', id } for /items/:id,
+// or null for anything else. Call this after pathToView() returns null.
+export function parseEntityRoute(pathname) {
+  if (!pathname) return null;
+  const m = ENTITY_RE.exec(pathname.replace(/\/$/, ''));
+  if (m) return { kind: 'work-item', id: m[1] };
+  return null;
+}

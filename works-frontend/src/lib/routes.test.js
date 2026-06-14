@@ -1,4 +1,4 @@
-import { VIEW_PATHS, viewToPath, pathToView } from './routes';
+import { VIEW_PATHS, viewToPath, pathToView, parseEntityRoute } from './routes';
 
 describe('routes', () => {
   it('round-trips every view through its path', () => {
@@ -37,5 +37,34 @@ describe('routes', () => {
 
   it('does not collapse the two settings paths onto each other', () => {
     expect(pathToView('/settings')).not.toBe(pathToView('/settings/workflows'));
+  });
+});
+
+describe('parseEntityRoute', () => {
+  it('parses /items/:id and returns the correct entity object', () => {
+    expect(parseEntityRoute('/items/WI-123')).toEqual({ kind: 'work-item', id: 'WI-123' });
+    expect(parseEntityRoute('/items/42')).toEqual({ kind: 'work-item', id: '42' });
+  });
+
+  it('is case-insensitive and tolerates a trailing slash', () => {
+    expect(parseEntityRoute('/Items/WI-1')).toEqual({ kind: 'work-item', id: 'WI-1' });
+    expect(parseEntityRoute('/items/WI-1/')).toEqual({ kind: 'work-item', id: 'WI-1' });
+  });
+
+  it('returns null for top-level view paths', () => {
+    expect(parseEntityRoute('/board')).toBeNull();
+    expect(parseEntityRoute('/sla')).toBeNull();
+    expect(parseEntityRoute('/')).toBeNull();
+  });
+
+  it('returns null for empty or undefined input', () => {
+    expect(parseEntityRoute('')).toBeNull();
+    expect(parseEntityRoute(undefined)).toBeNull();
+    expect(parseEntityRoute(null)).toBeNull();
+  });
+
+  it('does not match paths with extra segments', () => {
+    // /items/WI-1/sub would be a sub-path — not a single entity link
+    expect(parseEntityRoute('/items/WI-1/comments')).toBeNull();
   });
 });

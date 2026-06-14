@@ -1,4 +1,4 @@
-import { Star, X, CornerDownRight } from 'lucide-react';
+import { Star, X, CornerDownRight, Link2 } from 'lucide-react';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { WatchButton } from '@/components/works/organisms/watch-button';
 import { SaveToKnowButton } from '@/components/knowledge/SaveToKnowButton';
@@ -70,6 +70,13 @@ export function WorkItemDetailPanel({
             })()}
           </div>
           <div className="flex gap-1">
+            <button
+              type="button"
+              title="Copy link to this item"
+              aria-label="Copy link to this item"
+              onClick={() => navigator.clipboard.writeText(`${window.location.origin}/items/${selectedItem.id}`)}
+              className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy p-1 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+            ><Link2 className="h-4 w-4" aria-hidden="true" /></button>
             <WatchButton itemId={selectedItem.id} />
             <button onClick={() => toggleStar(selectedItem)}
               title={selectedItem.starred ? 'Unstar' : 'Star this item'}

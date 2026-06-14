@@ -1,5 +1,8 @@
 package com.bcits.works;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -23,9 +26,15 @@ public class NotificationController {
     }
 
     @GetMapping
-    public List<Notification> getNotifications(@RequestParam(required = false) String userId) {
-        userId = authenticatedUser.id();
-        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    public List<Notification> getNotifications(
+            @RequestParam(required = false) String userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        String uid = authenticatedUser.id();
+        // Clamp size to avoid runaway queries (RB-10 §4: always paginate list endpoints).
+        int safeSize = Math.min(size, 200);
+        Pageable pageable = PageRequest.of(page, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return notificationRepository.findByUserId(uid, pageable);
     }
 
     @GetMapping("/unread-count")

@@ -120,6 +120,26 @@ describe('KnowledgeView', () => {
     }
   });
 
+  it('fetches full article detail on open (so views/analytics are tracked)', () => {
+    const fetchArticleDetail = vi.fn();
+    const setSelectedArticle = vi.fn();
+    render(
+      <KnowledgeView {...baseProps} knowledgeTab="all"
+        setSelectedArticle={setSelectedArticle} fetchArticleDetail={fetchArticleDetail}
+        knowledgeArticles={[{ id: 'A1', title: 'Runbook', status: 'PUBLISHED', versionNumber: 1 }]} />,
+    );
+    fireEvent.click(screen.getByText('Runbook'));
+    expect(setSelectedArticle).toHaveBeenCalledWith(expect.objectContaining({ id: 'A1' }));
+    expect(fetchArticleDetail).toHaveBeenCalledWith('A1');
+  });
+
+  it('shows skeletons (not the empty state) while spaces/articles load', () => {
+    render(<KnowledgeView {...baseProps} knowledgeTab="all" knowledgeSpacesLoading knowledgeArticlesLoading />);
+    expect(screen.getByLabelText('Loading spaces')).toBeInTheDocument();
+    expect(screen.getByLabelText('Loading articles')).toBeInTheDocument();
+    expect(screen.queryByText(/no spaces yet/i)).not.toBeInTheDocument();
+  });
+
   it('renders block-format articles in read mode via BlockRenderer', () => {
     const blocks = JSON.stringify([{ id: 'b1', type: 'callout', content: 'Heads up', metadata: { variant: 'info' } }]);
     render(

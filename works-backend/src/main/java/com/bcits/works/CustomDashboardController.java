@@ -75,6 +75,10 @@ public class CustomDashboardController {
         dashboard.setId("DSH-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         dashboard.setOwnerId(userId);
         dashboard.setScope(dashboard.getScope() != null ? dashboard.getScope() : "PERSONAL");
+        // surface is NOT NULL (V70); user-built dashboards are CANVAS. Without @DynamicInsert,
+        // Hibernate writes the column explicitly, so a null here becomes a NOT NULL violation (409),
+        // not the DB DEFAULT — set it here as the role-Today layouts do (TodayLayoutService).
+        dashboard.setSurface(dashboard.getSurface() != null ? dashboard.getSurface() : "CANVAS");
         dashboard.setLayoutCols(layoutService.cols(dashboard.getLayoutCols()));
         dashboard.setCreatedAt(OffsetDateTime.now());
         dashboard.setUpdatedAt(OffsetDateTime.now());

@@ -41,6 +41,7 @@ public class WorkItemController {
     private final ExtensionExecutionService extensions;
     private final WorkflowRuleEngine workflowRules;
     private final StatusConfigService statusConfig;
+    private final BoardWipLimitService wipLimits;
     private final WorkItemBulkService bulkService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -52,6 +53,7 @@ public class WorkItemController {
                               ExtensionExecutionService extensions,
                               WorkflowRuleEngine workflowRules,
                               StatusConfigService statusConfig,
+                              BoardWipLimitService wipLimits,
                               WorkItemBulkService bulkService) {
         this.repository = repository;
         this.eventService = eventService;
@@ -66,6 +68,7 @@ public class WorkItemController {
         this.extensions = extensions;
         this.workflowRules = workflowRules;
         this.statusConfig = statusConfig;
+        this.wipLimits = wipLimits;
         this.bulkService = bulkService;
     }
 
@@ -432,6 +435,7 @@ public class WorkItemController {
             // validators before persisting the new status. Post-functions run after save.
             if (!java.util.Objects.equals(oldStatus, updatedItem.getStatus())) {
                 workflowRules.enforceTransitionRules(id, oldStatus, updatedItem.getStatus(), userId, wsId);
+                wipLimits.enforceEntry(wsId, oldStatus, updatedItem.getStatus());
             }
             String oldAssignee = existing.getAssigneeId();
             String oldPriority = existing.getPriority();

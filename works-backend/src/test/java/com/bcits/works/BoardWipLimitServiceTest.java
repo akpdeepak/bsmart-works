@@ -2,6 +2,7 @@ package com.bcits.works;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.Optional;
 
@@ -17,7 +18,8 @@ import static org.mockito.Mockito.when;
 class BoardWipLimitServiceTest {
 
     private final BoardWipLimitRepository repo = mock(BoardWipLimitRepository.class);
-    private final BoardWipLimitService service = new BoardWipLimitService(repo);
+    private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
+    private final BoardWipLimitService service = new BoardWipLimitService(repo, jdbc);
 
     @Test
     void returnsEmptyLimitsWhenNoneSet() {

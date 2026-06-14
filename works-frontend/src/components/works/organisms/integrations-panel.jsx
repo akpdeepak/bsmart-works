@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plug, Webhook, KeyRound } from 'lucide-react';
 import { integrationsClient } from '@/lib/integrations';
+import { useDialog } from '@/lib/dialog';
 import { Badge } from '@/components/works/atoms/badge';
 import { Skeleton } from '@/components/works/atoms/skeleton';
 
@@ -15,6 +16,7 @@ const TABS = [
 ];
 
 export function IntegrationsPanel({ workspaceId, can = () => true, onToast = () => {} }) {
+  const { prompt } = useDialog();
   const [tab, setTab] = useState('connectors');
   const [providers, setProviders] = useState([]);
   const [connections, setConnections] = useState([]);
@@ -77,7 +79,7 @@ export function IntegrationsPanel({ workspaceId, can = () => true, onToast = () 
     const fields = provider.requiredFields || [];
     const config = {};
     for (const f of fields) {
-      const v = typeof window !== 'undefined' ? window.prompt(`${provider.label} — ${f}`) : '';
+      const v = await prompt({ title: `Connect ${provider.label}`, label: f, placeholder: `Enter ${f}` });
       if (!v) return;
       config[f] = v;
     }
@@ -91,7 +93,7 @@ export function IntegrationsPanel({ workspaceId, can = () => true, onToast = () 
   }
 
   async function issueToken() {
-    const name = typeof window !== 'undefined' ? window.prompt('Token name') : '';
+    const name = await prompt({ title: 'New API token', label: 'Token name', placeholder: 'e.g. CI pipeline', confirmLabel: 'Issue token' });
     if (!name) return;
     try {
       const res = await integrationsClient.issueToken(workspaceId, name, ['read']);

@@ -24,7 +24,7 @@ vi.mock('@/lib/kpi', async () => {
     ...actual,
     kpiClient: {
       personal: vi.fn(), org: vi.fn(), manager: vi.fn(), team: vi.fn(), project: vi.fn(),
-      distribution: vi.fn(), shares: vi.fn(), share: vi.fn(), unshare: vi.fn(),
+      distribution: vi.fn(), health: vi.fn(), shares: vi.fn(), share: vi.fn(), unshare: vi.fn(),
     },
   };
 });
@@ -54,6 +54,9 @@ beforeEach(() => {
   kpiClient.team.mockResolvedValue({ ...PERSONAL, scopeLevel: 'TEAM', label: 'Team', privacyNote: 'aggregated' });
   kpiClient.project.mockResolvedValue({ ...PERSONAL, scopeLevel: 'PROJECT', label: 'Project', privacyNote: 'aggregated' });
   kpiClient.distribution.mockResolvedValue(DISTRIBUTION);
+  kpiClient.health.mockResolvedValue({
+    teamId: 'TEAM-1', predictability: 85, scopeStability: 70, flowEfficiency: 40, overall: 65, bands: [],
+  });
   kpiClient.shares.mockResolvedValue([]);
   aiClient.budget.mockResolvedValue({ percent: 20, degraded: false, disabled: false });
   aiClient.explainAnomaly.mockResolvedValue({
@@ -66,6 +69,15 @@ describe('PerformancePanel a11y', () => {
     const { container } = renderWith(<PerformancePanel workspaceId="ws-1" aiCapabilities={AI_CAPS} />);
     await screen.findByText('Throughput');
     await screen.findByText('Cycle-time distribution');
+    await expectNoA11yViolations(container);
+  });
+
+  it('Team layer (health composite + trends + histogram) has no serious/critical violations', async () => {
+    const { container } = renderWith(<PerformancePanel workspaceId="ws-1" />);
+    await screen.findByText('Throughput');
+    fireEvent.click(screen.getByRole('tab', { name: 'Team' }));
+    await waitFor(() => expect(kpiClient.health).toHaveBeenCalled());
+    await screen.findByText('Team health');
     await expectNoA11yViolations(container);
   });
 

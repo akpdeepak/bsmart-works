@@ -141,3 +141,17 @@ The following items from the Layer A validation (Prompt A, 2026-06-07) cannot be
 - **Decision (2026-06-08):** SSE is the canonical real-time protocol for bSmart Works. Rationale: (1) SSE is unidirectional server→client which matches all current use cases (state change fan-out, presence heartbeat, co-presence awareness); (2) SSE works through HTTP/2 multiplexing, CDN edge nodes, and standard load balancers without sticky-session configuration; (3) The current `RealtimeService` + `PresenceService` + `EventSource` client implementation is production-quality with heartbeat + reconnect logic. WebSocket would be required only for true bidirectional cursor sync (e.g. collaborative code editing) which is not in the 20-iteration roadmap.
 - **SOURCE-OF-TRUTH update:** Added to §4 reconciliation ledger — spec says WebSocket, code uses SSE, SSE wins per tech-stack authority rule.
 - **Remaining impact:** None — SSE delivers the spec's co-presence requirements.
+
+### TD-024 — Performance panel wired with wrong props in App.jsx (Cap L, iteration 12) — **OPEN, needs owner sign-off**
+- **Found (2026-06-14, feat/performance-insights):** `App.jsx` renders `<PerformancePanel workspaceId={...} can={can} onToast={showToast} />`, but the component's contract is `({ workspaceId, aiCapabilities = [], onOpenItem })`. The `can` and `onToast` props are ignored, so in production:
+  - `aiCapabilities` always defaults to `[]` → the AI "Explain anomaly" buttons and the AI budget notice never render (graceful — not a crash, but the AI affordances are dead on this surface);
+  - `onOpenItem` is `undefined` → the cycle-time histogram's outlier chips render as inert text instead of drilling into the work item.
+- **Why not fixed here:** `App.jsx` is explicitly out of scope for the `feat/performance-insights` task (it is owned by other concurrent work). The panel/molecule code already handles both props correctly; only the call site is wrong.
+- **Fix (for the App.jsx owner):** pass `aiCapabilities={<the workspace's enabled AI capabilities for KPI anomaly explain>}` and `onOpenItem={<the open-work-item handler used elsewhere in App.jsx>}`. No component changes required.
+- **Remaining impact:** AI explain + outlier drill-down inert on the Performance surface until the call site is corrected.
+
+### TD-025 — KPI metric snapshots are ORG-scope only (Cap L trends) — **OPEN, product/eng decision**
+- **Found (2026-06-14, feat/performance-insights):** `KpiSnapshotScheduler` writes only ORG-scope hourly snapshots. The new sprint-over-sprint trend ("vs last period") on `MetricValue.trend` therefore populates for the ORG layer but is honestly absent (renders "No prior period to compare yet.") for Individual / Team / Project, because no history exists for those scopes. The `/kpi/history` endpoint and the trend computation already support any scope; only the writer is limited.
+- **Why deferred:** extending the scheduler to team/project/individual snapshots multiplies snapshot volume and was intentionally deferred in the original scheduler ("until query volume justifies them"). Widening it is a deliberate data-growth decision, not a bug.
+- **Fix (when prioritised):** have the scheduler also snapshot per-team and per-project aggregates (individual snapshots remain private — only the owner's own series, never exposed to a manager). No schema change needed (`metric_snapshots` already keys on scopeLevel + scopeId).
+- **Remaining impact:** trends are live for ORG today; team/project/individual trends light up once the scheduler is widened.

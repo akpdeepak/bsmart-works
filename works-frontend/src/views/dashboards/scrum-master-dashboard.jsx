@@ -66,6 +66,27 @@ const SCRUM_MASTER_REGISTRY = {
         )}
     </TodayCard>
   ),
+  'at-a-glance': (ctx) => (
+    <div className="rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
+      <h3 className="mb-4 flex items-center gap-2 font-semibold text-neutral-900 dark:text-neutral-100">
+        <Activity className="h-4 w-4 text-brand-navy dark:text-brand-navy-tint" aria-hidden="true" />At a glance
+      </h3>
+      {ctx.activeSprint ? (
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { title: 'Completion', pct: ctx.sprintPct, stroke: ctx.sprintStroke, label: 'done' },
+            { title: 'Points', pct: ctx.pointsPct, stroke: ctx.pointsStroke, label: 'pts' },
+            { title: 'Time', pct: ctx.timebox?.timePct ?? 0, stroke: 'stroke-brand-navy-tint', label: 'elapsed' },
+          ].map((r) => (
+            <div key={r.title} className="flex flex-col items-center gap-2 text-center">
+              <HealthRing pct={r.pct} size={72} stroke={r.stroke} label={r.label} />
+              <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{r.title}</p>
+            </div>
+          ))}
+        </div>
+      ) : <Empty msg="No active sprint." />}
+    </div>
+  ),
   'sprint-health': (ctx) => (
     <div className="rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
       <h3 className="mb-4 flex items-center gap-2 font-semibold text-neutral-900 dark:text-neutral-100">
@@ -159,8 +180,12 @@ export function ScrumMasterToday({ data, currentUser, setView, layout, builtinLa
     scopeChanges.length ? `${scopeChanges.length} scope change${scopeChanges.length !== 1 ? 's' : ''}` : null,
   ].filter(Boolean).join(' · ');
 
+  const pointsPct = activeSprint?.total_points > 0
+    ? Math.round((activeSprint.done_points || 0) * 100 / activeSprint.total_points) : 0;
+  const pointsStroke = pointsPct >= 70 ? 'stroke-semantic-success' : pointsPct >= 40 ? 'stroke-semantic-warning' : 'stroke-semantic-danger';
+
   const ctx = {
-    sprintPct, sprintColor, sprintStroke, activeSprint, highRisk, velocity, capacity,
+    sprintPct, sprintColor, sprintStroke, pointsPct, pointsStroke, activeSprint, highRisk, velocity, capacity,
     scopeChanges, velocityDone, timebox, setView,
   };
 

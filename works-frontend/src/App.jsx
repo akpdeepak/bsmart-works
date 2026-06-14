@@ -60,6 +60,7 @@ import { ResetPasswordScreen } from '@/components/works/reset-password-screen';
 // DonutChart / BarChart moved to dashboard-widget-card.jsx + report-section-card.jsx (TD-003).
 // exportElementToPng / exportElementToPdf / exportRowsToCsv moved to export-buttons.jsx (TD-003).
 import { api } from '@/lib/apiClient';
+import { useDialog } from '@/lib/dialog';
 import { reportError, setToastEmitter } from '@/lib/report-error';
 import { layoutToWidgets } from '@/lib/today-layouts';
 import { useCardPrefs } from '@/hooks/useCardPrefs';
@@ -171,6 +172,7 @@ export default function App() {
   const [view, setView]                 = useState(() => pathToView(window.location.pathname) || 'dashboard');
   const didInitRoute                    = useRef(false);
   const [toast, setToast]               = useState(null); // { message, type }
+  const { confirm, prompt } = useDialog(); // in-app dialogs (lib/dialog.jsx), not window.* natives
   const [workItems, setWorkItems]       = useState([]);
   const [projects, setProjects]         = useState([]);
   const [users, setUsers]               = useState([]);
@@ -1236,8 +1238,8 @@ export default function App() {
       .catch(() => showToast('Could not stop sharing', 'error'));
   }
 
-  function createDashboard() {
-    const name = prompt('Dashboard name'); // simple capture; inline form is a later refinement
+  async function createDashboard() {
+    const name = await prompt({ title: 'New dashboard', label: 'Dashboard name', placeholder: 'e.g. Sprint health', confirmLabel: 'Create' });
     if (!name || !name.trim()) return;
     api.send(`/dashboards`, { method: 'POST', body: JSON.stringify({ name: name.trim(), scope: 'PERSONAL', workspaceId: activeWorkspaceId }) })
       .then(d => { showToast('Dashboard created'); fetchCustomDashboards(); openDashboard(d.id); setDashboardEditMode(true); })
@@ -1281,8 +1283,8 @@ export default function App() {
       setReportEditMode(false);
     }).catch(reportError);
   }
-  function createBlankReport() {
-    const name = prompt('Report name'); // simple capture; inline form is a later refinement
+  async function createBlankReport() {
+    const name = await prompt({ title: 'New report', label: 'Report name', placeholder: 'e.g. Monthly delivery summary', confirmLabel: 'Create' });
     if (!name || !name.trim()) return;
     api.send(`/reports`, { method: 'POST', body: JSON.stringify({ name: name.trim(), sections: '[]', workspaceId: activeWorkspaceId }) })
       .then(d => { showToast('Report created'); fetchReports(); openReport(d.id); setReportEditMode(true); })
@@ -2369,8 +2371,9 @@ export default function App() {
       }).catch(err => showToast(err.message, 'error'));
   }
 
-  function permanentDelete(id) {
-    if (!window.confirm('Permanently delete? This cannot be undone.')) return;
+  async function permanentDelete(id) {
+    const ok = await confirm({ title: 'Permanently delete', message: 'This work item will be permanently deleted. This cannot be undone.', confirmLabel: 'Delete permanently', variant: 'danger' });
+    if (!ok) return;
     api.send(`/work-items/${id}/permanent`, { method: 'DELETE' })
       .then(() => { setTrashItems(prev => prev.filter(i => i.id !== id)); showToast('Permanently deleted'); })
       .catch(err => showToast(err.message, 'error'));
@@ -3598,7 +3601,11 @@ export default function App() {
 
           {/* ITERATION 12 — Performance (KPI framework with privacy guardrails) */}
           {view === 'performance' && (
-            <PerformancePanel workspaceId={activeWorkspaceId} can={can} onToast={showToast} />
+            <PerformancePanel
+              workspaceId={activeWorkspaceId}
+              aiCapabilities={aiCapabilities}
+              onOpenItem={(id) => api.send(`/work-items/${encodeURIComponent(id)}`).then((it) => { if (it) setSelectedItem(it); }).catch(reportError)}
+            />
           )}
 
           {/* ITERATION 11 — AI Control (AI Control Plane settings; mockup 09) */}

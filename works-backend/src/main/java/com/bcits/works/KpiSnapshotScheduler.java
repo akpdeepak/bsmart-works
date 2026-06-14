@@ -15,8 +15,9 @@ import java.util.List;
  * for each active workspace. Snapshots are append-only (RB-10 §3, RB-20 §5) — they build up the
  * history that the /kpi/history endpoint and dashboards read from.
  *
- * <p>Only ORG-scope snapshots are written here; team/project/individual snapshots are a natural
- * next step but are intentionally deferred until the KPI history query volume justifies them.
+ * <p>Writes ORG-, TEAM- and PROJECT-scope snapshots per workspace (TD-025), so the trend deltas on
+ * the Performance surface light up at every aggregated layer — not just org. Individual snapshots
+ * are intentionally not written (privacy: an individual's series is self-only, RB-40 §1).
  */
 @Component
 public class KpiSnapshotScheduler {
@@ -56,7 +57,7 @@ public class KpiSnapshotScheduler {
         int failed = 0;
         for (Workspace ws : allWorkspaces) {
             try {
-                writeOrgSnapshot(ws.getId(), period);
+                writeWorkspaceSnapshots(ws.getId(), period);
                 written++;
             } catch (Exception ex) {
                 log.warn("[KPI-SNAPSHOT] Failed to write snapshot for workspace={}: {}", ws.getId(), ex.getMessage());
@@ -66,10 +67,19 @@ public class KpiSnapshotScheduler {
         log.info("[KPI-SNAPSHOT] Done — written={}, failed={}", written, failed);
     }
 
-    private void writeOrgSnapshot(String workspaceId, String period) {
-        KpiService.Layer org = kpiService.orgForSystem(workspaceId);
-        for (KpiService.MetricValue mv : org.metrics()) {
-            kpiService.snapshot(workspaceId, mv.key(), "ORG", null, period, mv.value(), mv.sampleSize());
+    /** Write the ORG layer plus one TEAM layer per team and one PROJECT layer per project (TD-025). */
+    private void writeWorkspaceSnapshots(String workspaceId, String period) {
+        writeLayers(workspaceId, period, List.of(kpiService.orgForSystem(workspaceId)));
+        writeLayers(workspaceId, period, kpiService.teamsForSystem(workspaceId));
+        writeLayers(workspaceId, period, kpiService.projectsForSystem(workspaceId));
+    }
+
+    private void writeLayers(String workspaceId, String period, List<KpiService.Layer> layers) {
+        for (KpiService.Layer layer : layers) {
+            for (KpiService.MetricValue mv : layer.metrics()) {
+                kpiService.snapshot(workspaceId, mv.key(), layer.scopeLevel(), layer.scopeId(),
+                    period, mv.value(), mv.sampleSize());
+            }
         }
     }
 }

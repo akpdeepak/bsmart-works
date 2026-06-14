@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -39,9 +40,11 @@ class PublicDashboardControllerTest {
     private final DashboardRepository dashboardRepository = mock(DashboardRepository.class);
     private final DashboardWidgetRepository widgetRepository = mock(DashboardWidgetRepository.class);
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
+    private final PivotService pivotService = mock(PivotService.class);
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final PublicDashboardController controller =
-            new PublicDashboardController(dashboardRepository, widgetRepository, jdbc);
+            new PublicDashboardController(dashboardRepository, widgetRepository, jdbc, pivotService, objectMapper);
 
     private static final String WS_A = "WS-A";
     private static final String WS_B = "WS-B";
@@ -56,6 +59,14 @@ class PublicDashboardControllerTest {
         d.setLayoutCols(12);
         d.setShareToken(token);
         return d;
+    }
+
+    private DashboardWidget pivotWidget(long id, String config) {
+        DashboardWidget w = new DashboardWidget();
+        w.setId(id);
+        w.setWidgetType("PIVOT");
+        w.setConfig(config);
+        return w;
     }
 
     // The controller passes its params array into JdbcTemplate's Object... varargs, so the bound
@@ -115,5 +126,70 @@ class PublicDashboardControllerTest {
         assertThat(controller.getByToken("   ").getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(controller.getByToken(null).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         verify(dashboardRepository, never()).findByShareToken(any());
+    }
+
+    // ── PIVOT widgets resolved server-side for the embed (the public-embed PIVOT gap) ──────────
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void pivotWidget_isResolvedServerSide_scopedToTheTokensWorkspace() {
+        Dashboard dA = dashboard("DSH-A", WS_A, TOKEN_A);
+        String cfg = "{\"spec\":{\"sourceKind\":\"guided\",\"measures\":[{\"field\":\"*\",\"agg\":\"COUNT\"}],"
+                + "\"dimensions\":[\"status\"],\"chartType\":\"bar\"}}";
+        when(dashboardRepository.findByShareToken(TOKEN_A)).thenReturn(Optional.of(dA));
+        when(widgetRepository.findByDashboardIdOrderByPositionAsc("DSH-A"))
+                .thenReturn(List.of(pivotWidget(7L, cfg)));
+        stubAggregateQueries(5L);
+        PivotService.PivotResult result =
+                new PivotService.PivotResult(List.of("status"), List.of("count_all"),
+                        List.of(Map.of("status", "Open", "count_all", 3)));
+        when(pivotService.resolveForWorkspace(eq(WS_A), any(PivotSpec.class))).thenReturn(result);
+
+        ResponseEntity<Map<String, Object>> res = controller.getByToken(TOKEN_A);
+
+        // The pivot is resolved against the TOKEN's workspace (WS_A) — never a caller-supplied one.
+        verify(pivotService).resolveForWorkspace(eq(WS_A), any(PivotSpec.class));
+        Map<String, Object> pivots = (Map<String, Object>) res.getBody().get("pivots");
+        assertThat(pivots).containsKey("7");
+        Map<String, Object> data = (Map<String, Object>) pivots.get("7");
+        assertThat(data.get("dimensions")).isEqualTo(List.of("status"));
+        assertThat(data.get("rows")).isEqualTo(List.of(Map.of("status", "Open", "count_all", 3)));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void pivotWidget_resolutionFailure_isCapturedPerWidget_neverAborting() {
+        Dashboard dA = dashboard("DSH-A", WS_A, TOKEN_A);
+        String cfg = "{\"spec\":{\"sourceKind\":\"bql\",\"query\":\"bogus\","
+                + "\"measures\":[{\"field\":\"*\",\"agg\":\"COUNT\"}],\"dimensions\":[]}}";
+        when(dashboardRepository.findByShareToken(TOKEN_A)).thenReturn(Optional.of(dA));
+        when(widgetRepository.findByDashboardIdOrderByPositionAsc("DSH-A"))
+                .thenReturn(List.of(pivotWidget(9L, cfg)));
+        stubAggregateQueries(0L);
+        when(pivotService.resolveForWorkspace(eq(WS_A), any(PivotSpec.class)))
+                .thenThrow(ApiException.badRequest("BAD", "Could not parse query.", "filters"));
+
+        ResponseEntity<Map<String, Object>> res = controller.getByToken(TOKEN_A);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK); // the dashboard still renders
+        Map<String, Object> pivots = (Map<String, Object>) res.getBody().get("pivots");
+        Map<String, Object> entry = (Map<String, Object>) pivots.get("9");
+        assertThat(entry).containsKey("error");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void unconfiguredPivotWidget_isSkipped_withNoResolution() {
+        Dashboard dA = dashboard("DSH-A", WS_A, TOKEN_A);
+        when(dashboardRepository.findByShareToken(TOKEN_A)).thenReturn(Optional.of(dA));
+        when(widgetRepository.findByDashboardIdOrderByPositionAsc("DSH-A"))
+                .thenReturn(List.of(pivotWidget(3L, "{}"))); // no spec yet
+        stubAggregateQueries(0L);
+
+        ResponseEntity<Map<String, Object>> res = controller.getByToken(TOKEN_A);
+
+        verify(pivotService, never()).resolveForWorkspace(any(), any());
+        Map<String, Object> pivots = (Map<String, Object>) res.getBody().get("pivots");
+        assertThat(pivots).doesNotContainKey("3");
     }
 }

@@ -31,17 +31,17 @@ export const CEREMONY_LABELS = {
 
 export const TAB_LABELS = {
   health: 'Health', myday: 'My Day', ceremonies: 'Ceremonies', standup: 'Standup', impediments: 'Impediments',
-  risk: 'Risk panel', variance: 'Variance', planning: 'Planning', retro: 'Retro', review: 'Review prep',
-  patterns: 'Patterns',
+  risk: 'Risk panel', variance: 'Variance', planning: 'Planning', capacity: 'Capacity', retro: 'Retro',
+  review: 'Review prep', patterns: 'Patterns',
 };
 
 // One surface, role-shaped: tab order/visibility follows the caller's team role (role_key,
 // shared with the Today surface). Relevance only — every action stays RBAC-gated server-side.
 export const ROLE_TABS = {
-  'scrum-master': ['ceremonies', 'standup', 'impediments', 'risk', 'variance', 'planning', 'retro', 'review', 'patterns', 'health'],
-  admin: ['ceremonies', 'standup', 'impediments', 'risk', 'variance', 'planning', 'retro', 'review', 'patterns', 'health'],
-  developer: ['myday', 'standup', 'impediments', 'retro', 'ceremonies'],
-  'product-owner': ['health', 'planning', 'review', 'variance', 'patterns', 'ceremonies', 'impediments'],
+  'scrum-master': ['ceremonies', 'standup', 'impediments', 'risk', 'variance', 'planning', 'capacity', 'retro', 'review', 'patterns', 'health'],
+  admin: ['ceremonies', 'standup', 'impediments', 'risk', 'variance', 'planning', 'capacity', 'retro', 'review', 'patterns', 'health'],
+  developer: ['myday', 'standup', 'impediments', 'capacity', 'retro', 'ceremonies'],
+  'product-owner': ['health', 'planning', 'capacity', 'review', 'variance', 'patterns', 'ceremonies', 'impediments'],
   executive: ['health', 'variance', 'risk', 'review', 'patterns', 'ceremonies'],
 };
 
@@ -51,7 +51,7 @@ export const ROLE_LABELS = {
 };
 
 // Two-mode IA: "Run" = surfaces you act on; "Insights" = surfaces you read/analyse.
-export const RUN_TABS = ['myday', 'ceremonies', 'standup', 'impediments', 'retro', 'planning', 'review'];
+export const RUN_TABS = ['myday', 'ceremonies', 'standup', 'impediments', 'retro', 'planning', 'capacity', 'review'];
 export const INSIGHTS_TABS = ['health', 'variance', 'risk', 'patterns'];
 
 export const RAISE_LABELS = {

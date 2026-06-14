@@ -122,9 +122,9 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
   };
 
   return (
-    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-700 flex items-center justify-between gap-3">
-        <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+    <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-md dark:border-neutral-700 dark:bg-neutral-800">
+      <div className="flex items-center justify-between gap-3 border-b border-neutral-100 px-4 py-3 dark:border-neutral-700/60">
+        <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-1 text-sm font-semibold text-neutral-700 dark:bg-neutral-900 dark:text-neutral-200">
           {results.length} result{results.length !== 1 ? 's' : ''}
         </span>
         <div className="flex items-center gap-2">
@@ -134,16 +134,20 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
             <Button variant="ghost" size="sm" leftIcon={<Columns3 aria-hidden="true" className="h-3.5 w-3.5" />}
               onClick={() => setChooserOpen(o => !o)} aria-expanded={chooserOpen}>Columns</Button>
             {chooserOpen && (
-              <div className="absolute right-0 mt-1 z-overlay w-44 max-h-72 overflow-y-auto bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg py-1">
-                {COLUMNS.map(c => (
-                  <button key={c.key} type="button" onClick={() => toggleColumn(c.key)}
-                    className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-700">
-                    <span className="w-3.5 shrink-0">
-                      {visibleKeys.includes(c.key) && <Check aria-hidden="true" className="h-3.5 w-3.5 text-brand-navy" />}
-                    </span>
-                    {c.label}
-                  </button>
-                ))}
+              <div className="absolute right-0 z-dropdown mt-1 max-h-72 w-48 overflow-y-auto rounded-lg border border-neutral-200 bg-white py-1 shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
+                <p className="px-3 py-1.5 text-2xs font-semibold uppercase tracking-wide text-neutral-400">Columns</p>
+                {COLUMNS.map(c => {
+                  const on = visibleKeys.includes(c.key);
+                  return (
+                    <button key={c.key} type="button" onClick={() => toggleColumn(c.key)}
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-neutral-700 transition-colors hover:bg-neutral-50 dark:text-neutral-200 dark:hover:bg-neutral-700/50">
+                      <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${on ? 'border-brand-navy bg-brand-navy text-white' : 'border-neutral-300 dark:border-neutral-600'}`}>
+                        {on && <Check aria-hidden="true" className="h-3 w-3" />}
+                      </span>
+                      {c.label}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -152,10 +156,13 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
 
       {/* Bulk-edit toolbar — only when rows are selected; the server re-checks edit rights per item. */}
       {bulkEnabled && selected.size > 0 && (
-        <div className="px-4 py-2 border-b border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">{selected.size} selected</span>
+        <div className="flex flex-wrap items-center gap-2 border-b border-brand-navy-tint/20 bg-brand-navy/5 px-4 py-2.5 dark:bg-brand-navy-tint/10">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-navy dark:text-neutral-100">
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-navy px-1.5 text-2xs text-white">{selected.size}</span>
+            selected
+          </span>
           <label className="sr-only" htmlFor="bulk-action">Bulk action</label>
-          <select id="bulk-action" className="input text-xs py-1" value={bulkAction}
+          <select id="bulk-action" className="input w-auto py-1 text-xs" value={bulkAction}
             onChange={e => { setBulkAction(e.target.value); setBulkValue(''); }}>
             <option value="priority">Set priority</option>
             <option value="addLabel">Add label</option>
@@ -163,16 +170,16 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
           </select>
           <label className="sr-only" htmlFor="bulk-value">Value</label>
           {bulkAction === 'priority' && priorityOptions.length > 0 ? (
-            <select id="bulk-value" className="input text-xs py-1" value={bulkValue}
+            <select id="bulk-value" className="input w-auto py-1 text-xs" value={bulkValue}
               onChange={e => setBulkValue(e.target.value)}>
               <option value="">value…</option>
               {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           ) : (
-            <input id="bulk-value" className="input text-xs py-1" placeholder="value"
+            <input id="bulk-value" className="input w-auto py-1 text-xs" placeholder="value"
               value={bulkValue} onChange={e => setBulkValue(e.target.value)} />
           )}
-          <Button variant="secondary" size="sm" onClick={applyBulk} loading={bulkBusy}
+          <Button variant="action" size="sm" onClick={applyBulk} loading={bulkBusy}
             disabled={!bulkValue.trim()}>Apply</Button>
           <Button variant="ghost" size="sm" leftIcon={<X aria-hidden="true" className="h-3.5 w-3.5" />}
             onClick={clearSelection}>Clear</Button>
@@ -181,38 +188,38 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
 
       <div className="max-h-96 overflow-auto">
         <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-neutral-50 dark:bg-neutral-900 text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">
+          <thead className="sticky top-0 z-base bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500 shadow-sm dark:bg-neutral-900 dark:text-neutral-400">
             <tr>
               {bulkEnabled && (
-                <th scope="col" className="px-3 py-2 w-8">
+                <th scope="col" className="w-8 px-3 py-2.5">
                   <input type="checkbox" checked={allSelected} onChange={toggleAll}
-                    aria-label="Select all rows" className="cursor-pointer" />
+                    aria-label="Select all rows" className="cursor-pointer accent-brand-navy" />
                 </th>
               )}
               {cols.map(col => (
                 <th key={col.key} scope="col"
-                  className={`px-4 py-2 text-left font-semibold ${col.sort ? 'cursor-pointer select-none hover:text-brand-navy' : ''}`}
+                  className={`px-4 py-2.5 text-left font-semibold ${col.sort ? 'cursor-pointer select-none transition-colors hover:text-brand-navy' : ''}`}
                   onClick={() => headerClick(col)}
                   aria-sort={col.sort && sortKey === col.sort ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}>
                   <span className="inline-flex items-center gap-1">
                     {col.label}
                     {col.sort === sortKey && (sortDir === 'asc'
-                      ? <ArrowUp aria-hidden="true" className="h-3 w-3" />
-                      : <ArrowDown aria-hidden="true" className="h-3 w-3" />)}
+                      ? <ArrowUp aria-hidden="true" className="h-3 w-3 text-brand-navy" />
+                      : <ArrowDown aria-hidden="true" className="h-3 w-3 text-brand-navy" />)}
                   </span>
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+          <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700/60">
             {results.map((item, i) => (
               <tr key={item.id || i}
-                className="hover:bg-neutral-50 dark:hover:bg-neutral-700/40">
+                className={`transition-colors hover:bg-brand-navy/5 dark:hover:bg-brand-navy-tint/10 ${selected.has(item.id) ? 'bg-brand-navy/5 dark:bg-brand-navy-tint/10' : ''}`}>
                 {bulkEnabled && (
                   <td className="px-3 py-2.5">
                     <input type="checkbox" checked={selected.has(item.id)}
                       onChange={() => toggleRow(item.id)}
-                      aria-label={`Select ${item.id}`} className="cursor-pointer" />
+                      aria-label={`Select ${item.id}`} className="cursor-pointer accent-brand-navy" />
                   </td>
                 )}
                 {cols.map((col, ci) => (
@@ -222,7 +229,7 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
                       // mouse AND keyboard without making the whole <tr> an interactive control
                       // (which would nest the bulk-select checkbox inside it — nested-interactive, RB-30 §6).
                       <button type="button" onClick={() => onOpen(item)}
-                        className="text-left hover:underline rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
+                        className="rounded-sm text-left font-medium text-brand-navy hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40 dark:text-neutral-100">
                         {renderCell(col, item)}
                       </button>
                     ) : renderCell(col, item)}
@@ -235,7 +242,7 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
       </div>
 
       {canShowMore && (
-        <div className="px-4 py-2 border-t border-neutral-100 dark:border-neutral-700 text-center">
+        <div className="border-t border-neutral-100 px-4 py-2.5 text-center dark:border-neutral-700/60">
           <Button variant="ghost" size="sm" onClick={onShowMore}>Show more</Button>
         </div>
       )}

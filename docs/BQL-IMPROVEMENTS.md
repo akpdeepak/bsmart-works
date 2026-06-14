@@ -309,3 +309,20 @@ summary of how many items currently match.
   to the load/delete buttons (no nested interactive elements, RB-30 §6).
 - Tests: scheduler due-logic unit tests + integration tests for the lifecycle, workspace-scoped
   match count, audit + notification on delivery, and the lost-access deactivation.
+
+## 18. Round 13 — premium UI/UX pass
+
+A visual polish of the whole BQL screen, all on the design system (RB-30 — tokens only, no raw
+hex/arbitrary values; guardrails green):
+
+- **Header** with a "N fields queryable" stat pill; the AI NL→BQL panel upgraded to a gradient card
+  with an icon badge.
+- **Query console** as the centrepiece — a single shadowed card with a labelled header, an inset
+  monospace editor (focus ring), a refined autocomplete popover (now on the real `z-dropdown`
+  token, fixing a latent no-op `z-overlay`), a validation pill on semantic surfaces, a primary
+  **Run Query** CTA with a `⌘ ↵` keyboard hint, and a tokenised "insert a token" palette.
+- **Saved views** as elevated chips with a "shared" badge and the subscribe bell; **group-by board**
+  with gradient `rounded-full` proportion bars and percentage-scaled widths; a premium empty state.
+- **Results navigator**: count as a pill, a brand-accented bulk-action bar, `accent-brand-navy`
+  checkboxes, sticky shadowed header, brand-tinted row hover/selection, and the key as a link.
+- All 777 frontend tests + a11y axe scan green; lint + build + guardrails clean.

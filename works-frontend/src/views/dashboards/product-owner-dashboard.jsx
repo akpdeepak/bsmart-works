@@ -27,6 +27,26 @@ const PRODUCT_OWNER_REGISTRY = {
         return <StatCard label="Backlog size" value={ctx.totalBacklog} sub="Total open items" color="text-neutral-600 dark:text-neutral-400" icon={BarChart2} onClick={() => ctx.setView('backlog')} />;
     }
   },
+  'at-a-glance': (ctx) => (
+    <div className="rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
+      <h3 className="mb-4 flex items-center gap-2 font-semibold text-neutral-900 dark:text-neutral-100">
+        <BarChart2 className="h-4 w-4 text-brand-navy dark:text-brand-navy-tint" aria-hidden="true" />At a glance
+      </h3>
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { title: 'Features done', pct: ctx.featurePct, label: 'done' },
+          { title: 'Backlog groomed', pct: ctx.groomedPct, label: 'groomed' },
+          { title: 'Release readiness', pct: ctx.releaseReadiness, label: 'ready' },
+        ].map((r) => (
+          <div key={r.title} className="flex flex-col items-center gap-2 text-center">
+            <HealthRing pct={r.pct} size={72}
+              stroke={r.pct >= 70 ? 'stroke-semantic-success' : r.pct >= 40 ? 'stroke-semantic-warning' : 'stroke-semantic-danger'} label={r.label} />
+            <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{r.title}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  ),
   'upcoming-releases': (ctx) => (
     <TodayCard title="Upcoming releases" icon={Package} iconColor="text-brand-navy"
       action={() => ctx.setView('releases')}>
@@ -167,9 +187,14 @@ export function ProductOwnerToday({ data, currentUser, setView, layout, builtinL
     `${featurePct}% features done`,
   ].filter(Boolean).join(' · ');
 
+  const groomedPct = totalBacklog > 0 ? Math.round(Math.max(0, totalBacklog - ungroomedCount) * 100 / totalBacklog) : 0;
+  const releaseReadiness = upcoming.length
+    ? Math.round(upcoming.reduce((s, r) => s + ((r.total_items ?? 0) > 0 ? (r.done_items || 0) * 100 / r.total_items : 0), 0) / upcoming.length)
+    : 0;
+
   const ctx = {
     upcoming, allReleases, ungroomed, ungroomedCount, priorityDist, backlogByType,
-    featureStats, featurePct, totalBacklog, maxPri, setView,
+    featureStats, featurePct, totalBacklog, maxPri, groomedPct, releaseReadiness, setView,
   };
 
   return (

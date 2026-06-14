@@ -2,7 +2,7 @@ import { StatCard } from '@/components/works/stat-card';
 import { BarChart } from '@/components/works/molecules';
 import { utilizationSeries } from '@/lib/today-metrics';
 import { TrendingUp, Users, AlertTriangle, Package, Target, Clock } from 'lucide-react';
-import { TodayCard, MiniBar, Empty, TodaySurface, getGreeting } from './_shared';
+import { TodayCard, HealthRing, MiniBar, Empty, TodaySurface, getGreeting } from './_shared';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // EXECUTIVE / LEADERSHIP
@@ -31,6 +31,26 @@ const EXECUTIVE_REGISTRY = {
         return <StatCard label="Team utilization" value={ctx.teamUtil.length} sub="Active members (30d)" color="text-brand-navy" icon={Users} />;
     }
   },
+  'at-a-glance': (ctx) => (
+    <div className="rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
+      <h3 className="mb-4 flex items-center gap-2 font-semibold text-neutral-900 dark:text-neutral-100">
+        <TrendingUp className="h-4 w-4 text-brand-navy dark:text-brand-navy-tint" aria-hidden="true" />At a glance
+      </h3>
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { title: 'Portfolio health', pct: ctx.health, label: 'done' },
+          { title: 'On-track projects', pct: ctx.onTrackPct, label: 'on track' },
+          { title: 'Release readiness', pct: ctx.releaseReadiness, label: 'ready' },
+        ].map((r) => (
+          <div key={r.title} className="flex flex-col items-center gap-2 text-center">
+            <HealthRing pct={r.pct} size={72}
+              stroke={r.pct >= 70 ? 'stroke-semantic-success' : r.pct >= 40 ? 'stroke-semantic-warning' : 'stroke-semantic-danger'} label={r.label} />
+            <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{r.title}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  ),
   'project-portfolio': (ctx) => (
     <TodayCard title="Project portfolio" icon={Target} iconColor="text-brand-navy" action={() => ctx.setView('projects')}>
       {ctx.portfolio.length === 0
@@ -159,9 +179,16 @@ export function ExecutiveToday({ data, currentUser, setView, layout, builtinLayo
     (openRisks + openIssues) > 0 ? `${openRisks + openIssues} open risks/issues` : null,
   ].filter(Boolean).join(' · ');
 
+  const onTrackPct = portfolio.length
+    ? Math.round(portfolio.filter(p => p.total_items > 0 && (p.done_items * 100 / p.total_items) >= 70).length * 100 / portfolio.length)
+    : 0;
+  const releaseReadiness = releaseSchedule.length
+    ? Math.round(releaseSchedule.reduce((s, r) => s + ((r.total_items ?? 0) > 0 ? (r.done_items || 0) * 100 / r.total_items : 0), 0) / releaseSchedule.length)
+    : 0;
+
   const ctx = {
     health, healthColor, overdueActions, openRisks, openIssues, teamUtil,
-    portfolio, raidSummary, releaseSchedule, setView,
+    portfolio, raidSummary, releaseSchedule, onTrackPct, releaseReadiness, setView,
   };
 
   return (

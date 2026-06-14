@@ -49,8 +49,11 @@ services:
       SPRING_MAIL_HOST: mailhog          # relaxed-binding override of spring.mail.host
       SPRING_MAIL_PORT: "1025"
       APP_ATTACHMENTS_VIRUS_SCAN_ENABLED: "false"   # ClamAV WSL2 dependency not in this stack
+      APP_ATTACHMENTS_DIR: /data/uploads            # backed by bsmart_uploads named volume — survives container restarts
       BSMART_CORS_ALLOWED_ORIGINS: "http://localhost:${FRONTEND_PORT:-8088},http://127.0.0.1:${FRONTEND_PORT:-8088}"
       BSMART_FRONTEND_BASE_URL: "http://localhost:${FRONTEND_PORT:-8088}"
+    volumes:
+      - bsmart_uploads:/data/uploads
     ports:
       - "${BACKEND_PORT:-8090}:8080"
 
@@ -67,3 +70,4 @@ services:
 
 volumes:
   bsmart_deploy_pg_data:
+  bsmart_uploads:       # durable attachment storage — never lost on backend container restart

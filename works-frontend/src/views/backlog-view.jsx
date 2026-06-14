@@ -1,6 +1,7 @@
 import { FileText } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { Skeleton, ListSkeleton } from '@/components/works/atoms/skeleton';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { PriorityBadge } from '@/components/works/priority-badge';
 import { Avatar } from '@/components/works/atoms/avatar';
@@ -15,6 +16,7 @@ import { absoluteDate } from '@/lib/format';
  * pure rendering shell that accepts handlers as props.
  */
 export default function BacklogView({
+  loading = false,
   workItems,
   backlogItems,
   sprints,
@@ -46,6 +48,15 @@ export default function BacklogView({
     ? statusResolver.categoryOf(item.type, item.status)
     : statusToCategory(item.status)) === 'done';
   const onPressKey = (e) => { if (e.key === 'Enter' || e.key === ' ') e.currentTarget.click(); };
+
+  if (loading && backlogItems.length === 0 && sprints.length === 0) {
+    return (
+      <div className="p-6">
+        <Skeleton className="h-7 w-32 mb-6" />
+        <ListSkeleton rows={6} />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">

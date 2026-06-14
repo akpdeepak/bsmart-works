@@ -1,11 +1,21 @@
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { Skeleton, ListSkeleton } from '@/components/works/atoms/skeleton';
 import { TypeBadge } from '@/components/works/work-item-type';
 
 // Trash view — extracted from the App.jsx monolith (UX finding A3/H2). Behaviour-preserving: the
 // parent owns the soft-deleted items and the restore/purge handlers; this renders them.
-export default function TrashView({ trashItems, restoreFromTrash, permanentDelete }) {
+export default function TrashView({ loading = false, trashItems, restoreFromTrash, permanentDelete }) {
+  if (loading && trashItems.length === 0) {
+    return (
+      <div className="p-8 max-w-3xl">
+        <Skeleton className="h-7 w-24 mb-6" />
+        <ListSkeleton rows={4} />
+      </div>
+    );
+  }
+
   return (
     <div className="p-8 max-w-3xl">
       <div className="flex items-center justify-between mb-6">

@@ -36,6 +36,8 @@ import { WorkItemDetailPanel } from '@/components/works/organisms/work-item-deta
 import { AutomationsPanel } from '@/components/works/organisms/automations-panel';
 import { IntegrationsPanel } from '@/components/works/organisms/integrations-panel';
 import { SecurityCenter } from '@/components/works/organisms/security-center';
+import { AiComplianceSuggestion } from '@/components/works/organisms/ai-compliance-suggestion';
+import { SprintItemList } from '@/components/works/organisms/sprint-item-list';
 import { Modal } from '@/components/works/molecules/modal';
 import { Toast } from '@/components/works/atoms/toast';
 import { Skeleton } from '@/components/works/atoms/skeleton';
@@ -58,6 +60,7 @@ import { ResetPasswordScreen } from '@/components/works/reset-password-screen';
 // DonutChart / BarChart moved to dashboard-widget-card.jsx + report-section-card.jsx (TD-003).
 // exportElementToPng / exportElementToPdf / exportRowsToCsv moved to export-buttons.jsx (TD-003).
 import { api } from '@/lib/apiClient';
+import { reportError, setToastEmitter } from '@/lib/report-error';
 import { layoutToWidgets } from '@/lib/today-layouts';
 import { useCardPrefs } from '@/hooks/useCardPrefs';
 import { buildStatusResolver } from '@/lib/status-config';
@@ -112,14 +115,10 @@ import { DashboardWidgetCard } from '@/components/works/organisms/dashboard-widg
 // EXTRA_WIDGET_PRESETS / EXTRA_WIDGET_CATEGORIES moved to dashboards-view.jsx (TD-003).
 
 // One error-presentation contract (findings F1/F2 in docs/UX-CODEBASE-ANALYSIS.md): failures are
-// never swallowed silently. `reportError` is registered with the live toast emitter from inside
-// App(); because there is a single toast slot, a burst of failures collapses to one message
-// rather than spamming. Transient/data errors surface here; form-field errors stay inline.
-let _emitToast = null;
-function reportError(e) {
-  if (e) { try { console.error('[bSmart]', e); } catch { /* noop */ } }
-  if (_emitToast) _emitToast('Something went wrong. Please try again.', 'error');
-}
+// never swallowed silently. `reportError` (now in lib/report-error.js) is wired to the live toast
+// emitter from inside App() via setToastEmitter(); because there is a single toast slot, a burst of
+// failures collapses to one message rather than spamming. Transient/data errors surface here;
+// form-field errors stay inline.
 
 const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
@@ -676,7 +675,7 @@ export default function App() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
-  _emitToast = showToast; // register the live emitter for module-level reportError (F1/F2)
+  setToastEmitter(showToast); // register the live emitter for reportError (lib/report-error.js)
 
   // Access guard — once the real role is known, bounce out of any surface this user can't see
   // (e.g. a deep link or stale URL into an admin area). Server RBAC already 403s the data; this
@@ -4263,13 +4262,7 @@ export default function App() {
 
 // renderMd extracted to @/lib/utils (imported above). Imported as renderMd from utils (TD-003).
 
-// eslint-disable-next-line no-unused-vars
-function getTimeOfDay() {
-  const h = new Date().getHours();
-  if (h < 12) return 'morning';
-  if (h < 17) return 'afternoon';
-  return 'evening';
-}
+// getTimeOfDay moved to lib/utils.js (TD-003 / ONE Source — also de-duplicates dashboard-view.jsx).
 
 // StatCard, RoleBadge, Field and the onPressKey keyboard helper now live in
 // components/works/{stat-card,role-badge,field}.jsx and lib/utils.js (imported above).
@@ -4285,101 +4278,14 @@ function getTimeOfDay() {
 // src/components/works/organisms/public-dashboard-embed.jsx — imported at the top of this file and
 // rendered before the auth gate from ?share=<token> or /embed/dashboard/<token>.
 
-// B27 — AI-assisted compliance rule suggestion. Sends a natural-language prompt to the AI
-// which returns suggested rules; the user can adopt one directly into the rule builder.
-// Fallback: when AI is off or over budget, the component is not rendered (hidden by the parent).
-function AiComplianceSuggestion({ workspaceId, onAdopt, onToast }) {
-  const [prompt, setPrompt] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState(null);
-
-  function handleSuggest() {
-    if (!prompt.trim()) return;
-    setLoading(true);
-    setSuggestions(null);
-    aiClient.suggestComplianceRules(workspaceId, prompt.trim())
-      .then(res => {
-        const rules = res?.suggestions || res?.rules || [];
-        setSuggestions(rules);
-        setLoading(false);
-        if (!rules.length) onToast('No rule suggestions returned — try a different prompt.', 'info');
-        if (res?.meta?.fallback) onToast('AI rule suggestion used fallback (template match).', 'info');
-      })
-      .catch(() => { setLoading(false); onToast('AI rule suggestion failed. Please try again.', 'error'); });
-  }
-
-  return (
-    <div className="bg-white dark:bg-neutral-800 border border-brand-navy/20 rounded-xl p-5">
-      <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">✦ AI Rule Suggestions</h3>
-      <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3">
-        Describe a compliance concern in plain language — AI will suggest a BQL rule to encode it.
-        <span className="block mt-0.5 italic">Fallback: seeded templates below when AI is off.</span>
-      </p>
-      <div className="flex gap-2">
-        <input
-          id="ai-compliance-prompt"
-          className="input flex-1 text-sm"
-          placeholder="e.g. Incidents should be assigned within 2 hours of creation"
-          value={prompt}
-          onChange={e => setPrompt(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') handleSuggest(); }}
-          aria-label="Describe the compliance rule you need"
-        />
-        <Button variant="secondary" disabled={loading || !prompt.trim()} onClick={handleSuggest}>
-          {loading ? 'Thinking…' : 'Suggest'}
-        </Button>
-      </div>
-      {loading && (
-        <div className="mt-3 space-y-2" aria-busy="true" aria-label="Loading suggestions">
-          <div className="animate-pulse h-10 bg-neutral-100 dark:bg-neutral-700 rounded" aria-hidden="true" />
-          <div className="animate-pulse h-10 bg-neutral-100 dark:bg-neutral-700 rounded" aria-hidden="true" />
-        </div>
-      )}
-      {suggestions && suggestions.length > 0 && (
-        <ul className="mt-3 space-y-2">
-          {suggestions.map((s, i) => (
-            <li key={i} className="flex items-start gap-3 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{s.name || `Rule ${i + 1}`}</p>
-                {s.description && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">{s.description}</p>}
-                {s.scopeBql && <p className="text-xs font-mono text-brand-navy mt-1 truncate">{s.scopeBql} ⟶ {s.assertionBql}</p>}
-              </div>
-              <Button variant="secondary" onClick={() => { onAdopt(s); onToast('Rule draft opened in the rule builder.'); }}>Adopt</Button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
+// AiComplianceSuggestion (B27) extracted to
+// src/components/works/organisms/ai-compliance-suggestion.jsx (TD-003 / ONE Function) — imported
+// above and passed to the compliance view as a prop.
 
 // DashboardDrillModal extracted to src/components/works/organisms/dashboard-drill-modal.jsx (TD-003).
 // PmArtifactList extracted to src/components/works/organisms/pm-artifact-list.jsx (TD-003).
 
-function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
-  const [items, setItems] = React.useState([]);
-  React.useEffect(() => {
-    api.raw(`/sprints/${sprintId}/items`)
-      .then(r => r.json()).then(d => setItems(Array.isArray(d) ? d : [])).catch(reportError);
-  }, [sprintId]);
-
-  if (items.length === 0) return <div className="px-5 py-4 text-sm text-neutral-600 text-center">No items in this sprint yet.</div>;
-  return (
-    <div className="divide-y divide-neutral-50 dark:divide-neutral-700">
-      {items.map(item => (
-        <div key={item.id} className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-700 group">
-          <TypeBadge type={item.type} compact />
-          <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
-          <span role="button" tabIndex={0} onKeyDown={onPressKey} className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => onSelect(item)}>{item.title}</span>
-          <StatusBadge category={statusToCategory(item.status)}>{item.status}</StatusBadge>
-          {(item.storyPoints > 0) && <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{item.storyPoints}pt</span>}
-          {item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={6} />}
-          <button onClick={() => { onMoveToBacklog(item.id); setItems(prev => prev.filter(i => i.id !== item.id)); }}
-            className="opacity-0 group-hover:opacity-100 text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-opacity" aria-label="Move to backlog"><ArrowDown className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />Backlog</button>
-        </div>
-      ))}
-    </div>
-  );
-}
+// SprintItemList extracted to src/components/works/organisms/sprint-item-list.jsx (TD-003 / ONE
+// Function) — imported above and passed to the sprint surfaces as a prop.
 
 // SprintBoard extracted to src/components/works/organisms/sprint-board.jsx (TD-003)

@@ -10,12 +10,22 @@ import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { useI18n } from '@/lib/i18n';
 
 const HISTORY_KEY = 'bql.history';
+const NAV_COLS_KEY = 'bql.navigator.columns';
 
 function loadHistory() {
   try {
     const h = JSON.parse(localStorage.getItem(HISTORY_KEY));
     return Array.isArray(h) ? h : [];
   } catch { return []; }
+}
+
+// Current navigator column layout from localStorage (the global default), or null to let the table
+// fall back to its built-in default set.
+function loadNavCols() {
+  try {
+    const s = JSON.parse(localStorage.getItem(NAV_COLS_KEY));
+    return Array.isArray(s) && s.length ? s : null;
+  } catch { return null; }
 }
 
 // BQL query view. The parent owns query state + run/save/fetch handlers; this view adds the
@@ -45,6 +55,8 @@ export default function BqlView({
   const [viewSaving, setViewSaving] = useState(false);
   const [subscriptions, setSubscriptions] = useState([]); // saved-view subscriptions for this user
   const [subBusy, setSubBusy] = useState(() => new Set()); // view ids with an in-flight subscribe toggle
+  const [columnKeys, setColumnKeys] = useState(loadNavCols); // results-table column layout (controlled)
+  const [activeViewId, setActiveViewId] = useState(null);    // the saved view currently loaded, if any
 
   // P3 — editor assists
   const [schema, setSchema] = useState(null); // { fields, operators, functions, enums }
@@ -98,8 +110,8 @@ export default function BqlView({
 
   const showMore = () => runQuery({ size: Math.min(resultSize + 100, 500) });
 
-  // Load a saved view: reflect its query in the editor, then run it through the audited saved-view
-  // endpoint (RB-20 §5) rather than ad-hoc execute, so the named run is recorded.
+  // Load a saved view: reflect its query in the editor, apply its saved column layout, then run it
+  // through the audited saved-view endpoint (RB-20 §5) rather than ad-hoc execute.
   const loadSavedView = (v) => {
     const q = v.bqlFilter || '';
     setBqlQuery(q);
@@ -107,7 +119,20 @@ export default function BqlView({
     syncUrl(q, sort);
     setGroupBy('');
     setGroups(null);
+    let cols = null;
+    try { const p = JSON.parse(v.columnKeys || '[]'); if (Array.isArray(p) && p.length) cols = p; } catch { /* keep null */ }
+    setColumnKeys(cols);
+    setActiveViewId(v.id);
     runBql({ query: q, savedViewId: v.id, size: resultSize });
+  };
+
+  // A column change persists to the global default, and to the active saved view (so each view keeps
+  // its own curated layout) when one is loaded.
+  const handleColumnsChange = (keys) => {
+    setColumnKeys(keys);
+    if (activeViewId && activeWorkspaceId) {
+      savedViewsClient.update(activeWorkspaceId, activeViewId, { columnKeys: JSON.stringify(keys) }).catch(() => {});
+    }
   };
 
   // Fetch per-bucket counts for the current query, grouped by the chosen field. Empty field clears
@@ -303,9 +328,10 @@ export default function BqlView({
   const saveView = () => {
     if (!viewName.trim() || !activeWorkspaceId) return;
     setViewSaving(true);
-    savedViewsClient.create(activeWorkspaceId, { name: viewName.trim(), bqlFilter: bqlQuery, columnKeys: '[]' })
-      .then(v => { setSavedViews(prev => [...prev, v]); setViewName(''); })
-      .catch(() => {})
+    // Capture the current column layout so the view reopens with it.
+    savedViewsClient.create(activeWorkspaceId, { name: viewName.trim(), bqlFilter: bqlQuery, columnKeys: JSON.stringify(columnKeys ?? []) })
+      .then(v => { setSavedViews(prev => [...prev, v]); setViewName(''); if (v?.id) setActiveViewId(v.id); notify('View saved'); })
+      .catch(() => notify('Could not save view', 'error'))
       .finally(() => setViewSaving(false));
   };
 
@@ -398,7 +424,7 @@ export default function BqlView({
               rows={3}
               placeholder={'status = Open AND (priority = High OR priority = Critical)\nassignee = currentUser() AND createdAt >= startOfWeek()\ndueDate < today() AND status NOT IN (Done, Cancelled)'}
               value={bqlQuery}
-              onChange={e => { setBqlQuery(e.target.value); refreshAc(e.target.value, e.target.selectionStart); }}
+              onChange={e => { setBqlQuery(e.target.value); setActiveViewId(null); refreshAc(e.target.value, e.target.selectionStart); }}
               onKeyDown={onQueryKeyDown}
               onBlur={() => setTimeout(() => setAc(a => ({ ...a, open: false })), 120)}
               aria-autocomplete="list"
@@ -660,6 +686,8 @@ export default function BqlView({
           sort={sort}
           nameMaps={nameMaps}
           priorityOptions={schema?.enums?.priority || []}
+          columnKeys={columnKeys}
+          onColumnsChange={handleColumnsChange}
           onSort={(s) => runQuery({ sort: s })}
           onOpen={openItem}
           onShowMore={showMore}

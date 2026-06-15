@@ -4,7 +4,7 @@ import { expectNoA11yViolations } from '@/test/a11y';
 
 vi.mock('@/lib/apiClient', () => ({ api: { send: vi.fn(() => Promise.resolve({})) } }));
 vi.mock('@/lib/saved-views', () => ({
-  savedViewsClient: { list: vi.fn(() => Promise.resolve([])), create: vi.fn(), delete: vi.fn() },
+  savedViewsClient: { list: vi.fn(() => Promise.resolve([])), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
 }));
 
 import BqlView from './bql-view';

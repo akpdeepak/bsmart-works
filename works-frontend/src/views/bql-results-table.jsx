@@ -63,9 +63,14 @@ function toCsv(rows, cols, nameMaps) {
 // JIRA-style issue navigator for BQL results: sortable columns, a column chooser, CSV export, and
 // rows that always open their work item (the parent resolves by id, fetching if needed).
 export default function BqlResultsTable({ results, sort, nameMaps = {}, priorityOptions = [],
-  onSort, onOpen, onShowMore, onBulk, canShowMore }) {
-  const [visibleKeys, setVisibleKeys] = useState(loadVisible);
+  columnKeys = null, onColumnsChange, onSort, onOpen, onShowMore, onBulk, canShowMore }) {
+  const [internalKeys, setInternalKeys] = useState(loadVisible);
   const [chooserOpen, setChooserOpen] = useState(false);
+  // Columns are controlled by the parent when onColumnsChange is supplied (so a saved view can carry
+  // its own layout); otherwise the table owns them via localStorage. An empty/absent controlled value
+  // falls back to the saved/default set.
+  const controlledCols = typeof onColumnsChange === 'function';
+  const visibleKeys = controlledCols ? (columnKeys && columnKeys.length ? columnKeys : loadVisible()) : internalKeys;
   // Bulk-edit selection (JIRA-style): pick rows, apply one change to all (server re-checks per item).
   const [selected, setSelected] = useState(() => new Set());
   const [bulkAction, setBulkAction] = useState('priority');
@@ -104,12 +109,10 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
   };
 
   const toggleColumn = (key) => {
-    setVisibleKeys(prev => {
-      const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key];
-      const ordered = COLUMNS.filter(c => next.includes(c.key)).map(c => c.key);
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ordered)); } catch { /* ignore */ }
-      return ordered;
-    });
+    const next = visibleKeys.includes(key) ? visibleKeys.filter(k => k !== key) : [...visibleKeys, key];
+    const ordered = COLUMNS.filter(c => next.includes(c.key)).map(c => c.key);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ordered)); } catch { /* ignore */ }
+    if (controlledCols) onColumnsChange(ordered); else setInternalKeys(ordered);
   };
 
   const headerClick = (col) => {

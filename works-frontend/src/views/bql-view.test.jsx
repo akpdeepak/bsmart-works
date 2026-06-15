@@ -36,6 +36,14 @@ describe('BqlView', () => {
     expect(runBql).toHaveBeenCalled();
   });
 
+  it('inserts and runs a snippet from the palette', () => {
+    const runBql = vi.fn();
+    render(<BqlView {...baseProps} runBql={runBql} setBqlQuery={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Snippets/ }));
+    fireEvent.click(screen.getByText('My open work'));
+    expect(runBql).toHaveBeenCalled();
+  });
+
   it('renders results with status and priority badges', () => {
     render(
       <BqlView

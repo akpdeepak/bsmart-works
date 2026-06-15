@@ -1,4 +1,5 @@
 import { TrendingUp, Activity } from 'lucide-react';
+import { PageLayout } from '@/components/works/templates/page-layout';
 import { Folder } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -25,16 +26,12 @@ export default function ProjectsView({
     ? statusResolver.categoryOf(item.type, item.status)
     : statusToCategory(item.status)) === 'done';
   return (
-    <div className="p-8 max-w-4xl">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-brand-navy">{t('deliver.teams.title')}</h1>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-0.5">
-            {projects.length} {projects.length !== 1 ? t('deliver.teams.teamPlural') : t('deliver.teams.teamSingular')} {t('deliver.teams.inThisWorkspace')}
-          </p>
-        </div>
-        <Button variant="action" onClick={() => setIsProjectOpen(true)}>{t('deliver.teams.newTeam')}</Button>
-      </div>
+    <PageLayout
+      title={t('deliver.teams.title')}
+      description={`${projects.length} ${projects.length !== 1 ? t('deliver.teams.teamPlural') : t('deliver.teams.teamSingular')} ${t('deliver.teams.inThisWorkspace')}`}
+      actions={<Button variant="action" onClick={() => setIsProjectOpen(true)}>{t('deliver.teams.newTeam')}</Button>}
+      width="dashboard"
+    >
 
       {projects.length === 0
         ? (
@@ -141,6 +138,6 @@ export default function ProjectsView({
           </div>
         )
       }
-    </div>
+    </PageLayout>
   );
 }

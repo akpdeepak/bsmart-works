@@ -1,3 +1,4 @@
+import { PageLayout } from '@/components/works/templates/page-layout';
 import StatusManagementTab from '@/components/works/organisms/status-management-tab';
 import FieldConfigEditor from '@/components/works/organisms/field-config-editor';
 import WorkflowSettings from './settings3/workflow-settings';
@@ -86,9 +87,11 @@ export default function Settings3View({
   api,
 }) {
   return (
-    <div className="p-8 max-w-5xl">
-      <h1 className="text-2xl font-bold text-brand-navy dark:text-white mb-1">Workflows &amp; Fields</h1>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">Configure workflows, custom fields, permissions, and work item types</p>
+    <PageLayout
+      title="Workflows & Fields"
+      description="Configure workflows, custom fields, permissions, and work item types"
+      width="dashboard"
+    >
 
       {/* Sub-tabs */}
       <div className="flex gap-1 mb-6 border-b border-neutral-200 dark:border-neutral-700">
@@ -210,6 +213,6 @@ export default function Settings3View({
           api={api}
         />
       )}
-    </div>
+    </PageLayout>
   );
 }

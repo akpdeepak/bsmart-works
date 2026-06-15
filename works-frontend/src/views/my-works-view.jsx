@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PageLayout } from '@/components/works/templates/page-layout';
 import { Star, User, AtSign, ClipboardList, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/works/button';
@@ -176,9 +177,11 @@ export default function MyWorksView({
   ];
 
   return (
-    <div className="p-8 max-w-4xl">
-      <h1 className="text-2xl font-bold text-brand-navy mb-1">{t('deliver.myWorks.title')}</h1>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">{t('deliver.myWorks.subtitle')}</p>
+    <PageLayout
+      title={t('deliver.myWorks.title')}
+      description={t('deliver.myWorks.subtitle')}
+      width="dashboard"
+    >
 
       {/* Tab bar */}
       <div role="tablist" className="flex gap-1 mb-5 border-b border-neutral-200 dark:border-neutral-700">
@@ -304,6 +307,6 @@ export default function MyWorksView({
               )}
             </div>
       )}
-    </div>
+    </PageLayout>
   );
 }

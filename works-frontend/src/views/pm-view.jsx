@@ -7,6 +7,7 @@ import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { Modal } from '@/components/works/molecules/modal';
 import { PageHeader } from '@/components/works/atoms/page-header';
+import { PageLayout } from '@/components/works/templates/page-layout';
 import { Tabs, TabList, Tab, TabPanel } from '@/components/works/atoms/tabs';
 import { Field } from '@/components/works/field';
 import { Avatar } from '@/components/works/atoms/avatar';
@@ -87,7 +88,7 @@ export default function PmView({
     saved: 'text-semantic-success', error: 'text-semantic-danger',
   };
   return (
-    <div className="p-6 max-w-6xl">
+    <PageLayout width="dashboard">
       <PageHeader
         title="Project Management"
         description="RAID logs, decisions, meetings, action items"
@@ -653,6 +654,6 @@ export default function PmView({
             </div>
         </Modal>
       )}
-    </div>
+    </PageLayout>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { PageLayout } from '@/components/works/templates/page-layout';
 import { Code2, Key, ExternalLink, Copy, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -43,11 +44,11 @@ export default function DeveloperPortalView({ workspaceId }) {
   }
 
   return (
-    <div className="p-8 max-w-4xl">
-      <h1 className="text-2xl font-bold text-brand-navy mb-1">Developer Portal</h1>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">
-        Everything you need to build a Works extension — the SDK, extension points, scopes and a sandbox.
-      </p>
+    <PageLayout
+      title="Developer Portal"
+      description="Everything you need to build a Works extension — the SDK, extension points, scopes and a sandbox."
+      width="dashboard"
+    >
 
       {error && (
         <div role="alert" className="flex items-start gap-2 bg-semantic-danger/10 border border-semantic-danger/30 text-semantic-danger rounded-lg px-4 py-3 mb-4 text-sm">
@@ -150,6 +151,6 @@ export default function DeveloperPortalView({ workspaceId }) {
         <EmptyState icon={Code2} title="Developer portal unavailable"
           subtitle="The SDK manifest could not be loaded for this workspace. Refresh the page, or contact a workspace admin if the problem persists." />
       ) : null}
-    </div>
+    </PageLayout>
   );
 }

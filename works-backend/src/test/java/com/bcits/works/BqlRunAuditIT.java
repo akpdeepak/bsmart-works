@@ -1,4 +1,4 @@
-package com.bcits.works;
+﻿package com.bcits.works;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -120,7 +120,7 @@ class BqlRunAuditIT {
         savedViews.run(ADMIN_A, WS_A, VIEW_ID, 100);
         // ADMIN can read the log; it reflects the run above.
         assertThat(savedViews.auditLog(ADMIN_A, WS_A, 50)).hasSize(1);
-        // A VIEWER lacks manage_projects → forbidden.
+        // A VIEWER lacks manage_projects â†’ forbidden.
         assertThrows(ApiException.class, () -> savedViews.auditLog(VIEWER_A, WS_A, 50));
     }
 }

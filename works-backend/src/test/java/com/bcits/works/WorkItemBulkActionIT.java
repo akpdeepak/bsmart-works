@@ -1,4 +1,4 @@
-package com.bcits.works;
+﻿package com.bcits.works;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -42,8 +42,8 @@ class WorkItemBulkActionIT {
     private static final String WS_B = "BULK-WS-B";
     private static final String PROJ_A = "BULK-PROJ-A";
     private static final String PROJ_B = "BULK-PROJ-B";
-    private static final String ADMIN_A = "BULK-ADMIN-A";   // ADMIN in WS A — can edit any A item
-    private static final String MEMBER_A = "BULK-MEMBER-A"; // MEMBER in WS A — can edit only own
+    private static final String ADMIN_A = "BULK-ADMIN-A";   // ADMIN in WS A â€” can edit any A item
+    private static final String MEMBER_A = "BULK-MEMBER-A"; // MEMBER in WS A â€” can edit only own
     private static final String USER_B = "BULK-USR-B";
 
     @BeforeEach
@@ -51,7 +51,7 @@ class WorkItemBulkActionIT {
         OffsetDateTime now = OffsetDateTime.now();
         jdbc.update("DELETE FROM tags WHERE work_item_id IN (SELECT id FROM work_items WHERE project_id IN (?, ?))",
             PROJ_A, PROJ_B);
-        // The events table is append-only (RB-10 §3 — a trigger blocks DELETE), so it is never
+        // The events table is append-only (RB-10 Â§3 â€” a trigger blocks DELETE), so it is never
         // cleaned between runs; audit assertions measure a delta around the action instead.
         jdbc.update("DELETE FROM work_items WHERE project_id IN (?, ?)", PROJ_A, PROJ_B);
         jdbc.update("DELETE FROM projects WHERE id IN (?, ?)", PROJ_A, PROJ_B);
@@ -127,7 +127,7 @@ class WorkItemBulkActionIT {
 
     @Test
     void memberBulkEdit_onlyTouchesOwnItems() {
-        // MEMBER_A created A-1 but not A-2 → A-2 must be skipped (edit-own-only).
+        // MEMBER_A created A-1 but not A-2 â†’ A-2 must be skipped (edit-own-only).
         WorkItemBulkService.BulkResult r =
             bulk.apply(MEMBER_A, List.of("BULK-A-1", "BULK-A-2"), "priority", "LOW");
 

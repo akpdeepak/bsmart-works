@@ -1,4 +1,4 @@
-package com.bcits.works;
+﻿package com.bcits.works;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -13,7 +13,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -23,8 +23,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Custom (user-built) dashboard creation against real Postgres.
  *
  * <p>Regression guard for the NOT NULL {@code surface} column added in V70: the create endpoint
- * must default surface to {@code CANVAS}. Without that, the entity field is null and — because
- * {@link Dashboard} is not {@code @DynamicInsert} — Hibernate writes the column explicitly as NULL
+ * must default surface to {@code CANVAS}. Without that, the entity field is null and â€” because
+ * {@link Dashboard} is not {@code @DynamicInsert} â€” Hibernate writes the column explicitly as NULL
  * (the DB {@code DEFAULT 'CANVAS'} only applies when the column is omitted), so the INSERT dies with
  * a {@code DataIntegrityViolationException} surfaced as HTTP 409 ("Failed to create dashboard" in the
  * UI). This test drives the exact frontend payload ({@code {name, scope, workspaceId}}, no surface).
@@ -76,7 +76,7 @@ class CustomDashboardCreateIT {
         in.setName("My sprint health");
         in.setWorkspaceId(WS);
         in.setScope("PERSONAL");
-        // surface intentionally left null — exactly what the frontend sends.
+        // surface intentionally left null â€” exactly what the frontend sends.
 
         Dashboard saved = controller.create(in);
 

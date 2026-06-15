@@ -150,12 +150,12 @@
 		</dependency>
 		<dependency>
 			<groupId>org.testcontainers</groupId>
-			<artifactId>postgresql</artifactId>
+			<artifactId>testcontainers-postgresql</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.testcontainers</groupId>
-			<artifactId>junit-jupiter</artifactId>
+			<artifactId>testcontainers-junit-jupiter</artifactId>
 			<scope>test</scope>
 		</dependency>
 
@@ -345,11 +345,9 @@
 						<include>**/*IT.java</include>
 					</includes>
 					<systemPropertyVariables>
-						<!-- docker-java (under Testcontainers 1.20.x) defaults to Docker API 1.32,
-						     which engines ≥ 29 reject (min 1.40) with an opaque 400. Pin a version
-						     every supported engine speaks: CI runners (Docker 26/27) and current
-						     Docker Desktop both accept 1.44. Drop when Testcontainers is bumped to
-						     a docker-java that negotiates. -->
+						<!-- Testcontainers 2.x ships docker-java 4.x which negotiates the API
+						     version automatically; pin 1.44 as a safety floor for CI runners
+						     (Docker 26/27) and Docker Desktop. -->
 						<api.version>1.44</api.version>
 					</systemPropertyVariables>
 				</configuration>

@@ -1,4 +1,4 @@
-package com.bcits.works;
+﻿package com.bcits.works;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -16,13 +16,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * The DB / Flyway CI stage (the gap parked since I01-S04). Boots the full Spring context against a
  * real Postgres via Testcontainers, so on every PR:
- *   - every Flyway migration is applied end-to-end — a duplicate version or bad SQL fails the boot
+ *   - every Flyway migration is applied end-to-end â€” a duplicate version or bad SQL fails the boot
  *     (this is exactly what let the V35 collision reach main mid-iteration), and
  *   - Hibernate {@code ddl-auto=validate} confirms the entities match the migrated schema.
  * It also asserts the I01-S04 append-only event guarantee at the database.
  *
  * <p>Tagged {@code "integration"} and named {@code *IntegrationTest}, so it runs only via the
- * failsafe-driven {@code backend-integration-test} CI job (Docker required) — never in the unit jobs.
+ * failsafe-driven {@code backend-integration-test} CI job (Docker required) â€” never in the unit jobs.
  */
 @Tag("integration")
 @Testcontainers
@@ -69,7 +69,7 @@ class FlywayMigrationIntegrationTest {
         assertThatThrownBy(() -> jdbc.update("DELETE FROM events WHERE id = ?", id))
                 .hasMessageContaining("append-only");
 
-        // The row is unchanged and still present — the audit trail is immutable.
+        // The row is unchanged and still present â€” the audit trail is immutable.
         assertThat(jdbc.queryForObject(
                 "SELECT event_type FROM events WHERE id = ?", String.class, id)).isEqualTo("IT_EVENT");
     }

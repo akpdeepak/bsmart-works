@@ -1,4 +1,4 @@
-package com.bcits.works;
+﻿package com.bcits.works;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -17,27 +17,27 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Cross-tenant workspace isolation integration test (RB-40 §1 / TD-013).
+ * Cross-tenant workspace isolation integration test (RB-40 Â§1 / TD-013).
  *
  * <p>Seeds two workspaces (A and B), each with a project and work items. Verifies that repository
- * queries scoped to workspace A's user cannot return workspace B's rows — the single catastrophic
- * failure mode for a multi-tenant product (RB-40 §1: "no repository method returns rows across
+ * queries scoped to workspace A's user cannot return workspace B's rows â€” the single catastrophic
+ * failure mode for a multi-tenant product (RB-40 Â§1: "no repository method returns rows across
  * workspaces").
  *
  * <p>The isolation predicate tested here mirrors the {@code MEMBER_PROJECTS} constant used in
  * {@link WorkItemController}: items are visible only when their project lives in a workspace where
  * the caller is a member. A caller that is only a member of workspace A must receive zero rows
- * from workspace B — regardless of whether workspace B's data exists in the same database.
+ * from workspace B â€” regardless of whether workspace B's data exists in the same database.
  *
  * <p>Scenario categories covered:
  * <ul>
- *   <li>Happy path — user A sees their own workspace A items.</li>
- *   <li>Cross-tenant — user A does NOT see workspace B items.</li>
- *   <li>Isolation of membership — adding user A to workspace A does not grant access to B.</li>
- *   <li>Soft-delete boundary — deleted items in A are not leaked to B's query.</li>
+ *   <li>Happy path â€” user A sees their own workspace A items.</li>
+ *   <li>Cross-tenant â€” user A does NOT see workspace B items.</li>
+ *   <li>Isolation of membership â€” adding user A to workspace A does not grant access to B.</li>
+ *   <li>Soft-delete boundary â€” deleted items in A are not leaked to B's query.</li>
  * </ul>
  *
- * <p>Tagged {@code "integration"} and named {@code *IT} — picked up by maven-failsafe in the
+ * <p>Tagged {@code "integration"} and named {@code *IT} â€” picked up by maven-failsafe in the
  * {@code integration-tests} CI job; never executed in the unit jobs (no Docker required there).
  */
 @Tag("integration")
@@ -45,7 +45,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 class WorkspaceTenantIsolationIT {
 
-    // ── Infra ──────────────────────────────────────────────────────────────────────────────
+    // â”€â”€ Infra â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Container
     @ServiceConnection
@@ -54,7 +54,7 @@ class WorkspaceTenantIsolationIT {
     @Autowired
     JdbcTemplate jdbc;
 
-    // ── Test fixtures ─────────────────────────────────────────────────────────────────────
+    // â”€â”€ Test fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private static final String WS_A      = "ISOL-WS-A";
     private static final String WS_B      = "ISOL-WS-B";
@@ -72,7 +72,7 @@ class WorkspaceTenantIsolationIT {
         "project_id IN (SELECT p.id FROM projects p "
         + "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id WHERE wm.user_id = ?)";
 
-    // ── Setup ─────────────────────────────────────────────────────────────────────────────
+    // â”€â”€ Setup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @BeforeEach
     void seed() {
@@ -136,7 +136,7 @@ class WorkspaceTenantIsolationIT {
         }
     }
 
-    // ── Tests ─────────────────────────────────────────────────────────────────────────────
+    // â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     /**
      * Happy path: user A sees exactly the 3 items in their own workspace A.
@@ -230,7 +230,7 @@ class WorkspaceTenantIsolationIT {
             .as("deleted workspace A items must not appear in the live view")
             .isEmpty();
 
-        // User B should still see exactly their 5 items — A's deleted rows are irrelevant
+        // User B should still see exactly their 5 items â€” A's deleted rows are irrelevant
         List<String> userBItems = jdbc.queryForList(
             "SELECT id FROM work_items WHERE deleted_at IS NULL AND " + MEMBER_PROJECTS,
             String.class, USER_B);

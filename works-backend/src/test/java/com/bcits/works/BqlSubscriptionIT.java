@@ -1,4 +1,4 @@
-package com.bcits.works;
+﻿package com.bcits.works;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * Integration tests for saved-view subscriptions against real Postgres. Covers the lifecycle plus
  * the governance scenarios (RB-05 Stage 3): a delivery counts <b>workspace-scoped</b> matches,
  * records a SUBSCRIPTION <b>audit</b> row and an in-app notification, and a subscription whose owner
- * has <b>lost workspace access</b> is deactivated rather than leaking counts (RB-40 §1).
+ * has <b>lost workspace access</b> is deactivated rather than leaking counts (RB-40 Â§1).
  */
 @Tag("integration")
 @Testcontainers
@@ -68,7 +68,7 @@ class BqlSubscriptionIT {
         jdbc.update("INSERT INTO projects(id, workspace_id, name, key_prefix, slug, created_at) VALUES (?,?,?,?,?,?)",
             PROJ_B, WS_B, "Sub Project B", "SUB", "sub-proj-b", now);
 
-        // 2 HIGH bugs in A, 3 in B — the count must only reflect A (the subscription's workspace).
+        // 2 HIGH bugs in A, 3 in B â€” the count must only reflect A (the subscription's workspace).
         item("SUB-A-1", "A bug", "HIGH", PROJ_A);
         item("SUB-A-2", "A bug 2", "HIGH", PROJ_A);
         for (int i = 1; i <= 3; i++) item("SUB-B-" + i, "B bug " + i, "HIGH", PROJ_B);
@@ -103,7 +103,7 @@ class BqlSubscriptionIT {
         BqlSubscription sub = service.subscribe(USER_A, WS_A, VIEW_ID, "DAILY", "BOTH");
         int count = service.deliver(sub);
 
-        // 2 HIGH bugs in A — never the 3 in B.
+        // 2 HIGH bugs in A â€” never the 3 in B.
         assertThat(count).isEqualTo(2);
         Integer audited = jdbc.queryForObject(
             "SELECT result_count FROM bql_run_audits WHERE workspace_id = ? AND source = 'SUBSCRIPTION'",

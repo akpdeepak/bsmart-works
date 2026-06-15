@@ -1,4 +1,4 @@
-package com.bcits.works;
+﻿package com.bcits.works;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -18,12 +18,12 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Cross-tenant isolation IT for the BQL <b>query path</b> (RB-40 §1). Regression guard for the
+ * Cross-tenant isolation IT for the BQL <b>query path</b> (RB-40 Â§1). Regression guard for the
  * former leak in {@code BqlController.execute()}, which queried {@code work_items} with no
  * {@code workspace_id} predicate and so returned every tenant's rows.
  *
- * <p>It composes the exact SQL the controller now builds — the workspace scope predicate plus the
- * {@link BqlCompiler} output — and asserts that a user filtering in workspace A can never see
+ * <p>It composes the exact SQL the controller now builds â€” the workspace scope predicate plus the
+ * {@link BqlCompiler} output â€” and asserts that a user filtering in workspace A can never see
  * workspace B's items, <b>even when the BQL filter would otherwise match B's rows</b>.
  */
 @Tag("integration")
@@ -76,7 +76,7 @@ class BqlWorkspaceScopeIT {
         jdbc.update("INSERT INTO projects(id, workspace_id, name, key_prefix, slug, created_at) VALUES (?,?,?,?,?,?)",
             PROJ_B, WS_B, "Scope Project B", "BSB", "bqlscope-proj-b", now);
 
-        // Both workspaces have HIGH-priority bugs — the BQL filter below matches in BOTH tenants,
+        // Both workspaces have HIGH-priority bugs â€” the BQL filter below matches in BOTH tenants,
         // so only the scope predicate can keep them apart.
         seedItem("BQLSCOPE-A-1", "A high bug", "Open", "Bug", "HIGH", PROJ_A, USER_A, now);
         seedItem("BQLSCOPE-A-2", "A low task", "Open", "Task", "LOW", PROJ_A, USER_A, now);
@@ -162,7 +162,7 @@ class BqlWorkspaceScopeIT {
     @Test
     void groupByWithFilter_appliesPredicateBeforeCounting() {
         List<java.util.Map<String, Object>> buckets = runGrouped(WS_B, "priority", "type = Bug");
-        // Only B's two HIGH bugs survive the filter → a single HIGH bucket of 2.
+        // Only B's two HIGH bugs survive the filter â†’ a single HIGH bucket of 2.
         assertThat(buckets).hasSize(1);
         assertThat(buckets.get(0)).containsEntry("value", "HIGH");
         assertThat(((Number) buckets.get(0).get("count")).longValue()).isEqualTo(2L);

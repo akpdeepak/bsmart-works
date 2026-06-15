@@ -1,11 +1,11 @@
-package com.bcits.works;
+﻿package com.bcits.works;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -18,17 +18,17 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Framing-header behaviour per path (RB-10 §8, RB-40 §1; iteration 6, Cap J — iframe-embeddable
+ * Framing-header behaviour per path (RB-10 Â§8, RB-40 Â§1; iteration 6, Cap J â€” iframe-embeddable
  * dashboards). The two {@link SecurityConfig} filter chains must apply different framing policy:
  * <ul>
- *   <li><b>Public embed API</b> ({@code /api/v1/public/**}): relaxed — CSP {@code frame-ancestors}
+ *   <li><b>Public embed API</b> ({@code /api/v1/public/**}): relaxed â€” CSP {@code frame-ancestors}
  *       carries the configurable allow-list (default {@code 'self'}) and {@code X-Frame-Options}
  *       is <em>absent</em> (it can only say DENY/SAMEORIGIN and would contradict the allow-list).</li>
- *   <li><b>Authenticated app</b> (everything else): unchanged — {@code frame-ancestors 'none'} +
+ *   <li><b>Authenticated app</b> (everything else): unchanged â€” {@code frame-ancestors 'none'} +
  *       {@code X-Frame-Options: DENY}. Never framable.</li>
  * </ul>
  * Run against a real servlet container so the actual filter chains execute; headers are emitted
- * regardless of response status, so a 404 (no such token) and a 401 (no auth) suffice — no seeding.
+ * regardless of response status, so a 404 (no such token) and a 401 (no auth) suffice â€” no seeding.
  */
 @Tag("integration")
 @Testcontainers
@@ -68,7 +68,7 @@ class PublicEmbedFramingIT {
 
     @Test
     void authenticatedApp_isNeverFramable() throws Exception {
-        // Any app path runs the default chain; unauthenticated → 401/403, but framing headers are
+        // Any app path runs the default chain; unauthenticated â†’ 401/403, but framing headers are
         // still written.
         HttpResponse<String> res = get("/api/v1/work-items");
 

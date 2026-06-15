@@ -1,4 +1,4 @@
-package com.bcits.works;
+﻿package com.bcits.works;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Today-layout resolution, RBAC and tenancy (RB-40 §1) against real Postgres.
+ * Today-layout resolution, RBAC and tenancy (RB-40 Â§1) against real Postgres.
  *
  * <p>Scenario categories: happy path (template + personal resolution), edge
  * (upsert replaces, reset falls back), error (bad role, oversized layout),
@@ -51,7 +51,7 @@ class TodayLayoutServiceIT {
     void seed() {
         OffsetDateTime now = OffsetDateTime.now();
 
-        // Teardown previous run's fixtures (FK order: widgets → dashboards → members → ws → users)
+        // Teardown previous run's fixtures (FK order: widgets â†’ dashboards â†’ members â†’ ws â†’ users)
         jdbc.update("DELETE FROM dashboard_widgets WHERE dashboard_id IN "
             + "(SELECT id FROM dashboards WHERE workspace_id IN (?, ?))", WS_A, WS_B);
         jdbc.update("DELETE FROM dashboards WHERE workspace_id IN (?, ?)", WS_A, WS_B);
@@ -90,7 +90,7 @@ class TodayLayoutServiceIT {
         return w;
     }
 
-    // ── Resolution ─────────────────────────────────────────────────────────────
+    // â”€â”€ Resolution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void effective_isBuiltin_whenNothingSaved() {
@@ -149,7 +149,7 @@ class TodayLayoutServiceIT {
             .containsExactly("v2a", "v2b");
     }
 
-    // ── Unauthorized (RB-40 §1 mandatory scenario) ─────────────────────────────
+    // â”€â”€ Unauthorized (RB-40 Â§1 mandatory scenario) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void member_cannotSaveWorkspaceTemplate() {
@@ -163,7 +163,7 @@ class TodayLayoutServiceIT {
         assertThat(rows).isZero();
     }
 
-    // ── Cross-tenant (RB-40 §1 mandatory scenario) ─────────────────────────────
+    // â”€â”€ Cross-tenant (RB-40 Â§1 mandatory scenario) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void nonMember_cannotReadOrWriteAnotherWorkspacesLayouts() {
@@ -181,7 +181,7 @@ class TodayLayoutServiceIT {
         assertThat(intruderRows).isZero();
     }
 
-    // ── Validation ─────────────────────────────────────────────────────────────
+    // â”€â”€ Validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void validation_rejectsUnknownRole_andOversizedLayout() {

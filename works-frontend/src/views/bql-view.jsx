@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Sparkles, X, BookmarkPlus, Bookmark, Check, AlertCircle, Plus, Trash2, SlidersHorizontal, Link2, Clock, Bell, Play, Terminal, Database, Search, LayoutGrid } from 'lucide-react';
+import { Sparkles, X, BookmarkPlus, Bookmark, Check, AlertCircle, Plus, Trash2, SlidersHorizontal, Link2, Clock, Bell, Play, Terminal, Database, Search, LayoutGrid, Wand2 } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { savedViewsClient } from '@/lib/saved-views';
 import { Button } from '@/components/works/button';
@@ -7,7 +7,10 @@ import { capabilityEnabled } from '@/lib/ai';
 import { NULLARY_OPS, SET_OPS, rowToClause, suggestions, applySuggestion } from '@/lib/bql-builder';
 import BqlResultsTable from '@/views/bql-results-table';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
+import { CommandPalette } from '@/components/works/organisms/command-palette';
+import { SearchInput } from '@/components/works/molecules/search-input';
 import { tokenize } from '@/lib/bql-highlight';
+import { BQL_SNIPPETS } from '@/lib/bql-snippets';
 import { useI18n } from '@/lib/i18n';
 
 // Token type → highlight colour (design tokens only; dark-mode legible).
@@ -70,6 +73,8 @@ export default function BqlView({
   const [subBusy, setSubBusy] = useState(() => new Set()); // view ids with an in-flight subscribe toggle
   const [columnKeys, setColumnKeys] = useState(loadNavCols); // results-table column layout (controlled)
   const [activeViewId, setActiveViewId] = useState(null);    // the saved view currently loaded, if any
+  const [paletteOpen, setPaletteOpen] = useState(false);     // BQL snippet command palette
+  const [viewFilter, setViewFilter] = useState('');          // saved-view name filter (large lists)
 
   // P3 — editor assists
   const [schema, setSchema] = useState(null); // { fields, operators, functions, enums }
@@ -168,6 +173,31 @@ export default function BqlView({
       savedViewsClient.update(activeWorkspaceId, activeViewId, { columnKeys: JSON.stringify(keys) }).catch(() => {});
     }
   };
+
+  // Run an example query from the snippet palette.
+  const runSnippet = (q) => {
+    setBqlQuery(q);
+    setActiveViewId(null);
+    recordHistory(q);
+    syncUrl(q, sort);
+    setGroupBy('');
+    setGroups(null);
+    runBql({ query: q, sort, size: resultSize });
+    setPaletteOpen(false);
+  };
+
+  // Keyboard shortcut: "?" opens the snippet palette — but only when not typing in a field, so it
+  // never hijacks the editor or any input.
+  useEffect(() => {
+    const onKey = (e) => {
+      const el = e.target;
+      const editing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'
+        || el.tagName === 'SELECT' || el.isContentEditable);
+      if (!editing && e.key === '?') { e.preventDefault(); setPaletteOpen(true); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 
   // Fetch per-bucket counts for the current query, grouped by the chosen field. Empty field clears
   // the board back to the flat results table. Runs on demand (no effect) to avoid set-state-in-effect.
@@ -384,6 +414,18 @@ export default function BqlView({
 
   return (
     <div className="mx-auto max-w-5xl space-y-5 p-6 sm:p-8">
+      {/* BQL snippet palette (⌘K-style) — example queries as a fast on-ramp; opened by the Snippets
+          button or the "?" shortcut. Mounted only while open (it owns its focus trap + scroll lock). */}
+      {paletteOpen && (
+        <CommandPalette
+          onClose={() => setPaletteOpen(false)}
+          placeholder="Insert a BQL snippet…"
+          commands={BQL_SNIPPETS.map(s => ({
+            id: s.id, label: s.label, group: 'BQL snippet', Icon: Terminal, keywords: s.keywords,
+            run: () => runSnippet(s.query),
+          }))}
+        />
+      )}
       {/* Header */}
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -508,6 +550,10 @@ export default function BqlView({
             <Button variant="secondary" leftIcon={<SlidersHorizontal aria-hidden="true" className="h-3.5 w-3.5" />}
               onClick={() => setBuilderOpen(o => !o)} aria-expanded={builderOpen}>
               Visual builder
+            </Button>
+            <Button variant="ghost" leftIcon={<Wand2 aria-hidden="true" className="h-3.5 w-3.5" />}
+              onClick={() => setPaletteOpen(true)} title="Insert an example query (?)">
+              Snippets
             </Button>
             <Button variant="ghost" leftIcon={<Link2 aria-hidden="true" className="h-3.5 w-3.5" />}
               onClick={copyLink} disabled={!bqlQuery.trim()} title="Copy a shareable link to this query">
@@ -649,9 +695,18 @@ export default function BqlView({
             Save as View
           </Button>
         </div>
+        {/* Filter the saved-view library once it grows past a handful. */}
+        {savedViews.length > 8 && (
+          <div className="mt-3">
+            <SearchInput placeholder="Filter saved views…" size="sm" defaultValue={viewFilter}
+              onSearch={setViewFilter} />
+          </div>
+        )}
         {savedViews.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
-            {savedViews.map(v => {
+            {savedViews
+              .filter(v => !viewFilter.trim() || (v.name || '').toLowerCase().includes(viewFilter.trim().toLowerCase()))
+              .map(v => {
               const subscribed = !!subscriptionFor(v.id);
               return (
                 // Sibling controls (not nested buttons) — load, subscribe, delete — for a11y (RB-30 §6).

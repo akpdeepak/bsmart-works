@@ -7,6 +7,30 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-08 [benchmark] — HEART metrics spec + activation funnel definition (2026-06-15)
+
+Produced `docs/HEART-METRICS.md` — the binding specification for Milestone 1 (Measurement). Covers:
+
+- **HEART table** (5 dimensions × Goal / Signal / Metric / Priority): Happiness (CSAT
+  micro-survey), Engagement (DAU/WAU + meaningful-actions depth), Adoption (first-value rate),
+  Retention (W1/W4 cohort), Task success (create-item + plan-sprint funnel + time-on-task).
+- **Canonical "first value" event** (`WORKSPACE_FIRST_VALUE`) — fires once per workspace on
+  first real work-item creation in a real project; idempotent; schema defined.
+- **Activation funnel** — 5 named steps (WORKSPACE_CREATED → TEMPLATE_APPLIED →
+  FIRST_VALUE → TEAMMATE_INVITED → DAY_2_RETURN) with conversion-rate metric definition.
+- **Meaningful-action taxonomy** for Engagement metric (7 event types; page-views excluded).
+- **Micro-survey spec** (Happiness) — 2 triggers, 1-question / 5-star, once/30 days, no
+  free-text in V1, survey events schema.
+- **WI-10 dashboard widget plan** — 6 widgets mapped to metrics, built on Dashboard/BQL stack.
+- **DPDP/data-governance constraints** (binding for WI-09): no raw PII in events, no third-party
+  SDKs, workspace-scoped at write time, crypto-shredding compatible.
+- **WI-09 readiness checklist** — gates the ⚠️ instrumentation item on explicit sign-off.
+
+WI-08 marked ✅. Milestone 1 measurement foundation is now specced; WI-09 (⚠️) requires
+Deepak sign-off before instrumentation begins; WI-10 unblocked once WI-09 merges.
+
+---
+
 ## WI-07 [consistency] — Retire App.jsx arbitrary-value exemption (2026-06-15)
 
 `text-2xs` token (10px / 0.625rem) was already present in `tailwind.config.js`; no arbitrary

@@ -39,7 +39,6 @@ export const NoLabel = {
 };
 
 export const Controlled = {
-  name: 'Controlled',
   render: () => {
     const [on, setOn] = useState(false);
     return (

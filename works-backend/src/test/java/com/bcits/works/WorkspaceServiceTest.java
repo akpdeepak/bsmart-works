@@ -36,8 +36,9 @@ class WorkspaceServiceTest {
     private final EventService eventService = mock(EventService.class);
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
 
+    private final FunnelService funnelService = mock(FunnelService.class);
     private final WorkspaceService service =
-            new WorkspaceService(workspaceRepository, userRepository, rbac, eventService, jdbc);
+            new WorkspaceService(workspaceRepository, userRepository, rbac, eventService, jdbc, funnelService);
 
     private Workspace ws(String id) {
         Workspace w = new Workspace();

@@ -24,7 +24,8 @@ class ConfigTemplateServiceTest {
 
     private final ConfigTemplateRepository repo = mock(ConfigTemplateRepository.class);
     private final ConfigService configService = mock(ConfigService.class);
-    private final ConfigTemplateService service = new ConfigTemplateService(repo, configService);
+    private final FunnelService funnelService = mock(FunnelService.class);
+    private final ConfigTemplateService service = new ConfigTemplateService(repo, configService, funnelService);
 
     @Test
     void saveSnapshotsTheLiveDocument() {

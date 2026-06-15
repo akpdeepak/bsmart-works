@@ -25,6 +25,7 @@ export function SaveToKnowButton({ workspaceId, defaultTitle = '', getContent, l
   const [title, setTitle] = useState(defaultTitle);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [loadingSpaces, setLoadingSpaces] = useState(false);
   const ref = useRef(null);
 
   useEffect(() => {
@@ -42,13 +43,15 @@ export function SaveToKnowButton({ workspaceId, defaultTitle = '', getContent, l
     setOpen(true);
     setTitle(defaultTitle);
     setError(null);
+    setLoadingSpaces(true);
     knowledge.listSpaces()
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
         setSpaces(list);
         setSpaceId((prev) => prev || (list[0] ? list[0].id : ''));
       })
-      .catch(() => setError('Could not load knowledge spaces.'));
+      .catch(() => setError('Could not load knowledge spaces.'))
+      .finally(() => setLoadingSpaces(false));
   };
 
   const save = async () => {
@@ -106,14 +109,18 @@ export function SaveToKnowButton({ workspaceId, defaultTitle = '', getContent, l
             />
           </label>
           <label className="block text-2xs uppercase tracking-wide font-semibold text-neutral-400">Space
-            <select
-              value={spaceId}
-              onChange={(e) => setSpaceId(e.target.value)}
-              className="mt-1 w-full text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1.5 text-neutral-900 dark:text-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
-            >
-              {spaces.length === 0 && <option value="">No spaces</option>}
-              {spaces.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+            {loadingSpaces ? (
+              <div className="mt-1 h-8 rounded animate-pulse bg-neutral-100 dark:bg-neutral-800" aria-busy="true" aria-label="Loading spaces" />
+            ) : (
+              <select
+                value={spaceId}
+                onChange={(e) => setSpaceId(e.target.value)}
+                className="mt-1 w-full text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1.5 text-neutral-900 dark:text-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+              >
+                {spaces.length === 0 && <option value="">No spaces</option>}
+                {spaces.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            )}
           </label>
           {error && <p className="text-xs text-semantic-danger">{error}</p>}
           <button

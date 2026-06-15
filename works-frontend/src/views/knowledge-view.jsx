@@ -164,15 +164,47 @@ export default function KnowledgeView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedArticle?.id]);
 
-  // Open an article: snapshot is rendered immediately (instant open); full detail fetch
-  // runs in the background and increments the server-side view count.
+  // Navigation stack for sub-article drilling: Back returns to the direct parent article
+  // rather than jumping to the flat list. Breadcrumbs show the full ancestor path.
+  const [navStack, setNavStack] = useState([]);
+
+  // Open an article from the list/search/AI panel — always a fresh top-level navigation.
   const selectArticle = (art) => {
     if (!art) return;
+    setNavStack([]);
     setSelectedArticle(art);
     setEditingArticle(false);
     setArticlePanel(null);
     fetchArticleChildren?.(art.id);
     fetchArticleDetail?.(art.id);
+  };
+
+  // Drill into a sub-article, pushing the current article onto the nav stack.
+  const selectSubArticle = (child) => {
+    if (!child) return;
+    setNavStack((prev) => [...prev, selectedArticle]);
+    setSelectedArticle(child);
+    setEditingArticle(false);
+    setArticlePanel(null);
+    fetchArticleChildren?.(child.id);
+    fetchArticleDetail?.(child.id);
+  };
+
+  // Navigate back: pop the parent from the stack, or go to the article list if stack is empty.
+  const goBack = () => {
+    if (navStack.length > 0) {
+      const parent = navStack[navStack.length - 1];
+      setNavStack((prev) => prev.slice(0, -1));
+      setSelectedArticle(parent);
+      setEditingArticle(false);
+      setArticlePanel(null);
+      fetchArticleChildren?.(parent.id);
+      fetchArticleDetail?.(parent.id);
+    } else {
+      setSelectedArticle(null);
+      setEditingArticle(false);
+      setArticlePanel(null);
+    }
   };
 
   // Open a cited article from the KB AI panel if it is already in the loaded list.
@@ -373,13 +405,37 @@ export default function KnowledgeView({
               {/* Row 1: back arrow + title + status/meta */}
               <div className="flex items-start gap-3">
                 <button
-                  onClick={() => { setSelectedArticle(null); setEditingArticle(false); setArticlePanel(null); }}
+                  onClick={goBack}
                   className="mt-0.5 text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
-                  aria-label="Back to article list"
+                  aria-label={navStack.length > 0 ? `Back to ${navStack[navStack.length - 1].title}` : 'Back to article list'}
                 >
                   <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                 </button>
                 <div className="flex-1 min-w-0">
+                  {navStack.length > 0 && (
+                    <nav aria-label="Article breadcrumb" className="flex items-center gap-1 text-xs text-neutral-500 mb-0.5 flex-wrap">
+                      {navStack.map((ancestor, i) => (
+                        <span key={ancestor.id} className="flex items-center gap-1">
+                          {i > 0 && <ChevronRight aria-hidden="true" className="h-2.5 w-2.5 flex-shrink-0" />}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNavStack(navStack.slice(0, i));
+                              setSelectedArticle(ancestor);
+                              setEditingArticle(false);
+                              setArticlePanel(null);
+                              fetchArticleChildren?.(ancestor.id);
+                              fetchArticleDetail?.(ancestor.id);
+                            }}
+                            className="hover:text-brand-navy hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded truncate max-w-32"
+                          >
+                            {ancestor.title}
+                          </button>
+                        </span>
+                      ))}
+                      <ChevronRight aria-hidden="true" className="h-2.5 w-2.5 flex-shrink-0" />
+                    </nav>
+                  )}
                   <h1 className="font-bold text-lg text-neutral-900 dark:text-white truncate leading-tight">
                     {selectedArticle.title}
                   </h1>
@@ -633,7 +689,7 @@ export default function KnowledgeView({
                           {articleChildren.map(child => (
                             <button
                               key={child.id}
-                              onClick={() => selectArticle(child)}
+                              onClick={() => selectSubArticle(child)}
                               className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 text-sm text-brand-navy dark:text-blue-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors group"
                             >
                               <FileText className="h-3.5 w-3.5 flex-shrink-0 text-neutral-400" aria-hidden="true" />

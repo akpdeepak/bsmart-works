@@ -111,7 +111,7 @@ function newBlock(type) {
 // menu, and the fully-accessible Add-block button remains the primary path.
 const SLASH_RE = /^\/(\S*)$/;
 
-function ParagraphBlock({ block, onChange, onReplace, focused }) {
+function ParagraphBlock({ block, onChange, onReplace, onAddAfter, focused }) {
   const slashOpen = typeof onReplace === 'function' && SLASH_RE.test(block.content);
   const query = slashOpen ? block.content.slice(1).toLowerCase() : '';
   const matches = slashOpen
@@ -129,11 +129,19 @@ function ParagraphBlock({ block, onChange, onReplace, focused }) {
   const activeIndex = Math.min(active, Math.max(0, matches.length - 1));
 
   const onKeyDown = (e) => {
-    if (!menuOpen) return;
-    if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => (a + 1) % matches.length); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => (a + matches.length - 1) % matches.length); }
-    else if (e.key === 'Enter') { e.preventDefault(); onReplace(matches[activeIndex].type); }
-    else if (e.key === 'Escape') { e.preventDefault(); setDismissedFor(block.content); }
+    if (menuOpen) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => (a + 1) % matches.length); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => (a + matches.length - 1) % matches.length); }
+      else if (e.key === 'Enter') { e.preventDefault(); onReplace(matches[activeIndex].type); }
+      else if (e.key === 'Escape') { e.preventDefault(); setDismissedFor(block.content); }
+      return;
+    }
+    // Enter at cursor-end creates a new paragraph block below — Shift+Enter and mid-text Enter
+    // remain default textarea behavior (they insert a newline within the same block).
+    if (e.key === 'Enter' && !e.shiftKey && e.currentTarget.selectionStart === e.currentTarget.value.length) {
+      e.preventDefault();
+      onAddAfter?.();
+    }
   };
 
   return (
@@ -1018,8 +1026,15 @@ function AiComposeBar({ aiAssist, onInsert }) {
 
 // ── Block wrapper ───────────────────────────────────────────────────────────────
 
-function Block({ block, index, total, focused, onFocus, onChange, onMove, onDelete, onReplace, allBlocks, aiAssist, workspaceId }) {
+function Block({ block, index, total, focused, onFocus, onChange, onMove, onDelete, onReplace, onAddAfter, allBlocks, aiAssist, workspaceId, blockRef }) {
   const wrapRef = useRef(null);
+
+  // Merge the internal wrapRef (used for keyboard nav) with the external blockRef callback
+  // (used by BlockEditor for auto-scroll). Both need to point at the same DOM node.
+  const setRefs = useCallback((el) => {
+    wrapRef.current = el;
+    if (typeof blockRef === 'function') blockRef(el);
+  }, [blockRef]);
 
   const handleKeyDown = (e) => {
     // Arrow keys navigate between blocks when focus is on the wrapper (not inside an input)
@@ -1031,7 +1046,7 @@ function Block({ block, index, total, focused, onFocus, onChange, onMove, onDele
 
   return (
     <div
-      ref={wrapRef}
+      ref={setRefs}
       role="option"
       aria-selected={focused}
       tabIndex={0}
@@ -1085,7 +1100,7 @@ function Block({ block, index, total, focused, onFocus, onChange, onMove, onDele
       </div>
 
       {/* Block content */}
-      {block.type === 'paragraph' && <ParagraphBlock block={block} onChange={onChange} onReplace={onReplace} focused={focused} />}
+      {block.type === 'paragraph' && <ParagraphBlock block={block} onChange={onChange} onReplace={onReplace} onAddAfter={onAddAfter} focused={focused} />}
       {block.type === 'heading1' && <HeadingBlock block={block} onChange={onChange} level={1} />}
       {block.type === 'heading2' && <HeadingBlock block={block} onChange={onChange} level={2} />}
       {block.type === 'heading3' && <HeadingBlock block={block} onChange={onChange} level={3} />}
@@ -1189,15 +1204,36 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
   );
   const [focusedIndex, setFocusedIndex] = useState(0);
 
+  // Per-block DOM node map for auto-scroll; populated via the blockRef callback prop on Block.
+  const blockElsRef = useRef({});
+  // Track previous block count so we only scroll on insertions, not on user focus clicks.
+  const prevBlockCountRef = useRef(initialBlocks.length > 0 ? initialBlocks.length : 1);
+
   const emit = useCallback(
     (next) => { setBlocks(next); onChange?.(next); },
     [onChange],
   );
 
+  // Scroll the focused block into view whenever a new block is inserted (count grows).
+  useEffect(() => {
+    if (blocks.length > prevBlockCountRef.current) {
+      blockElsRef.current[focusedIndex]?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+    }
+    prevBlockCountRef.current = blocks.length;
+  }, [blocks.length, focusedIndex]);
+
   const addBlock = (type) => {
     const next = [...blocks, newBlock(type)];
     emit(next);
     setFocusedIndex(next.length - 1);
+  };
+
+  // Insert a new paragraph immediately after a given block index (Enter-to-create).
+  const insertBlockAfter = (index) => {
+    const next = [...blocks];
+    next.splice(index + 1, 0, newBlock('paragraph'));
+    emit(next);
+    setFocusedIndex(index + 1);
   };
 
   const updateBlock = (index, patch) => {
@@ -1255,9 +1291,11 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
             onMove={moveBlock}
             onDelete={deleteBlock}
             onReplace={(type) => replaceBlock(index, type)}
+            onAddAfter={() => insertBlockAfter(index)}
             allBlocks={blocks}
             aiAssist={aiAssist}
             workspaceId={workspaceId}
+            blockRef={(el) => { blockElsRef.current[index] = el; }}
           />
         ))}
       </div>

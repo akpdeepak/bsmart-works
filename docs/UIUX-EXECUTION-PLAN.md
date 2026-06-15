@@ -126,9 +126,9 @@ visual source before building).
 
 | ID | Work item | Maps to | Depends on | Status | PR |
 |----|-----------|---------|-----------|--------|----|
-| WI-01 | Build `Card` + `PageHeader` + `Tabs` (cva+cn, dark, a11y, 1 Storybook story each) | H.3, H.4 A-WS1; D #7 | — | ☐ | |
-| WI-02 | Add 3 structural lint rules **warn-only**, scoped to `views/` (ban inline card-chrome, raw `<table>`, raw `<button>`; restrict page `max-w-*` to the 2 sanctioned) | H.4 A-WS4 | WI-01 | ☐ | |
-| WI-03 | Pilot-migrate the 4 exemplar views (`pm-view`, `bql-view`, `admin-ops-view`, `compliance-view`) onto the primitives | H.4 A-WS3 | WI-01 | ☐ | |
+| WI-01 | Build `Card` + `PageHeader` + `Tabs` (cva+cn, dark, a11y, 1 Storybook story each) | H.3, H.4 A-WS1; D #7 | — | ✅ | claude/bsmart-uiux-program-uv3ulr |
+| WI-02 | Add 3 structural lint rules **warn-only**, scoped to `views/` (ban inline card-chrome, raw `<table>`, raw `<button>`; restrict page `max-w-*` to the 2 sanctioned) | H.4 A-WS4 | WI-01 | ✅ | claude/bsmart-uiux-program-uv3ulr |
+| WI-03 | Pilot-migrate the 4 exemplar views (`pm-view`, `bql-view`, `admin-ops-view`, `compliance-view`) onto the primitives | H.4 A-WS3 | WI-01 | ✅ | claude/bsmart-uiux-program-uv3ulr |
 | WI-04 | Build `DataTable` base + `Drawer` + `IconButton` + form set (`Checkbox`/`Radio`/`Toggle`/`Select`) + `Confirm` + consolidate 6 badges → 1 | H.3, H.4 A-WS1 | WI-01 | ☐ | |
 | WI-05 | `PageLayout` (shell → `PageHeader` → content; 2 widths, 1 padding rhythm) | H.4 A-WS2 | WI-01, WI-04 | ☐ | |
 | WI-06 | Migrate ~20 data-heavy views onto primitives + `PageLayout` | H.4 A-WS3 | WI-05 | ☐ | |

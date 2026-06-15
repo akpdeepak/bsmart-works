@@ -81,6 +81,109 @@ const worksArbitraryValueRule = {
   },
 }
 
+// WI-02 (UIUX M0): Structural guardrails for views/ — warn-only pending full primitive adoption.
+// Implemented as an inline ESLint plugin so these warnings co-exist with the error-level arch
+// rules above without overriding them (two no-restricted-syntax blocks at different severities
+// for the same files would shadow each other in flat config).
+//
+// Rules (all 'warn' now; flipped to 'error' in WI-21 once all views are migrated):
+//   no-raw-table     — use <DataTable> from atoms/ (WI-04) instead of raw <table>
+//   no-raw-button    — use <Button> from components/works/ instead of raw <button>
+//   no-inline-card-chrome — use <Card> from atoms/ instead of hand-rolled shadow+rounded divs
+//   sanctioned-page-widths — only max-w-7xl (dashboard) or max-w-reading (content) in page shells
+const worksViewStructurePlugin = {
+  rules: {
+    'no-raw-table': {
+      meta: { type: 'suggestion', docs: { description: 'Disallow raw <table> in views — use <DataTable>.' } },
+      create(context) {
+        return {
+          JSXOpeningElement(node) {
+            if (node.name.type === 'JSXIdentifier' && node.name.name === 'table') {
+              context.report({
+                node,
+                message: 'Raw <table> in views/: use <DataTable> from @/components/works/atoms (WI-04). UIUX-M0.',
+              });
+            }
+          },
+        };
+      },
+    },
+
+    'no-raw-button': {
+      meta: { type: 'suggestion', docs: { description: 'Disallow raw <button> in views — use <Button>.' } },
+      create(context) {
+        return {
+          JSXOpeningElement(node) {
+            if (node.name.type === 'JSXIdentifier' && node.name.name === 'button') {
+              context.report({
+                node,
+                message: 'Raw <button> in views/: use <Button> from @/components/works/button. RB-30.',
+              });
+            }
+          },
+        };
+      },
+    },
+
+    'no-inline-card-chrome': {
+      meta: { type: 'suggestion', docs: { description: 'Disallow hand-rolled card-chrome (rounded+shadow) — use <Card>.' } },
+      create(context) {
+        return {
+          JSXAttribute(node) {
+            if (node.name.name !== 'className') return;
+            const val = node.value?.type === 'Literal' ? node.value.value : null;
+            if (!val) return;
+            if (/\brounded[-\w]/.test(val) && /\bshadow[-\w]/.test(val)) {
+              context.report({
+                node,
+                message: 'Inline card-chrome (rounded+shadow) in views/: use <Card variant="elevated|outlined|flat"> from @/components/works/atoms/card. WI-01.',
+              });
+            }
+          },
+        };
+      },
+    },
+
+    'sanctioned-page-widths': {
+      meta: { type: 'suggestion', docs: { description: 'Only max-w-7xl and max-w-reading are sanctioned page widths.' } },
+      create(context) {
+        const SANCTIONED = new Set([
+          'max-w-7xl', 'max-w-reading',
+          // Utility values that are never used as page-shell widths:
+          'max-w-full', 'max-w-none', 'max-w-fit', 'max-w-min', 'max-w-max', 'max-w-prose', 'max-w-screen',
+        ]);
+        return {
+          JSXAttribute(node) {
+            if (node.name.name !== 'className') return;
+            const val = node.value?.type === 'Literal' ? node.value.value : null;
+            if (!val) return;
+            const bad = val.split(/\s+/).filter(
+              (cls) => cls.startsWith('max-w-') && !SANCTIONED.has(cls) && !cls.startsWith('max-w-screen-'),
+            );
+            if (bad.length > 0) {
+              context.report({
+                node,
+                message: `Non-sanctioned page width "${bad[0]}" in views/: use max-w-7xl (dashboard) or max-w-reading (content). RB-30 §4.`,
+              });
+            }
+          },
+        };
+      },
+    },
+  },
+};
+
+const worksViewStructureRules = {
+  files: ['src/views/**/*.{js,jsx}'],
+  plugins: { 'works-view': worksViewStructurePlugin },
+  rules: {
+    'works-view/no-raw-table': 'warn',
+    'works-view/no-raw-button': 'warn',
+    'works-view/no-inline-card-chrome': 'warn',
+    'works-view/sanctioned-page-widths': 'warn',
+  },
+};
+
 // Accessibility — enforces CLAUDE.md §4.17 (WCAG 2.1 AA) at lint time: icon-only buttons
 // need aria-label, click handlers on non-interactive elements need keyboard handlers + role,
 // etc. App.jsx (the legacy monolith) may surface violations — that's documented baseline debt
@@ -117,4 +220,4 @@ export default defineConfig([globalIgnores(['dist']), vitestTestConfig, e2eNodeC
     globals: globals.browser,
     parserOptions: { ecmaFeatures: { jsx: true } },
   },
-}, worksA11yRules, worksArchRules, worksArbitraryValueRule, ...storybook.configs["flat/recommended"]])
+}, worksA11yRules, worksArchRules, worksArbitraryValueRule, worksViewStructureRules, ...storybook.configs["flat/recommended"]])

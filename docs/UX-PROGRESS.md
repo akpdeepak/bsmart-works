@@ -7,6 +7,62 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-03 [consistency] — pilot-migrate 4 exemplar views onto Card/PageHeader/Tabs primitives (2026-06-15)
+
+Migrated `bql-view`, `admin-ops-view`, `compliance-view`, and `pm-view` onto the WI-01 atoms.
+Every view now uses `<PageHeader>` (one `h1`, breadcrumb + actions slot) and, where the view is
+tabbed, the `<Tabs>`/`<TabList>`/`<Tab>`/`<TabPanel>` set. Inline card-chrome replaced by `<Card>`.
+
+| View | What changed |
+|------|-------------|
+| `bql-view` | `PageHeader` header; 6 card-chrome blocks → `<Card variant="..." padding="...">` |
+| `admin-ops-view` | `PageHeader`; tab bar + `border-b` div → `<Tabs>`/`<TabList>`/`<Tab>`; content areas → 8 `<TabPanel>`s; local `Card` / `Stat` helpers now use `AtomCard` internally (`Card as AtomCard` alias avoids name collision) |
+| `compliance-view` | `PageHeader`; outer `flex flex-col h-full` div → `<Tabs className="flex flex-col h-full overflow-hidden">`; tab buttons + `border-b` → `<TabList>` (provides own border); content blocks → 4 `<TabPanel className="pt-0">` |
+| `pm-view` | `PageHeader` + project-selector in `actions` slot; 11-tab bar → `<TabList>`; 11 content conditionals → `<TabPanel value="...">` for each; virtual `meeting-detail` tab handled by passing `value=""` to `<Tabs>` when active (hides TabList, keeps detail view as direct conditional) |
+
+**Bug fixed in `tabs.jsx` atom**: `TabPanel` previously returned `null` when inactive, leaving
+`Tab`'s `aria-controls` pointing at non-existent IDs — an axe `aria-valid-attr-value` violation in
+any state where panels are conditionally absent. Fixed to always render a `<div id hidden />` shell
+for inactive panels (lazy — no children mounted). All 899 tests pass; the previously failing
+`compliance-view` tab-role test and `admin-ops-view` error-state a11y test are now green.
+
+Execution Plan WI-03 marked ✅.
+
+---
+
+## WI-02 [consistency] — structural lint guardrails for `views/` (warn-only) (2026-06-15)
+
+Inline ESLint plugin (`works-view/*`) added to `eslint.config.js`, scoped to `src/views/**`.
+Four warn-only rules surface hand-rolled patterns for migration to primitives (flipped to error in WI-21):
+
+| Rule | Catches | Guides toward |
+|------|---------|---------------|
+| `works-view/no-raw-table` | `<table>` in views | `<DataTable>` (WI-04) |
+| `works-view/no-raw-button` | `<button>` in views | `<Button>` from components/works |
+| `works-view/no-inline-card-chrome` | className with both `rounded-*` + `shadow-*` | `<Card>` (WI-01) |
+| `works-view/sanctioned-page-widths` | `max-w-*` other than `max-w-7xl` / `max-w-reading` | sanctioned page widths only (RB-30 §4) |
+
+Implemented as an inline plugin (not `no-restricted-syntax`) so the existing error-level arch rules
+(`no-restricted-syntax` for raw hex / `works-*` / inline fetch) are NOT overridden for views files.
+Confirmed: arch rules stay at severity 2 for views; view rules fire as warnings only; rules do not
+fire on `atoms/` or `molecules/`. Execution Plan WI-02 marked ✅.
+
+---
+
+## WI-01 [consistency] — `Card` + `PageHeader` + `Tabs` primitives (2026-06-15)
+
+Three canonical atoms added to `components/works/atoms/`:
+
+| File | What | Status |
+|------|------|--------|
+| `card.jsx` + tests + stories | `Card` (elevated/outlined/flat, forwardRef), `CardHeader`, `CardTitle`, `CardDescription`, `CardBody`, `CardFooter` — replaces ~85 inline card-chrome blocks | ✅ |
+| `page-header.jsx` + tests + stories | `PageHeader` — single h1 per view (text-2xl bold), breadcrumb + actions slots | ✅ |
+| `tabs.jsx` + tests + stories | `Tabs`/`TabList`/`Tab`/`TabPanel` — roving tabindex, ARIA linked (aria-controls/aria-labelledby), keyboard (↑↓/Home/End), controlled+uncontrolled | ✅ |
+
+36 tests pass; ESLint clean; guardrails clean (pre-existing baseline debt only); dark-mode `dark:` pairs on all three. Each has 1 Storybook story (stories file). Execution Plan WI-01 marked ✅.
+
+---
+
 > Verification norm: CI runner is degraded, so each change is verified **locally** before
 > merge — `vite build` + `vitest` + `eslint` (changed component files) +
 > `scripts/guardrails.sh` (exit 0). `App.jsx` is the `/* eslint-disable */` monolith, so it

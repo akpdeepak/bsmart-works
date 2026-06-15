@@ -6,6 +6,8 @@ import { useState } from 'react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { Modal } from '@/components/works/molecules/modal';
+import { PageHeader } from '@/components/works/atoms/page-header';
+import { Tabs, TabList, Tab, TabPanel } from '@/components/works/atoms/tabs';
 import { Field } from '@/components/works/field';
 import { Avatar } from '@/components/works/atoms/avatar';
 import { StatCard } from '@/components/works/stat-card';
@@ -86,50 +88,55 @@ export default function PmView({
   };
   return (
     <div className="p-6 max-w-6xl">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-brand-navy">Project Management</h1>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-0.5">RAID logs, decisions, meetings, action items</p>
-        </div>
-        {/* Project selector */}
-        <select className="input text-sm w-48" value={pmProjectId} onChange={e => {
-          const pid = e.target.value;
-          setPmProjectId(pid);
-          if (pid) { fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); }
-        }}>
-          <option value="">— Select project —</option>
-          {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-      </div>
+      <PageHeader
+        title="Project Management"
+        description="RAID logs, decisions, meetings, action items"
+        actions={
+          <select className="input text-sm w-48" value={pmProjectId} onChange={e => {
+            const pid = e.target.value;
+            setPmProjectId(pid);
+            if (pid) { fetchRaidDashboard(pid); fetchRisks(pid); fetchAssumptions(pid); fetchPmIssues(pid); fetchDependencies(pid); fetchDecisions(pid); fetchMeetings(pid); fetchActionItems(pid); fetchStakeholders(pid); fetchLessons(pid); }
+          }}>
+            <option value="">— Select project —</option>
+            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        }
+        className="mb-4"
+      />
 
       {!pmProjectId ? (
         <EmptyState icon={Target} title="Select a project" subtitle="Choose a project above to view its PM artifacts." />
       ) : (
-        <>
-          {/* Sub-tabs */}
-          <div className="flex gap-1 mb-5 border-b border-neutral-200 dark:border-neutral-700 overflow-x-auto">
-            {[
-              { key: 'raid',         Icon: Target,       label: 'RAID Dashboard' },
-              { key: 'risks',        Icon: AlertTriangle, label: `Risks (${risks.length})` },
-              { key: 'assumptions',  Icon: Lightbulb,    label: `Assumptions (${assumptions.length})` },
-              { key: 'issues',       Icon: AlertCircle,  label: `Issues (${pmIssues.length})` },
-              { key: 'deps',         Icon: Link,         label: `Dependencies (${dependencies.length})` },
-              { key: 'decisions',    Icon: Scale,        label: `Decisions (${decisions.length})` },
-              { key: 'meetings',     Icon: Calendar,     label: `Meetings (${meetings.length})` },
-              { key: 'actions',      Icon: CheckCircle2, label: `Actions (${actionItems.length})` },
-              { key: 'stakeholders', Icon: Users,        label: `Stakeholders (${stakeholders.length})` },
-              { key: 'lessons',      Icon: BookOpen,     label: `Lessons (${lessonsLearned.length})` },
-              { key: 'cross-deps',   Icon: Globe,        label: `Cross-Project (${crossProjectDeps.length})` },
-            ].map(t => (
-              <button key={t.key} onClick={() => { setPmTab(t.key); if (t.key === 'cross-deps') fetchCrossProjectDeps(); }}
-                className={`text-xs font-medium px-3 py-2 border-b-2 whitespace-nowrap transition-colors ${pmTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
-                {t.Icon && <t.Icon className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />}{t.label}
-              </button>
-            ))}
-          </div>
+        <Tabs
+          value={pmTab !== 'meeting-detail' ? pmTab : ''}
+          onValueChange={(val) => { setPmTab(val); if (val === 'cross-deps') fetchCrossProjectDeps(); }}
+        >
+          {/* Sub-tabs — hidden while in meeting-detail virtual screen */}
+          {pmTab !== 'meeting-detail' && (
+            <TabList aria-label="PM artifacts" className="mb-5 overflow-x-auto gap-1">
+              {[
+                { key: 'raid',         Icon: Target,        label: 'RAID Dashboard' },
+                { key: 'risks',        Icon: AlertTriangle, label: `Risks (${risks.length})` },
+                { key: 'assumptions',  Icon: Lightbulb,     label: `Assumptions (${assumptions.length})` },
+                { key: 'issues',       Icon: AlertCircle,   label: `Issues (${pmIssues.length})` },
+                { key: 'deps',         Icon: Link,          label: `Dependencies (${dependencies.length})` },
+                { key: 'decisions',    Icon: Scale,         label: `Decisions (${decisions.length})` },
+                { key: 'meetings',     Icon: Calendar,      label: `Meetings (${meetings.length})` },
+                { key: 'actions',      Icon: CheckCircle2,  label: `Actions (${actionItems.length})` },
+                { key: 'stakeholders', Icon: Users,         label: `Stakeholders (${stakeholders.length})` },
+                { key: 'lessons',      Icon: BookOpen,      label: `Lessons (${lessonsLearned.length})` },
+                { key: 'cross-deps',   Icon: Globe,         label: `Cross-Project (${crossProjectDeps.length})` },
+              ].map(t => (
+                <Tab key={t.key} value={t.key} className="text-xs px-3 py-2">
+                  <t.Icon className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{t.label}
+                </Tab>
+              ))}
+            </TabList>
+          )}
 
           {/* RAID DASHBOARD */}
-          {pmTab === 'raid' && raidDashboard && (
+          <TabPanel value="raid">
+          {raidDashboard && (
             <div>
               {/* Health score */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
@@ -189,7 +196,7 @@ export default function PmView({
               </div>
             </div>
           )}
-          {pmTab === 'raid' && !raidDashboard && (
+          {!raidDashboard && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse" aria-busy="true" aria-label="Loading RAID dashboard">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
@@ -199,9 +206,10 @@ export default function PmView({
               ))}
             </div>
           )}
+          </TabPanel>
 
           {/* RISKS */}
-          {pmTab === 'risks' && (
+          <TabPanel value="risks">
             <PmArtifactList
               title="Risks Register" icon={AlertTriangle}
               items={risks}
@@ -210,10 +218,10 @@ export default function PmView({
               onDelete={id => pmDelete('risk', id)}
               onAdd={() => { setPmFormOpen('risk'); setPmForm({ probability: 'MEDIUM', impact: 'MEDIUM', status: 'OPEN' }); }}
             />
-          )}
+          </TabPanel>
 
           {/* ASSUMPTIONS */}
-          {pmTab === 'assumptions' && (
+          <TabPanel value="assumptions">
             <PmArtifactList
               title="Assumptions Log" icon={Lightbulb}
               items={assumptions}
@@ -222,10 +230,10 @@ export default function PmView({
               onDelete={id => pmDelete('assumption', id)}
               onAdd={() => { setPmFormOpen('assumption'); setPmForm({ validationStatus: 'UNVALIDATED' }); }}
             />
-          )}
+          </TabPanel>
 
           {/* PM ISSUES */}
-          {pmTab === 'issues' && (
+          <TabPanel value="issues">
             <PmArtifactList
               title="Issues Log" icon={AlertCircle}
               items={pmIssues}
@@ -234,10 +242,10 @@ export default function PmView({
               onDelete={id => pmDelete('issue', id)}
               onAdd={() => { setPmFormOpen('issue'); setPmForm({ priority: 'MEDIUM', status: 'OPEN' }); }}
             />
-          )}
+          </TabPanel>
 
           {/* DEPENDENCIES */}
-          {pmTab === 'deps' && (
+          <TabPanel value="deps">
             <PmArtifactList
               title="Dependencies Tracker" icon={Link}
               items={dependencies}
@@ -246,10 +254,10 @@ export default function PmView({
               onDelete={id => pmDelete('dependency', id)}
               onAdd={() => { setPmFormOpen('dependency'); setPmForm({ status: 'PENDING', isBlocker: false }); }}
             />
-          )}
+          </TabPanel>
 
           {/* DECISIONS */}
-          {pmTab === 'decisions' && (
+          <TabPanel value="decisions">
             <PmArtifactList
               title="Decisions Register" icon={Scale}
               items={decisions}
@@ -258,10 +266,10 @@ export default function PmView({
               onDelete={id => pmDelete('decision', id)}
               onAdd={() => { setPmFormOpen('decision'); setPmForm({ status: 'PROPOSED' }); }}
             />
-          )}
+          </TabPanel>
 
           {/* MEETINGS */}
-          {pmTab === 'meetings' && (
+          <TabPanel value="meetings">
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="font-semibold text-neutral-900 flex items-center gap-2"><Calendar className="h-5 w-5 text-neutral-500" aria-hidden="true" /> Meeting Notes</h2>
@@ -290,7 +298,7 @@ export default function PmView({
                   </div>
               }
             </div>
-          )}
+          </TabPanel>
 
           {/* MEETING DETAIL */}
           {pmTab === 'meeting-detail' && selectedMeeting && (
@@ -333,7 +341,7 @@ export default function PmView({
           )}
 
           {/* ACTION ITEMS */}
-          {pmTab === 'actions' && (
+          <TabPanel value="actions">
             <PmArtifactList
               title="Action Items" icon={CheckCircle2}
               items={actionItems}
@@ -343,10 +351,10 @@ export default function PmView({
               onAdd={() => { setPmFormOpen('action'); setPmForm({ status: 'OPEN', priority: 'MEDIUM' }); }}
               statusColors={{ OPEN: 'text-semantic-warning', IN_PROGRESS: 'text-brand-navy', DONE: 'text-semantic-success', CANCELLED: 'text-neutral-600 dark:text-neutral-400' }}
             />
-          )}
+          </TabPanel>
 
           {/* STAKEHOLDERS */}
-          {pmTab === 'stakeholders' && (
+          <TabPanel value="stakeholders">
             <div>
               <PmArtifactList
                 title="Stakeholder Register" icon={Users}
@@ -398,10 +406,10 @@ export default function PmView({
                 </div>
               )}
             </div>
-          )}
+          </TabPanel>
 
           {/* LESSONS LEARNED */}
-          {pmTab === 'lessons' && (
+          <TabPanel value="lessons">
             <PmArtifactList
               title="Lessons Learned" icon={BookOpen}
               items={lessonsLearned}
@@ -410,9 +418,9 @@ export default function PmView({
               onDelete={id => pmDelete('lesson', id)}
               onAdd={() => { setPmFormOpen('lesson'); setPmForm({ category: 'PROCESS' }); }}
             />
-          )}
+          </TabPanel>
 
-          {pmTab === 'cross-deps' && (
+          <TabPanel value="cross-deps">
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Cross-Project Dependencies</h2>
@@ -505,8 +513,8 @@ export default function PmView({
                 </Modal>
               )}
             </div>
-          )}
-        </>
+          </TabPanel>
+        </Tabs>
       )}
 
       {/* PM CREATE MODAL */}

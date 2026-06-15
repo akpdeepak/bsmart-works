@@ -13,6 +13,8 @@ import { SearchInput } from '@/components/works/molecules/search-input';
 import { tokenize } from '@/lib/bql-highlight';
 import { BQL_SNIPPETS } from '@/lib/bql-snippets';
 import { useI18n } from '@/lib/i18n';
+import { Card } from '@/components/works/atoms/card';
+import { PageHeader } from '@/components/works/atoms/page-header';
 
 // Token type → highlight colour (design tokens only; dark-mode legible).
 const TOKEN_CLASS = {
@@ -428,22 +430,20 @@ export default function BqlView({
         />
       )}
       {/* Header */}
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-brand-navy dark:text-neutral-50">{t('insights.bql.title')}</h1>
-          <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">{t('insights.bql.subtitle')}</p>
-        </div>
-        {schema?.fields?.length > 0 && (
+      <PageHeader
+        title={t('insights.bql.title')}
+        description={t('insights.bql.subtitle')}
+        actions={schema?.fields?.length > 0 && (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-medium text-neutral-500 shadow-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400">
             <Database aria-hidden="true" className="h-3.5 w-3.5 text-brand-navy-tint" />
             {schema.fields.length} fields queryable
           </span>
         )}
-      </header>
+      />
 
       {/* Iteration 10 Cap O — NL→BQL translation panel */}
       {aiOn && (
-        <div className="overflow-hidden rounded-xl border border-brand-navy-tint/30 bg-gradient-to-br from-brand-navy/5 to-transparent shadow-sm dark:border-brand-navy-tint/40 dark:from-brand-navy-tint/10">
+        <Card variant="outlined" padding="none" className="overflow-hidden border-brand-navy-tint/30 dark:border-brand-navy-tint/40 bg-gradient-to-br from-brand-navy/5 to-transparent shadow-sm dark:from-brand-navy-tint/10">
           <div className="flex items-start gap-3 p-4">
             <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-navy/10 text-brand-navy dark:bg-brand-navy-tint/20 dark:text-brand-navy-tint">
               <Sparkles aria-hidden="true" className="h-4 w-4" />
@@ -475,11 +475,11 @@ export default function BqlView({
               )}
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Query console */}
-      <section className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-md dark:border-neutral-700 dark:bg-neutral-800">
+      <Card variant="elevated" padding="none" className="overflow-hidden">
         <div className="flex items-center justify-between gap-3 border-b border-neutral-100 px-5 py-3 dark:border-neutral-700/60">
           <div className="flex items-center gap-2">
             <Terminal aria-hidden="true" className="h-4 w-4 text-brand-navy-tint" />
@@ -604,11 +604,11 @@ export default function BqlView({
             </div>
           )}
         </div>
-      </section>
+      </Card>
 
       {/* Visual builder (P3 / RB-40 §2 manual fallback) */}
       {builderOpen && (
-        <div className="rounded-xl border border-brand-navy-tint/30 bg-white p-5 shadow-sm dark:border-brand-navy-tint/40 dark:bg-neutral-800">
+        <Card variant="outlined" padding="none" className="p-5 border-brand-navy-tint/30 dark:border-brand-navy-tint/40 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-neutral-700 dark:text-neutral-200">
               <SlidersHorizontal aria-hidden="true" className="h-3.5 w-3.5 text-brand-navy-tint" /> Visual builder
@@ -673,11 +673,11 @@ export default function BqlView({
             </Button>
             <Button variant="secondary" size="sm" onClick={applyBuilder}>Apply to query</Button>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Saved views (Cap R) — filter + column config stored as a named view */}
-      <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-800">
+      <Card variant="outlined" padding="sm">
         <div className="flex items-center gap-3">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
             <Bookmark aria-hidden="true" className="h-4 w-4" />
@@ -739,11 +739,11 @@ export default function BqlView({
             })}
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Board / group-by breakdown — count per bucket, click a lane to drill into it. */}
       {groups && (
-        <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-800">
+        <Card variant="outlined" padding="none" className="p-5">
           <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-300">
             <LayoutGrid aria-hidden="true" className="h-3.5 w-3.5 text-brand-navy-tint" />
             Grouped by {groupBy} {groupBusy && <span className="font-normal normal-case tracking-normal text-neutral-400">· loading…</span>}
@@ -776,14 +776,14 @@ export default function BqlView({
               });
             })()}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Loading — skeleton rows while a query runs and we have nothing to show yet (RB-30 §6). */}
       {bqlLoading && !groups && bqlResults.length === 0 && (
-        <div aria-busy="true" className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-800">
+        <Card variant="outlined" padding="sm" aria-busy="true">
           <ListSkeleton rows={6} />
-        </div>
+        </Card>
       )}
 
       {/* Results — JIRA-style navigator: sortable columns, column chooser, CSV export */}

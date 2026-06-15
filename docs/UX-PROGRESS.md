@@ -7,6 +7,25 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-17 [consistency] — PageLayout sweep: admin-ops, leadership, reports, dashboard, backlog (2026-06-15)
+
+Wraps the outer content div with `PageLayout` in 5 views that had no `h-full` height constraint
+(safe to wrap without breaking flex layouts). Title and description attributes extracted into the
+primitive where available; `header={null}` used where the view owns its own header component.
+
+**Views updated:**
+- `admin-ops-view`: outer div + `PageHeader` → `<PageLayout title="Admin Operations Center" description="…">`
+- `leadership-console-view`: outer div + inline `h1/p` → `<PageLayout title="Leadership Console" description="…">`
+- `reports-view`: both skeleton early-return and main return → `<PageLayout … width="reading">` (reading width for document-like layout)
+- `dashboard-view`: outer div → `<PageLayout header={null}>` (RoleTabs component owns the tab-bar header)
+- `backlog-view`: outer div in both skeleton and main return → `<PageLayout header={null}>` (h1 is rendered inline by the view)
+
+Pre-existing sub-component warnings (raw `<button>`, non-sanctioned inline widths) not in WI-17
+scope — logged for follow-up in WI-21. No behaviour changes; Feature Parity Ledger holds.
+Branch: `feat/uiux-wi17-primitives-sweep`.
+
+---
+
 ## WI-09 [benchmark] — HEART activation-funnel instrumentation (2026-06-15)
 
 Server-side funnel telemetry wired into the events store via a new `FunnelService`. No PII,

@@ -157,7 +157,7 @@ visual source before building).
 
 | ID | Work item | Maps to | Depends on | Status | PR |
 |----|-----------|---------|-----------|--------|----|
-| WI-17 | Adopt primitives across the remaining ~95 views (extract-loop) | H.4 A-WS3 | WI-06 | ☐ | |
+| WI-17 | Adopt primitives across the remaining ~95 views (extract-loop) | H.4 A-WS3 | WI-06 | ✅ | feat/uiux-wi17-primitives-sweep |
 | WI-18 | App-wide loading/empty/error + `aria-label` sweep; unified `AsyncBoundary` | H.2 DoD; D H2 #8 | WI-04 | ☐ | |
 | WI-19 | Storybook ≥ 50 stories + visual regression (Chromatic) | H.4 A-WS4 | WI-04 | ☐ | |
 | WI-20 | Build Part-B premium primitives: `Tooltip` `Popover` `DatePicker` `Pagination` `Breadcrumb` `Progress` `Slider` `Alert` | H.3, H.5 1.1 | WI-04 | ☐ | |

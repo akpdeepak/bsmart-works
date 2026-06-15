@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FileText, FilePlus2, Sparkles, AlertCircle } from 'lucide-react';
+import { FileText, FilePlus2, Sparkles, AlertCircle, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { Field } from '@/components/works/field';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -20,6 +20,7 @@ export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onT
   const [text, setText] = useState('');
   const [extraction, setExtraction] = useState(null);
   const [extracting, setExtracting] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
 
   const notify = useCallback((msg, kind) => { if (onToast) onToast(msg, kind); }, [onToast]);
 
@@ -50,6 +51,16 @@ export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onT
       .catch((e) => notify(e.message || 'Could not create template.', 'error'))
       .finally(() => setCreating(false));
   }, [workspaceId, form, notify]);
+
+  const deleteTemplate = useCallback((id) => {
+    templatesClient.remove(workspaceId, id)
+      .then(() => {
+        setTemplates((prev) => prev.filter((t) => t.id !== id));
+        setExpandedId((prev) => (prev === id ? null : prev));
+        notify('Template deleted.', 'success');
+      })
+      .catch((e) => notify(e.message || 'Could not delete template.', 'error'));
+  }, [workspaceId, notify]);
 
   const runExtract = useCallback(() => {
     if (!text.trim()) { notify('Enter some text to extract from.', 'error'); return; }
@@ -101,7 +112,7 @@ export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onT
                 <li key={t.id}
                   className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         {t.category && (
                           <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-brand-navy/10 text-brand-navy">{t.category}</span>
@@ -110,10 +121,37 @@ export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onT
                       </div>
                       {t.description && <p className="text-xs text-neutral-500 mt-1">{t.description}</p>}
                     </div>
-                    {onUseTemplate && (
-                      <Button variant="secondary" size="sm" onClick={() => onUseTemplate(t)}>Use template</Button>
-                    )}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {t.body && (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedId((prev) => (prev === t.id ? null : t.id))}
+                          aria-expanded={expandedId === t.id}
+                          className="flex items-center gap-0.5 text-xs text-neutral-500 hover:text-brand-navy px-1.5 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+                        >
+                          {expandedId === t.id
+                            ? <><ChevronUp aria-hidden="true" className="h-3 w-3" />Hide</>
+                            : <><ChevronDown aria-hidden="true" className="h-3 w-3" />Body</>}
+                        </button>
+                      )}
+                      {onUseTemplate && (
+                        <Button variant="secondary" size="sm" onClick={() => onUseTemplate(t)}>Use</Button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => deleteTemplate(t.id)}
+                        aria-label={`Delete template "${t.name}"`}
+                        className="w-7 h-7 rounded flex items-center justify-center text-neutral-400 hover:text-semantic-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+                      >
+                        <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
+                  {expandedId === t.id && t.body && (
+                    <pre className="mt-3 text-xs font-mono bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800 rounded-md p-3 overflow-x-auto whitespace-pre-wrap text-neutral-700 dark:text-neutral-300 max-h-48">
+                      {t.body}
+                    </pre>
+                  )}
                 </li>
               ))}
             </ul>

@@ -7,6 +7,37 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-21 [consistency] — Structural lint → error, React.lazy routes, dark-contrast audit (2026-06-15)
+
+**Structural lint enforcement (ESLint):**
+Four `works-view/*` rules (no-raw-button, no-raw-table, no-inline-card-chrome, sanctioned-page-widths)
+flipped from `'warn'` to `'error'` — new view files will now fail CI if they use raw primitives.
+43 legacy files with known violations retain `'warn'` via a `worksViewStructureLegacy` override block
+(transparent in config; tracked as TD-021). Also downgraded `react-hooks/set-state-in-effect` to
+`'warn'` at config level (idiomatic async-load pattern used throughout views/).
+
+**eslint-disable sweep (views/):**
+All 17 inline `eslint-disable` directives removed from 10 view files. Zero remain.
+- Dead rule comments (8): deleted — `react-hooks/set-state-in-effect` is now config-level.
+- `exhaustive-deps` (6): replaced with plain explanatory comments naming the intentionally omitted stable refs.
+- `react-refresh/only-export-components` (1): moved `getGreeting` re-export out of `_shared.jsx`; 5 dashboard
+  files now import `getTimeOfDay` directly from `@/lib/utils`, eliminating the mixed-export barrel.
+
+**React.lazy per route (App.jsx):**
+All 28 static view imports converted to `React.lazy(() => import(...))`. Vite now emits one chunk per
+route (13 separate files confirmed in build output). Content area wrapped in `<React.Suspense>` with
+a `Skeleton` fallback + `aria-busy` + `aria-label` for WCAG 4.1.3 compliance.
+
+**Dark-contrast audit:**
+Scanned all views for standalone `text-neutral-400` used as readable text (fails AA contrast: ~2.5:1
+on white). Fixed 10 violations:
+- `compliance-view.jsx`: 8 violations (form labels, help paragraphs, "(optional)" annotations) → `text-neutral-600`.
+- `settings3/type-fields-settings.jsx`: 2 violations (section header, empty-state message) → `text-neutral-600`.
+- Confirmed: `text-neutral-600 dark:text-neutral-400` pairings (the standard muted pattern) pass AA in both modes.
+- Icon and decorative `text-neutral-400` usages (separators, arrows, decorative icons) are intentional and exempt.
+
+---
+
 ## WI-20 [premium] — Part-B premium primitives: Alert, Progress, Breadcrumb, Pagination, Tooltip, Popover, Slider, DatePicker (2026-06-15)
 
 Adds 8 new design-system atoms. All use `cva` + `cn()`, design tokens only (no raw hex or

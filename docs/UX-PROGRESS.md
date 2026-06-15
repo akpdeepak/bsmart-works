@@ -7,6 +7,46 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-12 [benchmark] — first-run onboarding wizard + project templates + setup-completeness meter (2026-06-15)
+
+First-run workspace activation flow (HEART funnel step 1). No third-party onboarding SDKs;
+every event workspace-scoped (RB-40 §3).
+
+**V93 migration** — seeds 4 global config templates (owner_workspace_id = NULL, shareable = TRUE):
+Scrum · Kanban · Bug tracking · RAID log. Each configures `defaults.workItemType` and
+`defaults.estimateUnit` for the chosen workflow style.
+
+**`FunnelService.onWorkspaceCreated()`** — new method (step 1 of HEART funnel); idempotent per
+workspace; called by `WorkspaceSetupService` on first status request.
+
+**`WorkspaceSetupService`** (new `@Service`) — `getSetupStatus(callerId, workspaceId)`:
+- RBAC: any workspace member (tier ≥ 1); non-member → 404.
+- Emits `WORKSPACE_CREATED` on first call (idempotent via EventRepository guard).
+- Returns `{ needsWizard, score, steps, templates }`. `needsWizard` = workspace age ≤ 30 days
+  AND not all 3 checklist steps done. Steps: template applied · first item created · teammate invited.
+- Loads the 4 onboarding template stubs for the wizard template picker.
+
+**`WorkspaceSetupController`** — `GET /api/v1/workspace-setup/status?workspaceId=` (any member).
+
+**Frontend:**
+- `lib/workspaceSetup.js` — `workspaceSetupClient.getStatus()` via the one `apiClient`.
+- `hooks/queries/useWorkspaceSetup.js` + `workspaceSetupKeys` in `keys.js` — TanStack Query hook;
+  `staleTime` 60 s; disabled when workspaceId missing.
+- `views/onboarding-wizard.jsx` — 2-step modal wizard: (1) choose workflow template (applies via
+  `configClient.applyTemplate`; invalidates setup cache); (2) completeness checklist (create first
+  item · invite teammate · progress ring). Uses `<Button>` component; WCAG-compliant modal role.
+- `views/dashboards/developer-dashboard.jsx` — new `setup-completeness` widget type: progress ring
+  + step checklist; auto-hides when score = 100 and wizard is no longer needed.
+
+**Tests:** 7 unit tests in `WorkspaceSetupServiceTest` (non-member 404, null workspace 404,
+WORKSPACE_CREATED emission, zero-done score 0 + needsWizard true, all-done score 100 +
+needsWizard false, old workspace needsWizard false, partial score). `queries.test.jsx` +1 describe
+block for `useWorkspaceSetup`.
+
+**WI-12 ✅.** WI-13, WI-14, WI-15 are now all unblocked.
+
+---
+
 ## WI-09 [benchmark] — HEART activation-funnel instrumentation (2026-06-15)
 
 Server-side funnel telemetry wired into the events store via a new `FunnelService`. No PII,

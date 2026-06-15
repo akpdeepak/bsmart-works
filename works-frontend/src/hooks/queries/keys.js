@@ -13,3 +13,8 @@ export const projectsKeys = {
   all: ['projects'],
   list: (workspaceId) => ['projects', workspaceId],
 };
+
+export const workspaceSetupKeys = {
+  all: ['workspace-setup'],
+  status: (workspaceId) => ['workspace-setup', workspaceId, 'status'],
+};

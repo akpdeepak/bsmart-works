@@ -7,6 +7,45 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-04 [consistency] — DataTable + Drawer + form atoms + badge consolidation (2026-06-15)
+
+**8 new components + 3 badge refactors + 52 tests + 9 Storybook stories.**
+
+### New atoms
+
+| File | What it is |
+|------|-----------|
+| `atoms/icon-button.jsx` | Square icon-only button — ghost/primary/secondary/danger variants, xs/sm/md/lg sizes, cva+cn, forwardRef |
+| `atoms/checkbox.jsx` | Native `<input type="checkbox">` overlaid on a styled visual box; controlled + uncontrolled; indeterminate support; forwardRef |
+| `atoms/radio.jsx` | `RadioGroup` context wrapper (controlled via `value`/`onChange`, uncontrolled via `defaultValue`) + `Radio` atom reading context |
+| `atoms/toggle.jsx` | Pill-shaped `role="switch"` toggle; cva compound variants for thumb translate; sm/md sizes; forwardRef |
+| `atoms/select.jsx` | Native `<select>` with `appearance-none` + `ChevronDown` icon; cva matching `input.jsx`; forwardRef |
+| `atoms/data-table.jsx` | Base table: sortable columns, zebra stripe, skeleton loading (4 rows), empty state, `renderCell`, `onRowClick`; no virtualisation (WI-33) |
+
+### New molecules
+
+| File | What it is |
+|------|-----------|
+| `molecules/drawer.jsx` | Side-panel drawer (right/left); same focus-trap/Escape/scroll-lock/aria-modal as Modal; sm/md/lg/xl/full sizes; optional `footer` slot |
+| `molecules/confirm-dialog.jsx` | Thin Modal wrapper with confirm/cancel button pair; danger variant; `loading` disables both buttons |
+
+### Badge consolidation (cva)
+
+`PriorityBadge`, `RoleBadge`, and `LapseBadge` converted from inline config-object patterns to
+`class-variance-authority`. Unknown values now fall back gracefully (`MEDIUM` / `MEMBER`) rather
+than rendering raw keys. `StatusBadge` was already cva; `TypeBadge` and `AiMetaBadge` kept
+as-is (special domain logic). Consolidated badge Storybook story added at `badges.stories.jsx`.
+
+### ESLint fix
+
+Removed unsupported `aria-invalid` from `Radio`'s `<input type="radio">` (jsx-a11y/role-supports-aria-props).
+Removed dev-only `process.env` check from `IconButton` (no `process` in browser context). Removed
+unused `import * as React` from `DataTable`.
+
+All 976 tests pass (155 files, 0 lint errors). Execution Plan WI-04 marked ✅.
+
+---
+
 ## WI-03 [consistency] — pilot-migrate 4 exemplar views onto Card/PageHeader/Tabs primitives (2026-06-15)
 
 Migrated `bql-view`, `admin-ops-view`, `compliance-view`, and `pm-view` onto the WI-01 atoms.

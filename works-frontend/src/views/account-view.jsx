@@ -1,4 +1,5 @@
 import { KeyRound } from 'lucide-react';
+import { PageLayout } from '@/components/works/templates/page-layout';
 import { Button } from '@/components/works/button';
 import { Avatar } from '@/components/works/atoms/avatar';
 import { LanguageSwitcher } from '@/components/works/organisms/language-switcher';
@@ -10,9 +11,7 @@ export default function AccountView({
   setMfaSetup, setMfaSetupCode, saveNotifPrefs, handleMfaEnroll, handleMfaConfirm,
 }) {
   return (
-    <div className="p-8 max-w-2xl">
-      <h1 className="text-2xl font-bold text-brand-navy mb-1">My Account</h1>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-6">Personal settings and security</p>
+    <PageLayout title="My Account" description="Personal settings and security" width="reading">
 
       {/* Profile */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 mb-6">
@@ -93,6 +92,6 @@ export default function AccountView({
         <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">Choose your preferred display language</p>
         <LanguageSwitcher />
       </div>
-    </div>
+    </PageLayout>
   );
 }

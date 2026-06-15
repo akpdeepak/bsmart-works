@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { PageLayout } from '@/components/works/templates/page-layout';
 import { Package, Plug, Check, Trash2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -98,12 +99,11 @@ export default function MarketplaceView({ workspaceId }) {
   }
 
   return (
-    <div className="p-8 max-w-7xl">
-      <h1 className="text-2xl font-bold text-brand-navy mb-1">App Marketplace</h1>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">
-        Install third-party extensions into your workspace. You approve exactly which permissions each
-        extension may use.
-      </p>
+    <PageLayout
+      title="App Marketplace"
+      description="Install third-party extensions into your workspace. You approve exactly which permissions each extension may use."
+      width="dashboard"
+    >
 
       {error && (
         <div role="alert" className="flex items-start gap-2 bg-semantic-danger/10 border border-semantic-danger/30 text-semantic-danger rounded-lg px-4 py-3 mb-4 text-sm">
@@ -237,6 +237,6 @@ export default function MarketplaceView({ workspaceId }) {
           </div>
         </div>
       )}
-    </div>
+    </PageLayout>
   );
 }

@@ -1,4 +1,5 @@
 import { Trash2 } from 'lucide-react';
+import { PageLayout } from '@/components/works/templates/page-layout';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { Skeleton, ListSkeleton } from '@/components/works/atoms/skeleton';
@@ -9,21 +10,15 @@ import { TypeBadge } from '@/components/works/work-item-type';
 export default function TrashView({ loading = false, trashItems, restoreFromTrash, permanentDelete }) {
   if (loading && trashItems.length === 0) {
     return (
-      <div className="p-8 max-w-3xl">
+      <PageLayout width="reading">
         <Skeleton className="h-7 w-24 mb-6" />
         <ListSkeleton rows={4} />
-      </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="p-8 max-w-3xl">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-brand-navy">Trash</h1>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-0.5">Deleted items are kept for 30 days</p>
-        </div>
-      </div>
+    <PageLayout title="Trash" description="Deleted items are kept for 30 days" width="reading">
       {trashItems.length === 0
         ? <EmptyState icon={Trash2} title="Trash is empty" subtitle="Deleted work items will appear here for 30 days before permanent removal." />
         : (
@@ -47,6 +42,6 @@ export default function TrashView({ loading = false, trashItems, restoreFromTras
           </div>
         )
       }
-    </div>
+    </PageLayout>
   );
 }

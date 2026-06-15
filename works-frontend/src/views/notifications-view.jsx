@@ -1,4 +1,5 @@
 import { Bell, Check, Link2 } from 'lucide-react';
+import { PageLayout } from '@/components/works/templates/page-layout';
 import { api } from '@/lib/apiClient';
 import { pathToView } from '@/lib/routes';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -42,32 +43,32 @@ export default function NotificationsView({
 
   if (loading && notifications.length === 0) {
     return (
-      <div className="p-8 max-w-2xl">
+      <PageLayout width="reading">
         <Skeleton className="h-7 w-36 mb-6" />
         <ListSkeleton rows={5} />
-      </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="p-8 max-w-2xl">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-brand-navy">Notifications</h1>
-        {unreadCount > 0 && (
-          <button
-            type="button"
-            onClick={() => {
-              api.raw(`/notifications/mark-all-read?userId=${currentUser.id}`, { method: 'PUT' })
-                .then(() => {
-                  setNotifications(prev => prev.map(x => ({ ...x, read: true })));
-                  setUnreadCount(0);
-                })
-                .catch(onError);
-            }}
-            className="text-sm text-brand-navy-tint hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
-          >Mark all as read</button>
-        )}
-      </div>
+    <PageLayout
+      title="Notifications"
+      actions={unreadCount > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            api.raw(`/notifications/mark-all-read?userId=${currentUser.id}`, { method: 'PUT' })
+              .then(() => {
+                setNotifications(prev => prev.map(x => ({ ...x, read: true })));
+                setUnreadCount(0);
+              })
+              .catch(onError);
+          }}
+          className="text-sm text-brand-navy-tint hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
+        >Mark all as read</button>
+      )}
+      width="reading"
+    >
       {notifications.length === 0
         ? <EmptyState icon={Bell} title="You're all caught up"
             subtitle="Notifications about assignments, comments, and mentions will appear here." />
@@ -118,6 +119,6 @@ export default function NotificationsView({
           </div>
         )
       }
-    </div>
+    </PageLayout>
   );
 }

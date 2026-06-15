@@ -6,6 +6,7 @@ import { ScrumMasterToday } from './dashboards/scrum-master-dashboard';
 import { ProductOwnerToday } from './dashboards/product-owner-dashboard';
 import { ExecutiveToday } from './dashboards/executive-dashboard';
 import { AdminToday } from './dashboards/admin-dashboard';
+import { PageLayout } from '@/components/works/templates/page-layout';
 
 // ── Role tab bar (Admin/Owner only) ───────────────────────────────────────────
 
@@ -164,7 +165,7 @@ export default function DashboardView({
   };
 
   return (
-    <div className="p-6 max-w-7xl">
+    <PageLayout header={null}>
       <RoleTabs dashboardRole={dashboardRole} onSwitch={switchRole} userTier={userRole?.tier} />
 
       {dashLoading || !activeData
@@ -175,6 +176,6 @@ export default function DashboardView({
         : dashboardRole === 'admin'         ? <AdminToday        data={adminDash}    {...sharedProps} />
         :                                     <DeveloperToday    data={developerDash} {...sharedProps} />
       }
-    </div>
+    </PageLayout>
   );
 }

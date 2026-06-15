@@ -9,6 +9,7 @@ import { statusToCategory } from '@/components/works/status';
 import { PivotChart } from '@/components/works/organisms/pivot-chart';
 import { resolvePivotBatch } from '@/lib/pivot';
 import { useI18n } from '@/lib/i18n';
+import { PageLayout } from '@/components/works/templates/page-layout';
 import { absoluteDate } from '@/lib/format';
 
 // The pivot-backed insight tiles rendered at the top of Reports — same shared <PivotChart/> +
@@ -259,15 +260,17 @@ export default function ReportsView({
 
   if (loading && sprints.length === 0) {
     return (
-      <div className="p-8 max-w-5xl">
+      <PageLayout title={t('insights.reports.title')} width="reading">
         <ListSkeleton rows={4} />
-      </div>
+      </PageLayout>
     );
   }
   return (
-    <div className="p-8 max-w-5xl">
-      <h1 className="text-2xl font-bold text-brand-navy dark:text-white mb-1">{t('insights.reports.title')}</h1>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">{t('insights.reports.subtitle')}</p>
+    <PageLayout
+      title={t('insights.reports.title')}
+      description={t('insights.reports.subtitle')}
+      width="reading"
+    >
 
       {sprints.length === 0
         ? <EmptyState icon={BarChart2} title={t('insights.reports.emptyTitle')} subtitle={t('insights.reports.emptySubtitle')} />
@@ -512,6 +515,6 @@ export default function ReportsView({
         )}
         <ReportPivotStrip workspaceId={activeWorkspaceId} />
       </div>
-    </div>
+    </PageLayout>
   );
 }

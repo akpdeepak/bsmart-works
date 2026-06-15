@@ -11,6 +11,7 @@ import { Avatar } from '@/components/works/atoms/avatar';
 import { statusToCategory } from '@/components/works/status';
 import { useI18n } from '@/lib/i18n';
 import { absoluteDate } from '@/lib/format';
+import { PageLayout } from '@/components/works/templates/page-layout';
 
 /**
  * BacklogView — product backlog with epic rail, sprint sections, drag-drop reorder.
@@ -61,15 +62,15 @@ export default function BacklogView({
 
   if (loading && backlogItems.length === 0 && sprints.length === 0) {
     return (
-      <div className="p-6">
+      <PageLayout header={null}>
         <Skeleton className="h-7 w-32 mb-6" />
         <ListSkeleton rows={6} />
-      </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="p-6">
+    <PageLayout header={null}>
       <div className="flex gap-6">
         {/* Epic panel — sticky left rail with per-epic progress */}
         <aside className="hidden lg:block w-56 flex-shrink-0">
@@ -220,6 +221,6 @@ export default function BacklogView({
           </div>
         </div>
       </div>
-    </div>
+    </PageLayout>
   );
 }

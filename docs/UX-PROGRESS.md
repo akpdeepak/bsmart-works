@@ -7,6 +7,38 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-16 [benchmark] — Optimistic-UI rollback / TanStack Query mutation infrastructure (2026-06-15)
+
+First slice of the TanStack Query migration (D H1 #5 / H2 #6). Establishes the canonical
+mutation pattern — `onMutate` optimistic cache write + `onError` snapshot rollback + `onSuccess`
+server-item adoption — so WI-25 (full TQ adoption) and WI-37 (App.jsx decomposition) have
+a proven template to extend.
+
+**`keys.js`** — adds `workItemsKeys` (`all`, `list(workspaceId, projectId)`, `detail(id)`)
+and `savedViewsKeys` (`all`, `list(workspaceId, projectId)`) to the ONE-source key factory.
+
+**`useWorkItems(workspaceId, { projectId? })`** — new query hook; puts work-item lists in
+TanStack Query cache keyed by workspace + optional project. Complements App.jsx's `workItems`
+`useState`; individual views can subscribe as the decomposition proceeds (WI-37).
+
+**`useWorkItemCreate(workspaceId, { projectId? })`** — `useMutation` with full optimistic cycle:
+- `onMutate`: cancel in-flight refetches, snapshot cache, prepend a temp row (`_temp: true`)
+- `onError`: restore snapshot (failed create never stays in the list)
+- `onSuccess`: swap the temp row for the real server item (picks up autoId, createdAt, etc.)
+- `onSettled`: invalidate to sync with server truth
+
+**`useWorkItemStatusChange(workspaceId, { projectId? })`** — `useMutation` with optimistic status
+update + 409-safe rollback:
+- `onMutate`: snapshot + optimistic status patch
+- `onError`: restore snapshot (transition-blocked move snaps back)
+- `onSuccess`: adopt full server item (picks up `statusChangedAt` for lapse badges)
+- `onSettled`: invalidate
+
+**Tests** (21 green): `queries.test.jsx` extended (key factories + `useWorkItems`);
+`work-item-mutations.test.jsx` new (11 tests — in-flight placeholder, front-of-list ordering,
+server-item swap, snapshot rollback, empty-cache create, caller onError propagation × 2;
+status optimistic, sibling isolation, rollback, server adoption, caller onError propagation).
+
 ## WI-09 [benchmark] — HEART activation-funnel instrumentation (2026-06-15)
 
 Server-side funnel telemetry wired into the events store via a new `FunnelService`. No PII,

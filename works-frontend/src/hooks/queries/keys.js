@@ -13,3 +13,16 @@ export const projectsKeys = {
   all: ['projects'],
   list: (workspaceId) => ['projects', workspaceId],
 };
+
+export const workItemsKeys = {
+  all: ['work-items'],
+  // projectId is optional — null when querying workspace-wide. Consistent null keeps the cache
+  // key stable so optimistic updates and invalidations always hit the same entry.
+  list: (workspaceId, projectId) => ['work-items', workspaceId, projectId ?? null],
+  detail: (id) => ['work-items', id],
+};
+
+export const savedViewsKeys = {
+  all: ['saved-views'],
+  list: (workspaceId, projectId) => ['saved-views', workspaceId, projectId ?? null],
+};

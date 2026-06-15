@@ -1,4 +1,4 @@
-﻿package com.bcits.works;
+package com.bcits.works;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;

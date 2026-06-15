@@ -1,4 +1,4 @@
-﻿package com.bcits.works;
+package com.bcits.works;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;

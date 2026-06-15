@@ -1,4 +1,4 @@
-﻿package com.bcits.works;
+package com.bcits.works;
 
 import java.time.OffsetDateTime;
 import java.util.List;

@@ -1,4 +1,4 @@
-﻿package com.bcits.works;
+package com.bcits.works;
 
 import java.util.List;
 import org.junit.jupiter.api.Tag;

@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/apiClient';
 import { statusToCategory } from '@/components/works/status';
-import { formatDuration } from '@/lib/format';
+import { formatDuration, absoluteDateTime } from '@/lib/format';
 
 const CAT_BG = {
   todo: 'bg-status-todo',
@@ -26,7 +26,7 @@ const tone = (status) => CAT_BG[statusToCategory(status)] || 'bg-neutral-300';
 // Accepts: the metrics object {durations, leadSeconds, cycleSeconds, completed, started},
 // or a bare durations array (legacy / controlled tests).
 function normalize(raw) {
-  if (Array.isArray(raw)) return { durations: raw, leadSeconds: null, cycleSeconds: null, leadRunning: false, cycleRunning: false, hasMetrics: false };
+  if (Array.isArray(raw)) return { durations: raw, leadSeconds: null, cycleSeconds: null, leadRunning: false, cycleRunning: false, completedAt: null, hasMetrics: false };
   if (raw && typeof raw === 'object') {
     return {
       durations: Array.isArray(raw.durations) ? raw.durations : [],
@@ -34,10 +34,11 @@ function normalize(raw) {
       cycleSeconds: raw.cycleSeconds ?? 0,
       leadRunning: raw.leadRunning ?? false,
       cycleRunning: raw.cycleRunning ?? false,
+      completedAt: raw.completedAt ?? null,
       hasMetrics: true,
     };
   }
-  return { durations: [], leadSeconds: null, cycleSeconds: null, leadRunning: false, cycleRunning: false, hasMetrics: false };
+  return { durations: [], leadSeconds: null, cycleSeconds: null, leadRunning: false, cycleRunning: false, completedAt: null, hasMetrics: false };
 }
 
 function Metric({ label, value, hint }) {
@@ -86,7 +87,7 @@ export function WorkItemStatusTimeline({ workItemId, durations: durationsProp, m
     );
   }
 
-  const { durations, leadSeconds, cycleSeconds, leadRunning, cycleRunning, hasMetrics } = normalize(raw);
+  const { durations, leadSeconds, cycleSeconds, leadRunning, cycleRunning, completedAt, hasMetrics } = normalize(raw);
   const total = durations.reduce((sum, d) => sum + (d.totalSeconds || 0), 0);
   const reopened = durations.filter((d) => (d.timesEntered || 0) > 1);
 
@@ -105,6 +106,12 @@ export function WorkItemStatusTimeline({ workItemId, durations: durationsProp, m
           <Metric label="Lead time" value={leadLabel} hint="in To Do + In Progress" />
           <div className="w-px self-stretch bg-neutral-200 dark:bg-neutral-700" aria-hidden="true" />
           <Metric label="Cycle time" value={cycleLabel} hint="in In Progress" />
+          {completedAt && (
+            <>
+              <div className="w-px self-stretch bg-neutral-200 dark:bg-neutral-700" aria-hidden="true" />
+              <Metric label="Completed" value={absoluteDateTime(completedAt)} hint="marked as done" />
+            </>
+          )}
         </div>
       )}
 
@@ -132,7 +139,7 @@ export function WorkItemStatusTimeline({ workItemId, durations: durationsProp, m
           </div>
 
           <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
-            {durations.map((d) => (
+            {durations.filter((d) => d.totalSeconds > 0).map((d) => (
               <li key={d.status} className="flex items-center gap-1.5 text-xs text-neutral-700 dark:text-neutral-300">
                 <span className={`h-2 w-2 rounded-full ${tone(d.status)}`} aria-hidden="true" />
                 <span className="font-medium text-neutral-900 dark:text-neutral-100">{d.status}</span>

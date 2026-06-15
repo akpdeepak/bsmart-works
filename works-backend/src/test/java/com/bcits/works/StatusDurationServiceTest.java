@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Tag("unit")
@@ -83,10 +84,32 @@ class StatusDurationServiceTest {
             new StatusDurationService.StatusChange("Todo", "In Progress", created.plusHours(1)),
             new StatusDurationService.StatusChange("In Progress", "Done", created.plusHours(4)));
         var m = service.computeMetrics(created, "Done", changes, created.plusHours(5), cat);
-        assertEquals(14400, m.leadSeconds());          // Todo 1h + In Progress 3h (Done 1h excluded)
+        assertEquals(14400, m.leadSeconds());          // Todo 1h + In Progress 3h (Done excluded)
         assertEquals(10800, m.cycleSeconds());         // In Progress 3h
         assertFalse(m.leadRunning());                  // currently Done — lead paused
         assertFalse(m.cycleRunning());
+        assertEquals(created.plusHours(4), m.completedAt()); // clock stopped at Done entry
+    }
+
+    @Test
+    void completedAt_isSetWhenDoneAndNullOtherwise() {
+        OffsetDateTime created = OffsetDateTime.parse("2026-06-01T00:00:00Z");
+        OffsetDateTime doneAt = created.plusHours(4);
+        List<StatusDurationService.StatusChange> changes = List.of(
+            new StatusDurationService.StatusChange("Todo", "In Progress", created.plusHours(1)),
+            new StatusDurationService.StatusChange("In Progress", "Done", doneAt));
+
+        var done = service.computeMetrics(created, "Done", changes, created.plusHours(10), cat);
+        assertEquals(doneAt, done.completedAt());              // set to the Done-entry timestamp
+
+        var inProgress = service.computeMetrics(created, "In Progress",
+            List.of(new StatusDurationService.StatusChange("Todo", "In Progress", created.plusHours(1))),
+            created.plusHours(3), cat);
+        assertTrue(inProgress.leadRunning());           // sanity: still running
+        assertNull(inProgress.completedAt());           // not done yet
+
+        var todo = service.computeMetrics(created, "Todo", List.of(), created.plusHours(2), cat);
+        assertNull(todo.completedAt());
     }
 
     @Test

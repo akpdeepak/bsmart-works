@@ -48,7 +48,8 @@ public class StatusDurationService {
      * currently counting (i.e. the current status is non-Done / In Progress).
      */
     public record StatusTimelineMetrics(List<StatusDuration> durations, long leadSeconds,
-                                        long cycleSeconds, boolean leadRunning, boolean cycleRunning) { }
+                                        long cycleSeconds, boolean leadRunning, boolean cycleRunning,
+                                        OffsetDateTime completedAt) { }
 
     /** Load a work item's status timeline and project per-status durations. Empty if unknown. */
     public List<StatusDuration> forWorkItem(String workItemId) {
@@ -64,7 +65,7 @@ public class StatusDurationService {
     public StatusTimelineMetrics metricsForWorkItem(String workItemId,
                                                     java.util.function.Function<String, String> categoryOf) {
         Loaded l = load(workItemId);
-        if (l == null) return new StatusTimelineMetrics(List.of(), 0, 0, false, false);
+        if (l == null) return new StatusTimelineMetrics(List.of(), 0, 0, false, false, null);
         return computeMetrics(l.createdAt(), l.currentStatus(), l.changes(), OffsetDateTime.now(), categoryOf);
     }
 
@@ -78,7 +79,21 @@ public class StatusDurationService {
     StatusTimelineMetrics computeMetrics(OffsetDateTime createdAt, String currentStatus,
                                          List<StatusChange> changes, OffsetDateTime now,
                                          java.util.function.Function<String, String> categoryOf) {
-        List<StatusDuration> durations = compute(createdAt, currentStatus, changes, now);
+        String currentCategory = cat(categoryOf, currentStatus);
+        // When the item is currently Done, stop the clock at the moment it entered Done so the
+        // Done-status duration does not keep growing and total workflow time stays fixed.
+        OffsetDateTime completedAt = null;
+        if ("DONE".equals(currentCategory)) {
+            for (int i = changes.size() - 1; i >= 0; i--) {
+                if ("DONE".equals(cat(categoryOf, changes.get(i).to()))) {
+                    completedAt = changes.get(i).at();
+                    break;
+                }
+            }
+            if (completedAt == null) completedAt = createdAt; // item created directly in Done
+        }
+        OffsetDateTime effectiveNow = completedAt != null ? completedAt : now;
+        List<StatusDuration> durations = compute(createdAt, currentStatus, changes, effectiveNow);
         long lead = 0, cycle = 0;
         for (StatusDuration d : durations) {
             String category = cat(categoryOf, d.status());
@@ -90,10 +105,9 @@ public class StatusDurationService {
             }
             // DONE is excluded from both lead and cycle.
         }
-        String currentCategory = cat(categoryOf, currentStatus);
-        boolean leadRunning = !"DONE".equals(currentCategory);     // lead counts while not Done
+        boolean leadRunning = !"DONE".equals(currentCategory);
         boolean cycleRunning = "IN_PROGRESS".equals(currentCategory);
-        return new StatusTimelineMetrics(durations, lead, cycle, leadRunning, cycleRunning);
+        return new StatusTimelineMetrics(durations, lead, cycle, leadRunning, cycleRunning, completedAt);
     }
 
     private static String cat(java.util.function.Function<String, String> categoryOf, String status) {

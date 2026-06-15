@@ -7,6 +7,25 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-02 [consistency] — structural lint guardrails for `views/` (warn-only) (2026-06-15)
+
+Inline ESLint plugin (`works-view/*`) added to `eslint.config.js`, scoped to `src/views/**`.
+Four warn-only rules surface hand-rolled patterns for migration to primitives (flipped to error in WI-21):
+
+| Rule | Catches | Guides toward |
+|------|---------|---------------|
+| `works-view/no-raw-table` | `<table>` in views | `<DataTable>` (WI-04) |
+| `works-view/no-raw-button` | `<button>` in views | `<Button>` from components/works |
+| `works-view/no-inline-card-chrome` | className with both `rounded-*` + `shadow-*` | `<Card>` (WI-01) |
+| `works-view/sanctioned-page-widths` | `max-w-*` other than `max-w-7xl` / `max-w-reading` | sanctioned page widths only (RB-30 §4) |
+
+Implemented as an inline plugin (not `no-restricted-syntax`) so the existing error-level arch rules
+(`no-restricted-syntax` for raw hex / `works-*` / inline fetch) are NOT overridden for views files.
+Confirmed: arch rules stay at severity 2 for views; view rules fire as warnings only; rules do not
+fire on `atoms/` or `molecules/`. Execution Plan WI-02 marked ✅.
+
+---
+
 ## WI-01 [consistency] — `Card` + `PageHeader` + `Tabs` primitives (2026-06-15)
 
 Three canonical atoms added to `components/works/atoms/`:

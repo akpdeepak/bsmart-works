@@ -7,6 +7,28 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-05 [consistency] — PageLayout template (2 widths, 1 padding rhythm) (2026-06-15)
+
+New `templates/page-layout.jsx` — the mandatory content wrapper for every view surface (A-WS2).
+
+Composes `PageHeader` + a width-constrained, padded content zone. Two sanctioned widths:
+- `width="dashboard"` (default) → `max-w-7xl` (1280px) — boards, lists, analytics
+- `width="reading"` → `max-w-reading` (880px, Tailwind token) — detail panels, documents, settings
+
+One canonical padding rhythm: `px-6 py-6 md:px-8`. Props:
+- `title` / `description` / `breadcrumb` / `actions` — forwarded to `PageHeader`
+- `header` — node; replaces `PageHeader` entirely (`null` = no header)
+- `noPadding` — omits padding for full-bleed surfaces (boards, calendars)
+- `className` — merged onto the outer wrapper
+
+14 tests (156 files, 990 tests total, all green). 6-story Storybook entry covers
+dashboard/reading/breadcrumb/custom-header/no-header/no-padding variants.
+
+ESLint fix: `max-w-[880px]` is a guardrail-blocked arbitrary value — swapped to `max-w-reading`
+token from `tailwind.config.js` throughout. Execution Plan WI-05 marked ✅.
+
+---
+
 ## WI-04 [consistency] — DataTable + Drawer + form atoms + badge consolidation (2026-06-15)
 
 **8 new components + 3 badge refactors + 52 tests + 9 Storybook stories.**

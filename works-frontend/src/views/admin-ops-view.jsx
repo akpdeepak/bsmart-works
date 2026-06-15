@@ -13,6 +13,9 @@ import {
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { Skeleton } from '@/components/works/atoms/skeleton';
+import { Card as AtomCard, CardHeader, CardTitle, CardBody } from '@/components/works/atoms/card';
+import { PageHeader } from '@/components/works/atoms/page-header';
+import { Tabs, TabList, Tab, TabPanel } from '@/components/works/atoms/tabs';
 import { adminOpsClient } from '@/lib/adminOps';
 import { formatNumber, smartDate } from '@/lib/format';
 import { DEFAULT_PAGE_SIZE } from '@/lib/pagination';
@@ -43,24 +46,24 @@ function Stat({ label, value, tone = 'neutral' }) {
     : tone === 'warning' ? 'text-semantic-warning'
       : tone === 'success' ? 'text-semantic-success' : 'text-brand-navy dark:text-neutral-100';
   return (
-    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
+    <AtomCard variant="outlined" padding="sm">
       <p className="text-xs font-semibold uppercase tracking-wide text-neutral-600">{label}</p>
       <p className={`mt-1 text-2xl font-bold ${toneClass}`}>{value}</p>
-    </div>
+    </AtomCard>
   );
 }
 
 function Card({ title, icon, action, children }) {
   return (
-    <section className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
-      <header className="flex items-center justify-between mb-3">
-        <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+    <AtomCard variant="outlined" padding="sm">
+      <CardHeader className="mb-3">
+        <CardTitle className="flex items-center gap-2">
           <span className="text-brand-navy dark:text-neutral-300">{icon}</span>{title}
-        </h3>
+        </CardTitle>
         {action}
-      </header>
-      {children}
-    </section>
+      </CardHeader>
+      <CardBody>{children}</CardBody>
+    </AtomCard>
   );
 }
 
@@ -111,53 +114,46 @@ export default function AdminOpsView({ workspaceId, onToast }) {
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Admin Operations Center</h1>
-        <p className="text-sm text-neutral-600 dark:text-neutral-400">Operate the workspace — users, seats, cost, integrations, access and compliance.</p>
-      </div>
+      <PageHeader
+        title="Admin Operations Center"
+        description="Operate the workspace — users, seats, cost, integrations, access and compliance."
+        className="mb-6"
+      />
 
-      <div className="flex gap-1 overflow-x-auto border-b border-neutral-200 dark:border-neutral-700 mb-6" role="tablist">
-        {TABS.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={tab === id}
-            onClick={() => selectTab(id)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 whitespace-nowrap ${
-              tab === id
-                ? 'border-brand-orange text-brand-navy dark:text-neutral-100'
-                : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-brand-navy dark:hover:text-neutral-200'
-            }`}
-          >
-            <Icon aria-hidden="true" className="h-4 w-4" />{label}
-          </button>
-        ))}
-      </div>
+      <Tabs value={tab} onValueChange={selectTab}>
+        <TabList aria-label="Admin operations" className="mb-6 overflow-x-auto gap-1">
+          {TABS.map(({ id, label, Icon }) => (
+            <Tab key={id} value={id}>
+              <Icon aria-hidden="true" className="inline-block h-4 w-4 mr-1.5 align-text-bottom" />{label}
+            </Tab>
+          ))}
+        </TabList>
 
-      {error ? (
-        <EmptyState
-          icon={ShieldAlert}
-          title="Couldn't load this view"
-          subtitle={error}
-          action={<Button variant="secondary" size="sm" leftIcon={<RefreshCw className="h-4 w-4" />} onClick={refresh}>Try again</Button>}
-        />
-      ) : loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4" aria-busy="true">
-          <Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" />
-        </div>
-      ) : (
-        <div role="tabpanel">
-          {tab === 'health' && <HealthTab data={data.health} />}
-          {tab === 'lifecycle' && <LifecycleTab workspaceId={workspaceId} data={data.lifecycle} onChanged={refresh} notify={notify} />}
-          {tab === 'seats' && <SeatsTab data={data.seats} />}
-          {tab === 'aicost' && <AiCostTab data={data.aicost} />}
-          {tab === 'audit' && <AuditTab workspaceId={workspaceId} data={data.audit} onChanged={refresh} notify={notify} />}
-          {tab === 'integrations' && <IntegrationsTab workspaceId={workspaceId} data={data.integrations} onChanged={refresh} notify={notify} />}
-          {tab === 'access' && <AccessTab workspaceId={workspaceId} data={data.access} onChanged={refresh} notify={notify} />}
-          {tab === 'evidence' && <EvidenceTab workspaceId={workspaceId} data={data.evidence} onChanged={refresh} notify={notify} />}
-        </div>
-      )}
+        {/* TabPanels always rendered so Tab's aria-controls resolves to existing IDs (axe valid-attr-value). */}
+        <TabPanel value="health">
+          {error ? (
+            <EmptyState
+              icon={ShieldAlert}
+              title="Couldn't load this view"
+              subtitle={error}
+              action={<Button variant="secondary" size="sm" leftIcon={<RefreshCw className="h-4 w-4" />} onClick={refresh}>Try again</Button>}
+            />
+          ) : loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4" aria-busy="true">
+              <Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" />
+            </div>
+          ) : (
+            <HealthTab data={data.health} />
+          )}
+        </TabPanel>
+        <TabPanel value="lifecycle">{!error && !loading && <LifecycleTab workspaceId={workspaceId} data={data.lifecycle} onChanged={refresh} notify={notify} />}</TabPanel>
+        <TabPanel value="seats">{!error && !loading && <SeatsTab data={data.seats} />}</TabPanel>
+        <TabPanel value="aicost">{!error && !loading && <AiCostTab data={data.aicost} />}</TabPanel>
+        <TabPanel value="audit">{!error && !loading && <AuditTab workspaceId={workspaceId} data={data.audit} onChanged={refresh} notify={notify} />}</TabPanel>
+        <TabPanel value="integrations">{!error && !loading && <IntegrationsTab workspaceId={workspaceId} data={data.integrations} onChanged={refresh} notify={notify} />}</TabPanel>
+        <TabPanel value="access">{!error && !loading && <AccessTab workspaceId={workspaceId} data={data.access} onChanged={refresh} notify={notify} />}</TabPanel>
+        <TabPanel value="evidence">{!error && !loading && <EvidenceTab workspaceId={workspaceId} data={data.evidence} onChanged={refresh} notify={notify} />}</TabPanel>
+      </Tabs>
     </div>
   );
 }

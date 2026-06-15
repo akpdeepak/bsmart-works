@@ -56,7 +56,7 @@ describe('ComplianceView', () => {
 
   it('renders tab buttons', () => {
     render(<ComplianceView {...baseProps} />);
-    expect(screen.getByRole('button', { name: /rules/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /violations/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /rules/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /violations/i })).toBeInTheDocument();
   });
 });

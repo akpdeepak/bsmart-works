@@ -7,6 +7,29 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-03 [consistency] — pilot-migrate 4 exemplar views onto Card/PageHeader/Tabs primitives (2026-06-15)
+
+Migrated `bql-view`, `admin-ops-view`, `compliance-view`, and `pm-view` onto the WI-01 atoms.
+Every view now uses `<PageHeader>` (one `h1`, breadcrumb + actions slot) and, where the view is
+tabbed, the `<Tabs>`/`<TabList>`/`<Tab>`/`<TabPanel>` set. Inline card-chrome replaced by `<Card>`.
+
+| View | What changed |
+|------|-------------|
+| `bql-view` | `PageHeader` header; 6 card-chrome blocks → `<Card variant="..." padding="...">` |
+| `admin-ops-view` | `PageHeader`; tab bar + `border-b` div → `<Tabs>`/`<TabList>`/`<Tab>`; content areas → 8 `<TabPanel>`s; local `Card` / `Stat` helpers now use `AtomCard` internally (`Card as AtomCard` alias avoids name collision) |
+| `compliance-view` | `PageHeader`; outer `flex flex-col h-full` div → `<Tabs className="flex flex-col h-full overflow-hidden">`; tab buttons + `border-b` → `<TabList>` (provides own border); content blocks → 4 `<TabPanel className="pt-0">` |
+| `pm-view` | `PageHeader` + project-selector in `actions` slot; 11-tab bar → `<TabList>`; 11 content conditionals → `<TabPanel value="...">` for each; virtual `meeting-detail` tab handled by passing `value=""` to `<Tabs>` when active (hides TabList, keeps detail view as direct conditional) |
+
+**Bug fixed in `tabs.jsx` atom**: `TabPanel` previously returned `null` when inactive, leaving
+`Tab`'s `aria-controls` pointing at non-existent IDs — an axe `aria-valid-attr-value` violation in
+any state where panels are conditionally absent. Fixed to always render a `<div id hidden />` shell
+for inactive panels (lazy — no children mounted). All 899 tests pass; the previously failing
+`compliance-view` tab-role test and `admin-ops-view` error-state a11y test are now green.
+
+Execution Plan WI-03 marked ✅.
+
+---
+
 ## WI-02 [consistency] — structural lint guardrails for `views/` (warn-only) (2026-06-15)
 
 Inline ESLint plugin (`works-view/*`) added to `eslint.config.js`, scoped to `src/views/**`.

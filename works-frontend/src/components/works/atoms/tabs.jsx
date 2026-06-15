@@ -101,7 +101,18 @@ export function Tab({ value, children, className, disabled, ...props }) {
 export function TabPanel({ value, children, className, ...props }) {
   const { activeValue, instanceId } = useTabs();
   const isActive = activeValue === value;
-  if (!isActive) return null;
+  // Always render the wrapper div so Tab's aria-controls resolves to an existing element.
+  // Inactive panels use the HTML `hidden` attribute (removes from a11y tree + display).
+  if (!isActive) {
+    return (
+      <div
+        id={`${instanceId}-panel-${value}`}
+        role="tabpanel"
+        aria-labelledby={`${instanceId}-tab-${value}`}
+        hidden
+      />
+    );
+  }
   return (
     <div
       id={`${instanceId}-panel-${value}`}

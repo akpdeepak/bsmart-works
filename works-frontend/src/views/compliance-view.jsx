@@ -3,6 +3,8 @@ import { ClipboardList, CheckCircle2, ScrollText, ArrowUp, Plus, Trash2 } from '
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { Modal } from '@/components/works/molecules/modal';
+import { PageHeader } from '@/components/works/atoms/page-header';
+import { Tabs, TabList, Tab, TabPanel } from '@/components/works/atoms/tabs';
 
 const severityClass = {
   CRITICAL: 'bg-semantic-danger text-white',
@@ -73,38 +75,44 @@ export default function ComplianceView({
   const allSelected = selectableViolations.length > 0 &&
     selectableViolations.every(id => selectedViolations.includes(id));
 
+  const COMPLIANCE_TABS = [
+    { key: 'dashboard',  label: 'Dashboard',  load: () => fetchComplianceDashboard() },
+    { key: 'rules',      label: 'Rules',      load: () => { fetchComplianceRules(); fetchComplianceTemplates(); } },
+    { key: 'violations', label: 'Violations', load: () => fetchComplianceViolations() },
+    { key: 'audit',      label: 'Audit log',  load: () => fetchComplianceAudit() },
+  ];
+
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <Tabs
+      value={complianceTab}
+      onValueChange={(val) => {
+        const t = COMPLIANCE_TABS.find(x => x.key === val);
+        setComplianceTab(val);
+        t?.load();
+      }}
+      className="flex flex-col h-full overflow-hidden"
+    >
       {/* Header + tabs */}
-      <div className="px-6 pt-5 border-b border-neutral-200 dark:border-neutral-700">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Compliance</h1>
-            <p className="text-sm text-neutral-500">Native rules engine — define what compliance means, catch drift in hours not quarters.</p>
-          </div>
-          {complianceTab === 'rules' && can('manage_compliance') && (
+      <div className="px-6 pt-5">
+        <PageHeader
+          title="Compliance"
+          description="Native rules engine — define what compliance means, catch drift in hours not quarters."
+          actions={complianceTab === 'rules' && can('manage_compliance') && (
             <Button variant="action" onClick={newRuleBuilder}>New Rule</Button>
           )}
-        </div>
-        <div className="flex gap-1">
-          {[
-            { key: 'dashboard',  label: 'Dashboard',  load: () => fetchComplianceDashboard() },
-            { key: 'rules',      label: 'Rules',      load: () => { fetchComplianceRules(); fetchComplianceTemplates(); } },
-            { key: 'violations', label: 'Violations', load: () => fetchComplianceViolations() },
-            { key: 'audit',      label: 'Audit log',  load: () => fetchComplianceAudit() },
-          ].map(t => (
-            <button key={t.key} onClick={() => { setComplianceTab(t.key); t.load(); }}
-              className={`text-sm font-medium px-3 py-2 border-b-2 transition-colors ${complianceTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
-              {t.label}
-            </button>
+          className="mb-3"
+        />
+        <TabList>
+          {COMPLIANCE_TABS.map(t => (
+            <Tab key={t.key} value={t.key}>{t.label}</Tab>
           ))}
-        </div>
+        </TabList>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
         {/* ── DASHBOARD ── */}
-        {complianceTab === 'dashboard' && (
-          !complianceDashboard ? (
+        <TabPanel value="dashboard" className="pt-0">
+          {!complianceDashboard ? (
             <div role="status" aria-busy="true" aria-label="Loading compliance dashboard">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 {[...Array(4)].map((_, i) => (
@@ -214,10 +222,10 @@ export default function ComplianceView({
               </div>
             </div>
           )
-        )}
+          }</TabPanel>
 
         {/* ── RULES ── */}
-        {complianceTab === 'rules' && (
+        <TabPanel value="rules" className="pt-0">
           <div className="space-y-6">
             <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
               <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Your rules ({complianceRules.length})</h3>
@@ -270,10 +278,10 @@ export default function ComplianceView({
               </div>
             </div>
           </div>
-        )}
+        </TabPanel>
 
         {/* ── VIOLATIONS ── */}
-        {complianceTab === 'violations' && (
+        <TabPanel value="violations" className="pt-0">
           <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -321,10 +329,10 @@ export default function ComplianceView({
                 </div>
               ))}
           </div>
-        )}
+        </TabPanel>
 
         {/* ── AUDIT LOG ── */}
-        {complianceTab === 'audit' && (
+        <TabPanel value="audit" className="pt-0">
           <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Append-only audit log</h3>
@@ -349,7 +357,7 @@ export default function ComplianceView({
                 </table>
               )}
           </div>
-        )}
+        </TabPanel>
       </div>
 
       {/* Gap 1 — Resolution notes modal */}
@@ -370,7 +378,7 @@ export default function ComplianceView({
           saveRule={saveRule}
         />
       )}
-    </div>
+    </Tabs>
   );
 }
 

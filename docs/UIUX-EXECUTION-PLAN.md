@@ -138,9 +138,9 @@ visual source before building).
 
 | ID | Work item | Maps to | Depends on | Status | PR |
 |----|-----------|---------|-----------|--------|----|
-| WI-08 | Define HEART goals→signals→metrics; define the explicit **"first value"** event | F | — | ☐ | |
-| WI-09 | Instrument the activation funnel (signup→workspace→template→first item→invite→day-2) via `EventService` / `events` store (DPDP-safe, server-side) | F; RB-40 | WI-08 | ☐ ⚠️ | |
-| WI-10 | Internal HEART/funnel dashboard (dogfood via the `Dashboard`/BQL stack) | F | WI-09 | ☐ | |
+| WI-08 | Define HEART goals→signals→metrics; define the explicit **"first value"** event | F | — | ✅ | feat/uiux-wi09-funnel-instrumentation · PR #373 |
+| WI-09 | Instrument the activation funnel (signup→workspace→template→first item→invite→day-2) via `EventService` / `events` store (DPDP-safe, server-side) | F; RB-40 | WI-08 | ✅ | feat/uiux-wi09-funnel-instrumentation · PR #373 |
+| WI-10 | Internal HEART/funnel dashboard (dogfood via the `Dashboard`/BQL stack) | F | WI-09 | ✅ | feat/uiux-wi10-heart-dashboard |
 | WI-11 | Feature-flag layer (prereq for A/B + safe UX rollout) | C.6; D | — | ☐ ⚠️ | |
 
 ### Milestone 2 — Activation & list ergonomics  *(Benchmark Horizon 1 · roadmap §D-H1)*

@@ -15,6 +15,7 @@ import { BQL_SNIPPETS } from '@/lib/bql-snippets';
 import { useI18n } from '@/lib/i18n';
 import { Card } from '@/components/works/atoms/card';
 import { PageHeader } from '@/components/works/atoms/page-header';
+import { PageLayout } from '@/components/works/templates/page-layout';
 
 // Token type → highlight colour (design tokens only; dark-mode legible).
 const TOKEN_CLASS = {
@@ -416,7 +417,7 @@ export default function BqlView({
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 p-6 sm:p-8">
+    <PageLayout width="dashboard" className="space-y-5">
       {/* BQL snippet palette (⌘K-style) — example queries as a fast on-ramp; opened by the Snippets
           button or the "?" shortcut. Mounted only while open (it owns its focus trap + scroll lock). */}
       {paletteOpen && (
@@ -817,7 +818,7 @@ export default function BqlView({
             action={<Button variant="secondary" onClick={() => runQuery()}>Run again</Button>} />
         </div>
       )}
-    </div>
+    </PageLayout>
   );
 }
 

@@ -63,6 +63,60 @@ const BLOCK_TYPES = [
 
 const BLOCK_GROUPS = ['Basic', 'Data', 'Visual', 'Connect'];
 
+// ── Top toolbar — every block type as a compact icon, grouped like a minimal ribbon ─────────────
+// Inserts after the currently focused block so the new block appears where the author is looking.
+// Groups: Text (headings, quotes, callouts), Structure (checklist/toggle/code), Data (tables/charts),
+// Media (images/diagrams/whiteboards), Connect (work items/bookmarks/files).
+const TOOLBAR_GROUPS = [
+  {
+    label: 'Text',
+    items: [
+      { type: 'paragraph',  title: 'Paragraph',           Icon: AlignLeft },
+      { type: 'heading1',   title: 'Heading 1',           Icon: Heading1 },
+      { type: 'heading2',   title: 'Heading 2',           Icon: Heading2 },
+      { type: 'heading3',   title: 'Heading 3',           Icon: Heading3 },
+      { type: 'quote',      title: 'Quote',               Icon: Quote },
+      { type: 'callout',    title: 'Callout / panel',     Icon: Info },
+    ],
+  },
+  {
+    label: 'Structure',
+    items: [
+      { type: 'checklist',  title: 'Checklist',           Icon: CheckSquare },
+      { type: 'toggle',     title: 'Toggle (collapsible)', Icon: ChevronRight },
+      { type: 'toc',        title: 'Table of contents',   Icon: List },
+      { type: 'code',       title: 'Code block',          Icon: Code },
+      { type: 'divider',    title: 'Divider',             Icon: Minus },
+    ],
+  },
+  {
+    label: 'Data',
+    items: [
+      { type: 'table',      title: 'Table',               Icon: Table },
+      { type: 'sheet',      title: 'Sheet (formulas)',    Icon: Grid },
+      { type: 'chart',      title: 'Chart',               Icon: BarChart3 },
+      { type: 'bqlwidget',  title: 'Live widget (BQL)',   Icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: 'Media',
+    items: [
+      { type: 'image',      title: 'Image',               Icon: Image },
+      { type: 'mermaid',    title: 'Diagram (Mermaid)',   Icon: GitBranch },
+      { type: 'whiteboard', title: 'Whiteboard (Miro)',   Icon: PenTool },
+      { type: 'sticker',    title: 'Sticker / emoji',     Icon: Smile },
+    ],
+  },
+  {
+    label: 'Connect',
+    items: [
+      { type: 'workitem',   title: 'Work item',           Icon: Link2 },
+      { type: 'bookmark',   title: 'Bookmark / link',     Icon: Bookmark },
+      { type: 'file',       title: 'File (any type)',     Icon: Paperclip },
+    ],
+  },
+];
+
 const blockLabel = (type) => BLOCK_TYPES.find((t) => t.type === type)?.label || type;
 
 function blockId() {
@@ -101,6 +155,41 @@ function newBlock(type) {
     default:
       return { id, type, content: '', metadata: {} };
   }
+}
+
+// ── Block-insert toolbar ────────────────────────────────────────────────────────
+// Minimal ribbon at the top of the editor. One click inserts any of the 22 block types
+// right after the focused block — no scrolling to the bottom dropdown required.
+function BlockToolbar({ onInsert }) {
+  return (
+    <div
+      role="toolbar"
+      aria-label="Insert block"
+      className="flex items-center flex-wrap gap-0 px-2 py-1 bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-700 rounded-lg"
+    >
+      {TOOLBAR_GROUPS.map((group, gi) => (
+        <div key={group.label} className="flex items-center">
+          {gi > 0 && (
+            <span aria-hidden="true" className="w-px h-5 bg-neutral-200 dark:bg-neutral-700 mx-1.5 flex-shrink-0" />
+          )}
+          <div className="flex items-center gap-0.5">
+            {group.items.map(({ type, title, Icon }) => (
+              <button
+                key={type}
+                type="button"
+                title={title}
+                aria-label={title}
+                onClick={() => onInsert(type)}
+                className="w-7 h-7 flex items-center justify-center rounded text-neutral-500 dark:text-neutral-400 hover:bg-brand-navy/10 hover:text-brand-navy dark:hover:text-brand-orange transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+              >
+                <Icon aria-hidden="true" className="h-3.5 w-3.5" />
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ── Existing block renderers ────────────────────────────────────────────────────
@@ -1236,6 +1325,15 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
     setFocusedIndex(index + 1);
   };
 
+  // Toolbar insert: add a block of the chosen type after the focused block (or at the end).
+  const addBlockAtCursor = (type) => {
+    const insertAt = focusedIndex ?? blocks.length - 1;
+    const next = [...blocks];
+    next.splice(insertAt + 1, 0, newBlock(type));
+    emit(next);
+    setFocusedIndex(insertAt + 1);
+  };
+
   const updateBlock = (index, patch) => {
     emit(blocks.map((b, i) => (i === index ? { ...b, ...patch } : b)));
   };
@@ -1278,6 +1376,7 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
 
   return (
     <div className="space-y-2">
+      <BlockToolbar onInsert={addBlockAtCursor} />
       <div role="listbox" aria-label="Block editor" aria-multiselectable="false" className="space-y-2">
         {blocks.map((block, index) => (
           <Block

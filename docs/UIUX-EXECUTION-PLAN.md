@@ -131,8 +131,8 @@ visual source before building).
 | WI-03 | Pilot-migrate the 4 exemplar views (`pm-view`, `bql-view`, `admin-ops-view`, `compliance-view`) onto the primitives | H.4 A-WS3 | WI-01 | ✅ | claude/bsmart-uiux-program-uv3ulr |
 | WI-04 | Build `DataTable` base + `Drawer` + `IconButton` + form set (`Checkbox`/`Radio`/`Toggle`/`Select`) + `Confirm` + consolidate 6 badges → 1 | H.3, H.4 A-WS1 | WI-01 | ✅ | claude/bsmart-uiux-program-uv3ulr |
 | WI-05 | `PageLayout` (shell → `PageHeader` → content; 2 widths, 1 padding rhythm) | H.4 A-WS2 | WI-01, WI-04 | ✅ | claude/bsmart-uiux-program-uv3ulr |
-| WI-06 | Migrate ~20 data-heavy views onto primitives + `PageLayout` | H.4 A-WS3 | WI-05 | ☐ | |
-| WI-07 | Token adds: `text-2xs` / `text-3xs`; retire `App.jsx` `text-[10px]` exemption | H.5 1.4 | — | ☐ | |
+| WI-06 | Migrate ~20 data-heavy views onto primitives + `PageLayout` | H.4 A-WS3 | WI-05 | ✅ | claude/bsmart-uiux-program-uv3ulr |
+| WI-07 | Token adds: `text-2xs` / `text-3xs`; retire `App.jsx` `text-[10px]` exemption | H.5 1.4 | — | ✅ | claude/bsmart-uiux-program-uv3ulr |
 
 ### Milestone 1 — Measurement: HEART + activation funnel  *(Benchmark Part F · roadmap §F)*
 

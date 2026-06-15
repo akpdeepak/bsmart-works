@@ -25,9 +25,8 @@ const vitestTestConfig = {
 // Two blocks, because the rules have different readiness across the codebase:
 //   A) Architecture/token rules — enforced everywhere except the apiClient itself.
 //      App.jsx now passes these (its inline fetches were extracted to lib/apiClient.js).
-//   B) Arbitrary-value rule — still exempts App.jsx, which uses ~60 intentional `text-[10px]`
-//      density sizes. Follow-up: add tiny-font tokens (e.g. text-2xs/3xs) + the few layout
-//      arbitraries (min-w-[80px], w-[500px]) to tailwind.config, convert, then drop this exempt.
+//   B) Arbitrary-value rule — enforced everywhere (WI-07: text-2xs token added; App.jsx
+//      arbitrary text sizes converted; exemption retired).
 const worksArchRules = {
   files: ['src/**/*.{js,jsx}'],
   ignores: ['src/lib/apiClient.js', 'src/lib/api-client.js'], // the ONE place fetch is allowed
@@ -66,8 +65,7 @@ const worksArchRules = {
 
 const worksArbitraryValueRule = {
   files: ['src/**/*.{js,jsx}'],
-  // App.jsx exempt for now (intentional dense `text-[10px]` sizes — see follow-up note above).
-  ignores: ['src/lib/apiClient.js', 'src/lib/api-client.js', 'src/App.jsx'],
+  ignores: ['src/lib/apiClient.js', 'src/lib/api-client.js'],
   rules: {
     'no-restricted-syntax': [
       'error',

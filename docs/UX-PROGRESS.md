@@ -7,6 +7,30 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-07 [consistency] — Retire App.jsx arbitrary-value exemption (2026-06-15)
+
+`text-2xs` token (10px / 0.625rem) was already present in `tailwind.config.js`; no arbitrary
+`text-[10px]` values remained in App.jsx. WI-07 closes the loop by removing the stale
+`'src/App.jsx'` entry from `worksArbitraryValueRule.ignores` in `eslint.config.js` and updating
+the block comment to reflect completed status. App.jsx now passes the arbitrary-value rule with 0
+errors. `text-3xs` deferred — no current usages; token will be added on first concrete need.
+
+Execution Plan WI-06 and WI-07 marked ✅. Milestone 0 — Foundation — is complete.
+
+---
+
+## WI-06 [consistency] — Migrate 11 views onto PageLayout (2026-06-15)
+
+Wraps the outer page div in `PageLayout` across 11 data-heavy views: `account`, `workspace`,
+`notifications`, `trash`, `projects`, `developer-portal`, `settings3`, `marketplace`,
+`my-works`, `pm`, and `bql`. Titles / descriptions / action buttons extracted into PageLayout
+props where applicable; `pm-view` and `bql-view` retain their existing `PageHeader` inside.
+
+Sanctioned-page-widths warnings reduced from 218 → 206 (−12 outer-wrapper hits). 0 errors
+throughout. 990/990 tests pass. Branch: `claude/bsmart-uiux-program-uv3ulr`.
+
+---
+
 ## WI-05 [consistency] — PageLayout template (2 widths, 1 padding rhythm) (2026-06-15)
 
 New `templates/page-layout.jsx` — the mandatory content wrapper for every view surface (A-WS2).

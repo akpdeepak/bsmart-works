@@ -7,6 +7,20 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-01 [consistency] — `Card` + `PageHeader` + `Tabs` primitives (2026-06-15)
+
+Three canonical atoms added to `components/works/atoms/`:
+
+| File | What | Status |
+|------|------|--------|
+| `card.jsx` + tests + stories | `Card` (elevated/outlined/flat, forwardRef), `CardHeader`, `CardTitle`, `CardDescription`, `CardBody`, `CardFooter` — replaces ~85 inline card-chrome blocks | ✅ |
+| `page-header.jsx` + tests + stories | `PageHeader` — single h1 per view (text-2xl bold), breadcrumb + actions slots | ✅ |
+| `tabs.jsx` + tests + stories | `Tabs`/`TabList`/`Tab`/`TabPanel` — roving tabindex, ARIA linked (aria-controls/aria-labelledby), keyboard (↑↓/Home/End), controlled+uncontrolled | ✅ |
+
+36 tests pass; ESLint clean; guardrails clean (pre-existing baseline debt only); dark-mode `dark:` pairs on all three. Each has 1 Storybook story (stories file). Execution Plan WI-01 marked ✅.
+
+---
+
 > Verification norm: CI runner is degraded, so each change is verified **locally** before
 > merge — `vite build` + `vitest` + `eslint` (changed component files) +
 > `scripts/guardrails.sh` (exit 0). `App.jsx` is the `/* eslint-disable */` monolith, so it

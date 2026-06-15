@@ -1,31 +1,18 @@
 import { cn } from '@/lib/utils';
+import { bgColorFor } from './chart-palette';
 
 // Molecules — two-dimension renderers that consume the matrix shape produced by
 // `toMatrix` ({ rowKeys, colKeys, value(r,c), max }). Domain-free (CLAUDE.md §4.19),
 // token classes only (§4.2), each ships a data-table fallback / aria so meaning never
 // relies on colour alone (§4.17, RB-30 §6).
-
-const SERIES_COLORS = [
-  'bg-brand-navy',
-  'bg-brand-navy-tint',
-  'bg-semantic-success',
-  'bg-brand-amber',
-  'bg-brand-orange',
-  'bg-semantic-warning',
-  'bg-semantic-danger',
-  'bg-neutral-400',
-];
-
-function colorFor(i) {
-  return SERIES_COLORS[i % SERIES_COLORS.length];
-}
+// CB-safe palette via CHART_PALETTE_BG (WI-22): avoids red/green pairs.
 
 function Legend({ colKeys }) {
   return (
     <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
       {colKeys.map((c, i) => (
         <li key={c} className="flex items-center gap-1.5 text-2xs text-neutral-600 dark:text-neutral-400">
-          <span aria-hidden="true" className={cn('inline-block h-2 w-2 flex-shrink-0 rounded-full', colorFor(i))} />
+          <span aria-hidden="true" className={cn('inline-block h-2 w-2 flex-shrink-0 rounded-full', bgColorFor(i))} />
           {c}
         </li>
       ))}
@@ -57,7 +44,7 @@ export function StackedBarChart({ matrix, className }) {
             <div className="flex h-3 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-700">
               {m.colKeys.map((c, i) => {
                 const v = m.value(r, c);
-                return v > 0 ? <div key={c} className={cn('h-full', colorFor(i))} style={{ width: `${(v / total) * 100}%` }} title={`${c}: ${v}`} /> : null;
+                return v > 0 ? <div key={c} className={cn('h-full', bgColorFor(i))} style={{ width: `${(v / total) * 100}%` }} title={`${c}: ${v}`} /> : null;
               })}
             </div>
           </div>
@@ -87,7 +74,7 @@ export function GroupedBarChart({ matrix, className }) {
                 <div key={c} className="flex items-center gap-2">
                   <span className="w-16 flex-shrink-0 truncate text-2xs text-neutral-600 dark:text-neutral-400">{c}</span>
                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-700">
-                    <div className={cn('h-full rounded-full', colorFor(i))} style={{ width: `${(v / max) * 100}%` }} />
+                    <div className={cn('h-full rounded-full', bgColorFor(i))} style={{ width: `${(v / max) * 100}%` }} />
                   </div>
                   <span className="w-8 flex-shrink-0 text-right text-2xs font-semibold text-neutral-700 dark:text-neutral-300">{v}</span>
                 </div>

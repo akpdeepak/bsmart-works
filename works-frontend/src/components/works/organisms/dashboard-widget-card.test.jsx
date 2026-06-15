@@ -70,8 +70,9 @@ describe('DashboardWidgetCard PIVOT — server-resolved (embed) path', () => {
     const resolved = { dimensions: ['status'], measures: ['count_all'], rows: [{ status: 'Open', count_all: 4 }] };
     render(<DashboardWidgetCard widget={PIVOT} workItems={[]} resolvedPivot={resolved} />);
     // The bar chart renders the resolved row; never the "no workspace selected" embed error.
-    expect(screen.getByText('Open')).toBeInTheDocument();
-    expect(screen.getByText('4')).toBeInTheDocument();
+    // Text appears in both the sr-only data table and the visual bar (WCAG 1.4.1 SR fallback)
+    expect(screen.getAllByText('Open').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('4').length).toBeGreaterThan(0);
     expect(screen.queryByText(/no workspace/i)).not.toBeInTheDocument();
   });
 

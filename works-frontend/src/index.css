@@ -63,3 +63,47 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ── High-contrast theme — 3rd mode (WI-22, WCAG 1.4.3 / 1.4.6) ────────────────────────────
+   Activated by the OS "increase contrast" setting (Windows: High Contrast, macOS: Increased
+   Contrast). Does NOT override semantic colour (success/danger/warning) — those retain their
+   hue but become bolder. Borders, focus rings, and muted text are hardened to neutral-900
+   in light mode so nothing falls below the WCAG AA 4.5:1 threshold.
+   ─────────────────────────────────────────────────────────────────────────────────────────── */
+@media (prefers-contrast: more) {
+  /* Strengthen all borders */
+  [class*="border-neutral"] {
+    border-color: #1f2937; /* neutral-800 — always visible on white */
+  }
+  .dark [class*="border-neutral"] {
+    border-color: #e5e7eb; /* neutral-200 — always visible on dark */
+  }
+
+  /* Lift muted text to primary contrast */
+  [class*="text-neutral-400"],
+  [class*="text-neutral-500"],
+  [class*="text-neutral-600"] {
+    color: #111827; /* neutral-900 */
+  }
+  .dark [class*="text-neutral-400"],
+  .dark [class*="text-neutral-500"],
+  .dark [class*="text-neutral-600"] {
+    color: #f9fafb; /* neutral-50 */
+  }
+
+  /* Solid focus rings — remove opacity so rings are always fully visible */
+  [class*="focus-visible:ring-brand-navy-tint/40"] {
+    --tw-ring-color: #1E4D8C; /* brand-navy-tint, 100% opacity */
+  }
+  [class*="focus-visible:ring-semantic-danger/40"] {
+    --tw-ring-color: #C0392B; /* semantic-danger, 100% opacity */
+  }
+
+  /* Input borders — always solid and visible */
+  .input {
+    border-color: #374151; /* neutral-700 */
+  }
+  .dark .input {
+    border-color: #d1d5db; /* neutral-300 */
+  }
+}

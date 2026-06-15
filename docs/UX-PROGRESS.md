@@ -7,6 +7,47 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-22 [consistency] — WCAG 2.2 AA inclusivity: CB-safe palette, high-contrast theme, SR chart fallback, neutral-400 audit (2026-06-15)
+
+**Colour-blind-safe chart palette (`chart-palette.js`):**
+Extracted a shared `CHART_PALETTE` / `CHART_PALETTE_BG` from a new `chart-palette.js` module.
+Six token-keyed series: brand-navy · brand-amber · brand-navy-tint · brand-orange · neutral-600 ·
+semantic-warning. Avoids red/green pairs (deuteranopia/protanopia safe). `semantic-success` and
+`semantic-danger` excluded — they are status indicators, not categorical series colours. `colorFor(i)`
+and `bgColorFor(i)` index-safe helpers exported for atoms/molecules.
+
+**Screen-reader table fallbacks (WCAG 1.4.1 / 1.3.1):**
+- `donut-chart.jsx`: `<table className="sr-only">` with caption + category/value/percent columns added.
+  `role="img"` + `aria-label` moved from the SVG to the outer container div; SVG is `aria-hidden="true"`.
+- `bar-chart.jsx`: `<table className="sr-only">` with caption + category/value columns added. Container
+  retains `role="img"` + `aria-label`. Single `bg-brand-navy-tint` fill preserved (single-series).
+- `matrix-chart.jsx`: replaced bespoke `SERIES_COLORS` + `colorFor` with `bgColorFor` from `chart-palette`.
+  HeatmapChart and MatrixTable already render as `<table>` — no additional fallback needed.
+
+**High-contrast CSS theme (3rd mode — `index.css`):**
+`@media (prefers-contrast: more)` block added outside `@layer` so it always wins:
+- Neutral borders hardened to `#1f2937` / `#e5e7eb` (neutral-800/200) in light/dark.
+- `text-neutral-400/500/600` lifted to `#111827` / `#f9fafb` (neutral-900/50) — nothing below AA 4.5:1.
+- Focus rings de-opaqued: `ring-brand-navy-tint/40` → full `#1E4D8C`; `ring-semantic-danger/40` → `#C0392B`.
+- `.input` border hardened to neutral-700/300 in light/dark.
+
+**`neutral-400`-as-text component audit:**
+14 standalone `text-neutral-400` readable-text violations fixed across 7 component files.
+All changed to `text-neutral-600 dark:text-neutral-400` (the AA-passing muted pattern):
+- `BlockEditor.jsx` (6): spreadsheet hint, two TOC eyebrow labels, whiteboard empty state, block-type label, block-type-picker group labels, word-count status bar.
+- `BlockRenderer.jsx` (1): TOC "Contents" eyebrow label.
+- `PortalFormDesigner.jsx` (3): "Select a field" prompt, "No fields added yet" empty state, "Pick a field type" empty state.
+- `card-fields-popover.jsx` (4): "Always shown"/"Optional fields" section labels, custom-field group labels, footer info text.
+- `field-config-editor.jsx` (1): category label.
+- `command-palette.jsx` (1): command group label.
+- `work-item-status-timeline.jsx` (1): hint text.
+Intentionally exempt (decorative/state): icons (`aria-hidden`), done-state strikethrough, selected/unselected icon toggles, preview inputs, icon-button hover states.
+
+**Test updates:** 9 tests in 4 files updated to use `getAllByText` where labels now appear in both
+the SR table and the visual element — this is the expected, correct behaviour.
+
+---
+
 ## WI-21 [consistency] — Structural lint → error, React.lazy routes, dark-contrast audit (2026-06-15)
 
 **Structural lint enforcement (ESLint):**

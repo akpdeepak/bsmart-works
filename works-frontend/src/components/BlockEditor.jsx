@@ -668,7 +668,7 @@ function SheetBlock({ block, onChange }) {
       <div className="flex gap-2">
         <button type="button" onClick={addRow} className="text-xs text-brand-navy hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded">+ Row</button>
         <button type="button" onClick={addCol} className="text-xs text-brand-navy hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded">+ Column</button>
-        <span className="text-2xs text-neutral-400 self-center">Try =SUM(A1:A3), =A1*B1</span>
+        <span className="text-2xs text-neutral-600 dark:text-neutral-400 self-center">Try =SUM(A1:A3), =A1*B1</span>
       </div>
     </div>
   );
@@ -680,7 +680,7 @@ function TocBlock({ allBlocks }) {
   const outline = blocksOutline(allBlocks);
   return (
     <div>
-      <p className="text-2xs uppercase tracking-wide font-semibold text-neutral-400 mb-1.5">Contents · auto-generated from headings</p>
+      <p className="text-2xs uppercase tracking-wide font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5">Contents · auto-generated from headings</p>
       {outline.length === 0 ? (
         <p className="text-xs text-neutral-500">Add heading blocks and they appear here automatically.</p>
       ) : (
@@ -854,7 +854,7 @@ function WhiteboardBlock({ block, onChange }) {
         aria-label="Whiteboard canvas"
       >
         {notes.length === 0 && (
-          <p className="absolute inset-0 flex items-center justify-center text-xs text-neutral-400 select-none">Add a sticky note to start.</p>
+          <p className="absolute inset-0 flex items-center justify-center text-xs text-neutral-600 dark:text-neutral-400 select-none">Add a sticky note to start.</p>
         )}
         {notes.map((note) => (
           <div
@@ -1151,7 +1151,7 @@ function Block({ block, index, total, focused, onFocus, onChange, onMove, onDele
     >
       {/* Block type label */}
       <div className="flex items-center gap-1 mb-2">
-        <span className="text-xs uppercase tracking-wide font-semibold text-neutral-400 select-none">
+        <span className="text-xs uppercase tracking-wide font-semibold text-neutral-600 dark:text-neutral-400 select-none">
           {blockLabel(block.type)}
         </span>
         {/* Block controls — visible on focus/hover */}
@@ -1254,7 +1254,7 @@ function AddBlockButton({ onAdd }) {
         >
           {BLOCK_GROUPS.map((group) => (
             <div key={group}>
-              <p className="px-3 pt-2 pb-1 text-2xs uppercase tracking-wide font-semibold text-neutral-400 select-none">{group}</p>
+              <p className="px-3 pt-2 pb-1 text-2xs uppercase tracking-wide font-semibold text-neutral-600 dark:text-neutral-400 select-none">{group}</p>
               {BLOCK_TYPES.filter((t) => t.group === group).map(({ type, label, Icon }) => (
                 <button
                   key={type}
@@ -1401,7 +1401,7 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
       {aiAssist && <AiComposeBar aiAssist={aiAssist} onInsert={insertParagraph} />}
       <AddBlockButton onAdd={addBlock} />
       {/* MS Word-style live status bar — word count + reading time, always current, no file to sync. */}
-      <div className="flex items-center justify-end gap-3 text-2xs text-neutral-400 pt-1" aria-live="polite">
+      <div className="flex items-center justify-end gap-3 text-2xs text-neutral-600 dark:text-neutral-400 pt-1" aria-live="polite">
         <span>{stats.words} {stats.words === 1 ? 'word' : 'words'}</span>
         <span aria-hidden="true">·</span>
         <span>{stats.characters} characters</span>

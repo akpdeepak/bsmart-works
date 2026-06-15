@@ -71,7 +71,7 @@ function PropertyEditor({ field, allFields, onChange }) {
   if (!field) {
     return (
       <aside className="w-72 shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 p-6 flex items-center justify-center">
-        <p className="text-sm text-neutral-400">Select a field to edit its properties.</p>
+        <p className="text-sm text-neutral-600 dark:text-neutral-400">Select a field to edit its properties.</p>
       </aside>
     );
   }
@@ -310,7 +310,7 @@ function FormPreview({ fields }) {
         Preview — read-only
       </p>
       {fields.length === 0 && (
-        <p className="text-sm text-neutral-400 text-center py-8">No fields added yet.</p>
+        <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-8">No fields added yet.</p>
       )}
       {fields.filter(isVisible).map((f) => (
         <div key={f.id}>
@@ -652,7 +652,7 @@ export function PortalFormDesigner({ requestTypeId, onClose, onSaved }) {
             {fields.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl">
                 <p className="text-sm font-medium text-neutral-500">No fields yet</p>
-                <p className="text-xs text-neutral-400 mt-1">Pick a field type from the left panel to get started.</p>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Pick a field type from the left panel to get started.</p>
               </div>
             )}
 

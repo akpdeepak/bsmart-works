@@ -46,7 +46,7 @@ export default function FieldConfigEditor({ fieldPrefs, customFieldDefs = [], on
       <div className="w-52 flex-shrink-0 space-y-5">
         {Object.entries(CATEGORIES).map(([catKey, cat]) => (
           <div key={catKey}>
-            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-1.5 px-2">{cat.label}</p>
+            <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-1.5 px-2">{cat.label}</p>
             <div className="space-y-0.5">
               {ALL_TYPES.filter((t) => t.category === catKey).map((t) => {
                 const Icon = resolveTypeIcon(t.icon);

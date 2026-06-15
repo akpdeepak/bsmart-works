@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 // a text label + value so meaning never relies on colour alone (§4.17). When
 // `onSelect` is given, each bar becomes a button so users can drill into the
 // underlying items (CLAUDE.md iteration 6).
+// SR table fallback added (WI-22 — WCAG 1.4.1, WCAG 1.3.1).
 export function BarChart({ data = [], onSelect, className }) {
   const items = data.filter((d) => (d.value || 0) > 0);
 
@@ -19,6 +20,16 @@ export function BarChart({ data = [], onSelect, className }) {
   return (
     <div className={cn('space-y-1.5', className)}
       role={onSelect ? 'group' : 'img'} aria-label={`Bar chart: ${summary}`}>
+      {/* Screen-reader table — conveying data without relying on visual bar width (WI-22, WCAG 1.4.1). */}
+      <table className="sr-only">
+        <caption>Bar chart data</caption>
+        <thead><tr><th scope="col">Category</th><th scope="col">Value</th></tr></thead>
+        <tbody>
+          {items.map((d) => (
+            <tr key={d.label}><td>{d.label}</td><td>{d.value}</td></tr>
+          ))}
+        </tbody>
+      </table>
       {items.map((d) => {
         const row = (
           <>

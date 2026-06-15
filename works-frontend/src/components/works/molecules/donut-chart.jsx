@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { CHART_PALETTE } from './chart-palette';
 
 // Molecule — presentational donut/pie chart for a categorical distribution.
 // Takes pre-aggregated [{ label, value }] data and carries no domain knowledge
@@ -7,19 +8,7 @@ import { cn } from '@/lib/utils';
 // Every slice has a text label + value in the legend — meaning never relies on
 // colour alone (CLAUDE.md §4.17). When `onSelect` is given, each legend row becomes
 // a button so users can drill into the underlying items (CLAUDE.md iteration 6).
-
-// Distinct brand/semantic hues, cycled by slice index. Navy leads so small charts
-// stay calm; navy-tint and semantic.info share a hex, so only one is included.
-const SLICE_COLORS = [
-  'text-brand-navy',
-  'text-brand-navy-tint',
-  'text-semantic-success',
-  'text-brand-amber',
-  'text-brand-orange',
-  'text-semantic-warning',
-  'text-semantic-danger',
-  'text-neutral-400',
-];
+// CB-safe palette (WI-22): avoids red/green pairs; uses hue + luminance contrast.
 
 const RADIUS = 16;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -34,26 +23,39 @@ export function DonutChart({ data = [], onSelect, className }) {
 
   const summary = items.map((d) => `${d.label} ${d.value}`).join(', ');
   const fractions = items.map((d) => d.value / total);
-  // Cumulative fraction before slice i — kept pure (no render-time mutation) so the
-  // react-hooks/immutability rule stays satisfied. Slice counts are tiny, so O(n²) is fine.
   const offsetBefore = (i) => fractions.slice(0, i).reduce((a, b) => a + b, 0);
 
   return (
-    <div className={cn('flex items-center gap-4', className)}>
+    <div className={cn('flex items-center gap-4', className)}
+      role="img" aria-label={`Donut chart: ${summary}`}>
+      {/* Screen-reader table — conveying data without relying on visual colour (WI-22, WCAG 1.4.1). */}
+      <table className="sr-only">
+        <caption>Donut chart data</caption>
+        <thead><tr><th scope="col">Category</th><th scope="col">Value</th><th scope="col">Percent</th></tr></thead>
+        <tbody>
+          {items.map((d) => (
+            <tr key={d.label}>
+              <td>{d.label}</td>
+              <td>{d.value}</td>
+              <td>{Math.round((d.value / total) * 100)}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
       <svg viewBox="0 0 40 40" className="h-24 w-24 flex-shrink-0 -rotate-90"
-        role="img" aria-label={`Donut chart: ${summary}`}>
+        aria-hidden="true">
         <circle cx="20" cy="20" r={RADIUS} fill="none" strokeWidth="6"
           stroke="currentColor" className="text-neutral-200 dark:text-neutral-700" />
         {items.map((d, i) => (
           <circle key={d.label} cx="20" cy="20" r={RADIUS} fill="none" strokeWidth="6"
-            stroke="currentColor" className={SLICE_COLORS[i % SLICE_COLORS.length]}
+            stroke="currentColor" className={CHART_PALETTE[i % CHART_PALETTE.length]}
             strokeDasharray={`${fractions[i] * CIRCUMFERENCE} ${CIRCUMFERENCE}`}
             strokeDashoffset={-offsetBefore(i) * CIRCUMFERENCE} />
         ))}
       </svg>
       <ul className="min-w-0 flex-1 space-y-1">
         {items.map((d, i) => {
-          const colorClass = SLICE_COLORS[i % SLICE_COLORS.length];
+          const colorClass = CHART_PALETTE[i % CHART_PALETTE.length];
           const pct = Math.round((d.value / total) * 100);
           const row = (
             <>

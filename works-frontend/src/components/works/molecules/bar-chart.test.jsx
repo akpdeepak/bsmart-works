@@ -11,10 +11,11 @@ const data = [
 describe('BarChart', () => {
   it('renders a bar row with label and value for each entry', () => {
     render(<BarChart data={data} />);
-    expect(screen.getByText('High')).toBeInTheDocument();
-    expect(screen.getByText('Medium')).toBeInTheDocument();
-    expect(screen.getByText('6')).toBeInTheDocument();
-    expect(screen.getByText('1')).toBeInTheDocument();
+    // Text appears in both the sr-only data table and the visual bar row (WCAG 1.4.1 SR fallback)
+    expect(screen.getAllByText('High').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Medium').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('6').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('1').length).toBeGreaterThan(0);
   });
 
   it('exposes an accessible image label summarising the data (not colour-alone)', () => {
@@ -24,7 +25,7 @@ describe('BarChart', () => {
 
   it('ignores zero-value entries', () => {
     render(<BarChart data={[{ label: 'High', value: 2 }, { label: 'None', value: 0 }]} />);
-    expect(screen.getByText('High')).toBeInTheDocument();
+    expect(screen.getAllByText('High').length).toBeGreaterThan(0);
     expect(screen.queryByText('None')).not.toBeInTheDocument();
   });
 

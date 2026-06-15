@@ -11,16 +11,18 @@ const data = [
 describe('DonutChart', () => {
   it('renders a legend row with label and value for each slice', () => {
     render(<DonutChart data={data} />);
-    expect(screen.getByText('Todo')).toBeInTheDocument();
-    expect(screen.getByText('In Progress')).toBeInTheDocument();
-    expect(screen.getByText('5')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
+    // Text appears in both the sr-only data table and the visual legend (WCAG 1.4.1 SR fallback)
+    expect(screen.getAllByText('Todo').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('In Progress').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('5').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('3').length).toBeGreaterThan(0);
   });
 
   it('computes the percentage of the total per slice', () => {
     render(<DonutChart data={data} />);
-    expect(screen.getByText('50%')).toBeInTheDocument(); // 5 of 10
-    expect(screen.getByText('30%')).toBeInTheDocument(); // 3 of 10
+    // Percentage appears in both the sr-only data table and the visual legend
+    expect(screen.getAllByText('50%').length).toBeGreaterThan(0); // 5 of 10
+    expect(screen.getAllByText('30%').length).toBeGreaterThan(0); // 3 of 10
   });
 
   it('exposes an accessible image label summarising the data (not colour-alone)', () => {
@@ -30,7 +32,7 @@ describe('DonutChart', () => {
 
   it('ignores zero-value slices', () => {
     render(<DonutChart data={[{ label: 'Todo', value: 4 }, { label: 'Empty', value: 0 }]} />);
-    expect(screen.getByText('Todo')).toBeInTheDocument();
+    expect(screen.getAllByText('Todo').length).toBeGreaterThan(0);
     expect(screen.queryByText('Empty')).not.toBeInTheDocument();
   });
 

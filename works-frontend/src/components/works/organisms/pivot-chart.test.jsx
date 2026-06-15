@@ -42,7 +42,8 @@ describe('PivotChart dispatch per type', () => {
   it('bar → labelled bar chart image', () => {
     render(<PivotChart type="bar" result={oneDim} />);
     expect(screen.getByRole('img', { name: /Bar chart/ })).toBeInTheDocument();
-    expect(screen.getByText('Open')).toBeInTheDocument();
+    // Text appears in both the sr-only data table and the visual bar (WCAG 1.4.1 SR fallback)
+    expect(screen.getAllByText('Open').length).toBeGreaterThan(0);
   });
   it('donut → donut chart image', () => {
     render(<PivotChart type="donut" result={oneDim} />);

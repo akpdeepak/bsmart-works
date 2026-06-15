@@ -46,7 +46,7 @@ function Metric({ label, value, hint }) {
     <div className="flex-1 min-w-0">
       <p className="text-xs text-neutral-500 dark:text-neutral-400">{label}</p>
       <p className="text-base font-bold font-mono text-neutral-900 dark:text-neutral-100 leading-tight">{value}</p>
-      <p className="text-xs text-neutral-400">{hint}</p>
+      <p className="text-xs text-neutral-600 dark:text-neutral-400">{hint}</p>
     </div>
   );
 }

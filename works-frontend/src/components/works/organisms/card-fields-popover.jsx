@@ -156,7 +156,7 @@ export function CardFieldsPopover({ cardPrefs, workspaceId, customFieldDefs = []
 
           {/* Always-on fields */}
           <div className="px-4 pt-1 pb-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500 mb-2">Always shown</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mb-2">Always shown</p>
             <div className="grid grid-cols-2 gap-1.5">
               {ALWAYS_VISIBLE.map(f => (
                 <div key={f.key}
@@ -170,7 +170,7 @@ export function CardFieldsPopover({ cardPrefs, workspaceId, customFieldDefs = []
 
           {/* Toggleable fields */}
           <div className="px-4 pb-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500 mb-2">Optional fields</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mb-2">Optional fields</p>
             <div className="grid grid-cols-2 gap-1.5">
               {DEFAULT_TOGGLES.map(f => (
                 <FieldToggle key={f.key} label={f.label} on={isVisible(f.key)} onChange={() => toggleField(f.key)} />
@@ -237,7 +237,7 @@ export function CardFieldsPopover({ cardPrefs, workspaceId, customFieldDefs = []
                     )}
                     {groups.map(group => (
                       <div key={group}>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500 px-1 pt-2 pb-1">{group}</p>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400 px-1 pt-2 pb-1">{group}</p>
                         {filteredBuiltin.filter(f => f.group === group).map(f => (
                           <button key={f.key}
                             onClick={() => { addField(f.key); setSearch(''); }}
@@ -302,7 +302,7 @@ export function CardFieldsPopover({ cardPrefs, workspaceId, customFieldDefs = []
           )}
 
           {/* Footer */}
-          <div className="px-4 py-2.5 border-t border-neutral-100 dark:border-neutral-700 flex items-center gap-1.5 text-xs text-neutral-400 dark:text-neutral-500">
+          <div className="px-4 py-2.5 border-t border-neutral-100 dark:border-neutral-700 flex items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400">
             <span>Saved for your account · applies to all views</span>
           </div>
         </div>

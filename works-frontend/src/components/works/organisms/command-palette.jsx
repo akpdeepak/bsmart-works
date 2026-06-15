@@ -152,7 +152,7 @@ export function CommandPalette({ onClose, commands = [], onSearch, placeholder =
               >
                 {cmd.Icon && <cmd.Icon aria-hidden="true" className="h-4 w-4 shrink-0 text-neutral-400" />}
                 <span className="flex-1 truncate">{cmd.label}</span>
-                {cmd.group && <span className="shrink-0 text-xs text-neutral-400">{cmd.group}</span>}
+                {cmd.group && <span className="shrink-0 text-xs text-neutral-600 dark:text-neutral-400">{cmd.group}</span>}
                 {i === safeActive && <CornerDownLeft aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-neutral-400" />}
               </button>
             ))

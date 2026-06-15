@@ -46,7 +46,7 @@ function TocView({ allBlocks }) {
   if (outline.length === 0) return null;
   return (
     <nav aria-label="Table of contents" className="rounded-md border border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 p-3">
-      <p className="text-2xs uppercase tracking-wide font-semibold text-neutral-400 mb-1.5">Contents</p>
+      <p className="text-2xs uppercase tracking-wide font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5">Contents</p>
       <ul className="space-y-0.5">
         {outline.map((h) => (
           <li key={h.id} className={cn(h.level === 2 && 'pl-3', h.level === 3 && 'pl-6')}>

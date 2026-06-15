@@ -1048,6 +1048,20 @@ export default function App() {
     }).catch(err => showToast(err.message, 'error'));
   };
 
+  // Inline quick-add (WI-13): promise-returning variant for the backlog quick-add row; resolves with
+  // the saved item so the row can reset itself. Project defaults to the first available project.
+  const handleInlineCreate = ({ title, type, priority = 'MEDIUM' }) => {
+    const projectId = projects.length > 0 ? projects[0].id : 'PROJ-WORKS';
+    return api.send('/work-items', {
+      method: 'POST',
+      body: JSON.stringify({ title, type, priority, projectId }),
+    }).then((saved) => {
+      setWorkItems((prev) => [...prev, saved]);
+      showToast(`${saved.autoId ? saved.autoId + ' — ' : ''}${saved.title} created`);
+      return saved;
+    });
+  };
+
   // Bulk-edit selected items (assignee/priority/add|removeLabel). The server re-checks edit rights
   // per item (RB-40 §1) and returns { requested, updated, skipped }; we refetch so every surface
   // reflects the change and surface a summary toast. Returns a promise so the caller can clear state.
@@ -3505,6 +3519,7 @@ export default function App() {
               customFieldDefs={customFieldDefs}
               statusResolver={statusResolver}
               currentUserId={currentUser?.id}
+              onInlineCreate={handleInlineCreate}
             />
           )}
 

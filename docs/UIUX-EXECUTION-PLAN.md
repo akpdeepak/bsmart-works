@@ -140,15 +140,15 @@ visual source before building).
 |----|-----------|---------|-----------|--------|----|
 | WI-08 | Define HEART goals→signals→metrics; define the explicit **"first value"** event | F | — | ✅ | feat/uiux-wi09-funnel-instrumentation |
 | WI-09 | Instrument the activation funnel (signup→workspace→template→first item→invite→day-2) via `EventService` / `events` store (DPDP-safe, server-side) | F; RB-40 | WI-08 | ✅ | feat/uiux-wi09-funnel-instrumentation |
-| WI-10 | Internal HEART/funnel dashboard (dogfood via the `Dashboard`/BQL stack) | F | WI-09 | ☐ | |
-| WI-11 | Feature-flag layer (prereq for A/B + safe UX rollout) | C.6; D | — | ☐ ⚠️ | |
+| WI-10 | Internal HEART/funnel dashboard (dogfood via the `Dashboard`/BQL stack) | F | WI-09 | ✅ | feat/uiux-wi10-heart-dashboard · PR #376 |
+| WI-11 | Feature-flag layer (prereq for A/B + safe UX rollout) | C.6; D | — | ✅ | feat/uiux-wi11-feature-flags |
 
 ### Milestone 2 — Activation & list ergonomics  *(Benchmark Horizon 1 · roadmap §D-H1)*
 
 | ID | Work item | Maps to | Depends on | Status | PR |
 |----|-----------|---------|-----------|--------|----|
-| WI-12 | First-run onboarding wizard + project templates (Scrum / Kanban / Bug / RAID) + setup-completeness meter | D H1 #1 | WI-05, WI-11 | ☐ | |
-| WI-13 | Inline quick-add on lists (`N`/`+` → editable row) | D H1 #2 | WI-05 | ☐ | |
+| WI-12 | First-run onboarding wizard + project templates (Scrum / Kanban / Bug / RAID) + setup-completeness meter | D H1 #1 | WI-05, WI-11 | ✅ | feat/uiux-wi12-onboarding-wizard |
+| WI-13 | Inline quick-add on lists (`N`/`+` → editable row) | D H1 #2 | WI-05 | ✅ | feat/uiux-wi13-inline-quick-add |
 | WI-14 | List-level keyboard rhythm (`j/k/e/n/Enter`) | D H1 #3 | — | ☐ | |
 | WI-15 | Surface saved views (rename / delete / reorder UI over `lib/saved-views.js`) | D H1 #4 | WI-05 | ☐ | |
 | WI-16 | Optimistic-UI rollback (first slice of the TanStack Query migration) | D H1 #5, H2 #6 | — | ☐ | |

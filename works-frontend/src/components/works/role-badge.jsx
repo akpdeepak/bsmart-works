@@ -1,19 +1,39 @@
-// Role/tier badge, extracted from the App.jsx monolith. ROLE_CONFIG stays module-private (used
-// only here) so this file exports a single component (react-refresh/only-export-components). The
-// unified <Badge> work (UX finding A4) will later fold this into the one badge API.
-const ROLE_CONFIG = {
-  OWNER:  { label: 'Owner',  bg: 'bg-brand-amber/10', text: 'text-brand-amber', tier: 5 },
-  ADMIN:  { label: 'Admin',  bg: 'bg-brand-navy/10', text: 'text-brand-navy', tier: 4 },
-  LEAD:   { label: 'Lead',   bg: 'bg-semantic-success/10', text: 'text-semantic-success', tier: 3 },
-  MEMBER: { label: 'Member', bg: 'bg-neutral-100',   text: 'text-neutral-600', tier: 2 },
-  VIEWER: { label: 'Viewer', bg: 'bg-neutral-50',    text: 'text-neutral-600 dark:text-neutral-400', tier: 1 },
-};
+import { cva } from 'class-variance-authority';
+import { cn } from '@/lib/utils';
 
-export function RoleBadge({ role, tier, small = false }) {
-  const r = ROLE_CONFIG[role] || Object.values(ROLE_CONFIG).find(config => config.tier === tier) || ROLE_CONFIG.MEMBER;
+// Role/tier badge — converted to cva (UX finding A4: unified badge family, WI-04).
+// tier lookup is preserved for callers that resolve by numeric tier instead of string key.
+const roleVariants = cva(
+  'inline-flex items-center gap-1 text-xs font-semibold rounded whitespace-nowrap',
+  {
+    variants: {
+      role: {
+        OWNER:  'bg-brand-amber/10 text-brand-amber',
+        ADMIN:  'bg-brand-navy/10 text-brand-navy dark:text-brand-navy-tint',
+        LEAD:   'bg-semantic-success/10 text-semantic-success',
+        MEMBER: 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400',
+        VIEWER: 'bg-neutral-50 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400',
+      },
+      small: {
+        true:  'px-1 py-0.5',
+        false: 'px-1.5 py-0.5',
+      },
+    },
+    defaultVariants: { role: 'MEMBER', small: false },
+  }
+);
+
+const TIER_TO_ROLE = { 5: 'OWNER', 4: 'ADMIN', 3: 'LEAD', 2: 'MEMBER', 1: 'VIEWER' };
+const LABELS = { OWNER: 'Owner', ADMIN: 'Admin', LEAD: 'Lead', MEMBER: 'Member', VIEWER: 'Viewer' };
+
+const KNOWN_ROLES = new Set(['OWNER', 'ADMIN', 'LEAD', 'MEMBER', 'VIEWER']);
+
+export function RoleBadge({ role, tier, small = false, className }) {
+  const raw = (role || '').toUpperCase();
+  const r = KNOWN_ROLES.has(raw) ? raw : (TIER_TO_ROLE[tier] || 'MEMBER');
   return (
-    <span className={`inline-flex items-center gap-1 font-semibold rounded ${small ? 'text-xs px-1 py-0.5' : 'text-xs px-1.5 py-0.5'} ${r.bg} ${r.text}`}>
-      {r.label}
+    <span className={cn(roleVariants({ role: r, small }), className)}>
+      {LABELS[r] ?? r}
     </span>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import BqlView from './bql-view';
 import { rowToClause, quoteIfNeeded, suggestions, applySuggestion } from '@/lib/bql-builder';
 
@@ -45,8 +45,11 @@ describe('BqlView', () => {
       />,
     );
     expect(screen.getByText('1 result')).toBeInTheDocument();
-    expect(screen.getByText('A bug')).toBeInTheDocument();
-    expect(screen.getByText('High')).toBeInTheDocument();
+    // Scope to the results table — the syntax-highlight overlay also renders the query text
+    // ("High"), so assert the badge within the table specifically.
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('A bug')).toBeInTheDocument();
+    expect(within(table).getByText('High')).toBeInTheDocument();
   });
 
   it('resolves id columns to names in results (JIRA-style)', () => {

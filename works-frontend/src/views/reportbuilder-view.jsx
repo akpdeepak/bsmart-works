@@ -1,6 +1,7 @@
 import { FileText, File as FileIcon, ArrowLeft, Puzzle } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { ExportButtons } from '@/components/works/export-buttons';
 import { Modal } from '@/components/works/molecules/modal';
 import { ReportSectionCard } from '@/components/works/organisms/report-section-card';
@@ -14,6 +15,7 @@ import { absoluteDate } from '@/lib/format';
  * pure rendering shell that accepts handlers as props.
  */
 export default function ReportBuilderView({
+  loading = false,
   reports,
   selectedReport,
   reportEditMode,
@@ -46,6 +48,13 @@ export default function ReportBuilderView({
   const { t } = useI18n();
   const onPressKey = (e) => { if (e.key === 'Enter' || e.key === ' ') e.currentTarget.click(); };
 
+  if (loading && reports.length === 0 && !selectedReport) {
+    return (
+      <div className="p-6 max-w-4xl">
+        <ListSkeleton rows={4} />
+      </div>
+    );
+  }
   return (
     <>
       <div className="p-6 overflow-y-auto h-full">

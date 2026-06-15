@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ClipboardList, CheckCircle2, ScrollText, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { Modal } from '@/components/works/molecules/modal';
 import { PageHeader } from '@/components/works/atoms/page-header';
 import { Tabs, TabList, Tab, TabPanel } from '@/components/works/atoms/tabs';
@@ -27,6 +28,7 @@ const vStatusClass = {
  * pure rendering shell that accepts handlers as props.
  */
 export default function ComplianceView({
+  loading = false,
   complianceTab,
   complianceDashboard,
   complianceRules,
@@ -68,6 +70,14 @@ export default function ComplianceView({
 }) {
   // Gap 1 — per-violation resolution notes form
   const [resolveForm, setResolveForm] = useState(null); // { id, action } | null
+
+  if (loading && complianceRules.length === 0 && complianceViolations.length === 0) {
+    return (
+      <div className="p-8 max-w-4xl">
+        <ListSkeleton rows={4} />
+      </div>
+    );
+  }
 
   const selectableViolations = complianceViolations
     .filter(v => v.status === 'OPEN' || v.status === 'ACKNOWLEDGED')

@@ -133,4 +133,26 @@ describe('MyWorksView', () => {
     expect(screen.getByText('My assigned task')).toBeInTheDocument();
     expect(screen.queryByText("Someone elses task")).not.toBeInTheDocument();
   });
+
+  // ── Loading-state guard (audit finding #32) ──────────────────────────────
+  it('shows a skeleton (not the empty state) when loading=true and workItems is empty', () => {
+    render(<MyWorksView {...baseProps} loading />);
+    // The ListSkeleton wrapper carries aria-busy="true" and aria-label="Loading".
+    expect(document.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+    // No false empty state should appear while data is in flight.
+    expect(screen.queryByText('Nothing assigned to you')).not.toBeInTheDocument();
+  });
+
+  it('shows the empty state (not the skeleton) when loading=false and workItems is empty', () => {
+    render(<MyWorksView {...baseProps} loading={false} />);
+    expect(screen.getByText('Nothing assigned to you')).toBeInTheDocument();
+    expect(document.querySelector('[aria-busy="true"]')).not.toBeInTheDocument();
+  });
+
+  it('shows the item list (not the skeleton) when loading=true but workItems is non-empty', () => {
+    render(<MyWorksView {...baseProps} loading myItems={[makeItem()]} workItems={[makeItem()]} />);
+    // Non-empty → the skeleton guard does NOT fire; we should see the list.
+    expect(screen.queryByText('Nothing assigned to you')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Do the thing/ })).toBeInTheDocument();
+  });
 });

@@ -1,6 +1,7 @@
 import { Headset, Building2, Archive, Timer, Star } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { Modal } from '@/components/works/molecules/modal';
 import { PortalFormDesigner } from '@/components/PortalFormDesigner';
 
@@ -11,6 +12,7 @@ import { PortalFormDesigner } from '@/components/PortalFormDesigner';
  * pure rendering shell that accepts handlers as props.
  */
 export default function ServiceView({
+  loading = false,
   serviceTab,
   serviceQueue,
   serviceRequests,
@@ -35,6 +37,13 @@ export default function ServiceView({
   createServiceCustomer,
   showToast,
 }) {
+  if (loading && serviceRequests.length === 0 && serviceCustomers.length === 0) {
+    return (
+      <div className="p-8 max-w-4xl">
+        <ListSkeleton rows={4} />
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="px-6 pt-5 border-b border-neutral-200 dark:border-neutral-700">

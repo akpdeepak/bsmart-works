@@ -3408,6 +3408,7 @@ export default function App() {
           {/* PROJECTS */}
           {view === 'projects' && (
             <ProjectsView
+              loading={loading}
               projects={projects}
               workItems={workItems}
               setIsProjectOpen={setIsProjectOpen}
@@ -3511,6 +3512,7 @@ export default function App() {
           {/* ACTIVE SPRINT VIEW — extracted to src/views/sprint-view.jsx (TD-003) */}
           {view === 'sprint' && (
             <SprintView
+              loading={loading}
               activeSprint={activeSprint}
               sprints={sprints}
               sprintItems={sprintItems}
@@ -3558,6 +3560,7 @@ export default function App() {
           {/* REPORTS VIEW */}
           {view === 'reports' && (
             <ReportsView
+              loading={loading}
               velocityData={velocityData}
               sprints={sprints}
               selectedSprintId={selectedSprintId}
@@ -3714,6 +3717,7 @@ export default function App() {
              ====================================================== */}
           {view === 'pm' && (
             <PmView
+              loading={loading}
               pmProjectId={pmProjectId}
               pmTab={pmTab}
               raidDashboard={raidDashboard}
@@ -3808,6 +3812,7 @@ export default function App() {
              ====================================================== */}
           {view === 'dashboards' && (
             <DashboardsView
+              loading={loading}
               customDashboards={customDashboards}
               selectedDashboard={selectedDashboard}
               dashboardEditMode={dashboardEditMode}
@@ -3849,6 +3854,7 @@ export default function App() {
           {/* REPORT BUILDER — extracted to src/views/reportbuilder-view.jsx (TD-003) */}
           {view === 'reportbuilder' && (
             <ReportBuilderView
+              loading={loading}
               reports={reports}
               selectedReport={selectedReport}
               reportEditMode={reportEditMode}
@@ -3885,6 +3891,7 @@ export default function App() {
              ====================================================== */}
           {view === 'knowledge' && (
             <KnowledgeView
+              loading={loading}
               knowledgeSearch={knowledgeSearch}
               knowledgeTab={knowledgeTab}
               knowledgeSpaces={knowledgeSpaces}
@@ -3940,6 +3947,7 @@ export default function App() {
              ====================================================== */}
           {view === 'releases' && (
             <ReleasesView
+              loading={loading}
               releases={releases}
               releaseSearch={releaseSearch}
               selectedRelease={selectedRelease}
@@ -3967,6 +3975,7 @@ export default function App() {
 
           {view === 'smcockpit' && (
             <ScrumMasterCockpitView
+              loading={loading}
               i15ProjectId={i15ProjectId}
               cockpitContext={cockpitContext}
               ceremonies={ceremonies}
@@ -4063,6 +4072,7 @@ export default function App() {
 
           {view === 'poworkspace' && (
             <PoWorkspaceView
+              loading={loading}
               i15ProjectId={i15ProjectId}
               projects={projects}
               poTab={poTab}
@@ -4107,6 +4117,7 @@ export default function App() {
           {/* COMPLIANCE — extracted to src/views/compliance-view.jsx (TD-003) */}
           {view === 'compliance' && (
             <ComplianceView
+              loading={loading}
               complianceTab={complianceTab}
               complianceDashboard={complianceDashboard}
               complianceRules={complianceRules}
@@ -4150,6 +4161,7 @@ export default function App() {
 \n          {/* SERVICE DESK — extracted to src/views/service-view.jsx (TD-003) */}
           {view === 'service' && (
             <ServiceView
+              loading={loading}
               serviceTab={serviceTab}
               serviceQueue={serviceQueue}
               serviceRequests={serviceRequests}

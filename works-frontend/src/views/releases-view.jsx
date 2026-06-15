@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Rocket } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
@@ -12,6 +13,7 @@ import { absoluteDate } from '@/lib/format';
 // the parent owns release data + mutations; this renders the two-pane list/detail. A11y nudge
 // (finding D3): the previously placeholder-only search box and project filter now carry aria-labels.
 export default function ReleasesView({
+  loading = false,
   releases,
   releaseSearch,
   selectedRelease,
@@ -34,6 +36,13 @@ export default function ReleasesView({
   // Local search over the add-to-release candidate list, so items past the first page are
   // reachable (previously the picker hard-capped at 20 with no way to find the rest).
   const [itemSearch, setItemSearch] = useState('');
+  if (loading && releases.length === 0) {
+    return (
+      <div className="p-8 max-w-3xl">
+        <ListSkeleton rows={4} />
+      </div>
+    );
+  }
   return (
     <div className="flex h-full overflow-hidden">
       <div className="w-72 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col">

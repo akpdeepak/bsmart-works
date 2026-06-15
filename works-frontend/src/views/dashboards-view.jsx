@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { LayoutDashboard, ArrowLeft, Puzzle } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { ExportButtons } from '@/components/works/export-buttons';
 import { Modal } from '@/components/works/molecules/modal';
 import { DashboardWidgetCard } from '@/components/works/organisms/dashboard-widget-card';
@@ -47,6 +48,7 @@ const STARTER_WIDGETS = [
  * pure rendering shell that accepts handlers as props.
  */
 export default function DashboardsView({
+  loading = false,
   customDashboards,
   selectedDashboard,
   dashboardEditMode,
@@ -118,6 +120,13 @@ export default function DashboardsView({
     STARTER_WIDGETS.forEach((w) => addDashboardWidget(w.type, w.config, w.title, w.w));
   };
 
+  if (loading && customDashboards.length === 0 && !selectedDashboard) {
+    return (
+      <div className="p-6 max-w-4xl">
+        <ListSkeleton rows={4} />
+      </div>
+    );
+  }
   return (
     <>
       <div className="p-6 overflow-y-auto h-full">

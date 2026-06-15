@@ -1,6 +1,7 @@
 import { Zap, Star, Globe, Lock, Unlock, X } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { SprintBoard } from '@/components/works/organisms/sprint-board';
 import { WorkItemFilterBar } from '@/components/works/organisms/work-item-filter-bar';
 import { normalizeSavedFilter, hasActiveFilters } from '@/lib/work-item-filter';
@@ -15,6 +16,7 @@ import { absoluteDate } from '@/lib/format';
  * pure rendering shell that accepts handlers as props.
  */
 export default function SprintView({
+  loading = false,
   activeSprint,
   sprints,
   sprintItems,
@@ -58,6 +60,13 @@ export default function SprintView({
   statusResolver,
 }) {
   const { t } = useI18n();
+  if (loading && !activeSprint && sprints.length === 0) {
+    return (
+      <div className="p-6">
+        <ListSkeleton rows={5} />
+      </div>
+    );
+  }
   return (
     <div className="p-6 h-full flex flex-col">
       {activeSprint ? (

@@ -5,6 +5,7 @@ import {
 import { useState } from 'react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { Modal } from '@/components/works/molecules/modal';
 import { PageHeader } from '@/components/works/atoms/page-header';
 import { PageLayout } from '@/components/works/templates/page-layout';
@@ -23,6 +24,7 @@ import { PmArtifactList } from '@/components/works/organisms/pm-artifact-list';
  * pure rendering shell that accepts handlers as props.
  */
 export default function PmView({
+  loading = false,
   pmProjectId,
   pmTab,
   raidDashboard,
@@ -73,6 +75,13 @@ export default function PmView({
   // Per-section save status for meeting notes ('dirty' | 'saving' | 'saved' | 'error'), so an
   // autosave-on-blur is no longer silent — the user sees whether their notes persisted.
   const [noteStatus, setNoteStatus] = useState({});
+  if (loading && projects.length === 0) {
+    return (
+      <div className="p-6 max-w-6xl">
+        <ListSkeleton rows={4} />
+      </div>
+    );
+  }
   const saveMeetingNote = (section, content) => {
     setNoteStatus(s => ({ ...s, [section]: 'saving' }));
     api.raw(`/meetings/${selectedMeeting.id}/notes/${section}`, {

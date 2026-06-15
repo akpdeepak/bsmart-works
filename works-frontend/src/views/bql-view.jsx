@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Sparkles, X, BookmarkPlus, Bookmark, Check, AlertCircle, Plus, Trash2, SlidersHorizontal, Link2, Clock, Bell, Play, Terminal, Database, Search, LayoutGrid } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { savedViewsClient } from '@/lib/saved-views';
@@ -7,7 +7,20 @@ import { capabilityEnabled } from '@/lib/ai';
 import { NULLARY_OPS, SET_OPS, rowToClause, suggestions, applySuggestion } from '@/lib/bql-builder';
 import BqlResultsTable from '@/views/bql-results-table';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
+import { tokenize } from '@/lib/bql-highlight';
 import { useI18n } from '@/lib/i18n';
+
+// Token type → highlight colour (design tokens only; dark-mode legible).
+const TOKEN_CLASS = {
+  field: 'text-brand-navy dark:text-brand-navy-tint',
+  operator: 'text-semantic-info',
+  keyword: 'text-brand-orange',
+  function: 'text-semantic-success',
+  string: 'text-neutral-500',
+  number: 'text-brand-amber',
+  paren: 'text-neutral-400',
+  plain: '',
+};
 
 const HISTORY_KEY = 'bql.history';
 const NAV_COLS_KEY = 'bql.navigator.columns';
@@ -73,6 +86,27 @@ export default function BqlView({
   const [history, setHistory] = useState(loadHistory);
   const [ac, setAc] = useState({ open: false, options: [], partial: '', index: 0 });
   const queryRef = useRef(null);
+  const highlightRef = useRef(null); // the <pre> overlay behind the textarea (scroll-synced)
+
+  // Syntax-highlight tokens (with char offsets) for the overlay, recomputed only when the query or
+  // schema changes.
+  const tokens = useMemo(() => {
+    const out = [];
+    tokenize(bqlQuery, schema).reduce((off, t) => {
+      out.push({ ...t, start: off, end: off + t.text.length });
+      return off + t.text.length;
+    }, 0);
+    return out;
+  }, [bqlQuery, schema]);
+  // Char offset to mark with an error squiggle (clamped into range), or null when valid.
+  const errorPos = validation && !validation.valid && validation.position >= 0
+    ? Math.min(validation.position, Math.max(0, bqlQuery.length - 1))
+    : null;
+  const syncScroll = (e) => {
+    if (!highlightRef.current) return;
+    highlightRef.current.scrollTop = e.target.scrollTop;
+    highlightRef.current.scrollLeft = e.target.scrollLeft;
+  };
 
   // Reflect the current query + sort into the URL so a run is shareable/bookmarkable (JIRA filter
   // URLs), without polluting history. Uses replaceState; the app's path stays unchanged.
@@ -420,15 +454,32 @@ export default function BqlView({
             <textarea
               id="bql-query"
               ref={queryRef}
-              className="input w-full resize-none rounded-lg bg-neutral-50/60 font-mono text-sm leading-relaxed focus:bg-white focus:ring-2 focus:ring-brand-navy-tint/30 dark:bg-neutral-900/40 dark:focus:bg-neutral-900"
+              spellCheck={false}
+              className="input relative w-full resize-none rounded-lg bg-neutral-50/60 font-mono text-sm leading-relaxed text-transparent caret-brand-navy focus:bg-white focus:ring-2 focus:ring-brand-navy-tint/30 dark:bg-neutral-900/40 dark:caret-brand-navy-tint dark:focus:bg-neutral-900"
               rows={3}
               placeholder={'status = Open AND (priority = High OR priority = Critical)\nassignee = currentUser() AND createdAt >= startOfWeek()\ndueDate < today() AND status NOT IN (Done, Cancelled)'}
               value={bqlQuery}
               onChange={e => { setBqlQuery(e.target.value); setActiveViewId(null); refreshAc(e.target.value, e.target.selectionStart); }}
               onKeyDown={onQueryKeyDown}
+              onScroll={syncScroll}
               onBlur={() => setTimeout(() => setAc(a => ({ ...a, open: false })), 120)}
               aria-autocomplete="list"
             />
+            {/* Syntax-highlight overlay — aria-hidden; the textarea above is the real, accessible field
+                (its text is transparent so this shows through; the caret stays visible). RB-30 §6. */}
+            <pre ref={highlightRef} aria-hidden="true"
+              className="pointer-events-none absolute inset-0 m-0 overflow-hidden whitespace-pre-wrap break-words rounded-lg border border-transparent px-3 py-2 font-mono text-sm leading-relaxed text-neutral-900 dark:text-neutral-100">
+              {tokens.map((tok, i) => {
+                const isErr = errorPos !== null && errorPos >= tok.start && errorPos < tok.end;
+                return (
+                  <span key={i}
+                    className={`${TOKEN_CLASS[tok.type] || ''}${isErr ? ' underline decoration-semantic-danger decoration-dotted decoration-2 underline-offset-2' : ''}`}>
+                    {tok.text}
+                  </span>
+                );
+              })}
+              {'\n'}
+            </pre>
             {ac.open && (
               <ul role="listbox" className="absolute left-0 right-0 z-dropdown mt-1 max-h-60 overflow-y-auto rounded-lg border border-neutral-200 bg-white py-1 text-sm shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
                 {ac.options.map((opt, i) => (

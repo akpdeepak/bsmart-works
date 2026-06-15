@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Sparkles, X, BookmarkPlus, Bookmark, Check, AlertCircle, Plus, Trash2, SlidersHorizontal, Link2, Clock, Bell, Play, Terminal, Database, Search, LayoutGrid, Wand2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Sparkles, BookmarkPlus, Bookmark, Check, AlertCircle, Plus, Trash2, SlidersHorizontal, Link2, Clock, Play, Terminal, Database, Search, LayoutGrid, Wand2 } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { savedViewsClient } from '@/lib/saved-views';
 import { Button } from '@/components/works/button';
@@ -9,10 +10,11 @@ import BqlResultsTable from '@/views/bql-results-table';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { CommandPalette } from '@/components/works/organisms/command-palette';
-import { SearchInput } from '@/components/works/molecules/search-input';
 import { tokenize } from '@/lib/bql-highlight';
 import { BQL_SNIPPETS } from '@/lib/bql-snippets';
 import { useI18n } from '@/lib/i18n';
+import { savedViewsKeys } from '@/hooks/queries/keys';
+import { SavedViewsPanel } from '@/components/works/molecules/saved-views-panel';
 import { Card } from '@/components/works/atoms/card';
 import { PageHeader } from '@/components/works/atoms/page-header';
 import { PageLayout } from '@/components/works/templates/page-layout';
@@ -66,19 +68,16 @@ export default function BqlView({
   bqlLoading = false,
 }) {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
   // Iteration 10 Cap O — NL→BQL translation (first AI surface)
   const [nlText, setNlText] = useState('');
   const [nlBusy, setNlBusy] = useState(false);
   const [nlMeta, setNlMeta] = useState(null); // { confidence, fallback }
-  const [savedViews, setSavedViews] = useState([]);
   const [viewName, setViewName] = useState('');
   const [viewSaving, setViewSaving] = useState(false);
-  const [subscriptions, setSubscriptions] = useState([]); // saved-view subscriptions for this user
-  const [subBusy, setSubBusy] = useState(() => new Set()); // view ids with an in-flight subscribe toggle
   const [columnKeys, setColumnKeys] = useState(loadNavCols); // results-table column layout (controlled)
   const [activeViewId, setActiveViewId] = useState(null);    // the saved view currently loaded, if any
   const [paletteOpen, setPaletteOpen] = useState(false);     // BQL snippet command palette
-  const [viewFilter, setViewFilter] = useState('');          // saved-view name filter (large lists)
 
   // P3 — editor assists
   const [schema, setSchema] = useState(null); // { fields, operators, functions, enums }
@@ -324,42 +323,12 @@ export default function BqlView({
   // Gate the NL→BQL panel on ITS capability (nl_to_bql), not "any AI" (RB-40 §2 most-restrictive).
   const aiOn = capabilityEnabled(aiCapabilities, 'nl_to_bql');
 
-  const refreshSubscriptions = () => {
-    if (!activeWorkspaceId) return;
-    api.send(`/bql-subscriptions?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
-      .then(r => setSubscriptions(Array.isArray(r) ? r : []))
-      .catch(() => setSubscriptions([]));
-  };
-
-  const subscriptionFor = (viewId) => subscriptions.find(s => s.savedViewId === viewId && s.active);
-
   useEffect(() => {
     if (!activeWorkspaceId) return;
-    savedViewsClient.list(activeWorkspaceId).then(r => setSavedViews(Array.isArray(r) ? r : [])).catch(() => {});
-    refreshSubscriptions();
     api.send(`/bql/schema?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
       .then(setSchema)
       .catch(() => setSchema(null));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWorkspaceId]);
-
-  // Toggle a daily, in-app + email subscription to a saved view (the manage UI can refine later).
-  // Tracks an in-flight set so the bell can show a busy/disabled state and confirm via a toast.
-  const toggleSubscribe = (v) => {
-    if (!activeWorkspaceId || subBusy.has(v.id)) return;
-    const existing = subscriptionFor(v.id);
-    setSubBusy(prev => new Set(prev).add(v.id));
-    const req = existing
-      ? api.send(`/bql-subscriptions/${encodeURIComponent(existing.id)}?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, { method: 'DELETE' })
-      : api.send(`/bql-subscriptions?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, {
-        method: 'POST',
-        body: JSON.stringify({ savedViewId: v.id, frequency: 'DAILY', channels: 'BOTH' }),
-      });
-    req
-      .then(() => { refreshSubscriptions(); notify(existing ? 'Unsubscribed' : 'Subscribed — daily summary'); })
-      .catch(() => notify('Subscription update failed', 'error'))
-      .finally(() => setSubBusy(prev => { const n = new Set(prev); n.delete(v.id); return n; }));
-  };
 
   // Live validation — debounced; surfaces parse/field errors before the user runs the query.
   // All setState happens inside the timeout (async), never synchronously in the effect body.
@@ -398,17 +367,17 @@ export default function BqlView({
     setViewSaving(true);
     // Capture the current column layout so the view reopens with it.
     savedViewsClient.create(activeWorkspaceId, { name: viewName.trim(), bqlFilter: bqlQuery, columnKeys: JSON.stringify(columnKeys ?? []) })
-      .then(v => { setSavedViews(prev => [...prev, v]); setViewName(''); if (v?.id) setActiveViewId(v.id); notify('View saved'); })
+      .then(v => {
+        setViewName('');
+        if (v?.id) setActiveViewId(v.id);
+        queryClient.invalidateQueries({ queryKey: savedViewsKeys.list(activeWorkspaceId) });
+        notify('View saved');
+      })
       .catch(() => notify('Could not save view', 'error'))
       .finally(() => setViewSaving(false));
   };
 
-  const deleteView = (id) => {
-    if (!activeWorkspaceId) return;
-    savedViewsClient.delete(activeWorkspaceId, id)
-      .then(() => setSavedViews(prev => prev.filter(v => v.id !== id)))
-      .catch(() => {});
-  };
+
 
   const enumOptions = (alias) => {
     if (!schema?.enums) return null;
@@ -697,49 +666,14 @@ export default function BqlView({
             Save as View
           </Button>
         </div>
-        {/* Filter the saved-view library once it grows past a handful. */}
-        {savedViews.length > 8 && (
-          <div className="mt-3">
-            <SearchInput placeholder="Filter saved views…" size="sm" defaultValue={viewFilter}
-              onSearch={setViewFilter} />
-          </div>
-        )}
-        {savedViews.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {savedViews
-              .filter(v => !viewFilter.trim() || (v.name || '').toLowerCase().includes(viewFilter.trim().toLowerCase()))
-              .map(v => {
-              const subscribed = !!subscriptionFor(v.id);
-              return (
-                // Sibling controls (not nested buttons) — load, subscribe, delete — for a11y (RB-30 §6).
-                <div key={v.id}
-                  className="group flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 py-1.5 pl-3 pr-2 text-sm transition-all hover:border-brand-navy hover:shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
-                  <button type="button" onClick={() => loadSavedView(v)}
-                    className="flex items-center gap-1.5 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
-                    aria-label={`Load view: ${v.name}`}>
-                    <Bookmark aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-brand-navy" />
-                    <span className="font-medium text-neutral-900 dark:text-neutral-100">{v.name}</span>
-                    {v.isShared && <span className="rounded bg-semantic-info-surface px-1.5 py-0.5 text-2xs font-medium uppercase tracking-wide text-semantic-info">shared</span>}
-                  </button>
-                  <button type="button" onClick={() => toggleSubscribe(v)}
-                    disabled={subBusy.has(v.id)}
-                    className={`rounded-md p-1 transition-colors disabled:opacity-50 ${subscribed ? 'text-brand-navy' : 'text-neutral-300 hover:text-brand-navy'}`}
-                    aria-label={subscribed ? `Unsubscribe from ${v.name}` : `Subscribe to ${v.name} (daily summary)`}
-                    aria-pressed={subscribed}
-                    aria-busy={subBusy.has(v.id)}
-                    title={subscribed ? 'Subscribed — daily summary' : 'Subscribe — daily summary'}>
-                    <Bell className={`h-3.5 w-3.5 ${subBusy.has(v.id) ? 'animate-pulse' : ''} ${subscribed ? 'fill-brand-navy' : ''}`} aria-hidden="true" />
-                  </button>
-                  <button type="button" onClick={() => deleteView(v.id)}
-                    className="rounded-md p-1 text-neutral-300 opacity-0 transition-opacity hover:text-semantic-danger group-hover:opacity-100"
-                    aria-label={`Remove view ${v.name}`}>
-                    <X className="h-3.5 w-3.5" aria-hidden="true" />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        {/* First-class view management — rename / reorder / delete (WI-15). */}
+        <div className="mt-3">
+          <SavedViewsPanel
+            workspaceId={activeWorkspaceId}
+            activeViewId={activeViewId}
+            onLoad={loadSavedView}
+          />
+        </div>
       </Card>
 
       {/* Board / group-by breakdown — count per bucket, click a lane to drill into it. */}

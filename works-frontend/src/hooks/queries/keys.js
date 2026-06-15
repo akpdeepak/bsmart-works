@@ -13,3 +13,8 @@ export const projectsKeys = {
   all: ['projects'],
   list: (workspaceId) => ['projects', workspaceId],
 };
+
+export const savedViewsKeys = {
+  all: ['saved-views'],
+  list: (workspaceId, projectId) => ['saved-views', workspaceId, projectId ?? null],
+};

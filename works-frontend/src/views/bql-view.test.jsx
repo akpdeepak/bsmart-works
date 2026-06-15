@@ -1,7 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import BqlView from './bql-view';
 import { rowToClause, quoteIfNeeded, suggestions, applySuggestion } from '@/lib/bql-builder';
+
+function renderWithQuery(ui) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+}
 
 const schema = {
   fields: [{ alias: 'status' }, { alias: 'priority' }, { alias: 'assignee' }],
@@ -22,7 +28,7 @@ const baseProps = {
 
 describe('BqlView', () => {
   it('renders the editor with an associated query label', () => {
-    render(<BqlView {...baseProps} />);
+    renderWithQuery(<BqlView {...baseProps} />);
     // label-for association: getByLabelText resolves the textarea via htmlFor/id.
     expect(screen.getByLabelText('Query')).toBeInTheDocument();
     // Saving is now a single concept — "Save as View" (the redundant Save Filter input is gone).
@@ -31,21 +37,21 @@ describe('BqlView', () => {
 
   it('runs the query when Run is clicked', () => {
     const runBql = vi.fn();
-    render(<BqlView {...baseProps} runBql={runBql} />);
+    renderWithQuery(<BqlView {...baseProps} runBql={runBql} />);
     fireEvent.click(screen.getByRole('button', { name: /Run Query/ }));
     expect(runBql).toHaveBeenCalled();
   });
 
   it('inserts and runs a snippet from the palette', () => {
     const runBql = vi.fn();
-    render(<BqlView {...baseProps} runBql={runBql} setBqlQuery={vi.fn()} />);
+    renderWithQuery(<BqlView {...baseProps} runBql={runBql} setBqlQuery={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: /Snippets/ }));
     fireEvent.click(screen.getByText('My open work'));
     expect(runBql).toHaveBeenCalled();
   });
 
   it('renders results with status and priority badges', () => {
-    render(
+    renderWithQuery(
       <BqlView
         {...baseProps}
         bqlQuery="priority = High"
@@ -61,7 +67,7 @@ describe('BqlView', () => {
   });
 
   it('resolves id columns to names in results (JIRA-style)', () => {
-    render(
+    renderWithQuery(
       <BqlView
         {...baseProps}
         bqlQuery="assignee = currentUser()"
@@ -73,7 +79,7 @@ describe('BqlView', () => {
   });
 
   it('toggles the visual builder open', () => {
-    render(<BqlView {...baseProps} />);
+    renderWithQuery(<BqlView {...baseProps} />);
     expect(screen.queryByText('Visual builder', { selector: 'p' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Visual builder/ }));
     expect(screen.getByText('Visual builder', { selector: 'p' })).toBeInTheDocument();

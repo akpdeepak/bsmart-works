@@ -7,6 +7,30 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-18 [consistency] — AsyncBoundary primitive + aria-label sweep (2026-06-15)
+
+New `atoms/async-boundary.jsx` — the unified three-state async wrapper (roadmap H2 #8). Every
+async data surface can now wrap its content section in `<AsyncBoundary>` to get consistent
+loading, error, and empty states from a single source of truth.
+
+**AsyncBoundary states:**
+- `loading=true` → caller's `skeleton` node wrapped in `aria-busy="true"` + `aria-label` container
+- `error` non-null → `EmptyState` with ShieldAlert icon; maps `{code,message}` API shape to subtitle; optional retry button via `onRetry` prop
+- `empty=true` → `EmptyState` with caller-supplied icon / title / subtitle / action
+- default → children (the resolved content)
+
+**17 tests** cover all state transitions, precedence order (loading > error > empty), retry callback,
+Error-object message extraction, and fallback text.
+
+**aria-label sweep** — 7 containers across 6 files that had `aria-busy="true"` but no paired
+`aria-label` (WCAG 2.1 SC 4.1.3): marketplace-view, developer-portal-view, bql-view,
+admin-ops-view, leadership-console-view, integrations-panel, status-page.
+`pivot-chart` already uses `<span className="sr-only">` — no change needed there.
+
+Branch: `feat/uiux-wi18-async-boundary`.
+
+---
+
 ## WI-09 [benchmark] — HEART activation-funnel instrumentation (2026-06-15)
 
 Server-side funnel telemetry wired into the events store via a new `FunnelService`. No PII,

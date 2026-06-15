@@ -35,7 +35,6 @@ export const NoLabel = {
 };
 
 export const Controlled = {
-  name: 'Controlled',
   render: () => {
     const [checked, setChecked] = useState(false);
     return (

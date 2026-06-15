@@ -21,7 +21,6 @@ export const Default = {
 };
 
 export const Controlled = {
-  name: 'Controlled',
   render: () => {
     const [value, setValue] = useState('admin');
     return (

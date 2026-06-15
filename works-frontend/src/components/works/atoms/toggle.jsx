@@ -86,7 +86,7 @@ export const Toggle = React.forwardRef(
           <span className={thumbClass} />
         </button>
         {children && (
-          <label htmlFor={id} className={cn('select-none text-sm text-neutral-900 dark:text-neutral-100', disabled && 'opacity-50 cursor-not-allowed', 'cursor-pointer')}>
+          <label htmlFor={id} className={cn('select-none text-sm text-neutral-900 dark:text-neutral-100', disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer')}>
             {children}
           </label>
         )}

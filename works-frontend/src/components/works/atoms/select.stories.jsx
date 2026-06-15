@@ -61,7 +61,6 @@ export const Disabled = {
 };
 
 export const Controlled = {
-  name: 'Controlled',
   render: () => {
     const [value, setValue] = useState('');
     return (

@@ -7,6 +7,7 @@ import { capabilityEnabled } from '@/lib/ai';
 import { NULLARY_OPS, SET_OPS, rowToClause, suggestions, applySuggestion } from '@/lib/bql-builder';
 import BqlResultsTable from '@/views/bql-results-table';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
+import { EmptyState } from '@/components/works/atoms/empty-state';
 import { CommandPalette } from '@/components/works/organisms/command-palette';
 import { SearchInput } from '@/components/works/molecules/search-input';
 import { tokenize } from '@/lib/bql-highlight';
@@ -801,13 +802,19 @@ export default function BqlView({
           canShowMore={bqlResults.length >= resultSize && resultSize < 500}
         />
       )}
-      {!bqlLoading && bqlResults.length === 0 && bqlQuery && !bqlError && (
-        <div className="flex flex-col items-center rounded-xl border border-dashed border-neutral-200 bg-white py-14 text-center dark:border-neutral-700 dark:bg-neutral-800">
-          <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-300 dark:bg-neutral-900 dark:text-neutral-600">
-            <Search aria-hidden="true" className="h-6 w-6" />
-          </span>
-          <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">No results yet</p>
-          <p className="mt-1 text-xs text-neutral-500">Run the query above to see matching work items.</p>
+      {/* Error state — the query couldn't run; offer to jump back to the editor. */}
+      {!bqlLoading && !groups && bqlResults.length === 0 && bqlError && (
+        <div className="rounded-xl border border-dashed border-semantic-danger/40 bg-white dark:border-semantic-danger/40 dark:bg-neutral-800">
+          <EmptyState icon={AlertCircle} title="This query couldn't run" subtitle={bqlError}
+            action={<Button variant="secondary" onClick={() => queryRef.current?.focus()}>Fix query</Button>} />
+        </div>
+      )}
+      {/* No-results state — the query ran but matched nothing. */}
+      {!bqlLoading && !groups && bqlResults.length === 0 && bqlQuery && !bqlError && (
+        <div className="rounded-xl border border-dashed border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800">
+          <EmptyState icon={Search} title="No results"
+            subtitle="No work items match this query. Adjust a clause and run it again."
+            action={<Button variant="secondary" onClick={() => runQuery()}>Run again</Button>} />
         </div>
       )}
     </div>

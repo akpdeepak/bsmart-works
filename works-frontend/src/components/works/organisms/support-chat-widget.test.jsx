@@ -123,9 +123,13 @@ describe('SupportChatWidget', () => {
   it('calls getConversation on the poll interval while the panel is open', async () => {
     // Intercept setInterval to capture the poll callback; call it manually so this test is
     // deterministic without real clock delays. Real timers are active so waitFor/findBy work.
-    let pollCallback = null;
-    const intervalSpy = vi.spyOn(window, 'setInterval').mockImplementation((fn) => {
-      pollCallback = fn;
+    //
+    // Important: @testing-library/react's waitFor() also calls setInterval(fn, 50) internally.
+    // We filter by delay (8000 ms = POLL_INTERVAL_MS) so RTL's polling loop does not overwrite
+    // the captured callback with its own internal function.
+    let capturedPollFn = null;
+    const intervalSpy = vi.spyOn(window, 'setInterval').mockImplementation((fn, delay) => {
+      if (delay === 8000) capturedPollFn = fn; // the component's 8-second poll, not RTL's 50ms loop
       return 999; // fake interval id
     });
     vi.spyOn(window, 'clearInterval').mockImplementation(() => {});
@@ -148,13 +152,15 @@ describe('SupportChatWidget', () => {
     fireEvent.change(input, { target: { value: 'I want a human' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    // Wait for the start() round-trip to settle, which stores the conversation id and triggers
-    // the polling useEffect so pollCallback is set.
-    await waitFor(() => expect(start).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(pollCallback).not.toBeNull());
+    // Wait for start()'s promise to fully resolve: the AI message appears in the DOM only
+    // after apply() runs, which only happens after start() settles. Once findByText returns,
+    // React has committed the conversation state update and the polling useEffect has re-run
+    // with the new conversation.id, registering the 8-second setInterval callback.
+    await screen.findByText('Connecting you with an agent.');
+    expect(capturedPollFn).not.toBeNull();
 
     // Fire the poll callback directly (simulates one interval tick).
-    await act(async () => { pollCallback(); });
+    await act(async () => { capturedPollFn(); });
 
     await waitFor(() => expect(getConversation).toHaveBeenCalledWith('CHAT-99'));
     expect(await screen.findByText('Hi, I am reviewing your case.')).toBeInTheDocument();

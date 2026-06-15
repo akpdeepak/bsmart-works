@@ -19,7 +19,6 @@ const baseProps = {
   articleComments: [],
   articleAnalytics: null,
   newArticleComment: '',
-  articleContentFormat: 'markdown',
   can: () => false,
   setKnowledgeSearch: noop,
   setKnowledgeTab: noop,
@@ -28,7 +27,6 @@ const baseProps = {
   setEditingArticle: noop,
   setArticlePanel: noop,
   setNewArticleComment: noop,
-  setArticleContentFormat: noop,
   setIsSpaceFormOpen: noop,
   setIsArticleFormOpen: noop,
   setArticleForm: noop,
@@ -80,17 +78,15 @@ describe('KnowledgeView', () => {
 
   // ── UAT: Know Studio editing flow ──────────────────────────────────────────────
 
-  it('opens a block-format article in the block editor (syncs the format toggle)', () => {
-    const setArticleContentFormat = vi.fn();
-    const blocks = JSON.stringify([{ id: 'b1', type: 'heading1', content: 'Title', metadata: {} }]);
+  it('opens a block-format article in the block editor (always uses block editor)', () => {
+    const blocks = JSON.stringify([{ id: 'b1', type: 'heading1', content: 'My Heading', metadata: {} }]);
     render(
-      <KnowledgeView {...baseProps} editingArticle articleContentFormat="markdown"
-        setArticleContentFormat={setArticleContentFormat}
+      <KnowledgeView {...baseProps} editingArticle
         selectedSpace={{ id: 'S1', name: 'Ops' }}
         selectedArticle={{ id: 'A1', title: 'Doc', status: 'DRAFT', contentFormat: 'blocks', contentBlocks: blocks }} />,
     );
-    // The editor opens in the article's own format instead of the stale markdown default.
-    expect(setArticleContentFormat).toHaveBeenCalledWith('blocks');
+    // The block editor is always rendered — content from the article's blocks is visible.
+    expect(screen.getByLabelText('Block editor')).toBeInTheDocument();
   });
 
   it('autosaves block edits quietly after a debounce, not on every keystroke', () => {
@@ -99,7 +95,7 @@ describe('KnowledgeView', () => {
       const updateArticle = vi.fn(() => Promise.resolve({}));
       const blocks = JSON.stringify([{ id: 'b1', type: 'paragraph', content: '', metadata: {} }]);
       render(
-        <KnowledgeView {...baseProps} editingArticle articleContentFormat="blocks"
+        <KnowledgeView {...baseProps} editingArticle
           updateArticle={updateArticle}
           selectedSpace={{ id: 'S1', name: 'Ops' }}
           selectedArticle={{ id: 'A1', title: 'Doc', status: 'DRAFT', contentFormat: 'blocks', contentBlocks: blocks }} />,

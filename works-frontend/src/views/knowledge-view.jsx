@@ -91,7 +91,6 @@ function ArticleCard({ art, onClick }) {
  * remain in App.jsx because they live outside this block in the original code.
  */
 export default function KnowledgeView({
-  loading = false,
   knowledgeSearch,
   knowledgeTab,
   knowledgeSpaces,
@@ -105,7 +104,6 @@ export default function KnowledgeView({
   articleComments,
   articleAnalytics,
   newArticleComment,
-  articleContentFormat,
   can,
   setKnowledgeSearch,
   setKnowledgeTab,
@@ -114,7 +112,6 @@ export default function KnowledgeView({
   setEditingArticle,
   setArticlePanel,
   setNewArticleComment,
-  setArticleContentFormat,
   setIsSpaceFormOpen,
   setIsArticleFormOpen,
   setArticleForm,
@@ -140,9 +137,6 @@ export default function KnowledgeView({
   workspaceId,
   aiCapabilities = [],
 }) {
-  // `loading` is the global fetch flag from App.jsx; treat it as a fallback for the
-  // more granular space-loading flag so the first visit gets a skeleton, not an empty state.
-  const spacesLoading = loading || knowledgeSpacesLoading;
   const aiGenEnabled = capabilityEnabled(aiCapabilities, 'generation');
   const aiAssist = makeAiAssist(workspaceId, aiGenEnabled);
 
@@ -160,13 +154,6 @@ export default function KnowledgeView({
     }, 900);
   };
   useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current); }, []);
-
-  // Open the editor in the article's own format — prevents a block article showing the
-  // empty markdown box when first opened.
-  useEffect(() => {
-    if (selectedArticle?.id) setArticleContentFormat(selectedArticle.contentFormat === 'blocks' ? 'blocks' : 'markdown');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedArticle?.id]);
 
   // Navigation stack for sub-article drilling: Back returns to the direct parent article
   // rather than jumping to the flat list. Breadcrumbs show the full ancestor path.
@@ -260,7 +247,7 @@ export default function KnowledgeView({
 
         {/* Space list */}
         <div className="flex-1 overflow-y-auto px-2 pb-2">
-          {spacesLoading && knowledgeSpaces.length === 0 ? (
+          {knowledgeSpacesLoading && knowledgeSpaces.length === 0 ? (
             <div className="space-y-1.5 px-1 py-2" aria-busy="true" aria-label="Loading spaces">
               {[0, 1, 2].map(i => <div key={i} className="h-8 rounded-lg animate-pulse bg-neutral-100 dark:bg-neutral-700" />)}
             </div>
@@ -564,86 +551,49 @@ export default function KnowledgeView({
                         </select>
                       </div>
 
-                      {/* B09 — content format toggle: markdown ↔ blocks */}
-                      <div className="flex-1 flex justify-end">
-                        <div
-                          className="flex rounded-lg border border-neutral-200 dark:border-neutral-600 overflow-hidden"
-                          role="group"
-                          aria-label="Content format"
-                        >
-                          {['markdown', 'blocks'].map(fmt => (
-                            <button
-                              key={fmt}
-                              type="button"
-                              onClick={() => setArticleContentFormat(fmt)}
-                              aria-pressed={articleContentFormat === fmt}
-                              className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${articleContentFormat === fmt ? 'bg-brand-navy text-white' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700'}`}
-                            >
-                              {fmt}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
                     </div>
 
-                    {articleContentFormat === 'markdown' ? (
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label htmlFor="article-content" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                            Content <span className="font-normal normal-case tracking-normal">· Markdown supported</span>
-                          </label>
-                          {aiAssist && (
-                            <AiTextAssist
-                              workspaceId={workspaceId}
-                              getText={() => selectedArticle.content || ''}
-                              onApply={text => { setSelectedArticle(a => ({ ...a, content: text })); updateArticle(selectedArticle.id, { title: selectedArticle.title, content: text, templateType: selectedArticle.templateType }); }}
-                            />
-                          )}
-                        </div>
-                        <textarea
-                          id="article-content"
-                          rows={20}
-                          className="input resize-none font-mono text-sm w-full"
-                          value={selectedArticle.content || ''}
-                          onChange={e => setSelectedArticle(a => ({ ...a, content: e.target.value }))}
-                          onBlur={e => updateArticle(selectedArticle.id, { title: selectedArticle.title, content: e.target.value, contentFormat: 'markdown', templateType: selectedArticle.templateType })}
-                          placeholder="Write your article content here… Supports Markdown formatting."
-                        />
+                    {/* Block editor — always used; markdown articles are migrated to a paragraph block on first edit */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                          Content · Block editor
+                        </span>
+                        {blockSaveStatus === 'saving' && (
+                          <span className="text-2xs text-neutral-400" aria-live="polite">Saving…</span>
+                        )}
+                        {blockSaveStatus === 'saved' && (
+                          <span className="text-2xs text-semantic-success" aria-live="polite">Saved</span>
+                        )}
                       </div>
-                    ) : (
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                            Content · Block editor
-                          </span>
-                          {blockSaveStatus === 'saving' && (
-                            <span className="text-2xs text-neutral-400" aria-live="polite">Saving…</span>
-                          )}
-                          {blockSaveStatus === 'saved' && (
-                            <span className="text-2xs text-semantic-success" aria-live="polite">Saved</span>
-                          )}
-                        </div>
-                        <BlockEditor
-                          key={selectedArticle.id}
-                          aiAssist={aiAssist}
-                          workspaceId={workspaceId}
-                          blocks={(() => { try { return JSON.parse(selectedArticle.contentBlocks || '[]'); } catch { return []; } })()}
-                          onChange={blocks => {
-                            const json = JSON.stringify(blocks);
-                            setSelectedArticle(a => ({ ...a, contentBlocks: json, contentFormat: 'blocks' }));
-                            scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
-                          }}
-                        />
-                      </div>
-                    )}
+                      <BlockEditor
+                        key={selectedArticle.id}
+                        aiAssist={aiAssist}
+                        workspaceId={workspaceId}
+                        blocks={(() => {
+                          try {
+                            const parsed = JSON.parse(selectedArticle.contentBlocks || '[]');
+                            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                          } catch { /* fall through */ }
+                          if (selectedArticle.content) {
+                            return [{ id: `blk-migrate-${selectedArticle.id}`, type: 'paragraph', content: selectedArticle.content, metadata: {} }];
+                          }
+                          return [];
+                        })()}
+                        onChange={blocks => {
+                          const json = JSON.stringify(blocks);
+                          setSelectedArticle(a => ({ ...a, contentBlocks: json, contentFormat: 'blocks' }));
+                          scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
+                        }}
+                      />
+                    </div>
 
                     <Button
                       variant="action"
                       onClick={() => updateArticle(selectedArticle.id, {
                         title: selectedArticle.title,
-                        content: selectedArticle.content,
                         contentBlocks: selectedArticle.contentBlocks,
-                        contentFormat: articleContentFormat,
+                        contentFormat: 'blocks',
                         templateType: selectedArticle.templateType,
                       })}
                     >

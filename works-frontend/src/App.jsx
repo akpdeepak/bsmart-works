@@ -452,7 +452,6 @@ export default function App() {
   const [isArticleFormOpen, setIsArticleFormOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState(false);
   const [articlePanel, setArticlePanel] = useState(null); // 'history' | 'comments' | 'analytics' | null
-  const [articleContentFormat, setArticleContentFormat] = useState('markdown'); // 'markdown' | 'blocks'
   const [articleComments, setArticleComments] = useState([]);
   const [articleChildren, setArticleChildren] = useState([]);
   const [newArticleComment, setNewArticleComment] = useState('');
@@ -3905,7 +3904,6 @@ export default function App() {
               articleComments={articleComments}
               articleAnalytics={articleAnalytics}
               newArticleComment={newArticleComment}
-              articleContentFormat={articleContentFormat}
               can={can}
               setKnowledgeSearch={setKnowledgeSearch}
               setKnowledgeTab={setKnowledgeTab}
@@ -3914,7 +3912,6 @@ export default function App() {
               setEditingArticle={setEditingArticle}
               setArticlePanel={setArticlePanel}
               setNewArticleComment={setNewArticleComment}
-              setArticleContentFormat={setArticleContentFormat}
               setIsSpaceFormOpen={setIsSpaceFormOpen}
               setIsArticleFormOpen={setIsArticleFormOpen}
               setArticleForm={setArticleForm}

@@ -7,6 +7,47 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-20 [premium] — Part-B premium primitives: Alert, Progress, Breadcrumb, Pagination, Tooltip, Popover, Slider, DatePicker (2026-06-15)
+
+Adds 8 new design-system atoms. All use `cva` + `cn()`, design tokens only (no raw hex or
+arbitrary Tailwind values), and meet WCAG 2.1 AA. 51 Vitest tests; 8 Storybook story files
+(5–6 stories each). Guardrails: all blocking rules pass.
+
+**Alert** (`alert.jsx`) — four tones (info / success / warning / danger) keyed to semantic-*
+tokens. `role="alert"`, `aria-live="polite"` so dynamic insertions are announced. Dismiss is
+optional and caller-controlled (alert never hides itself).
+
+**Progress** (`progress.jsx`) — determinate (`aria-valuenow` set, width driven by clamped
+0–100 value) and indeterminate (`animate-pulse` fill, value attrs omitted per WAI-ARIA 1.2).
+Four tones, three sizes (sm h-1 / md h-2 / lg h-3).
+
+**Breadcrumb** (`breadcrumb.jsx`) — `<nav aria-label="Breadcrumb">` + `<ol>` landmark.
+ChevronRight separators (`aria-hidden`). Last item gets `aria-current="page"`; items with
+`href` render as `<a>`, others as `<span>`. Truncates at `max-w-48`.
+
+**Pagination** (`pagination.jsx`) — 0-indexed (Spring `Pageable` compatible). Sliding window:
+first + last always visible; current ± 1 in between; `…` dots bridging gaps. Prev / next /
+first / last nav buttons. `aria-current="page"` on active page; disabled states on boundary.
+
+**Tooltip** (`tooltip.jsx`) — configurable `delay` prop (default 350 ms). Four sides (top /
+bottom / left / right) via CSS translate. `aria-describedby` injected into trigger child via
+`React.cloneElement`. Timer cleared on unmount (`useEffect` cleanup).
+
+**Popover** (`popover.jsx`) — click-triggered open/close toggle. Closes on Escape (`keydown`
+listener), outside click (`pointerdown` listener), or second trigger click. `aria-expanded`,
+`aria-haspopup="dialog"`, `role="dialog"`. Six `side × align` positions (top/bottom × start/end/center).
+
+**Slider** (`slider.jsx`) — styled native `<input type="range">`. Custom track + filled portion
+drawn via absolutely-positioned divs; native input sits on top (`appearance-none`, transparent
+track). Controlled (value prop) and uncontrolled (defaultValue). `showValue` display with
+`aria-live="polite"`. `aria-valuenow/min/max` set.
+
+**DatePicker** (`date-picker.jsx`) — styled native `<input type="date">`. RTL-safe `ps-`/`pe-`
+padding. Calendar icon decorative (`aria-hidden`). Native WebKit picker indicator suppressed so
+Lucide icon is the sole affordance. `aria-invalid` for validation states. `min` / `max` forwarded for date bounding.
+
+---
+
 ## WI-09 [benchmark] — HEART activation-funnel instrumentation (2026-06-15)
 
 Server-side funnel telemetry wired into the events store via a new `FunnelService`. No PII,

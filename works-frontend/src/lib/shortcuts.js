@@ -18,6 +18,9 @@ export const DEFAULT_SHORTCUTS = [
   { id: 'go-projects', keys: 'g p', label: 'Go to projects', group: 'Navigate' },
   { id: 'go-reports', keys: 'g r', label: 'Go to reports', group: 'Navigate' },
   { id: 'go-knowledge', keys: 'g k', label: 'Go to knowledge', group: 'Navigate' },
+  { id: 'list-next', keys: 'j', label: 'Next item in list', group: 'List' },
+  { id: 'list-prev', keys: 'k', label: 'Previous item in list', group: 'List' },
+  { id: 'list-open', keys: 'e', label: 'Open focused item', group: 'List' },
 ];
 
 // Merge user overrides ({ actionId: keys }) onto the defaults, keeping catalogue order + metadata.

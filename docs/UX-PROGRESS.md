@@ -7,6 +7,30 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-14 [benchmark] — List-level keyboard rhythm on backlog (j/k/Enter) (2026-06-15)
+
+`j`/`ArrowDown` and `k`/`ArrowUp` navigate the backlog list row by row. `Enter` or `e` opens the
+focused item. `Escape` clears the selection. A keyboard hint bar at the list footer shows the
+available shortcuts.
+
+**Approach**: single stable `document.addEventListener('keydown')` registered once (deps: `[setSelectedItem]`);
+handler reads `visibleBacklogRef` + `focusedIdxRef` to avoid stale closures. Both refs are kept
+current via `useEffect`. Setting-state-in-effect lint error avoided by intercepting filter/sort
+change callbacks (`handleFiltersChange`/`handleSortChange`) to batch-clear focus alongside the state update.
+
+**Visual indicator**: focused row gets `bg-brand-navy/5 dark:bg-brand-navy/10 border-l-2 border-l-brand-navy`
+(left blue accent + subtle tint) and `aria-current="true"` on the row container. Replaces hover
+state while focused.
+
+**Shortcuts registered**: `j` (Next item), `k` (Previous item), `e` (Open focused item) added to
+`DEFAULT_SHORTCUTS` in `lib/shortcuts.js` under the `'List'` group — visible in the `?` help overlay.
+
+**Tests** — 5 new keyboard-nav tests added to `backlog-view.test.jsx` (total: 14, all passing):
+j → first item focused · second j → second item · k → back up · Escape → clear · Enter → calls
+setSelectedItem · form-control guard (no nav when focus is in a search input)
+
+Branch: `feat/uiux-wi14-keyboard-rhythm`
+
 ## WI-09 [benchmark] — HEART activation-funnel instrumentation (2026-06-15)
 
 Server-side funnel telemetry wired into the events store via a new `FunnelService`. No PII,

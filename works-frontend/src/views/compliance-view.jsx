@@ -400,7 +400,7 @@ function ResolveModal({ action, onConfirm, onClose }) {
       <div className="space-y-3">
         <div>
           <label htmlFor="resolve-note" className="block text-xs font-medium text-neutral-500 mb-1">
-            Resolution note <span className="text-neutral-400">(optional)</span>
+            Resolution note <span className="text-neutral-600">(optional)</span>
           </label>
           <textarea
             id="resolve-note"
@@ -434,7 +434,7 @@ function RuleBuilderModal({ ruleBuilder, setRuleBuilder, projects, saveRule }) {
         {/* Gap 3 — project-scoped rules */}
         {projects.length > 0 && (
           <div>
-            <label htmlFor="rule-project" className="block text-xs font-medium text-neutral-500 mb-1">Project scope <span className="text-neutral-400">(optional — leave blank to apply workspace-wide)</span></label>
+            <label htmlFor="rule-project" className="block text-xs font-medium text-neutral-500 mb-1">Project scope <span className="text-neutral-600">(optional — leave blank to apply workspace-wide)</span></label>
             <select id="rule-project" className="input w-full" value={ruleBuilder.projectId} onChange={e => setRuleBuilder({ ...ruleBuilder, projectId: e.target.value })}>
               <option value="">All projects</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -474,15 +474,15 @@ function RuleBuilderModal({ ruleBuilder, setRuleBuilder, projects, saveRule }) {
           </div>
           <div className="grid grid-cols-1 gap-2">
             <div>
-              <label htmlFor="rule-notify-users" className="block text-xs text-neutral-400 mb-0.5">User IDs (comma-separated)</label>
+              <label htmlFor="rule-notify-users" className="block text-xs text-neutral-600 mb-0.5">User IDs (comma-separated)</label>
               <input id="rule-notify-users" className="input w-full text-sm" value={ruleBuilder.notifyUsers} onChange={e => setRuleBuilder({ ...ruleBuilder, notifyUsers: e.target.value })} placeholder="user-123, user-456" />
             </div>
             <div>
-              <label htmlFor="rule-notify-emails" className="block text-xs text-neutral-400 mb-0.5">Email addresses (comma-separated)</label>
+              <label htmlFor="rule-notify-emails" className="block text-xs text-neutral-600 mb-0.5">Email addresses (comma-separated)</label>
               <input id="rule-notify-emails" className="input w-full text-sm" value={ruleBuilder.notifyEmails} onChange={e => setRuleBuilder({ ...ruleBuilder, notifyEmails: e.target.value })} placeholder="eng@example.com, ops@example.com" />
             </div>
             <div>
-              <label htmlFor="rule-notify-slack" className="block text-xs text-neutral-400 mb-0.5">Slack channels (comma-separated)</label>
+              <label htmlFor="rule-notify-slack" className="block text-xs text-neutral-600 mb-0.5">Slack channels (comma-separated)</label>
               <input id="rule-notify-slack" className="input w-full text-sm" value={ruleBuilder.notifySlack} onChange={e => setRuleBuilder({ ...ruleBuilder, notifySlack: e.target.value })} placeholder="#compliance-alerts, #eng-ops" />
             </div>
           </div>
@@ -500,7 +500,7 @@ function RuleBuilderModal({ ruleBuilder, setRuleBuilder, projects, saveRule }) {
             </button>
           </div>
           {(ruleBuilder.escalationSteps || []).length === 0
-            ? <p className="text-xs text-neutral-400 py-1">No steps — add a step to enable multi-step escalation, or use the single-step field below.</p>
+            ? <p className="text-xs text-neutral-600 py-1">No steps — add a step to enable multi-step escalation, or use the single-step field below.</p>
             : (ruleBuilder.escalationSteps || []).map((step, idx) => (
               <div key={idx} className="flex items-center gap-2 py-1.5 border-b border-neutral-100 dark:border-neutral-700 last:border-0">
                 <span className="text-xs text-neutral-500 w-16 shrink-0">Step {idx + 1}</span>
@@ -536,11 +536,11 @@ function RuleBuilderModal({ ruleBuilder, setRuleBuilder, projects, saveRule }) {
                 </button>
               </div>
             ))}
-          <p className="text-xs text-neutral-400 mt-1">Steps fire in order. A violation is marked fully escalated only when all steps have fired.</p>
+          <p className="text-xs text-neutral-600 mt-1">Steps fire in order. A violation is marked fully escalated only when all steps have fired.</p>
         </div>
 
         <div>
-          <label htmlFor="rule-escalate-hours" className="block text-xs font-medium text-neutral-500 mb-1">Single-step escalation — escalate if unacknowledged after (hours) <span className="text-neutral-400">— ignored when steps are defined above</span></label>
+          <label htmlFor="rule-escalate-hours" className="block text-xs font-medium text-neutral-500 mb-1">Single-step escalation — escalate if unacknowledged after (hours) <span className="text-neutral-600">— ignored when steps are defined above</span></label>
           <input id="rule-escalate-hours" type="number" min="0" className="input w-full" value={ruleBuilder.escalateAfterHours} onChange={e => setRuleBuilder({ ...ruleBuilder, escalateAfterHours: e.target.value })} placeholder="e.g. 24" />
         </div>
       </div>

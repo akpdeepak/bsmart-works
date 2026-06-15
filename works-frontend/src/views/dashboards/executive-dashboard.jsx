@@ -2,7 +2,8 @@ import { StatCard } from '@/components/works/stat-card';
 import { BarChart } from '@/components/works/molecules';
 import { utilizationSeries } from '@/lib/today-metrics';
 import { TrendingUp, Users, AlertTriangle, Package, Target, Clock } from 'lucide-react';
-import { TodayCard, HealthRing, MiniBar, Empty, TodaySurface, getGreeting } from './_shared';
+import { TodayCard, HealthRing, MiniBar, Empty, TodaySurface } from './_shared';
+import { getTimeOfDay as getGreeting } from '@/lib/utils';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // EXECUTIVE / LEADERSHIP

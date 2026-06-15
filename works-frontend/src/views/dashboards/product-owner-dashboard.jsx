@@ -2,7 +2,8 @@ import { StatCard } from '@/components/works/stat-card';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { DonutChart } from '@/components/works/molecules';
 import { Layers, Package, BarChart2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { TodayCard, HealthRing, MiniBar, Empty, TodaySurface, getGreeting } from './_shared';
+import { TodayCard, HealthRing, MiniBar, Empty, TodaySurface } from './_shared';
+import { getTimeOfDay as getGreeting } from '@/lib/utils';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PRODUCT OWNER

@@ -78,38 +78,40 @@ import { TypeBadge, TypeIcon } from '@/components/works/work-item-type';
 import { StatCard } from '@/components/works/stat-card';
 import { Field } from '@/components/works/field';
 import { Avatar } from '@/components/works/atoms/avatar';
-import DashboardView from '@/views/dashboard-view';
-import BoardView from '@/views/board-view';
-import WorkspaceView from '@/views/workspace-view';
-import AccountView from '@/views/account-view';
-import PoWorkspaceView from '@/views/po-workspace-view';
-import LeadershipConsoleView from '@/views/leadership-console-view';
-import AdminOpsView from '@/views/admin-ops-view';
+// Route-level code-split — each view loads on demand (WI-21). Vite emits one chunk per
+// import(); the Suspense below shows a skeleton until the chunk is ready.
+const DashboardView = React.lazy(() => import('@/views/dashboard-view'));
+const BoardView = React.lazy(() => import('@/views/board-view'));
+const WorkspaceView = React.lazy(() => import('@/views/workspace-view'));
+const AccountView = React.lazy(() => import('@/views/account-view'));
+const PoWorkspaceView = React.lazy(() => import('@/views/po-workspace-view'));
+const LeadershipConsoleView = React.lazy(() => import('@/views/leadership-console-view'));
+const AdminOpsView = React.lazy(() => import('@/views/admin-ops-view'));
 import { AiMetaBadge } from '@/components/works/ai-meta-badge';
-import NotificationsView from '@/views/notifications-view';
-import TrashView from '@/views/trash-view';
-import ReleasesView from '@/views/releases-view';
-import BqlView from '@/views/bql-view';
-import MyWorksView from '@/views/my-works-view';
-import ScrumMasterCockpitView from '@/views/scrum-master-cockpit-view';
-import ProjectsView from '@/views/projects-view';
-import ReportsView from '@/views/reports-view';
-import AiStudioView from '@/views/ai-studio-view';
-import MarketplaceView from '@/views/marketplace-view';
-import DeveloperPortalView from '@/views/developer-portal-view';
-import KnowledgeTemplatesView from '@/views/knowledge-templates-view';
-import SupportInboxView from '@/views/support-inbox-view';
+const NotificationsView = React.lazy(() => import('@/views/notifications-view'));
+const TrashView = React.lazy(() => import('@/views/trash-view'));
+const ReleasesView = React.lazy(() => import('@/views/releases-view'));
+const BqlView = React.lazy(() => import('@/views/bql-view'));
+const MyWorksView = React.lazy(() => import('@/views/my-works-view'));
+const ScrumMasterCockpitView = React.lazy(() => import('@/views/scrum-master-cockpit-view'));
+const ProjectsView = React.lazy(() => import('@/views/projects-view'));
+const ReportsView = React.lazy(() => import('@/views/reports-view'));
+const AiStudioView = React.lazy(() => import('@/views/ai-studio-view'));
+const MarketplaceView = React.lazy(() => import('@/views/marketplace-view'));
+const DeveloperPortalView = React.lazy(() => import('@/views/developer-portal-view'));
+const KnowledgeTemplatesView = React.lazy(() => import('@/views/knowledge-templates-view'));
+const SupportInboxView = React.lazy(() => import('@/views/support-inbox-view'));
 import { BlockEditor } from '@/components/BlockEditor';
 // PortalFormDesigner moved to service-view.jsx (TD-003).
-import BacklogView from '@/views/backlog-view';
-import SprintView from '@/views/sprint-view';
-import DashboardsView from '@/views/dashboards-view';
-import ReportBuilderView from '@/views/reportbuilder-view';
-import ComplianceView from '@/views/compliance-view';
-import ServiceView from '@/views/service-view';
-import KnowledgeView from '@/views/knowledge-view';
-import PmView from '@/views/pm-view';
-import Settings3View from '@/views/settings3-view';
+const BacklogView = React.lazy(() => import('@/views/backlog-view'));
+const SprintView = React.lazy(() => import('@/views/sprint-view'));
+const DashboardsView = React.lazy(() => import('@/views/dashboards-view'));
+const ReportBuilderView = React.lazy(() => import('@/views/reportbuilder-view'));
+const ComplianceView = React.lazy(() => import('@/views/compliance-view'));
+const ServiceView = React.lazy(() => import('@/views/service-view'));
+const KnowledgeView = React.lazy(() => import('@/views/knowledge-view'));
+const PmView = React.lazy(() => import('@/views/pm-view'));
+const Settings3View = React.lazy(() => import('@/views/settings3-view'));
 import { DashboardWidgetCard } from '@/components/works/organisms/dashboard-widget-card';
 // DashboardDrillModal extracted to src/components/works/organisms/dashboard-drill-modal.jsx (TD-003).
 // ExportButtons extracted to src/components/works/export-buttons.jsx (TD-003).
@@ -3315,8 +3317,16 @@ export default function App() {
             />
           </aside>
 
-        {/* CONTENT */}
+        {/* CONTENT — wrapped in Suspense so lazy-loaded route chunks show a skeleton (WI-21). */}
         <div className="flex-1 overflow-auto dark:bg-neutral-900">
+          <React.Suspense fallback={
+            <div aria-busy="true" aria-label="Loading view" className="p-6">
+              <Skeleton className="h-8 w-64 mb-4" />
+              <Skeleton className="h-4 w-full mb-2" />
+              <Skeleton className="h-4 w-full mb-2" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          }>
 
           {/* ======================================================
                ITERATION 6 — ROLE-TUNED DASHBOARD
@@ -4185,6 +4195,7 @@ export default function App() {
             />
           )}
 
+          </React.Suspense>
         </div>
         </div>
       </main>

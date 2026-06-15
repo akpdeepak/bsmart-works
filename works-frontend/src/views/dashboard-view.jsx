@@ -116,7 +116,7 @@ export default function DashboardView({
     if (!activeData && !dashLoading) {
       fetchDashboard(dashboardRole);
     }
-  }, [dashboardRole]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dashboardRole]); // activeData/dashLoading excluded: including them would trigger a loop on every fetch.
 
   const switchRole = (role) => {
     setDashboardRole(role);

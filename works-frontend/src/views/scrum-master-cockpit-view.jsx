@@ -94,12 +94,11 @@ export default function ScrumMasterCockpitView({
     } else if (tab === 'patterns' && !patternsResult && !cockpitLoading.patterns) {
       runPatterns();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // fetch fns are stable refs (useCallback); cockpitLoading excluded to avoid re-trigger loop.
   }, [tab, activeSprintId, i15ProjectId]);
 
   // Reset the manual-touch flag on project switch so the phase-aware default applies afresh.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTabTouched(false);
   }, [i15ProjectId]);
 

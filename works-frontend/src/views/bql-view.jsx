@@ -302,8 +302,7 @@ export default function BqlView({
     const s = params.get('bqlSort') || undefined;
     const t = setTimeout(() => { setBqlQuery(q); if (s) setSort(s); runBql({ query: q, sort: s }); }, 0);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // intentional mount-only: reads URL params once on load, before any user interaction.
 
   const translateNl = () => {
     if (!nlText.trim() || !activeWorkspaceId) return;
@@ -340,8 +339,7 @@ export default function BqlView({
     api.send(`/bql/schema?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
       .then(setSchema)
       .catch(() => setSchema(null));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeWorkspaceId]);
+  }, [activeWorkspaceId]); // api.send, set fns excluded: stable refs that don't affect when to re-fetch.
 
   // Toggle a daily, in-app + email subscription to a saved view (the manage UI can refine later).
   // Tracks an in-flight set so the bell can show a busy/disabled state and confirm via a toast.

@@ -5,7 +5,8 @@ import { statusToCategory } from '@/components/works/status';
 import { BarChart, PairedBars } from '@/components/works/molecules';
 import { velocityPairs, timeboxProgress, utilizationSeries } from '@/lib/today-metrics';
 import { Zap, TrendingUp, Users, AlertTriangle, Activity } from 'lucide-react';
-import { TodayCard, HealthRing, MiniBar, Empty, TodaySurface, getGreeting } from './_shared';
+import { TodayCard, HealthRing, MiniBar, Empty, TodaySurface } from './_shared';
+import { getTimeOfDay as getGreeting } from '@/lib/utils';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SCRUM MASTER

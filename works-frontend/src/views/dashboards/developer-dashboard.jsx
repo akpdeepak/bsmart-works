@@ -7,7 +7,8 @@ import { SegmentBar, DayBars } from '@/components/works/molecules';
 import { aggregateByDimension } from '@/lib/dashboard-metrics';
 import { dueBuckets, dailyHours } from '@/lib/today-metrics';
 import { Pin, Zap, Timer, Ban, Clock, Layers, Target } from 'lucide-react';
-import { TodayCard, HealthRing, Empty, TodaySurface, getGreeting } from './_shared';
+import { TodayCard, HealthRing, Empty, TodaySurface } from './_shared';
+import { getTimeOfDay as getGreeting } from '@/lib/utils';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DEVELOPER

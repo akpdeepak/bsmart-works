@@ -114,7 +114,6 @@ function AssistantsPanel({ workspaceId, notify }) {
       .finally(() => setLoading(false));
   }, [workspaceId]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
     if (endRef.current && typeof endRef.current.scrollIntoView === 'function') {
@@ -213,7 +212,6 @@ function AgentsPanel({ workspaceId, notify }) {
       .finally(() => setLoading(false));
   }, [workspaceId]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   const run = () => {

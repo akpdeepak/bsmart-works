@@ -25,7 +25,6 @@ function ReportPivotStrip({ workspaceId }) {
   useEffect(() => {
     let alive = true;
     if (!workspaceId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState({ loading: false, error: null, byId: {} });
       return undefined;
     }
@@ -40,8 +39,7 @@ function ReportPivotStrip({ workspaceId }) {
       })
       .catch((e) => { if (alive) setState({ loading: false, error: e.message || t('insights.reports.couldNotLoad'), byId: {} }); });
     return () => { alive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceId]);
+  }, [workspaceId]); // resolvePivotBatch, setState, t excluded: stable module-level refs.
 
   if (!workspaceId) return null;
 
@@ -254,8 +252,7 @@ export default function ReportsView({
     if (!active) return undefined;
     const tid = setTimeout(() => { setSelectedSprintId(active.id); fetchSprintReport(active.id); }, 0);
     return () => clearTimeout(tid);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sprints, selectedSprintId]);
+  }, [sprints, selectedSprintId]); // fetchSprintReport, setSelectedSprintId excluded: stable refs.
 
   if (loading && sprints.length === 0) {
     return (

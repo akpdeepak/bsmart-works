@@ -2,7 +2,8 @@ import { StatCard } from '@/components/works/stat-card';
 import { DonutChart } from '@/components/works/molecules';
 import { activeMemberCount } from '@/lib/today-metrics';
 import { Users, ShieldCheck, AlertTriangle, Activity } from 'lucide-react';
-import { TodayCard, HealthRing, MiniBar, Empty, TodaySurface, getGreeting } from './_shared';
+import { TodayCard, HealthRing, MiniBar, Empty, TodaySurface } from './_shared';
+import { getTimeOfDay as getGreeting } from '@/lib/utils';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN

@@ -34,9 +34,6 @@ export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onT
       .finally(() => setLoading(false));
   }, [workspaceId]);
 
-  // Initial load synchronises external (server) state into React — the documented exception to
-  // react-hooks/set-state-in-effect (matches sla-view / integrations-panel).
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   const createTemplate = useCallback(() => {

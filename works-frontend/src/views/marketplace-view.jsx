@@ -50,7 +50,6 @@ export default function MarketplaceView({ workspaceId }) {
     }
   }, [workspaceId]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   const installedListingIds = new Set(installed.map((i) => i.listingId));

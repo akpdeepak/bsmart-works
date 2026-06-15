@@ -83,11 +83,6 @@ function TodayHeader({ greeting, firstName, rolePill, subtitle, cta, onCta }) {
   );
 }
 
-// Shared greeting helper — single source in lib/utils (ONE Source; the same logic was duplicated
-// here and in App.jsx before the consolidation). This module also exports the Today atoms, so we
-// waive the component-only fast-refresh rule for this re-export (repo pattern — see src/lib/i18n.jsx).
-// eslint-disable-next-line react-refresh/only-export-components
-export { getTimeOfDay as getGreeting } from '@/lib/utils';
 
 // ── Today surface — header + edit toolbar + canvas ─────────────────────────────
 // Wraps every role's Today: renders the fixed header, the customize/edit controls, and the
@@ -208,7 +203,7 @@ export function TodaySurface({ header, registry, ctx, layout, builtinLayout, edi
       })
       .catch(() => { if (!cancelled) setWidgetData({}); });
     return () => { cancelled = true; };
-  }, [dataKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dataKey]); // api.send, widgetSpecs, setWidgetData excluded: stable refs that don't affect when to re-fetch.
 
   const fullRegistry = { ...GENERIC_DATA_REGISTRY, ...registry };
   const fullCtx = { ...ctx, widgetData };

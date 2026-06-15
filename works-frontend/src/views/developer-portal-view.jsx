@@ -28,7 +28,6 @@ export default function DeveloperPortalView({ workspaceId }) {
     }
   }, [workspaceId]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   async function generateSandbox() {

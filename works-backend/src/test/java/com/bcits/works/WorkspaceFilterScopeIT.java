@@ -11,7 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -21,9 +21,9 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * End-to-end proof that the central Hibernate {@code workspaceFilter} (RB-40 §1) narrows a default
- * JPA read to the bound workspace, and that the system/unfiltered escape hatch bypasses it — against
- * real Postgres (Testcontainers, RB-10 §7). This is the "scoping applied centrally, not re-typed per
+ * End-to-end proof that the central Hibernate {@code workspaceFilter} (RB-40 Â§1) narrows a default
+ * JPA read to the bound workspace, and that the system/unfiltered escape hatch bypasses it â€” against
+ * real Postgres (Testcontainers, RB-10 Â§7). This is the "scoping applied centrally, not re-typed per
  * query" guarantee: {@link ProjectRepository#findAll()} carries <b>no</b> explicit workspace
  * predicate, yet returns only the bound workspace's rows once the filter is active.
  *
@@ -39,7 +39,7 @@ class WorkspaceFilterScopeIT {
 
     @Container
     @ServiceConnection
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16-alpine");
 
     @Autowired
     JdbcTemplate jdbc;
@@ -118,7 +118,7 @@ class WorkspaceFilterScopeIT {
 
     @Test
     void noWorkspaceBound_findAll_isUnfiltered_dormantDefault() {
-        // No workspace set on the thread → filter dormant → behaviour identical to before this layer.
+        // No workspace set on the thread â†’ filter dormant â†’ behaviour identical to before this layer.
         activator.apply(em.unwrap(org.hibernate.Session.class));
         assertThat(idsOf(projectRepository.findAll())).containsExactly(PROJ_A, PROJ_B);
     }

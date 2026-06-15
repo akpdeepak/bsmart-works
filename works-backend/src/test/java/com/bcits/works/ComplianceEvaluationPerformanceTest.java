@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -21,11 +21,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>Seeded dataset: 1 workspace, 1 project, 100 active rules, 1 000 work items.
  * Assert: evaluating all 100 rules against all 1 000 items completes in under 75 seconds
- * on a warm Postgres (NFR budget: RB-40 §5 — 1 500 ms P95 for complex queries; we allow
- * 50 × that for a full workspace sweep, which is a scheduled background job, not a web request;
- * 50 × 1 500 ms = 75 000 ms).
+ * on a warm Postgres (NFR budget: RB-40 Â§5 â€” 1 500 ms P95 for complex queries; we allow
+ * 50 Ã— that for a full workspace sweep, which is a scheduled background job, not a web request;
+ * 50 Ã— 1 500 ms = 75 000 ms).
  *
- * <p>Tagged {@code "integration"} — requires Docker (Testcontainers real Postgres). Runs in the
+ * <p>Tagged {@code "integration"} â€” requires Docker (Testcontainers real Postgres). Runs in the
  * {@code backend-integration-test} CI job only; excluded from the unit jobs.
  */
 @Tag("integration")
@@ -33,11 +33,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 class ComplianceEvaluationPerformanceTest {
 
-    // ── Infra ───────────────────────────────────────────────────────────────────
+    // â”€â”€ Infra â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Container
     @ServiceConnection
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16-alpine");
 
     @Autowired
     JdbcTemplate jdbc;
@@ -48,7 +48,7 @@ class ComplianceEvaluationPerformanceTest {
     @Autowired
     ComplianceRuleRepository ruleRepo;
 
-    // ── Constants ───────────────────────────────────────────────────────────────
+    // â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private static final String WS_ID   = "PERF-WS-1";
     private static final String PROJ_ID = "PERF-PROJ-1";
@@ -59,7 +59,7 @@ class ComplianceEvaluationPerformanceTest {
     /** Maximum wall-clock time (ms) allowed for evaluating all N_RULES rules end-to-end. */
     private static final long   BUDGET_MS = 15_000;
 
-    // ── Setup ───────────────────────────────────────────────────────────────────
+    // â”€â”€ Setup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @BeforeEach
     void seed() {
@@ -76,7 +76,7 @@ class ComplianceEvaluationPerformanceTest {
             "INSERT INTO users(id, email, password_hash, full_name) VALUES (?,?,?,?)",
             "USR-PERF", "perf@test.invalid", "x", "Perf User");
 
-        // User (work items reference created_by → users FK)
+        // User (work items reference created_by â†’ users FK)
         jdbc.update(
             "INSERT INTO users(id, email, password_hash, full_name) VALUES (?,?,?,?) ON CONFLICT DO NOTHING",
             "USR-PERF", "perf-test@bcits.test", "placeholder", "Perf Test User");
@@ -95,7 +95,7 @@ class ComplianceEvaluationPerformanceTest {
             PROJ_ID, WS_ID, "Perf Project", "PERF", "perf-proj-1",
             OffsetDateTime.now(), OffsetDateTime.now());
 
-        // 1 000 work items — half with a description, half without (so ~50% fail assertion BQL)
+        // 1 000 work items â€” half with a description, half without (so ~50% fail assertion BQL)
         OffsetDateTime now = OffsetDateTime.now();
         for (int i = 0; i < N_ITEMS; i++) {
             String itemId = "PERF-W-" + i;
@@ -108,7 +108,7 @@ class ComplianceEvaluationPerformanceTest {
                 PROJ_ID, "USR-PERF", now, now, desc);
         }
 
-        // 100 active compliance rules — each asserts description is not null.
+        // 100 active compliance rules â€” each asserts description is not null.
         // (A simple assertion so BQL compiles correctly and the query is representative.)
         for (int i = 0; i < N_RULES; i++) {
             String ruleId = "PERF-CR-" + i;
@@ -120,7 +120,7 @@ class ComplianceEvaluationPerformanceTest {
                 + ") VALUES (?,?,?,?,?,?,?,?,?,?::jsonb,?::jsonb,?,?,?)",
                 ruleId, WS_ID, "Perf Rule " + i,
                 "description != ''",   // assertion: description must be present
-                "",                    // no scope filter — all items
+                "",                    // no scope filter â€” all items
                 "MEDIUM",
                 true, false, "CONTINUOUS",
                 "[]", "[]",            // jsonb empty arrays
@@ -128,7 +128,7 @@ class ComplianceEvaluationPerformanceTest {
         }
     }
 
-    // ── Test ────────────────────────────────────────────────────────────────────
+    // â”€â”€ Test â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void evaluateWorkspace_100Rules_1000Items_completesUnder5Seconds() {
@@ -143,7 +143,7 @@ class ComplianceEvaluationPerformanceTest {
         }
         long elapsed = System.currentTimeMillis() - start;
 
-        // ~500 items fail (description is null) × 100 rules = ~50 000 violation opens on first run.
+        // ~500 items fail (description is null) Ã— 100 rules = ~50 000 violation opens on first run.
         // On re-runs the reconcile() short-circuits (toOpen is empty). Either way the assertion holds.
         assertThat(totalViolations).as("violations detected across all rules")
             .isGreaterThan(0);
@@ -199,10 +199,10 @@ class ComplianceEvaluationPerformanceTest {
         assertThat(rules).isNotEmpty();
         ComplianceRule rule = rules.get(0);
 
-        // All items in WS_ID have even-index descriptions — half pass. WS2 items must NOT be counted.
+        // All items in WS_ID have even-index descriptions â€” half pass. WS2 items must NOT be counted.
         ComplianceEvaluationService.EvaluationResult result = evaluationService.evaluateRule(rule);
         // The violation count must reflect only WS_ID items, not the 100 items from WS2.
-        // WS_ID has N_ITEMS items, ~500 without description. We assert total ≤ N_ITEMS.
+        // WS_ID has N_ITEMS items, ~500 without description. We assert total â‰¤ N_ITEMS.
         assertThat(result.failing())
             .as("rule must only see items within its workspace")
             .isLessThanOrEqualTo(N_ITEMS);

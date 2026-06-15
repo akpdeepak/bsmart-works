@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Seeded report templates (Cap J, S05) against real Postgres with the Flyway migrations applied.
- * Asserts the two templates the spec names — Monthly executive summary and Customer status — are
+ * Asserts the two templates the spec names â€” Monthly executive summary and Customer status â€” are
  * returned by the repository method behind {@code GET /api/v1/reports/templates}
  * ({@link ReportRepository#findByIsTemplateTrueOrderByNameAsc()}), with the section structure
  * made insightful in V88 (KPI grid + pivot-backed charts + table + narrative prompts; the templates
@@ -28,7 +28,7 @@ class ReportTemplateSeedIT {
 
     @Container
     @ServiceConnection
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16-alpine");
 
     @Autowired ReportRepository reportRepository;
 
@@ -58,7 +58,7 @@ class ReportTemplateSeedIT {
     void monthlyExecutiveSummaryHasKpiPivotChartsAndNarrativeSections() {
         Report exec = templateNamed("Monthly executive summary");
         String sections = exec.getSections();
-        // Whitespace-insensitive for the structural `"type":"x"` checks — the stored JSON may be
+        // Whitespace-insensitive for the structural `"type":"x"` checks â€” the stored JSON may be
         // pretty-printed (`"type": "kpi"`); the section shape is what matters, not the spacing.
         String compact = sections.replaceAll("\\s+", "");
 

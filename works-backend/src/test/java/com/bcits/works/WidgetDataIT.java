@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * Widget data executor against real Postgres. Covers metric scalar/series, BQL count/group/list,
  * guided resolution, the batch path, and the mandatory governance scenarios: the workspace scope
- * keeps another tenant's rows out of every source kind (RB-40 §1, cross-tenant), and a bad source
+ * keeps another tenant's rows out of every source kind (RB-40 Â§1, cross-tenant), and a bad source
  * in a batch degrades to an error entry without aborting its neighbours (error scenario).
  */
 @Tag("integration")
@@ -30,7 +30,7 @@ class WidgetDataIT {
 
     @Container
     @ServiceConnection
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16-alpine");
 
     @Autowired JdbcTemplate jdbc;
     @Autowired WidgetDataService service;
@@ -87,7 +87,7 @@ class WidgetDataIT {
             id, title, status, type, priority, projectId, assignee, USER_A, now, now);
     }
 
-    // ── Metrics ──────────────────────────────────────────────────────────────────
+    // â”€â”€ Metrics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void metric_scalar_isWorkspaceScoped() {
@@ -108,7 +108,7 @@ class WidgetDataIT {
         assertThat(counts).containsEntry("BUG", 2L).containsEntry("STORY", 1L).containsEntry("TASK", 1L);
     }
 
-    // ── BQL ──────────────────────────────────────────────────────────────────────
+    // â”€â”€ BQL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void bql_count_group_and_list_areScoped() {
@@ -137,12 +137,12 @@ class WidgetDataIT {
         assertThat(data.value()).isEqualTo(2);
     }
 
-    // ── Cross-tenant (RB-40 §1 mandatory scenario) ─────────────────────────────────
+    // â”€â”€ Cross-tenant (RB-40 Â§1 mandatory scenario) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void nonMember_cannotResolveAgainstAnotherWorkspace() {
         // The membership gate IS the tenant boundary: user A is not a member of WS B, so every
-        // source kind is refused before any row is read — not silently returned empty.
+        // source kind is refused before any row is read â€” not silently returned empty.
         assertThatThrownBy(() -> service.resolve(WS_B, USER_A, metric("open_items")))
             .isInstanceOf(ApiException.class);
         assertThatThrownBy(() -> service.resolve(WS_B, USER_A, bql("", "list", null, 50)))
@@ -150,7 +150,7 @@ class WidgetDataIT {
         assertThatThrownBy(() -> service.batch(WS_B, USER_A, Map.of("w", metric("open_items"))))
             .isInstanceOf(ApiException.class);
 
-        // And WS B's own member sees exactly WS B's 5 rows — never WS A's.
+        // And WS B's own member sees exactly WS B's 5 rows â€” never WS A's.
         WidgetDataService.WidgetData bOpen = service.resolve(WS_B, USER_B, metric("open_items"));
         assertThat(bOpen.value()).isEqualTo(5);
         WidgetDataService.WidgetData bList = service.resolve(WS_B, USER_B, bql("", "list", null, 50));
@@ -158,15 +158,15 @@ class WidgetDataIT {
             assertThat(((String) r.get("id"))).startsWith("WDB-"));
     }
 
-    // ── Batch + error degradation ──────────────────────────────────────────────────
+    // â”€â”€ Batch + error degradation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void batch_resolvesAll_andIsolatesAnInvalidSource() {
         Map<String, WidgetSource> sources = new java.util.LinkedHashMap<>();
         sources.put("w1", metric("open_items"));
         sources.put("w2", bql("status != \"Done\"", "group", "status", null));
-        sources.put("w3", metric("does_not_exist"));   // bad → error entry, must not abort the batch
-        sources.put("w4", bql("", "group", "nonsense_dim", null)); // bad group dim → error entry
+        sources.put("w3", metric("does_not_exist"));   // bad â†’ error entry, must not abort the batch
+        sources.put("w4", bql("", "group", "nonsense_dim", null)); // bad group dim â†’ error entry
 
         List<WidgetDataService.BatchResult> results = service.batch(WS_A, USER_A, sources);
         assertThat(results).hasSize(4);

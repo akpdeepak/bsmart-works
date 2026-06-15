@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * The multi-dimensional pivot engine against real Postgres. Covers the mandatory governance
- * scenarios (RB-05 Stage 3, RB-40 §1): cross-tenant denied, field-level security (a low tier cannot
+ * scenarios (RB-05 Stage 3, RB-40 Â§1): cross-tenant denied, field-level security (a low tier cannot
  * pivot on a sensitive field), and injection-safety (a bogus dimension/measure is rejected, not
  * interpolated). Plus each aggregation, the 0/1/2/N-dimension shapes, the empty result, and the
  * dimension cap.
@@ -31,7 +31,7 @@ class PivotServiceIT {
 
     @Container
     @ServiceConnection
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16-alpine");
 
     @Autowired JdbcTemplate jdbc;
     @Autowired PivotService service;
@@ -40,8 +40,8 @@ class PivotServiceIT {
     private static final String WS_B = "PV-WS-B";
     private static final String PROJ_A = "PV-PROJ-A";
     private static final String PROJ_B = "PV-PROJ-B";
-    private static final String USER_MEMBER = "PV-USR-MEM"; // tier 2 — no sensitive fields
-    private static final String USER_LEAD = "PV-USR-LEAD";  // tier 3 — sees sensitive fields
+    private static final String USER_MEMBER = "PV-USR-MEM"; // tier 2 â€” no sensitive fields
+    private static final String USER_LEAD = "PV-USR-LEAD";  // tier 3 â€” sees sensitive fields
     private static final String USER_B = "PV-USR-B";        // member of WS B only
 
     @BeforeEach
@@ -107,7 +107,7 @@ class PivotServiceIT {
         return new PivotSpec(null, List.of(measures), dims, null);
     }
 
-    // ── Dimension shapes 0/1/2/N ─────────────────────────────────────────────────────
+    // â”€â”€ Dimension shapes 0/1/2/N â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void zeroDimensions_returnsOneGrandTotalRow() {
@@ -133,7 +133,7 @@ class PivotServiceIT {
         PivotService.PivotResult r = service.resolve(WS_A, USER_MEMBER,
             spec(List.of("status", "priority"), new PivotSpec.Measure("*", PivotSpec.Agg.COUNT)));
         assertThat(r.dimensions()).containsExactly("status", "priority");
-        // Todo/HIGH=1, Todo/LOW=1, Done/HIGH=2 → three rows.
+        // Todo/HIGH=1, Todo/LOW=1, Done/HIGH=2 â†’ three rows.
         assertThat(r.rows()).hasSize(3);
     }
 
@@ -145,7 +145,7 @@ class PivotServiceIT {
         assertThat(r.rows()).isNotEmpty();
     }
 
-    // ── Each aggregation ─────────────────────────────────────────────────────────────
+    // â”€â”€ Each aggregation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void aggregations_areCorrect() {
@@ -178,7 +178,7 @@ class PivotServiceIT {
         assertThat(total).isEqualTo(100.0); // Todo 50% + Done 50%
     }
 
-    // ── Empty ────────────────────────────────────────────────────────────────────────
+    // â”€â”€ Empty â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void emptyResult_whenFilterMatchesNothing() {
@@ -189,16 +189,16 @@ class PivotServiceIT {
         assertThat(r.rows()).isEmpty();
     }
 
-    // ── Cross-tenant (RB-40 §1 mandatory) ──────────────────────────────────────────────
+    // â”€â”€ Cross-tenant (RB-40 Â§1 mandatory) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void crossTenant_nonMemberIsDenied_andScopingKeepsRowsApart() {
-        // USER_MEMBER is not a member of WS B → refused before any row is read.
+        // USER_MEMBER is not a member of WS B â†’ refused before any row is read.
         assertThatThrownBy(() -> service.resolve(WS_B, USER_MEMBER,
             spec(List.of(), new PivotSpec.Measure("*", PivotSpec.Agg.COUNT))))
             .isInstanceOf(ApiException.class);
 
-        // WS A's own count is 4 — never WS B's 6.
+        // WS A's own count is 4 â€” never WS B's 6.
         PivotService.PivotResult a = service.resolve(WS_A, USER_MEMBER,
             spec(List.of(), new PivotSpec.Measure("*", PivotSpec.Agg.COUNT)));
         assertThat(((Number) a.rows().get(0).get("count_all")).longValue()).isEqualTo(4);
@@ -212,7 +212,7 @@ class PivotServiceIT {
     @Test
     void resolveForWorkspace_isWorkspaceScoped_withoutRbac_andHidesSensitiveFields() {
         // The unauthenticated public-embed path: no per-user RBAC gate, but the workspace predicate
-        // is the entire scope — WS A's own count (4), never WS B's (6) (RB-40 §1).
+        // is the entire scope â€” WS A's own count (4), never WS B's (6) (RB-40 Â§1).
         PivotService.PivotResult a = service.resolveForWorkspace(WS_A,
             spec(List.of(), new PivotSpec.Measure("*", PivotSpec.Agg.COUNT)));
         assertThat(((Number) a.rows().get(0).get("count_all")).longValue()).isEqualTo(4);
@@ -228,15 +228,15 @@ class PivotServiceIT {
             .isInstanceOf(BqlException.class);
     }
 
-    // ── Field-level security (RB-40 §1 mandatory) ───────────────────────────────────────
+    // â”€â”€ Field-level security (RB-40 Â§1 mandatory) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void fieldSecurity_lowTierCannotPivotOnSensitiveField() {
-        // businessValue is sensitive (LEAD+). A MEMBER referencing it as a measure is rejected…
+        // businessValue is sensitive (LEAD+). A MEMBER referencing it as a measure is rejectedâ€¦
         assertThatThrownBy(() -> service.resolve(WS_A, USER_MEMBER,
             spec(List.of(), new PivotSpec.Measure("businessValue", PivotSpec.Agg.SUM))))
             .isInstanceOf(BqlException.class);
-        // …and as a dimension.
+        // â€¦and as a dimension.
         assertThatThrownBy(() -> service.resolve(WS_A, USER_MEMBER,
             spec(List.of("businessValue"), new PivotSpec.Measure("*", PivotSpec.Agg.COUNT))))
             .isInstanceOf(BqlException.class);
@@ -247,11 +247,11 @@ class PivotServiceIT {
         assertThat(((Number) r.rows().get(0).get("sum_businessValue")).longValue()).isEqualTo(24);
     }
 
-    // ── Injection-safety (RB-40 §1 / RB-10 §6 mandatory) ────────────────────────────────
+    // â”€â”€ Injection-safety (RB-40 Â§1 / RB-10 Â§6 mandatory) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void injectionSafety_bogusDimensionAndMeasureAreRejected() {
-        // A column that is not in the allow-list, even a real one, is refused — never interpolated.
+        // A column that is not in the allow-list, even a real one, is refused â€” never interpolated.
         assertThatThrownBy(() -> service.resolve(WS_A, USER_MEMBER,
             spec(List.of("deleted_at"), new PivotSpec.Measure("*", PivotSpec.Agg.COUNT))))
             .isInstanceOf(BqlException.class);
@@ -269,7 +269,7 @@ class PivotServiceIT {
             Long.class, PROJ_A)).isEqualTo(4);
     }
 
-    // ── Limits / error cases ─────────────────────────────────────────────────────────
+    // â”€â”€ Limits / error cases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void dimensionCap_isEnforced() {

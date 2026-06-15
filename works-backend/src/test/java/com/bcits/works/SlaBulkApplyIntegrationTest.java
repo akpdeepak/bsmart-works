@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -22,26 +22,26 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>Three scenario groups:
  * <ol>
- *   <li><b>Preview mode</b> — {@code SlaEvaluationService#preview()} returns the count and a sample
+ *   <li><b>Preview mode</b> â€” {@code SlaEvaluationService#preview()} returns the count and a sample
  *       of affected items without mutating any clock state.</li>
- *   <li><b>Confirm / apply mode</b> — {@code SlaEvaluationService#applyNow()} starts one
+ *   <li><b>Confirm / apply mode</b> â€” {@code SlaEvaluationService#applyNow()} starts one
  *       {@link SlaInstance} per item per target; idempotent on re-run.</li>
- *   <li><b>Cross-workspace isolation</b> — items belonging to a second workspace are never
- *       touched by a policy scoped to the first workspace (RB-40 §1).</li>
+ *   <li><b>Cross-workspace isolation</b> â€” items belonging to a second workspace are never
+ *       touched by a policy scoped to the first workspace (RB-40 Â§1).</li>
  * </ol>
  *
- * <p>Tagged {@code "integration"} — requires Docker (Testcontainers real Postgres).
+ * <p>Tagged {@code "integration"} â€” requires Docker (Testcontainers real Postgres).
  */
 @Tag("integration")
 @Testcontainers
 @SpringBootTest
 class SlaBulkApplyIntegrationTest {
 
-    // ── Infra ────────────────────────────────────────────────────────────────────
+    // â”€â”€ Infra â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Container
     @ServiceConnection
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16-alpine");
 
     @Autowired
     JdbcTemplate jdbc;
@@ -58,7 +58,7 @@ class SlaBulkApplyIntegrationTest {
     @Autowired
     SlaInstanceRepository instanceRepo;
 
-    // ── Constants ────────────────────────────────────────────────────────────────
+    // â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private static final String WS_ID   = "SLA-WS-1";
     private static final String PROJ_ID = "SLA-PROJ-1";
@@ -69,7 +69,7 @@ class SlaBulkApplyIntegrationTest {
     /** Resolution target: 8 hours = 480 minutes. */
     private static final int    TARGET_MINUTES = 480;
 
-    // ── Setup ────────────────────────────────────────────────────────────────────
+    // â”€â”€ Setup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @BeforeEach
     void seed() {
@@ -83,7 +83,7 @@ class SlaBulkApplyIntegrationTest {
 
         OffsetDateTime now = OffsetDateTime.now();
 
-        // Seed test user (ON CONFLICT DO NOTHING — may already exist from a prior run).
+        // Seed test user (ON CONFLICT DO NOTHING â€” may already exist from a prior run).
         jdbc.update(
             "INSERT INTO users(id, email, password_hash, full_name) VALUES (?,?,?,?)"
             + " ON CONFLICT DO NOTHING",
@@ -97,7 +97,7 @@ class SlaBulkApplyIntegrationTest {
             "INSERT INTO projects(id, workspace_id, name, key_prefix, slug, created_at) VALUES (?,?,?,?,?,?)",
             PROJ_ID, WS_ID, "SLA Project", "SLA", "sla", now);
 
-        // N_ITEMS work items — all status="Todo" so no start/stop triggers block clock creation.
+        // N_ITEMS work items â€” all status="Todo" so no start/stop triggers block clock creation.
         for (int i = 0; i < N_ITEMS; i++) {
             jdbc.update(
                 "INSERT INTO work_items("
@@ -107,7 +107,7 @@ class SlaBulkApplyIntegrationTest {
                 PROJ_ID, "USR-SLA", now, now);
         }
 
-        // One active SLA policy — no scope filter (all items in workspace are in scope).
+        // One active SLA policy â€” no scope filter (all items in workspace are in scope).
         jdbc.update(
             "INSERT INTO sla_policies("
             + "  id, workspace_id, name, scope_bql, active, created_by, created_at, updated_at"
@@ -122,7 +122,7 @@ class SlaBulkApplyIntegrationTest {
             TGT_ID, POL_ID, WS_ID, "RESOLUTION", TARGET_MINUTES, 0);
     }
 
-    // ── 1 · Preview mode ─────────────────────────────────────────────────────────
+    // â”€â”€ 1 Â· Preview mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void preview_returnsAffectedItemCountAndSample_withoutStartingClocks() {
@@ -142,7 +142,7 @@ class SlaBulkApplyIntegrationTest {
         int scoped = (int) result.get("scoped");
         assertThat(scoped).isEqualTo(N_ITEMS);
 
-        // Sample ≤ 10 items, each with id + title
+        // Sample â‰¤ 10 items, each with id + title
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> sample = (List<Map<String, Object>>) result.get("sample");
         assertThat(sample).hasSizeLessThanOrEqualTo(10);
@@ -151,10 +151,10 @@ class SlaBulkApplyIntegrationTest {
             assertThat(entry).containsKey("title");
         });
 
-        // Preview must NOT create any SLA instances — it is read-only.
+        // Preview must NOT create any SLA instances â€” it is read-only.
         long instanceCount = countInstances(WS_ID);
         assertThat(instanceCount)
-            .as("preview must not persist any SLA clocks — it is read-only")
+            .as("preview must not persist any SLA clocks â€” it is read-only")
             .isZero();
     }
 
@@ -165,7 +165,7 @@ class SlaBulkApplyIntegrationTest {
             "$$NOT_VALID_BQL$$", POL_ID);
         SlaPolicy policy = policyRepo.findById(POL_ID).orElseThrow();
 
-        // Must not throw — preview is defensive.
+        // Must not throw â€” preview is defensive.
         Map<String, Object> result = evaluationService.preview(policy);
 
         assertThat(result.get("valid")).isEqualTo(false);
@@ -173,7 +173,7 @@ class SlaBulkApplyIntegrationTest {
         assertThat(countInstances(WS_ID)).isZero();
     }
 
-    // ── 2 · Confirm / apply mode ─────────────────────────────────────────────────
+    // â”€â”€ 2 Â· Confirm / apply mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void applyNow_startsOneInstancePerItemPerTarget() {
@@ -214,7 +214,7 @@ class SlaBulkApplyIntegrationTest {
         evaluationService.applyNow(policy);
         long after1st = countInstances(WS_ID);
 
-        // Second apply — same policy, same items.
+        // Second apply â€” same policy, same items.
         SlaEvaluationService.EvaluationResult second = evaluationService.applyNow(policy);
         long after2nd = countInstances(WS_ID);
 
@@ -222,7 +222,7 @@ class SlaBulkApplyIntegrationTest {
             .as("second apply must not create duplicate clocks")
             .isEqualTo(after1st);
 
-        // On re-run: 0 new starts (instances already exist), ≥ 0 advances (clock tick).
+        // On re-run: 0 new starts (instances already exist), â‰¥ 0 advances (clock tick).
         assertThat(second.started())
             .as("no new instances should be created on re-run")
             .isZero();
@@ -230,7 +230,7 @@ class SlaBulkApplyIntegrationTest {
 
     @Test
     void applyNow_inactivePolicyProducesZeroClocks() {
-        // Mark the policy inactive — the engine must skip it.
+        // Mark the policy inactive â€” the engine must skip it.
         jdbc.update("UPDATE sla_policies SET active = FALSE WHERE id = ?", POL_ID);
         SlaPolicy policy = policyRepo.findById(POL_ID).orElseThrow();
 
@@ -241,7 +241,7 @@ class SlaBulkApplyIntegrationTest {
         assertThat(countInstances(WS_ID)).isZero();
     }
 
-    // ── 3 · Cross-workspace isolation ────────────────────────────────────────────
+    // â”€â”€ 3 Â· Cross-workspace isolation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     /**
      * A policy in WS_ID must never start clocks for items that belong to a different workspace.
@@ -287,7 +287,7 @@ class SlaBulkApplyIntegrationTest {
         assertThat(result.scoped()).isEqualTo(N_ITEMS);
         assertThat(result.started()).isEqualTo(N_ITEMS);
 
-        // No clocks must exist for WS2 items — the policy must not leak across tenant boundaries.
+        // No clocks must exist for WS2 items â€” the policy must not leak across tenant boundaries.
         long ws2Instances = jdbc.queryForObject(
             "SELECT COUNT(*) FROM sla_instances WHERE workspace_id = ?",
             Long.class, ws2);
@@ -312,7 +312,7 @@ class SlaBulkApplyIntegrationTest {
         jdbc.update("DELETE FROM workspaces    WHERE id           = ?", ws2);
     }
 
-    // ── helpers ───────────────────────────────────────────────────────────────────
+    // â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private long countInstances(String workspaceId) {
         Long count = jdbc.queryForObject(

@@ -33,7 +33,7 @@
 ## Table of contents
 
 1. [Executive summary](#1-executive-summary)
-2. [How to read this document](#2-how-to-read-this-document)
+2. [How to read this document](#2-how-to-read-this-document) — incl. the **document map & canonical sources**
 3. [Part A — Current-state scorecard (code-grounded)](#part-a--current-state-scorecard-code-grounded)
 4. [Part B — Benchmark design DNA](#part-b--benchmark-design-dna)
 5. [Part C — Design philosophy & engagement framework layer](#part-c--design-philosophy--engagement-framework-layer)
@@ -89,6 +89,31 @@ The three highest-leverage moves, in order:
 Precedence note (RB-00 / SOURCE-OF-TRUTH): where this document and the code disagree on *how it is
 built today*, the code wins (Part A is kept honest). Where they disagree on *what we are building
 toward*, this roadmap is the target.
+
+---
+
+### Canonical sources & document map
+
+To prevent confusion or conflict, here is **every UI/UX doc and its single role.** Read top-down:
+law → brand → this program → logs / specs / pointers.
+
+| Doc | Role | Authority |
+|-----|------|-----------|
+| `ai-rules/rulebooks/30-DESIGN.md` (**RB-30**) | **Canonical design law** — tokens, layout shell, five states, a11y, typography, motion, z-index, iconography, content | **Highest.** This program *adopts* RB-30 and never contradicts it (generated into `CLAUDE.md` §4/§22). |
+| `docs/brand/brand-and-identity.md` (+ `brand/README.md`) | **Canonical brand** — logo, colour rationale, "Calm Cockpit" direction, UX principles, naming, white-label | **High.** Referenced here; the visual target originates here. |
+| **`docs/UIUX-BENCHMARK-ROADMAP.md`** (this doc) | **The reference roadmap** — applies RB-30 + brand across the benchmark, behavioral, measurement, and premium/visual-craft layers | The *what / why / how*. |
+| **`docs/UIUX-EXECUTION-PLAN.md`** | **The live execution layer** — status ledger (WI-01…WI-49), session triggers, resume protocol | The *what's done / what's next*. |
+| `docs/UX-PROGRESS.md` | Append-only progress log (newest-first) | The shared log. |
+| `docs/UX-CODEBASE-ANALYSIS.md` | Historical baseline audit (2026-06-05) — *why* the program exists | Reference only. |
+| `docs/A11Y.md` · `docs/I18N.md` | Topic frameworks the program depends on (WCAG 2.2 AA audit; i18n runtime) | Reference. |
+| `docs/KNOW-STUDIO.md` · `plans/KNOW-STUDIO-PLAN.md` | Surface spec + build order for the knowledge editor — input to WI-29 | Surface plan. |
+| `plans/sprint-cockpit-ux-plan.md` | Sprint-Cockpit UX (iteration-15, **parallel / out-of-scope** here) | Reference. |
+| `docs/PREMIUM-UX-ROADMAP.md` · `docs/DESIGN-CONSISTENCY-PROGRAM.md` | **Superseded → pointers** to Part H | Redirect only. |
+
+**Precedence (per `ai-rules/SOURCE-OF-TRUTH.md`):** for *how it is built today*, the **code / `CLAUDE.md`
+wins**; for *what must be true going forward*, **RB-30 + the specs win**; this roadmap is the program that
+closes the gap. **Reference, don't restate:** where this doc lists tokens / states / rules, they are
+RB-30's — cited to *apply* them across surfaces, not to redefine them.
 
 ---
 
@@ -164,6 +189,14 @@ The compressed "what each product is actually good at," across the three lenses 
 | **Jira** | Momentum (boards visibly moving); notifications/mentions | Inline quick-add, JQL saved filters, bulk ops, keyboard | Make work visible; configurable to the team |
 | **Confluence** | Real-time co-presence; @mentions; comments | Templates, page tree, inline editing | Collaboration as the default state |
 | **Microsoft (Office / Copilot)** | Copilot contextual prompts; familiarity / habit | Ribbon (recognition > recall), templates, deep keyboard | Fluent: *Coherent · Inclusive · Adaptive*; "solve for one, extend to many" |
+| **Microsoft Word** | Familiarity + autosave trust | Rich editing; styles & templates; track-changes & comments; outline nav; find/replace | The document *is* the surface; review & collaboration are first-class |
+| **Trello** | Card momentum; lovable simplicity; Butler nudges | Drag-drop as the whole model; inline card create; near-zero learning curve | Radical simplicity — start trivial, reveal power (progressive complexity) |
+| **AirBNB** | Trust through visual quality, photography, micro-delight | One consistent component everywhere (DLS) | Design Language System — pioneered design tokens + components; design that earns trust |
+| **Uber** | Real-time status reassurance ("where's my driver") | Operational clarity under pressure; maps/live data; state-machine UX | Base design system; motion conveys state; built for global scale (a11y + i18n) |
+| **Notion** | Flexible, low-chrome canvas; "everything is a block" | Slash (`/`) menu; one dataset → many views (table/board/calendar/gallery); templates | Composability — the same primitives recombine into any surface |
+| **Linear** | Crafted minimalism that *feels* fast | Speed as a feature (<400 ms); keyboard-first; optimistic everywhere; instant nav | Opinionated · fast · beautiful — the bar for a premium PM tool |
+| **Asana** | Task-complete celebration delight; goals give meaning | Multi-view work (list/board/timeline/calendar); My Tasks; rules | Clarity + peak-end delight without losing professionalism |
+| **Figma** | Real-time multiplayer (live cursors / presence) | Components / variants / auto-layout; in-canvas comments | Multiplayer collaboration + the design system *is* the source of truth |
 
 ---
 
@@ -197,7 +230,7 @@ Every engagement technique below is filtered through this inversion.
 | **Zeigarnik effect** — open loops nag | Jira badges, email drafts | Persistent "assigned to me / awaiting you" counts; auto-saved drafts; "left in review" reminders |
 | **Variable feedback (ethical)** | feeds | A personalized "Today" that surfaces genuinely *different, relevant* items each visit — relevance, not randomness |
 | **Social proof / reciprocity** | LinkedIn, Confluence | @mentions, comment reactions, "N teammates viewing" presence — light social signals that pull collaboration |
-| **Peak-End rule** — judged by peak + finish | Apple, Duolingo | Design the *moment of completion* (sprint complete, item done) within the calm aesthetic |
+| **Peak-End rule** — judged by peak + finish | Apple, Duolingo, **Asana** (task-complete celebration) | Design the *moment of completion* (sprint complete, item done) within the calm aesthetic |
 | **Von Restorff (isolation) effect** | — | Already embodied: single-orange-accent rule (one CTA stands out). Keep it disciplined |
 
 **bSmart-specific:** the plumbing exists (SSE presence, notifications, the `events` store, role
@@ -213,6 +246,7 @@ dashboards) but none of the *behavioral design* on top. Highest-leverage: the **
 | **Flow-state preservation (no interruption)** | Linear, Notion | ⚠️ Modal-first creation breaks flow → inline quick-add; ambient (not modal) notifications |
 | **Conservation of complexity (Tesler's Law)** | Jira (JQL *and* visual builder) | ⚠️ You expose BQL but no visual builder → casual users carry the complexity. Add visual builders over BQL |
 | **Smart defaults > configuration** | Gmail, MS | ⚠️ Powerful config, blank-slate defaults → ship opinionated template defaults |
+| **Radical simplicity / progressive complexity** | Trello | Start trivial (a board + cards), reveal power on demand — the lowest learning curve → fastest activation |
 | **Batching** | Jira bulk ops, Gmail | ✅ Bulk bar exists → add a preview-the-change wizard |
 | **Keyboard-first** | Linear, Superhuman | ⚠️ Global shortcuts strong; **list-level `j/k/e/n`** missing |
 | **Optimistic UI** | Meta, Linear | ⚠️ Happy-path only → add rollback on failure |
@@ -260,7 +294,7 @@ measurable, not vibes.
 
 | Practice | Benchmark | bSmart |
 |---|---|---|
-| **Component-driven dev + Storybook** | Atlassian, MS | ⚠️ Installed, ≈4% coverage → make it the design-system shop window |
+| **Component-driven dev + Storybook** | Atlassian, MS, **AirBNB (DLS)** | ⚠️ Installed, ≈4% coverage → make it the design-system shop window |
 | **Design Ops / system governance** | All | ✅ Rule-enforcement exists; add *visual* governance (Storybook + Chromatic, already configured) |
 | **Telemetry-informed design** | Meta, MS | ❌ Instrument everything (within DPDP, RB-40) |
 | **Continuous discovery (dual-track)** | SVPG teams | ❌ Add a discovery track beside delivery |
@@ -281,7 +315,7 @@ config layer, the design-token system).
 
 | # | What | Why | How | Borrowed from |
 |---|---|---|---|---|
-| 1 | **First-run onboarding + project templates** | #1 gap; new users hit a blank app and churn. Templates convert "blank slate" → "value in 60s" (the North Star) | Setup wizard (workspace → template → invite); ship Scrum / Kanban / Bug-tracking / RAID seed templates via the existing `Workflow`+`FieldDef`+`Dashboard` config layer; a completeness checklist widget on Today | **Jira** (templates), **LinkedIn** (completeness) |
+| 1 | **First-run onboarding + project templates** | #1 gap; new users hit a blank app and churn. Templates convert "blank slate" → "value in 60s" (the North Star) | Setup wizard (workspace → template → invite); ship Scrum / Kanban / Bug-tracking / RAID seed templates via the existing `Workflow`+`FieldDef`+`Dashboard` config layer; a completeness checklist widget on Today | **Jira** (templates), **LinkedIn** (completeness), **Trello** (zero-friction first board) |
 | 2 | **Inline quick-add on lists** | Modal-per-create kills flow and loses list context; capture cost should be ≈0 | Press `N`/`+` → editable row at top of backlog/board; Enter saves, Esc cancels; keep the dialog as the power path | **Jira backlog**, **Linear** |
 | 3 | **List-level keyboard rhythm** (`j/k/e/n/Enter`) | Global `g+x` shortcuts are strong but the *list* isn't a keyboard surface; power users live in lists | Extend `lib/shortcuts.js` with a focused-list context; wire selection state in board/backlog/my-works | **Linear**, **Jira**, **Gmail** |
 | 4 | **Surface saved views** | Backend done (`lib/saved-views.js`) but invisible — pure waste | Render saved views as first-class sidebar items per list section, with rename/delete/reorder | **Jira** (saved filters/JQL) |
@@ -301,10 +335,10 @@ config layer, the design-token system).
 | # | What | Why | How | Borrowed from |
 |---|---|---|---|---|
 | 10 | **AI-native UX** — contextual + proactive + streaming + a canvas | AI is architecturally excellent (Control Plane, fallbacks) but *reactive*; the benchmarks make AI ambient | Inline "draft description / fill fields" in detail panel; proactive Today nudges ("5 overdue — bulk-reschedule?"); **stream** AI token-by-token; an **Artifacts-style** side canvas for AI-built reports/articles — all on the existing capability + fallback layer (RB-40 §2) | **ChatGPT/Claude** (streaming, Artifacts), **MS Copilot** (contextual) |
-| 11 | **Content-first detail + narrative activity feed** | Detail shell is 2-column (PR #217) but the Details *tab* is a dense field-grid and Activity is a raw event dump | Lead with title/description prose at reading width; render `events` as human sentences ("Rahul moved this to In Progress · 2h ago") | **Claude** (editorial), **Confluence** |
-| 12 | **Real-time collaborative knowledge editor + inline comments + templates** | `BlockEditor.jsx` is rich but single-author — no presence/conflict; no page templates | SSE-driven presence + soft-lock/merge; inline block comments; seed article templates (PRD, runbook, retro) | **Confluence**, **Notion** |
+| 11 | **Content-first detail + narrative activity feed** | Detail shell is 2-column (PR #217) but the Details *tab* is a dense field-grid and Activity is a raw event dump | Lead with title/description prose at reading width; render `events` as human sentences ("Rahul moved this to In Progress · 2h ago") | **Claude** (editorial), **Confluence**, **MS Word** (document surface) |
+| 12 | **Real-time collaborative knowledge editor + inline comments + templates** | `BlockEditor.jsx` is rich but single-author — no presence/conflict; no page templates | SSE-driven presence + soft-lock/merge; inline block comments; seed article templates (PRD, runbook, retro) | **Confluence**, **Notion**, **Figma** (multiplayer presence), **MS Word** (track-changes / comments / styles / templates) |
 | 13 | **Search overhaul** — standalone surface + full-text body + facets | Search is modal-only and title/id-only; no article-body or comment search | Dedicated search page with facets (type/space/date/status) + full-text over items + articles; keep ⌘K as the quick entry | **Jira/Confluence search** |
-| 14 | **Board swimlanes/grouping + bulk-change preview wizard** | Board is fixed to 3 status columns; bulk edit is one-field-flat with no preview | Group-by assignee/type/epic/release swimlanes; a bulk wizard that previews the diff before commit | **Jira** |
+| 14 | **Board swimlanes/grouping + bulk-change preview wizard** | Board is fixed to 3 status columns; bulk edit is one-field-flat with no preview | Group-by assignee/type/epic/release swimlanes; a bulk wizard that previews the diff before commit | **Jira**, **Asana** / **Notion** (one dataset, many views) |
 | 15 | **Visual builders + live preview** (workflow, chart, permission matrix, field layout) | Admin config is form/table-heavy; admins write BQL by hand for simple charts (Tesler's Law violated) | Drag-drop workflow states/transitions; visual metric/dimension chart picker over BQL; live preview of layout/visibility changes | **Jira workflow editor**, **MS** |
 
 ### Horizon 4 — Platform maturity
@@ -424,6 +458,12 @@ a **convergence + elevation** program, never a redesign or a token rework:
 Visual target = the **"Calm Cockpit"** direction (navy primary, single orange accent, Lucide,
 expand-in-place, persona "Today", role-based nav). Brand origin: `docs/brand/brand-and-identity.md`.
 
+> **Relationship to the design law:** RB-30 (`ai-rules/rulebooks/30-DESIGN.md`) owns the design *law*
+> (tokens, five states, a11y, shell, typography, motion, z-index, iconography); the brand spec owns the
+> *identity*. This program **adopts both and never restates or overrides them** — where it lists rules
+> (e.g. the Premium Bar §H.2.1), it does so to *apply* them across surfaces, citing RB-30 as canonical.
+> Convergence = wiring RB-30's law into reusable primitives across 100% of views.
+
 ### H.1 Convergence scorecard (design-system lens, 2026-06-14)
 
 Complements [Part A](#part-a--current-state-scorecard-code-grounded) (which is the engagement/perf
@@ -463,6 +503,46 @@ control has the five interaction states (RB-30 §1); (4) zero raw hex/arbitrary 
 control labelled, keyboard-operable, visible focus, WCAG 2.1 AA, **no `eslint-disable`**; (6) light +
 dark verified. A surface is **premium** when, on top of converged, it meets its Part-B items
 (density, motion, deep-link, inclusivity) where applicable.
+
+### H.2.1 The Premium Bar — every surface, every element (universal merge gate)
+
+> **Premium UI is end-to-end: every layer, every surface, every view, every pop-up, every button — no
+> exceptions, no "polish it later."** "Premium everywhere" is achieved primarily by *baking premium into
+> the shared primitives* (every button/input/card/dialog is premium because it comes from the component)
+> and then *enforcing a coverage gate* — not by hand-polishing screens one by one. The bar below is the
+> **objective, testable acceptance standard appended to the Definition of Done of every UI surface**: a
+> surface does not merge until every applicable row passes, in light + dark + high-contrast.
+
+**Foundations — every surface**
+- Renders through `PageLayout` (shell → `PageHeader` → content); one sanctioned width; one padding rhythm.
+- Zero hand-rolled chrome — every card/table/tab/dialog/menu/button/input/badge from `components/works/**`.
+- Tokens only: no raw hex/px/arbitrary values; type from the scale (5.1); icons at canonical sizes (5.2).
+- One clear focal point; grid-aligned; consistent spacing rhythm; no orphaned or misaligned elements.
+
+**Every interactive element — buttons, links, rows, controls**
+- All five states crafted: default · hover · active · disabled · focus-visible ring.
+- ≥ 44×44 px target; fully keyboard-operable; `aria-label` on icon-only; state-change motion per the recipe (1.3).
+
+**Every overlay — modal · dialog · drawer · popover · tooltip · context-menu · command palette**
+- Correct z-layer; entrance/exit motion; focus trap + restore; Esc + click-outside; backdrop where applicable;
+  never clips; responsive on small screens.
+
+**Every data region — list · table · board · card · chart**
+- All states designed, never bare: default · loading (skeleton matching shape) · empty (illustration/icon + why
+  + next action) · error (what + what-next + retry) · partial.
+- Tables: sticky header, zebra, sort affordance. Charts: colour-blind-safe palette, legend, SR `<table>` fallback (4.3).
+
+**Every form**
+- Label + helper + inline error beneath the field (never toast-for-validation); sensible defaults; validation.
+
+**Content & feel**
+- Microcopy sentence-case, active voice, present tense; errors say what + what-next; dates/numbers via `lib/format`.
+- Optical polish (alignment, balance, no jank); a peak-end moment where the flow completes (5.5).
+
+> **Enforcement:** the Premium Bar is a **merge gate** (PR DoD), backed by structural guardrails (A-WS4)
+> and a per-surface visual-regression story (Chromatic), plus a **coverage tracker** driven to 100% across
+> the full surface inventory (every view, dialog, drawer, popover, menu, toast). Tracked in the execution
+> plan (WI-44 defines the bar, WI-48 enforces + tracks it, WI-46/WI-49 apply it to 100% of surfaces).
 
 ### H.3 The unified primitive library
 
@@ -516,7 +596,8 @@ Build once, in `cva`+`cn()`, dark-complete, a11y, RTL, with a Storybook story.
   global **density mode** (compact/comfortable/spacious) via a `useDensity()` hook + token-driven
   padding scale (generalize the board's existing toggle). *Data-dense DISCOM users want compact.*
 - **1.3 Motion choreography:** standardize panel/modal/toast/accordion entrance-exit on `duration-base`
-  + `out-quint`; reserve `spring` for press/drag; optimistic-update shimmer + success check-morph.
+  + `out-quint`; reserve `spring` for press/drag; optimistic-update shimmer + success check-morph —
+  motion should *convey state* (**Uber Base**).
 - **1.4 Token additions:** `text-2xs`/`text-3xs` (retire the `App.jsx` `text-[10px]` exemption);
   focus-ring alias; categorical chart-palette tokens.
 
@@ -551,12 +632,48 @@ Build once, in `cva`+`cn()`, dark-complete, a11y, RTL, with a Storybook story.
   pair shape/label); **high-contrast theme** as a third mode; **screen-reader chart fallback** (every
   chart exposes an accessible `<table>`); audit `neutral-400`-as-text misuse.
 
+**Theme 5 — UI visual craft & aesthetic elevation** *(the "make it premium, not just consistent" layer)*
+
+Convergence (Part A) makes the UI *consistent*; this theme makes it *beautiful* — **across every surface,
+view, pop-up, and button, enforced by the Premium Bar (H.2.1)**. Craft, not features — the Feature Parity
+Ledger (RB-20 §1) still holds. (**🎨** = benefits from designer / Figma input; confirm the visual source
+before building. Everything else is in-code against the token system.) Reference exemplars for this
+layer: **AirBNB** (Design Language System — tokens, illustration, trust-through-craft) and **Uber**
+(Base — motion conveys state, real-time clarity).
+- **5.1 Typography system:** a complete, tokenized type scale (display / title / heading / body /
+  caption / overline + mono) with line-height, tracking, weight (Inter 300/400/600/700), reading
+  measure, and vertical rhythm; applied through `PageHeader` / `Card` / prose. Subsumes the
+  `text-2xs/3xs` token add (1.4). *A real type ramp is the fastest "premium" signal.*
+- **5.2 Iconography system:** Lucide only; canonical sizes 16/20/24/32; one-icon-one-meaning mapping
+  (CLAUDE.md §4.23); **audit + converge actual usage across views**; add a guardrail against
+  mis-sized / off-meaning icons.
+- **5.3 Illustration & imagery layer** 🎨: a restrained, on-brand spot-illustration set for empty
+  states, onboarding, errors, success, and zero-data dashboards; a coherent **avatar system**
+  (initials → colour → image); image-usage guidelines. *Lifts the functional empty-state formula into
+  brand-grade visuals.*
+- **5.4 Premium sweep to the Premium Bar (H.2.1) across 100% of surfaces** — *every view, pop-up, menu,
+  toast, and state*, not a chosen few. Phased: the top-5 exemplars first (Today/dashboard, board,
+  work-item detail, knowledge, reports) to set the standard, then the full long tail of remaining
+  surfaces, dialogs, drawers, popovers, tooltips, menus, and empty/loading/error states — each cluster a
+  small PR, each gated by the per-surface premium-bar checklist. Pixel-level craft (optical alignment,
+  balance, focal point, scannability, hover/active/focus) on surfaces already converged onto the primitives.
+- **5.5 Signature / peak-end moments:** design the restrained delight moments within the Calm Cockpit
+  (sprint complete, item done, onboarding milestone, first value) — motion + visual reward that respect
+  "operational, not playful." (Engagement: Peak-End rule, Part C.1.)
+- **5.6 Visual design-review practice + enforcement:** the **Premium Bar (H.2.1) becomes a merge gate**
+  in the PR DoD; a per-surface premium-bar visual-QA checklist + a recurring pixel-craft critique; wired
+  to Storybook + Chromatic visual regression (A-WS4) so no surface ships — or regresses — below the bar.
+  Makes "premium everywhere" repeatable and enforced, not heroic.
+- **5.7 Visual source-of-truth** 🎨: reference mockups (Figma or in-repo reference screenshots) for the
+  elevated surfaces, linked from `docs/brand/brand-and-identity.md`; a short `docs/VISUAL-SPEC.md`.
+
 ### H.6 Colours & visual specs (cross-cutting)
 
 - **Keep the brand spine:** `brand-navy` primary; `brand-orange` the single sparing CTA accent
   (RB-30 §2) — do **not** broaden the accent palette.
 - **Add, in tokens only:** categorical chart palette (6–8 hues, colour-blind-safe); high-contrast theme
-  variables; `text-2xs`/`text-3xs`. All via `tailwind.config.js` — never raw hex (guardrail BLOCK).
+  variables; the full typographic scale (Theme 5.1) incl. `text-2xs`/`text-3xs`. All via
+  `tailwind.config.js` — never raw hex (guardrail BLOCK).
 - **Spec hygiene:** flip `z-[]` + arbitrary-spacing guardrails **WARN → BLOCK** once baseline clean.
 
 ### H.7 Unified sequencing (one ordered program)
@@ -566,8 +683,8 @@ Build once, in `cva`+`cn()`, dark-complete, a11y, RTL, with a Storybook story.
 | **0 — Prove (days)** | A-WS1 start: `Card` + `PageHeader` + `Tabs`; 3 structural lint rules (warn-only); pilot-migrate the 4 exemplar views | foundation |
 | **1 — Core primitives (1–2 wk)** | A-WS1 finish: `DataTable` base + `Drawer` + `IconButton` + form set + `Badge`; A-WS2 `PageLayout`; migrate ~20 data-heavy views; token adds `text-2xs/3xs` | |
 | **2 — Breadth (2–3 wk)** | A-WS3 remaining views; app-wide loading/empty/error + `aria-label` sweep; A-WS4 Storybook + visual regression; build Part-B premium primitives | |
-| **3 — Harden + Premium P0 (ongoing)** | A-WS4 flip lint to error, remove all `eslint-disable`, `React.lazy` per route, dark-contrast audit; **Premium P0:** inclusivity (colour-blind palette, HC theme, SR charts), elevation/density spec, motion choreography, guardrail WARN→BLOCK | base now premium-ready |
-| **4 — Premium P1** | breadcrumbs (2.2), command-palette actions (2.3), premium `DataTable` (3.1), density preference (1.2), surface polish pass | builds on converged base |
+| **3 — Harden + Premium P0 (ongoing)** | A-WS4 flip lint to error, remove all `eslint-disable`, `React.lazy` per route, dark-contrast audit; **Premium P0:** inclusivity (colour-blind palette, HC theme, SR charts), elevation/density spec, motion choreography, guardrail WARN→BLOCK; **visual craft (Theme 5):** typography system, iconography sweep, visual-review practice + visual source-of-truth | base now premium-ready |
+| **4 — Premium P1** | breadcrumbs (2.2), command-palette actions (2.3), premium `DataTable` (3.1), density preference (1.2); **visual craft (Theme 5):** illustration & avatar system, aesthetic + hierarchy polish on the top-5 surfaces, signature/peak-end moments | builds on converged base |
 | **5 — Premium P2 (stop-and-ask)** | router/deep-linking (2.1, `App.jsx`), board virtualization (3.2), richer analytics (3.3), deeper/streaming AI (4.1–4.2) | each its own gated task |
 
 Each step is a **small, single-purpose, lint-clean PR** through RB-05 — no big-bang rewrite, no
@@ -578,8 +695,13 @@ feature change.
 inline card blocks in `views/` → **0** · raw `<table>` / raw `<button>` in `views/` → **0** · distinct
 page-level `max-w-*` → **2** · views with full loading/empty/error → **100%** · views with
 `eslint-disable` → **0** · Storybook stories → **≥ 50** w/ visual-regression · charts with SR fallback
-→ **100%** · themes shipped → **light/dark/high-contrast**. Logged newest-first in
-`docs/UX-PROGRESS.md`, tagged `[consistency]` / `[premium]`.
+→ **100%** · themes shipped → **light/dark/high-contrast**. **Visual craft (Theme 5):** typography
+fully tokenized (no ad-hoc `text-[*]`) · iconography consistent (sizes 16/20/24/32, one-icon-one-meaning
+— guardrail green) · illustration/avatar coverage for empty/onboarding/error/success → **100%** ·
+**100% of surfaces** — every view, dialog, drawer, popover, menu, and toast — pass the Premium Bar
+(H.2.1) with a visual-regression story (premium-everywhere coverage) · 100% of buttons/inputs via shared
+primitives · every data region has all 5 states · visual design-review cadence established.
+Logged newest-first in `docs/UX-PROGRESS.md`, tagged `[consistency]` / `[premium]`.
 
 ### H.9 Governance & references
 
@@ -638,6 +760,9 @@ Premium Part A (Converge & Lock)  ── the foundation: one system, locked, no 
   regression) — without it, every gain drifts back.
 - The complete **primitive library** spec (Part-A + Part-B) and the `PageLayout` skeleton.
 - **Inclusivity to WCAG 2.2 AA** (colour-blind palette, high-contrast theme, SR chart fallback).
+- The **UI visual-craft / aesthetic-elevation** layer (Theme 5: typography system, iconography sweep,
+  illustration & avatars, aesthetic polish, peak-end moments, visual-review practice) — premium *feel*,
+  not just premium *system*.
 
 **Recommended combined order:** Premium **Phase 0–1** (foundation: primitives + `PageLayout` + 4
 exemplars) → **Part F** (stand up HEART + funnel, so everything after is measured) → **Horizon 1**

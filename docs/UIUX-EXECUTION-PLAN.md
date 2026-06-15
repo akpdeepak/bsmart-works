@@ -89,12 +89,26 @@ So nothing is lost or assumed, the complete scope captured across the originatin
 | Source thread | Where it lives now | In the ledger as |
 |---|---|---|
 | **Doc-pack assessment** ("AI-Optional, Metadata-Driven Work OS" pack) | Decision: **do not implement** — already built & surpassed; one real gap = tenant branding | *Context only* (not executable here); branding tracked separately if pursued |
-| **Benchmark study** of ChatGPT/Claude/Meta/LinkedIn/Jira/Confluence/MS | Roadmap **Part B** (design DNA) | Informs every WI ("borrowed from") |
+| **Benchmark study** of ChatGPT/Claude/Meta/LinkedIn/Jira/Confluence/MS Word/Trello/AirBNB/Uber/Notion/Linear/Asana/Figma (+ Gmail/Superhuman as supporting exemplars) | Roadmap **Part B** (design DNA) | Informs every WI ("borrowed from") |
 | **Engagement / productivity / principles / frameworks / methods / practices** | Roadmap **Part C** (behavioral, productivity, design principles, frameworks, methods, practices) | Milestone 1 (measurement) + woven through |
 | **Benchmark feature roadmap** (Horizons 1–4) | Roadmap **Part D** | Milestones 2, 4, 5 |
 | **HEART + activation funnel** first milestone | Roadmap **Part F** | Milestone 1 |
 | **Premium program** (Converge & Lock → Elevate) | Roadmap **Part H** | Milestones 0, 3, 4, 5 |
 | **Reconciliation / combined order** | Roadmap **Part I** | The milestone ordering below |
+| **UI visual craft / premium aesthetic** | Roadmap **Part H Theme 5** | Milestones 3–4 (WI-41…WI-49) |
+| **Premium everywhere** (the Premium Bar as a universal merge gate, 100% surface coverage) | Roadmap **Part H §H.2.1** | WI-44 (define) · WI-48 (enforce + track) · WI-46/WI-49 (apply to 100%) |
+
+### 4.1 Related & input docs (cross-links)
+
+These feed specific work-items or constrain all of them. Full roles in the roadmap's **document map** (§2).
+
+| Doc | Relationship | Applies to |
+|-----|--------------|-----------|
+| `docs/A11Y.md` | WCAG 2.2 AA audit framework (lint → axe → Storybook → manual) — *how* a11y is validated | WI-22 (remediation); WI-44 / WI-48 (Premium Bar enforcement) |
+| `docs/I18N.md` | i18n runtime + pattern (10 langs, RTL) — a **prerequisite for every UI surface** | All WIs touching UI text |
+| `docs/KNOW-STUDIO.md` (spec) + `plans/KNOW-STUDIO-PLAN.md` (build order) | Definitive surface spec + build order for the knowledge editor / block ecosystem | WI-29 |
+| `plans/sprint-cockpit-ux-plan.md` | Sprint-Cockpit UX — **iteration-15 parallel work, out of this ledger** | Log in `UX-PROGRESS.md` if it lands; don't pull in |
+| `docs/brand/brand-and-identity.md` · RB-30 | Canonical brand + design law this program adopts | Every WI (reference, don't restate) |
 
 ---
 
@@ -105,7 +119,8 @@ Milestones run in order (M0 → M5). The combined order follows roadmap **Part I
 **differentiators**, then **stop-and-ask platform** items.
 
 **Status key:** `☐` not started · `◐` in progress · `✅` done · `⛔` blocked · `⏸` deferred/stop-and-ask
-· **⚠️** = stop-and-ask before executing.
+· **⚠️** = stop-and-ask before executing · **🎨** = benefits from designer / Figma input (confirm the
+visual source before building).
 
 ### Milestone 0 — Foundation: primitives + page skeleton  *(Premium Phase 0–1 · roadmap §H.4)*
 
@@ -152,6 +167,11 @@ Milestones run in order (M0 → M5). The combined order follows roadmap **Part I
 | WI-24 | Motion choreography recipe (panel/modal/toast/accordion on `duration-base`+`out-quint`; optimistic shimmer; success check-morph) | H.5 1.3 | — | ☐ | |
 | WI-25 | Performance pass: TanStack Query adoption + virtual scrolling (`@tanstack/react-virtual`) + prefetch-on-hover + CI perf budget (Doherty < 400 ms) | D H2 #6; H.5 3.2 | WI-16 | ☐ | |
 | WI-26 | Notification center + toast queue/stacking + preferences UI (mute/snooze/quiet-hours) | D H2 #9 | WI-20 | ☐ | |
+| WI-41 | **Typography system** — tokenized type scale (display/title/heading/body/caption/overline + mono), line-height, tracking, weights, reading measure, vertical rhythm; applied via `PageHeader`/`Card`/prose (subsumes `text-2xs/3xs`) | H.5 5.1 | WI-04, WI-05 | ☐ | |
+| WI-42 | **Iconography system** — Lucide, sizes 16/20/24/32, one-icon-one-meaning; audit + converge usage across views; add icon guardrail | H.5 5.2 | WI-04 | ☐ | |
+| WI-43 | **Visual source-of-truth** — reference mockups (Figma/in-repo) for elevated surfaces + `docs/VISUAL-SPEC.md`, linked to the brand doc | H.5 5.7 | — | ☐ 🎨 | |
+| WI-44 | **Define the Premium Bar (roadmap §H.2.1)** — the objective per-element acceptance standard — + per-surface checklist + visual design-review practice; make it a PR **DoD merge-gate** | H.2.1, H.5 5.6 | WI-19 | ☐ | |
+| WI-48 | **Premium Bar enforcement & coverage tracker** — bake the bar into the PR DoD; per-surface visual-regression (Chromatic); a coverage ledger over the full surface inventory (all views + dialogs/drawers/popovers/menus/toasts) driven to **100%**; guardrails so no surface ships/regresses non-premium | H.2.1, H.5 5.6; A-WS4 | WI-44 | ☐ | |
 
 ### Milestone 4 — Differentiators  *(Benchmark Horizon 3 ≈ Premium Part B · roadmap §D-H3 + H.5)*
 
@@ -166,6 +186,10 @@ Milestones run in order (M0 → M5). The combined order follows roadmap **Part I
 | WI-33 | Premium `DataTable` upgrade: virtualization, multi-sort, column ops, inline edit, density-aware | H.5 3.1; D H3 #13/#14 | WI-04, WI-25 | ☐ | |
 | WI-34 | Richer analytics: comparison charts, capacity/utilization heatmaps, workflow Sankey, drill-through into `DataTable` | H.5 3.3 | WI-33 | ☐ | |
 | WI-35 | Command palette → action layer + breadcrumbs in context bar + persisted per-surface view state | H.5 2.2–2.4; D H4 #18 | WI-20 | ☐ | |
+| WI-45 | **Illustration & imagery system** — on-brand spot illustrations for empty/onboarding/error/success + zero-data; avatar system (initials→colour→image); image guidelines | H.5 5.3 | WI-20 | ☐ 🎨 | |
+| WI-46 | **Premium sweep — exemplars:** bring the top-5 surfaces (Today, board, detail, knowledge, reports) to the Premium Bar — sets the standard for the full sweep | H.5 5.4 | WI-17, WI-44 | ☐ | |
+| WI-47 | **Signature / peak-end moments** — restrained delight for sprint-complete, item-done, onboarding milestone, first value (motion + visual reward) | H.5 5.5; C.1 | WI-24 | ☐ | |
+| WI-49 | **Premium sweep — full coverage:** bring ALL remaining surfaces, views, pop-ups, drawers, popovers, tooltips, menus, toasts, and every empty/loading/error/partial state to the Premium Bar — *premium everywhere*; drive coverage to **100%** (one small PR per surface cluster) | H.2.1, H.5 5.4 | WI-46, WI-17, WI-48 | ☐ | |
 
 ### Milestone 5 — Platform maturity & stop-and-ask  *(Premium Phase 5 / Benchmark Horizon 4 · roadmap §H.5 + D-H4)*
 
@@ -211,6 +235,12 @@ For every work-item:
   concurrent agents ([[bsmart-concurrent-agents]]). Auto-clean the worktree when done.
 - **One small, single-purpose, lint-clean PR per work-item.** No big-bang rewrite.
 - **No feature removal / no behaviour change** — Feature Parity Ledger (RB-20 §1).
+- **Premium everywhere is a merge gate.** Every UI surface — every view, pop-up, drawer, menu, toast,
+  and every button/state — must pass **the Premium Bar (roadmap §H.2.1)** before merge. No surface is
+  exempt and nothing ships "to be polished later." New/changed surfaces add a visual-regression story.
+- **Every UI surface is i18n-ready and a11y-verified.** Externalize strings per `docs/I18N.md`
+  (use `t()`, never hand-format — `lib/format.js`); validate accessibility per `docs/A11Y.md` (axe
+  harness in tests). Both are part of the Premium Bar (roadmap §H.2.1).
 - **Tokens, not literals.** No raw hex/px/`gray-*`/arbitrary `z-[]`/`p-[]` (guardrails BLOCK).
 - **Verify locally** before merge; do not rely on CI alone; **never merge onto a red `main`** —
   surface the unrelated breakage and wait/park (history: PR #319/#325 blocked by an unrelated
@@ -235,6 +265,12 @@ For every work-item:
   - Inclusivity: charts with SR fallback → **100%**; themes shipped → **light / dark / high-contrast**.
   - Engagement/perf: HEART dashboard live; activation funnel instrumented; hot-path response
     < **400 ms** (Doherty) under the NFR budget.
+  - Visual craft (Theme 5): typography fully tokenized (no ad-hoc `text-[*]`); iconography consistent
+    (sizes 16/20/24/32, one-icon-one-meaning — guardrail green); illustration/avatar coverage for
+    empty/onboarding/error/success → **100%**; visual design-review cadence established.
+  - **Premium-everywhere coverage:** **100%** of surfaces — every view + dialog/drawer/popover/menu/toast
+    — pass the Premium Bar (roadmap §H.2.1), each with a visual-regression story; 100% of buttons/inputs
+    via shared primitives; every data region has all five states (default/loading/empty/error/partial).
 
 ---
 

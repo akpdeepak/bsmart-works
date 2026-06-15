@@ -7,6 +7,19 @@ The canonical source of truth for product, brand, and architecture decisions.
 - [CLAUDE.md](../CLAUDE.md) — machine-readable rules (every AI tool reads this)
 - [CONTRIBUTING.md](../CONTRIBUTING.md) — setup and daily workflow
 
+## Design & UI/UX
+The **unified UI/UX program** lives in two synchronized docs (governed by RB-30, the canonical design
+law in `ai-rules/rulebooks/30-DESIGN.md`). Everything else below is reference, log, or pointer.
+- [UIUX-BENCHMARK-ROADMAP.md](UIUX-BENCHMARK-ROADMAP.md) — **the reference roadmap** (Parts A–I:
+  current-state scorecard, benchmark study, engagement/measurement, feature roadmap, and the premium
+  "Converge & Lock → Elevate" program incl. the Premium Bar §H.2.1). Its §2 holds the full **document map**.
+- [UIUX-EXECUTION-PLAN.md](UIUX-EXECUTION-PLAN.md) — **the live execution ledger + session triggers**
+  (start/resume the program from here).
+- [UX-PROGRESS.md](UX-PROGRESS.md) — append-only progress log · [UX-CODEBASE-ANALYSIS.md](UX-CODEBASE-ANALYSIS.md) — historical baseline (2026-06-05)
+- [A11Y.md](A11Y.md) — accessibility audit and WCAG 2.2 strategy · [I18N.md](I18N.md) — i18n runtime & pattern
+- Surface specs: [KNOW-STUDIO.md](KNOW-STUDIO.md) / [plans/KNOW-STUDIO-PLAN.md](plans/KNOW-STUDIO-PLAN.md) · [plans/sprint-cockpit-ux-plan.md](plans/sprint-cockpit-ux-plan.md)
+- Superseded (pointers): [PREMIUM-UX-ROADMAP.md](PREMIUM-UX-ROADMAP.md) · [DESIGN-CONSISTENCY-PROGRAM.md](DESIGN-CONSISTENCY-PROGRAM.md) → both now Part H of the roadmap
+
 ## Product specifications
 Each spec has a **readable Markdown mirror** (machine-extracted, so AI tools and PRs can read/diff
 it) next to the canonical `.docx`. Regenerate the mirrors with `python3 scripts/extract-specs.py`.

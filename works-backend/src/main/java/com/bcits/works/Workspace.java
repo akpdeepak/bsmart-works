@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "workspaces")
@@ -26,6 +27,9 @@ public class Workspace {
     @Column(name = "sandbox_mode")
     private boolean sandboxMode = false;
 
+    @Column(name = "created_at")
+    private OffsetDateTime createdAt;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getName() { return name; }
@@ -40,4 +44,6 @@ public class Workspace {
     public void setDescription(String description) { this.description = description; }
     public boolean isSandboxMode() { return sandboxMode; }
     public void setSandboxMode(boolean sandboxMode) { this.sandboxMode = sandboxMode; }
+    public OffsetDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
 }

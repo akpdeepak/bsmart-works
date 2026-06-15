@@ -50,6 +50,7 @@ public class WorkItemController {
     private final WorkItemBulkService bulkService;
     private final WatcherService watcherService;
     private final AutomationService automations;
+    private final FunnelService funnelService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
@@ -63,7 +64,8 @@ public class WorkItemController {
                               BoardWipLimitService wipLimits,
                               WorkItemBulkService bulkService,
                               WatcherService watcherService,
-                              AutomationService automations) {
+                              AutomationService automations,
+                              FunnelService funnelService) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
@@ -81,6 +83,7 @@ public class WorkItemController {
         this.bulkService = bulkService;
         this.watcherService = watcherService;
         this.automations = automations;
+        this.funnelService = funnelService;
     }
 
     // ── Watchers (followers) ─────────────────────────────────────────────────────
@@ -465,6 +468,14 @@ public class WorkItemController {
 
         eventService.record(saved.getId(), "WORK_ITEM_CREATED", userId,
                 "{\"title\":\"" + saved.getTitle() + "\",\"type\":\"" + saved.getType() + "\"}");
+
+        // HEART activation funnel (WI-09): emit FIRST_VALUE + DAY_2_RETURN only for items in a
+        // real workspace (wsId != null). Non-fatal — telemetry must not roll back the business write.
+        if (wsId != null) {
+            funnelService.onFirstValueCandidate(wsId, userId, saved.getProjectId(),
+                    saved.getId(), saved.getType());
+            funnelService.onMeaningfulAction(wsId, userId);
+        }
 
         // Fire ITEM_CREATED automations (non-fatal — a rule failure must not roll back the save).
         if (wsId != null) {

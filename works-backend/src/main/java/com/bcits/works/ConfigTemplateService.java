@@ -18,10 +18,13 @@ public class ConfigTemplateService {
 
     private final ConfigTemplateRepository templateRepo;
     private final ConfigService configService;
+    private final FunnelService funnelService;
 
-    public ConfigTemplateService(ConfigTemplateRepository templateRepo, ConfigService configService) {
+    public ConfigTemplateService(ConfigTemplateRepository templateRepo, ConfigService configService,
+                                 FunnelService funnelService) {
         this.templateRepo = templateRepo;
         this.configService = configService;
+        this.funnelService = funnelService;
     }
 
     public List<ConfigTemplate> list(String workspaceId) {
@@ -49,8 +52,10 @@ public class ConfigTemplateService {
     /** Apply a visible template to the workspace's live config (a new TEMPLATE-sourced version). */
     public WorkspaceConfig apply(String templateId, String workspaceId, String userId, int userTier) {
         ConfigTemplate t = visibleOrThrow(templateId, workspaceId);
-        return configService.update(workspaceId, t.getDocument(), userId, userTier,
+        WorkspaceConfig result = configService.update(workspaceId, t.getDocument(), userId, userTier,
                 ConfigService.Source.TEMPLATE, "Applied template '" + t.getName() + "'");
+        funnelService.onTemplateApplied(workspaceId, userId, templateId, t.getName());
+        return result;
     }
 
     public void delete(String templateId, String workspaceId) {

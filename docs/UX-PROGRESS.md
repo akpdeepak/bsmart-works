@@ -7,6 +7,38 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-09 [benchmark] — HEART activation-funnel instrumentation (2026-06-15)
+
+Server-side funnel telemetry wired into the events store via a new `FunnelService`. No PII,
+no third-party SDKs, every event workspace-scoped (RB-40 §3). Four emission points live:
+
+**V91 migration** — adds `created_at` to `workspaces`; backfills from earliest workspace-scoped
+event. Required for step-5 day-2 detection.
+
+**`FunnelService`** (new `@Service`) — 4 idempotent methods, all non-fatal (telemetry failures
+cannot roll back business writes):
+- `onTemplateApplied()` → `WORKSPACE_TEMPLATE_APPLIED` (step 2)
+- `onFirstValueCandidate()` → `WORKSPACE_FIRST_VALUE` (step 3, idempotent per workspace)
+- `onTeammateInvited()` → `WORKSPACE_TEAMMATE_INVITED` (step 4, every invite)
+- `onMeaningfulAction()` → `WORKSPACE_DAY_2_RETURN` (step 5, idempotent, day-1…30 window)
+
+**Wired into 3 existing services:**
+- `ConfigTemplateService.apply()` → step 2
+- `WorkItemController.createWorkItem()` → steps 3 + 5 (when wsId ≠ null)
+- `WorkspaceService.addMember()` → step 4
+
+**`EventRepository`** — added `existsByWorkspaceIdAndEventType()` for O(1) idempotency guard.
+
+**Step 1 (`WORKSPACE_CREATED`)** — deferred to WI-12 (onboarding wizard builds the workspace
+creation flow).
+
+**Tests:** 17 new unit tests in `FunnelServiceTest` covering all 4 steps, idempotency,
+guard-null, window boundary (too soon / too old), and EventService resilience.
+
+**WI-08 + WI-09 both marked ✅.** WI-10 (HEART/funnel dashboard) is now unblocked.
+
+---
+
 ## WI-07 [consistency] — Retire App.jsx arbitrary-value exemption (2026-06-15)
 
 `text-2xs` token (10px / 0.625rem) was already present in `tailwind.config.js`; no arbitrary

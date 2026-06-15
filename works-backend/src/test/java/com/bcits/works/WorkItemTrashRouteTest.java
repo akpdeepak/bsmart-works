@@ -65,7 +65,8 @@ class WorkItemTrashRouteTest {
             repository, eventService, jdbc, notificationRepository, userRepository,
             emailService, batchService, authenticatedUser, rbac, dodChecklists, extensions,
             workflowRules, statusConfig, wipLimits,
-            mock(WorkItemBulkService.class), mock(WatcherService.class), mock(AutomationService.class));
+            mock(WorkItemBulkService.class), mock(WatcherService.class), mock(AutomationService.class),
+            mock(FunnelService.class));
 
     WorkItemTrashRouteTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

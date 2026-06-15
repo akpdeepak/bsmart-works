@@ -29,14 +29,17 @@ public class WorkspaceService {
     private final RbacService rbac;
     private final EventService eventService;
     private final JdbcTemplate jdbc;
+    private final FunnelService funnelService;
 
     public WorkspaceService(WorkspaceRepository workspaceRepository, UserRepository userRepository,
-                            RbacService rbac, EventService eventService, JdbcTemplate jdbc) {
+                            RbacService rbac, EventService eventService, JdbcTemplate jdbc,
+                            FunnelService funnelService) {
         this.workspaceRepository = workspaceRepository;
         this.userRepository = userRepository;
         this.rbac = rbac;
         this.eventService = eventService;
         this.jdbc = jdbc;
+        this.funnelService = funnelService;
     }
 
     // ── Tenant isolation guard (RB-40 §1) ────────────────────────────────────
@@ -109,6 +112,7 @@ public class WorkspaceService {
                 + "VALUES (?, ?, ?) ON CONFLICT DO NOTHING", workspaceId, user.getId(), resolvedRole);
         eventService.recordInWorkspace(workspaceId, workspaceId, "MEMBER_ADDED", callerId,
                 Map.of("workspaceId", workspaceId, "userId", user.getId(), "role", resolvedRole));
+        funnelService.onTeammateInvited(workspaceId, callerId, user.getId());
         return Map.of("message", "Member added", "userId", user.getId());
     }
 

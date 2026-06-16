@@ -68,6 +68,7 @@ function TodaySkeleton() {
 
 export default function DashboardView({
   currentUser,
+  activeWorkspaceId,
   userRole,
   dashboardRole,
   dashLoading,
@@ -160,7 +161,7 @@ export default function DashboardView({
   };
 
   const sharedProps = {
-    currentUser, setView, setIsCreateOpen, setSelectedItem, setIsWorklogOpen, selectedItem,
+    currentUser, activeWorkspaceId, setView, setIsCreateOpen, setSelectedItem, setIsWorklogOpen, selectedItem,
     showToast, workItems, layout: resolved, builtinLayout: builtin, edit,
   };
 

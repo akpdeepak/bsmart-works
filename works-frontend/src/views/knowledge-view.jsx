@@ -205,6 +205,7 @@ export default function KnowledgeView({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [focusMode]);
 
+
   // KR-044: AI semantic search — search mode toggle + AI answer state
   const [searchMode, setSearchMode] = useSearchMode();
   const [aiAnswer, setAiAnswer] = useState(null);  // { answer, citations, meta } | null

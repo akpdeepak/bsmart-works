@@ -70,6 +70,11 @@ public class Article {
     // KR-021: set by ArticleStalenessChecker when review_by_date has passed on a published article.
     @Column(name = "is_stale") private Boolean isStale = false;
 
+    // KR-066: public share token — opaque UUID for /p/{token} (no auth required).
+    // Null when sharing is disabled. Set only on PUBLISHED articles.
+    @Column(name = "public_share_token", length = 64, unique = true)
+    private String publicShareToken;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getSpaceId() { return spaceId; }
@@ -139,4 +144,6 @@ public class Article {
     public void setReviewerDueDate(OffsetDateTime reviewerDueDate) { this.reviewerDueDate = reviewerDueDate; }
     public Boolean getIsStale() { return isStale; }
     public void setIsStale(Boolean isStale) { this.isStale = isStale; }
+    public String getPublicShareToken() { return publicShareToken; }
+    public void setPublicShareToken(String publicShareToken) { this.publicShareToken = publicShareToken; }
 }

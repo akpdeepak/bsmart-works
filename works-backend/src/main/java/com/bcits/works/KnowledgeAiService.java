@@ -112,88 +112,127 @@ public class KnowledgeAiService {
     /**
      * Deterministic meeting-notes scaffold from a raw transcript (the mandatory fallback for
      * the AI meeting-notes assistant, RB-40 §2).
-     *
-     * <ul>
-     *   <li>Lines containing {@code @mention} patterns → Attendees section</li>
-     *   <li>Lines starting with {@code Action:} or {@code TODO:} (case-insensitive) → Action Items
-     *       as unchecked checklist items {@code - [ ] ...}</li>
-     *   <li>Other non-blank lines → Key Decisions section</li>
-     * </ul>
-     *
-     * Returns a structured markdown string with Attendees / Key Decisions / Action Items / Next
-     * Steps sections — the same shape the AI prompt returns, so the frontend {@code markdownToBlocks}
-     * logic applies identically to both paths.
      */
     public static String meetingNotesDeterministic(String rawInput, String instruction) {
         String input = nv(rawInput).trim();
         if (input.isEmpty()) {
             return "# Attendees\n\n# Key Decisions\n\n# Action Items\n\n# Next Steps\n";
         }
-
         List<String> attendees = new ArrayList<>();
         List<String> actionItems = new ArrayList<>();
         List<String> decisions = new ArrayList<>();
-
         for (String rawLine : input.split("\\r?\\n")) {
             String line = rawLine.trim();
-            if (line.isEmpty()) {
-                continue;
-            }
+            if (line.isEmpty()) continue;
             String lower = line.toLowerCase(Locale.ROOT);
             if (lower.startsWith("action:") || lower.startsWith("todo:")) {
-                // Strip the prefix and record as an unchecked action item.
                 int colon = line.indexOf(':');
                 String item = line.substring(colon + 1).trim();
-                if (!item.isEmpty()) {
-                    actionItems.add(item);
-                }
+                if (!item.isEmpty()) actionItems.add(item);
             } else if (line.contains("@")) {
-                // Collect @mention tokens as attendees.
-                java.util.regex.Pattern mention = java.util.regex.Pattern.compile("@([\\w.-]+)");
-                java.util.regex.Matcher m = mention.matcher(line);
+                Matcher m = Pattern.compile("@([\\w.-]+)").matcher(line);
                 while (m.find()) {
                     String name = m.group(1);
-                    if (!attendees.contains(name)) {
-                        attendees.add(name);
-                    }
+                    if (!attendees.contains(name)) attendees.add(name);
                 }
             } else {
                 decisions.add(line);
             }
         }
-
         StringBuilder sb = new StringBuilder();
         sb.append("# Attendees\n");
-        if (attendees.isEmpty()) {
-            sb.append("_No attendees detected._\n");
-        } else {
-            for (String a : attendees) {
-                sb.append("- ").append(a).append('\n');
-            }
-        }
-
+        if (attendees.isEmpty()) sb.append("_No attendees detected._\n");
+        else for (String a : attendees) sb.append("- ").append(a).append('\n');
         sb.append("\n# Key Decisions\n");
-        if (decisions.isEmpty()) {
-            sb.append("_No key decisions detected._\n");
-        } else {
-            for (String d : decisions) {
-                sb.append("- ").append(d).append('\n');
-            }
-        }
-
+        if (decisions.isEmpty()) sb.append("_No key decisions detected._\n");
+        else for (String d : decisions) sb.append("- ").append(d).append('\n');
         sb.append("\n# Action Items\n");
-        if (actionItems.isEmpty()) {
-            sb.append("_No action items detected._\n");
-        } else {
-            for (String ai : actionItems) {
-                sb.append("- [ ] ").append(ai).append('\n');
-            }
-        }
-
+        if (actionItems.isEmpty()) sb.append("_No action items detected._\n");
+        else for (String ai : actionItems) sb.append("- [ ] ").append(ai).append('\n');
         sb.append("\n# Next Steps\n");
         sb.append("_Add next steps here._\n");
-
         return sb.toString();
+    }
+
+    /**
+     * KR-073: Deterministic outline scaffold for the Knowledge outline generator (RB-40 §2).
+     */
+    public static String outlineDeterministic(String title, String templateType) {
+        String t = nv(title).trim();
+        String heading = "# " + (t.isEmpty() ? "Untitled" : t) + "\n";
+        String type = nv(templateType).toUpperCase(Locale.ROOT).trim();
+        return switch (type) {
+            case "RUNBOOK" -> heading
+                + "\n## Prerequisites\n_List prerequisites here._\n"
+                + "\n## Steps\n_Add steps here._\n"
+                + "\n## Rollback\n_Describe rollback procedure._\n";
+            case "KB" -> heading
+                + "\n## Background\n_Provide background here._\n"
+                + "\n## Details\n_Add details here._\n"
+                + "\n## References\n_Add references here._\n";
+            default -> heading
+                + "\n## Section 1\n_Add content here._\n"
+                + "\n## Section 2\n_Add content here._\n"
+                + "\n## Conclusion\n_Summarize here._\n";
+        };
+    }
+
+    /**
+     * KR-074: Deterministic writing-quality check. The documented fallback for the AI
+     * writing-check endpoint (RB-40 §2).
+     */
+    public static List<WritingIssue> checkWritingDeterministic(String text) {
+        List<WritingIssue> issues = new ArrayList<>();
+        if (text == null || text.isBlank()) return issues;
+        String lower = text.toLowerCase(Locale.ROOT);
+        if (lower.contains("its a")) {
+            issues.add(new WritingIssue("its a", "Missing apostrophe — did you mean \"it's\"?", "it's a"));
+        }
+        Matcher m = Pattern.compile("\\butilize\\b", Pattern.CASE_INSENSITIVE).matcher(text);
+        while (m.find()) {
+            issues.add(new WritingIssue(m.group().toLowerCase(Locale.ROOT), "Prefer simpler word", "use"));
+        }
+        return issues;
+    }
+
+    /**
+     * KR-075: Frequency-based tag suggestion. The documented fallback for the AI tag-suggestion
+     * endpoint (RB-40 §2).
+     */
+    public static List<String> suggestTagsDeterministic(String content, List<String> existingTags) {
+        if (content == null || content.isBlank()) return List.of();
+        String[] words = content.replaceAll("[^A-Za-z0-9 ]", " ")
+            .toLowerCase(Locale.ROOT).trim().split("\\s+");
+        List<String> keys = new ArrayList<>();
+        List<Integer> freqs = new ArrayList<>();
+        for (String w : words) {
+            if (w.length() >= 4) {
+                int i = keys.indexOf(w);
+                if (i < 0) { keys.add(w); freqs.add(1); }
+                else { freqs.set(i, freqs.get(i) + 1); }
+            }
+        }
+        List<String> result = new ArrayList<>();
+        while (!keys.isEmpty() && result.size() < 5) {
+            int best = 0;
+            for (int i = 1; i < freqs.size(); i++) {
+                if (freqs.get(i) > freqs.get(best)) best = i;
+            }
+            result.add(keys.remove(best));
+            freqs.remove(best);
+        }
+        return result;
+    }
+
+    /**
+     * KR-076: Deterministic text simplification. The documented fallback for the AI simplify
+     * endpoint (RB-40 §2).
+     */
+    public static String simplifyDeterministic(String text, String gradeLevel) {
+        if (text == null || text.isBlank()) return "";
+        return text
+            .replaceAll("(?i)\\bin order to\\b", "to")
+            .replaceAll("(?i)\\butilize\\b", "use");
     }
 
     /** Split prose into sentences on ., ! or ? boundaries (keeps it simple and dependency-free). */
@@ -280,7 +319,6 @@ public class KnowledgeAiService {
 
     /**
      * Deterministic writing check: detect repeated consecutive words (e.g. "the the").
-     * The documented fallback for the AI writing-check endpoint (RB-40 §2).
      */
     static List<WritingIssue> deterministicCheck(String text) {
         List<WritingIssue> issues = new ArrayList<>();
@@ -296,7 +334,6 @@ public class KnowledgeAiService {
 
     /**
      * Deterministic tag suggestion: the first five distinct words longer than four characters.
-     * The documented fallback for the AI tag-suggestion endpoint (RB-40 §2).
      */
     static List<String> deterministicTags(String text) {
         if (text == null || text.isBlank()) {

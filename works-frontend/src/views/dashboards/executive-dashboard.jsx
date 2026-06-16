@@ -4,6 +4,13 @@ import { utilizationSeries } from '@/lib/today-metrics';
 import { TrendingUp, Users, AlertTriangle, Package, Target, Clock } from 'lucide-react';
 import { TodayCard, HealthRing, MiniBar, Empty, TodaySurface } from './_shared';
 import { getTimeOfDay as getGreeting } from '@/lib/utils';
+import {
+  HeartDashboardWidget,
+  ActivationFunnelWidget,
+  EngagementScoreWidget,
+  RetentionMetricsWidget,
+  TaskSuccessWidget,
+} from '@/components/works/widgets/heart-widgets';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // EXECUTIVE / LEADERSHIP
@@ -136,6 +143,31 @@ const EXECUTIVE_REGISTRY = {
         )}
     </TodayCard>
   ),
+  'heart-dashboard': (ctx) => (
+    <TodayCard title="" icon={null}>
+      <HeartDashboardWidget workspaceId={ctx.activeWorkspaceId} />
+    </TodayCard>
+  ),
+  'activation-funnel': (ctx) => (
+    <TodayCard title="" icon={null}>
+      <ActivationFunnelWidget workspaceId={ctx.activeWorkspaceId} />
+    </TodayCard>
+  ),
+  'engagement-score': (ctx) => (
+    <TodayCard title="" icon={null}>
+      <EngagementScoreWidget workspaceId={ctx.activeWorkspaceId} />
+    </TodayCard>
+  ),
+  'retention-metrics': (ctx) => (
+    <TodayCard title="" icon={null}>
+      <RetentionMetricsWidget workspaceId={ctx.activeWorkspaceId} />
+    </TodayCard>
+  ),
+  'task-success': (ctx) => (
+    <TodayCard title="" icon={null}>
+      <TaskSuccessWidget workspaceId={ctx.activeWorkspaceId} />
+    </TodayCard>
+  ),
   'overdue-actions': (ctx) => (
     <TodayCard title={`Overdue actions (${ctx.overdueActions.length})`} icon={Clock} iconColor="text-semantic-danger" className="overflow-hidden">
       <table className="w-full text-sm">
@@ -160,7 +192,7 @@ const EXECUTIVE_REGISTRY = {
   ),
 };
 
-export function ExecutiveToday({ data, currentUser, setView, layout, builtinLayout, edit }) {
+export function ExecutiveToday({ data, currentUser, activeWorkspaceId, setView, layout, builtinLayout, edit }) {
   const firstName = currentUser?.fullName?.split(' ')[0] || 'there';
   const portfolio = data?.projectPortfolio || [];
   const raidSummary = data?.raidSummary || [];
@@ -190,6 +222,7 @@ export function ExecutiveToday({ data, currentUser, setView, layout, builtinLayo
   const ctx = {
     health, healthColor, overdueActions, openRisks, openIssues, teamUtil,
     portfolio, raidSummary, releaseSchedule, onTrackPct, releaseReadiness, setView,
+    activeWorkspaceId,
   };
 
   return (

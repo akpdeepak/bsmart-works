@@ -164,7 +164,7 @@ visual source before building).
 | WI-21 | Flip structural lint **warn → error**; delete all `eslint-disable` in `views/`; `React.lazy` per route; dark-contrast audit | H.4 A-WS4; D H2 #6 | WI-17 | ✅ | feat/uiux-wi21-lint-lazy-contrast |
 | WI-22 | Inclusivity → WCAG 2.2 AA: colour-blind-safe chart palette, high-contrast theme (3rd mode), screen-reader chart fallback (`<table>`); audit `neutral-400`-as-text | H.5 4.3 | WI-20 | ✅ | feat/uiux-wi22-wcag-inclusivity |
 | WI-23 | Elevation/density spec + `useDensity()` hook + density preference (compact/comfortable/spacious) | H.5 1.2; D H4 #17 | WI-04 | ✅ | claude/bsmart-uiux-program-u9u4os |
-| WI-24 | Motion choreography recipe (panel/modal/toast/accordion on `duration-base`+`out-quint`; optimistic shimmer; success check-morph) | H.5 1.3 | — | ☐ | |
+| WI-24 | Motion choreography recipe (panel/modal/toast/accordion on `duration-base`+`out-quint`; optimistic shimmer; success check-morph) | H.5 1.3 | — | ✅ | claude/bsmart-uiux-program-u9u4os |
 | WI-25 | Performance pass: TanStack Query adoption + virtual scrolling (`@tanstack/react-virtual`) + prefetch-on-hover + CI perf budget (Doherty < 400 ms) | D H2 #6; H.5 3.2 | WI-16 | ☐ | |
 | WI-26 | Notification center + toast queue/stacking + preferences UI (mute/snooze/quiet-hours) | D H2 #9 | WI-20 | ☐ | |
 | WI-41 | **Typography system** — tokenized type scale (display/title/heading/body/caption/overline + mono), line-height, tracking, weights, reading measure, vertical rhythm; applied via `PageHeader`/`Card`/prose (subsumes `text-2xs/3xs`) | H.5 5.1 | WI-04, WI-05 | ☐ | |

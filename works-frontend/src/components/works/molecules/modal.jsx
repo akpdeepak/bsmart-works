@@ -11,6 +11,8 @@ import { Backdrop } from '@/components/works/atoms/backdrop';
 //   - Escape to close; backdrop click to close (a real <button> catcher, so it
 //     stays keyboard/AT-safe and passes jsx-a11y — mirrors ThreeZoneLayout)
 //   - body scroll lock while open
+// WI-24: entrance animation — backdrop fades in; panel scales+fades from 95%→100%.
+// Uses a mounted/rAF pattern so the CSS transition actually plays on first render.
 // Tokens only: z-modal + motion tokens, never z-[..]/arbitrary values (§4.21);
 // Lucide close icon, never an emoji (§8).
 
@@ -27,6 +29,14 @@ const FOCUSABLE =
 export function Modal({ title, onClose, children, size = 'md', className, initialFocus }) {
   const dialogRef = React.useRef(null);
   const titleId = React.useId();
+
+  // WI-24: Mount flag — set on the next animation frame so the initial CSS state
+  // (`opacity-0 scale-95`) is painted before the transition to (`opacity-100 scale-100`).
+  const [visible, setVisible] = React.useState(false);
+  React.useEffect(() => {
+    const id = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   React.useEffect(() => {
     const previouslyFocused = document.activeElement;
@@ -77,9 +87,17 @@ export function Modal({ title, onClose, children, size = 'md', className, initia
   }, [onClose, initialFocus]);
 
   return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center p-4">
+    // Backdrop wrapper — fades in on mount (WI-24).
+    <div
+      className={cn(
+        'fixed inset-0 z-modal flex items-center justify-center p-4',
+        'transition-opacity duration-base ease-out-quint',
+        visible ? 'opacity-100' : 'opacity-0'
+      )}
+    >
       <Backdrop onClick={onClose} label="Close dialog" />
 
+      {/* Dialog panel — scales + fades in on mount (WI-24). */}
       <div
         ref={dialogRef}
         role="dialog"
@@ -88,6 +106,8 @@ export function Modal({ title, onClose, children, size = 'md', className, initia
         tabIndex={-1}
         className={cn(
           'relative w-full rounded-xl bg-white shadow-xl outline-none dark:bg-neutral-800',
+          'transition-[opacity,transform] duration-base ease-out-quint',
+          visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95',
           SIZES[size] ?? SIZES.md,
           className
         )}

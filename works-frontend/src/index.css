@@ -130,3 +130,35 @@
   --dp-gap:   0.75rem;   /* gap-3 */
   --dp-row-y: 0.75rem;   /* py-3 */
 }
+
+/* ── Optimistic-update shimmer (WI-24) ──────────────────────────────────────────────────────
+   Apply `.shimmer` to any element that is in an optimistic-pending state (e.g. a row that has
+   been speculatively updated but not yet confirmed by the server). The sweep completes once in
+   ~1.5s. Respects prefers-reduced-motion: the @media block above collapses animation-duration
+   to 0.01ms so the shimmer completes near-instantly (still communicates state without motion).
+   ─────────────────────────────────────────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    #F2F4F8 25%,
+    #E5E9EF 50%,
+    #F2F4F8 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.dark .shimmer {
+  background: linear-gradient(
+    90deg,
+    #1A2638 25%,
+    #2A3B52 50%,
+    #1A2638 75%
+  );
+  background-size: 200% 100%;
+}

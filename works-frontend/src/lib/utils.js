@@ -48,8 +48,10 @@ export function renderMd(text) {
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
     .replace(/^- (.+)$/gm, '• $1')
     .replace(/\n/g, '<br/>');
+  // KR-005: span is allowed so text-color / highlight marks can pass through.
+  // DOMPurify strips event handlers and dangerous attributes; Tailwind class names are safe.
   return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['strong', 'em', 's', 'u', 'code', 'br', 'a'],
+    ALLOWED_TAGS: ['strong', 'em', 's', 'u', 'code', 'br', 'a', 'span'],
     ALLOWED_ATTR: ['class', 'href', 'target', 'rel'],
   });
 }

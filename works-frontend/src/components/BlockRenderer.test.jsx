@@ -111,6 +111,28 @@ describe('BlockRenderer', () => {
     expect(container.querySelector('mark')).toBeNull();
   });
 
+  it('renders <span> text-color marks in paragraph content (KR-005)', () => {
+    render(<BlockRenderer blocks={[block('paragraph', 'Normal <span class="text-semantic-danger">red</span> text')]} />);
+    const span = document.querySelector('span.text-semantic-danger');
+    expect(span).toBeInTheDocument();
+    expect(span.textContent).toBe('red');
+  });
+
+  it('renders <span> highlight marks in a heading (KR-005)', () => {
+    render(<BlockRenderer blocks={[block('heading1', '<span class="bg-yellow-100 dark:bg-yellow-900/30">bright</span>')]} />);
+    // The span class contains the first class token (DOMPurify keeps all listed classes).
+    const span = document.querySelector('h2 span');
+    expect(span).toBeInTheDocument();
+    expect(span.textContent).toBe('bright');
+  });
+
+  it('strips dangerous attributes from span color marks (KR-005 / XSS)', () => {
+    render(<BlockRenderer blocks={[block('paragraph', '<span class="text-semantic-danger" onclick="alert(1)">safe</span>')]} />);
+    const span = document.querySelector('span.text-semantic-danger');
+    expect(span).toBeInTheDocument();
+    expect(span).not.toHaveAttribute('onclick');
+  });
+
   it('renders a sticker emoji and a type-aware file card', () => {
     render(<BlockRenderer blocks={[
       block('sticker', '🚀', { size: 'xl' }),

@@ -24,8 +24,21 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+// URL-routing mock: MentionPicker fetches /members on mount (child effect fires before parent),
+// so we discriminate by URL rather than relying on call order.
+function mockSend(comments = [ROOT, REPLY]) {
+  apiClient.api.send.mockImplementation((url, opts) => {
+    if (url.includes('/block-comments') && (!opts || opts.method !== 'DELETE')) {
+      // POST returns the new comment object; GET returns the array.
+      if (opts?.method === 'POST') return Promise.resolve({ ...ROOT, id: 'NEW', content: opts.body?.content ?? '' });
+      return Promise.resolve(comments);
+    }
+    return Promise.resolve([]); // /members and anything else
+  });
+}
+
 function renderPanel(overrides = {}) {
-  apiClient.api.send.mockResolvedValueOnce([ROOT, REPLY]);
+  mockSend();
   return render(
     <BlockCommentsPanel
       articleId="ART-001"
@@ -77,11 +90,7 @@ describe('BlockCommentsPanel (KR-025, KR-027)', () => {
   });
 
   it('posts a new comment on button click', async () => {
-    const newComment = { id: 'ABC-NEW', articleId: 'ART-001', blockId: 'blk-1', workspaceId: 'WS-001',
-      authorId: 'user-1', content: 'New comment', resolved: false, parentId: null,
-      createdAt: '2026-01-03T00:00:00Z', updatedAt: '2026-01-03T00:00:00Z' };
-    apiClient.api.send.mockResolvedValueOnce([ROOT, REPLY]);
-    apiClient.api.send.mockResolvedValueOnce(newComment);
+    mockSend();
     render(<BlockCommentsPanel articleId="ART-001" blockId="blk-1" workspaceId="WS-001"
       currentUserId="user-1" open onClose={vi.fn()} />);
     await waitFor(() => screen.getByText('First comment'));
@@ -100,7 +109,7 @@ describe('BlockCommentsPanel (KR-025, KR-027)', () => {
   });
 
   it('shows empty state when no comments', async () => {
-    apiClient.api.send.mockResolvedValueOnce([]);
+    mockSend([]);
     render(<BlockCommentsPanel articleId="ART-001" blockId="blk-1" workspaceId="WS-001"
       currentUserId="user-1" open onClose={vi.fn()} />);
     await waitFor(() => {

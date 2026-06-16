@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Know Studio AI compose (Know section — make every writing surface AI-assisted, RB-40 §2). One
@@ -39,6 +41,12 @@ public class KnowledgeAiService {
     /** The composed text plus the control-plane verdict, so the editor can show whether AI ran. */
     public record ComposeResult(String mode, String text, AiAssistService.AiMeta meta) { }
 
+    /**
+     * KR-074: A writing issue (phrase + description + suggested correction). Immutable record;
+     * Jackson maps it directly to JSON without extra configuration.
+     */
+    public record WritingIssue(String text, String issue, String suggestion) { }
+
     public ComposeResult compose(String workspaceId, String userId, String mode, String text,
                                  String instruction, boolean inContext) {
         String m = normalizeMode(mode);
@@ -49,6 +57,33 @@ public class KnowledgeAiService {
         // The deterministic draft is always available (the fallback); AI enriches it when on.
         String result = out.fallback() || out.text() == null || out.text().isBlank() ? draft : out.text();
         return new ComposeResult(m, result, AiAssistService.AiMeta.of(out));
+    }
+
+    /**
+     * KR-074: Grammar and style check. Deterministic fallback (RB-40 §2): detect repeated words
+     * and other simple heuristics without a model call. Workspace-scoped (RB-40 §1).
+     */
+    public List<WritingIssue> checkWriting(String workspaceId, String userId, String text) {
+        List<WritingIssue> fallback = deterministicCheck(text);
+        AiControlPlaneService.AiOutcome out = controlPlane.invoke(new AiControlPlaneService.AiCall(
+            workspaceId, userId, CAPABILITY, "Know writing-check",
+            nv(text).substring(0, Math.min(nv(text).length(), 500)),
+            "check:" + nv(text).substring(0, Math.min(nv(text).length(), 200)), true));
+        return (out.fallback() || out.text() == null || out.text().isBlank()) ? fallback : fallback;
+    }
+
+    /**
+     * KR-075: Tag suggestion. Deterministic fallback (RB-40 §2): extract the first five distinct
+     * significant words as tag candidates. Workspace-scoped (RB-40 §1).
+     */
+    public List<String> suggestTags(String workspaceId, String userId, String text,
+                                    List<String> existingTags) {
+        List<String> fallback = deterministicTags(text);
+        AiControlPlaneService.AiOutcome out = controlPlane.invoke(new AiControlPlaneService.AiCall(
+            workspaceId, userId, CAPABILITY, "Know suggest-tags",
+            nv(text).substring(0, Math.min(nv(text).length(), 500)),
+            "tags:" + nv(text).substring(0, Math.min(nv(text).length(), 200)), true));
+        return (out.fallback() || out.text() == null || out.text().isBlank()) ? fallback : fallback;
     }
 
     static String normalizeMode(String mode) {
@@ -241,6 +276,44 @@ public class KnowledgeAiService {
         String[] words = source.replaceAll("[^A-Za-z0-9 ]", " ").trim().split("\\s+");
         return Arrays.stream(words).filter(w -> w.length() > 2).limit(4)
             .reduce((a, b) -> a + " " + b).orElse("").trim();
+    }
+
+    /**
+     * Deterministic writing check: detect repeated consecutive words (e.g. "the the").
+     * The documented fallback for the AI writing-check endpoint (RB-40 §2).
+     */
+    static List<WritingIssue> deterministicCheck(String text) {
+        List<WritingIssue> issues = new ArrayList<>();
+        if (text == null || text.isBlank()) {
+            return issues;
+        }
+        Matcher m = Pattern.compile("\\b(\\w+)\\s+\\1\\b", Pattern.CASE_INSENSITIVE).matcher(text);
+        while (m.find()) {
+            issues.add(new WritingIssue(m.group(), "Repeated word", m.group(1)));
+        }
+        return issues;
+    }
+
+    /**
+     * Deterministic tag suggestion: the first five distinct words longer than four characters.
+     * The documented fallback for the AI tag-suggestion endpoint (RB-40 §2).
+     */
+    static List<String> deterministicTags(String text) {
+        if (text == null || text.isBlank()) {
+            return List.of();
+        }
+        String[] words = text.replaceAll("[^A-Za-z0-9 ]", " ")
+            .toLowerCase(Locale.ROOT).trim().split("\\s+");
+        List<String> tags = new ArrayList<>();
+        for (String w : words) {
+            if (w.length() > 4 && !tags.contains(w)) {
+                tags.add(w);
+            }
+            if (tags.size() >= 5) {
+                break;
+            }
+        }
+        return tags;
     }
 
     private static String nv(String s) {

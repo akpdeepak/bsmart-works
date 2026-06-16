@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Check, Reply, Trash2 } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { cn } from '@/lib/utils';
+import { MentionPicker, renderMentions } from '@/components/knowledge/MentionPicker';
 
 const REPLIES_SHOW_THRESHOLD = 3;
 
@@ -30,7 +31,9 @@ function CommentItem({ comment, currentUserId, onResolve, onDelete, articleId, w
             <span className="text-neutral-400">{new Date(comment.createdAt).toLocaleDateString()}</span>
             {comment.resolved && <span className="text-semantic-success text-2xs font-semibold">Resolved</span>}
           </div>
-          <p className="text-neutral-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap">{comment.content}</p>
+          {/* KR-028: render @mentions in brand-orange */}
+          <p className="text-neutral-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap"
+            dangerouslySetInnerHTML={{ __html: renderMentions(comment.content) }} />
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           {!comment.resolved && (
@@ -232,17 +235,25 @@ export function BlockCommentsPanel({ articleId, blockId, workspaceId, currentUse
         )}
       </div>
 
-      {/* New comment input */}
+      {/* KR-028: new comment textarea wrapped with MentionPicker */}
       <div className="px-4 py-3 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
-        <textarea
-          aria-label="New comment"
-          placeholder="Add a comment…"
-          value={newComment}
-          onChange={e => setNewComment(e.target.value)}
-          rows={3}
-          onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handlePost(); }}
-          className="w-full text-xs border border-neutral-200 dark:border-neutral-700 rounded-md px-3 py-2 bg-transparent text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 resize-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
-        />
+        <MentionPicker workspaceId={workspaceId} value={newComment} onChange={setNewComment}>
+          {({ ref, onChange: onMentionChange, onKeyDown: onMentionKeyDown }) => (
+            <textarea
+              ref={ref}
+              aria-label="New comment"
+              placeholder="Add a comment… (type @ to mention)"
+              value={newComment}
+              onChange={(e) => { setNewComment(e.target.value); onMentionChange(e); }}
+              rows={3}
+              onKeyDown={(e) => {
+                onMentionKeyDown(e);
+                if (!e.defaultPrevented && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handlePost();
+              }}
+              className="w-full text-xs border border-neutral-200 dark:border-neutral-700 rounded-md px-3 py-2 bg-transparent text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 resize-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+            />
+          )}
+        </MentionPicker>
         <button
           type="button"
           disabled={!newComment.trim() || posting}

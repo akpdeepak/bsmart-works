@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Block-level comment threads (KR-025, KR-026, KR-027).
@@ -28,17 +30,20 @@ public class ArticleBlockCommentController {
     private final KnowledgeSpaceRepository spaceRepository;
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
+    private final EventService eventService;
 
     public ArticleBlockCommentController(ArticleBlockCommentRepository commentRepository,
                                           ArticleRepository articleRepository,
                                           KnowledgeSpaceRepository spaceRepository,
                                           AuthenticatedUser authenticatedUser,
-                                          RbacService rbac) {
+                                          RbacService rbac,
+                                          EventService eventService) {
         this.commentRepository = commentRepository;
         this.articleRepository = articleRepository;
         this.spaceRepository = spaceRepository;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
+        this.eventService = eventService;
     }
 
     /** List comments for a specific block (or all blocks when blockId is omitted). */
@@ -102,7 +107,12 @@ public class ArticleBlockCommentController {
 
         c.setCreatedAt(OffsetDateTime.now());
         c.setUpdatedAt(OffsetDateTime.now());
-        return commentRepository.save(c);
+        ArticleBlockComment saved = commentRepository.save(c);
+
+        // KR-028: emit ARTICLE_MENTION event per @username found in the comment content.
+        emitMentions(saved, wid);
+
+        return saved;
     }
 
     /** Edit or resolve a comment. Only the author can edit; any workspace member can resolve. */
@@ -150,6 +160,18 @@ public class ArticleBlockCommentController {
         }
         commentRepository.deleteById(commentId);
         return ResponseEntity.noContent().build();
+    }
+
+    private static final Pattern MENTION_PATTERN = Pattern.compile("@(\\w+)");
+
+    private void emitMentions(ArticleBlockComment comment, String workspaceId) {
+        Matcher m = MENTION_PATTERN.matcher(comment.getContent() == null ? "" : comment.getContent());
+        while (m.find()) {
+            String username = m.group(1);
+            String payload = String.format("{\"articleId\":\"%s\",\"commentId\":\"%s\",\"workspaceId\":\"%s\",\"mentionedUser\":\"%s\"}",
+                comment.getArticleId(), comment.getId(), workspaceId, username);
+            eventService.record(comment.getArticleId(), "ARTICLE_MENTION", comment.getAuthorId(), payload);
+        }
     }
 
     // Resolve the workspace for the article and enforce RBAC (view_items).

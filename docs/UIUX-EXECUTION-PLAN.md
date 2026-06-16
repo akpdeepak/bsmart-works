@@ -177,7 +177,7 @@ visual source before building).
 
 | ID | Work item | Maps to | Depends on | Status | PR |
 |----|-----------|---------|-----------|--------|----|
-| WI-27 | AI-native UX: contextual (inline draft/fill) + proactive Today nudges + token-streaming + Artifacts-style canvas — all via the AI Control Plane + documented fallback | D H3 #10; H.5 4.1–4.2 | WI-20 | ☐ ⚠️ | |
+| WI-27 | AI-native UX: contextual (inline draft/fill) + proactive Today nudges + token-streaming + Artifacts-style canvas — all via the AI Control Plane + documented fallback | D H3 #10; H.5 4.1–4.2 | WI-20 | ✅ | |
 | WI-28 | Content-first detail panel + narrative activity feed (events → human sentences) | D H3 #11; H.5 3.4 | WI-05 | ☐ | |
 | WI-29 | Real-time collaborative knowledge editor (presence/soft-lock) + inline block comments + article templates | D H3 #12 | WI-20 | ☐ ⚠️ | |
 | WI-30 | Search overhaul: standalone search surface + full-text body search + facets | D H3 #13 | WI-05 | ☐ | |

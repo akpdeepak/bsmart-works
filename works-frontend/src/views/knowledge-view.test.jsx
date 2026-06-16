@@ -163,4 +163,54 @@ describe('KnowledgeView', () => {
     );
     await expectNoA11yViolations(container);
   });
+
+  // KR-012: Focus mode
+  it('Ctrl+Shift+F toggles focus mode and hides the sidebar (KR-012)', () => {
+    render(
+      <KnowledgeView {...baseProps} editingArticle={false}
+        selectedArticle={{ id: 'A1', title: 'Doc', status: 'DRAFT', content: 'hi' }} />,
+    );
+    // Sidebar should be visible initially
+    expect(screen.getByRole('heading', { name: /knowledge spaces/i })).toBeInTheDocument();
+    // Fire Ctrl+Shift+F to enter focus mode
+    fireEvent.keyDown(document, { key: 'F', ctrlKey: true, shiftKey: true });
+    // Sidebar should now be hidden (has 'hidden' class)
+    const sidebar = screen.getByRole('heading', { name: /knowledge spaces/i }).closest('.hidden');
+    expect(sidebar).not.toBeNull();
+  });
+
+  it('renders the Exit focus button in focus mode (KR-012)', () => {
+    render(
+      <KnowledgeView {...baseProps}
+        selectedArticle={{ id: 'A1', title: 'Doc', status: 'DRAFT', content: 'hi' }} />,
+    );
+    fireEvent.keyDown(document, { key: 'F', ctrlKey: true, shiftKey: true });
+    expect(screen.getByRole('button', { name: /exit focus mode/i })).toBeInTheDocument();
+  });
+
+  // KR-036: Recently viewed
+  it('shows recently viewed section when articles have been opened (KR-036)', () => {
+    // Pre-seed localStorage
+    localStorage.setItem('know-recent-ws1', JSON.stringify([
+      { id: 'A1', title: 'My Article', icon: null },
+    ]));
+    render(<KnowledgeView {...baseProps} workspaceId="ws1" />);
+    expect(screen.getByRole('region', { name: /recently viewed/i })).toBeInTheDocument();
+    expect(screen.getByText('My Article')).toBeInTheDocument();
+    localStorage.removeItem('know-recent-ws1');
+  });
+
+  // KR-011: Properties panel toggle
+  it('Properties button shows and hides the properties panel (KR-011)', () => {
+    render(
+      <KnowledgeView {...baseProps}
+        selectedArticle={{ id: 'A1', title: 'Doc', status: 'DRAFT', content: 'hi', templateType: 'KB' }} />,
+    );
+    const propertiesBtn = screen.getByRole('button', { name: /properties/i });
+    expect(propertiesBtn).toBeInTheDocument();
+    fireEvent.click(propertiesBtn);
+    expect(screen.getByRole('complementary', { name: /article properties/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /close properties panel/i }));
+    expect(screen.queryByRole('complementary', { name: /article properties/i })).not.toBeInTheDocument();
+  });
 });

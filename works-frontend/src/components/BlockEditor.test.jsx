@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BlockEditor } from '@/components/BlockEditor';
+import { computeMatches } from '@/lib/block-search';
 
 describe('BlockEditor — Know Studio blocks', () => {
   it('starts with one paragraph block and a grouped insert menu', async () => {
@@ -113,5 +114,60 @@ describe('BlockEditor — Know Studio blocks', () => {
     render(<BlockEditor blocks={[]} onChange={() => {}} />);
     await user.type(screen.getByLabelText('Paragraph content'), 'see the path/to file');
     expect(screen.queryByRole('listbox', { name: 'Insert block' })).not.toBeInTheDocument();
+  });
+});
+
+// ── KR-006: Find & Replace ────────────────────────────────────────────────────
+
+describe('computeMatches (KR-006)', () => {
+  it('returns empty array for empty query', () => {
+    const blocks = [{ id: 'b1', type: 'paragraph', content: 'hello world', metadata: {} }];
+    expect(computeMatches('', blocks)).toHaveLength(0);
+  });
+
+  it('finds all occurrences (KR-006)', () => {
+    const blocks = [
+      { id: 'b1', type: 'paragraph', content: 'hello world hello', metadata: {} },
+      { id: 'b2', type: 'paragraph', content: 'goodbye', metadata: {} },
+      { id: 'b3', type: 'paragraph', content: 'hello again', metadata: {} },
+    ];
+    const m = computeMatches('hello', blocks);
+    expect(m).toHaveLength(3);
+    expect(m[0]).toMatchObject({ blockId: 'b1', start: 0, end: 5 });
+    expect(m[1]).toMatchObject({ blockId: 'b1', start: 12, end: 17 });
+    expect(m[2]).toMatchObject({ blockId: 'b3', start: 0, end: 5 });
+  });
+
+  it('is case-insensitive', () => {
+    const blocks = [{ id: 'b1', type: 'paragraph', content: 'Hello HELLO hello', metadata: {} }];
+    expect(computeMatches('hello', blocks)).toHaveLength(3);
+  });
+});
+
+describe('BlockEditor Find bar (KR-006)', () => {
+  it('Ctrl+F opens the find bar when editingArticle is true', () => {
+    const blocks = [{ id: 'p1', type: 'paragraph', content: 'some text', metadata: {} }];
+    const { container } = render(<BlockEditor blocks={blocks} onBlocksChange={() => {}} editingArticle />);
+    const editor = container.querySelector('[role="listbox"]');
+    fireEvent.keyDown(editor, { key: 'f', ctrlKey: true });
+    expect(screen.getByRole('search', { name: /find and replace/i })).toBeInTheDocument();
+  });
+
+  it('Ctrl+H opens the find bar with replace row', () => {
+    const blocks = [{ id: 'p1', type: 'paragraph', content: 'some text', metadata: {} }];
+    const { container } = render(<BlockEditor blocks={blocks} onBlocksChange={() => {}} editingArticle />);
+    const editor = container.querySelector('[role="listbox"]');
+    fireEvent.keyDown(editor, { key: 'h', ctrlKey: true });
+    expect(screen.getByRole('search', { name: /find and replace/i })).toBeInTheDocument();
+    expect(screen.getByLabelText('Replace with')).toBeInTheDocument();
+  });
+
+  it('shows 0 matches when find query has no results', () => {
+    const blocks = [{ id: 'p1', type: 'paragraph', content: 'some text', metadata: {} }];
+    const { container } = render(<BlockEditor blocks={blocks} onBlocksChange={() => {}} editingArticle />);
+    const editor = container.querySelector('[role="listbox"]');
+    fireEvent.keyDown(editor, { key: 'f', ctrlKey: true });
+    fireEvent.change(screen.getByLabelText('Find'), { target: { value: 'xyz' } });
+    expect(screen.getByText('0 matches')).toBeInTheDocument();
   });
 });

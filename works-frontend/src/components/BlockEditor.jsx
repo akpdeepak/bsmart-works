@@ -7,15 +7,16 @@
 // WCAG 2.2 AA: keyboard-navigable blocks (arrow keys), visible focus rings, labelled controls.
 // Design tokens only — no raw values (RB-30 §1).
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   Plus, Trash2, ChevronUp, ChevronDown, Code, AlignLeft,
   Heading1, Heading2, Heading3, Minus, Image, Table,
   GitBranch, ChevronDown as ChevronDownIcon,
   Info, CheckSquare, Quote, ChevronRight,
   Grid, BarChart3, PenTool, Link2, Bookmark, GripVertical, List, Sparkles,
-  LayoutDashboard, Smile, Paperclip,
+  LayoutDashboard, Smile, Paperclip, X,
 } from 'lucide-react';
+import { fleschKincaid, gradeLabel } from '@/lib/readability';
 import { cn } from '@/lib/utils';
 import { evaluateSheet, indexToCol } from '@/lib/sheet-engine';
 import { CHART_TYPES } from '@/lib/chart-data';
@@ -25,6 +26,9 @@ import { ChartPreview } from '@/components/blocks/chart-preview';
 import { BqlWidget } from '@/components/blocks/bql-widget';
 import { EmojiPicker } from '@/components/blocks/emoji-picker';
 import { AiMetaBadge } from '@/components/works/ai-meta-badge';
+
+// KR-006: computeMatches lives in lib/block-search (pure function, kept separate for react-refresh).
+import { computeMatches } from '@/lib/block-search';
 
 // Text-bearing blocks that the per-block AI menu can rewrite (improve / expand / summarize / shorten).
 const AI_TEXT_TYPES = new Set(['paragraph', 'heading1', 'heading2', 'heading3', 'quote', 'callout']);
@@ -1287,11 +1291,19 @@ function AddBlockButton({ onAdd }) {
  *                                       appear (routed through the AI Control Plane server-side).
  * @param {string} [props.workspaceId]  Enables live BQL widget blocks (server-side pivot resolver).
  */
-export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, workspaceId }) {
+export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, workspaceId, editingArticle }) {
   const [blocks, setBlocks] = useState(() =>
     initialBlocks.length > 0 ? initialBlocks : [newBlock('paragraph')]
   );
   const [focusedIndex, setFocusedIndex] = useState(0);
+
+  // KR-006: Find & Replace state
+  const [findBarOpen, setFindBarOpen] = useState(false);
+  const [findQuery, setFindQuery] = useState('');
+  const [replaceQuery, setReplaceQuery] = useState('');
+  const [replaceRowOpen, setReplaceRowOpen] = useState(false);
+  const [matches, setMatches] = useState([]);
+  const [activeMatchIndex, setActiveMatchIndex] = useState(0);
 
   // Per-block DOM node map for auto-scroll; populated via the blockRef callback prop on Block.
   const blockElsRef = useRef({});
@@ -1310,6 +1322,61 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
     }
     prevBlockCountRef.current = blocks.length;
   }, [blocks.length, focusedIndex]);
+
+  // KR-006: recompute matches whenever findQuery or blocks change
+  useEffect(() => {
+    const m = computeMatches(findQuery, blocks);
+    setMatches(m);
+    setActiveMatchIndex(0);
+  }, [findQuery, blocks]);
+
+  // KR-006: navigate to prev/next match
+  const goNext = useCallback(() => {
+    if (matches.length === 0) return;
+    const next = (activeMatchIndex + 1) % matches.length;
+    setActiveMatchIndex(next);
+    blockElsRef.current[matches[next].blockIndex]?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+  }, [matches, activeMatchIndex]);
+
+  const goPrev = useCallback(() => {
+    if (matches.length === 0) return;
+    const prev = (activeMatchIndex - 1 + matches.length) % matches.length;
+    setActiveMatchIndex(prev);
+    blockElsRef.current[matches[prev].blockIndex]?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+  }, [matches, activeMatchIndex]);
+
+  // KR-006: replace current match
+  const replaceCurrent = useCallback(() => {
+    if (matches.length === 0) return;
+    const m = matches[activeMatchIndex];
+    const block = blocks[m.blockIndex];
+    if (!block) return;
+    const content = block.content || '';
+    const next = content.slice(0, m.start) + replaceQuery + content.slice(m.end);
+    emit(blocks.map((b, i) => (i === m.blockIndex ? { ...b, content: next } : b)));
+  }, [matches, activeMatchIndex, replaceQuery, blocks, emit]);
+
+  // KR-006: replace all matches (in reverse order so indices stay valid)
+  const replaceAll = useCallback(() => {
+    if (matches.length === 0) return;
+    let updated = [...blocks];
+    // Group by blockIndex and replace from last to first within each block
+    const byBlock = {};
+    matches.forEach((m) => {
+      if (!byBlock[m.blockIndex]) byBlock[m.blockIndex] = [];
+      byBlock[m.blockIndex].push(m);
+    });
+    Object.entries(byBlock).forEach(([bi, hits]) => {
+      const idx = parseInt(bi, 10);
+      let content = updated[idx].content || '';
+      // Replace from end to start to preserve indices
+      [...hits].reverse().forEach((h) => {
+        content = content.slice(0, h.start) + replaceQuery + content.slice(h.end);
+      });
+      updated = updated.map((b, i) => (i === idx ? { ...b, content } : b));
+    });
+    emit(updated);
+  }, [matches, replaceQuery, blocks, emit]);
 
   const addBlock = (type) => {
     const next = [...blocks, newBlock(type)];
@@ -1374,10 +1441,66 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
 
   const stats = docStats(blocks);
 
+  // KR-013: readability metrics
+  const allText = useMemo(() => blocks.filter(b => b.content).map(b => b.content).join(' '), [blocks]);
+  const grade = useMemo(() => fleschKincaid(allText), [allText]);
+  const charCount = allText.replace(/\s/g, '').length;
+
+  // KR-006: keyboard handler for Ctrl+F / Ctrl+H / Escape
+  const handleEditorKeyDown = useCallback((e) => {
+    const ctrl = e.ctrlKey || e.metaKey;
+    if (ctrl && e.key === 'f') {
+      e.preventDefault();
+      setFindBarOpen(true);
+      setReplaceRowOpen(false);
+      return;
+    }
+    if (ctrl && e.key === 'h') {
+      e.preventDefault();
+      setFindBarOpen(true);
+      setReplaceRowOpen(true);
+      return;
+    }
+    if (e.key === 'Escape' && findBarOpen) {
+      setFindBarOpen(false);
+    }
+  }, [findBarOpen]);
+
   return (
     <div className="space-y-2">
       <BlockToolbar onInsert={addBlockAtCursor} />
-      <div role="listbox" aria-label="Block editor" aria-multiselectable="false" className="space-y-2">
+      {/* KR-006: Find & Replace bar */}
+      {findBarOpen && editingArticle && (
+        <div role="search" aria-label="Find and replace" className="flex flex-col gap-1 p-2 bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
+          <div className="flex items-center gap-1">
+            <input
+              aria-label="Find"
+              value={findQuery}
+              onChange={e => setFindQuery(e.target.value)}
+              placeholder="Find…"
+              className="flex-1 text-sm border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+            />
+            <span className="text-xs text-neutral-500 min-w-12 text-right">{matches.length > 0 ? `${activeMatchIndex + 1}/${matches.length}` : '0 matches'}</span>
+            <button type="button" aria-label="Previous match" onClick={goPrev} className="p-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700"><ChevronUp className="h-3.5 w-3.5" /></button>
+            <button type="button" aria-label="Next match" onClick={goNext} className="p-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700"><ChevronDown className="h-3.5 w-3.5" /></button>
+            <button type="button" aria-label="Close find bar" onClick={() => setFindBarOpen(false)} className="p-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700"><X className="h-3.5 w-3.5" /></button>
+          </div>
+          {replaceRowOpen && (
+            <div className="flex items-center gap-1">
+              <input
+                aria-label="Replace with"
+                value={replaceQuery}
+                onChange={e => setReplaceQuery(e.target.value)}
+                placeholder="Replace with…"
+                className="flex-1 text-sm border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+              />
+              <button type="button" onClick={replaceCurrent} className="text-xs px-2 py-1 rounded bg-brand-navy text-white hover:bg-brand-navy-tint">Replace</button>
+              <button type="button" onClick={replaceAll} className="text-xs px-2 py-1 rounded bg-brand-navy text-white hover:bg-brand-navy-tint">Replace All</button>
+            </div>
+          )}
+        </div>
+      )}
+      <div role="listbox" aria-label="Block editor" aria-multiselectable="false" tabIndex={0} className="space-y-2" onKeyDown={handleEditorKeyDown}>
         {blocks.map((block, index) => (
           <Block
             key={block.id}
@@ -1400,13 +1523,15 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
       </div>
       {aiAssist && <AiComposeBar aiAssist={aiAssist} onInsert={insertParagraph} />}
       <AddBlockButton onAdd={addBlock} />
-      {/* MS Word-style live status bar — word count + reading time, always current, no file to sync. */}
+      {/* MS Word-style live status bar — word count + reading time + readability, always current (KR-013). */}
       <div className="flex items-center justify-end gap-3 text-2xs text-neutral-600 dark:text-neutral-400 pt-1" aria-live="polite">
         <span>{stats.words} {stats.words === 1 ? 'word' : 'words'}</span>
         <span aria-hidden="true">·</span>
-        <span>{stats.characters} characters</span>
+        <span>{charCount} chars</span>
         <span aria-hidden="true">·</span>
-        <span>{stats.readingMinutes} min read</span>
+        <span>{stats.readingMinutes} min</span>
+        <span aria-hidden="true">·</span>
+        <span>{gradeLabel(grade)}</span>
       </div>
     </div>
   );

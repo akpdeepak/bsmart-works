@@ -35,7 +35,7 @@
 | KR-002 | Floating selection toolbar | P0 | ⬜ open |
 | KR-003 | Undo / redo | P0 | ⬜ open |
 | KR-004 | Syntax highlighting in code blocks | P0 | ⬜ open |
-| KR-005 | Text color & highlight | P1 | ⬜ open |
+| KR-005 | Text color & highlight | P1 | ✅ done · 2026-06-16 |
 | KR-006 | Find & Replace | P1 | ⬜ open |
 | KR-007 | Block indent / nesting | P2 | ⬜ open |
 | KR-008 | Footnotes | P2 | ⬜ open |

@@ -27,7 +27,8 @@ public class KnowledgeAiService {
     public static final String CAPABILITY = AiCapabilities.GENERATION;
 
     /** Supported compose modes. Anything else is rejected at the boundary. */
-    public static final List<String> MODES = List.of("write", "improve", "expand", "summarize", "shorten");
+    public static final List<String> MODES = List.of(
+        "write", "improve", "expand", "summarize", "shorten", "meeting_notes");
 
     private final AiControlPlaneService controlPlane;
 
@@ -68,8 +69,96 @@ public class KnowledgeAiService {
             case "expand" -> expand(t, instruction);
             case "summarize" -> summarize(t);
             case "shorten" -> shorten(t);
+            case "meeting_notes" -> meetingNotesDeterministic(t, instruction);
             default -> improve(t);
         };
+    }
+
+    /**
+     * Deterministic meeting-notes scaffold from a raw transcript (the mandatory fallback for
+     * the AI meeting-notes assistant, RB-40 §2).
+     *
+     * <ul>
+     *   <li>Lines containing {@code @mention} patterns → Attendees section</li>
+     *   <li>Lines starting with {@code Action:} or {@code TODO:} (case-insensitive) → Action Items
+     *       as unchecked checklist items {@code - [ ] ...}</li>
+     *   <li>Other non-blank lines → Key Decisions section</li>
+     * </ul>
+     *
+     * Returns a structured markdown string with Attendees / Key Decisions / Action Items / Next
+     * Steps sections — the same shape the AI prompt returns, so the frontend {@code markdownToBlocks}
+     * logic applies identically to both paths.
+     */
+    public static String meetingNotesDeterministic(String rawInput, String instruction) {
+        String input = nv(rawInput).trim();
+        if (input.isEmpty()) {
+            return "# Attendees\n\n# Key Decisions\n\n# Action Items\n\n# Next Steps\n";
+        }
+
+        List<String> attendees = new ArrayList<>();
+        List<String> actionItems = new ArrayList<>();
+        List<String> decisions = new ArrayList<>();
+
+        for (String rawLine : input.split("\\r?\\n")) {
+            String line = rawLine.trim();
+            if (line.isEmpty()) {
+                continue;
+            }
+            String lower = line.toLowerCase(Locale.ROOT);
+            if (lower.startsWith("action:") || lower.startsWith("todo:")) {
+                // Strip the prefix and record as an unchecked action item.
+                int colon = line.indexOf(':');
+                String item = line.substring(colon + 1).trim();
+                if (!item.isEmpty()) {
+                    actionItems.add(item);
+                }
+            } else if (line.contains("@")) {
+                // Collect @mention tokens as attendees.
+                java.util.regex.Pattern mention = java.util.regex.Pattern.compile("@([\\w.-]+)");
+                java.util.regex.Matcher m = mention.matcher(line);
+                while (m.find()) {
+                    String name = m.group(1);
+                    if (!attendees.contains(name)) {
+                        attendees.add(name);
+                    }
+                }
+            } else {
+                decisions.add(line);
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("# Attendees\n");
+        if (attendees.isEmpty()) {
+            sb.append("_No attendees detected._\n");
+        } else {
+            for (String a : attendees) {
+                sb.append("- ").append(a).append('\n');
+            }
+        }
+
+        sb.append("\n# Key Decisions\n");
+        if (decisions.isEmpty()) {
+            sb.append("_No key decisions detected._\n");
+        } else {
+            for (String d : decisions) {
+                sb.append("- ").append(d).append('\n');
+            }
+        }
+
+        sb.append("\n# Action Items\n");
+        if (actionItems.isEmpty()) {
+            sb.append("_No action items detected._\n");
+        } else {
+            for (String ai : actionItems) {
+                sb.append("- [ ] ").append(ai).append('\n');
+            }
+        }
+
+        sb.append("\n# Next Steps\n");
+        sb.append("_Add next steps here._\n");
+
+        return sb.toString();
     }
 
     /** Split prose into sentences on ., ! or ? boundaries (keeps it simple and dependency-free). */

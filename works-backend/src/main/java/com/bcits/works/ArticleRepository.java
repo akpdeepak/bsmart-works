@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ArticleRepository extends JpaRepository<Article, String> {
     List<Article> findBySpaceIdOrderByUpdatedAtDesc(String spaceId);
@@ -46,6 +47,10 @@ public interface ArticleRepository extends JpaRepository<Article, String> {
 
     /** Top-level articles in a space (no parent). */
     List<Article> findBySpaceIdAndParentIdIsNullOrderByUpdatedAtDesc(String spaceId);
+
+    // KR-066: look up a published article by its public share token (no workspace scope —
+    // this is the ONE intended public-facing lookup; the controller verifies PUBLISHED status).
+    Optional<Article> findByPublicShareToken(String publicShareToken);
 
     /** Workspace-scoped search (RB-40 §1). */
     @Query(nativeQuery = true,

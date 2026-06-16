@@ -112,6 +112,10 @@ const ReportBuilderView = React.lazy(() => import('@/views/reportbuilder-view'))
 const ComplianceView = React.lazy(() => import('@/views/compliance-view'));
 const ServiceView = React.lazy(() => import('@/views/service-view'));
 const KnowledgeView = React.lazy(() => import('@/views/knowledge-view'));
+// KR-066: public article share link — loaded on /p/:token with no auth.
+const PublicArticleView = React.lazy(() => import('@/views/public-article-view'));
+// KR-069: minimal-chrome article embed — loaded on /embed/article/:token with no auth.
+const EmbedArticleView = React.lazy(() => import('@/views/embed-article-view'));
 const PmView = React.lazy(() => import('@/views/pm-view'));
 const Settings3View = React.lazy(() => import('@/views/settings3-view'));
 const SearchView = React.lazy(() => import('@/views/search-view'));
@@ -2770,6 +2774,26 @@ export default function App() {
   if (embedMatch) return <PublicDashboardEmbed token={decodeURIComponent(embedMatch[1])} embedded />;
   const shareToken = new URLSearchParams(window.location.search).get('share');
   if (shareToken) return <PublicDashboardEmbed token={shareToken} />;
+
+  // KR-066: Public article share link — /p/{token} — no auth required.
+  const publicArticleMatch = window.location.pathname.match(/^\/p\/([^/?#]+)/);
+  if (publicArticleMatch) {
+    return (
+      <React.Suspense fallback={<div className="min-h-screen bg-white dark:bg-neutral-950" />}>
+        <PublicArticleView token={decodeURIComponent(publicArticleMatch[1])} />
+      </React.Suspense>
+    );
+  }
+
+  // KR-069: Minimal-chrome iframe embed for a shared article — /embed/article/{token} — no auth.
+  const embedArticleMatch = window.location.pathname.match(/^\/embed\/article\/([^/?#]+)/);
+  if (embedArticleMatch) {
+    return (
+      <React.Suspense fallback={<div className="min-h-screen bg-white dark:bg-neutral-950" />}>
+        <EmbedArticleView token={decodeURIComponent(embedArticleMatch[1])} />
+      </React.Suspense>
+    );
+  }
 
   // Password-reset link (forgot-password flow) — renders without a session.
   if (resetToken !== null) {

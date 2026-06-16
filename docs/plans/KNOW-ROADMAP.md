@@ -60,7 +60,7 @@
 | KR-027 | Threaded replies | P0 | ✅ done · 2026-06-16 |
 | KR-028 | @mention in comments & blocks | P0 | ✅ done · 2026-06-16 |
 | KR-029 | Reactions on comments & articles | P1 | ⬜ open |
-| KR-030 | Comment digest notifications | P1 | ⬜ open |
+| KR-030 | Comment digest notifications | P1 | ✅ done · 2026-06-16 |
 | KR-031 | Comment draft auto-save | P2 | ⬜ open |
 | KR-032 | External reviewer comments | P2 | ⬜ open |
 | KR-033 | Persistent page tree sidebar | P0 | ✅ done · 2026-06-16 |
@@ -74,7 +74,7 @@
 | KR-041 | Full-text search across content | P0 | ✅ done · 2026-06-16 |
 | KR-042 | Search result excerpts | P0 | ✅ done · 2026-06-16 |
 | KR-043 | Advanced search filters | P1 | ⬜ open |
-| KR-044 | AI semantic search | P1 | ⬜ open |
+| KR-044 | AI semantic search | P1 | ✅ done · 2026-06-16 |
 | KR-045 | Related articles recommendations | P1 | ⬜ open |
 | KR-046 | Content knowledge graph | P2 | ⬜ open |
 | KR-047 | Popular & trending section | P2 | ⬜ open |
@@ -95,26 +95,26 @@
 | KR-062 | Math / LaTeX block | P2 | ⬜ open |
 | KR-063 | Rich embed block | P2 | ⬜ open |
 | KR-064 | Whiteboard export | P2 | ⬜ open |
-| KR-065 | Real-time presence indicators | P1 | ⬜ open |
+| KR-065 | Real-time presence indicators | P1 | ✅ done · 2026-06-16 |
 | KR-066 | Article public share link | P1 | ⬜ open |
 | KR-067 | Article subscriptions / watch | P1 | ⬜ open |
 | KR-068 | Follow a space | P1 | ⬜ open |
-| KR-069 | Embed article anywhere | P1 | ⬜ open |
+| KR-069 | Embed article anywhere | P1 | ✅ done · 2026-06-16 |
 | KR-070 | Live co-editing cursors | P2 | ⬜ open |
 | KR-071 | Activity timeline tab | P2 | ⬜ open |
 | KR-072 | Version diff viewer | P2 | ⬜ open |
-| KR-073 | AI document outline generator | P1 | ⬜ open |
-| KR-074 | AI grammar & style check | P1 | ⬜ open |
-| KR-075 | AI auto-tagging | P1 | ⬜ open |
-| KR-076 | AI readability score | P1 | ⬜ open |
-| KR-077 | Meeting notes assistant | P1 | ⬜ open |
+| KR-073 | AI document outline generator | P1 | ✅ done · 2026-06-16 |
+| KR-074 | AI grammar & style check | P1 | ✅ done · 2026-06-16 |
+| KR-075 | AI auto-tagging | P1 | ✅ done · 2026-06-16 |
+| KR-076 | AI readability score | P1 | ✅ done · 2026-06-16 |
+| KR-077 | Meeting notes assistant | P1 | ✅ done · 2026-06-16 |
 | KR-078 | AI content gap analysis | P2 | ⬜ open |
 | KR-079 | AI duplicate detection | P2 | ⬜ open |
 | KR-080 | AI translation (10 locales) | P2 | ⬜ open |
 | KR-081 | PDF export (server-side) | P1 | ⬜ open |
 | KR-082 | DOCX export | P1 | ⬜ open |
-| KR-083 | Markdown export | P1 | ⬜ open |
-| KR-084 | Email article | P1 | ⬜ open |
+| KR-083 | Markdown export | P1 | ✅ done · 2026-06-16 |
+| KR-084 | Email article | P1 | ✅ done · 2026-06-16 |
 | KR-085 | Slack share integration | P2 | ⬜ open |
 | KR-086 | Print stylesheet | P2 | ⬜ open |
 | KR-087 | Public REST API for published articles | P2 | ⬜ open |

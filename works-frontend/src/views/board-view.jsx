@@ -300,7 +300,15 @@ export default function BoardView({
 
       {bulkEnabled && selected.size > 0 && (
         <div className="mb-4">
-          <BulkEditBar count={selected.size} users={users} busy={bulkBusy} onApply={applyBulk} onClear={clearSelection} />
+          <BulkEditBar
+            count={selected.size}
+            users={users}
+            selectedItems={workItems.filter((i) => selected.has(i.id))}
+            userName={userName}
+            busy={bulkBusy}
+            onApply={applyBulk}
+            onClear={clearSelection}
+          />
         </div>
       )}
 

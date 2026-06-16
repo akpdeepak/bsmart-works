@@ -422,6 +422,13 @@ export const MESSAGES = {
     'deliver.bulk.apply': 'Apply',
     'deliver.bulk.clear': 'Clear',
     'deliver.bulk.selectItem': 'Select item',
+    // Bulk-change preview wizard (WI-31). English source; other locales fall back pending the i18n pass.
+    'deliver.bulk.review': 'Review changes',
+    'deliver.bulk.previewTitle': 'Review bulk change',
+    'deliver.bulk.willChange': 'will change',
+    'deliver.bulk.unchanged': 'unchanged',
+    'deliver.bulk.cancel': 'Cancel',
+    'deliver.bulk.confirmApply': 'Apply change',
     // Watch/follow toggle (English source; other locales fall back pending the i18n pass).
     'deliver.watch.watch': 'Watch',
     'deliver.watch.unwatch': 'Unwatch',

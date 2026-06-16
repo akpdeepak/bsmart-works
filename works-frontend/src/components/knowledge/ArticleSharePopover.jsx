@@ -2,20 +2,24 @@
 // Shown when a PUBLISHED article is selected. Lets the author generate, copy, and revoke
 // the public share link. The link is served at /p/{token} (no auth required).
 // KR-069: also shows an "Embed" section with an iframe snippet when a share token exists.
+// KR-084: also shows a "Send by email" button that opens EmailArticleModal.
 import { useState, useEffect, useRef } from 'react';
-import { Copy, Check, Trash2, Code2 } from 'lucide-react';
+import { Copy, Check, Trash2, Code2, Mail } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { Button } from '@/components/works/button';
+import { EmailArticleModal } from './EmailArticleModal';
 
 /**
  * @param {{
  *   articleId: string,
+ *   articleTitle: string,
  *   token: string|null,
  *   onTokenChange: (token: string|null) => void,
  *   onClose: () => void,
  * }} props
  */
-export function ArticleSharePopover({ articleId, token: initialToken, onTokenChange, onClose }) {
+export function ArticleSharePopover({ articleId, articleTitle, token: initialToken, onTokenChange, onClose }) {
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [token, setToken] = useState(initialToken);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -202,6 +206,26 @@ export function ArticleSharePopover({ articleId, token: initialToken, onTokenCha
             {loading ? 'Generating…' : 'Generate share link'}
           </Button>
         </>
+      )}
+
+      {/* KR-084: Send by email */}
+      <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800">
+        <button
+          type="button"
+          onClick={() => setEmailModalOpen(true)}
+          className="flex items-center gap-2 w-full text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy dark:hover:text-brand-navy-tint transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded py-1"
+        >
+          <Mail className="h-3.5 w-3.5" aria-hidden="true" />
+          Send by email…
+        </button>
+      </div>
+
+      {emailModalOpen && (
+        <EmailArticleModal
+          articleId={articleId}
+          articleTitle={articleTitle || ''}
+          onClose={() => { setEmailModalOpen(false); onClose(); }}
+        />
       )}
     </div>
   );

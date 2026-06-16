@@ -60,6 +60,14 @@ describe('BlockRenderer', () => {
     expect(screen.getByRole('link', { name: /Runbook/ })).toHaveAttribute('href', 'https://example.com');
   });
 
+  it('renders a code block with its content (KR-004 plain fallback)', () => {
+    render(<BlockRenderer blocks={[block('code', 'const x = 1', { language: 'javascript' })]} />);
+    // The CodeBlockRenderer is async; before Shiki resolves it renders the plain-text fallback.
+    expect(screen.getByText('const x = 1')).toBeInTheDocument();
+    // Language badge is shown next to the code block.
+    expect(screen.getByText('javascript')).toBeInTheDocument();
+  });
+
   it('renders inline bold, strikethrough and link marks in paragraph content (KR-001)', () => {
     render(<BlockRenderer blocks={[block('paragraph', '**bold** ~~strike~~ [click](https://example.com)')]} />);
     expect(document.querySelector('strong')).toHaveTextContent('bold');

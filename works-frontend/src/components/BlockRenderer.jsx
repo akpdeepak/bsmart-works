@@ -11,6 +11,7 @@ import { blocksOutline } from '@/lib/doc-stats';
 import { CALLOUT_VARIANTS, STICKY_COLORS, CANVAS_H, NOTE_W, NOTE_H, fileKind, padRows } from '@/lib/block-kit';
 import { ChartPreview } from '@/components/blocks/chart-preview';
 import { BqlWidget } from '@/components/blocks/bql-widget';
+import { CodeBlockRenderer } from '@/components/blocks/CodeBlockRenderer';
 
 const STICKER_SIZE = { md: 'text-4xl', lg: 'text-6xl', xl: 'text-8xl' };
 const FILE_KIND_LABEL = { image: 'Image', pdf: 'PDF', doc: 'Document', sheet: 'Spreadsheet', slide: 'Slides', archive: 'Archive', video: 'Video', audio: 'Audio', code: 'Code', link: 'File' };
@@ -201,8 +202,17 @@ function OneBlock({ block, allBlocks, workspaceId }) {
       );
     case 'toc':
       return <TocView allBlocks={allBlocks} />;
-    case 'code':
-      return <pre className="rounded-md ring-1 ring-neutral-800 bg-neutral-900 p-3.5 text-sm font-mono text-neutral-100 overflow-x-auto whitespace-pre-wrap">{block.content}</pre>;
+    case 'code': {
+      const lang = block.metadata?.language || 'plaintext';
+      return (
+        <div className="space-y-1">
+          {lang !== 'plaintext' && (
+            <span className="text-2xs px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 font-mono">{lang}</span>
+          )}
+          <CodeBlockRenderer content={block.content} language={lang} />
+        </div>
+      );
+    }
     case 'divider':
       return <hr className="border-neutral-300 dark:border-neutral-600" aria-label="Divider" />;
     case 'sheet':

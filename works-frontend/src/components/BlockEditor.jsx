@@ -22,8 +22,10 @@ import { CHART_TYPES } from '@/lib/chart-data';
 import { docStats, blocksOutline } from '@/lib/doc-stats';
 import { CALLOUT_VARIANTS, STICKY_COLORS, CANVAS_H, NOTE_W, NOTE_H, fileKind, padRows } from '@/lib/block-kit';
 import { ChartPreview } from '@/components/blocks/chart-preview';
+import { CODE_LANGUAGES } from '@/components/blocks/CodeBlockRenderer';
 import { BqlWidget } from '@/components/blocks/bql-widget';
 import { EmojiPicker } from '@/components/blocks/emoji-picker';
+import { SelectionToolbar } from '@/components/blocks/SelectionToolbar';
 import { AiMetaBadge } from '@/components/works/ai-meta-badge';
 
 // Text-bearing blocks that the per-block AI menu can rewrite (improve / expand / summarize / shorten).
@@ -329,10 +331,22 @@ function HeadingBlock({ block, onChange, level }) {
 }
 
 function CodeBlock({ block, onChange }) {
-  // A distinct dark slab in both themes — code reads as code, set apart from prose.
+  const lang = block.metadata?.language || 'plaintext';
   return (
     <div className="rounded-md overflow-hidden ring-1 ring-neutral-800">
-      <div className="bg-neutral-800 px-3 py-1 text-xs text-neutral-400 font-mono">Code</div>
+      <div className="flex items-center gap-2 bg-neutral-800 px-3 py-1">
+        <span className="text-xs text-neutral-400 font-mono">Code</span>
+        <label htmlFor={`code-lang-${block.id}`} className="sr-only">Language</label>
+        <select
+          id={`code-lang-${block.id}`}
+          value={lang}
+          onChange={(e) => onChange({ metadata: { ...block.metadata, language: e.target.value } })}
+          className="ml-auto text-xs bg-neutral-700 text-neutral-200 border border-neutral-600 rounded px-2 py-0.5 font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+          aria-label="Code language"
+        >
+          {CODE_LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+        </select>
+      </div>
       <textarea
         aria-label="Code block content"
         value={block.content}
@@ -1325,6 +1339,7 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
   );
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [saveStatus, setSaveStatus] = useState(null); // 'Undone' | 'Redone' | null (KR-003)
+  const [selTool, setSelTool] = useState(null);        // { blockIndex, start, end, rect } | null (KR-002)
 
   // Per-block DOM node map for auto-scroll; populated via the blockRef callback prop on Block.
   const blockElsRef = useRef({});
@@ -1390,6 +1405,43 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
     onChange?.(next);
     flashStatus('Redone');
   }, [onChange]);
+
+  // ── Selection toolbar (KR-002) ─────────────────────────────────────────────────
+
+  // Show the floating toolbar when the user finishes a mouseup with an active text selection
+  // inside a text-bearing block. Uses the active element's selectionStart/End (textarea API)
+  // since window.getSelection() returns an empty range for textarea selections in most browsers.
+  const handleEditorMouseUp = useCallback(() => {
+    const el = document.activeElement;
+    if (!(el instanceof HTMLTextAreaElement) && !(el instanceof HTMLInputElement && el.type === 'text')) {
+      setSelTool(null);
+      return;
+    }
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    if (start === end) { setSelTool(null); return; }
+
+    // Identify which block this textarea/input belongs to.
+    let blockIndex = -1;
+    for (const [idx, wrapper] of Object.entries(blockElsRef.current)) {
+      if (wrapper?.contains(el)) { blockIndex = parseInt(idx, 10); break; }
+    }
+    if (blockIndex === -1) { setSelTool(null); return; }
+
+    // Position relative to the textarea element (viewport-fixed). A textarea's selection range
+    // isn't exposed as a DOM Range, so we use the textarea's bounding box instead.
+    setSelTool({ blockIndex, start, end, rect: el.getBoundingClientRect() });
+  }, []);
+
+  // Apply a format wrap from the toolbar to the stored selection, then dismiss.
+  const handleWrapToolbar = useCallback((startSyntax, endSyntax) => {
+    if (!selTool) return;
+    const { blockIndex, start, end } = selTool;
+    const content = blocks[blockIndex]?.content || '';
+    const next = `${content.slice(0, start)}${startSyntax}${content.slice(start, end)}${endSyntax}${content.slice(end)}`;
+    emit(blocks.map((b, i) => (i === blockIndex ? { ...b, content: next } : b)));
+    setSelTool(null);
+  }, [selTool, blocks, emit]);
 
   // Scroll the focused block into view whenever a new block is inserted (count grows).
   useEffect(() => {
@@ -1463,6 +1515,7 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
   const stats = docStats(blocks);
 
   const handleEditorKeyDown = useCallback((e) => {
+    if (e.key === 'Escape') { setSelTool(null); return; }
     const ctrl = e.ctrlKey || e.metaKey;
     if (!ctrl) return;
     if (!e.shiftKey && e.key === 'z') { e.preventDefault(); handleUndo(); }
@@ -1471,7 +1524,7 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
   }, [handleUndo, handleRedo]);
 
   return (
-    <div id="block-editor-root" className="space-y-2" onKeyDown={handleEditorKeyDown}>
+    <div id="block-editor-root" className="space-y-2" onKeyDown={handleEditorKeyDown} onMouseUp={handleEditorMouseUp}>
       <BlockToolbar onInsert={addBlockAtCursor} />
       <div role="listbox" aria-label="Block editor" aria-multiselectable="false" className="space-y-2">
         {blocks.map((block, index) => (
@@ -1496,6 +1549,7 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
       </div>
       {aiAssist && <AiComposeBar aiAssist={aiAssist} onInsert={insertParagraph} />}
       <AddBlockButton onAdd={addBlock} />
+      <SelectionToolbar rect={selTool?.rect ?? null} onWrap={handleWrapToolbar} onDismiss={() => setSelTool(null)} />
       {/* MS Word-style live status bar — word count + reading time, always current, no file to sync. */}
       <div className="flex items-center justify-end gap-3 text-2xs text-neutral-600 dark:text-neutral-400 pt-1" aria-live="polite">
         {saveStatus && <span className="text-brand-navy dark:text-brand-orange font-medium">{saveStatus}</span>}

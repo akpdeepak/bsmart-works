@@ -107,3 +107,26 @@
     border-color: #d1d5db; /* neutral-300 */
   }
 }
+
+/* ── Density mode spec (WI-23) ─────────────────────────────────────────────────────────────
+   `document.documentElement.dataset.density` is set by useDensity() hook.
+   --dp-card: card/row padding; --dp-gap: item gap; --dp-row-y: table row vertical padding.
+   Consumers can use these vars directly in custom styles; Tailwind consumers use DENSITY_PAD
+   / DENSITY_GAP / DENSITY_ROW_Y from lib/density.js.
+   ──────────────────────────────────────────────────────────────────────────────────────── */
+:root,
+[data-density="comfortable"] {
+  --dp-card:  0.75rem;   /* p-3 */
+  --dp-gap:   0.5rem;    /* gap-2 */
+  --dp-row-y: 0.5rem;    /* py-2 */
+}
+[data-density="compact"] {
+  --dp-card:  0.5rem;    /* p-2 */
+  --dp-gap:   0.25rem;   /* gap-1 */
+  --dp-row-y: 0.25rem;   /* py-1 */
+}
+[data-density="spacious"] {
+  --dp-card:  1rem;      /* p-4 */
+  --dp-gap:   0.75rem;   /* gap-3 */
+  --dp-row-y: 0.75rem;   /* py-3 */
+}

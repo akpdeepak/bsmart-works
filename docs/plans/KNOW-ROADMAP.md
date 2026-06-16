@@ -36,14 +36,14 @@
 | KR-003 | Undo / redo | P0 | ✅ done · 2026-06-16 |
 | KR-004 | Syntax highlighting in code blocks | P0 | ✅ done · 2026-06-16 |
 | KR-005 | Text color & highlight | P1 | ✅ done · 2026-06-16 |
-| KR-006 | Find & Replace | P1 | ⬜ open |
+| KR-006 | Find & Replace | P1 | ✅ done · 2026-06-16 |
 | KR-007 | Block indent / nesting | P2 | ⬜ open |
 | KR-008 | Footnotes | P2 | ⬜ open |
 | KR-009 | Cover image / gradient | P0 | ✅ done · 2026-06-16 |
 | KR-010 | Article icon / emoji | P0 | ✅ done · 2026-06-16 |
-| KR-011 | Article properties panel | P1 | ⬜ open |
-| KR-012 | Focus / distraction-free mode | P1 | ⬜ open |
-| KR-013 | Enhanced status bar | P1 | ⬜ open |
+| KR-011 | Article properties panel | P1 | ✅ done · 2026-06-16 |
+| KR-012 | Focus / distraction-free mode | P1 | ✅ done · 2026-06-16 |
+| KR-013 | Enhanced status bar | P1 | ✅ done · 2026-06-16 |
 | KR-014 | In-article TOC pane | P2 | ⬜ open |
 | KR-015 | Print / PDF / DOCX / Markdown export | P2 | ⬜ open |
 | KR-016 | Article reading view | P2 | ⬜ open |
@@ -66,7 +66,7 @@
 | KR-033 | Persistent page tree sidebar | P0 | ✅ done · 2026-06-16 |
 | KR-034 | Tags / labels | P1 | ✅ done |
 | KR-035 | Starred / favorites | P1 | ✅ done |
-| KR-036 | Recently viewed | P1 | ⬜ open |
+| KR-036 | Recently viewed | P1 | ✅ done · 2026-06-16 |
 | KR-037 | Space home page | P1 | ⬜ open |
 | KR-038 | Bulk operations | P1 | ⬜ open |
 | KR-039 | Article moves across spaces | P2 | ⬜ open |

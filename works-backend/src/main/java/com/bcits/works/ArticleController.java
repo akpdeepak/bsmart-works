@@ -31,6 +31,7 @@ public class ArticleController {
     private final ArticleDao articleDao;
     private final KnowledgeSpaceRepository knowledgeSpaceRepository;
     private final RbacService rbac;
+    private final ArticleService articleService;
 
     public ArticleController(ArticleRepository articleRepository,
                               ArticleVersionRepository articleVersionRepository,
@@ -41,7 +42,8 @@ public class ArticleController {
                               EventService eventService, AuthenticatedUser authenticatedUser,
                               ArticleDao articleDao,
                               KnowledgeSpaceRepository knowledgeSpaceRepository,
-                              RbacService rbac) {
+                              RbacService rbac,
+                              ArticleService articleService) {
         this.articleRepository = articleRepository;
         this.articleVersionRepository = articleVersionRepository;
         this.articleCommentRepository = articleCommentRepository;
@@ -53,6 +55,7 @@ public class ArticleController {
         this.articleDao = articleDao;
         this.knowledgeSpaceRepository = knowledgeSpaceRepository;
         this.rbac = rbac;
+        this.articleService = articleService;
     }
 
     @GetMapping
@@ -266,6 +269,53 @@ public class ArticleController {
 
     @PutMapping("/{id}/restore")
     public Article restore(@PathVariable String id) { return applyTransition(id, "restore"); }
+
+    // ── KR-022: Duplicate article ─────────────────────────────────────────────
+
+    /**
+     * POST /api/v1/articles/{id}/duplicate?workspaceId=...
+     * Creates a copy of the article as a fresh DRAFT with "(copy)" title suffix.
+     * RBAC and workspace isolation are enforced in ArticleService (RB-10 §2, RB-40 §1).
+     */
+    @PostMapping("/{id}/duplicate")
+    public Article duplicate(@PathVariable String id, @RequestParam String workspaceId) {
+        String userId = authenticatedUser.id();
+        return articleService.duplicate(id, userId, workspaceId);
+    }
+
+    // ── KR-038: Bulk operations ───────────────────────────────────────────────
+
+    /**
+     * POST /api/v1/articles/bulk-archive?workspaceId=...
+     * Body: { "ids": ["ART-1", "ART-2", ...] }
+     */
+    @PostMapping("/bulk-archive")
+    public ArticleService.BulkResult bulkArchive(@RequestBody Map<String, Object> body,
+                                                  @RequestParam String workspaceId) {
+        String userId = authenticatedUser.id();
+        @SuppressWarnings("unchecked")
+        List<String> ids = (List<String>) body.get("ids");
+        if (ids == null || ids.isEmpty()) {
+            return new ArticleService.BulkResult(java.util.List.of(), java.util.List.of());
+        }
+        return articleService.bulkArchive(ids, userId, workspaceId);
+    }
+
+    /**
+     * POST /api/v1/articles/bulk-delete?workspaceId=...
+     * Body: { "ids": ["ART-1", "ART-2", ...] }
+     */
+    @PostMapping("/bulk-delete")
+    public ArticleService.BulkResult bulkDelete(@RequestBody Map<String, Object> body,
+                                                 @RequestParam String workspaceId) {
+        String userId = authenticatedUser.id();
+        @SuppressWarnings("unchecked")
+        List<String> ids = (List<String>) body.get("ids");
+        if (ids == null || ids.isEmpty()) {
+            return new ArticleService.BulkResult(java.util.List.of(), java.util.List.of());
+        }
+        return articleService.bulkDelete(ids, userId, workspaceId);
+    }
 
     private Article applyTransition(String id, String action) {
         String userId = authenticatedUser.id();

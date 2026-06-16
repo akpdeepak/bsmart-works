@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import {
   Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen,
   AlertTriangle, Pencil, Eye, ChevronRight, LayoutTemplate,
+  Copy, SlidersHorizontal, X,
 } from 'lucide-react';
 import { MeetingNotesAssistant } from '@/components/knowledge/MeetingNotesAssistant';
 import { CreateWorkItemsFromChecklist } from '@/components/knowledge/CreateWorkItemsFromChecklist';
@@ -24,8 +25,10 @@ import { SearchModeToggle } from '@/components/knowledge/SearchModeToggle';
 import { useSearchMode } from '@/hooks/use-search-mode';
 import { SearchAIAnswer } from '@/components/knowledge/SearchAIAnswer';
 import { PresenceAvatarRow } from '@/components/knowledge/PresenceAvatarRow';
+import { ArticlePropertiesPanel } from '@/components/knowledge/ArticlePropertiesPanel';
+import { BulkActionBar } from '@/components/knowledge/BulkActionBar';
 import { onPressKey, renderMd } from '@/lib/utils';
-import { blocksText } from '@/lib/doc-stats';
+import { blocksText, countWords } from '@/lib/doc-stats';
 import { makeAiAssist, knowledgeAi } from '@/lib/knowledge-ai';
 import { capabilityEnabled } from '@/lib/ai';
 import { api } from '@/lib/apiClient';
@@ -61,8 +64,9 @@ const STATUS_CHIP = {
 };
 
 // Shared article list card — used in both the space view and search results.
-function ArticleCard({ art, onClick }) {
+function ArticleCard({ art, onClick, selectedIds, onToggleSelect }) {
   const preview = articlePreview(art);
+  const isSelected = selectedIds ? selectedIds.has(art.id) : false;
   return (
     <div
       onClick={onClick}
@@ -71,7 +75,17 @@ function ArticleCard({ art, onClick }) {
       onKeyDown={onPressKey}
       className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40"
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-3">
+        {onToggleSelect && (
+          <input
+            type="checkbox"
+            aria-label={`Select article ${art.title}`}
+            checked={isSelected}
+            onChange={(e) => { e.stopPropagation(); onToggleSelect(art.id); }}
+            onClick={(e) => e.stopPropagation()}
+            className="flex-shrink-0 mt-0.5"
+          />
+        )}
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{art.title}</p>
           {preview && (
@@ -157,6 +171,39 @@ export default function KnowledgeView({
 }) {
   const aiGenEnabled = capabilityEnabled(aiCapabilities, 'generation');
   const aiAssist = makeAiAssist(workspaceId, aiGenEnabled);
+
+  // KR-036: Recently viewed — loaded from localStorage on mount
+  const [recentlyViewed, setRecentlyViewed] = useState(() => {
+    if (!workspaceId) return [];
+    try {
+      const raw = localStorage.getItem('know-recent-' + workspaceId);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  });
+
+  // KR-038: Bulk selection state
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  // KR-011: Properties panel — persisted across sessions
+  const [propertiesOpen, setPropertiesOpen] = useState(() => {
+    try { return localStorage.getItem('know_props_open') === 'true'; } catch { return false; }
+  });
+
+  // KR-012: Focus mode — keyboard shortcut Ctrl+Shift+F
+  const [focusMode, setFocusMode] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'F') {
+        setFocusMode(prev => !prev);
+      } else if (e.key === 'Escape' && focusMode) {
+        setFocusMode(false);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [focusMode]);
 
   // KR-044: AI semantic search — search mode toggle + AI answer state
   const [searchMode, setSearchMode] = useSearchMode();
@@ -300,6 +347,16 @@ export default function KnowledgeView({
     setArticlePanel(null);
     fetchArticleChildren?.(art.id);
     fetchArticleDetail?.(art.id);
+    // KR-036: push to recently viewed, cap at 5
+    if (workspaceId) {
+      setRecentlyViewed(prev => {
+        const entry = { id: art.id, title: art.title, icon: art.icon || null };
+        const filtered = prev.filter(r => r.id !== art.id);
+        const next = [entry, ...filtered].slice(0, 5);
+        try { localStorage.setItem('know-recent-' + workspaceId, JSON.stringify(next)); } catch { /* non-fatal */ }
+        return next;
+      });
+    }
   };
 
   // Drill into a sub-article, pushing the current article onto the nav stack.
@@ -336,11 +393,72 @@ export default function KnowledgeView({
     if (found) selectArticle(found);
   };
 
+  // KR-038: toggle a single article in/out of the selection set
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) { next.delete(id); } else { next.add(id); }
+      return next;
+    });
+  };
+
+  // KR-038: bulk archive — POST /articles/bulk-archive
+  const handleBulkArchive = async () => {
+    if (selectedIds.size === 0 || bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      await api.send('/articles/bulk-archive?workspaceId=' + encodeURIComponent(workspaceId), {
+        method: 'POST',
+        body: { ids: [...selectedIds] },
+      });
+      await fetchKnowledgeArticles(selectedSpace?.id || null);
+      setSelectedIds(new Set());
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  // KR-038: bulk delete — POST /articles/bulk-delete
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0 || bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      await api.send('/articles/bulk-delete?workspaceId=' + encodeURIComponent(workspaceId), {
+        method: 'POST',
+        body: { ids: [...selectedIds] },
+      });
+      await fetchKnowledgeArticles(selectedSpace?.id || null);
+      setSelectedIds(new Set());
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  // KR-011: word count for the properties panel
+  const wordCount = (() => {
+    if (!selectedArticle) return 0;
+    let blocks;
+    try { blocks = JSON.parse(selectedArticle.contentBlocks || '[]'); } catch { blocks = []; }
+    if (Array.isArray(blocks) && blocks.length > 0) return countWords(blocksText(blocks));
+    return countWords(selectedArticle.content || '');
+  })();
+
+  // KR-022: duplicate the current article
+  const handleDuplicate = async () => {
+    if (!selectedArticle || !workspaceId) return;
+    const newArticle = await api.send(
+      '/articles/' + encodeURIComponent(selectedArticle.id) + '/duplicate?workspaceId=' + encodeURIComponent(workspaceId),
+      { method: 'POST' },
+    );
+    await fetchKnowledgeArticles(selectedSpace?.id || null);
+    if (newArticle) setSelectedArticle(newArticle);
+  };
+
   return (
     <div className="flex h-full overflow-hidden">
 
       {/* ── Left sidebar — spaces ──────────────────────────────────── */}
-      <div className="w-64 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col">
+      <div className={`w-64 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col ${focusMode ? 'hidden' : ''}`}>
         <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">Knowledge Spaces</h2>
@@ -431,6 +549,26 @@ export default function KnowledgeView({
             All Articles
           </button>
         </div>
+
+        {/* KR-036: Recently viewed */}
+        {recentlyViewed.length > 0 && (
+          <section aria-label="Recently viewed" className="px-2 py-1 border-t border-neutral-100 dark:border-neutral-700">
+            <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider px-3 py-1">Recent</p>
+            {recentlyViewed.map(r => (
+              <button
+                key={r.id}
+                onClick={() => {
+                  const art = [...(knowledgeArticles || []), ...(knowledgeSearchResults || [])].find(a => a.id === r.id) || r;
+                  selectArticle(art);
+                }}
+                className="w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 truncate"
+              >
+                {r.icon ? <span aria-hidden="true">{r.icon}</span> : <FileText className="h-3 w-3 flex-shrink-0" aria-hidden="true" />}
+                <span className="truncate">{r.title}</span>
+              </button>
+            ))}
+          </section>
+        )}
 
         {/* Space list */}
         <div className="flex-1 overflow-y-auto px-2 pb-2">
@@ -532,8 +670,15 @@ export default function KnowledgeView({
                   <EmptyState icon={Search} title="No results found" subtitle={`No articles match "${knowledgeSearch}". Try different keywords.`} />
                 ) : (
                   <div className="space-y-2">
+                    <BulkActionBar
+                      selectedIds={selectedIds}
+                      onArchive={handleBulkArchive}
+                      onDelete={handleBulkDelete}
+                      onClear={() => setSelectedIds(new Set())}
+                      busy={bulkBusy}
+                    />
                     {knowledgeSearchResults.map(art => (
-                      <ArticleCard key={art.id} art={art} onClick={() => selectArticle(art)} />
+                      <ArticleCard key={art.id} art={art} onClick={() => selectArticle(art)} selectedIds={selectedIds} onToggleSelect={toggleSelect} />
                     ))}
                   </div>
                 )}
@@ -606,8 +751,15 @@ export default function KnowledgeView({
                   />
                 ) : (
                   <div className="space-y-2">
+                    <BulkActionBar
+                      selectedIds={selectedIds}
+                      onArchive={handleBulkArchive}
+                      onDelete={handleBulkDelete}
+                      onClear={() => setSelectedIds(new Set())}
+                      busy={bulkBusy}
+                    />
                     {knowledgeArticles.map(art => (
-                      <ArticleCard key={art.id} art={art} onClick={() => selectArticle(art)} />
+                      <ArticleCard key={art.id} art={art} onClick={() => selectArticle(art)} selectedIds={selectedIds} onToggleSelect={toggleSelect} />
                     ))}
                   </div>
                 )}
@@ -767,6 +919,30 @@ export default function KnowledgeView({
                     ? <><Eye className="h-3.5 w-3.5" aria-hidden="true" />View</>
                     : <><Pencil className="h-3.5 w-3.5" aria-hidden="true" />Edit</>
                   }
+                </button>
+
+                {/* KR-022: Duplicate article */}
+                <button
+                  aria-label="Duplicate this article"
+                  onClick={handleDuplicate}
+                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+                >
+                  <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                  Duplicate
+                </button>
+
+                {/* KR-011: Properties panel toggle */}
+                <button
+                  onClick={() => {
+                    const next = !propertiesOpen;
+                    setPropertiesOpen(next);
+                    try { localStorage.setItem('know_props_open', String(next)); } catch { /* non-fatal */ }
+                  }}
+                  aria-pressed={propertiesOpen}
+                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${propertiesOpen ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy'}`}
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+                  Properties
                 </button>
 
                 <button
@@ -1020,6 +1196,22 @@ export default function KnowledgeView({
                 onClose={() => setBlockCommentPanel({ open: false, blockId: null })}
               />
 
+              {/* KR-011: Article properties panel */}
+              {propertiesOpen && (
+                <ArticlePropertiesPanel
+                  article={selectedArticle}
+                  wordCount={wordCount}
+                  onClose={() => {
+                    setPropertiesOpen(false);
+                    try { localStorage.setItem('know_props_open', 'false'); } catch { /* non-fatal */ }
+                  }}
+                  readOnly={!editingArticle}
+                  workspaceId={workspaceId}
+                  articleText={articleText(selectedArticle)}
+                  onAcceptTag={() => {}}
+                />
+              )}
+
               {/* ── Contextual side panels ── */}
               {articlePanel === 'history' && (
                 <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
@@ -1158,6 +1350,17 @@ export default function KnowledgeView({
           </div>
         )}
       </div>
+
+      {/* KR-012: Focus mode exit button — fixed at top-right when focus mode is active */}
+      {focusMode && (
+        <button
+          aria-label="Exit focus mode"
+          onClick={() => setFocusMode(false)}
+          className="fixed top-4 right-4 z-modal text-xs px-3 py-1.5 rounded-lg bg-neutral-900/80 text-white hover:bg-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 flex items-center gap-1.5"
+        >
+          Exit focus <X className="h-3 w-3" aria-hidden="true" />
+        </button>
+      )}
 
       {/* WI-29: template picker modal */}
       {templatePickerOpen && (

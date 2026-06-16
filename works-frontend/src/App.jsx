@@ -64,6 +64,7 @@ import { useDialog } from '@/lib/dialog';
 import { reportError, setToastEmitter } from '@/lib/report-error';
 import { layoutToWidgets } from '@/lib/today-layouts';
 import { useCardPrefs } from '@/hooks/useCardPrefs';
+import { useDensity } from '@/hooks/use-density';
 import { buildStatusResolver } from '@/lib/status-config';
 import { EMPTY_FILTERS, DEFAULT_SORT, filterItems, sortItems, normalizeSavedFilter } from '@/lib/work-item-filter';
 import { buildFieldPrefsResolver, saveTypeFieldPrefs } from '@/lib/type-field-prefs';
@@ -231,8 +232,8 @@ export default function App() {
   const [inviteEmail, setInviteEmail]   = useState('');
   const [inviteMsg, setInviteMsg]       = useState('');
 
-  // Kanban density: compact | comfortable | spacious
-  const [density, setDensity]           = useState('comfortable');
+  // Kanban density: compact | comfortable | spacious — persisted via useDensity (WI-23)
+  const { density, setDensity }         = useDensity();
 
   // Card field customisation — preferences persisted per-user in localStorage
   const cardPrefs = useCardPrefs();

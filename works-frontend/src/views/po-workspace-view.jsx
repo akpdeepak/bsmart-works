@@ -1,4 +1,4 @@
-import { Map as MapIcon, Lightbulb, Send, Target, FileText, Megaphone, ChevronUp } from 'lucide-react';
+import { Map as MapIcon, Lightbulb, Send, Target, FileText, Megaphone, ChevronUp, Trash2 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { Field } from '@/components/works/field';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -14,7 +14,7 @@ export default function PoWorkspaceView({
   feedbackClusters, newFeedback, objectives, activeObjective, newObjective, newKr,
   releaseNotesName, releaseNotesResult, setI15ProjectId, setPoTab, setNewTheme, setNewIdea,
   setNewFeedback, setNewObjective, setNewKr, setReleaseNotesName, setView, setPmProjectId,
-  updateThemeStatus, createTheme, voteIdea, promoteIdea, createIdea, clusterFeedback,
+  updateThemeStatus, createTheme, deleteTheme, voteIdea, promoteIdea, createIdea, clusterFeedback,
   createFeedback, openObjective, updateKrProgress, addKeyResult, createObjective,
   runReleaseNotes, fetchStakeholders,
 }) {
@@ -25,6 +25,29 @@ export default function PoWorkspaceView({
       </div>
     );
   }
+
+  const STATUS_BADGE = {
+    PLANNED:     'bg-neutral-100 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300',
+    IN_PROGRESS: 'bg-brand-navy/10 text-brand-navy dark:text-brand-navy-tint',
+    SHIPPED:     'bg-semantic-success/10 text-semantic-success',
+    ON_HOLD:     'bg-semantic-warning/10 text-semantic-warning',
+  };
+
+  function groupByQuarter(themes) {
+    const map = {};
+    themes.forEach(t => {
+      const key = t.quarter || 'Unscheduled';
+      (map[key] = map[key] || []).push(t);
+    });
+    return Object.keys(map)
+      .sort((a, b) => {
+        if (a === 'Unscheduled') return 1;
+        if (b === 'Unscheduled') return -1;
+        return a.localeCompare(b);
+      })
+      .map(q => ({ quarter: q, themes: map[q] }));
+  }
+
   return (
             <div className="flex flex-col h-full overflow-y-auto p-6 max-w-7xl mx-auto w-full">
               <div className="flex items-center justify-between mb-5">
@@ -49,23 +72,66 @@ export default function PoWorkspaceView({
 
               {poTab === 'roadmap' && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                  <div className="lg:col-span-2 space-y-2">
-                    {roadmapThemes.length === 0
-                      ? <EmptyState icon={MapIcon} title="No themes yet" subtitle="Lay out strategic themes across quarters — status, scope and dates per theme." />
-                      : roadmapThemes.map(t => (
-                        <div key={t.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{t.name}</span>
-                              {t.quarter && <span className="ml-2 text-xs text-neutral-600 dark:text-neutral-400">{t.quarter}</span>}
-                              {t.description && <p className="text-xs text-neutral-500 mt-1">{t.description}</p>}
+                  <div className="lg:col-span-2">
+                    {roadmapThemes.length === 0 ? (
+                      <EmptyState icon={MapIcon} title="No themes yet" subtitle="Lay out strategic themes across quarters — status, scope and dates per theme." />
+                    ) : groupByQuarter(roadmapThemes).map(({ quarter, themes }) => (
+                      <section key={quarter} className="mb-6" aria-label={`Quarter: ${quarter}`}>
+                        <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mb-2">{quarter}</h2>
+                        <div className="space-y-2">
+                          {themes.map(t => (
+                            <div key={t.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-start gap-2.5 min-w-0">
+                                  {t.color && (
+                                    <span
+                                      className="mt-0.5 h-3.5 w-3.5 rounded-full flex-shrink-0"
+                                      style={{ backgroundColor: t.color }}
+                                      aria-hidden="true"
+                                    />
+                                  )}
+                                  <div className="min-w-0">
+                                    <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">{t.name}</span>
+                                    {t.description && (
+                                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">{t.description}</p>
+                                    )}
+                                    {(t.startDate || t.targetDate) && (
+                                      <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">
+                                        {t.startDate && <span>{t.startDate}</span>}
+                                        {t.startDate && t.targetDate && <span aria-hidden="true"> → </span>}
+                                        {t.targetDate && <span>{t.targetDate}</span>}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_BADGE[t.status] || STATUS_BADGE.PLANNED}`}>
+                                    {t.status.replace('_', ' ')}
+                                  </span>
+                                  <select
+                                    className="input text-xs py-1"
+                                    value={t.status}
+                                    onChange={e => updateThemeStatus(t, e.target.value)}
+                                    aria-label={`Change status for ${t.name}`}
+                                  >
+                                    {['PLANNED', 'IN_PROGRESS', 'SHIPPED', 'ON_HOLD'].map(s => (
+                                      <option key={s} value={s}>{s}</option>
+                                    ))}
+                                  </select>
+                                  <button
+                                    onClick={() => deleteTheme(t.id)}
+                                    className="text-neutral-400 hover:text-semantic-danger transition-colors"
+                                    aria-label={`Delete ${t.name}`}
+                                  >
+                                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                            <select className="input text-xs py-1" value={t.status} onChange={e => updateThemeStatus(t, e.target.value)}>
-                              {['PLANNED', 'IN_PROGRESS', 'SHIPPED', 'ON_HOLD'].map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                          </div>
+                          ))}
                         </div>
-                      ))}
+                      </section>
+                    ))}
                   </div>
                   <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 h-fit">
                     <h3 className="font-semibold text-sm mb-3 text-neutral-900 dark:text-neutral-100">Add theme</h3>

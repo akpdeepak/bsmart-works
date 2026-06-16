@@ -97,8 +97,8 @@
 | KR-064 | Whiteboard export | P2 | ⬜ open |
 | KR-065 | Real-time presence indicators | P1 | ⬜ open |
 | KR-066 | Article public share link | P1 | ✅ done · 2026-06-16 |
-| KR-067 | Article subscriptions / watch | P1 | ⬜ open |
-| KR-068 | Follow a space | P1 | ⬜ open |
+| KR-067 | Article subscriptions / watch | P1 | ✅ done · 2026-06-16 |
+| KR-068 | Follow a space | P1 | ✅ done · 2026-06-16 |
 | KR-069 | Embed article anywhere | P1 | ⬜ open |
 | KR-070 | Live co-editing cursors | P2 | ⬜ open |
 | KR-071 | Activity timeline tab | P2 | ⬜ open |

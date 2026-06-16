@@ -44,6 +44,8 @@ export const BUILTIN_TODAY_LAYOUTS = {
     { id: 'po-backlog-health', type: 'backlog-health', span: 4 },
     { id: 'po-composition', type: 'backlog-composition', span: 6 },
     { id: 'po-feature-completion', type: 'feature-completion', span: 6 },
+    { id: 'po-activation-funnel', type: 'activation-funnel', span: 6 },
+    { id: 'po-engagement', type: 'engagement-score', span: 6 },
   ],
   executive: [
     { id: 'ex-stat-health', type: 'stat', span: 3, spanSm: 6, config: { k: 'health' } },
@@ -55,6 +57,7 @@ export const BUILTIN_TODAY_LAYOUTS = {
     { id: 'ex-raid', type: 'raid-pulse', span: 4 },
     { id: 'ex-release', type: 'release-schedule', span: 4 },
     { id: 'ex-util', type: 'team-utilization', span: 4 },
+    { id: 'ex-heart', type: 'heart-dashboard', span: 12 },
   ],
   admin: [
     { id: 'ad-stat-members', type: 'stat', span: 3, spanSm: 6, config: { k: 'members' } },

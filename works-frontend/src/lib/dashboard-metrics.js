@@ -147,6 +147,12 @@ export const EXTRA_WIDGET_PRESETS = [
   { category: 'Sprint',  type: 'CUMULATIVE_FLOW', title: 'Cumulative flow', config: {}, w: 6 },
   // Advanced
   { category: 'Advanced', type: 'MATRIX', title: 'Status × priority', config: {}, w: 6 },
+  // HEART — workspace-level user metrics (WI-06–10)
+  { category: 'HEART', type: 'heart-dashboard',   title: 'HEART overview',      config: {}, w: 12 },
+  { category: 'HEART', type: 'activation-funnel',  title: 'Activation funnel',   config: {}, w: 6 },
+  { category: 'HEART', type: 'engagement-score',   title: 'Engagement score',    config: {}, w: 6 },
+  { category: 'HEART', type: 'retention-metrics',  title: 'Retention metrics',   config: {}, w: 6 },
+  { category: 'HEART', type: 'task-success',       title: 'Task success rate',   config: {}, w: 6 },
 ];
 
-export const EXTRA_WIDGET_CATEGORIES = ['Metrics', 'Distribution', 'Sprint', 'Advanced'];
+export const EXTRA_WIDGET_CATEGORIES = ['Metrics', 'Distribution', 'Sprint', 'Advanced', 'HEART'];

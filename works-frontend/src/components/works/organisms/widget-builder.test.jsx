@@ -89,6 +89,17 @@ describe('WidgetBuilder', () => {
     expect(cfg.measures).toEqual([{ field: '*', agg: 'COUNT' }]);
   });
 
+  it('reorders dimensions with the up/down controls (pivot grouping order)', async () => {
+    const user = userEvent.setup();
+    render(<WidgetBuilder workspaceId="ws-1" value={{ dimensions: ['status', 'type'] }} onSave={() => {}} />);
+    await screen.findByLabelText('Dimension 1');
+    expect(screen.getByLabelText('Dimension 1').value).toBe('status');
+    expect(screen.getByLabelText('Dimension 2').value).toBe('type');
+    await user.click(screen.getByRole('button', { name: /move dimension 1 down/i }));
+    expect(screen.getByLabelText('Dimension 1').value).toBe('type');
+    expect(screen.getByLabelText('Dimension 2').value).toBe('status');
+  });
+
   it('caps dimensions at the engine maximum (4)', async () => {
     const user = userEvent.setup();
     render(<WidgetBuilder workspaceId="ws-1" value={{ dimensions: ['status', 'type', 'priority'] }} onSave={() => {}} />);

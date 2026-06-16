@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, X, AlertTriangle, Lightbulb } from 'lucide-react';
+import { Plus, X, AlertTriangle, Lightbulb, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { PivotChart } from '@/components/works/organisms/pivot-chart';
 import {
   fetchChartTypes, fetchFieldSchema, resolvePivot, buildPivotSpec, AGGS, MAX_DIMENSIONS,
 } from '@/lib/pivot';
 import { annotateChartTypes, resolveSelection } from '@/lib/pivot-charts';
+import { moveIndex } from '@/lib/reorder';
 import { useI18n } from '@/lib/i18n';
 
 const SOURCES = [
@@ -104,6 +105,8 @@ export function WidgetBuilder({ workspaceId, value, onSave, onCancel }) {
   const addDimension = () => { if (dimensions.length < MAX_DIMENSIONS && availableDims[0]) setDimensions((d) => [...d, availableDims[0]]); };
   const setDimension = (i, alias) => setDimensions((d) => d.map((x, j) => (j === i ? alias : x)));
   const removeDimension = (i) => setDimensions((d) => d.filter((_, j) => j !== i));
+  // Dimension order is the pivot grouping order (primary → secondary), so reordering is meaningful.
+  const moveDimension = (i, delta) => setDimensions((d) => moveIndex(d, i, delta));
 
   const handleSave = () => {
     // If the chosen chart doesn't fit, save the suggested compatible type instead (graceful).
@@ -185,6 +188,18 @@ export function WidgetBuilder({ workspaceId, value, onSave, onCancel }) {
                 <option value={d}>{d}</option>
                 {availableDims.map((a) => <option key={a} value={a}>{a}</option>)}
               </select>
+              {dimensions.length > 1 && (
+                <>
+                  <button type="button" onClick={() => moveDimension(i, -1)} disabled={i === 0} aria-label={`Move dimension ${i + 1} up`}
+                    className="p-1 rounded text-neutral-500 hover:text-brand-navy disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
+                    <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                  <button type="button" onClick={() => moveDimension(i, 1)} disabled={i === dimensions.length - 1} aria-label={`Move dimension ${i + 1} down`}
+                    className="p-1 rounded text-neutral-500 hover:text-brand-navy disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
+                    <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                </>
+              )}
               <button type="button" onClick={() => removeDimension(i)} aria-label={`Remove dimension ${i + 1}`}
                 className="p-1 rounded text-neutral-500 hover:text-semantic-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
                 <X className="h-3.5 w-3.5" aria-hidden="true" />

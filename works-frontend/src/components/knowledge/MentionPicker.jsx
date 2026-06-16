@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-exports the renderMentions() helper used by comment renderers; DX/HMR-only rule */
 // KR-028 — @mention picker for comment textareas.
 // Triggers when the user types "@" at a word boundary. Fetches workspace members,
 // filters by typed query. Selecting inserts "@username" at cursor position.
@@ -25,7 +26,7 @@ function getMentionQuery(textarea) {
  *   onChange: (value: string) => void,
  * }} props
  */
-export function MentionPicker({ workspaceId, value, onChange, children }) {
+export function MentionPicker({ workspaceId, onChange, children }) {
   const [members, setMembers] = useState([]);
   const [query, setQuery] = useState(null);
   const [open, setOpen] = useState(false);

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-exports STATUS_COLORS/STATUS_LABELS constants consumed across the knowledge UI; splitting them out is not worth the churn (DX/HMR-only rule) */
 // KR-017 — Status badge with click-to-transition support.
 // Renders a colored pill. When `onClick` is provided the badge is
 // a button; otherwise it is a presentational span (read-mode list cards).

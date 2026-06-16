@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-exports the CODE_LANGUAGES constant used by the editor; DX/HMR-only rule */
 // Syntax-highlighted code block for read mode (BlockRenderer). Uses Shiki with the web bundle so
 // the highlighter is loaded lazily once per page session and shared across all code blocks.
 // Fallback: plain <pre><code> with the same monospace styling if Shiki hasn't initialised yet

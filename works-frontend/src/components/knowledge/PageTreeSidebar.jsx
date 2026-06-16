@@ -7,7 +7,6 @@ import { ChevronRight, FileText, Plus } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { cn } from '@/lib/utils';
 import { TEMPLATE_ICONS } from '@/components/knowledge/ArticleIconPicker';
-import { STATUS_COLORS } from '@/components/knowledge/StatusBadge';
 
 function storageKey(spaceId) {
   return `know-tree-${spaceId}`;
@@ -34,7 +33,9 @@ function NodeIcon({ node }) {
   }
   if (node.icon.startsWith('lucide:')) {
     const name = node.icon.slice(7);
-    const LucideIcon = Object.values(TEMPLATE_ICONS).find((_, i) => Object.keys(TEMPLATE_ICONS)[i] === name) || FileText;
+    // Direct key lookup — same result as the prior Object.values(...).find() (which matched on
+    // TEMPLATE_ICONS keys), but a stable reference the React compiler accepts in render.
+    const LucideIcon = TEMPLATE_ICONS[name] || FileText;
     return <LucideIcon aria-hidden="true" className="h-3.5 w-3.5 flex-shrink-0 text-neutral-400" />;
   }
   return <span aria-hidden="true" className="text-sm leading-none">{node.icon}</span>;

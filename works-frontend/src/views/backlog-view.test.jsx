@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import BacklogView from './backlog-view';
 
@@ -76,5 +76,56 @@ describe('BacklogView', () => {
     render(<BacklogView {...baseProps} backlogItems={items} workItems={items} currentUserId="u1" />);
     fireEvent.change(screen.getByRole('searchbox', { name: /search items/i }), { target: { value: 'zzz-nope' } });
     expect(screen.getByText(/no items match/i)).toBeInTheDocument();
+  });
+
+  it('shows keyboard hint when items are visible', () => {
+    render(<BacklogView {...baseProps} backlogItems={items} workItems={items} />);
+    expect(screen.getByText(/j\/k/)).toBeInTheDocument();
+  });
+
+  describe('keyboard navigation (j/k/Enter)', () => {
+    it('j focuses the first item, second j moves to the second', () => {
+      render(<BacklogView {...baseProps} backlogItems={items} workItems={items} />);
+      fireEvent.keyDown(document, { key: 'j' });
+      const rows = document.querySelectorAll('[aria-current="true"]');
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toHaveTextContent('WI-1');
+      fireEvent.keyDown(document, { key: 'j' });
+      const rows2 = document.querySelectorAll('[aria-current="true"]');
+      expect(rows2[0]).toHaveTextContent('WI-2');
+    });
+
+    it('k moves focus back up', () => {
+      render(<BacklogView {...baseProps} backlogItems={items} workItems={items} />);
+      fireEvent.keyDown(document, { key: 'j' });
+      fireEvent.keyDown(document, { key: 'j' });
+      fireEvent.keyDown(document, { key: 'k' });
+      const rows = document.querySelectorAll('[aria-current="true"]');
+      expect(rows[0]).toHaveTextContent('WI-1');
+    });
+
+    it('Escape clears the focus', () => {
+      render(<BacklogView {...baseProps} backlogItems={items} workItems={items} />);
+      fireEvent.keyDown(document, { key: 'j' });
+      expect(document.querySelectorAll('[aria-current="true"]')).toHaveLength(1);
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(document.querySelectorAll('[aria-current="true"]')).toHaveLength(0);
+    });
+
+    it('Enter on focused item calls setSelectedItem', () => {
+      const setSelectedItem = vi.fn();
+      render(<BacklogView {...baseProps} backlogItems={items} workItems={items} setSelectedItem={setSelectedItem} />);
+      fireEvent.keyDown(document, { key: 'j' });
+      fireEvent.keyDown(document, { key: 'Enter' });
+      expect(setSelectedItem).toHaveBeenCalledWith(items[0]);
+    });
+
+    it('does not navigate when focus is inside a form control', () => {
+      render(<BacklogView {...baseProps} backlogItems={items} workItems={items} />);
+      const search = screen.getByRole('searchbox', { name: /search items/i });
+      search.focus();
+      fireEvent.keyDown(search, { key: 'j' });
+      expect(document.querySelectorAll('[aria-current="true"]')).toHaveLength(0);
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FileText } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -48,6 +48,9 @@ export default function BacklogView({
   const iv = cardPrefs?.isVisible ?? (() => true);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [sort, setSort] = useState(DEFAULT_SORT);
+  const [focusedIdx, setFocusedIdx] = useState(null);
+  const focusedIdxRef = useRef(null);
+  const visibleBacklogRef = useRef([]);
   const userName = (id) => users.find(u => u.id === id)?.fullName || id;
   // Filter + sort the backlog list with the shared model (same bar as the Board). Sort defaults to
   // 'Manual', preserving the drag-drop backlog_order until the user opts into a sort.
@@ -58,6 +61,47 @@ export default function BacklogView({
     ? statusResolver.categoryOf(item.type, item.status)
     : statusToCategory(item.status)) === 'done';
   const onPressKey = (e) => { if (e.key === 'Enter' || e.key === ' ') e.currentTarget.click(); };
+
+  // Keep refs current for the stable keydown handler (ref updates in effects, not render phase).
+  useEffect(() => { visibleBacklogRef.current = visibleBacklog; });
+  useEffect(() => { focusedIdxRef.current = focusedIdx; }, [focusedIdx]);
+
+  // Clear list focus whenever filter or sort changes. Both setters are called from callbacks
+  // (not from an effect body), so batching applies and only one re-render is triggered.
+  const handleFiltersChange = useCallback((f) => { setFilters(f); setFocusedIdx(null); }, []);
+  const handleSortChange = useCallback((s) => { setSort(s); setFocusedIdx(null); }, []);
+
+  // j/k/ArrowUp/ArrowDown — navigate the backlog list; Enter/e — open focused item.
+  useEffect(() => {
+    function handler(e) {
+      const tag = e.target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) return;
+      const list = visibleBacklogRef.current;
+      const cur = focusedIdxRef.current;
+      if (e.key === 'j' || e.key === 'ArrowDown') {
+        if (list.length === 0) return;
+        e.preventDefault();
+        const next = cur === null ? 0 : Math.min(cur + 1, list.length - 1);
+        focusedIdxRef.current = next;
+        setFocusedIdx(next);
+      } else if (e.key === 'k' || e.key === 'ArrowUp') {
+        if (list.length === 0) return;
+        e.preventDefault();
+        const next = cur === null ? 0 : Math.max(cur - 1, 0);
+        focusedIdxRef.current = next;
+        setFocusedIdx(next);
+      } else if ((e.key === 'Enter' || e.key === 'e') && cur !== null) {
+        const item = list[cur];
+        if (item) { e.preventDefault(); setSelectedItem(item); }
+      } else if (e.key === 'Escape' && cur !== null) {
+        e.preventDefault();
+        focusedIdxRef.current = null;
+        setFocusedIdx(null);
+      }
+    }
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [setSelectedItem]);
 
   if (loading && backlogItems.length === 0 && sprints.length === 0) {
     return (
@@ -156,9 +200,9 @@ export default function BacklogView({
             <WorkItemFilterBar
               items={backlogItems}
               filters={filters}
-              onFiltersChange={setFilters}
+              onFiltersChange={handleFiltersChange}
               sort={sort}
-              onSortChange={setSort}
+              onSortChange={handleSortChange}
               userName={userName}
             />
           </div>
@@ -177,13 +221,16 @@ export default function BacklogView({
               ? <EmptyState icon={FileText} title={t('deliver.backlog.emptyTitle')} subtitle={t('deliver.backlog.emptySubtitle')} action={<Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>{t('deliver.backlog.addToBacklog')}</Button>} />
               : visibleBacklog.length === 0
               ? <p className="px-5 py-8 text-center text-sm text-neutral-600 dark:text-neutral-400">{t('deliver.filter.noMatches')}</p>
-              : visibleBacklog.map((item) => (
+              : visibleBacklog.map((item, idx) => {
+                const isFocused = focusedIdx === idx;
+                return (
                 <div key={item.id}
+                  aria-current={isFocused ? 'true' : undefined}
                   draggable onDragStart={(e) => handleBacklogDragStart(e, item.id)}
                   onDragOver={(e) => { e.preventDefault(); setDragOverId(item.id); }}
                   onDragLeave={() => setDragOverId(null)}
                   onDrop={(e) => handleBacklogDrop(e, item.id)}
-                  className={`flex items-center gap-3 px-5 py-3 border-b border-neutral-50 dark:border-neutral-700 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-700 group transition-colors ${dragOverId === item.id ? 'border-t-2 border-t-brand-navy bg-brand-navy/5' : ''}`}>
+                  className={`flex items-center gap-3 px-5 py-3 border-b border-neutral-50 dark:border-neutral-700 last:border-0 group transition-colors ${isFocused ? 'bg-brand-navy/5 dark:bg-brand-navy/10 border-l-2 border-l-brand-navy' : `hover:bg-neutral-50 dark:hover:bg-neutral-700${dragOverId === item.id ? ' border-t-2 border-t-brand-navy bg-brand-navy/5' : ''}`}`}>
                   <span className="text-neutral-300 cursor-grab text-xs mr-1">⠿</span>
                   <TypeBadge type={item.type} compact />
                   <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
@@ -215,8 +262,14 @@ export default function BacklogView({
                     </select>
                   )}
                 </div>
-              ))
+                );
+              })
             }
+            {visibleBacklog.length > 0 && (
+              <p className="border-t border-neutral-100 dark:border-neutral-700 px-5 py-1.5 text-right text-xs text-neutral-400 dark:text-neutral-600 select-none">
+                <kbd className="font-mono">j/k</kbd> navigate · <kbd className="font-mono">Enter</kbd> open · <kbd className="font-mono">Esc</kbd> clear
+              </p>
+            )}
           </div>
         </div>
       </div>

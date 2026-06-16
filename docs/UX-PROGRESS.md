@@ -54,7 +54,6 @@ audit. Tracks what has shipped to `main` so the state is always legible. Newest 
 
 **Tests:** 24 unit tests in `src/lib/activity-feed.test.js` (all 13 sentence generators + fallback + `groupEventsByDay` grouping/ordering/edge cases). 15 component tests in `src/components/works/molecules/activity-feed.test.jsx` (loading skeletons, empty state, sentence rendering, actor names, day grouping/ordering, WCAG semantics). All 39 tests pass.
 
-<<<<<<< HEAD
 ## WI-27 [benchmark] — AI-native UX: aiAssistClient, useAiAssist, AiAssistButton, StreamingText, Today nudges — all with documented fallbacks (2026-06-16)
 
 **`src/lib/ai-assist.js` (new):** AI assist API client wrapping three endpoints (`/ai/assist/suggest-description`, `/ai/assist/stream`, `/ai/today-nudges`). Every method documents its deterministic fallback — `suggestDescription` and `getTodayNudges` catch errors and return `{ result: null, fallback: true }` / `{ nudges: [], fallback: true }` respectively; `streamComplete` returns `null` when the EventSource cannot be created. Callers always have a safe value; no surface silently degrades (RB-40 §2). Uses `api.send` exclusively — no inline fetch.
@@ -106,8 +105,6 @@ Each change writes through `setNotifPrefs`. The inbox tab is behaviour-preserved
 - `src/lib/notification-prefs.test.js` (15 tests): defaults when empty/invalid JSON, partial update merge, muted/snoozed/quiet-hours detection, midnight-spanning window
 - `src/components/works/atoms/toast-stack.test.jsx` (9 tests): renders from state, +N badge, dismiss calls `dismissToast`, action button, tone class, `aria-label`
 
-=======
->>>>>>> 60b2c61 (feat(uiux): wi-28 narrative activity feed — event-to-sentence, ActivityFeed molecule)
 ## WI-25 [benchmark] — Performance pass: virtual list hook, DataTable virtualization, prefetch-on-hover, CI perf budget (2026-06-16)
 
 **`@tanstack/react-virtual` installed** (`^3.14.3`). Enables DOM-count-bounded rendering for large lists, directly supporting the Doherty threshold (< 400 ms interactive) goal.

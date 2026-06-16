@@ -40,6 +40,7 @@ import { AiComplianceSuggestion } from '@/components/works/organisms/ai-complian
 import { SprintItemList } from '@/components/works/organisms/sprint-item-list';
 import { Modal } from '@/components/works/molecules/modal';
 import { Toast } from '@/components/works/atoms/toast';
+import { ToastStack } from '@/components/works/atoms/toast-stack';
 import { Skeleton } from '@/components/works/atoms/skeleton';
 import { CommandPalette } from '@/components/works/organisms/command-palette';
 import { OfflineBanner } from '@/components/works/organisms/offline-banner';
@@ -3358,6 +3359,7 @@ export default function App() {
           {view === 'dashboard' && (
             <DashboardView
               currentUser={currentUser}
+              activeWorkspaceId={activeWorkspaceId}
               userRole={userRole}
               dashboardRole={dashboardRole}
               dashLoading={dashLoading}
@@ -4438,6 +4440,8 @@ export default function App() {
 
       {/* TOAST NOTIFICATION — accessible live region (components/works/atoms/toast.jsx) */}
       <Toast toast={toast} canUndo={Boolean(deleteUndoItem)} onUndo={handleUndoDelete} />
+      {/* TOAST STACK — queued push-notifications (WI-26: lib/toast-queue.js + pushToast()) */}
+      <ToastStack />
 
       {/* CREATE SPRINT MODAL */}
       {isSprintOpen && (

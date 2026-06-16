@@ -215,7 +215,7 @@ const DEVELOPER_REGISTRY = {
     </TodayCard>
   ),
   'setup-completeness': (ctx) => (
-    <SetupCompletenessWidget workspaceId={ctx.currentUser?.workspaceId} />
+    <SetupCompletenessWidget workspaceId={ctx.activeWorkspaceId} />
   ),
 };
 
@@ -266,7 +266,7 @@ function TodayNudges({ workspaceId, userId }) {
   );
 }
 
-export function DeveloperToday({ data, workItems, currentUser, setView, setSelectedItem, setIsCreateOpen, setIsWorklogOpen, selectedItem, showToast, layout, builtinLayout, edit }) {
+export function DeveloperToday({ data, workItems, currentUser, activeWorkspaceId, setView, setSelectedItem, setIsCreateOpen, setIsWorklogOpen, selectedItem, showToast, layout, builtinLayout, edit }) {
   const firstName = currentUser?.fullName?.split(' ')[0] || 'there';
   const myItems = data?.myOpenItems
     ?? workItems.filter(i => i.assigneeId === currentUser?.id && i.status !== 'Done');
@@ -290,14 +290,14 @@ export function DeveloperToday({ data, workItems, currentUser, setView, setSelec
 
   const ctx = {
     data, myItems, openCount, sprint, sprintPct, blockers, hours, worklogs, prioritized,
-    currentUser, setView, setSelectedItem, setIsWorklogOpen, selectedItem, showToast,
+    currentUser, activeWorkspaceId, setView, setSelectedItem, setIsWorklogOpen, selectedItem, showToast,
   };
 
   return (
     <>
       {/* AI Today nudges — absent when AI is off or empty (clean fallback, RB-40 §2) */}
       <TodayNudges
-        workspaceId={currentUser?.workspaceId}
+        workspaceId={activeWorkspaceId}
         userId={currentUser?.id}
       />
       <TodaySurface

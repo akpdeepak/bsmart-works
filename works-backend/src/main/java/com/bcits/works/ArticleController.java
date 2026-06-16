@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 
@@ -379,6 +380,47 @@ public class ArticleController {
         Article existing = articleRepository.findById(id).orElseThrow(() -> ApiException.notFound("Article", id));
         requireArticleAccess(existing);
         articleRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── KR-066: Public share link ─────────────────────────────────────────────
+
+    /**
+     * Generate (or return existing) public share link for a PUBLISHED article.
+     * Returns {@code { token, url }} where url = "/p/{token}".
+     */
+    @PostMapping("/{id}/share")
+    public Map<String, String> generateShareLink(@PathVariable String id) {
+        String userId = authenticatedUser.id();
+        Article article = requireArticleById(id);
+        if (!"PUBLISHED".equals(article.getStatus())) {
+            throw ApiException.badRequest("NOT_PUBLISHED",
+                    "Only a published article can be shared publicly.", "status");
+        }
+        // Idempotent: return existing token if already generated.
+        String token = article.getPublicShareToken();
+        if (token == null || token.isBlank()) {
+            token = UUID.randomUUID().toString().replace("-", "")
+                  + UUID.randomUUID().toString().replace("-", "");
+            article.setPublicShareToken(token);
+            article.setUpdatedAt(OffsetDateTime.now());
+            articleRepository.save(article);
+            eventService.record(id, "ARTICLE_SHARE_LINK_GENERATED", userId, "{}");
+        }
+        return Map.of("token", token, "url", "/p/" + token);
+    }
+
+    /**
+     * Revoke the public share link for an article. The old token immediately becomes invalid.
+     */
+    @DeleteMapping("/{id}/share")
+    public ResponseEntity<Void> revokeShareLink(@PathVariable String id) {
+        String userId = authenticatedUser.id();
+        Article article = requireArticleById(id);
+        article.setPublicShareToken(null);
+        article.setUpdatedAt(OffsetDateTime.now());
+        articleRepository.save(article);
+        eventService.record(id, "ARTICLE_SHARE_LINK_REVOKED", userId, "{}");
         return ResponseEntity.noContent().build();
     }
 

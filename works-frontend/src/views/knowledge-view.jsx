@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import DOMPurify from 'dompurify';
 import {
   Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen,
-  AlertTriangle, Pencil, Eye, ChevronRight, PanelRight, Copy,
+  AlertTriangle, Pencil, Eye, ChevronRight, PanelRight, Copy, Share2, Home,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -23,11 +23,12 @@ import { StarButton } from '@/components/knowledge/StarButton';
 import { RelatedArticles } from '@/components/knowledge/RelatedArticles';
 import { ArticlePropertiesPanel } from '@/components/knowledge/ArticlePropertiesPanel';
 import { BulkActionBar } from '@/components/knowledge/BulkActionBar';
-import { api } from '@/lib/apiClient';
+import { ArticleSharePopover } from '@/components/knowledge/ArticleSharePopover';
 import { onPressKey, renderMd } from '@/lib/utils';
 import { blocksText } from '@/lib/doc-stats';
 import { makeAiAssist } from '@/lib/knowledge-ai';
 import { capabilityEnabled } from '@/lib/ai';
+import { api } from '@/lib/apiClient';
 
 // Plain text of an article for AI summary — block content when present, else the markdown body.
 function articleText(article) {
@@ -74,8 +75,9 @@ const STATUS_CHIP = {
 };
 
 // Shared article list card — used in both the space view and search results.
+// KR-037: isHomeArticle — shows a house icon when this article is the space home.
 // KR-038: accepts `selected` + `onToggleSelect` for bulk multi-select.
-function ArticleCard({ art, onClick, selected = false, onToggleSelect }) {
+function ArticleCard({ art, onClick, selected = false, onToggleSelect, isHomeArticle }) {
   const preview = articlePreview(art);
   return (
     <div
@@ -103,7 +105,12 @@ function ArticleCard({ art, onClick, selected = false, onToggleSelect }) {
         aria-label={`Open article "${art.title}"`}
       >
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{art.title}</p>
+          <div className="flex items-center gap-1.5">
+            {isHomeArticle && (
+              <Home className="h-3.5 w-3.5 flex-shrink-0 text-brand-navy" aria-label="Space home page" title="Space home page" />
+            )}
+            <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{art.title}</p>
+          </div>
           {preview && (
             <p className="text-xs text-neutral-500 mt-0.5 line-clamp-2">{preview}</p>
           )}
@@ -279,6 +286,25 @@ export default function KnowledgeView({
       setBulkBusy(false);
     }
   };
+
+  // KR-066: share popover state
+  const [sharePopoverOpen, setSharePopoverOpen] = useState(false);
+
+  // KR-037: when a space is selected, auto-navigate to its home article if one is set.
+  // We use a ref to avoid running this on every selectedArticle change.
+  const lastSpaceId = useRef(null);
+  useEffect(() => {
+    if (!selectedSpace || !selectedSpace.homeArticleId) return;
+    if (selectedSpace.id === lastSpaceId.current) return; // already navigated for this space
+    lastSpaceId.current = selectedSpace.id;
+    fetchArticleDetail?.(selectedSpace.homeArticleId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSpace?.id, selectedSpace?.homeArticleId]);
+
+  // Reset last space tracker when space is cleared
+  useEffect(() => {
+    if (!selectedSpace) lastSpaceId.current = null;
+  }, [selectedSpace]);
 
   // Block-editor autosave: persist quietly ~900ms after the last change instead of
   // PUT-on-every-keystroke (which previously fired a toast + version + list refetch per character).
@@ -597,7 +623,8 @@ export default function KnowledgeView({
                 ) : (
                   <div className="space-y-2">
                     {knowledgeSearchResults.map(art => (
-                      <ArticleCard key={art.id} art={art} onClick={() => selectArticle(art)} />
+                      <ArticleCard key={art.id} art={art} onClick={() => selectArticle(art)}
+                        isHomeArticle={selectedSpace?.homeArticleId === art.id} />
                     ))}
                   </div>
                 )}
@@ -678,6 +705,7 @@ export default function KnowledgeView({
                         onClick={() => selectArticle(art)}
                         selected={selectedArticleIds.has(art.id)}
                         onToggleSelect={toggleSelect}
+                        isHomeArticle={selectedSpace?.homeArticleId === art.id}
                       />
                     ))}
                   </div>
@@ -845,6 +873,53 @@ export default function KnowledgeView({
                     Duplicate
                   </button>
                 )}
+
+                {/* KR-037: Set as space home — only when inside a space */}
+                {selectedSpace && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      api.send(`/knowledge-spaces/${selectedSpace.id}/home-article`, {
+                        method: 'PUT',
+                        body: JSON.stringify({ articleId: selectedArticle.id }),
+                      }).catch(() => {});
+                    }}
+                    aria-label="Set as space home page"
+                    title={selectedSpace.homeArticleId === selectedArticle.id
+                      ? 'This is the space home page'
+                      : 'Set as space home page'}
+                    className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${selectedSpace.homeArticleId === selectedArticle.id ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy'}`}
+                  >
+                    <Home className="h-3.5 w-3.5" aria-hidden="true" />
+                    {selectedSpace.homeArticleId === selectedArticle.id ? 'Space home' : 'Set home'}
+                  </button>
+                )}
+
+                {/* KR-066: Share button — only for PUBLISHED articles */}
+                {selectedArticle.status === 'PUBLISHED' && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setSharePopoverOpen(o => !o)}
+                      aria-expanded={sharePopoverOpen}
+                      aria-haspopup="dialog"
+                      aria-label="Share article"
+                      className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+                    >
+                      <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      Share
+                    </button>
+                    {sharePopoverOpen && (
+                      <ArticleSharePopover
+                        articleId={selectedArticle.id}
+                        token={selectedArticle.publicShareToken || null}
+                        onTokenChange={(t) => setSelectedArticle(a => ({ ...a, publicShareToken: t }))}
+                        onClose={() => setSharePopoverOpen(false)}
+                      />
+                    )}
+                  </div>
+                )}
+
 
                 <button
                   onClick={() => deleteArticle(selectedArticle.id)}

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import jakarta.validation.Valid;
 
@@ -70,7 +71,7 @@ public class KnowledgeSpaceController {
             : articleRepository.findBySpaceIdOrderByUpdatedAtDesc(id, pr).getContent();
     }
 
-    /** KR-033: returns a depth-limited (4) article tree for the given space (KR-033). */
+    /** KR-033: returns a depth-limited (4) article tree for the given space. */
     @GetMapping("/{id}/tree")
     public List<ArticleTreeNode> getSpaceTree(@PathVariable String id) {
         KnowledgeSpace space = knowledgeSpaceRepository.findById(id).orElseThrow();
@@ -111,6 +112,11 @@ public class KnowledgeSpaceController {
         return saved;
     }
 
+    /**
+     * Update space metadata. If {@code homeArticleId} is present in the body, the article is
+     * validated (must belong to this space and workspace) and set as the space home (KR-037).
+     * Pass {@code null} for {@code homeArticleId} to clear the home article.
+     */
     @PutMapping("/{id}")
     public KnowledgeSpace updateSpace(@PathVariable String id, @Valid @RequestBody KnowledgeSpace updated) {
         String userId = authenticatedUser.id();
@@ -121,9 +127,53 @@ public class KnowledgeSpaceController {
             s.setDescription(updated.getDescription());
             s.setIcon(updated.getIcon());
             s.setVisibility(updated.getVisibility());
+            // KR-037: homeArticleId present in request body → validate + set; absent/null → clear.
+            if (updated.getHomeArticleId() != null && !updated.getHomeArticleId().isBlank()) {
+                validateAndSetHomeArticle(s, updated.getHomeArticleId());
+            } else {
+                s.setHomeArticleId(null);
+            }
             s.setUpdatedAt(OffsetDateTime.now());
             return knowledgeSpaceRepository.save(s);
         }).orElseThrow();
+    }
+
+    /**
+     * KR-037: Dedicated endpoint to set (or clear) the home article for a space.
+     * Body: {@code { "articleId": "<id>" }} to set; {@code { "articleId": null }} to clear.
+     */
+    @PutMapping("/{id}/home-article")
+    public KnowledgeSpace setSpaceHomeArticle(@PathVariable String id,
+                                               @RequestBody Map<String, String> body) {
+        String userId = authenticatedUser.id();
+        KnowledgeSpace space = knowledgeSpaceRepository.findById(id).orElseThrow();
+        rbac.require(userId, space.getWorkspaceId(), "view_items");
+
+        String articleId = body.get("articleId");
+        if (articleId != null && !articleId.isBlank()) {
+            validateAndSetHomeArticle(space, articleId);
+        } else {
+            space.setHomeArticleId(null);
+        }
+        space.setUpdatedAt(OffsetDateTime.now());
+        KnowledgeSpace saved = knowledgeSpaceRepository.save(space);
+        eventService.record(id, "SPACE_HOME_ARTICLE_SET", userId,
+                "{\"articleId\":\"" + (articleId != null ? articleId : "") + "\"}");
+        return saved;
+    }
+
+    /**
+     * Validates that the article belongs to this space (workspace-scoped via the space check
+     * already done by the caller). Throws 400 if the article is not in this space.
+     */
+    private void validateAndSetHomeArticle(KnowledgeSpace space, String articleId) {
+        Article article = articleRepository.findById(articleId)
+                .orElseThrow(() -> ApiException.notFound("Article", articleId));
+        if (!space.getId().equals(article.getSpaceId())) {
+            throw ApiException.badRequest("ARTICLE_NOT_IN_SPACE",
+                    "Article does not belong to this space.", "articleId");
+        }
+        space.setHomeArticleId(articleId);
     }
 
     @DeleteMapping("/{id}")

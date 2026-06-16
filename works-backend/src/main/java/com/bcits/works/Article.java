@@ -64,6 +64,11 @@ public class Article {
     @Column(name = "content_blocks", columnDefinition = "jsonb")
     private String contentBlocks;
 
+    // KR-066: public share link — a PUBLISHED article can be shared via this unique URL-safe token
+    // (no auth required). Generated on demand; null = no public link. Added in V104.
+    @Column(name = "public_share_token", length = 64, unique = true)
+    private String publicShareToken;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getSpaceId() { return spaceId; }
@@ -129,4 +134,6 @@ public class Article {
     public void setContentFormat(String contentFormat) { this.contentFormat = contentFormat; }
     public String getContentBlocks() { return contentBlocks; }
     public void setContentBlocks(String contentBlocks) { this.contentBlocks = contentBlocks; }
+    public String getPublicShareToken() { return publicShareToken; }
+    public void setPublicShareToken(String publicShareToken) { this.publicShareToken = publicShareToken; }
 }

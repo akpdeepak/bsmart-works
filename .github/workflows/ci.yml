@@ -386,6 +386,9 @@ jobs:
           cache-dependency-path: works-frontend/package-lock.json
       - run: npm ci
       - name: Publish to Chromatic
+        # Skip gracefully when the secret is not configured (forks, local PRs without the token).
+        # The job succeeds (no step fails) so this check is non-blocking even without a token.
+        if: ${{ secrets.CHROMATIC_PROJECT_TOKEN != '' }}
         uses: chromaui/action@latest
         with:
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}

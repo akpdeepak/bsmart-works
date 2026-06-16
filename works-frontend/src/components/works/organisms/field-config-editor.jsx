@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronUp, ChevronDown, Eye, EyeOff, SlidersHorizontal } from 'lucide-react';
 import { ALL_TYPES, CATEGORIES, resolveTypeIcon } from '@/lib/work-item-types';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { FieldLayoutPreview } from '@/components/works/organisms/field-layout-preview';
 import { detailFieldsFor, orderByPrefs } from '@/lib/type-detail-fields';
 import { cn } from '@/lib/utils';
 
@@ -100,6 +101,9 @@ export default function FieldConfigEditor({ fieldPrefs, customFieldDefs = [], on
           </div>
         )}
       </div>
+
+      {/* Live preview — reflects visibility + order as the editor re-renders (WI-32b) */}
+      <FieldLayoutPreview typeLabel={typeLabel} fields={ordered.filter((f) => isVisible(f.key))} />
     </div>
   );
 }

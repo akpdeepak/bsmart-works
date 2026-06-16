@@ -19,11 +19,6 @@ public class KnowledgeSpace {
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
-    // KR-037: optional designated "home" article — opening the space auto-navigates to it.
-    // TEXT FK to articles(id); ON DELETE SET NULL in V103. Null = no home article set.
-    @Column(name = "home_article_id")
-    private String homeArticleId;
-
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getWorkspaceId() { return workspaceId; }
@@ -42,6 +37,4 @@ public class KnowledgeSpace {
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
-    public String getHomeArticleId() { return homeArticleId; }
-    public void setHomeArticleId(String homeArticleId) { this.homeArticleId = homeArticleId; }
 }

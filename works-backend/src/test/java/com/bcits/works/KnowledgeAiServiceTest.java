@@ -218,4 +218,61 @@ class KnowledgeAiServiceTest {
         assertThat(KnowledgeAiService.simplifyDeterministic("", "6")).isEqualTo("");
         assertThat(KnowledgeAiService.simplifyDeterministic(null, "6")).isEqualTo("");
     }
+
+    // ── Deterministic fallback helpers (KR-074 / KR-075) ─────────────────────
+
+    @Test
+    void deterministicCheck_detectsRepeatedWords() {
+        List<KnowledgeAiService.WritingIssue> issues =
+            KnowledgeAiService.deterministicCheck("the the quick brown fox");
+        assertThat(issues).hasSize(1);
+        assertThat(issues.get(0).issue()).isEqualTo("Repeated word");
+        assertThat(issues.get(0).suggestion()).isEqualToIgnoringCase("the");
+    }
+
+    @Test
+    void deterministicCheck_emptyOrNull_returnsEmpty() {
+        assertThat(KnowledgeAiService.deterministicCheck(null)).isEmpty();
+        assertThat(KnowledgeAiService.deterministicCheck("  ")).isEmpty();
+        assertThat(KnowledgeAiService.deterministicCheck("no repeated words here")).isEmpty();
+    }
+
+    @Test
+    void deterministicTags_extractsSignificantWords() {
+        List<String> tags = KnowledgeAiService.deterministicTags("deployment pipeline requires careful testing strategy");
+        assertThat(tags).isNotEmpty();
+        assertThat(tags.size()).isLessThanOrEqualTo(5);
+        // all tags are longer than 4 chars
+        tags.forEach(t -> assertThat(t.length()).isGreaterThan(4));
+    }
+
+    @Test
+    void deterministicTags_emptyOrNull_returnsEmpty() {
+        assertThat(KnowledgeAiService.deterministicTags(null)).isEmpty();
+        assertThat(KnowledgeAiService.deterministicTags("  ")).isEmpty();
+    }
+
+    @Test
+    void checkWriting_onFallback_returnsDeterministicIssues() {
+        AiControlPlaneService controlPlane = mock(AiControlPlaneService.class);
+        when(controlPlane.invoke(any())).thenReturn(AiControlPlaneService.AiOutcome.fallback("DISABLED_WORKSPACE"));
+        KnowledgeAiService service = new KnowledgeAiService(controlPlane);
+
+        List<KnowledgeAiService.WritingIssue> issues = service.checkWriting("ws-1", "user-1", "the the fox");
+
+        assertThat(issues).hasSize(1);
+        assertThat(issues.get(0).issue()).isEqualTo("Repeated word");
+    }
+
+    @Test
+    void suggestTags_onFallback_returnsDeterministicTags() {
+        AiControlPlaneService controlPlane = mock(AiControlPlaneService.class);
+        when(controlPlane.invoke(any())).thenReturn(AiControlPlaneService.AiOutcome.fallback("DISABLED_WORKSPACE"));
+        KnowledgeAiService service = new KnowledgeAiService(controlPlane);
+
+        List<String> tags = service.suggestTags("ws-1", "user-1", "deployment pipeline testing strategy", List.of());
+
+        assertThat(tags).isNotEmpty();
+        assertThat(tags.size()).isLessThanOrEqualTo(5);
+    }
 }

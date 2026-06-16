@@ -29,6 +29,12 @@ public class Article {
     private OffsetDateTime updatedAt;
     private Boolean portalPublished = false; // iteration 9: surfaced on the customer portal KB
 
+    // KR-009: cover image (HTTPS URL or gradient key e.g. "gradient:brand-navy-to-orange")
+    @Column(name = "cover_image", length = 500) private String coverImage;
+
+    // KR-010: article icon — emoji string ("📝") or Lucide icon name ("lucide:FileText")
+    @Column(name = "icon", length = 50) private String icon;
+
     // B09: block-based editor (iteration 20, Cap I)
     // content_format: 'markdown' (default) | 'blocks' (JSON block array in content_blocks)
     @Column(name = "content_format", nullable = false)
@@ -76,6 +82,11 @@ public class Article {
     public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
     public Boolean getPortalPublished() { return portalPublished; }
     public void setPortalPublished(Boolean portalPublished) { this.portalPublished = portalPublished; }
+
+    public String getCoverImage() { return coverImage; }
+    public void setCoverImage(String coverImage) { this.coverImage = coverImage; }
+    public String getIcon() { return icon; }
+    public void setIcon(String icon) { this.icon = icon; }
 
     public String getContentFormat() { return contentFormat; }
     public void setContentFormat(String contentFormat) { this.contentFormat = contentFormat; }

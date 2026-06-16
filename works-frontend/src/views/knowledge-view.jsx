@@ -10,6 +10,8 @@ import { BlockRenderer } from '@/components/BlockRenderer';
 import { KnowAiPanel } from '@/components/knowledge/KnowAiPanel';
 import { ArticleSummarizeButton } from '@/components/knowledge/ArticleSummarizeButton';
 import { AiTextAssist } from '@/components/knowledge/AiTextAssist';
+import { ArticleCover, COVER_GRADIENTS } from '@/components/knowledge/ArticleCover';
+import { ArticleIconPicker, TEMPLATE_ICONS } from '@/components/knowledge/ArticleIconPicker';
 import { onPressKey, renderMd } from '@/lib/utils';
 import { blocksText } from '@/lib/doc-stats';
 import { makeAiAssist } from '@/lib/knowledge-ai';
@@ -154,6 +156,22 @@ export default function KnowledgeView({
     }, 900);
   };
   useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current); }, []);
+
+  // KR-009: cover image picker state
+  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+  const [coverUrlDraft, setCoverUrlDraft] = useState('');
+
+  const applyCover = (val) => {
+    setSelectedArticle((a) => ({ ...a, coverImage: val || null }));
+    updateArticle(selectedArticle.id, { coverImage: val || null });
+    setCoverPickerOpen(false);
+  };
+
+  // KR-010: icon change handler
+  const applyIcon = (val) => {
+    setSelectedArticle((a) => ({ ...a, icon: val }));
+    updateArticle(selectedArticle.id, { icon: val });
+  };
 
   // Navigation stack for sub-article drilling: Back returns to the direct parent article
   // rather than jumping to the flat list. Breadcrumbs show the full ancestor path.
@@ -427,9 +445,21 @@ export default function KnowledgeView({
                       <ChevronRight aria-hidden="true" className="h-2.5 w-2.5 flex-shrink-0" />
                     </nav>
                   )}
-                  <h1 className="font-bold text-lg text-neutral-900 dark:text-white truncate leading-tight">
-                    {selectedArticle.title}
-                  </h1>
+                  <div className="flex items-center gap-1.5">
+                    {editingArticle && (
+                      <ArticleIconPicker
+                        icon={selectedArticle.icon || null}
+                        templateType={selectedArticle.templateType || 'KB'}
+                        onPick={applyIcon}
+                      />
+                    )}
+                    {!editingArticle && selectedArticle.icon && (
+                      <span className="text-2xl leading-none" aria-hidden="true">{selectedArticle.icon.startsWith('lucide:') ? null : selectedArticle.icon}</span>
+                    )}
+                    <h1 className="font-bold text-lg text-neutral-900 dark:text-white truncate leading-tight">
+                      {selectedArticle.title}
+                    </h1>
+                  </div>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded ${STATUS_CHIP[selectedArticle.status] || STATUS_CHIP.DRAFT}`}>
                       {selectedArticle.status || 'DRAFT'}
@@ -510,6 +540,38 @@ export default function KnowledgeView({
                 >
                   Delete
                 </button>
+
+                {editingArticle && (
+                  <>
+                    <span className="text-neutral-200 dark:text-neutral-700 select-none mx-0.5" aria-hidden="true">|</span>
+                    {selectedArticle.coverImage ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => { setCoverUrlDraft(selectedArticle.coverImage); setCoverPickerOpen(true); }}
+                          className="text-xs text-neutral-500 hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
+                        >
+                          Change cover
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyCover(null)}
+                          className="text-xs text-neutral-400 hover:text-semantic-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-semantic-danger/40 rounded"
+                        >
+                          Remove cover
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setCoverUrlDraft(''); setCoverPickerOpen(true); }}
+                        className="text-xs text-neutral-500 hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
+                      >
+                        Add cover
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
             </div>
 
@@ -521,6 +583,43 @@ export default function KnowledgeView({
                 {editingArticle ? (
                   /* ── Edit mode ── */
                   <div className="max-w-3xl space-y-4">
+                    {/* KR-009: cover banner */}
+                    <ArticleCover image={selectedArticle.coverImage} />
+
+                    {/* KR-009: cover picker popover */}
+                    {coverPickerOpen && (
+                      <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/60 p-4 space-y-3">
+                        <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wide">Cover image</p>
+                        <div className="flex gap-2">
+                          <input
+                            type="url"
+                            aria-label="Cover image URL"
+                            value={coverUrlDraft}
+                            onChange={(e) => setCoverUrlDraft(e.target.value)}
+                            placeholder="https://… image URL"
+                            className="flex-1 text-sm border border-neutral-200 dark:border-neutral-700 rounded-md px-3 py-1.5 bg-transparent text-neutral-900 dark:text-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+                          />
+                          <button type="button" onClick={() => applyCover(coverUrlDraft)}
+                            className="text-xs px-3 py-1.5 rounded-md bg-brand-navy text-white hover:bg-brand-navy-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
+                            Use URL
+                          </button>
+                        </div>
+                        <p className="text-xs text-neutral-500">Or choose a gradient preset:</p>
+                        <div className="grid grid-cols-6 gap-1.5">
+                          {Object.entries(COVER_GRADIENTS).map(([key, cls]) => (
+                            <button key={key} type="button" aria-label={key} title={key}
+                              onClick={() => applyCover(`gradient:${key}`)}
+                              className={`h-8 rounded-md ${cls} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 hover:ring-2 hover:ring-brand-navy`}
+                            />
+                          ))}
+                        </div>
+                        <button type="button" onClick={() => setCoverPickerOpen(false)}
+                          className="text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded">
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+
                     <div>
                       <label htmlFor="article-title" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block mb-1">
                         Title
@@ -603,6 +702,8 @@ export default function KnowledgeView({
                 ) : (
                   /* ── Read mode ── */
                   <div className="max-w-3xl">
+                    {/* KR-009: cover banner in read mode */}
+                    <ArticleCover image={selectedArticle.coverImage} />
                     {(() => {
                       // Block-format articles render via BlockRenderer.
                       // Markdown articles render via renderMd. Neither should ever show nothing.

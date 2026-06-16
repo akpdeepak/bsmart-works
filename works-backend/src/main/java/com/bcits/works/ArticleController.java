@@ -224,6 +224,17 @@ public class ArticleController {
                 a.setContentFormat(updated.getContentFormat());
             }
             a.setContentBlocks(updated.getContentBlocks());
+            // KR-009: cover image — null to remove; must start with https:// or gradient:
+            String ci = updated.getCoverImage();
+            if (ci == null || ci.isBlank()) {
+                a.setCoverImage(null);
+            } else if (ci.startsWith("gradient:") || ci.startsWith("https://") || ci.startsWith("http://")) {
+                a.setCoverImage(ci);
+            } else {
+                throw ApiException.badRequest("INVALID_COVER_IMAGE", "coverImage must be null, a gradient key, or an http(s) URL.", "coverImage");
+            }
+            // KR-010: icon — null to reset; short emoji or lucide: prefix
+            a.setIcon(updated.getIcon());
             a.setVersionNumber(a.getVersionNumber() + 1);
             a.setUpdatedAt(OffsetDateTime.now());
             Article saved = articleRepository.save(a);

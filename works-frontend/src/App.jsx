@@ -113,6 +113,7 @@ const ServiceView = React.lazy(() => import('@/views/service-view'));
 const KnowledgeView = React.lazy(() => import('@/views/knowledge-view'));
 const PmView = React.lazy(() => import('@/views/pm-view'));
 const Settings3View = React.lazy(() => import('@/views/settings3-view'));
+const SearchView = React.lazy(() => import('@/views/search-view'));
 import { DashboardWidgetCard } from '@/components/works/organisms/dashboard-widget-card';
 import { FlagDevtools } from '@/components/works/organisms/flag-devtools';
 // DashboardDrillModal extracted to src/components/works/organisms/dashboard-drill-modal.jsx (TD-003).
@@ -3105,6 +3106,8 @@ export default function App() {
       run: () => { setView('board'); setIsCreateOpen(true); } },
     { id: 'act-search', label: 'Search work items', group: 'Action', Icon: Search, keywords: ['find'],
       run: () => setPaletteOpen(true) },
+    { id: 'act-search-all', label: 'Search everything', group: 'Action', Icon: Search, keywords: ['find', 'articles', 'full text'],
+      run: () => navigate('search') },
     { id: 'act-status', label: 'System status', group: 'Action', Icon: Activity, keywords: ['health', 'uptime', 'observability'],
       run: () => setOverlay('status') },
     { id: 'act-push', label: 'Notification preferences', group: 'Action', Icon: BellRing, keywords: ['push', 'quiet hours', 'snooze'],
@@ -3835,6 +3838,17 @@ export default function App() {
               trashItems={trashItems}
               restoreFromTrash={restoreFromTrash}
               permanentDelete={permanentDelete}
+            />
+          )}
+
+          {/* ======================================================
+               WI-30 — STANDALONE SEARCH SURFACE (unified work items + articles)
+             ====================================================== */}
+          {view === 'search' && (
+            <SearchView
+              workspaceId={activeWorkspaceId}
+              onSelectItem={(item) => { setSelectedItem(item); navigate('board'); }}
+              onSelectArticle={(art) => { navigate('knowledge'); }}
             />
           )}
 

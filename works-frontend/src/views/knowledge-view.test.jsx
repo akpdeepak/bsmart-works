@@ -569,3 +569,90 @@ describe('FTS search (KR-041 / KR-042)', () => {
     expect(api.send).toHaveBeenCalledWith('/articles/search?q=runbook');
   });
 });
+
+// ── KR-041 / KR-042: Full-text search + excerpt highlights ────────────────────
+
+describe('FTS search (KR-041 / KR-042)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('does not call the search API immediately on keystroke (debounce)', () => {
+    api.send.mockResolvedValue([]);
+    render(<KnowledgeView {...baseProps} />);
+    fireEvent.change(screen.getByLabelText('Search articles'), { target: { value: 'runbook' } });
+    expect(api.send).not.toHaveBeenCalled();
+  });
+
+  it('calls /articles/search with the query after the 300ms debounce fires', async () => {
+    api.send.mockResolvedValue([]);
+    render(<KnowledgeView {...baseProps} />);
+    fireEvent.change(screen.getByLabelText('Search articles'), { target: { value: 'runbook' } });
+    await act(async () => { vi.advanceTimersByTime(300); });
+    expect(api.send).toHaveBeenCalledWith('/articles/search?q=runbook');
+  });
+
+  it('shows the results listbox when the API returns matches', async () => {
+    api.send.mockResolvedValue([
+      { id: 'A1', title: 'Runbook Alpha', spaceId: 'S1', status: 'PUBLISHED', excerpt: '' },
+    ]);
+    render(<KnowledgeView {...baseProps} />);
+    fireEvent.change(screen.getByLabelText('Search articles'), { target: { value: 'runbook' } });
+    await act(async () => { vi.advanceTimersByTime(300); });
+    await act(async () => {});
+    expect(screen.getByRole('listbox', { name: /search results/i })).toBeInTheDocument();
+    expect(screen.getByText('Runbook Alpha')).toBeInTheDocument();
+  });
+
+  it('renders excerpt <mark> highlights inside the dropdown', async () => {
+    api.send.mockResolvedValue([
+      { id: 'A1', title: 'Runbook Alpha', spaceId: 'S1', status: 'PUBLISHED',
+        excerpt: 'Deploy the <mark>runbook</mark> config.' },
+    ]);
+    render(<KnowledgeView {...baseProps} />);
+    fireEvent.change(screen.getByLabelText('Search articles'), { target: { value: 'runbook' } });
+    await act(async () => { vi.advanceTimersByTime(300); });
+    await act(async () => {});
+    const mark = document.querySelector('mark');
+    expect(mark).toBeInTheDocument();
+    expect(mark.textContent).toBe('runbook');
+  });
+
+  it('hides the listbox when Escape is pressed', async () => {
+    api.send.mockResolvedValue([
+      { id: 'A1', title: 'Runbook Alpha', spaceId: 'S1', status: 'PUBLISHED', excerpt: '' },
+    ]);
+    render(<KnowledgeView {...baseProps} />);
+    const input = screen.getByLabelText('Search articles');
+    fireEvent.change(input, { target: { value: 'runbook' } });
+    await act(async () => { vi.advanceTimersByTime(300); });
+    await act(async () => {});
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('does not call the API when the query is whitespace-only', async () => {
+    api.send.mockResolvedValue([]);
+    render(<KnowledgeView {...baseProps} />);
+    fireEvent.change(screen.getByLabelText('Search articles'), { target: { value: '   ' } });
+    await act(async () => { vi.advanceTimersByTime(300); });
+    expect(api.send).not.toHaveBeenCalled();
+  });
+
+  it('does not fire a second API call when the user retypes within the debounce window', async () => {
+    api.send.mockResolvedValue([]);
+    render(<KnowledgeView {...baseProps} />);
+    const input = screen.getByLabelText('Search articles');
+    fireEvent.change(input, { target: { value: 'run' } });
+    await act(async () => { vi.advanceTimersByTime(200); });
+    fireEvent.change(input, { target: { value: 'runbook' } });
+    await act(async () => { vi.advanceTimersByTime(300); });
+    expect(api.send).toHaveBeenCalledTimes(1);
+    expect(api.send).toHaveBeenCalledWith('/articles/search?q=runbook');
+  });
+});

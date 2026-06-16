@@ -39,15 +39,15 @@
 | KR-006 | Find & Replace | P1 | ⬜ open |
 | KR-007 | Block indent / nesting | P2 | ⬜ open |
 | KR-008 | Footnotes | P2 | ⬜ open |
-| KR-009 | Cover image / gradient | P0 | ⬜ open |
-| KR-010 | Article icon / emoji | P0 | ⬜ open |
+| KR-009 | Cover image / gradient | P0 | ✅ done · 2026-06-16 |
+| KR-010 | Article icon / emoji | P0 | ✅ done · 2026-06-16 |
 | KR-011 | Article properties panel | P1 | ⬜ open |
 | KR-012 | Focus / distraction-free mode | P1 | ⬜ open |
 | KR-013 | Enhanced status bar | P1 | ⬜ open |
 | KR-014 | In-article TOC pane | P2 | ⬜ open |
 | KR-015 | Print / PDF / DOCX / Markdown export | P2 | ⬜ open |
 | KR-016 | Article reading view | P2 | ⬜ open |
-| KR-017 | Status badge + transition popover | P0 | ⬜ open |
+| KR-017 | Status badge + transition popover | P0 | ✅ done · 2026-06-16 |
 | KR-018 | Reviewer assignment | P1 | ⬜ open |
 | KR-019 | Approval requirements | P1 | ⬜ open |
 | KR-020 | Scheduled publish | P1 | ⬜ open |
@@ -55,15 +55,15 @@
 | KR-022 | Duplicate / clone article | P1 | ⬜ open |
 | KR-023 | Suggestions mode (track changes) | P2 | ⬜ open |
 | KR-024 | Content health score | P2 | ⬜ open |
-| KR-025 | Block-level comment threads | P0 | ⬜ open |
-| KR-026 | Text-selection inline comments | P0 | ⬜ open |
-| KR-027 | Threaded replies | P0 | ⬜ open |
-| KR-028 | @mention in comments & blocks | P0 | ⬜ open |
+| KR-025 | Block-level comment threads | P0 | ✅ done · 2026-06-16 |
+| KR-026 | Text-selection inline comments | P0 | ✅ done · 2026-06-16 |
+| KR-027 | Threaded replies | P0 | ✅ done · 2026-06-16 |
+| KR-028 | @mention in comments & blocks | P0 | ✅ done · 2026-06-16 |
 | KR-029 | Reactions on comments & articles | P1 | ⬜ open |
 | KR-030 | Comment digest notifications | P1 | ⬜ open |
 | KR-031 | Comment draft auto-save | P2 | ⬜ open |
 | KR-032 | External reviewer comments | P2 | ⬜ open |
-| KR-033 | Persistent page tree sidebar | P0 | ⬜ open |
+| KR-033 | Persistent page tree sidebar | P0 | ✅ done · 2026-06-16 |
 | KR-034 | Tags / labels | P1 | ⬜ open |
 | KR-035 | Starred / favorites | P1 | ⬜ open |
 | KR-036 | Recently viewed | P1 | ⬜ open |
@@ -71,8 +71,8 @@
 | KR-038 | Bulk operations | P1 | ⬜ open |
 | KR-039 | Article moves across spaces | P2 | ⬜ open |
 | KR-040 | Backlinks pane | P2 | ⬜ open |
-| KR-041 | Full-text search across content | P0 | ⬜ open |
-| KR-042 | Search result excerpts | P0 | ⬜ open |
+| KR-041 | Full-text search across content | P0 | ✅ done · 2026-06-16 |
+| KR-042 | Search result excerpts | P0 | ✅ done · 2026-06-16 |
 | KR-043 | Advanced search filters | P1 | ⬜ open |
 | KR-044 | AI semantic search | P1 | ⬜ open |
 | KR-045 | Related articles recommendations | P1 | ⬜ open |

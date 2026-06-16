@@ -7,6 +7,18 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-28 [premium] — Narrative activity feed: event-to-sentence renderer, ActivityFeed molecule, detail panel Activity tab upgrade (2026-06-16)
+
+**`src/lib/activity-feed.js` (new):** Pure event-to-sentence renderer with no JSX or React dependency. `eventToSentence(event)` maps 13 known `eventType` strings to human-readable sentences using payload fields (`assigneeName`, `toStatus`, `sprintName`, etc.) and falls back gracefully to a cleaned-up version of the type string for unknown events. `groupEventsByDay(events)` groups the event array by calendar date and returns the groups newest-first as `[{ date, events[] }]`.
+
+**`src/components/works/molecules/activity-feed.jsx` (new):** Narrative activity feed molecule. Renders events grouped by day under semantic `<h3>` day headers ("Today" / "Yesterday" / "1 Jun"), each event row showing an `Avatar` (initials), the sentence from `eventToSentence`, and a `<time>` relative-time stamp from `format.js`. Loading state: 4 skeleton rows (`animate-pulse bg-neutral-100`). Empty state: `EmptyState` atom with `Activity` icon. WCAG: `<ul>` list, `<li>` per event, day headers carry `aria-label="Activity on YYYY-MM-DD"`, `<time>` elements with ISO `dateTime` attribute.
+
+**`src/hooks/queries/useWorkItemActivity.js` (new):** TanStack Query hook. Calls `GET /api/v1/work-items/{id}/events?workspaceId=...` via `apiClient`. Falls back to `[]` on error so the feed renders the empty state without throwing when the endpoint is not yet live. 30 s staleTime (activity is append-only). Key factory `workItemActivityKeys` added to `src/hooks/queries/keys.js`.
+
+**`src/components/works/organisms/work-item-detail/activity-tab.jsx` (upgraded):** Replaces the old inline-fetch + dot-indicator UI with the new `ActivityFeed` molecule backed by `useWorkItemActivity`. Normalises both camelCase and snake_case API shapes. Legacy props (`activity`, `setActivity`, `activityEventFilter`, `setActivityEventFilter`, `reportError`) accepted via rest spread for call-site stability — no changes needed in `work-item-detail-panel.jsx` beyond passing `activeWorkspaceId` and `currentUser`.
+
+**Tests:** 24 unit tests in `src/lib/activity-feed.test.js` (all 13 sentence generators + fallback + `groupEventsByDay` grouping/ordering/edge cases). 15 component tests in `src/components/works/molecules/activity-feed.test.jsx` (loading skeletons, empty state, sentence rendering, actor names, day grouping/ordering, WCAG semantics). All 39 tests pass.
+
 ## WI-27 [benchmark] — AI-native UX: aiAssistClient, useAiAssist, AiAssistButton, StreamingText, Today nudges — all with documented fallbacks (2026-06-16)
 
 **`src/lib/ai-assist.js` (new):** AI assist API client wrapping three endpoints (`/ai/assist/suggest-description`, `/ai/assist/stream`, `/ai/today-nudges`). Every method documents its deterministic fallback — `suggestDescription` and `getTodayNudges` catch errors and return `{ result: null, fallback: true }` / `{ nudges: [], fallback: true }` respectively; `streamComplete` returns `null` when the EventSource cannot be created. Callers always have a safe value; no surface silently degrades (RB-40 §2). Uses `api.send` exclusively — no inline fetch.

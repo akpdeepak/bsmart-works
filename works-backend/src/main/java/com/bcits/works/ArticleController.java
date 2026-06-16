@@ -235,7 +235,10 @@ public class ArticleController {
             } else if (ci.startsWith("gradient:") || ci.startsWith("https://") || ci.startsWith("http://")) {
                 a.setCoverImage(ci);
             } else {
-                throw ApiException.badRequest("INVALID_COVER_IMAGE", "coverImage must be null, a gradient key, or an http(s) URL.", "coverImage");
+                throw ApiException.badRequest(
+                        "INVALID_COVER_IMAGE",
+                        "coverImage must be null, a gradient key, or an http(s) URL.",
+                        "coverImage");
             }
             // KR-010: icon — null to reset; short emoji or lucide: prefix
             a.setIcon(updated.getIcon());

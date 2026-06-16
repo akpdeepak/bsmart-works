@@ -165,6 +165,7 @@ export function WorkItemDetailPanel({
             <ActivityTab
               selectedItem={selectedItem} activity={activity} setActivity={setActivity}
               statusMetrics={statusMetrics} activityEventFilter={activityEventFilter} setActivityEventFilter={setActivityEventFilter} reportError={reportError}
+              activeWorkspaceId={activeWorkspaceId} currentUser={currentUser}
             />
           )}
         </div>

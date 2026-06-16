@@ -7,6 +7,47 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-23 [premium] — Elevation/density spec: `useDensity()` hook, `DensityToggle` atom, CSS custom properties, shared `DENSITY_PAD` token map (2026-06-16)
+
+**Density configuration library (`src/lib/density.js`):**
+Single source of truth for density tokens exported to all consumers: `DENSITY_LEVELS`, `DENSITY_DEFAULT`,
+`DENSITY_STORAGE_KEY`, `DENSITY_PAD` (card/row padding), `DENSITY_GAP` (item gap), `DENSITY_ROW_Y`
+(table row vertical padding). Eliminates the local `DENSITY_PAD` map that was duplicated in `board-view.jsx`.
+
+**`useDensity()` hook (`src/hooks/use-density.js`):**
+Reads initial level from `localStorage` (key `bsmart_density`); validates against `DENSITY_LEVELS`;
+falls back to `'comfortable'`. Persists on change and syncs `document.documentElement.dataset.density`
+so CSS consumers can target `[data-density]` attribute selectors directly. Invalid levels are silently
+ignored. Lazy initializer avoids SSR / storage-exception risk.
+
+**`DensityToggle` atom (`src/components/works/atoms/density-toggle.jsx`):**
+Segmented control using `role="group"` + per-button `aria-pressed`. Tokens only — no raw hex, no
+arbitrary values. Five interactive states covered (default / hover / focus-visible / active / capitalize).
+Storybook stories added (Default / Compact / Spacious, all interactive via `useState`).
+
+**CSS density spec (`src/index.css`):**
+`--dp-card` / `--dp-gap` / `--dp-row-y` custom properties declared under `:root` (comfortable default)
+and `[data-density="compact"]` / `[data-density="spacious"]` overrides. Enables CSS-only density
+consumers without JS coupling; Tailwind consumers continue to use the token maps.
+
+**App.jsx integration:**
+`const [density, setDensity] = useState('comfortable')` replaced with `const { density, setDensity } = useDensity()`.
+Density preference now persists across sessions and is reflected on `<html data-density="...">`.
+
+**board-view.jsx integration:**
+Local `DENSITY_PAD` map and `DENSITY` i18n array removed. `DENSITY_PAD` now imported from `lib/density`.
+Inline density toggle div replaced with `<DensityToggle density={density} setDensity={setDensity} />`.
+Board-view density feature is fully preserved — only the implementation source changed.
+
+**Tests (15 passing):**
+- `use-density.test.js` (8 tests): default fallback, localStorage read, invalid-value fallback,
+  setDensity updates state, invalid level is no-op, persists to localStorage, sets `dataset.density` on
+  change and on initial render.
+- `density-toggle.test.jsx` (7 tests): renders 3 buttons, aria-pressed active/inactive, rerender
+  tracks prop change, click calls setDensity with correct level, role+label on container, className forwarding.
+
+Branch: `claude/bsmart-uiux-program-u9u4os`
+
 ## WI-22 [consistency] — WCAG 2.2 AA inclusivity: CB-safe palette, high-contrast theme, SR chart fallback, neutral-400 audit (2026-06-15)
 
 **Colour-blind-safe chart palette (`chart-palette.js`):**

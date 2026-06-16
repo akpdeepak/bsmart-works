@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Star, SquarePen, X } from 'lucide-react';
+import { DensityToggle } from '@/components/works/atoms/density-toggle';
+import { DENSITY_PAD } from '@/lib/density';
 import { BoardWipBadge } from '@/components/works/organisms/board-wip-badge';
 import { WorkItemFilterBar } from '@/components/works/organisms/work-item-filter-bar';
 import { BulkEditBar } from '@/components/works/organisms/bulk-edit-bar';
@@ -24,14 +26,6 @@ const FALLBACK_COLUMNS = [
   { key: 'done',        name: 'Done',        category: 'DONE',        labelKey: 'deliver.board.colDone',       dot: 'bg-semantic-success', limitKey: 'doneLimit' },
 ];
 
-
-const DENSITY = [
-  { key: 'compact',     labelKey: 'deliver.board.density.compact' },
-  { key: 'comfortable', labelKey: 'deliver.board.density.comfortable' },
-  { key: 'spacious',    labelKey: 'deliver.board.density.spacious' },
-];
-
-const DENSITY_PAD = { compact: 'p-2', comfortable: 'p-3', spacious: 'p-4' };
 
 // Returns the localized due-date label + urgency for a card; `t` is the i18n translator.
 function dueLabel(dateStr, t) {
@@ -156,14 +150,7 @@ export default function BoardView({
             />
           )}
           {/* Density toggle */}
-          <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1">
-            {DENSITY.map(d => (
-              <button key={d.key} onClick={() => setDensity(d.key)}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors capitalize ${density === d.key ? 'bg-white dark:bg-neutral-700 shadow-sm text-brand-navy' : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
-                {t(d.labelKey)}
-              </button>
-            ))}
-          </div>
+          <DensityToggle density={density} setDensity={setDensity} />
         </div>
       </div>
 

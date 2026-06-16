@@ -1,11 +1,14 @@
-import { useState } from 'react';
-import { Star, SquarePen, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Star, SquarePen, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { DensityToggle } from '@/components/works/atoms/density-toggle';
+import { Select } from '@/components/works/atoms/select';
+import { Button } from '@/components/works/button';
 import { DENSITY_PAD } from '@/lib/density';
 import { BoardWipBadge } from '@/components/works/organisms/board-wip-badge';
 import { WorkItemFilterBar } from '@/components/works/organisms/work-item-filter-bar';
 import { BulkEditBar } from '@/components/works/organisms/bulk-edit-bar';
 import { filterItems, sortItems, EMPTY_FILTERS, DEFAULT_SORT } from '@/lib/work-item-filter';
+import { GROUP_BY_OPTIONS, groupItemsIntoLanes } from '@/lib/board-swimlanes';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { Avatar } from '@/components/works/atoms/avatar';
 import { CardFieldsPopover } from '@/components/works/organisms/card-fields-popover';
@@ -89,6 +92,20 @@ export default function BoardView({
   const iv = cardPrefs?.isVisible ?? (() => true);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [sort, setSort] = useState(DEFAULT_SORT);
+  // Swimlane grouping (WI-31): an orthogonal group-by axis over the status columns. 'none' keeps the
+  // flat columns-only board. Collapsed lanes are tracked by key so the state survives re-renders.
+  const [groupBy, setGroupBy] = useState('none');
+  const [collapsedLanes, setCollapsedLanes] = useState(() => new Set());
+  const toggleLane = (key) => setCollapsedLanes((prev) => {
+    const next = new Set(prev);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next;
+  });
+  // Resolve a parentId to its title for the "group by parent" lane labels.
+  const parentTitle = useMemo(() => {
+    const byId = new Map(workItems.map((i) => [i.id, i.title]));
+    return (id) => byId.get(id) || id;
+  }, [workItems]);
   // Multi-select bulk edit (JIRA-style): pick cards, apply one change to all; the server re-checks
   // edit rights per item (RB-40 §1). Selection is by id so it survives filter/sort re-renders.
   const [selected, setSelected] = useState(() => new Set());
@@ -123,6 +140,107 @@ export default function BoardView({
   // Apply the shared filter model once; columns then group + sort the visible subset.
   const visibleItems = filterItems(workItems, filters, currentUserId);
 
+  // Lanes for the active group-by dimension (empty array in flat 'none' mode).
+  const emptyLaneLabel = groupBy === 'assignee'
+    ? t('deliver.board.group.unassigned')
+    : groupBy === 'parent'
+      ? t('deliver.board.group.noParent')
+      : t('deliver.board.group.uncategorized');
+  const lanes = groupItemsIntoLanes(visibleItems, groupBy, { userName, parentTitle, emptyLabel: emptyLaneLabel });
+
+  // Render the status-column row for a given item subset. A plain render helper (not a nested
+  // component) so it closes over the shared props without prop-drilling or remounting. `showWip`
+  // is true only on the flat board — WIP limits are a board-level, not per-lane, concept.
+  const renderColumns = (laneItems, showWip) => (
+    <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
+      {columns.map(col => {
+        // When workflow columns are active, bucket by exact status name match.
+        // When fallback columns are active, bucket by category key.
+        const colItems = sortItems(
+          laneItems.filter(i => catOf(i) === col.key),
+          sort,
+        );
+        const wipLimit = showWip ? (wipLimits[col.limitKey] ?? null) : null;
+        const overWip = wipLimit != null && colItems.length > wipLimit;
+        // Category-based column background (design tokens — RB-30 §1).
+        const colBg = col.category === 'IN_PROGRESS'
+          ? 'bg-brand-navy/5 dark:bg-neutral-800'
+          : col.category === 'DONE'
+            ? 'bg-semantic-success/5 dark:bg-neutral-800'
+            : 'bg-neutral-100 dark:bg-neutral-800';
+        return (
+          <div key={col.key}
+            className={`flex-1 min-w-56 flex flex-col ${colBg} rounded-xl p-3 ${overWip ? 'ring-1 ring-semantic-danger/40' : ''}`}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, col.key)}>
+            <div className="mb-3 px-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${col.dot}`}
+                    style={col.color ? { backgroundColor: col.color } : undefined}
+                    aria-hidden="true" />
+                  <h3 className="text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider">
+                    {col.label ?? t(col.labelKey)}
+                  </h3>
+                </div>
+                {showWip ? (
+                  <BoardWipBadge count={colItems.length} limit={wipLimit}
+                    canEdit={can('manage_projects')} onSet={(next) => setWipLimit(col.limitKey, next)} />
+                ) : (
+                  <span className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 tabular-nums">{colItems.length}</span>
+                )}
+              </div>
+              {overWip && <p className="mt-1 text-xs font-medium text-semantic-danger">{t('deliver.board.overWipLimit')}</p>}
+            </div>
+
+            <div className="space-y-2 flex-1">
+              {colItems.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed border-neutral-200 rounded-lg">
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400">{t('deliver.board.dropItemsHere')}</p>
+                </div>
+              )}
+              {colItems.map(item => (
+                <WorkCard
+                  key={item.id}
+                  item={item}
+                  category={col.key}
+                  density={density}
+                  densityPad={densityPad}
+                  iv={iv}
+                  userName={userName}
+                  customFieldDefs={customFieldDefs}
+                  statusResolver={statusResolver}
+                  onStar={toggleStar}
+                  onEdit={setSelectedItem}
+                  onDelete={handleDelete}
+                  onDragStart={handleDragStart}
+                  selectable={bulkEnabled}
+                  selected={selected.has(item.id)}
+                  onToggleSelect={toggleSelect}
+                />
+              ))}
+            </div>
+
+            <button onClick={() => {
+              // Workflow columns: col.name IS the concrete target status.
+              // Category fallback: resolve the first status of the category via statusResolver.
+              setNewItem(p => ({
+                ...p,
+                status: workflowColumns
+                  ? col.name
+                  : (statusResolver?.firstStatusOfCategory(p.type, col.key) || p.status),
+              }));
+              setIsCreateOpen(true);
+            }}
+              className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-700 rounded-lg transition-colors">
+              <span>+</span> {t('deliver.board.addItem')}
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="p-6 h-full flex flex-col">
       <div className="flex justify-between items-center mb-5">
@@ -140,6 +258,21 @@ export default function BoardView({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Group-by (swimlanes) */}
+          <label className="flex items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400">
+            <span className="hidden sm:inline">{t('deliver.board.groupBy')}</span>
+            <Select
+              selectSize="sm"
+              value={groupBy}
+              onChange={(e) => setGroupBy(e.target.value)}
+              aria-label={t('deliver.board.groupBy')}
+              className="w-auto min-w-28"
+            >
+              {GROUP_BY_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{t(`deliver.board.group.${opt}`)}</option>
+              ))}
+            </Select>
+          </label>
           {/* Fields popover */}
           {cardPrefs && (
             <CardFieldsPopover
@@ -193,87 +326,32 @@ export default function BoardView({
             </div>
           ))}
         </div>
+      ) : groupBy === 'none' ? (
+        renderColumns(visibleItems, true)
+      ) : lanes.length === 0 ? (
+        <div className="flex flex-col items-center justify-center flex-1 text-center">
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">{t('deliver.filter.noMatches')}</p>
+        </div>
       ) : (
-        <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
-          {columns.map(col => {
-            // When workflow columns are active, bucket by exact status name match.
-            // When fallback columns are active, bucket by category key.
-            const colItems = sortItems(
-              visibleItems.filter(i => catOf(i) === col.key),
-              sort,
-            );
-            const wipLimit = wipLimits[col.limitKey] ?? null;
-            const overWip = wipLimit != null && colItems.length > wipLimit;
-            // Category-based column background (design tokens — RB-30 §1).
-            const colBg = col.category === 'IN_PROGRESS'
-              ? 'bg-brand-navy/5 dark:bg-neutral-800'
-              : col.category === 'DONE'
-                ? 'bg-semantic-success/5 dark:bg-neutral-800'
-                : 'bg-neutral-100 dark:bg-neutral-800';
+        <div className="flex-1 overflow-y-auto pb-4 space-y-4">
+          {lanes.map(lane => {
+            const collapsed = collapsedLanes.has(lane.key);
             return (
-              <div key={col.key}
-                className={`flex-1 min-w-56 flex flex-col ${colBg} rounded-xl p-3 ${overWip ? 'ring-1 ring-semantic-danger/40' : ''}`}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, col.key)}>
-                <div className="mb-3 px-1">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${col.dot}`}
-                        style={col.color ? { backgroundColor: col.color } : undefined}
-                        aria-hidden="true" />
-                      <h3 className="text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider">
-                        {col.label ?? t(col.labelKey)}
-                      </h3>
-                    </div>
-                    <BoardWipBadge count={colItems.length} limit={wipLimit}
-                      canEdit={can('manage_projects')} onSet={(next) => setWipLimit(col.limitKey, next)} />
-                  </div>
-                  {overWip && <p className="mt-1 text-xs font-medium text-semantic-danger">{t('deliver.board.overWipLimit')}</p>}
-                </div>
-
-                <div className="space-y-2 flex-1">
-                  {colItems.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed border-neutral-200 rounded-lg">
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400">{t('deliver.board.dropItemsHere')}</p>
-                    </div>
-                  )}
-                  {colItems.map(item => (
-                    <WorkCard
-                      key={item.id}
-                      item={item}
-                      category={col.key}
-                      density={density}
-                      densityPad={densityPad}
-                      iv={iv}
-                      userName={userName}
-                      customFieldDefs={customFieldDefs}
-                      statusResolver={statusResolver}
-                      onStar={toggleStar}
-                      onEdit={setSelectedItem}
-                      onDelete={handleDelete}
-                      onDragStart={handleDragStart}
-                      selectable={bulkEnabled}
-                      selected={selected.has(item.id)}
-                      onToggleSelect={toggleSelect}
-                    />
-                  ))}
-                </div>
-
-                <button onClick={() => {
-                  // Workflow columns: col.name IS the concrete target status.
-                  // Category fallback: resolve the first status of the category via statusResolver.
-                  setNewItem(p => ({
-                    ...p,
-                    status: workflowColumns
-                      ? col.name
-                      : (statusResolver?.firstStatusOfCategory(p.type, col.key) || p.status),
-                  }));
-                  setIsCreateOpen(true);
-                }}
-                  className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-700 rounded-lg transition-colors">
-                  <span>+</span> {t('deliver.board.addItem')}
-                </button>
-              </div>
+              <section key={lane.key} aria-label={lane.label}>
+                <Button
+                  variant="ghost"
+                  fullWidth
+                  onClick={() => toggleLane(lane.key)}
+                  aria-expanded={!collapsed}
+                  className="justify-start gap-1.5 mb-2 px-1 py-1 h-auto">
+                  {collapsed
+                    ? <ChevronRight className="h-4 w-4 text-neutral-600 dark:text-neutral-400" aria-hidden="true" />
+                    : <ChevronDown className="h-4 w-4 text-neutral-600 dark:text-neutral-400" aria-hidden="true" />}
+                  <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 truncate">{lane.label}</h2>
+                  <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400 tabular-nums">{lane.items.length}</span>
+                </Button>
+                {!collapsed && renderColumns(lane.items, false)}
+              </section>
             );
           })}
         </div>

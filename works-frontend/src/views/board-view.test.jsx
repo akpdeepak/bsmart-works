@@ -188,4 +188,35 @@ describe('BoardView', () => {
     // The item should not be visible (status 'Unknown' matches no column)
     expect(screen.queryByText('Orphan item')).not.toBeInTheDocument();
   });
+
+  // ── Swimlanes / group-by (WI-31) ──────────────────────────────────────────
+  const laneItems = [
+    { id: 'WI-1', title: 'Login bug',   type: 'Bug',   status: 'Todo', assigneeId: 'u1', priority: 'HIGH', tags: [], starred: false },
+    { id: 'WI-2', title: 'Signup story', type: 'Story', status: 'Done', assigneeId: null, priority: 'LOW', tags: [], starred: false },
+  ];
+
+  it('defaults to flat mode (no swimlane headings) with a group-by control present', () => {
+    render(<BoardView {...baseProps} workItems={laneItems} userName={(id) => (id === 'u1' ? 'Alice' : '')} />);
+    expect(screen.getByLabelText(/group by/i)).toBeInTheDocument();
+    // No lane <section> headings in flat mode.
+    expect(screen.queryByRole('heading', { name: 'Alice' })).not.toBeInTheDocument();
+  });
+
+  it('renders swimlane headings when grouping by assignee', () => {
+    render(<BoardView {...baseProps} workItems={laneItems} userName={(id) => (id === 'u1' ? 'Alice' : '')} />);
+    fireEvent.change(screen.getByLabelText(/group by/i), { target: { value: 'assignee' } });
+    expect(screen.getByRole('heading', { name: 'Alice' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /unassigned/i })).toBeInTheDocument();
+    expect(screen.getByText('Login bug')).toBeInTheDocument();
+  });
+
+  it('collapses a lane when its header is clicked', () => {
+    render(<BoardView {...baseProps} workItems={laneItems} userName={(id) => (id === 'u1' ? 'Alice' : '')} />);
+    fireEvent.change(screen.getByLabelText(/group by/i), { target: { value: 'assignee' } });
+    const aliceHeader = screen.getByRole('button', { expanded: true, name: /Alice/ });
+    fireEvent.click(aliceHeader);
+    expect(screen.getByRole('button', { expanded: false, name: /Alice/ })).toBeInTheDocument();
+    // The collapsed lane's card is no longer rendered.
+    expect(screen.queryByText('Login bug')).not.toBeInTheDocument();
+  });
 });

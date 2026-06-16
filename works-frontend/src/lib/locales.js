@@ -380,6 +380,16 @@ export const MESSAGES = {
     'deliver.board.addItem': 'Add item',
     'deliver.board.showing': 'showing',
     'deliver.board.of': 'of',
+    // Swimlanes / group-by (WI-31). English source; other locales fall back pending the i18n pass.
+    'deliver.board.groupBy': 'Group by',
+    'deliver.board.group.none': 'None',
+    'deliver.board.group.assignee': 'Assignee',
+    'deliver.board.group.type': 'Type',
+    'deliver.board.group.priority': 'Priority',
+    'deliver.board.group.parent': 'Parent',
+    'deliver.board.group.unassigned': 'Unassigned',
+    'deliver.board.group.noParent': 'No parent',
+    'deliver.board.group.uncategorized': 'Uncategorized',
     // Shared Deliver filter/sort bar (Board, Backlog, Sprint). English source; other locales
     // fall back to English until a localization pass externalizes them (translate() handles this).
     'deliver.filter.search': 'Search items…',

@@ -6,7 +6,7 @@
 
 import { createPortal } from 'react-dom';
 import { useRef, useLayoutEffect, useState } from 'react';
-import { Bold, Italic, Strikethrough, Code, Link2, Type, Highlighter } from 'lucide-react';
+import { Bold, Italic, Strikethrough, Code, Link2, Type, Highlighter, Wand2 } from 'lucide-react';
 
 // Each tool defines the asymmetric syntax pair — startSyntax wraps before the selection,
 // endSyntax wraps after. Symmetric marks use the same string for both sides.
@@ -47,7 +47,9 @@ const HIGHLIGHT_COLORS = [
  * @param {{ rect: DOMRect|null, onWrap: (start:string, end:string)=>void, onDismiss: ()=>void }} props
  * rect — bounding box of the selection (viewport-relative); null = hidden.
  */
-export function SelectionToolbar({ rect, onWrap, onDismiss }) {
+const SIMPLIFY_GRADES = [6, 8, 12];
+
+export function SelectionToolbar({ rect, onWrap, onSimplify }) {
   const ref = useRef(null);
   const [palette, setPalette] = useState(null); // 'text' | 'bg' | null
 
@@ -124,10 +126,29 @@ export function SelectionToolbar({ rect, onWrap, onDismiss }) {
         >
           <Highlighter aria-hidden="true" className="h-3.5 w-3.5" />
         </button>
+
+        {/* KR-076: Simplify button — only shown when the parent provides onSimplify */}
+        {onSimplify && (
+          <>
+            <span aria-hidden="true" className="w-px h-3.5 bg-neutral-700 mx-0.5 flex-shrink-0" />
+            <button
+              type="button"
+              title="Simplify"
+              aria-label="Simplify"
+              aria-haspopup="true"
+              aria-expanded={palette === 'simplify'}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setPalette((p) => (p === 'simplify' ? null : 'simplify'))}
+              className="rounded p-1.5 text-neutral-200 hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            >
+              <Wand2 aria-hidden="true" className="h-3.5 w-3.5" />
+            </button>
+          </>
+        )}
       </div>
 
       {/* KR-005: color/highlight palette sub-row */}
-      {palette && (
+      {palette && palette !== 'simplify' && (
         <div
           role="group"
           aria-label={palette === 'text' ? 'Text color palette' : 'Highlight color palette'}
@@ -146,6 +167,24 @@ export function SelectionToolbar({ rect, onWrap, onDismiss }) {
               }}
               className={`h-4 w-4 rounded-sm ${swatch} ring-1 ring-white/10 hover:ring-2 hover:ring-white/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60`}
             />
+          ))}
+        </div>
+      )}
+
+      {/* KR-076: Simplify grade sub-row */}
+      {palette === 'simplify' && (
+        <div className="flex items-center gap-0.5 px-1.5 pb-1.5">
+          {SIMPLIFY_GRADES.map((grade) => (
+            <button
+              key={grade}
+              type="button"
+              aria-label={`Simplify to grade ${grade}`}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { onSimplify(`grade:${grade}`); setPalette(null); }}
+              className="rounded px-2 py-1 text-xs text-neutral-200 hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            >
+              {`Grade ${grade}`}
+            </button>
           ))}
         </div>
       )}

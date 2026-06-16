@@ -5,11 +5,12 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   BookOpen, Terminal, Scale, AlertTriangle, Users, Wrench, FileText,
-  Smile, LayoutTemplate,
+  LayoutTemplate,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Default icon per article template type (Lucide component).
+// eslint-disable-next-line react-refresh/only-export-components
 export const TEMPLATE_ICONS = {
   KB:               BookOpen,
   RUNBOOK:          Terminal,

@@ -4,6 +4,13 @@ import { DonutChart } from '@/components/works/molecules';
 import { Layers, Package, BarChart2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { TodayCard, HealthRing, MiniBar, Empty, TodaySurface } from './_shared';
 import { getTimeOfDay as getGreeting } from '@/lib/utils';
+import {
+  HeartDashboardWidget,
+  ActivationFunnelWidget,
+  EngagementScoreWidget,
+  RetentionMetricsWidget,
+  TaskSuccessWidget,
+} from '@/components/works/widgets/heart-widgets';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PRODUCT OWNER
@@ -135,6 +142,31 @@ const PRODUCT_OWNER_REGISTRY = {
       </div>
     </TodayCard>
   ),
+  'heart-dashboard': (ctx) => (
+    <TodayCard title="" icon={null}>
+      <HeartDashboardWidget workspaceId={ctx.activeWorkspaceId} />
+    </TodayCard>
+  ),
+  'activation-funnel': (ctx) => (
+    <TodayCard title="" icon={null}>
+      <ActivationFunnelWidget workspaceId={ctx.activeWorkspaceId} />
+    </TodayCard>
+  ),
+  'engagement-score': (ctx) => (
+    <TodayCard title="" icon={null}>
+      <EngagementScoreWidget workspaceId={ctx.activeWorkspaceId} />
+    </TodayCard>
+  ),
+  'retention-metrics': (ctx) => (
+    <TodayCard title="" icon={null}>
+      <RetentionMetricsWidget workspaceId={ctx.activeWorkspaceId} />
+    </TodayCard>
+  ),
+  'task-success': (ctx) => (
+    <TodayCard title="" icon={null}>
+      <TaskSuccessWidget workspaceId={ctx.activeWorkspaceId} />
+    </TodayCard>
+  ),
   ungroomed: (ctx) => (
     <TodayCard
       title={`Ungroomed items${ctx.ungroomedCount > ctx.ungroomed.length ? ` (${ctx.ungroomedCount})` : ''}`}
@@ -168,7 +200,7 @@ const PRODUCT_OWNER_REGISTRY = {
   ),
 };
 
-export function ProductOwnerToday({ data, currentUser, setView, layout, builtinLayout, edit }) {
+export function ProductOwnerToday({ data, currentUser, activeWorkspaceId, setView, layout, builtinLayout, edit }) {
   const firstName = currentUser?.fullName?.split(' ')[0] || 'there';
   const upcoming = data?.upcomingReleases || [];
   const allReleases = data?.releases || [];
@@ -196,6 +228,7 @@ export function ProductOwnerToday({ data, currentUser, setView, layout, builtinL
   const ctx = {
     upcoming, allReleases, ungroomed, ungroomedCount, priorityDist, backlogByType,
     featureStats, featurePct, totalBacklog, maxPri, groomedPct, releaseReadiness, setView,
+    activeWorkspaceId,
   };
 
   return (

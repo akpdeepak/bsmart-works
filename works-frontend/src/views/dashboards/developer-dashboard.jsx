@@ -12,6 +12,13 @@ import { getTimeOfDay as getGreeting } from '@/lib/utils';
 import { useWorkspaceSetup } from '@/hooks/queries/useWorkspaceSetup';
 import { useQuery } from '@tanstack/react-query';
 import { aiAssistClient } from '@/lib/ai-assist';
+import {
+  HeartDashboardWidget,
+  ActivationFunnelWidget,
+  EngagementScoreWidget,
+  RetentionMetricsWidget,
+  TaskSuccessWidget,
+} from '@/components/works/widgets/heart-widgets';
 
 // ── Setup-completeness widget ─────────────────────────────────────────────────
 
@@ -216,6 +223,32 @@ const DEVELOPER_REGISTRY = {
   ),
   'setup-completeness': (ctx) => (
     <SetupCompletenessWidget workspaceId={ctx.activeWorkspaceId} />
+  ),
+  // ── WI-06–10: HEART metrics + activation funnel ──────────────────────────
+  'heart-dashboard': (ctx) => (
+    <TodayCard title="" icon={null}>
+      <HeartDashboardWidget workspaceId={ctx.activeWorkspaceId} />
+    </TodayCard>
+  ),
+  'activation-funnel': (ctx) => (
+    <TodayCard title="" icon={null}>
+      <ActivationFunnelWidget workspaceId={ctx.activeWorkspaceId} />
+    </TodayCard>
+  ),
+  'engagement-score': (ctx) => (
+    <TodayCard title="" icon={null}>
+      <EngagementScoreWidget workspaceId={ctx.activeWorkspaceId} />
+    </TodayCard>
+  ),
+  'retention-metrics': (ctx) => (
+    <TodayCard title="" icon={null}>
+      <RetentionMetricsWidget workspaceId={ctx.activeWorkspaceId} />
+    </TodayCard>
+  ),
+  'task-success': (ctx) => (
+    <TodayCard title="" icon={null}>
+      <TaskSuccessWidget workspaceId={ctx.activeWorkspaceId} />
+    </TodayCard>
   ),
 };
 

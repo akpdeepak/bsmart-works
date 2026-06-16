@@ -2,7 +2,7 @@
 // Shows threaded comment list for a block, with inline reply sub-textarea (KR-027).
 // Comments grouped as root → replies[]. Replies indented ml-8 with left border.
 // Depth capped at 1 (no sub-replies). Resolving root resolves all replies.
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Check, Reply, Trash2 } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { cn } from '@/lib/utils';
@@ -18,7 +18,7 @@ function groupComments(flat) {
   }));
 }
 
-function CommentItem({ comment, currentUserId, onResolve, onDelete, articleId, workspaceId }) {
+function CommentItem({ comment, currentUserId, onResolve, onDelete }) {
   return (
     <div className={cn('text-xs', comment.resolved && 'opacity-50')}>
       <div className="flex items-start gap-2">

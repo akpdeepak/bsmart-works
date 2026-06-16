@@ -4,7 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -89,7 +88,8 @@ class ArticleApprovalControllerTest {
     void listApprovals_memberOfWorkspace_returnsApprovals() {
         when(authenticatedUser.id()).thenReturn(REVIEWER);
         ArticleApproval a1 = new ArticleApproval();
-        a1.setId("APR-001"); a1.setDecision("APPROVED");
+        a1.setId("APR-001");
+        a1.setDecision("APPROVED");
         when(approvalRepository.findByArticleIdAndWorkspaceId(ARTICLE_ID, WS_A))
                 .thenReturn(List.of(a1));
 

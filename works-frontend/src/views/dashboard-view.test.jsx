@@ -1,6 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DashboardView from './dashboard-view';
+
+function Wrapper({ children }) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+}
 
 const noop = () => {};
 const baseProps = {
@@ -33,7 +39,7 @@ const baseProps = {
 
 describe('DashboardView (My Works home)', () => {
   it('greets the user and renders the KPI cards', () => {
-    render(<DashboardView {...baseProps} />);
+    render(<DashboardView {...baseProps} />, { wrapper: Wrapper });
     expect(screen.getByRole('heading', { name: /Deepak/ })).toBeInTheDocument();
     expect(screen.getByText('Open work items')).toBeInTheDocument();
     expect(screen.getByText('Items blocked on me')).toBeInTheDocument();
@@ -41,7 +47,7 @@ describe('DashboardView (My Works home)', () => {
 
   it('lists assigned items in the needs-attention table and opens one on click', () => {
     const setSelectedItem = vi.fn();
-    render(<DashboardView {...baseProps} setSelectedItem={setSelectedItem} />);
+    render(<DashboardView {...baseProps} setSelectedItem={setSelectedItem} />, { wrapper: Wrapper });
     const row = screen.getByText('Fix login');
     expect(row).toBeInTheDocument();
     fireEvent.click(row);
@@ -49,14 +55,14 @@ describe('DashboardView (My Works home)', () => {
   });
 
   it('renders the active-sprint ring with the completion percent', () => {
-    render(<DashboardView {...baseProps} />);
+    render(<DashboardView {...baseProps} />, { wrapper: Wrapper });
     expect(screen.getByText('Active sprint')).toBeInTheDocument();
     expect(screen.getByText('50%')).toBeInTheDocument(); // 6 of 12 items
     expect(screen.getByText(/6\/12 items/)).toBeInTheDocument();
   });
 
   it('shows the empty state when nothing is assigned', () => {
-    render(<DashboardView {...baseProps} developerDash={{ ...baseProps.developerDash, myOpenItems: [], myOpenItemCount: 0 }} />);
+    render(<DashboardView {...baseProps} developerDash={{ ...baseProps.developerDash, myOpenItems: [], myOpenItemCount: 0 }} />, { wrapper: Wrapper });
     expect(screen.getByText(/All caught up/)).toBeInTheDocument();
   });
 });

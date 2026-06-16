@@ -32,6 +32,8 @@ public class ArticleController {
     private final KnowledgeSpaceRepository knowledgeSpaceRepository;
     private final RbacService rbac;
     private final ArticleService articleService;
+    private final ArticleWatcherService articleWatcherService;
+    private final SpaceFollowerService spaceFollowerService;
 
     public ArticleController(ArticleRepository articleRepository,
                               ArticleVersionRepository articleVersionRepository,
@@ -43,7 +45,9 @@ public class ArticleController {
                               ArticleDao articleDao,
                               KnowledgeSpaceRepository knowledgeSpaceRepository,
                               RbacService rbac,
-                              ArticleService articleService) {
+                              ArticleService articleService,
+                              ArticleWatcherService articleWatcherService,
+                              SpaceFollowerService spaceFollowerService) {
         this.articleRepository = articleRepository;
         this.articleVersionRepository = articleVersionRepository;
         this.articleCommentRepository = articleCommentRepository;
@@ -56,6 +60,8 @@ public class ArticleController {
         this.knowledgeSpaceRepository = knowledgeSpaceRepository;
         this.rbac = rbac;
         this.articleService = articleService;
+        this.articleWatcherService = articleWatcherService;
+        this.spaceFollowerService = spaceFollowerService;
     }
 
     @GetMapping

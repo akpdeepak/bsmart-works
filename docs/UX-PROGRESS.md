@@ -41,6 +41,7 @@ audit. Tracks what has shipped to `main` so the state is always legible. Newest 
 
 **Tests (27 new, 3 files):** `presence.test.js` covers EventSource URL params, presence event parsing, malformed-payload swallow, cleanup/close, reconnect guard, `requestEditLock` success/denied/degraded, `releaseEditLock` error swallow. `use-article-presence.test.js` covers initial empty state, callback wiring, self-filter, cleanup, and missing-param guard. `presence-bar.test.jsx` covers null render (empty+granted), lock banner, avatar stack, +N overflow, combined state.
 
+
 ## WI-28 [premium] — Narrative activity feed: event-to-sentence renderer, ActivityFeed molecule, detail panel Activity tab upgrade (2026-06-16)
 
 **`src/lib/activity-feed.js` (new):** Pure event-to-sentence renderer with no JSX or React dependency. `eventToSentence(event)` maps 13 known `eventType` strings to human-readable sentences using payload fields (`assigneeName`, `toStatus`, `sprintName`, etc.) and falls back gracefully to a cleaned-up version of the type string for unknown events. `groupEventsByDay(events)` groups the event array by calendar date and returns the groups newest-first as `[{ date, events[] }]`.
@@ -103,6 +104,43 @@ Each change writes through `setNotifPrefs`. The inbox tab is behaviour-preserved
 - `src/lib/toast-queue.test.js` (15 tests): push to visible/queue, fill-to-MAX, queue promotion on dismiss, multiple subscribers, unsubscribe stops callbacks
 - `src/lib/notification-prefs.test.js` (15 tests): defaults when empty/invalid JSON, partial update merge, muted/snoozed/quiet-hours detection, midnight-spanning window
 - `src/components/works/atoms/toast-stack.test.jsx` (9 tests): renders from state, +N badge, dismiss calls `dismissToast`, action button, tone class, `aria-label`
+
+## WI-27 [benchmark] — AI-native UX: aiAssistClient, useAiAssist, AiAssistButton, StreamingText, Today nudges — all with documented fallbacks (2026-06-16)
+
+**`src/lib/ai-assist.js` (new):** AI assist API client wrapping three endpoints (`/ai/assist/suggest-description`, `/ai/assist/stream`, `/ai/today-nudges`). Every method documents its deterministic fallback — `suggestDescription` and `getTodayNudges` catch errors and return `{ result: null, fallback: true }` / `{ nudges: [], fallback: true }` respectively; `streamComplete` returns `null` when the EventSource cannot be created. Callers always have a safe value; no surface silently degrades (RB-40 §2). Uses `api.send` exclusively — no inline fetch.
+
+**`src/hooks/use-ai-assist.js` (new):** React hook managing the three async states: `suggesting` (one-shot description request in-flight), `streaming` (SSE token stream open), `fallback` (AI off/over-budget/unavailable). `startStream` closes any prior EventSource before opening a new one; a cleanup effect closes on unmount so connections are never leaked. `suggestDescription` returns the suggestion string or null with `fallback=true` set.
+
+**`src/components/works/molecules/ai-assist-button.jsx` (new):** Reusable AI trigger with three visual states — idle (`Sparkles` icon + label), suggesting (`Loader2` spin + "Thinking…"), fallback (renders `null`). When `fallback=true` the button is entirely absent from the DOM; the manual field is always the only path (RB-40 §2 clean-degradation contract). Uses design tokens (`brand-navy`, `ghost` button variant) and proper `aria-label` per state.
+
+**`src/components/works/atoms/streaming-text.jsx` (new):** Token-streaming text display with a blinking cursor (`animate-pulse` on a `brand-navy` `w-0.5 h-4` span) while `streaming=true`. `aria-live="polite"` announces incremental content to screen readers; `aria-label` is set during streaming for assistive tech that doesn't support live regions. Cursor is `aria-hidden`.
+
+**`src/components/works/organisms/work-item-detail/details-tab.jsx` — AI assist wired into description field:** Imports `useAiAssist` and `AiAssistButton`. The description label row becomes a flex row with the label on the left and `AiAssistButton` on the right. Clicking calls `suggestDescription({ title, type })`; if a suggestion returns it is applied to the description field and saved. Button is disabled when `workspaceId` or `title` is absent. Fallback: button renders null — textarea is always present (RB-40 §2).
+
+**`src/views/dashboards/developer-dashboard.jsx` — TodayNudges section (new):** `TodayNudges` component queries `/ai/today-nudges` via TanStack Query (`staleTime: 5 min`) and renders a "Suggested focus" card with `Sparkles` icon per nudge. When `fallback=true` or nudges are empty the section is entirely absent — clean degradation, no empty placeholder (RB-40 §2). Wired above the `TodaySurface` in `DeveloperToday`.
+
+**Tests (new — 34 passing):**
+- `src/lib/ai-assist.test.js` — 10 tests: success and fallback paths for `suggestDescription`, `getTodayNudges` (including 403/503 error scenarios), URL param verification; `streamComplete` EventSource construction, URL params, and token injection.
+- `src/components/works/molecules/ai-assist-button.test.jsx` — 12 tests: idle render, custom label, click handler, suggesting state (text + aria + disabled), fallback state (null), suggesting+fallback combo, disabled prop, className passthrough.
+- `src/components/works/atoms/streaming-text.test.jsx` — 9 tests: text content, empty text, cursor presence when streaming, no cursor when not streaming, `aria-live`, `aria-label` during/after streaming, className passthrough.
+
+**Fallback contract (RB-40 §2) summary:** every AI surface in this WI has a documented deterministic fallback: description textarea always present, Today dashboard always renders its manual layout, streaming text degrades to static textarea. No surface depends on AI being available.
+
+## WI-29 [benchmark] — Real-time collaborative knowledge editor: SSE presence, soft-lock, template picker (2026-06-16)
+
+**`src/lib/presence.js` (new):** SSE-based article co-presence client. `joinArticlePresence` opens an EventSource at `/api/v1/knowledge/presence?workspaceId=&articleId=&userId=`, parses `presence` events into `PresenceUser[]`, sends a POST heartbeat every 15 s so the server can detect stale viewers, and auto-reconnects on error after 3 s. Returns a `leave()` cleanup function that closes the SSE stream and posts `/knowledge/presence/leave`. `requestEditLock` and `releaseEditLock` hit the soft-lock endpoints with graceful degradation — if the lock endpoint is unavailable, `requestEditLock` returns `{ granted: true }` so the user can always edit (optimistic mode). All calls go through `api.send` (no inline fetch).
+
+**`src/hooks/use-article-presence.js` (new):** Thin React wrapper around `joinArticlePresence`. Opens the SSE stream on mount, closes it on unmount, filters the current user out of the viewer list. Returns `PresenceUser[]`.
+
+**`src/hooks/use-edit-lock.js` (new):** Manages the soft edit lock lifecycle. Acquires the lock when `editingArticle` becomes true, releases on `false` or unmount. Uses an async IIFE pattern inside `useEffect` to satisfy `react-hooks/set-state-in-effect`. Returns `{ lockGranted, lockedBy }`.
+
+**`src/components/works/molecules/presence-bar.jsx` (new):** Compact co-viewer avatar row + soft-lock banner. Shows up to 4 Avatar chips with a `+N` overflow chip for more. When `lockGranted=false`, renders a `semantic-warning` banner: "{lockedBy} is editing — you are in read-only mode". Renders `null` when there are no viewers and the lock is granted (zero DOM cost for solo authors). Full WCAG 2.1 AA: `role="status"`, `aria-label` on avatar stack, `aria-hidden` on decorative icons.
+
+**`src/components/knowledge/TemplatePickerModal.jsx` (new):** Template picker modal. Opens from a "From template" button in the article list header. Fetches workspace templates via the existing `templatesClient`. Selecting a template calls `onApplyTemplate(template)` then pre-fills the new-article form with the template body + category. Graceful degradation for load errors. Uses the `Modal` atom (focus trap, scroll lock, Escape-to-close).
+
+**`src/views/knowledge-view.jsx` (wired):** Added `LayoutTemplate` import; `currentUser` prop; `useArticlePresence` + `useEditLock` hooks; `<PresenceBar>` in the article header (above the action row); `readOnly={!lockGranted}` on `BlockEditor`; "From template" button in the space/article list header; `<TemplatePickerModal>` portal. Change is minimal — no restructuring.
+
+**Tests (27 new, 3 files):** `presence.test.js` covers EventSource URL params, presence event parsing, malformed-payload swallow, cleanup/close, reconnect guard, `requestEditLock` success/denied/degraded, `releaseEditLock` error swallow. `use-article-presence.test.js` covers initial empty state, callback wiring, self-filter, cleanup, and missing-param guard. `presence-bar.test.jsx` covers null render (empty+granted), lock banner, avatar stack, +N overflow, combined state.
 
 ## WI-25 [benchmark] — Performance pass: virtual list hook, DataTable virtualization, prefetch-on-hover, CI perf budget (2026-06-16)
 

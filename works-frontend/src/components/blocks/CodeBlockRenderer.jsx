@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import DOMPurify from 'dompurify';
 
 // Language menu shown in BlockEditor edit mode (≈20 common languages + plaintext fallback).
+// eslint-disable-next-line react-refresh/only-export-components
 export const CODE_LANGUAGES = [
   'plaintext', 'javascript', 'typescript', 'jsx', 'tsx',
   'java', 'python', 'sql', 'bash', 'shell',

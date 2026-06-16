@@ -52,7 +52,7 @@
 | KR-019 | Approval requirements | P1 | ✅ done · 2026-06-16 |
 | KR-020 | Scheduled publish | P1 | ✅ done · 2026-06-16 |
 | KR-021 | Article expiry / review-by date | P1 | ✅ done · 2026-06-16 |
-| KR-022 | Duplicate / clone article | P1 | ⬜ open |
+| KR-022 | Duplicate / clone article | P1 | ✅ done · 2026-06-16 |
 | KR-023 | Suggestions mode (track changes) | P2 | ⬜ open |
 | KR-024 | Content health score | P2 | ⬜ open |
 | KR-025 | Block-level comment threads | P0 | ✅ done · 2026-06-16 |
@@ -68,7 +68,7 @@
 | KR-035 | Starred / favorites | P1 | ✅ done |
 | KR-036 | Recently viewed | P1 | ✅ done · 2026-06-16 |
 | KR-037 | Space home page | P1 | ⬜ open |
-| KR-038 | Bulk operations | P1 | ⬜ open |
+| KR-038 | Bulk operations | P1 | ✅ done · 2026-06-16 |
 | KR-039 | Article moves across spaces | P2 | ⬜ open |
 | KR-040 | Backlinks pane | P2 | ⬜ open |
 | KR-041 | Full-text search across content | P0 | ✅ done · 2026-06-16 |

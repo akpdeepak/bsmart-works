@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.HttpStatus;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 

@@ -18,6 +18,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -84,7 +85,7 @@ class SpaceFollowerServiceTest {
         svc.notifyFollowers(SPACE, WORKSPACE, ARTICLE, USER);
 
         // user-2 and user-3 are NOT the actor so both get events
-        verify(events).recordInWorkspace(eq(WORKSPACE), eq(SPACE), eq("SPACE_ARTICLE_PUBLISHED"),
+        verify(events, times(2)).recordInWorkspace(eq(WORKSPACE), eq(SPACE), eq("SPACE_ARTICLE_PUBLISHED"),
                 eq(USER), any());
     }
 

@@ -47,14 +47,10 @@ class KnowledgeTenantIsolationTest {
     private final ArticleDao articleDao = mock(ArticleDao.class);
     private final KnowledgeSpaceRepository spaceRepository = mock(KnowledgeSpaceRepository.class);
     private final RbacService rbac = mock(RbacService.class);
-    private final ArticleService articleService = mock(ArticleService.class);
-    private final ArticleWatcherService articleWatcherService = mock(ArticleWatcherService.class);
-    private final SpaceFollowerService spaceFollowerService = mock(SpaceFollowerService.class);
 
     private final ArticleController articles = new ArticleController(
         articleRepository, articleVersionRepository, articleCommentRepository, workflowService,
-        analyticsService, diffService, eventService, authenticatedUser, articleDao, spaceRepository, rbac,
-        articleService, articleWatcherService, spaceFollowerService);
+        analyticsService, diffService, eventService, authenticatedUser, articleDao, spaceRepository, rbac);
     private final KnowledgeSpaceController spaces = new KnowledgeSpaceController(
         spaceRepository, articleRepository, eventService, authenticatedUser, rbac);
 

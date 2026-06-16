@@ -14,7 +14,7 @@ import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { Skeleton } from '@/components/works/atoms/skeleton';
 import { Card as AtomCard, CardHeader, CardTitle, CardBody } from '@/components/works/atoms/card';
-import { PageHeader } from '@/components/works/atoms/page-header';
+import { PageLayout } from '@/components/works/templates/page-layout';
 import { Tabs, TabList, Tab, TabPanel } from '@/components/works/atoms/tabs';
 import { adminOpsClient } from '@/lib/adminOps';
 import { formatNumber, smartDate } from '@/lib/format';
@@ -113,12 +113,10 @@ export default function AdminOpsView({ workspaceId, onToast }) {
   const refresh = () => { setLoading(true); setError(null); load(tab, { alive: true }); };
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto">
-      <PageHeader
-        title="Admin Operations Center"
-        description="Operate the workspace — users, seats, cost, integrations, access and compliance."
-        className="mb-6"
-      />
+    <PageLayout
+      title="Admin Operations Center"
+      description="Operate the workspace — users, seats, cost, integrations, access and compliance."
+    >
 
       <Tabs value={tab} onValueChange={selectTab}>
         <TabList aria-label="Admin operations" className="mb-6 overflow-x-auto gap-1">
@@ -154,7 +152,7 @@ export default function AdminOpsView({ workspaceId, onToast }) {
         <TabPanel value="access">{!error && !loading && <AccessTab workspaceId={workspaceId} data={data.access} onChanged={refresh} notify={notify} />}</TabPanel>
         <TabPanel value="evidence">{!error && !loading && <EvidenceTab workspaceId={workspaceId} data={data.evidence} onChanged={refresh} notify={notify} />}</TabPanel>
       </Tabs>
-    </div>
+    </PageLayout>
   );
 }
 

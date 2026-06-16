@@ -10,6 +10,7 @@ import {
   GitBranch, Presentation, RefreshCw, Wand2,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
+import { PageLayout } from '@/components/works/templates/page-layout';
 import { AiMetaBadge } from '@/components/works/ai-meta-badge';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { Skeleton } from '@/components/works/atoms/skeleton';
@@ -142,11 +143,10 @@ export default function LeadershipConsoleView({ workspaceId, onToast }) {
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Leadership Console</h1>
-        <p className="text-sm text-neutral-600 dark:text-neutral-400">Cross-team rollup, strategy and risk — at a glance.</p>
-      </div>
+    <PageLayout
+      title="Leadership Console"
+      description="Cross-team rollup, strategy and risk — at a glance."
+    >
 
       <div className="flex gap-1 overflow-x-auto border-b border-neutral-200 dark:border-neutral-700 mb-6" role="tablist">
         {TABS.map(({ id, label, Icon }) => (
@@ -195,7 +195,7 @@ export default function LeadershipConsoleView({ workspaceId, onToast }) {
           {tab === 'deck' && <DeckTab data={data.deck} busy={deckBusy} onGenerate={generateDeck} />}
         </div>
       )}
-    </div>
+    </PageLayout>
   );
 }
 

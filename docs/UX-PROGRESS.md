@@ -192,6 +192,31 @@ update + 409-safe rollback:
 server-item swap, snapshot rollback, empty-cache create, caller onError propagation × 2;
 status optimistic, sibling isolation, rollback, server adoption, caller onError propagation).
 
+---
+
+## WI-19 [consistency] — 5 new atom stories + Chromatic CI (139 stories total) (2026-06-15)
+
+Storybook already had 108 stories across 17 files (≥50 target met by prior WIs). This WI adds
+31 more stories for 5 atoms that had no coverage, and wires Chromatic visual regression into CI.
+
+**New story files (31 stories):**
+- `empty-state.stories.jsx` — 6 stories: default · with-action · search-no-results · error-state · no-team-members · no-subtitle
+- `avatar.stories.jsx` — 8 stories: xs/sm/md/lg sizes · single-word · no-name · default · avatar-group
+- `input.stories.jsx` — 8 stories: default · small · large · error · disabled · with-value · with-label · with-label-and-error
+- `collapsible.stories.jsx` — 4 stories: open-by-default · closed-by-default · no-count · nested-sections
+- `toast.stories.jsx` — 5 stories: success · error · undo-with-action · undo-without-action · empty
+
+**Chromatic CI job** — new `chromatic` job in `ci.yml`: runs on every push + PR from the same
+repo, uses `chromaui/action@latest` with `CHROMATIC_PROJECT_TOKEN` secret. `exitZeroOnChanges:
+true` so visual diffs are reviewed in the Chromatic UI (non-blocking gate — visual review is
+a human responsibility, not an automated binary).
+
+**Total: 139 stories across 22 files.** Baseline for WI-44 (Premium Bar).
+
+Branch: `feat/uiux-wi19-storybook`.
+
+---
+
 ## WI-09 [benchmark] — HEART activation-funnel instrumentation (2026-06-15)
 
 Server-side funnel telemetry wired into the events store via a new `FunnelService`. No PII,

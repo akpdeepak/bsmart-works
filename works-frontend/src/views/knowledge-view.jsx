@@ -15,6 +15,7 @@ import { ArticleIconPicker, TEMPLATE_ICONS } from '@/components/knowledge/Articl
 import { StatusBadge } from '@/components/knowledge/StatusBadge';
 import { StatusTransitionPopover } from '@/components/knowledge/StatusTransitionPopover';
 import { PageTreeSidebar } from '@/components/knowledge/PageTreeSidebar';
+import { BlockCommentsPanel } from '@/components/knowledge/BlockCommentsPanel';
 import { onPressKey, renderMd } from '@/lib/utils';
 import { blocksText } from '@/lib/doc-stats';
 import { makeAiAssist } from '@/lib/knowledge-ai';
@@ -185,6 +186,9 @@ export default function KnowledgeView({
     updateArticle(articleId, { sortOrder: newSortOrder }, { silent: true });
     setTreeVersion(v => v + 1);
   };
+
+  // KR-025: block comments panel
+  const [blockCommentPanel, setBlockCommentPanel] = useState({ open: false, blockId: null });
 
   // Navigation stack for sub-article drilling: Back returns to the direct parent article
   // rather than jumping to the flat list. Breadcrumbs show the full ancestor path.
@@ -784,6 +788,16 @@ export default function KnowledgeView({
                   </div>
                 )}
               </div>
+
+              {/* ── KR-025: Block comments panel ── */}
+              <BlockCommentsPanel
+                articleId={selectedArticle?.id}
+                blockId={blockCommentPanel.blockId}
+                workspaceId={workspaceId}
+                currentUserId={null}
+                open={blockCommentPanel.open}
+                onClose={() => setBlockCommentPanel({ open: false, blockId: null })}
+              />
 
               {/* ── Contextual side panels ── */}
               {articlePanel === 'history' && (

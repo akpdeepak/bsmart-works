@@ -85,6 +85,32 @@ describe('BlockRenderer', () => {
     expect(document.querySelector('p u')).toHaveTextContent('underline');
   });
 
+  it('highlights inline comment selection ranges with <mark> (KR-026)', () => {
+    const paragraph = { id: 'para-1', type: 'paragraph', content: 'Hello world today', metadata: {} };
+    const comments = [
+      {
+        id: 'ABC-001', blockId: 'para-1', resolved: false,
+        metadata: JSON.stringify({ selectionStart: 6, selectionEnd: 11 }),
+      },
+    ];
+    const { container } = render(<BlockRenderer blocks={[paragraph]} blockComments={comments} />);
+    const mark = container.querySelector('mark');
+    expect(mark).toBeTruthy();
+    expect(mark.textContent).toContain('world');
+  });
+
+  it('does not highlight resolved inline comments (KR-026)', () => {
+    const paragraph = { id: 'para-2', type: 'paragraph', content: 'Hello world today', metadata: {} };
+    const comments = [
+      {
+        id: 'ABC-002', blockId: 'para-2', resolved: true,
+        metadata: JSON.stringify({ selectionStart: 0, selectionEnd: 5 }),
+      },
+    ];
+    const { container } = render(<BlockRenderer blocks={[paragraph]} blockComments={comments} />);
+    expect(container.querySelector('mark')).toBeNull();
+  });
+
   it('renders a sticker emoji and a type-aware file card', () => {
     render(<BlockRenderer blocks={[
       block('sticker', '🚀', { size: 'xl' }),

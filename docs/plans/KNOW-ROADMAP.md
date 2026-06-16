@@ -99,21 +99,21 @@
 | KR-066 | Article public share link | P1 | ✅ done · 2026-06-16 |
 | KR-067 | Article subscriptions / watch | P1 | ✅ done · 2026-06-16 |
 | KR-068 | Follow a space | P1 | ✅ done · 2026-06-16 |
-| KR-069 | Embed article anywhere | P1 | ⬜ open |
+| KR-069 | Embed article anywhere | P1 | ✅ done · 2026-06-16 |
 | KR-070 | Live co-editing cursors | P2 | ⬜ open |
 | KR-071 | Activity timeline tab | P2 | ⬜ open |
 | KR-072 | Version diff viewer | P2 | ⬜ open |
-| KR-073 | AI document outline generator | P1 | ⬜ open |
-| KR-074 | AI grammar & style check | P1 | ⬜ open |
-| KR-075 | AI auto-tagging | P1 | ⬜ open |
-| KR-076 | AI readability score | P1 | ⬜ open |
+| KR-073 | AI document outline generator | P1 | ✅ done · 2026-06-16 |
+| KR-074 | AI grammar & style check | P1 | ✅ done · 2026-06-16 |
+| KR-075 | AI auto-tagging | P1 | ✅ done · 2026-06-16 |
+| KR-076 | AI readability score | P1 | ✅ done · 2026-06-16 |
 | KR-077 | Meeting notes assistant | P1 | ⬜ open |
 | KR-078 | AI content gap analysis | P2 | ⬜ open |
 | KR-079 | AI duplicate detection | P2 | ⬜ open |
 | KR-080 | AI translation (10 locales) | P2 | ⬜ open |
 | KR-081 | PDF export (server-side) | P1 | ✅ done · 2026-06-16 |
 | KR-082 | DOCX export | P1 | ✅ done · 2026-06-16 |
-| KR-083 | Markdown export | P1 | ⬜ open |
+| KR-083 | Markdown export | P1 | ✅ done · 2026-06-16 |
 | KR-084 | Email article | P1 | ⬜ open |
 | KR-085 | Slack share integration | P2 | ⬜ open |
 | KR-086 | Print stylesheet | P2 | ⬜ open |

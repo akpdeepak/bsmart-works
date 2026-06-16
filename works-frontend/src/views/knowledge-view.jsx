@@ -18,6 +18,9 @@ import { StatusTransitionPopover } from '@/components/knowledge/StatusTransition
 import { PageTreeSidebar } from '@/components/knowledge/PageTreeSidebar';
 import { BlockCommentsPanel } from '@/components/knowledge/BlockCommentsPanel';
 import { ArticleReactions } from '@/components/knowledge/ArticleReactions';
+import { ArticleTags } from '@/components/knowledge/ArticleTags';
+import { StarButton } from '@/components/knowledge/StarButton';
+import { RelatedArticles } from '@/components/knowledge/RelatedArticles';
 import { onPressKey, renderMd } from '@/lib/utils';
 import { blocksText } from '@/lib/doc-stats';
 import { makeAiAssist } from '@/lib/knowledge-ai';
@@ -42,6 +45,22 @@ function articlePreview(art, maxLen = 120) {
   } catch { /* keep art.content fallback */ }
   const trimmed = text.trim();
   return trimmed.length > maxLen ? `${trimmed.substring(0, maxLen)}…` : trimmed;
+}
+
+// KR-043: parse filter syntax from search query, e.g. "status:DRAFT tag:urgent deploy notes"
+// Returns { q: mainQuery, status?, tag?, type?, author? }
+function parseSearchQuery(raw) {
+  const filters = {};
+  const words = [];
+  for (const token of (raw || '').trim().split(/\s+/)) {
+    const m = token.match(/^(\w+):(.+)$/);
+    if (m && ['status', 'tag', 'type', 'author'].includes(m[1])) {
+      filters[m[1]] = m[2];
+    } else if (token) {
+      words.push(token);
+    }
+  }
+  return { q: words.join(' '), ...filters };
 }
 
 const STATUS_CHIP = {
@@ -193,18 +212,29 @@ export default function KnowledgeView({
   // KR-025: block comments panel
   const [blockCommentPanel, setBlockCommentPanel] = useState({ open: false, blockId: null });
 
-  // KR-041: full-text search with 300ms debounce
+  // KR-041/KR-043: full-text search with 300ms debounce + advanced filter parsing
   const [ftsResults, setFtsResults] = useState([]);
   const [ftsOpen, setFtsOpen] = useState(false);
+  const [parsedFilters, setParsedFilters] = useState({});
   const ftsTimer = useRef(null);
   const handleSearchInput = (e) => {
-    const q = e.target.value;
-    setKnowledgeSearch(q);
+    const raw = e.target.value;
+    setKnowledgeSearch(raw);
     if (ftsTimer.current) clearTimeout(ftsTimer.current);
-    if (!q.trim()) { setFtsResults([]); setFtsOpen(false); return; }
+    if (!raw.trim()) { setFtsResults([]); setFtsOpen(false); setParsedFilters({}); return; }
+    const { q, status, tag, type, author } = parseSearchQuery(raw);
+    setParsedFilters({ status, tag, type, author });
+    if (!q.trim() && !status && !tag && !type && !author) { setFtsResults([]); setFtsOpen(false); return; }
     ftsTimer.current = setTimeout(() => {
       import('@/lib/apiClient').then(({ api }) => {
-        api.send(`/articles/search?q=${encodeURIComponent(q)}`)
+        const url = new URL('/articles/search', 'http://x');
+        if (q.trim()) url.searchParams.set('q', q.trim());
+        else url.searchParams.set('q', '*');
+        if (status) url.searchParams.set('status', status);
+        if (tag) url.searchParams.set('tag', tag);
+        if (type) url.searchParams.set('templateType', type);
+        if (author) url.searchParams.set('authorId', author);
+        api.send(url.pathname + url.search)
           .then(data => { setFtsResults(Array.isArray(data) ? data : []); setFtsOpen(true); })
           .catch(() => { setFtsResults([]); setFtsOpen(false); });
       });
@@ -298,6 +328,17 @@ export default function KnowledgeView({
             <span className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
               <Search className="h-3.5 w-3.5" aria-hidden="true" />
             </span>
+
+            {/* KR-043: active filter chips shown below the search input */}
+            {(parsedFilters.status || parsedFilters.tag || parsedFilters.type || parsedFilters.author) && (
+              <div className="flex gap-1 flex-wrap mt-1">
+                {Object.entries(parsedFilters).filter(([, v]) => v).map(([k, v]) => (
+                  <span key={k} className="text-xs px-2 py-0.5 rounded-full bg-brand-navy/10 text-brand-navy dark:bg-brand-orange/10 dark:text-brand-orange">
+                    {k}: {v}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* KR-042: FTS results dropdown with excerpt highlights */}
             {ftsOpen && ftsResults.length > 0 && (
@@ -560,6 +601,10 @@ export default function KnowledgeView({
                     <h1 className="font-bold text-lg text-neutral-900 dark:text-white truncate leading-tight">
                       {selectedArticle.title}
                     </h1>
+                    {/* KR-035: star/favorite button */}
+                    {workspaceId && (
+                      <StarButton articleId={selectedArticle.id} workspaceId={workspaceId} />
+                    )}
                   </div>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     {/* KR-017: clickable status badge + transition popover */}
@@ -587,6 +632,14 @@ export default function KnowledgeView({
                       <span className="text-xs text-neutral-500">
                         Updated {new Date(selectedArticle.updatedAt).toLocaleDateString()}
                       </span>
+                    )}
+                    {/* KR-034: article tags */}
+                    {workspaceId && (
+                      <ArticleTags
+                        articleId={selectedArticle.id}
+                        workspaceId={workspaceId}
+                        readOnly={!editingArticle}
+                      />
                     )}
                   </div>
                 </div>
@@ -955,6 +1008,15 @@ export default function KnowledgeView({
                           ))}
                         </div>
                       </div>
+                    )}
+
+                    {/* KR-045: related articles via shared tags */}
+                    {workspaceId && (
+                      <RelatedArticles
+                        articleId={selectedArticle.id}
+                        workspaceId={workspaceId}
+                        onOpenArticle={openArticleById}
+                      />
                     )}
                   </div>
                 )}

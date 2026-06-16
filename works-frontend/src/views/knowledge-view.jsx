@@ -3,6 +3,8 @@ import {
   Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen,
   AlertTriangle, Pencil, Eye, ChevronRight, LayoutTemplate,
 } from 'lucide-react';
+import { MeetingNotesAssistant } from '@/components/knowledge/MeetingNotesAssistant';
+import { CreateWorkItemsFromChecklist } from '@/components/knowledge/CreateWorkItemsFromChecklist';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { BlockEditor } from '@/components/BlockEditor';
@@ -24,8 +26,6 @@ import { makeAiAssist } from '@/lib/knowledge-ai';
 import { capabilityEnabled } from '@/lib/ai';
 import { useArticlePresence } from '@/hooks/use-article-presence';
 import { useEditLock } from '@/hooks/use-edit-lock';
-import { MeetingNotesAssistant } from '@/components/knowledge/MeetingNotesAssistant';
-import { CreateWorkItemsFromChecklist } from '@/components/knowledge/CreateWorkItemsFromChecklist';
 
 // Plain text of an article for AI summary — block content when present, else the markdown body.
 function articleText(article) {
@@ -646,6 +646,24 @@ export default function KnowledgeView({
                   <ArticleSummarizeButton workspaceId={workspaceId} text={articleText(selectedArticle)} />
                 )}
 
+                {/* KR-077: convert unchecked action items to work items */}
+                {selectedArticle.templateType === 'MEETING_NOTES' && (() => {
+                  let blocks = [];
+                  try { blocks = JSON.parse(selectedArticle.contentBlocks || '[]'); } catch { /* ignore */ }
+                  return Array.isArray(blocks) && blocks.some(b => b.type === 'checklist' && (b.metadata?.items || []).some(i => !i.done)) ? (
+                    <CreateWorkItemsFromChecklist
+                      blocks={blocks}
+                      articleTitle={selectedArticle.title}
+                      workspaceId={workspaceId}
+                      onBlocksChange={(updated) => {
+                        const json = JSON.stringify(updated);
+                        setSelectedArticle(a => ({ ...a, contentBlocks: json }));
+                        scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
+                      }}
+                    />
+                  ) : null;
+                })()}
+
                 <button
                   onClick={() => setEditingArticle(e => !e)}
                   className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${editingArticle ? 'bg-neutral-100 dark:bg-neutral-700 border-neutral-200 dark:border-neutral-600 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-600' : 'border-brand-navy text-brand-navy hover:bg-brand-navy hover:text-white'}`}
@@ -662,13 +680,6 @@ export default function KnowledgeView({
                 >
                   Delete
                 </button>
-
-                {/* KR-077: create work items from checklist blocks */}
-                <CreateWorkItemsFromChecklist
-                  workspaceId={workspaceId}
-                  articleId={selectedArticle.id}
-                  contentBlocks={selectedArticle.contentBlocks}
-                />
 
                 {editingArticle && (
                   <>
@@ -781,20 +792,12 @@ export default function KnowledgeView({
 
                     </div>
 
-                    {/* KR-077: meeting notes assistant — shown only for MEETING_NOTES template */}
-                    {selectedArticle.templateType === 'MEETING_NOTES' && aiAssist && (
+                    {/* KR-077: meeting notes assistant — shown when templateType is MEETING_NOTES */}
+                    {selectedArticle.templateType === 'MEETING_NOTES' && (
                       <MeetingNotesAssistant
                         workspaceId={workspaceId}
-                        articleId={selectedArticle.id}
-                        onInsertBlocks={(blocks) => {
-                          const existing = (() => {
-                            try {
-                              const p = JSON.parse(selectedArticle.contentBlocks || '[]');
-                              return Array.isArray(p) ? p : [];
-                            } catch { return []; }
-                          })();
-                          const merged = [...existing, ...blocks];
-                          const json = JSON.stringify(merged);
+                        onInsert={(blocks) => {
+                          const json = JSON.stringify(blocks);
                           setSelectedArticle(a => ({ ...a, contentBlocks: json, contentFormat: 'blocks' }));
                           scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
                         }}

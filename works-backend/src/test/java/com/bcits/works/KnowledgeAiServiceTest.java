@@ -88,6 +88,42 @@ class KnowledgeAiServiceTest {
     }
 
     @Test
+    void meetingNotesDeterministic_parsesAttendeesActionItemsAndDecisions() {
+        String input = "@Alice @Bob\nAction: Deploy by Friday\nThe system needs upgrading.";
+        String out = KnowledgeAiService.meetingNotesDeterministic(input, null);
+
+        assertThat(out).contains("# Attendees");
+        assertThat(out).contains("Alice");
+        assertThat(out).contains("Bob");
+        assertThat(out).contains("# Key Decisions");
+        assertThat(out).contains("The system needs upgrading.");
+        assertThat(out).contains("# Action Items");
+        assertThat(out).contains("- [ ] Deploy by Friday");
+        assertThat(out).contains("# Next Steps");
+    }
+
+    @Test
+    void meetingNotesDeterministic_emptyInput_returnsScaffold() {
+        String out = KnowledgeAiService.meetingNotesDeterministic("", null);
+        assertThat(out).contains("# Attendees");
+        assertThat(out).contains("# Key Decisions");
+        assertThat(out).contains("# Action Items");
+        assertThat(out).contains("# Next Steps");
+    }
+
+    @Test
+    void meetingNotesDeterministic_todoPrefix_isAlsoRecognised() {
+        String input = "TODO: Review the deployment checklist";
+        String out = KnowledgeAiService.meetingNotesDeterministic(input, null);
+        assertThat(out).contains("- [ ] Review the deployment checklist");
+    }
+
+    @Test
+    void normalizeMode_acceptsMeetingNotesMode() {
+        assertThat(KnowledgeAiService.normalizeMode("meeting_notes")).isEqualTo("meeting_notes");
+    }
+
+    @Test
     void compose_returnsAiTextWhenAiRan() {
         AiControlPlaneService controlPlane = mock(AiControlPlaneService.class);
         when(controlPlane.invoke(any())).thenReturn(

@@ -243,6 +243,116 @@ public class KnowledgeAiService {
             .reduce((a, b) -> a + " " + b).orElse("").trim();
     }
 
+    // ══════════════════════════════════════════════════════════════════════════════
+    //  KR-074: writing check — grammar/style issues with deterministic fallback
+    // ══════════════════════════════════════════════════════════════════════════════
+
+    /** A single writing issue identified in the article text. */
+    public record WritingIssue(int offset, int length, String type, String message, String suggestion) { }
+
+    /**
+     * KR-074: check writing quality. Deterministic rules run first (the mandatory fallback);
+     * AI enrichment is applied when available (RB-40 §2).
+     */
+    public List<WritingIssue> checkWriting(String workspaceId, String userId, String text) {
+        List<WritingIssue> issues = deterministicWritingIssues(nv(text));
+        AiControlPlaneService.AiOutcome out = controlPlane.invoke(new AiControlPlaneService.AiCall(
+            workspaceId, userId, CAPABILITY, "Know writing-check", text,
+            "writing-check:" + nv(text).length(), false));
+        if (!out.fallback() && out.text() != null && !out.text().isBlank()) {
+            // AI returned structured issue text; merge with deterministic results (deduplicate by offset)
+            List<WritingIssue> aiIssues = parseAiIssues(out.text());
+            for (WritingIssue ai : aiIssues) {
+                boolean dup = issues.stream().anyMatch(i -> i.offset() == ai.offset());
+                if (!dup) issues.add(ai);
+            }
+        }
+        return issues;
+    }
+
+    /** Deterministic writing-issue detector (the documented fallback). */
+    static List<WritingIssue> deterministicWritingIssues(String text) {
+        List<WritingIssue> issues = new ArrayList<>();
+        if (text == null || text.isBlank()) return issues;
+        // Double-space
+        java.util.regex.Matcher dsm = java.util.regex.Pattern.compile("  +").matcher(text);
+        while (dsm.find()) {
+            issues.add(new WritingIssue(dsm.start(), dsm.end() - dsm.start(),
+                "STYLE", "Extra whitespace", " "));
+        }
+        // Very long sentence (> 50 words)
+        for (String sent : sentences(text)) {
+            int words = sent.split("\\s+").length;
+            if (words > 50) {
+                int idx = text.indexOf(sent);
+                issues.add(new WritingIssue(Math.max(0, idx), sent.length(),
+                    "READABILITY", "Sentence is very long (" + words + " words); consider splitting", ""));
+            }
+        }
+        return issues;
+    }
+
+    /** Parse AI-returned issue text (best-effort; malformed → empty list). */
+    private static List<WritingIssue> parseAiIssues(String raw) {
+        // AI is expected to return lines like: "OFFSET:n LEN:n TYPE:x MESSAGE:y SUGGESTION:z"
+        // Lenient parse: if format is unexpected just return empty.
+        List<WritingIssue> out = new ArrayList<>();
+        if (raw == null) return out;
+        for (String line : raw.split("\\r?\\n")) {
+            try {
+                java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("OFFSET:(\\d+)\\s+LEN:(\\d+)\\s+TYPE:(\\S+)\\s+MESSAGE:(.+?)(?:\\s+SUGGESTION:(.*))?$")
+                    .matcher(line.trim());
+                if (m.matches()) {
+                    out.add(new WritingIssue(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)),
+                        m.group(3), m.group(4).trim(),
+                        m.group(5) == null ? "" : m.group(5).trim()));
+                }
+            } catch (Exception ignored) { /* lenient */ }
+        }
+        return out;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════════
+    //  KR-075: auto-tag suggestion — keyword extraction with deterministic fallback
+    // ══════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * KR-075: suggest tags for the article. Deterministic keyword extraction runs first;
+     * AI enrichment adds context-aware tags when available (RB-40 §2).
+     */
+    public List<String> suggestTags(String workspaceId, String userId, String text,
+                                    List<Object> existingTags) {
+        List<String> tags = deterministicTags(nv(text));
+        AiControlPlaneService.AiOutcome out = controlPlane.invoke(new AiControlPlaneService.AiCall(
+            workspaceId, userId, CAPABILITY, "Know suggest-tags", text,
+            "suggest-tags:" + nv(text).length(), false));
+        if (!out.fallback() && out.text() != null && !out.text().isBlank()) {
+            for (String aiTag : out.text().split("[,\\n]")) {
+                String t = aiTag.trim().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9-]", "");
+                if (!t.isEmpty() && !tags.contains(t) && t.length() <= 40) tags.add(t);
+            }
+        }
+        return tags.stream().distinct().limit(10).toList();
+    }
+
+    /** Deterministic tag extraction: top frequent non-stopword tokens (the mandatory fallback). */
+    static List<String> deterministicTags(String text) {
+        if (text == null || text.isBlank()) return new ArrayList<>();
+        java.util.Set<String> stopWords = java.util.Set.of(
+            "the", "and", "for", "are", "this", "that", "with", "from", "will", "not",
+            "have", "has", "was", "can", "all", "but", "you", "your", "its", "our", "use");
+        java.util.Map<String, Long> freq = Arrays.stream(
+                text.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9 ]", " ").split("\\s+"))
+            .filter(w -> w.length() > 3 && !stopWords.contains(w))
+            .collect(java.util.stream.Collectors.groupingBy(w -> w, java.util.stream.Collectors.counting()));
+        return freq.entrySet().stream()
+            .sorted(java.util.Map.Entry.<String, Long>comparingByValue().reversed())
+            .limit(5)
+            .map(java.util.Map.Entry::getKey)
+            .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+    }
+
     private static String nv(String s) {
         return s == null ? "" : s;
     }

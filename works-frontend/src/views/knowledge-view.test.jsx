@@ -216,6 +216,90 @@ describe('KnowledgeView', () => {
     fireEvent.click(screen.getByRole('button', { name: /close properties panel/i }));
     expect(screen.queryByRole('complementary', { name: /article properties/i })).not.toBeInTheDocument();
   });
+
+  // ── KR-022: Duplicate article ──────────────────────────────────────────────
+
+  it('shows a Duplicate button in the article header (KR-022)', () => {
+    render(
+      <KnowledgeView {...baseProps} workspaceId="ws-1"
+        selectedSpace={{ id: 'S1', name: 'Ops' }}
+        selectedArticle={{ id: 'A1', title: 'Doc', status: 'DRAFT', content: 'hi' }} />,
+    );
+    expect(screen.getByRole('button', { name: /duplicate this article/i })).toBeInTheDocument();
+  });
+
+  it('calls the duplicate API and navigates to the new article (KR-022)', async () => {
+    const newArt = { id: 'ART-NEW', title: 'Doc (copy)', status: 'DRAFT' };
+    api.send.mockResolvedValue(newArt);
+    const fetchKnowledgeArticles = vi.fn().mockResolvedValue([]);
+    const setSelectedArticle = vi.fn();
+
+    render(
+      <KnowledgeView {...baseProps} workspaceId="ws-1"
+        fetchKnowledgeArticles={fetchKnowledgeArticles}
+        setSelectedArticle={setSelectedArticle}
+        selectedSpace={{ id: 'S1', name: 'Ops' }}
+        selectedArticle={{ id: 'A1', title: 'Doc', status: 'DRAFT', content: 'hi' }} />,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /duplicate this article/i }));
+    });
+
+    expect(api.send).toHaveBeenCalledWith(
+      expect.stringContaining('/articles/A1/duplicate'),
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(fetchKnowledgeArticles).toHaveBeenCalled();
+  });
+
+  // ── KR-038: Bulk operations ────────────────────────────────────────────────
+
+  it('shows checkboxes on article cards in the list view (KR-038)', () => {
+    render(
+      <KnowledgeView {...baseProps} knowledgeTab="all"
+        knowledgeArticles={[
+          { id: 'A1', title: 'First', status: 'DRAFT', versionNumber: 1 },
+          { id: 'A2', title: 'Second', status: 'PUBLISHED', versionNumber: 2 },
+        ]} />,
+    );
+    const checkboxes = screen.getAllByRole('checkbox');
+    expect(checkboxes.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('shows the BulkActionBar when at least one article is selected (KR-038)', async () => {
+    render(
+      <KnowledgeView {...baseProps} knowledgeTab="all"
+        knowledgeArticles={[
+          { id: 'A1', title: 'First', status: 'DRAFT', versionNumber: 1 },
+        ]} />,
+    );
+    const [checkbox] = screen.getAllByRole('checkbox');
+    await act(async () => { fireEvent.click(checkbox); });
+    expect(screen.getByRole('toolbar', { name: /bulk actions for 1/i })).toBeInTheDocument();
+  });
+
+  it('calls bulk-archive API when Archive is clicked (KR-038)', async () => {
+    api.send.mockResolvedValue({ processed: ['A1'], skipped: [] });
+    const fetchKnowledgeArticles = vi.fn().mockResolvedValue([]);
+
+    render(
+      <KnowledgeView {...baseProps} workspaceId="ws-1" knowledgeTab="all"
+        fetchKnowledgeArticles={fetchKnowledgeArticles}
+        knowledgeArticles={[{ id: 'A1', title: 'First', status: 'DRAFT', versionNumber: 1 }]} />,
+    );
+
+    const [checkbox] = screen.getAllByRole('checkbox');
+    await act(async () => { fireEvent.click(checkbox); });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /archive 1/i }));
+    });
+
+    expect(api.send).toHaveBeenCalledWith(
+      expect.stringContaining('bulk-archive'),
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(fetchKnowledgeArticles).toHaveBeenCalled();
+  });
 });
 
 // ── KR-041 / KR-042: Full-text search + excerpt highlights ────────────────────

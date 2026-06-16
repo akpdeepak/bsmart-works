@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import DOMPurify from 'dompurify';
 import {
   Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen,
-  AlertTriangle, Pencil, Eye, ChevronRight, PanelRight,
+  AlertTriangle, Pencil, Eye, ChevronRight, PanelRight, Copy,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -22,6 +22,8 @@ import { ArticleTags } from '@/components/knowledge/ArticleTags';
 import { StarButton } from '@/components/knowledge/StarButton';
 import { RelatedArticles } from '@/components/knowledge/RelatedArticles';
 import { ArticlePropertiesPanel } from '@/components/knowledge/ArticlePropertiesPanel';
+import { BulkActionBar } from '@/components/knowledge/BulkActionBar';
+import { api } from '@/lib/apiClient';
 import { onPressKey, renderMd } from '@/lib/utils';
 import { blocksText } from '@/lib/doc-stats';
 import { makeAiAssist } from '@/lib/knowledge-ai';
@@ -72,17 +74,34 @@ const STATUS_CHIP = {
 };
 
 // Shared article list card — used in both the space view and search results.
-function ArticleCard({ art, onClick }) {
+// KR-038: accepts `selected` + `onToggleSelect` for bulk multi-select.
+function ArticleCard({ art, onClick, selected = false, onToggleSelect }) {
   const preview = articlePreview(art);
   return (
     <div
-      onClick={onClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={onPressKey}
-      className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40"
+      className={`group relative bg-white dark:bg-neutral-800 border rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none${selected ? ' border-brand-navy ring-1 ring-brand-navy/30' : ' border-neutral-200 dark:border-neutral-700'}`}
     >
-      <div className="flex items-start justify-between gap-3">
+      {/* KR-038: checkbox — visible on hover or when selected */}
+      {onToggleSelect && (
+        <div className={`absolute left-2 top-2 transition-opacity${selected ? ' opacity-100' : ' opacity-0 group-hover:opacity-100'}`}>
+          <input
+            type="checkbox"
+            checked={selected}
+            aria-label={`Select article "${art.title}"`}
+            onChange={e => { e.stopPropagation(); onToggleSelect(art.id); }}
+            onClick={e => e.stopPropagation()}
+            className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-600 text-brand-navy focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 cursor-pointer"
+          />
+        </div>
+      )}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onKeyDown={onPressKey}
+        className={`flex items-start justify-between gap-3 focus-visible:outline-none${onToggleSelect ? ' pl-5' : ''}`}
+        aria-label={`Open article "${art.title}"`}
+      >
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{art.title}</p>
           {preview && (
@@ -216,6 +235,50 @@ export default function KnowledgeView({
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [focusMode]);
+
+  // KR-038: multi-select state for bulk operations
+  const [selectedArticleIds, setSelectedArticleIds] = useState(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const toggleSelect = (id) => {
+    setSelectedArticleIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedArticleIds(new Set());
+
+  const handleBulkArchive = async () => {
+    if (!workspaceId || selectedArticleIds.size === 0) return;
+    setBulkBusy(true);
+    try {
+      await api.send(`/articles/bulk-archive?workspaceId=${encodeURIComponent(workspaceId)}`, {
+        method: 'POST',
+        body: JSON.stringify({ ids: [...selectedArticleIds] }),
+      });
+      clearSelection();
+      fetchKnowledgeArticles(selectedSpace?.id ?? null);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!workspaceId || selectedArticleIds.size === 0) return;
+    setBulkBusy(true);
+    try {
+      await api.send(`/articles/bulk-delete?workspaceId=${encodeURIComponent(workspaceId)}`, {
+        method: 'POST',
+        body: JSON.stringify({ ids: [...selectedArticleIds] }),
+      });
+      clearSelection();
+      fetchKnowledgeArticles(selectedSpace?.id ?? null);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
 
   // Block-editor autosave: persist quietly ~900ms after the last change instead of
   // PUT-on-every-keystroke (which previously fired a toast + version + list refetch per character).
@@ -582,6 +645,17 @@ export default function KnowledgeView({
                   </div>
                 </div>
 
+                {/* KR-038: bulk action bar — shown when articles are selected */}
+                {selectedArticleIds.size > 0 && (
+                  <BulkActionBar
+                    selectedIds={selectedArticleIds}
+                    onArchive={handleBulkArchive}
+                    onDelete={handleBulkDelete}
+                    onClear={clearSelection}
+                    busy={bulkBusy}
+                  />
+                )}
+
                 {knowledgeArticlesLoading && knowledgeArticles.length === 0 ? (
                   <div className="space-y-2" aria-busy="true" aria-label="Loading articles">
                     {[0, 1, 2, 3].map(i => <div key={i} className="h-20 rounded-xl animate-pulse bg-neutral-100 dark:bg-neutral-800" />)}
@@ -598,7 +672,13 @@ export default function KnowledgeView({
                 ) : (
                   <div className="space-y-2">
                     {knowledgeArticles.map(art => (
-                      <ArticleCard key={art.id} art={art} onClick={() => selectArticle(art)} />
+                      <ArticleCard
+                        key={art.id}
+                        art={art}
+                        onClick={() => selectArticle(art)}
+                        selected={selectedArticleIds.has(art.id)}
+                        onToggleSelect={toggleSelect}
+                      />
                     ))}
                   </div>
                 )}
@@ -744,6 +824,27 @@ export default function KnowledgeView({
                     : <><Pencil className="h-3.5 w-3.5" aria-hidden="true" />Edit</>
                   }
                 </button>
+
+                {/* KR-022: Duplicate article */}
+                {workspaceId && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const newArt = await api.send(
+                          `/articles/${selectedArticle.id}/duplicate?workspaceId=${encodeURIComponent(workspaceId)}`,
+                          { method: 'POST' },
+                        );
+                        await fetchKnowledgeArticles(selectedSpace?.id ?? null);
+                        selectArticle(newArt);
+                      } catch { /* error already handled by apiClient */ }
+                    }}
+                    className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+                    aria-label="Duplicate this article"
+                  >
+                    <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                    Duplicate
+                  </button>
+                )}
 
                 <button
                   onClick={() => deleteArticle(selectedArticle.id)}

@@ -15,6 +15,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
 
 @RestController
 @RequestMapping("/api/v1/articles")
@@ -31,6 +32,7 @@ public class ArticleController {
     private final ArticleDao articleDao;
     private final KnowledgeSpaceRepository knowledgeSpaceRepository;
     private final RbacService rbac;
+    private final ArticleService articleService;
 
     public ArticleController(ArticleRepository articleRepository,
                               ArticleVersionRepository articleVersionRepository,
@@ -41,7 +43,8 @@ public class ArticleController {
                               EventService eventService, AuthenticatedUser authenticatedUser,
                               ArticleDao articleDao,
                               KnowledgeSpaceRepository knowledgeSpaceRepository,
-                              RbacService rbac) {
+                              RbacService rbac,
+                              ArticleService articleService) {
         this.articleRepository = articleRepository;
         this.articleVersionRepository = articleVersionRepository;
         this.articleCommentRepository = articleCommentRepository;
@@ -53,6 +56,7 @@ public class ArticleController {
         this.articleDao = articleDao;
         this.knowledgeSpaceRepository = knowledgeSpaceRepository;
         this.rbac = rbac;
+        this.articleService = articleService;
     }
 
     @GetMapping
@@ -340,6 +344,35 @@ public class ArticleController {
         articleDao.unlinkWorkItem(id, workItemId);
         return ResponseEntity.noContent().build();
     }
+
+    // ── KR-022: Duplicate / clone ──────────────────────────────────────────────
+
+    /** POST /api/v1/articles/{id}/duplicate — creates a DRAFT copy in the same space. */
+    @PostMapping("/{id}/duplicate")
+    public Article duplicateArticle(@PathVariable String id,
+                                    @RequestParam String workspaceId) {
+        // Controller: parse HTTP + delegate. RBAC and scoping are in ArticleService.
+        return articleService.duplicate(id, authenticatedUser.id(), workspaceId);
+    }
+
+    // ── KR-038: Bulk operations ────────────────────────────────────────────────
+
+    /** POST /api/v1/articles/bulk-archive — archives a list of articles (workspace-scoped). */
+    @PostMapping("/bulk-archive")
+    public ArticleService.BulkResult bulkArchive(@RequestParam String workspaceId,
+                                                  @RequestBody BulkIdsRequest body) {
+        return articleService.bulkArchive(body.ids(), authenticatedUser.id(), workspaceId);
+    }
+
+    /** POST /api/v1/articles/bulk-delete — deletes a list of articles (workspace-scoped). */
+    @PostMapping("/bulk-delete")
+    public ArticleService.BulkResult bulkDelete(@RequestParam String workspaceId,
+                                                 @RequestBody BulkIdsRequest body) {
+        return articleService.bulkDelete(body.ids(), authenticatedUser.id(), workspaceId);
+    }
+
+    /** Request body for bulk operations. */
+    public record BulkIdsRequest(@NotEmpty List<String> ids) {}
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteArticle(@PathVariable String id) {

@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import {
   Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen,
   AlertTriangle, Pencil, Eye, ChevronRight,
@@ -11,7 +12,7 @@ import { KnowAiPanel } from '@/components/knowledge/KnowAiPanel';
 import { ArticleSummarizeButton } from '@/components/knowledge/ArticleSummarizeButton';
 import { AiTextAssist } from '@/components/knowledge/AiTextAssist';
 import { ArticleCover, COVER_GRADIENTS } from '@/components/knowledge/ArticleCover';
-import { ArticleIconPicker, TEMPLATE_ICONS } from '@/components/knowledge/ArticleIconPicker';
+import { ArticleIconPicker } from '@/components/knowledge/ArticleIconPicker';
 import { StatusBadge } from '@/components/knowledge/StatusBadge';
 import { StatusTransitionPopover } from '@/components/knowledge/StatusTransitionPopover';
 import { PageTreeSidebar } from '@/components/knowledge/PageTreeSidebar';

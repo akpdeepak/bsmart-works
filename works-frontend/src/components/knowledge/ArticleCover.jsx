@@ -5,6 +5,7 @@
 import DOMPurify from 'dompurify';
 
 // Preset gradient options surfaced in the cover picker. Tailwind classes only — no raw hex.
+// eslint-disable-next-line react-refresh/only-export-components
 export const COVER_GRADIENTS = {
   'brand-navy-to-ocean':     'bg-gradient-to-r from-brand-navy to-blue-700',
   'brand-orange-to-amber':   'bg-gradient-to-r from-brand-orange to-amber-400',

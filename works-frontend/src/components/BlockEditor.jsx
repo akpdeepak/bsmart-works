@@ -1524,9 +1524,9 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
   }, [handleUndo, handleRedo]);
 
   return (
-    <div id="block-editor-root" className="space-y-2" onKeyDown={handleEditorKeyDown} onMouseUp={handleEditorMouseUp}>
+    <div className="space-y-2">
       <BlockToolbar onInsert={addBlockAtCursor} />
-      <div role="listbox" aria-label="Block editor" aria-multiselectable="false" className="space-y-2">
+      <div id="block-editor-root" role="listbox" aria-label="Block editor" aria-multiselectable="false" tabIndex={0} className="space-y-2" onKeyDown={handleEditorKeyDown} onMouseUp={handleEditorMouseUp}>
         {blocks.map((block, index) => (
           <Block
             key={block.id}

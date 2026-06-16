@@ -44,10 +44,10 @@ const HIGHLIGHT_COLORS = [
 ];
 
 /**
- * @param {{ rect: DOMRect|null, onWrap: (start:string, end:string)=>void, onDismiss: ()=>void }} props
+ * @param {{ rect: DOMRect|null, onWrap: (start:string, end:string)=>void }} props
  * rect — bounding box of the selection (viewport-relative); null = hidden.
  */
-export function SelectionToolbar({ rect, onWrap, onDismiss }) {
+export function SelectionToolbar({ rect, onWrap }) {
   const ref = useRef(null);
   const [palette, setPalette] = useState(null); // 'text' | 'bg' | null
 

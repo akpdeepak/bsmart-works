@@ -141,14 +141,23 @@ public class KnowledgeAiService {
         }
         StringBuilder sb = new StringBuilder();
         sb.append("# Attendees\n");
-        if (attendees.isEmpty()) sb.append("_No attendees detected._\n");
-        else for (String a : attendees) sb.append("- ").append(a).append('\n');
+        if (attendees.isEmpty()) {
+            sb.append("_No attendees detected._\n");
+        } else {
+            for (String a : attendees) { sb.append("- ").append(a).append('\n'); }
+        }
         sb.append("\n# Key Decisions\n");
-        if (decisions.isEmpty()) sb.append("_No key decisions detected._\n");
-        else for (String d : decisions) sb.append("- ").append(d).append('\n');
+        if (decisions.isEmpty()) {
+            sb.append("_No key decisions detected._\n");
+        } else {
+            for (String d : decisions) { sb.append("- ").append(d).append('\n'); }
+        }
         sb.append("\n# Action Items\n");
-        if (actionItems.isEmpty()) sb.append("_No action items detected._\n");
-        else for (String ai : actionItems) sb.append("- [ ] ").append(ai).append('\n');
+        if (actionItems.isEmpty()) {
+            sb.append("_No action items detected._\n");
+        } else {
+            for (String ai : actionItems) { sb.append("- [ ] ").append(ai).append('\n'); }
+        }
         sb.append("\n# Next Steps\n");
         sb.append("_Add next steps here._\n");
         return sb.toString();
@@ -208,7 +217,10 @@ public class KnowledgeAiService {
         for (String w : words) {
             if (w.length() >= 4) {
                 int i = keys.indexOf(w);
-                if (i < 0) { keys.add(w); freqs.add(1); }
+                if (i < 0) {
+                    keys.add(w);
+                    freqs.add(1);
+                }
                 else { freqs.set(i, freqs.get(i) + 1); }
             }
         }

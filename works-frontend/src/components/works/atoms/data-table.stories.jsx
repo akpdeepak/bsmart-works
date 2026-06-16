@@ -85,3 +85,48 @@ export const ClickableRows = {
     );
   },
 };
+
+// ── Premium upgrade (WI-33) ──────────────────────────────────────────────────
+
+export const MultiSort = {
+  name: 'Multi-sort (shift-click)',
+  render: () => {
+    const [model, setModel] = useState([{ key: 'role', dir: 'asc' }, { key: 'name', dir: 'asc' }]);
+    return (
+      <DataTable
+        columns={COLUMNS}
+        rows={ROWS}
+        multiSort
+        sortModel={model}
+        onSortModelChange={setModel}
+        caption="Shift-click a header to add a secondary sort; the badge shows priority."
+      />
+    );
+  },
+};
+
+export const ColumnControls = {
+  name: 'Column show/hide + reorder',
+  render: () => <DataTable columns={COLUMNS} rows={ROWS} columnControls caption="Manage columns" />,
+};
+
+export const InlineEdit = {
+  name: 'Inline cell edit',
+  render: () => {
+    const [rows, setRows] = useState(ROWS);
+    const editable = COLUMNS.map((c) => (c.key === 'role' ? { ...c, editable: true } : c));
+    return (
+      <DataTable
+        columns={editable}
+        rows={rows}
+        onCellEdit={(row, key, value) => setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, [key]: value } : r)))}
+        caption="Click a Role cell to edit it"
+      />
+    );
+  },
+};
+
+export const Density = {
+  name: 'Density (compact)',
+  render: () => <DataTable columns={COLUMNS} rows={ROWS} density="compact" caption="Compact density" />,
+};

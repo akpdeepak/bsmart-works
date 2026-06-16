@@ -94,4 +94,50 @@ describe('DataTable', () => {
     );
     expect(screen.getByText('Mr. Alice')).toBeInTheDocument();
   });
+
+  // ── Premium upgrade (WI-33) ───────────────────────────────────────────────
+  it('multiSort: plain click drives the sort model, shift-click adds a secondary sort', () => {
+    const cols = [
+      { key: 'name', label: 'Name', sortable: true },
+      { key: 'status', label: 'Status', sortable: true },
+    ];
+    const onModel = vi.fn();
+    const { rerender } = render(<DataTable columns={cols} rows={ROWS} multiSort sortModel={[]} onSortModelChange={onModel} />);
+    fireEvent.click(screen.getByRole('columnheader', { name: /name/i }));
+    expect(onModel).toHaveBeenLastCalledWith([{ key: 'name', dir: 'asc' }]);
+
+    rerender(<DataTable columns={cols} rows={ROWS} multiSort sortModel={[{ key: 'name', dir: 'asc' }]} onSortModelChange={onModel} />);
+    fireEvent.click(screen.getByRole('columnheader', { name: /status/i }), { shiftKey: true });
+    expect(onModel).toHaveBeenLastCalledWith([{ key: 'name', dir: 'asc' }, { key: 'status', dir: 'asc' }]);
+  });
+
+  it('columnControls: hides a column via the Columns menu', () => {
+    render(<DataTable columns={COLS} rows={ROWS} columnControls />);
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /columns/i }));
+    // Uncheck "Name" in the menu
+    const nameCheckbox = screen.getByRole('checkbox', { name: /name/i });
+    fireEvent.click(nameCheckbox);
+    // The Name column (and its cells) are gone; Status remains.
+    expect(screen.queryByText('Alice')).not.toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
+  });
+
+  it('inline edit: click-to-edit commits a new value on Enter', () => {
+    const onCellEdit = vi.fn();
+    const cols = [{ key: 'name', label: 'Name', editable: true }, { key: 'status', label: 'Status' }];
+    render(<DataTable columns={cols} rows={ROWS} onCellEdit={onCellEdit} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Alice' }));
+    const input = screen.getByDisplayValue('Alice');
+    fireEvent.change(input, { target: { value: 'Alicia' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onCellEdit).toHaveBeenCalledWith(ROWS[0], 'name', 'Alicia');
+  });
+
+  it('density: spacious rows use more vertical padding than compact', () => {
+    const { container, rerender } = render(<DataTable columns={COLS} rows={ROWS} density="compact" />);
+    expect(container.querySelector('tbody td')).toHaveClass('py-1');
+    rerender(<DataTable columns={COLS} rows={ROWS} density="spacious" />);
+    expect(container.querySelector('tbody td')).toHaveClass('py-3');
+  });
 });

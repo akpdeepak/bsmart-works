@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import org.hibernate.annotations.ColumnTransformer;
@@ -68,6 +69,10 @@ public class Article {
     // (no auth required). Generated on demand; null = no public link. Added in V104.
     @Column(name = "public_share_token", length = 64, unique = true)
     private String publicShareToken;
+
+    // KR-067: watch/subscribe — populated at query time from article_watchers (not persisted).
+    @Transient private Boolean watchedByMe;
+    @Transient private Integer watcherCount;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -136,4 +141,9 @@ public class Article {
     public void setContentBlocks(String contentBlocks) { this.contentBlocks = contentBlocks; }
     public String getPublicShareToken() { return publicShareToken; }
     public void setPublicShareToken(String publicShareToken) { this.publicShareToken = publicShareToken; }
+
+    public Boolean getWatchedByMe() { return watchedByMe; }
+    public void setWatchedByMe(Boolean watchedByMe) { this.watchedByMe = watchedByMe; }
+    public Integer getWatcherCount() { return watcherCount; }
+    public void setWatcherCount(Integer watcherCount) { this.watcherCount = watcherCount; }
 }

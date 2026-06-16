@@ -24,6 +24,8 @@ import { RelatedArticles } from '@/components/knowledge/RelatedArticles';
 import { ArticlePropertiesPanel } from '@/components/knowledge/ArticlePropertiesPanel';
 import { BulkActionBar } from '@/components/knowledge/BulkActionBar';
 import { ArticleSharePopover } from '@/components/knowledge/ArticleSharePopover';
+import { WatchButton } from '@/components/knowledge/WatchButton';
+import { FollowSpaceButton } from '@/components/knowledge/FollowSpaceButton';
 import { onPressKey, renderMd } from '@/lib/utils';
 import { blocksText } from '@/lib/doc-stats';
 import { makeAiAssist } from '@/lib/knowledge-ai';
@@ -653,6 +655,14 @@ export default function KnowledgeView({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {selectedSpace && (
+                      <FollowSpaceButton
+                        spaceId={selectedSpace.id}
+                        workspaceId={workspaceId}
+                        initialFollowing={!!selectedSpace.followedByMe}
+                        initialCount={selectedSpace.followerCount || 0}
+                      />
+                    )}
                     {selectedSpace && can('manage_projects') && (
                       <button
                         onClick={() => deleteKnowledgeSpace(selectedSpace.id)}
@@ -836,6 +846,13 @@ export default function KnowledgeView({
                     {p.label}
                   </button>
                 ))}
+
+                <WatchButton
+                  articleId={selectedArticle.id}
+                  workspaceId={workspaceId}
+                  initialWatching={!!selectedArticle.watchedByMe}
+                  initialCount={selectedArticle.watcherCount || 0}
+                />
 
                 <span className="text-neutral-200 dark:text-neutral-700 select-none mx-0.5" aria-hidden="true">|</span>
 

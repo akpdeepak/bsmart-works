@@ -34,6 +34,8 @@ public class ArticleController {
     private final KnowledgeSpaceRepository knowledgeSpaceRepository;
     private final RbacService rbac;
     private final ArticleService articleService;
+    private final ArticleWatcherService articleWatcherService;
+    private final SpaceFollowerService spaceFollowerService;
 
     public ArticleController(ArticleRepository articleRepository,
                               ArticleVersionRepository articleVersionRepository,
@@ -45,7 +47,9 @@ public class ArticleController {
                               ArticleDao articleDao,
                               KnowledgeSpaceRepository knowledgeSpaceRepository,
                               RbacService rbac,
-                              ArticleService articleService) {
+                              ArticleService articleService,
+                              ArticleWatcherService articleWatcherService,
+                              SpaceFollowerService spaceFollowerService) {
         this.articleRepository = articleRepository;
         this.articleVersionRepository = articleVersionRepository;
         this.articleCommentRepository = articleCommentRepository;
@@ -58,6 +62,8 @@ public class ArticleController {
         this.knowledgeSpaceRepository = knowledgeSpaceRepository;
         this.rbac = rbac;
         this.articleService = articleService;
+        this.articleWatcherService = articleWatcherService;
+        this.spaceFollowerService = spaceFollowerService;
     }
 
     @GetMapping
@@ -95,11 +101,16 @@ public class ArticleController {
 
     @GetMapping("/{id}")
     public Article getArticle(@PathVariable String id) {
+        String userId = authenticatedUser.id();
         Article article = articleRepository.findById(id).orElseThrow();
         requireArticleAccess(article);
         // increment view count
         articleDao.incrementViewCount(id);
         article.setViewCount(article.getViewCount() + 1);
+        // KR-067: enrich with watch status for the requesting user.
+        Map<String, Object> watchStatus = articleWatcherService.getStatus(userId, id);
+        article.setWatchedByMe(Boolean.TRUE.equals(watchStatus.get("watching")));
+        article.setWatcherCount((Integer) watchStatus.get("watcherCount"));
         return article;
     }
 
@@ -257,6 +268,11 @@ public class ArticleController {
             Article saved = articleRepository.save(a);
             saveVersion(saved, userId);
             eventService.record(id, "ARTICLE_UPDATED", userId, "{\"version\":" + saved.getVersionNumber() + "}");
+            // Notify watchers of the content update (KR-067).
+            String workspaceId = resolveWorkspaceId(saved);
+            if (workspaceId != null) {
+                articleWatcherService.notifyWatchers(id, workspaceId, userId, "ARTICLE_UPDATED");
+            }
             return saved;
         }).orElseThrow();
     }
@@ -292,9 +308,25 @@ public class ArticleController {
         }
         a.setUpdatedAt(now);
         Article saved = articleRepository.save(a);
-        eventService.record(id, "ARTICLE_" + action.toUpperCase(), userId,
-                "{\"status\":\"" + newStatus + "\"}");
+        String eventType = "ARTICLE_" + action.toUpperCase();
+        eventService.record(id, eventType, userId, "{\"status\":\"" + newStatus + "\"}");
+        // Notify watchers of the status change (KR-067) and, on publish, notify space followers (KR-068).
+        String workspaceId = resolveWorkspaceId(saved);
+        if (workspaceId != null) {
+            articleWatcherService.notifyWatchers(id, workspaceId, userId, eventType);
+            if (ArticleWorkflowService.PUBLISHED.equals(newStatus)) {
+                spaceFollowerService.notifyFollowers(saved.getSpaceId(), workspaceId, id, userId);
+            }
+        }
         return saved;
+    }
+
+    /** Resolve the workspaceId for an article via its space — returns null if the space is missing. */
+    private String resolveWorkspaceId(Article article) {
+        if (article == null || article.getSpaceId() == null) return null;
+        return knowledgeSpaceRepository.findById(article.getSpaceId())
+                .map(KnowledgeSpace::getWorkspaceId)
+                .orElse(null);
     }
 
     /** Publish an already-PUBLISHED article to the customer portal KB (iteration 9, Cap N). */

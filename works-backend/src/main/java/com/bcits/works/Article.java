@@ -37,6 +37,9 @@ public class Article {
 
     // B09: block-based editor (iteration 20, Cap I)
     // content_format: 'markdown' (default) | 'blocks' (JSON block array in content_blocks)
+    // KR-033: drag-to-reorder position within the parent in the page tree sidebar
+    @Column(name = "sort_order") private Integer sortOrder;
+
     @Column(name = "content_format", nullable = false)
     private String contentFormat = "markdown";
 
@@ -82,6 +85,9 @@ public class Article {
     public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
     public Boolean getPortalPublished() { return portalPublished; }
     public void setPortalPublished(Boolean portalPublished) { this.portalPublished = portalPublished; }
+
+    public Integer getSortOrder() { return sortOrder; }
+    public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
 
     public String getCoverImage() { return coverImage; }
     public void setCoverImage(String coverImage) { this.coverImage = coverImage; }

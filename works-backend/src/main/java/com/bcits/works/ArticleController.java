@@ -224,6 +224,10 @@ public class ArticleController {
                 a.setContentFormat(updated.getContentFormat());
             }
             a.setContentBlocks(updated.getContentBlocks());
+            // KR-033: sort order for page tree drag-to-reorder
+            if (updated.getSortOrder() != null) {
+                a.setSortOrder(updated.getSortOrder());
+            }
             // KR-009: cover image — null to remove; must start with https:// or gradient:
             String ci = updated.getCoverImage();
             if (ci == null || ci.isBlank()) {

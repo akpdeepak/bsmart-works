@@ -14,6 +14,7 @@ import { ArticleCover, COVER_GRADIENTS } from '@/components/knowledge/ArticleCov
 import { ArticleIconPicker, TEMPLATE_ICONS } from '@/components/knowledge/ArticleIconPicker';
 import { StatusBadge } from '@/components/knowledge/StatusBadge';
 import { StatusTransitionPopover } from '@/components/knowledge/StatusTransitionPopover';
+import { PageTreeSidebar } from '@/components/knowledge/PageTreeSidebar';
 import { onPressKey, renderMd } from '@/lib/utils';
 import { blocksText } from '@/lib/doc-stats';
 import { makeAiAssist } from '@/lib/knowledge-ai';
@@ -178,6 +179,13 @@ export default function KnowledgeView({
   // KR-017: status transition popover
   const [statusPopoverOpen, setStatusPopoverOpen] = useState(false);
 
+  // KR-033: page tree reorder — update sort_order via the article PUT endpoint
+  const [treeVersion, setTreeVersion] = useState(0);
+  const handleReorder = (articleId, newSortOrder) => {
+    updateArticle(articleId, { sortOrder: newSortOrder }, { silent: true });
+    setTreeVersion(v => v + 1);
+  };
+
   // Navigation stack for sub-article drilling: Back returns to the direct parent article
   // rather than jumping to the flat list. Breadcrumbs show the full ancestor path.
   const [navStack, setNavStack] = useState([]);
@@ -293,6 +301,26 @@ export default function KnowledgeView({
                   {space.visibility || 'TEAM'}
                 </span>
               </button>
+
+              {/* KR-033: page tree — rendered inline below the selected space */}
+              {selectedSpace?.id === space.id && (
+                <div className="ml-2 mt-0.5 mb-1">
+                  <PageTreeSidebar
+                    key={`${space.id}-${treeVersion}`}
+                    spaceId={space.id}
+                    activeArticleId={selectedArticle?.id}
+                    onSelectArticle={(node) => {
+                      const art = knowledgeArticles?.find(a => a.id === node.id) || node;
+                      selectArticle(art);
+                    }}
+                    onNewArticle={() => {
+                      setArticleForm({ title: '', content: '', templateType: 'KB', status: 'DRAFT', spaceId: space.id });
+                      setIsArticleFormOpen(true);
+                    }}
+                    onReorder={handleReorder}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>

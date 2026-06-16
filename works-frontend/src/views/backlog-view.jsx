@@ -11,6 +11,7 @@ import { Avatar } from '@/components/works/atoms/avatar';
 import { statusToCategory } from '@/components/works/status';
 import { useI18n } from '@/lib/i18n';
 import { absoluteDate } from '@/lib/format';
+import { InlineQuickAdd } from '@/components/works/molecules/inline-quick-add';
 
 /**
  * BacklogView — product backlog with epic rail, sprint sections, drag-drop reorder.
@@ -43,6 +44,8 @@ export default function BacklogView({
   cardPrefs,
   statusResolver,
   currentUserId = null,
+  // Inline quick-add (WI-13): async fn({ title, type }) → item; keep the full dialog as power path
+  onInlineCreate = null,
 }) {
   const { t } = useI18n();
   const iv = cardPrefs?.isVisible ?? (() => true);
@@ -51,6 +54,49 @@ export default function BacklogView({
   const [focusedIdx, setFocusedIdx] = useState(null);
   const focusedIdxRef = useRef(null);
   const visibleBacklogRef = useRef([]);
+
+  // ── Inline quick-add state ────────────────────────────────────────────────
+  const [showInlineAdd, setShowInlineAdd] = useState(false);
+  const [inlineSaving, setInlineSaving] = useState(false);
+  const [inlineError, setInlineError] = useState(null);
+
+  const openInlineAdd = useCallback(() => {
+    if (onInlineCreate) setShowInlineAdd(true);
+  }, [onInlineCreate]);
+
+  // N / + shortcut: activate the inline row when focus is NOT in a form control
+  useEffect(() => {
+    if (!onInlineCreate) return;
+    function handler(e) {
+      const tag = e.target?.tagName;
+      const isEditing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable;
+      if (isEditing) return;
+      if (e.key === 'n' || e.key === 'N' || e.key === '+') {
+        e.preventDefault();
+        setShowInlineAdd(true);
+      }
+    }
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onInlineCreate]);
+
+  async function handleInlineSave(formData) {
+    setInlineError(null);
+    setInlineSaving(true);
+    try {
+      await onInlineCreate(formData);
+      setShowInlineAdd(false);
+    } catch (err) {
+      setInlineError(err?.message || 'Could not create item — please try again.');
+    } finally {
+      setInlineSaving(false);
+    }
+  }
+
+  function handleInlineCancel() {
+    setShowInlineAdd(false);
+    setInlineError(null);
+  }
   const userName = (id) => users.find(u => u.id === id)?.fullName || id;
   // Filter + sort the backlog list with the shared model (same bar as the Board). Sort defaults to
   // 'Manual', preserving the drag-drop backlog_order until the user opts into a sort.
@@ -157,7 +203,12 @@ export default function BacklogView({
                 <span className="text-xs text-neutral-600 font-medium">{t('deliver.backlog.refinementMode')}</span>
               </label>
               <Button variant="secondary" size="sm" onClick={() => setIsSprintOpen(true)}>{t('deliver.backlog.newSprint')}</Button>
-              <Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>{t('deliver.backlog.addItem')}</Button>
+              {onInlineCreate && (
+              <Button variant="secondary" size="sm" onClick={openInlineAdd} aria-label="Inline quick-add (N / +)">
+                + Quick add
+              </Button>
+            )}
+            <Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>{t('deliver.backlog.addItem')}</Button>
             </div>
           </div>
 
@@ -217,9 +268,17 @@ export default function BacklogView({
                   : `${visibleBacklog.length} / ${backlogItems.length} ${t('deliver.backlog.items')}`}
               </span>
             </div>
-            {backlogItems.length === 0
+            {showInlineAdd && (
+              <InlineQuickAdd
+                onSave={handleInlineSave}
+                onCancel={handleInlineCancel}
+                saving={inlineSaving}
+                error={inlineError}
+              />
+            )}
+            {backlogItems.length === 0 && !showInlineAdd
               ? <EmptyState icon={FileText} title={t('deliver.backlog.emptyTitle')} subtitle={t('deliver.backlog.emptySubtitle')} action={<Button variant="action" size="sm" onClick={() => setIsCreateOpen(true)}>{t('deliver.backlog.addToBacklog')}</Button>} />
-              : visibleBacklog.length === 0
+              : visibleBacklog.length === 0 && !showInlineAdd
               ? <p className="px-5 py-8 text-center text-sm text-neutral-600 dark:text-neutral-400">{t('deliver.filter.noMatches')}</p>
               : visibleBacklog.map((item, idx) => {
                 const isFocused = focusedIdx === idx;

@@ -241,6 +241,39 @@ setSelectedItem · form-control guard (no nav when focus is in a search input)
 
 Branch: `feat/uiux-wi14-keyboard-rhythm`
 
+---
+
+## WI-13 [benchmark] — Inline quick-add on backlog list (N/+ shortcut) (2026-06-15)
+
+`N`, `+`, or the `+ Quick add` header button opens an editable row at the top of the backlog. Enter
+saves (min 3 chars), Esc cancels. Full create dialog remains the power path.
+
+**`InlineQuickAdd` component** (`src/components/works/molecules/inline-quick-add.jsx`):
+- AutoFocuses title input on mount via `useEffect + inputRef`
+- Type selector: STORY / TASK / BUG / EPIC; defaults to TASK
+- `onKeyDown`: Enter → submit (trimmed title ≥ 3 chars → `onSave({title, type})`), Escape → `onCancel()`
+- ARIA: `role="group" aria-label="Quick-add work item"`, `role="alert"` for inline errors, `aria-invalid`/`aria-describedby` on the input
+- Disabled state (`saving` prop) disables input, select, and Add button
+- `leftIcon={<Plus size={16} />}` (rendered element, not component ref — Button renders `{leftIcon}` directly)
+
+**`BacklogView`** — wired up:
+- `useEffect` listens for `n`/`N`/`+` keydown on `document`; skips when focus is in a form control
+- `handleInlineSave(formData)`: sets `inlineSaving`, awaits `onInlineCreate(formData)`, resets state on success; sets `inlineError` on catch
+- `+ Quick add` button rendered in header when `onInlineCreate` prop is present
+- `<InlineQuickAdd>` rendered above the backlog list when `showInlineAdd === true`
+- Empty-state guarded with `&& !showInlineAdd` so it doesn't flash while the add row is open
+
+**`App.jsx`** — `handleInlineCreate`:
+- Separate from `handleCreate`; returns the `api.send()` promise so `InlineQuickAdd` knows when save completes
+- On success: appends saved item to `workItems` state and shows a toast
+- Defaults: `priority = 'MEDIUM'`; `projectId` falls back to first project or `'PROJ-WORKS'`
+
+**Tests** — 8 unit tests (`inline-quick-add.test.jsx`), all passing:
+renders + type selector · autoFocus · Esc → onCancel · no save < 3 chars · Enter → trimmed title +
+TASK · Enter with changed type → correct type · error alert · disabled when saving
+
+Branch: `feat/uiux-wi13-inline-quick-add`
+
 ## WI-09 [benchmark] — HEART activation-funnel instrumentation (2026-06-15)
 
 Server-side funnel telemetry wired into the events store via a new `FunnelService`. No PII,

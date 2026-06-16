@@ -20,10 +20,15 @@ import { PageTreeSidebar } from '@/components/knowledge/PageTreeSidebar';
 import { BlockCommentsPanel } from '@/components/knowledge/BlockCommentsPanel';
 import { TemplatePickerModal } from '@/components/knowledge/TemplatePickerModal';
 import { PresenceBar } from '@/components/works/molecules/presence-bar';
+import { SearchModeToggle } from '@/components/knowledge/SearchModeToggle';
+import { useSearchMode } from '@/hooks/use-search-mode';
+import { SearchAIAnswer } from '@/components/knowledge/SearchAIAnswer';
+import { PresenceAvatarRow } from '@/components/knowledge/PresenceAvatarRow';
 import { onPressKey, renderMd } from '@/lib/utils';
 import { blocksText } from '@/lib/doc-stats';
-import { makeAiAssist } from '@/lib/knowledge-ai';
+import { makeAiAssist, knowledgeAi } from '@/lib/knowledge-ai';
 import { capabilityEnabled } from '@/lib/ai';
+import { api } from '@/lib/apiClient';
 import { useArticlePresence } from '@/hooks/use-article-presence';
 import { useEditLock } from '@/hooks/use-edit-lock';
 
@@ -153,6 +158,11 @@ export default function KnowledgeView({
   const aiGenEnabled = capabilityEnabled(aiCapabilities, 'generation');
   const aiAssist = makeAiAssist(workspaceId, aiGenEnabled);
 
+  // KR-044: AI semantic search — search mode toggle + AI answer state
+  const [searchMode, setSearchMode] = useSearchMode();
+  const [aiAnswer, setAiAnswer] = useState(null);  // { answer, citations, meta } | null
+  const [aiSearchBusy, setAiSearchBusy] = useState(false);
+
   // Block-editor autosave: persist quietly ~900ms after the last change instead of
   // PUT-on-every-keystroke (which previously fired a toast + version + list refetch per character).
   const saveTimer = useRef(null);
@@ -209,6 +219,43 @@ export default function KnowledgeView({
   // WI-29: template picker modal state
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
 
+  // KR-065: article-level presence — POST to /api/v1/articles/{id}/presence on mount/unmount/heartbeat.
+  // Separate from the workspace-level SSE presence (useArticlePresence); this tracks per-article viewers.
+  const [articlePresences, setArticlePresences] = useState([]);
+  const presenceIntervalRef = useRef(null);
+  useEffect(() => {
+    const articleId = selectedArticle?.id;
+    if (!articleId || !workspaceId || !currentUser?.id) return;
+
+    const wsParam = encodeURIComponent(workspaceId);
+
+    const join = () => {
+      api.send(`/articles/${encodeURIComponent(articleId)}/presence?workspaceId=${wsParam}`, {
+        method: 'POST',
+        body: { action: 'join' },
+      })
+        .then((res) => {
+          if (Array.isArray(res?.presences)) {
+            setArticlePresences(res.presences.filter((p) => p.userId !== currentUser.id));
+          }
+        })
+        .catch(() => {}); // non-fatal — presence is best-effort
+    };
+
+    join();
+    presenceIntervalRef.current = setInterval(join, 20_000);
+
+    return () => {
+      clearInterval(presenceIntervalRef.current);
+      // Best-effort leave signal on unmount.
+      api.send(`/articles/${encodeURIComponent(articleId)}/presence?workspaceId=${wsParam}`, {
+        method: 'POST',
+        body: { action: 'leave' },
+      }).catch(() => {});
+      setArticlePresences([]);
+    };
+  }, [selectedArticle?.id, workspaceId, currentUser?.id]);
+
   // KR-041: full-text search with 300ms debounce
   const [ftsResults, setFtsResults] = useState([]);
   const [ftsOpen, setFtsOpen] = useState(false);
@@ -218,15 +265,27 @@ export default function KnowledgeView({
     setKnowledgeSearch(q);
     if (ftsTimer.current) clearTimeout(ftsTimer.current);
     if (!q.trim()) { setFtsResults([]); setFtsOpen(false); return; }
-    ftsTimer.current = setTimeout(() => {
-      import('@/lib/apiClient').then(({ api }) => {
+    // Only run FTS debounce in keyword mode; AI mode submits on Enter/button click.
+    if (searchMode === 'keyword') {
+      ftsTimer.current = setTimeout(() => {
         api.send(`/articles/search?q=${encodeURIComponent(q)}`)
           .then(data => { setFtsResults(Array.isArray(data) ? data : []); setFtsOpen(true); })
           .catch(() => { setFtsResults([]); setFtsOpen(false); });
-      });
-    }, 300);
+      }, 300);
+    }
   };
   useEffect(() => () => { if (ftsTimer.current) clearTimeout(ftsTimer.current); }, []);
+
+  // KR-044: AI search submission — called when user presses Enter or the search button in AI mode.
+  const submitAiSearch = (query) => {
+    if (!query.trim() || aiSearchBusy) return;
+    setAiSearchBusy(true);
+    setAiAnswer(null);
+    knowledgeAi.ask(workspaceId, query.trim())
+      .then((res) => setAiAnswer(res))
+      .catch(() => setAiAnswer(null))
+      .finally(() => setAiSearchBusy(false));
+  };
 
   // Navigation stack for sub-article drilling: Back returns to the direct parent article
   // rather than jumping to the flat list. Breadcrumbs show the full ancestor path.
@@ -291,7 +350,10 @@ export default function KnowledgeView({
               title="New space"
             >+</button>
           </div>
-          {/* KR-041: search bar with 300ms debounce FTS + KR-042 excerpt dropdown */}
+          {/* KR-041/KR-044: search bar with mode toggle + 300ms debounce FTS + KR-042 excerpt dropdown */}
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <SearchModeToggle mode={searchMode} onChange={setSearchMode} />
+          </div>
           <div className="relative">
             <input
               type="search"
@@ -301,12 +363,22 @@ export default function KnowledgeView({
               aria-haspopup="listbox"
               aria-controls="fts-listbox"
               aria-autocomplete="list"
-              placeholder="Search articles… (Ctrl+K)"
+              placeholder={searchMode === 'ai' ? 'Ask your knowledge base…' : 'Search articles… (Ctrl+K)'}
               value={knowledgeSearch}
               onChange={handleSearchInput}
               onKeyDown={e => {
                 if (e.key === 'Escape') { setFtsOpen(false); }
-                if (e.key === 'Enter') { searchKnowledge(); setKnowledgeTab('search'); setFtsOpen(false); }
+                if (e.key === 'Enter') {
+                  if (searchMode === 'ai') {
+                    submitAiSearch(knowledgeSearch);
+                    setKnowledgeTab('search');
+                    setFtsOpen(false);
+                  } else {
+                    searchKnowledge();
+                    setKnowledgeTab('search');
+                    setFtsOpen(false);
+                  }
+                }
               }}
               onBlur={() => setTimeout(() => setFtsOpen(false), 150)}
               className="input text-xs pl-6 py-1.5 w-full"
@@ -431,13 +503,32 @@ export default function KnowledgeView({
                     {knowledgeSearchResults.length} result{knowledgeSearchResults.length !== 1 ? 's' : ''} for &ldquo;{knowledgeSearch}&rdquo;
                   </span>
                   <button
-                    onClick={() => { setKnowledgeTab('spaces'); setKnowledgeSearch(''); }}
+                    onClick={() => { setKnowledgeTab('spaces'); setKnowledgeSearch(''); setAiAnswer(null); }}
                     className="text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
                   >
                     Clear
                   </button>
                 </div>
-                {knowledgeSearchResults.length === 0 ? (
+
+                {/* KR-044: AI answer — shown above keyword results when AI mode is active */}
+                {aiSearchBusy && (
+                  <div className="mb-4 rounded-lg border border-brand-navy-tint/30 bg-brand-navy-tint/5 p-4 animate-pulse" aria-busy="true" aria-label="AI is searching…">
+                    <div className="h-3 bg-neutral-200 dark:bg-neutral-700 rounded w-3/4 mb-2" />
+                    <div className="h-3 bg-neutral-200 dark:bg-neutral-700 rounded w-1/2" />
+                  </div>
+                )}
+                {!aiSearchBusy && aiAnswer && (
+                  <div className="mb-4 rounded-lg border border-brand-navy-tint/30 bg-brand-navy-tint/5 p-4">
+                    <SearchAIAnswer
+                      answer={aiAnswer.answer}
+                      citations={aiAnswer.citations ?? []}
+                      meta={aiAnswer.meta}
+                      onOpenArticle={openArticleById}
+                    />
+                  </div>
+                )}
+
+                {knowledgeSearchResults.length === 0 && !aiAnswer ? (
                   <EmptyState icon={Search} title="No results found" subtitle={`No articles match "${knowledgeSearch}". Try different keywords.`} />
                 ) : (
                   <div className="space-y-2">
@@ -619,8 +710,12 @@ export default function KnowledgeView({
               </div>
 
               {/* WI-29: presence bar — co-viewers + soft-lock banner */}
-              <div className="ml-7 mt-1.5">
+              {/* KR-065: article-level presence avatar row */}
+              <div className="ml-7 mt-1.5 flex items-center gap-3">
                 <PresenceBar viewers={viewers} lockGranted={lockGranted} lockedBy={lockedBy} />
+                {articlePresences.length > 0 && (
+                  <PresenceAvatarRow presences={articlePresences} />
+                )}
               </div>
 
               {/* Row 2: all action buttons — flex-wrap so they never clip */}

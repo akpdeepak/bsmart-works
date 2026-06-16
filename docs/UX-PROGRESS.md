@@ -105,6 +105,27 @@ Each change writes through `setNotifPrefs`. The inbox tab is behaviour-preserved
 - `src/lib/notification-prefs.test.js` (15 tests): defaults when empty/invalid JSON, partial update merge, muted/snoozed/quiet-hours detection, midnight-spanning window
 - `src/components/works/atoms/toast-stack.test.jsx` (9 tests): renders from state, +N badge, dismiss calls `dismissToast`, action button, tone class, `aria-label`
 
+## WI-27 [benchmark] — AI-native UX: aiAssistClient, useAiAssist, AiAssistButton, StreamingText, Today nudges — all with documented fallbacks (2026-06-16)
+
+**`src/lib/ai-assist.js` (new):** AI assist API client wrapping three endpoints (`/ai/assist/suggest-description`, `/ai/assist/stream`, `/ai/today-nudges`). Every method documents its deterministic fallback — `suggestDescription` and `getTodayNudges` catch errors and return `{ result: null, fallback: true }` / `{ nudges: [], fallback: true }` respectively; `streamComplete` returns `null` when the EventSource cannot be created. Callers always have a safe value; no surface silently degrades (RB-40 §2). Uses `api.send` exclusively — no inline fetch.
+
+**`src/hooks/use-ai-assist.js` (new):** React hook managing the three async states: `suggesting` (one-shot description request in-flight), `streaming` (SSE token stream open), `fallback` (AI off/over-budget/unavailable). `startStream` closes any prior EventSource before opening a new one; a cleanup effect closes on unmount so connections are never leaked. `suggestDescription` returns the suggestion string or null with `fallback=true` set.
+
+**`src/components/works/molecules/ai-assist-button.jsx` (new):** Reusable AI trigger with three visual states — idle (`Sparkles` icon + label), suggesting (`Loader2` spin + "Thinking…"), fallback (renders `null`). When `fallback=true` the button is entirely absent from the DOM; the manual field is always the only path (RB-40 §2 clean-degradation contract). Uses design tokens (`brand-navy`, `ghost` button variant) and proper `aria-label` per state.
+
+**`src/components/works/atoms/streaming-text.jsx` (new):** Token-streaming text display with a blinking cursor (`animate-pulse` on a `brand-navy` `w-0.5 h-4` span) while `streaming=true`. `aria-live="polite"` announces incremental content to screen readers; `aria-label` is set during streaming for assistive tech that doesn't support live regions. Cursor is `aria-hidden`.
+
+**`src/components/works/organisms/work-item-detail/details-tab.jsx` — AI assist wired into description field:** Imports `useAiAssist` and `AiAssistButton`. The description label row becomes a flex row with the label on the left and `AiAssistButton` on the right. Clicking calls `suggestDescription({ title, type })`; if a suggestion returns it is applied to the description field and saved. Button is disabled when `workspaceId` or `title` is absent. Fallback: button renders null — textarea is always present (RB-40 §2).
+
+**`src/views/dashboards/developer-dashboard.jsx` — TodayNudges section (new):** `TodayNudges` component queries `/ai/today-nudges` via TanStack Query (`staleTime: 5 min`) and renders a "Suggested focus" card with `Sparkles` icon per nudge. When `fallback=true` or nudges are empty the section is entirely absent — clean degradation, no empty placeholder (RB-40 §2). Wired above the `TodaySurface` in `DeveloperToday`.
+
+**Tests (new — 34 passing):**
+- `src/lib/ai-assist.test.js` — 10 tests: success and fallback paths for `suggestDescription`, `getTodayNudges` (including 403/503 error scenarios), URL param verification; `streamComplete` EventSource construction, URL params, and token injection.
+- `src/components/works/molecules/ai-assist-button.test.jsx` — 12 tests: idle render, custom label, click handler, suggesting state (text + aria + disabled), fallback state (null), suggesting+fallback combo, disabled prop, className passthrough.
+- `src/components/works/atoms/streaming-text.test.jsx` — 9 tests: text content, empty text, cursor presence when streaming, no cursor when not streaming, `aria-live`, `aria-label` during/after streaming, className passthrough.
+
+**Fallback contract (RB-40 §2) summary:** every AI surface in this WI has a documented deterministic fallback: description textarea always present, Today dashboard always renders its manual layout, streaming text degrades to static textarea. No surface depends on AI being available.
+
 ## WI-25 [benchmark] — Performance pass: virtual list hook, DataTable virtualization, prefetch-on-hover, CI perf budget (2026-06-16)
 
 **`@tanstack/react-virtual` installed** (`^3.14.3`). Enables DOM-count-bounded rendering for large lists, directly supporting the Doherty threshold (< 400 ms interactive) goal.

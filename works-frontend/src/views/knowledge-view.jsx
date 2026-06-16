@@ -209,7 +209,6 @@ export default function KnowledgeView({
   // WI-29: template picker modal state
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
 
-
   // KR-041: full-text search with 300ms debounce
   const [ftsResults, setFtsResults] = useState([]);
   const [ftsOpen, setFtsOpen] = useState(false);

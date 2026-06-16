@@ -7,6 +7,22 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-29 [benchmark] — Real-time collaborative knowledge editor: SSE presence, soft-lock, template picker (2026-06-16)
+
+**`src/lib/presence.js` (new):** SSE-based article co-presence client. `joinArticlePresence` opens an EventSource at `/api/v1/knowledge/presence?workspaceId=&articleId=&userId=`, parses `presence` events into `PresenceUser[]`, sends a POST heartbeat every 15 s so the server can detect stale viewers, and auto-reconnects on error after 3 s. Returns a `leave()` cleanup function that closes the SSE stream and posts `/knowledge/presence/leave`. `requestEditLock` and `releaseEditLock` hit the soft-lock endpoints with graceful degradation — if the lock endpoint is unavailable, `requestEditLock` returns `{ granted: true }` so the user can always edit (optimistic mode). All calls go through `api.send` (no inline fetch).
+
+**`src/hooks/use-article-presence.js` (new):** Thin React wrapper around `joinArticlePresence`. Opens the SSE stream on mount, closes it on unmount, filters the current user out of the viewer list. Returns `PresenceUser[]`.
+
+**`src/hooks/use-edit-lock.js` (new):** Manages the soft edit lock lifecycle. Acquires the lock when `editingArticle` becomes true, releases on `false` or unmount. Uses an async IIFE pattern inside `useEffect` to satisfy `react-hooks/set-state-in-effect`. Returns `{ lockGranted, lockedBy }`.
+
+**`src/components/works/molecules/presence-bar.jsx` (new):** Compact co-viewer avatar row + soft-lock banner. Shows up to 4 Avatar chips with a `+N` overflow chip for more. When `lockGranted=false`, renders a `semantic-warning` banner: "{lockedBy} is editing — you are in read-only mode". Renders `null` when there are no viewers and the lock is granted (zero DOM cost for solo authors). Full WCAG 2.1 AA: `role="status"`, `aria-label` on avatar stack, `aria-hidden` on decorative icons.
+
+**`src/components/knowledge/TemplatePickerModal.jsx` (new):** Template picker modal. Opens from a "From template" button in the article list header. Fetches workspace templates via the existing `templatesClient`. Selecting a template calls `onApplyTemplate(template)` then pre-fills the new-article form with the template body + category. Graceful degradation for load errors. Uses the `Modal` atom (focus trap, scroll lock, Escape-to-close).
+
+**`src/views/knowledge-view.jsx` (wired):** Added `LayoutTemplate` import; `currentUser` prop; `useArticlePresence` + `useEditLock` hooks; `<PresenceBar>` in the article header (above the action row); `readOnly={!lockGranted}` on `BlockEditor`; "From template" button in the space/article list header; `<TemplatePickerModal>` portal. Change is minimal — no restructuring.
+
+**Tests (27 new, 3 files):** `presence.test.js` covers EventSource URL params, presence event parsing, malformed-payload swallow, cleanup/close, reconnect guard, `requestEditLock` success/denied/degraded, `releaseEditLock` error swallow. `use-article-presence.test.js` covers initial empty state, callback wiring, self-filter, cleanup, and missing-param guard. `presence-bar.test.jsx` covers null render (empty+granted), lock banner, avatar stack, +N overflow, combined state.
+
 ## WI-28 [premium] — Narrative activity feed: event-to-sentence renderer, ActivityFeed molecule, detail panel Activity tab upgrade (2026-06-16)
 
 **`src/lib/activity-feed.js` (new):** Pure event-to-sentence renderer with no JSX or React dependency. `eventToSentence(event)` maps 13 known `eventType` strings to human-readable sentences using payload fields (`assigneeName`, `toStatus`, `sprintName`, etc.) and falls back gracefully to a cleaned-up version of the type string for unknown events. `groupEventsByDay(events)` groups the event array by calendar date and returns the groups newest-first as `[{ date, events[] }]`.

@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import {
   Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen,
-  AlertTriangle, Pencil, Eye, ChevronRight,
+  AlertTriangle, Pencil, Eye, ChevronRight, LayoutTemplate,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -11,15 +11,19 @@ import { KnowAiPanel } from '@/components/knowledge/KnowAiPanel';
 import { ArticleSummarizeButton } from '@/components/knowledge/ArticleSummarizeButton';
 import { AiTextAssist } from '@/components/knowledge/AiTextAssist';
 import { ArticleCover, COVER_GRADIENTS } from '@/components/knowledge/ArticleCover';
-import { ArticleIconPicker, TEMPLATE_ICONS } from '@/components/knowledge/ArticleIconPicker';
+import { ArticleIconPicker } from '@/components/knowledge/ArticleIconPicker';
 import { StatusBadge } from '@/components/knowledge/StatusBadge';
 import { StatusTransitionPopover } from '@/components/knowledge/StatusTransitionPopover';
 import { PageTreeSidebar } from '@/components/knowledge/PageTreeSidebar';
 import { BlockCommentsPanel } from '@/components/knowledge/BlockCommentsPanel';
+import { TemplatePickerModal } from '@/components/knowledge/TemplatePickerModal';
+import { PresenceBar } from '@/components/works/molecules/presence-bar';
 import { onPressKey, renderMd } from '@/lib/utils';
 import { blocksText } from '@/lib/doc-stats';
 import { makeAiAssist } from '@/lib/knowledge-ai';
 import { capabilityEnabled } from '@/lib/ai';
+import { useArticlePresence } from '@/hooks/use-article-presence';
+import { useEditLock } from '@/hooks/use-edit-lock';
 
 // Plain text of an article for AI summary — block content when present, else the markdown body.
 function articleText(article) {
@@ -142,6 +146,7 @@ export default function KnowledgeView({
   knowledgeArticlesLoading = false,
   workspaceId,
   aiCapabilities = [],
+  currentUser,
 }) {
   const aiGenEnabled = capabilityEnabled(aiCapabilities, 'generation');
   const aiAssist = makeAiAssist(workspaceId, aiGenEnabled);
@@ -189,6 +194,18 @@ export default function KnowledgeView({
 
   // KR-025: block comments panel
   const [blockCommentPanel, setBlockCommentPanel] = useState({ open: false, blockId: null });
+
+  // WI-29: SSE presence indicators — who else is viewing/editing this article
+  const viewers = useArticlePresence(workspaceId, selectedArticle?.id, currentUser?.id);
+
+  // WI-29: soft edit lock — first-come single editor; others see a read-only banner.
+  // lockGranted=false means another user is editing; show read-only banner + disable editor.
+  const { lockGranted, lockedBy } = useEditLock(
+    workspaceId, selectedArticle?.id, currentUser?.id, editingArticle
+  );
+
+  // WI-29: template picker modal state
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
 
   // KR-041: full-text search with 300ms debounce
   const [ftsResults, setFtsResults] = useState([]);
@@ -316,8 +333,8 @@ export default function KnowledgeView({
                         <p
                           className="text-xs text-neutral-500 mt-0.5 line-clamp-2 [&_mark]:bg-brand-orange/20 [&_mark]:text-brand-orange [&_mark]:font-medium [&_mark]:rounded-sm"
                           dangerouslySetInnerHTML={{
-                            __html: typeof DOMPurify !== 'undefined'
-                              ? DOMPurify.sanitize(r.excerpt, { ALLOWED_TAGS: ['mark'] })
+                            __html: typeof window !== 'undefined' && window.DOMPurify
+                              ? window.DOMPurify.sanitize(r.excerpt, { ALLOWED_TAGS: ['mark'] })
                               : r.excerpt.replace(/<(?!\/?(mark))[^>]+>/g, '')
                           }}
                         />
@@ -461,12 +478,22 @@ export default function KnowledgeView({
                       </button>
                     )}
                     {selectedSpace && (
-                      <Button
-                        variant="action"
-                        onClick={() => { setIsArticleFormOpen(true); setArticleForm({ title: '', content: '', templateType: 'KB', status: 'DRAFT' }); }}
-                      >
-                        + New Article
-                      </Button>
+                      <>
+                        <Button
+                          variant="secondary"
+                          onClick={() => setTemplatePickerOpen(true)}
+                          className="flex items-center gap-1.5"
+                        >
+                          <LayoutTemplate className="h-3.5 w-3.5" aria-hidden="true" />
+                          From template
+                        </Button>
+                        <Button
+                          variant="action"
+                          onClick={() => { setIsArticleFormOpen(true); setArticleForm({ title: '', content: '', templateType: 'KB', status: 'DRAFT' }); }}
+                        >
+                          + New Article
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -587,6 +614,11 @@ export default function KnowledgeView({
                     )}
                   </div>
                 </div>
+              </div>
+
+              {/* WI-29: presence bar — co-viewers + soft-lock banner */}
+              <div className="ml-7 mt-1.5">
+                <PresenceBar viewers={viewers} lockGranted={lockGranted} lockedBy={lockedBy} />
               </div>
 
               {/* Row 2: all action buttons — flex-wrap so they never clip */}
@@ -757,6 +789,7 @@ export default function KnowledgeView({
                         key={selectedArticle.id}
                         aiAssist={aiAssist}
                         workspaceId={workspaceId}
+                        readOnly={!lockGranted}
                         blocks={(() => {
                           try {
                             const parsed = JSON.parse(selectedArticle.contentBlocks || '[]');
@@ -998,6 +1031,25 @@ export default function KnowledgeView({
           </div>
         )}
       </div>
+
+      {/* WI-29: template picker modal */}
+      {templatePickerOpen && (
+        <TemplatePickerModal
+          workspaceId={workspaceId}
+          onClose={() => setTemplatePickerOpen(false)}
+          onApplyTemplate={(template) => {
+            // Pre-fill a new article with the template's body as the initial content.
+            setArticleForm({
+              title: '',
+              content: template.body || '',
+              templateType: template.category || 'KB',
+              status: 'DRAFT',
+            });
+            setIsArticleFormOpen(true);
+            setTemplatePickerOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

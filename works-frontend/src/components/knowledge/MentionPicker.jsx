@@ -25,7 +25,7 @@ function getMentionQuery(textarea) {
  *   onChange: (value: string) => void,
  * }} props
  */
-export function MentionPicker({ workspaceId, onChange, children }) {
+export function MentionPicker({ workspaceId, value, onChange, children }) {
   const [members, setMembers] = useState([]);
   const [query, setQuery] = useState(null);
   const [open, setOpen] = useState(false);
@@ -137,7 +137,7 @@ export function MentionPicker({ workspaceId, onChange, children }) {
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
+/** Render @username mentions in brand-orange in HTML content. */
 export function renderMentions(text) {
   if (!text) return '';
   return text.replace(/@(\w+)/g, '<span class="text-brand-orange font-medium">@$1</span>');

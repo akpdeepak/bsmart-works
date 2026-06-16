@@ -12,13 +12,6 @@ import { CALLOUT_VARIANTS, STICKY_COLORS, CANVAS_H, NOTE_W, NOTE_H, fileKind, pa
 import { ChartPreview } from '@/components/blocks/chart-preview';
 import { BqlWidget } from '@/components/blocks/bql-widget';
 import { CodeBlockRenderer } from '@/components/blocks/CodeBlockRenderer';
-// KR-069: article_ref block — read-only card rendered inside BlockRenderer.
-import { ArticleRefBlock } from '@/components/blocks/ArticleRefBlock';
-
-// Thin wrapper: BlockRenderer passes workspaceId through to ArticleRefBlock for the API fetch.
-function ArticleRefBlockRead({ block, workspaceId }) {
-  return <ArticleRefBlock block={block} onChange={() => {}} editMode={false} workspaceId={workspaceId} />;
-}
 
 const STICKER_SIZE = { md: 'text-4xl', lg: 'text-6xl', xl: 'text-8xl' };
 const FILE_KIND_LABEL = { image: 'Image', pdf: 'PDF', doc: 'Document', sheet: 'Spreadsheet', slide: 'Slides', archive: 'Archive', video: 'Video', audio: 'Audio', code: 'Code', link: 'File' };
@@ -302,9 +295,6 @@ function OneBlock({ block, allBlocks, workspaceId, blockComments }) {
       return <BookmarkView block={block} />;
     case 'file':
       return <FileView block={block} />;
-    // KR-069: article_ref — renders read-only article card in BlockRenderer
-    case 'article_ref':
-      return <ArticleRefBlockRead block={block} workspaceId={workspaceId} />;
     default:
       return null;
   }

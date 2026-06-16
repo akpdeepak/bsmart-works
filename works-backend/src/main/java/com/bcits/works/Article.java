@@ -6,8 +6,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import org.hibernate.annotations.ColumnTransformer;
 
@@ -47,15 +45,6 @@ public class Article {
     // KR-041: maintained by @PrePersist/@PreUpdate for PostgreSQL full-text search.
     @Column(name = "text_content", columnDefinition = "TEXT") private String textContent;
 
-    // KR-019: approval requirement flag
-    @Column(name = "requires_approval") private boolean requiresApproval = false;
-
-    // KR-020: scheduled publish — article should auto-publish at this timestamp
-    @Column(name = "scheduled_publish_at") private OffsetDateTime scheduledPublishAt;
-
-    // KR-021: review-by date — content expiry / editorial review deadline
-    @Column(name = "review_by_date") private LocalDate reviewByDate;
-
     @Column(name = "content_format", nullable = false)
     private String contentFormat = "markdown";
 
@@ -64,15 +53,6 @@ public class Article {
     @ColumnTransformer(write = "?::jsonb")
     @Column(name = "content_blocks", columnDefinition = "jsonb")
     private String contentBlocks;
-
-    // KR-066: public share link — a PUBLISHED article can be shared via this unique URL-safe token
-    // (no auth required). Generated on demand; null = no public link. Added in V104.
-    @Column(name = "public_share_token", length = 64, unique = true)
-    private String publicShareToken;
-
-    // KR-067: watch/subscribe — populated at query time from article_watchers (not persisted).
-    @Transient private Boolean watchedByMe;
-    @Transient private Integer watcherCount;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -128,22 +108,8 @@ public class Article {
     public String getIcon() { return icon; }
     public void setIcon(String icon) { this.icon = icon; }
 
-    public boolean isRequiresApproval() { return requiresApproval; }
-    public void setRequiresApproval(boolean requiresApproval) { this.requiresApproval = requiresApproval; }
-    public OffsetDateTime getScheduledPublishAt() { return scheduledPublishAt; }
-    public void setScheduledPublishAt(OffsetDateTime scheduledPublishAt) { this.scheduledPublishAt = scheduledPublishAt; }
-    public LocalDate getReviewByDate() { return reviewByDate; }
-    public void setReviewByDate(LocalDate reviewByDate) { this.reviewByDate = reviewByDate; }
-
     public String getContentFormat() { return contentFormat; }
     public void setContentFormat(String contentFormat) { this.contentFormat = contentFormat; }
     public String getContentBlocks() { return contentBlocks; }
     public void setContentBlocks(String contentBlocks) { this.contentBlocks = contentBlocks; }
-    public String getPublicShareToken() { return publicShareToken; }
-    public void setPublicShareToken(String publicShareToken) { this.publicShareToken = publicShareToken; }
-
-    public Boolean getWatchedByMe() { return watchedByMe; }
-    public void setWatchedByMe(Boolean watchedByMe) { this.watchedByMe = watchedByMe; }
-    public Integer getWatcherCount() { return watcherCount; }
-    public void setWatcherCount(Integer watcherCount) { this.watcherCount = watcherCount; }
 }

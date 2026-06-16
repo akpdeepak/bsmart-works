@@ -7,6 +7,7 @@ import { ChevronRight, FileText, Plus } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { cn } from '@/lib/utils';
 import { TEMPLATE_ICONS } from '@/components/knowledge/ArticleIconPicker';
+import { STATUS_COLORS } from '@/components/knowledge/StatusBadge';
 
 function storageKey(spaceId) {
   return `know-tree-${spaceId}`;
@@ -33,8 +34,8 @@ function NodeIcon({ node }) {
   }
   if (node.icon.startsWith('lucide:')) {
     const name = node.icon.slice(7);
-    const Icon = TEMPLATE_ICONS[name] || FileText;
-    return <Icon aria-hidden="true" className="h-3.5 w-3.5 flex-shrink-0 text-neutral-400" />;
+    const LucideIcon = Object.values(TEMPLATE_ICONS).find((_, i) => Object.keys(TEMPLATE_ICONS)[i] === name) || FileText;
+    return <LucideIcon aria-hidden="true" className="h-3.5 w-3.5 flex-shrink-0 text-neutral-400" />;
   }
   return <span aria-hidden="true" className="text-sm leading-none">{node.icon}</span>;
 }

@@ -14,9 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotEmpty;
 
 @RestController
 @RequestMapping("/api/v1/articles")
@@ -33,9 +31,6 @@ public class ArticleController {
     private final ArticleDao articleDao;
     private final KnowledgeSpaceRepository knowledgeSpaceRepository;
     private final RbacService rbac;
-    private final ArticleService articleService;
-    private final ArticleWatcherService articleWatcherService;
-    private final SpaceFollowerService spaceFollowerService;
 
     public ArticleController(ArticleRepository articleRepository,
                               ArticleVersionRepository articleVersionRepository,
@@ -46,10 +41,7 @@ public class ArticleController {
                               EventService eventService, AuthenticatedUser authenticatedUser,
                               ArticleDao articleDao,
                               KnowledgeSpaceRepository knowledgeSpaceRepository,
-                              RbacService rbac,
-                              ArticleService articleService,
-                              ArticleWatcherService articleWatcherService,
-                              SpaceFollowerService spaceFollowerService) {
+                              RbacService rbac) {
         this.articleRepository = articleRepository;
         this.articleVersionRepository = articleVersionRepository;
         this.articleCommentRepository = articleCommentRepository;
@@ -61,9 +53,6 @@ public class ArticleController {
         this.articleDao = articleDao;
         this.knowledgeSpaceRepository = knowledgeSpaceRepository;
         this.rbac = rbac;
-        this.articleService = articleService;
-        this.articleWatcherService = articleWatcherService;
-        this.spaceFollowerService = spaceFollowerService;
     }
 
     @GetMapping
@@ -101,16 +90,11 @@ public class ArticleController {
 
     @GetMapping("/{id}")
     public Article getArticle(@PathVariable String id) {
-        String userId = authenticatedUser.id();
         Article article = articleRepository.findById(id).orElseThrow();
         requireArticleAccess(article);
         // increment view count
         articleDao.incrementViewCount(id);
         article.setViewCount(article.getViewCount() + 1);
-        // KR-067: enrich with watch status for the requesting user.
-        Map<String, Object> watchStatus = articleWatcherService.getStatus(userId, id);
-        article.setWatchedByMe(Boolean.TRUE.equals(watchStatus.get("watching")));
-        article.setWatcherCount((Integer) watchStatus.get("watcherCount"));
         return article;
     }
 
@@ -255,24 +239,11 @@ public class ArticleController {
             }
             // KR-010: icon — null to reset; short emoji or lucide: prefix
             a.setIcon(updated.getIcon());
-            // KR-018: reviewer assignment — null to unassign
-            a.setReviewerId(updated.getReviewerId());
-            // KR-019: approval requirement
-            a.setRequiresApproval(updated.isRequiresApproval());
-            // KR-020: scheduled publish
-            a.setScheduledPublishAt(updated.getScheduledPublishAt());
-            // KR-021: review-by date
-            a.setReviewByDate(updated.getReviewByDate());
             a.setVersionNumber(a.getVersionNumber() + 1);
             a.setUpdatedAt(OffsetDateTime.now());
             Article saved = articleRepository.save(a);
             saveVersion(saved, userId);
             eventService.record(id, "ARTICLE_UPDATED", userId, "{\"version\":" + saved.getVersionNumber() + "}");
-            // Notify watchers of the content update (KR-067).
-            String workspaceId = resolveWorkspaceId(saved);
-            if (workspaceId != null) {
-                articleWatcherService.notifyWatchers(id, workspaceId, userId, "ARTICLE_UPDATED");
-            }
             return saved;
         }).orElseThrow();
     }
@@ -308,25 +279,9 @@ public class ArticleController {
         }
         a.setUpdatedAt(now);
         Article saved = articleRepository.save(a);
-        String eventType = "ARTICLE_" + action.toUpperCase();
-        eventService.record(id, eventType, userId, "{\"status\":\"" + newStatus + "\"}");
-        // Notify watchers of the status change (KR-067) and, on publish, notify space followers (KR-068).
-        String workspaceId = resolveWorkspaceId(saved);
-        if (workspaceId != null) {
-            articleWatcherService.notifyWatchers(id, workspaceId, userId, eventType);
-            if (ArticleWorkflowService.PUBLISHED.equals(newStatus)) {
-                spaceFollowerService.notifyFollowers(saved.getSpaceId(), workspaceId, id, userId);
-            }
-        }
+        eventService.record(id, "ARTICLE_" + action.toUpperCase(), userId,
+                "{\"status\":\"" + newStatus + "\"}");
         return saved;
-    }
-
-    /** Resolve the workspaceId for an article via its space — returns null if the space is missing. */
-    private String resolveWorkspaceId(Article article) {
-        if (article == null || article.getSpaceId() == null) return null;
-        return knowledgeSpaceRepository.findById(article.getSpaceId())
-                .map(KnowledgeSpace::getWorkspaceId)
-                .orElse(null);
     }
 
     /** Publish an already-PUBLISHED article to the customer portal KB (iteration 9, Cap N). */
@@ -378,81 +333,11 @@ public class ArticleController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── KR-022: Duplicate / clone ──────────────────────────────────────────────
-
-    /** POST /api/v1/articles/{id}/duplicate — creates a DRAFT copy in the same space. */
-    @PostMapping("/{id}/duplicate")
-    public Article duplicateArticle(@PathVariable String id,
-                                    @RequestParam String workspaceId) {
-        // Controller: parse HTTP + delegate. RBAC and scoping are in ArticleService.
-        return articleService.duplicate(id, authenticatedUser.id(), workspaceId);
-    }
-
-    // ── KR-038: Bulk operations ────────────────────────────────────────────────
-
-    /** POST /api/v1/articles/bulk-archive — archives a list of articles (workspace-scoped). */
-    @PostMapping("/bulk-archive")
-    public ArticleService.BulkResult bulkArchive(@RequestParam String workspaceId,
-                                                  @RequestBody BulkIdsRequest body) {
-        return articleService.bulkArchive(body.ids(), authenticatedUser.id(), workspaceId);
-    }
-
-    /** POST /api/v1/articles/bulk-delete — deletes a list of articles (workspace-scoped). */
-    @PostMapping("/bulk-delete")
-    public ArticleService.BulkResult bulkDelete(@RequestParam String workspaceId,
-                                                 @RequestBody BulkIdsRequest body) {
-        return articleService.bulkDelete(body.ids(), authenticatedUser.id(), workspaceId);
-    }
-
-    /** Request body for bulk operations. */
-    public record BulkIdsRequest(@NotEmpty List<String> ids) {}
-
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteArticle(@PathVariable String id) {
         Article existing = articleRepository.findById(id).orElseThrow(() -> ApiException.notFound("Article", id));
         requireArticleAccess(existing);
         articleRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    // ── KR-066: Public share link ─────────────────────────────────────────────
-
-    /**
-     * Generate (or return existing) public share link for a PUBLISHED article.
-     * Returns {@code { token, url }} where url = "/p/{token}".
-     */
-    @PostMapping("/{id}/share")
-    public Map<String, String> generateShareLink(@PathVariable String id) {
-        String userId = authenticatedUser.id();
-        Article article = requireArticleById(id);
-        if (!"PUBLISHED".equals(article.getStatus())) {
-            throw ApiException.badRequest("NOT_PUBLISHED",
-                    "Only a published article can be shared publicly.", "status");
-        }
-        // Idempotent: return existing token if already generated.
-        String token = article.getPublicShareToken();
-        if (token == null || token.isBlank()) {
-            token = UUID.randomUUID().toString().replace("-", "")
-                  + UUID.randomUUID().toString().replace("-", "");
-            article.setPublicShareToken(token);
-            article.setUpdatedAt(OffsetDateTime.now());
-            articleRepository.save(article);
-            eventService.record(id, "ARTICLE_SHARE_LINK_GENERATED", userId, "{}");
-        }
-        return Map.of("token", token, "url", "/p/" + token);
-    }
-
-    /**
-     * Revoke the public share link for an article. The old token immediately becomes invalid.
-     */
-    @DeleteMapping("/{id}/share")
-    public ResponseEntity<Void> revokeShareLink(@PathVariable String id) {
-        String userId = authenticatedUser.id();
-        Article article = requireArticleById(id);
-        article.setPublicShareToken(null);
-        article.setUpdatedAt(OffsetDateTime.now());
-        articleRepository.save(article);
-        eventService.record(id, "ARTICLE_SHARE_LINK_REVOKED", userId, "{}");
         return ResponseEntity.noContent().build();
     }
 

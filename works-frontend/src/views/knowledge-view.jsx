@@ -1,8 +1,7 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
-import DOMPurify from 'dompurify';
+import { useRef, useState, useEffect } from 'react';
 import {
   Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen,
-  AlertTriangle, Pencil, Eye, ChevronRight, PanelRight, Copy, Share2, Home, FileDown,
+  AlertTriangle, Pencil, Eye, ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -12,28 +11,17 @@ import { KnowAiPanel } from '@/components/knowledge/KnowAiPanel';
 import { ArticleSummarizeButton } from '@/components/knowledge/ArticleSummarizeButton';
 import { AiTextAssist } from '@/components/knowledge/AiTextAssist';
 import { ArticleCover, COVER_GRADIENTS } from '@/components/knowledge/ArticleCover';
-import { ArticleIconPicker } from '@/components/knowledge/ArticleIconPicker';
+import { ArticleIconPicker, TEMPLATE_ICONS } from '@/components/knowledge/ArticleIconPicker';
 import { StatusBadge } from '@/components/knowledge/StatusBadge';
 import { StatusTransitionPopover } from '@/components/knowledge/StatusTransitionPopover';
 import { PageTreeSidebar } from '@/components/knowledge/PageTreeSidebar';
 import { BlockCommentsPanel } from '@/components/knowledge/BlockCommentsPanel';
-import { ArticleReactions } from '@/components/knowledge/ArticleReactions';
-import { ArticleTags } from '@/components/knowledge/ArticleTags';
-import { StarButton } from '@/components/knowledge/StarButton';
-import { RelatedArticles } from '@/components/knowledge/RelatedArticles';
-import { ArticlePropertiesPanel } from '@/components/knowledge/ArticlePropertiesPanel';
-import { BulkActionBar } from '@/components/knowledge/BulkActionBar';
-import { ArticleSharePopover } from '@/components/knowledge/ArticleSharePopover';
-import { WatchButton } from '@/components/knowledge/WatchButton';
-import { FollowSpaceButton } from '@/components/knowledge/FollowSpaceButton';
-import { GenerateOutlineModal } from '@/components/knowledge/GenerateOutlineModal';
-import { CheckWritingPanel } from '@/components/knowledge/CheckWritingPanel';
 import { onPressKey, renderMd } from '@/lib/utils';
 import { blocksText } from '@/lib/doc-stats';
 import { makeAiAssist } from '@/lib/knowledge-ai';
 import { capabilityEnabled } from '@/lib/ai';
-import { api } from '@/lib/apiClient';
-import { downloadMarkdown } from '@/lib/export';
+import { MeetingNotesAssistant } from '@/components/knowledge/MeetingNotesAssistant';
+import { CreateWorkItemsFromChecklist } from '@/components/knowledge/CreateWorkItemsFromChecklist';
 
 // Plain text of an article for AI summary — block content when present, else the markdown body.
 function articleText(article) {
@@ -56,22 +44,6 @@ function articlePreview(art, maxLen = 120) {
   return trimmed.length > maxLen ? `${trimmed.substring(0, maxLen)}…` : trimmed;
 }
 
-// KR-043: parse filter syntax from search query, e.g. "status:DRAFT tag:urgent deploy notes"
-// Returns { q: mainQuery, status?, tag?, type?, author? }
-function parseSearchQuery(raw) {
-  const filters = {};
-  const words = [];
-  for (const token of (raw || '').trim().split(/\s+/)) {
-    const m = token.match(/^(\w+):(.+)$/);
-    if (m && ['status', 'tag', 'type', 'author'].includes(m[1])) {
-      filters[m[1]] = m[2];
-    } else if (token) {
-      words.push(token);
-    }
-  }
-  return { q: words.join(' '), ...filters };
-}
-
 const STATUS_CHIP = {
   PUBLISHED: 'bg-semantic-success-surface text-semantic-success',
   DRAFT:     'bg-neutral-100 dark:bg-neutral-700 text-neutral-500',
@@ -80,42 +52,19 @@ const STATUS_CHIP = {
 };
 
 // Shared article list card — used in both the space view and search results.
-// KR-037: isHomeArticle — shows a house icon when this article is the space home.
-// KR-038: accepts `selected` + `onToggleSelect` for bulk multi-select.
-function ArticleCard({ art, onClick, selected = false, onToggleSelect, isHomeArticle }) {
+function ArticleCard({ art, onClick }) {
   const preview = articlePreview(art);
   return (
     <div
-      className={`group relative bg-white dark:bg-neutral-800 border rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none${selected ? ' border-brand-navy ring-1 ring-brand-navy/30' : ' border-neutral-200 dark:border-neutral-700'}`}
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={onPressKey}
+      className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40"
     >
-      {/* KR-038: checkbox — visible on hover or when selected */}
-      {onToggleSelect && (
-        <div className={`absolute left-2 top-2 transition-opacity${selected ? ' opacity-100' : ' opacity-0 group-hover:opacity-100'}`}>
-          <input
-            type="checkbox"
-            checked={selected}
-            aria-label={`Select article "${art.title}"`}
-            onChange={e => { e.stopPropagation(); onToggleSelect(art.id); }}
-            onClick={e => e.stopPropagation()}
-            className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-600 text-brand-navy focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 cursor-pointer"
-          />
-        </div>
-      )}
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={onClick}
-        onKeyDown={onPressKey}
-        className={`flex items-start justify-between gap-3 focus-visible:outline-none${onToggleSelect ? ' pl-5' : ''}`}
-        aria-label={`Open article "${art.title}"`}
-      >
+      <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            {isHomeArticle && (
-              <Home className="h-3.5 w-3.5 flex-shrink-0 text-brand-navy" aria-label="Space home page" title="Space home page" />
-            )}
-            <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{art.title}</p>
-          </div>
+          <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{art.title}</p>
           {preview && (
             <p className="text-xs text-neutral-500 mt-0.5 line-clamp-2">{preview}</p>
           )}
@@ -194,128 +143,10 @@ export default function KnowledgeView({
   knowledgeSpacesLoading = false,
   knowledgeArticlesLoading = false,
   workspaceId,
-  currentUserId,
   aiCapabilities = [],
 }) {
   const aiGenEnabled = capabilityEnabled(aiCapabilities, 'generation');
   const aiAssist = makeAiAssist(workspaceId, aiGenEnabled);
-
-  // KR-011: article properties panel state (persisted in localStorage)
-  const [showProperties, setShowProperties] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('know-show-properties') || 'false'); } catch { return false; }
-  });
-  const toggleProperties = useCallback(() => {
-    setShowProperties(p => {
-      const next = !p;
-      try { localStorage.setItem('know-show-properties', JSON.stringify(next)); } catch { /* ignore */ }
-      return next;
-    });
-  }, []);
-
-  // KR-012: focus / distraction-free mode
-  const [focusMode, setFocusMode] = useState(false);
-
-  // KR-036: recently viewed articles (localStorage, capped at 10, deduped by id)
-  const recentKey = workspaceId ? `know-recent-${workspaceId}` : 'know-recent';
-  const [recentlyViewed, setRecentlyViewed] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(recentKey) || '[]'); } catch { return []; }
-  });
-
-  // KR-036: push article to recently viewed when selected
-  useEffect(() => {
-    if (!selectedArticle) return;
-    setRecentlyViewed(prev => {
-      const entry = { id: selectedArticle.id, title: selectedArticle.title, icon: selectedArticle.icon };
-      const deduped = [entry, ...prev.filter(r => r.id !== selectedArticle.id)].slice(0, 10);
-      try { localStorage.setItem(recentKey, JSON.stringify(deduped)); } catch { /* ignore */ }
-      return deduped;
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedArticle?.id]);
-
-  // KR-012: Ctrl+Shift+F toggles focus mode; Escape exits
-  useEffect(() => {
-    const handler = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
-        e.preventDefault();
-        setFocusMode(f => !f);
-      }
-      if (e.key === 'Escape' && focusMode) {
-        setFocusMode(false);
-      }
-    };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [focusMode]);
-
-  // KR-038: multi-select state for bulk operations
-  const [selectedArticleIds, setSelectedArticleIds] = useState(new Set());
-  const [bulkBusy, setBulkBusy] = useState(false);
-
-  const toggleSelect = (id) => {
-    setSelectedArticleIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const clearSelection = () => setSelectedArticleIds(new Set());
-
-  const handleBulkArchive = async () => {
-    if (!workspaceId || selectedArticleIds.size === 0) return;
-    setBulkBusy(true);
-    try {
-      await api.send(`/articles/bulk-archive?workspaceId=${encodeURIComponent(workspaceId)}`, {
-        method: 'POST',
-        body: JSON.stringify({ ids: [...selectedArticleIds] }),
-      });
-      clearSelection();
-      fetchKnowledgeArticles(selectedSpace?.id ?? null);
-    } finally {
-      setBulkBusy(false);
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (!workspaceId || selectedArticleIds.size === 0) return;
-    setBulkBusy(true);
-    try {
-      await api.send(`/articles/bulk-delete?workspaceId=${encodeURIComponent(workspaceId)}`, {
-        method: 'POST',
-        body: JSON.stringify({ ids: [...selectedArticleIds] }),
-      });
-      clearSelection();
-      fetchKnowledgeArticles(selectedSpace?.id ?? null);
-    } finally {
-      setBulkBusy(false);
-    }
-  };
-
-  // KR-066: share popover state
-  const [sharePopoverOpen, setSharePopoverOpen] = useState(false);
-
-  // KR-073: outline generator modal state
-  const [outlineModalOpen, setOutlineModalOpen] = useState(false);
-
-  // KR-074: check writing panel state
-  const [checkWritingOpen, setCheckWritingOpen] = useState(false);
-
-  // KR-037: when a space is selected, auto-navigate to its home article if one is set.
-  // We use a ref to avoid running this on every selectedArticle change.
-  const lastSpaceId = useRef(null);
-  useEffect(() => {
-    if (!selectedSpace || !selectedSpace.homeArticleId) return;
-    if (selectedSpace.id === lastSpaceId.current) return; // already navigated for this space
-    lastSpaceId.current = selectedSpace.id;
-    fetchArticleDetail?.(selectedSpace.homeArticleId);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSpace?.id, selectedSpace?.homeArticleId]);
-
-  // Reset last space tracker when space is cleared
-  useEffect(() => {
-    if (!selectedSpace) lastSpaceId.current = null;
-  }, [selectedSpace]);
 
   // Block-editor autosave: persist quietly ~900ms after the last change instead of
   // PUT-on-every-keystroke (which previously fired a toast + version + list refetch per character).
@@ -361,29 +192,18 @@ export default function KnowledgeView({
   // KR-025: block comments panel
   const [blockCommentPanel, setBlockCommentPanel] = useState({ open: false, blockId: null });
 
-  // KR-041/KR-043: full-text search with 300ms debounce + advanced filter parsing
+  // KR-041: full-text search with 300ms debounce
   const [ftsResults, setFtsResults] = useState([]);
   const [ftsOpen, setFtsOpen] = useState(false);
-  const [parsedFilters, setParsedFilters] = useState({});
   const ftsTimer = useRef(null);
   const handleSearchInput = (e) => {
-    const raw = e.target.value;
-    setKnowledgeSearch(raw);
+    const q = e.target.value;
+    setKnowledgeSearch(q);
     if (ftsTimer.current) clearTimeout(ftsTimer.current);
-    if (!raw.trim()) { setFtsResults([]); setFtsOpen(false); setParsedFilters({}); return; }
-    const { q, status, tag, type, author } = parseSearchQuery(raw);
-    setParsedFilters({ status, tag, type, author });
-    if (!q.trim() && !status && !tag && !type && !author) { setFtsResults([]); setFtsOpen(false); return; }
+    if (!q.trim()) { setFtsResults([]); setFtsOpen(false); return; }
     ftsTimer.current = setTimeout(() => {
       import('@/lib/apiClient').then(({ api }) => {
-        const url = new URL('/articles/search', 'http://x');
-        if (q.trim()) url.searchParams.set('q', q.trim());
-        else url.searchParams.set('q', '*');
-        if (status) url.searchParams.set('status', status);
-        if (tag) url.searchParams.set('tag', tag);
-        if (type) url.searchParams.set('templateType', type);
-        if (author) url.searchParams.set('authorId', author);
-        api.send(url.pathname + url.search)
+        api.send(`/articles/search?q=${encodeURIComponent(q)}`)
           .then(data => { setFtsResults(Array.isArray(data) ? data : []); setFtsOpen(true); })
           .catch(() => { setFtsResults([]); setFtsOpen(false); });
       });
@@ -444,7 +264,7 @@ export default function KnowledgeView({
     <div className="flex h-full overflow-hidden">
 
       {/* ── Left sidebar — spaces ──────────────────────────────────── */}
-      <div className={`w-64 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col${focusMode ? ' hidden' : ''}`}>
+      <div className="w-64 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col">
         <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">Knowledge Spaces</h2>
@@ -477,17 +297,6 @@ export default function KnowledgeView({
             <span className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
               <Search className="h-3.5 w-3.5" aria-hidden="true" />
             </span>
-
-            {/* KR-043: active filter chips shown below the search input */}
-            {(parsedFilters.status || parsedFilters.tag || parsedFilters.type || parsedFilters.author) && (
-              <div className="flex gap-1 flex-wrap mt-1">
-                {Object.entries(parsedFilters).filter(([, v]) => v).map(([k, v]) => (
-                  <span key={k} className="text-xs px-2 py-0.5 rounded-full bg-brand-navy/10 text-brand-navy dark:bg-brand-orange/10 dark:text-brand-orange">
-                    {k}: {v}
-                  </span>
-                ))}
-              </div>
-            )}
 
             {/* KR-042: FTS results dropdown with excerpt highlights */}
             {ftsOpen && ftsResults.length > 0 && (
@@ -533,24 +342,6 @@ export default function KnowledgeView({
             All Articles
           </button>
         </div>
-
-        {/* KR-036: Recently viewed articles */}
-        {recentlyViewed.length > 0 && !knowledgeSearch && (
-          <section aria-label="Recently viewed" className="px-2 pb-1">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500 px-3 py-1">Recent</h3>
-            {recentlyViewed.slice(0, 5).map(item => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => openArticleById(item.id)}
-                className="w-full text-left px-3 py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 truncate rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
-              >
-                {item.icon ? <span className="mr-1.5">{item.icon}</span> : null}
-                {item.title || 'Untitled'}
-              </button>
-            ))}
-          </section>
-        )}
 
         {/* Space list */}
         <div className="flex-1 overflow-y-auto px-2 pb-2">
@@ -634,8 +425,7 @@ export default function KnowledgeView({
                 ) : (
                   <div className="space-y-2">
                     {knowledgeSearchResults.map(art => (
-                      <ArticleCard key={art.id} art={art} onClick={() => selectArticle(art)}
-                        isHomeArticle={selectedSpace?.homeArticleId === art.id} />
+                      <ArticleCard key={art.id} art={art} onClick={() => selectArticle(art)} />
                     ))}
                   </div>
                 )}
@@ -664,14 +454,6 @@ export default function KnowledgeView({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {selectedSpace && (
-                      <FollowSpaceButton
-                        spaceId={selectedSpace.id}
-                        workspaceId={workspaceId}
-                        initialFollowing={!!selectedSpace.followedByMe}
-                        initialCount={selectedSpace.followerCount || 0}
-                      />
-                    )}
                     {selectedSpace && can('manage_projects') && (
                       <button
                         onClick={() => deleteKnowledgeSpace(selectedSpace.id)}
@@ -691,17 +473,6 @@ export default function KnowledgeView({
                   </div>
                 </div>
 
-                {/* KR-038: bulk action bar — shown when articles are selected */}
-                {selectedArticleIds.size > 0 && (
-                  <BulkActionBar
-                    selectedIds={selectedArticleIds}
-                    onArchive={handleBulkArchive}
-                    onDelete={handleBulkDelete}
-                    onClear={clearSelection}
-                    busy={bulkBusy}
-                  />
-                )}
-
                 {knowledgeArticlesLoading && knowledgeArticles.length === 0 ? (
                   <div className="space-y-2" aria-busy="true" aria-label="Loading articles">
                     {[0, 1, 2, 3].map(i => <div key={i} className="h-20 rounded-xl animate-pulse bg-neutral-100 dark:bg-neutral-800" />)}
@@ -718,14 +489,7 @@ export default function KnowledgeView({
                 ) : (
                   <div className="space-y-2">
                     {knowledgeArticles.map(art => (
-                      <ArticleCard
-                        key={art.id}
-                        art={art}
-                        onClick={() => selectArticle(art)}
-                        selected={selectedArticleIds.has(art.id)}
-                        onToggleSelect={toggleSelect}
-                        isHomeArticle={selectedSpace?.homeArticleId === art.id}
-                      />
+                      <ArticleCard key={art.id} art={art} onClick={() => selectArticle(art)} />
                     ))}
                   </div>
                 )}
@@ -795,10 +559,6 @@ export default function KnowledgeView({
                     <h1 className="font-bold text-lg text-neutral-900 dark:text-white truncate leading-tight">
                       {selectedArticle.title}
                     </h1>
-                    {/* KR-035: star/favorite button */}
-                    {workspaceId && (
-                      <StarButton articleId={selectedArticle.id} workspaceId={workspaceId} />
-                    )}
                   </div>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     {/* KR-017: clickable status badge + transition popover */}
@@ -827,14 +587,6 @@ export default function KnowledgeView({
                         Updated {new Date(selectedArticle.updatedAt).toLocaleDateString()}
                       </span>
                     )}
-                    {/* KR-034: article tags */}
-                    {workspaceId && (
-                      <ArticleTags
-                        articleId={selectedArticle.id}
-                        workspaceId={workspaceId}
-                        readOnly={!editingArticle}
-                      />
-                    )}
                   </div>
                 </div>
               </div>
@@ -856,29 +608,10 @@ export default function KnowledgeView({
                   </button>
                 ))}
 
-                <WatchButton
-                  articleId={selectedArticle.id}
-                  workspaceId={workspaceId}
-                  initialWatching={!!selectedArticle.watchedByMe}
-                  initialCount={selectedArticle.watcherCount || 0}
-                />
-
                 <span className="text-neutral-200 dark:text-neutral-700 select-none mx-0.5" aria-hidden="true">|</span>
 
                 {aiAssist && (
                   <ArticleSummarizeButton workspaceId={workspaceId} text={articleText(selectedArticle)} />
-                )}
-
-                {/* KR-074: Check writing button */}
-                {aiAssist && editingArticle && (
-                  <button
-                    type="button"
-                    onClick={() => setCheckWritingOpen((o) => !o)}
-                    aria-pressed={checkWritingOpen}
-                    className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${checkWritingOpen ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy'}`}
-                  >
-                    Check writing
-                  </button>
                 )}
 
                 <button
@@ -891,96 +624,19 @@ export default function KnowledgeView({
                   }
                 </button>
 
-                {/* KR-022: Duplicate article */}
-                {workspaceId && (
-                  <button
-                    onClick={async () => {
-                      try {
-                        const newArt = await api.send(
-                          `/articles/${selectedArticle.id}/duplicate?workspaceId=${encodeURIComponent(workspaceId)}`,
-                          { method: 'POST' },
-                        );
-                        await fetchKnowledgeArticles(selectedSpace?.id ?? null);
-                        selectArticle(newArt);
-                      } catch { /* error already handled by apiClient */ }
-                    }}
-                    className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
-                    aria-label="Duplicate this article"
-                  >
-                    <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-                    Duplicate
-                  </button>
-                )}
-
-                {/* KR-037: Set as space home — only when inside a space */}
-                {selectedSpace && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      api.send(`/knowledge-spaces/${selectedSpace.id}/home-article`, {
-                        method: 'PUT',
-                        body: JSON.stringify({ articleId: selectedArticle.id }),
-                      }).catch(() => {});
-                    }}
-                    aria-label="Set as space home page"
-                    title={selectedSpace.homeArticleId === selectedArticle.id
-                      ? 'This is the space home page'
-                      : 'Set as space home page'}
-                    className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${selectedSpace.homeArticleId === selectedArticle.id ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy'}`}
-                  >
-                    <Home className="h-3.5 w-3.5" aria-hidden="true" />
-                    {selectedSpace.homeArticleId === selectedArticle.id ? 'Space home' : 'Set home'}
-                  </button>
-                )}
-
-                {/* KR-066: Share button — only for PUBLISHED articles */}
-                {selectedArticle.status === 'PUBLISHED' && (
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setSharePopoverOpen(o => !o)}
-                      aria-expanded={sharePopoverOpen}
-                      aria-haspopup="dialog"
-                      aria-label="Share article"
-                      className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
-                    >
-                      <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
-                      Share
-                    </button>
-                    {sharePopoverOpen && (
-                      <ArticleSharePopover
-                        articleId={selectedArticle.id}
-                        token={selectedArticle.publicShareToken || null}
-                        onTokenChange={(t) => setSelectedArticle(a => ({ ...a, publicShareToken: t }))}
-                        onClose={() => setSharePopoverOpen(false)}
-                      />
-                    )}
-                  </div>
-                )}
-
-                {/* KR-083: Export Markdown — only in view mode */}
-                {!editingArticle && (
-                  <button
-                    type="button"
-                    onClick={() => downloadMarkdown(
-                      selectedArticle.title,
-                      (() => { try { const b = JSON.parse(selectedArticle.contentBlocks || '[]'); return Array.isArray(b) ? b : []; } catch { return []; } })(),
-                    )}
-                    aria-label="Export article as Markdown"
-                    className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
-                  >
-                    <FileDown className="h-3.5 w-3.5" aria-hidden="true" />
-                    Export .md
-                  </button>
-                )}
-
-
                 <button
                   onClick={() => deleteArticle(selectedArticle.id)}
                   className="text-xs text-semantic-danger hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-semantic-danger/40 rounded"
                 >
                   Delete
                 </button>
+
+                {/* KR-077: create work items from checklist blocks */}
+                <CreateWorkItemsFromChecklist
+                  workspaceId={workspaceId}
+                  articleId={selectedArticle.id}
+                  contentBlocks={selectedArticle.contentBlocks}
+                />
 
                 {editingArticle && (
                   <>
@@ -1013,30 +669,8 @@ export default function KnowledgeView({
                     )}
                   </>
                 )}
-                {/* KR-011: Properties panel toggle */}
-                <button
-                  type="button"
-                  onClick={toggleProperties}
-                  aria-pressed={showProperties}
-                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${showProperties ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy'}`}
-                >
-                  <PanelRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  Properties
-                </button>
               </div>
             </div>
-
-            {/* KR-012: Exit focus mode chip */}
-            {focusMode && (
-              <button
-                type="button"
-                aria-label="Exit focus mode"
-                onClick={() => setFocusMode(false)}
-                className="fixed top-3 right-4 z-modal text-xs bg-neutral-800/80 text-neutral-200 px-3 py-1.5 rounded-full hover:bg-neutral-700 transition-colors"
-              >
-                Exit focus
-              </button>
-            )}
 
             {/* Body: content area + optional side panel */}
             <div className="flex flex-1 overflow-hidden">
@@ -1045,7 +679,7 @@ export default function KnowledgeView({
               <div className="flex-1 overflow-y-auto p-6">
                 {editingArticle ? (
                   /* ── Edit mode ── */
-                  <div className={`space-y-4${focusMode ? ' max-w-3xl mx-auto' : ' max-w-3xl'}`}>
+                  <div className="max-w-3xl space-y-4">
                     {/* KR-009: cover banner */}
                     <ArticleCover image={selectedArticle.coverImage} />
 
@@ -1107,7 +741,7 @@ export default function KnowledgeView({
                           value={selectedArticle.templateType || 'KB'}
                           onChange={e => { const t = e.target.value; setSelectedArticle(a => ({ ...a, templateType: t })); updateArticle(selectedArticle.id, { templateType: t }); }}
                         >
-                          {['KB', 'RUNBOOK', 'ADR', 'POSTMORTEM', 'ONBOARDING', 'TROUBLESHOOTING', 'CUSTOM'].map(t => (
+                          {['KB', 'RUNBOOK', 'ADR', 'POSTMORTEM', 'ONBOARDING', 'TROUBLESHOOTING', 'MEETING_NOTES', 'CUSTOM'].map(t => (
                             <option key={t} value={t}>{t}</option>
                           ))}
                         </select>
@@ -1115,105 +749,25 @@ export default function KnowledgeView({
 
                     </div>
 
-                    {/* KR-018 / KR-019 / KR-020 / KR-021 — workflow metadata */}
-                    <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/60 p-4 space-y-3">
-                      <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                        Workflow
-                      </p>
-
-                      {/* KR-018: reviewer assignment */}
-                      <div className="flex items-center gap-2">
-                        <label
-                          htmlFor="article-reviewer"
-                          className="text-xs text-neutral-500 dark:text-neutral-400 w-28 flex-shrink-0"
-                        >
-                          Reviewer
-                        </label>
-                        <input
-                          id="article-reviewer"
-                          type="text"
-                          aria-label="Reviewer ID"
-                          defaultValue={selectedArticle.reviewerId || ''}
-                          onBlur={e => {
-                            const val = e.target.value.trim() || null;
-                            setSelectedArticle(a => ({ ...a, reviewerId: val }));
-                            updateArticle(selectedArticle.id, { reviewerId: val });
-                          }}
-                          placeholder="Assign reviewer\u2026"
-                          className="flex-1 text-sm border border-neutral-200 dark:border-neutral-700 rounded px-2 py-0.5 bg-white dark:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
-                        />
-                      </div>
-
-                      {/* KR-021: review-by date */}
-                      <div className="flex items-center gap-2">
-                        <label
-                          htmlFor="article-review-by"
-                          className="text-xs text-neutral-500 dark:text-neutral-400 w-28 flex-shrink-0"
-                        >
-                          Review by
-                        </label>
-                        <input
-                          id="article-review-by"
-                          type="date"
-                          aria-label="Review-by date"
-                          value={selectedArticle.reviewByDate || ''}
-                          onChange={e => {
-                            const val = e.target.value || null;
-                            setSelectedArticle(a => ({ ...a, reviewByDate: val }));
-                            updateArticle(selectedArticle.id, { reviewByDate: val });
-                          }}
-                          className="flex-1 text-sm border border-neutral-200 dark:border-neutral-700 rounded px-2 py-0.5 bg-white dark:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
-                        />
-                      </div>
-
-                      {/* KR-020: scheduled publish — only for DRAFT or IN_REVIEW */}
-                      {(!selectedArticle.status || selectedArticle.status === 'DRAFT' || selectedArticle.status === 'IN_REVIEW') && (
-                        <div className="flex items-center gap-2">
-                          <label
-                            htmlFor="article-scheduled-publish"
-                            className="text-xs text-neutral-500 dark:text-neutral-400 w-28 flex-shrink-0"
-                          >
-                            Scheduled publish
-                          </label>
-                          <input
-                            id="article-scheduled-publish"
-                            type="datetime-local"
-                            aria-label="Scheduled publish date and time"
-                            value={selectedArticle.scheduledPublishAt
-                              ? selectedArticle.scheduledPublishAt.substring(0, 16)
-                              : ''}
-                            onChange={e => {
-                              const val = e.target.value ? e.target.value + ':00Z' : null;
-                              setSelectedArticle(a => ({ ...a, scheduledPublishAt: val }));
-                              updateArticle(selectedArticle.id, { scheduledPublishAt: val });
-                            }}
-                            className="flex-1 text-sm border border-neutral-200 dark:border-neutral-700 rounded px-2 py-0.5 bg-white dark:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
-                          />
-                        </div>
-                      )}
-
-                      {/* KR-019: requires approval toggle */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-neutral-500 dark:text-neutral-400 w-28 flex-shrink-0">
-                          Requires approval
-                        </span>
-                        <input
-                          id="article-requires-approval"
-                          type="checkbox"
-                          aria-label="Requires approval before publishing"
-                          checked={!!selectedArticle.requiresApproval}
-                          onChange={e => {
-                            const val = e.target.checked;
-                            setSelectedArticle(a => ({ ...a, requiresApproval: val }));
-                            updateArticle(selectedArticle.id, { requiresApproval: val });
-                          }}
-                          className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-600 text-brand-navy focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
-                        />
-                        <label htmlFor="article-requires-approval" className="text-xs text-neutral-600 dark:text-neutral-400">
-                          Approval required before publish
-                        </label>
-                      </div>
-                    </div>
+                    {/* KR-077: meeting notes assistant — shown only for MEETING_NOTES template */}
+                    {selectedArticle.templateType === 'MEETING_NOTES' && aiAssist && (
+                      <MeetingNotesAssistant
+                        workspaceId={workspaceId}
+                        articleId={selectedArticle.id}
+                        onInsertBlocks={(blocks) => {
+                          const existing = (() => {
+                            try {
+                              const p = JSON.parse(selectedArticle.contentBlocks || '[]');
+                              return Array.isArray(p) ? p : [];
+                            } catch { return []; }
+                          })();
+                          const merged = [...existing, ...blocks];
+                          const json = JSON.stringify(merged);
+                          setSelectedArticle(a => ({ ...a, contentBlocks: json, contentFormat: 'blocks' }));
+                          scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
+                        }}
+                      />
+                    )}
 
                     {/* Block editor — always used; markdown articles are migrated to a paragraph block on first edit */}
                     <div>
@@ -1227,27 +781,11 @@ export default function KnowledgeView({
                         {blockSaveStatus === 'saved' && (
                           <span className="text-2xs text-semantic-success" aria-live="polite">Saved</span>
                         )}
-                        {/* KR-073: Generate outline button — shown when AI is on and blocks are empty */}
-                        {aiAssist && (() => {
-                          try {
-                            const b = JSON.parse(selectedArticle.contentBlocks || '[]');
-                            return !Array.isArray(b) || b.length === 0;
-                          } catch { return true; }
-                        })() && (
-                          <button
-                            type="button"
-                            onClick={() => setOutlineModalOpen(true)}
-                            className="ml-auto flex items-center gap-1 text-xs text-brand-navy hover:text-brand-navy-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
-                          >
-                            Generate outline
-                          </button>
-                        )}
                       </div>
                       <BlockEditor
                         key={selectedArticle.id}
                         aiAssist={aiAssist}
                         workspaceId={workspaceId}
-                        editingArticle={editingArticle}
                         blocks={(() => {
                           try {
                             const parsed = JSON.parse(selectedArticle.contentBlocks || '[]');
@@ -1277,26 +815,10 @@ export default function KnowledgeView({
                     >
                       Save Changes
                     </Button>
-
-                    {/* KR-073: Generate outline modal */}
-                    {outlineModalOpen && (
-                      <GenerateOutlineModal
-                        open={outlineModalOpen}
-                        onClose={() => setOutlineModalOpen(false)}
-                        workspaceId={workspaceId}
-                        templateType={selectedArticle.templateType || 'KB'}
-                        onInsert={(blocks) => {
-                          const json = JSON.stringify(blocks);
-                          setSelectedArticle(a => ({ ...a, contentBlocks: json, contentFormat: 'blocks' }));
-                          updateArticle(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks' });
-                          setOutlineModalOpen(false);
-                        }}
-                      />
-                    )}
                   </div>
                 ) : (
                   /* ── Read mode ── */
-                  <div className={focusMode ? 'max-w-3xl mx-auto' : 'max-w-3xl'}>
+                  <div className="max-w-3xl">
                     {/* KR-009: cover banner in read mode */}
                     <ArticleCover image={selectedArticle.coverImage} />
                     {(() => {
@@ -1326,13 +848,6 @@ export default function KnowledgeView({
                       );
                     })()}
 
-                    {/* KR-029: emoji reactions strip below article content */}
-                    <ArticleReactions
-                      articleId={selectedArticle.id}
-                      workspaceId={workspaceId}
-                      currentUserId={currentUserId}
-                    />
-
                     {/* Sub-articles — placed below the article body, inside the scrollable content
                         area. Previously they were a flex-row sibling of this div which broke the
                         layout by rendering them as a narrow column next to the content. */}
@@ -1360,15 +875,6 @@ export default function KnowledgeView({
                         </div>
                       </div>
                     )}
-
-                    {/* KR-045: related articles via shared tags */}
-                    {workspaceId && (
-                      <RelatedArticles
-                        articleId={selectedArticle.id}
-                        workspaceId={workspaceId}
-                        onOpenArticle={openArticleById}
-                      />
-                    )}
                   </div>
                 )}
               </div>
@@ -1383,41 +889,8 @@ export default function KnowledgeView({
                 onClose={() => setBlockCommentPanel({ open: false, blockId: null })}
               />
 
-              {/* KR-074: Check writing panel */}
-              <CheckWritingPanel
-                articleText={articleText(selectedArticle)}
-                workspaceId={workspaceId}
-                open={checkWritingOpen}
-                onClose={() => setCheckWritingOpen(false)}
-              />
-
-              {/* KR-011: Article properties panel */}
-              {showProperties && selectedArticle && !focusMode && (
-                <ArticlePropertiesPanel
-                  article={selectedArticle}
-                  wordCount={(() => {
-                    try {
-                      const blocks = JSON.parse(selectedArticle.contentBlocks || '[]');
-                      if (Array.isArray(blocks) && blocks.length > 0) return blocksText(blocks).trim().split(/\s+/).filter(Boolean).length;
-                    } catch { /* ignore */ }
-                    return (selectedArticle.content || '').trim().split(/\s+/).filter(Boolean).length;
-                  })()}
-                  onClose={toggleProperties}
-                  readOnly={!editingArticle}
-                  workspaceId={workspaceId}
-                  articleText={articleText(selectedArticle)}
-                  onAcceptTag={(tagName) => {
-                    if (!workspaceId || !selectedArticle?.id) return;
-                    api.send(
-                      `/articles/${selectedArticle.id}/tags?workspaceId=${encodeURIComponent(workspaceId)}`,
-                      { method: 'POST', body: { name: tagName } },
-                    ).catch(() => {});
-                  }}
-                />
-              )}
-
               {/* ── Contextual side panels ── */}
-              {!focusMode && articlePanel === 'history' && (
+              {articlePanel === 'history' && (
                 <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
                   <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Version history</h3>
                   {articleVersions.length === 0 ? (
@@ -1448,7 +921,7 @@ export default function KnowledgeView({
                 </div>
               )}
 
-              {!focusMode && articlePanel === 'comments' && (
+              {articlePanel === 'comments' && (
                 <div className="w-72 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4 flex flex-col">
                   <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">
                     Comments ({articleComments.length})
@@ -1510,7 +983,7 @@ export default function KnowledgeView({
                 </div>
               )}
 
-              {!focusMode && articlePanel === 'analytics' && (
+              {articlePanel === 'analytics' && (
                 <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
                   <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Analytics</h3>
                   {!articleAnalytics ? (

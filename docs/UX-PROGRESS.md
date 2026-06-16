@@ -25,7 +25,6 @@ audit. Tracks what has shipped to `main` so the state is always legible. Newest 
 
 **ESLint / guardrails:** zero new violations from the new files. Pre-existing baseline debt (hex in `status-management-tab.jsx`, `max-w-[880px]` in `page-layout.jsx`) unchanged.
 
-
 ## WI-29 [benchmark] — Real-time collaborative knowledge editor: SSE presence, soft-lock, template picker (2026-06-16)
 
 **`src/lib/presence.js` (new):** SSE-based article co-presence client. `joinArticlePresence` opens an EventSource at `/api/v1/knowledge/presence?workspaceId=&articleId=&userId=`, parses `presence` events into `PresenceUser[]`, sends a POST heartbeat every 15 s so the server can detect stale viewers, and auto-reconnects on error after 3 s. Returns a `leave()` cleanup function that closes the SSE stream and posts `/knowledge/presence/leave`. `requestEditLock` and `releaseEditLock` hit the soft-lock endpoints with graceful degradation — if the lock endpoint is unavailable, `requestEditLock` returns `{ granted: true }` so the user can always edit (optimistic mode). All calls go through `api.send` (no inline fetch).

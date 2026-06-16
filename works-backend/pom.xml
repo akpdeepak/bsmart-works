@@ -167,6 +167,20 @@
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>3.0.3</version>
 		</dependency>
+
+		<!-- PDF export: Apache PDFBox (Apache 2.0) — KR-081 -->
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>3.0.3</version>
+		</dependency>
+
+		<!-- DOCX export: Apache POI (Apache 2.0) — KR-082 -->
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>5.3.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -258,6 +272,9 @@
 								<exclude>**/Workspace.class</exclude>
 								<exclude>**/CustomDomain.class</exclude>
 								<exclude>**/WorkItemTypeConfig.class</exclude>
+								<!-- KR-081/082: export components are exercised in integration tests -->
+								<exclude>**/ArticlePdfExporter.class</exclude>
+								<exclude>**/ArticleDocxSerializer.class</exclude>
 								<!-- Iteration 14 (developer workspace) entities -->
 								<exclude>**/PullRequest.class</exclude>
 								<exclude>**/PullRequestReviewer.class</exclude>

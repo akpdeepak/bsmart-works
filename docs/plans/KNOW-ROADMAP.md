@@ -111,8 +111,8 @@
 | KR-078 | AI content gap analysis | P2 | ⬜ open |
 | KR-079 | AI duplicate detection | P2 | ⬜ open |
 | KR-080 | AI translation (10 locales) | P2 | ⬜ open |
-| KR-081 | PDF export (server-side) | P1 | ⬜ open |
-| KR-082 | DOCX export | P1 | ⬜ open |
+| KR-081 | PDF export (server-side) | P1 | ✅ done · 2026-06-16 |
+| KR-082 | DOCX export | P1 | ✅ done · 2026-06-16 |
 | KR-083 | Markdown export | P1 | ⬜ open |
 | KR-084 | Email article | P1 | ⬜ open |
 | KR-085 | Slack share integration | P2 | ⬜ open |

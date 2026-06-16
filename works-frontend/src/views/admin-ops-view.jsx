@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Activity, UserPlus, CreditCard, Sparkles, ScrollText, Plug, UserCheck, FileCheck2,
-  RefreshCw, Wand2, Play, Check, X, ShieldAlert,
+  RefreshCw, Wand2, Play, Check, X, ShieldAlert, TrendingUp,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -29,6 +29,7 @@ const TABS = [
   { id: 'integrations', label: 'Integrations', Icon: Plug },
   { id: 'access', label: 'Access review', Icon: UserCheck },
   { id: 'evidence', label: 'Evidence', Icon: FileCheck2 },
+  { id: 'funnel', label: 'Funnel', Icon: TrendingUp },
 ];
 
 function money(cents) {
@@ -96,6 +97,7 @@ export default function AdminOpsView({ workspaceId, onToast }) {
       integrations: () => adminOpsClient.integrationHealth(workspaceId),
       access: async () => ({ reviews: await adminOpsClient.accessReviews(workspaceId) }),
       evidence: () => adminOpsClient.evidencePackages(workspaceId),
+      funnel: () => adminOpsClient.heartMetrics(workspaceId),
     };
     (fetchers[which] || fetchers.health)()
       .then((result) => { if (live()) { setData((d) => ({ ...d, [which]: result })); setError(null); } })
@@ -151,6 +153,7 @@ export default function AdminOpsView({ workspaceId, onToast }) {
         <TabPanel value="integrations">{!error && !loading && <IntegrationsTab workspaceId={workspaceId} data={data.integrations} onChanged={refresh} notify={notify} />}</TabPanel>
         <TabPanel value="access">{!error && !loading && <AccessTab workspaceId={workspaceId} data={data.access} onChanged={refresh} notify={notify} />}</TabPanel>
         <TabPanel value="evidence">{!error && !loading && <EvidenceTab workspaceId={workspaceId} data={data.evidence} onChanged={refresh} notify={notify} />}</TabPanel>
+        <TabPanel value="funnel">{!error && !loading && <FunnelTab data={data.funnel} />}</TabPanel>
       </Tabs>
     </PageLayout>
   );
@@ -523,6 +526,72 @@ function AccessTab({ workspaceId, data, onChanged, notify }) {
           </ul>
         )}
       </Card>
+    </div>
+  );
+}
+
+function FunnelTab({ data }) {
+  if (!data) return null;
+  const { totalWorkspaces = 0, funnelSteps = [], rates = {}, engagement = {} } = data;
+
+  function pct(ratio) { return `${Math.round((ratio || 0) * 100)}%`; }
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Stat label="First value (7d)" value={pct(rates.firstValueRate7d)} tone="success" />
+        <Stat label="Template adopted" value={pct(rates.templateAdoptionRate)} />
+        <Stat label="Teammate invited" value={pct(rates.teammateInviteRate)} />
+        <Stat label="Day-2 return" value={pct(rates.day2ReturnRate)} />
+      </div>
+
+      <Card title="Activation funnel" icon={<TrendingUp className="h-4 w-4" />}>
+        <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-4">
+          {formatNumber(totalWorkspaces)} total workspace{totalWorkspaces !== 1 ? 's' : ''}
+        </p>
+        {funnelSteps.length === 0 ? (
+          <EmptyState
+            icon={TrendingUp}
+            title="No funnel data yet"
+            subtitle="Funnel events appear once workspaces progress through the activation steps."
+          />
+        ) : (
+          <ol className="space-y-4">
+            {funnelSteps.map((step) => {
+              const pctNum = Math.round((step.rate || 0) * 100);
+              return (
+                <li key={step.step}>
+                  <div className="flex items-center justify-between text-sm mb-1.5">
+                    <span className="font-medium text-neutral-900 dark:text-neutral-100">
+                      <span className="text-xs font-mono text-neutral-400 mr-2">#{step.step}</span>
+                      {step.name}
+                    </span>
+                    <span className="text-neutral-600 dark:text-neutral-400 tabular-nums">
+                      {formatNumber(step.count)} ws · {pctNum}%
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-brand-navy dark:bg-brand-navy-tint transition-all duration-base"
+                      style={{ width: `${pctNum}%` }}
+                      role="progressbar"
+                      aria-valuenow={pctNum}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={step.name}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </Card>
+
+      <div className="grid grid-cols-2 gap-4">
+        <Stat label="Actions (7 days)" value={formatNumber(engagement.meaningfulActions7d)} />
+        <Stat label="Actions (30 days)" value={formatNumber(engagement.meaningfulActions30d)} />
+      </div>
     </div>
   );
 }

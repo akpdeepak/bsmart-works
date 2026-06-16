@@ -52,6 +52,9 @@ export const adminOpsClient = {
   completeAccessReview: (reviewId, summary) =>
     api.send(`/access-reviews/${reviewId}/complete`, { method: 'POST', body: { summary } }),
 
+  // ── HEART / activation-funnel metrics (WI-10, HEART-METRICS.md §7) ──────────
+  heartMetrics: (workspaceId) => api.send(`/funnel/heart?workspaceId=${ws(workspaceId)}`),
+
   // ── Compliance evidence packages ───────────────────────────────────────────
   evidencePackages: (workspaceId) => api.send(`/evidence-packages?workspaceId=${ws(workspaceId)}`),
   evidencePackage: (id) => api.send(`/evidence-packages/${id}`),

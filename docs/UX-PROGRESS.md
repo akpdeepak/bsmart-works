@@ -408,6 +408,30 @@ Milestone 1 (Measurement) complete: WI-08 ✅ WI-09 ✅ WI-10 ✅ WI-11 ✅. WI-
 
 ---
 
+## WI-10 [benchmark] — Internal HEART/funnel dashboard (2026-06-15)
+
+Implements the dogfood HEART/activation-funnel metrics surface described in `HEART-METRICS.md §7`.
+
+**Backend:** `FunnelMetricsService` + `FunnelMetricsController` at `GET /api/v1/funnel/heart?workspaceId=`.
+Admin-gated (tier ≥ 4, same pattern as `AdminOpsService.requireAdmin`). Queries the `events` table
+(cross-workspace platform analytics for the internal ops surface) and returns:
+- `totalWorkspaces` — platform workspace count
+- `funnelSteps` — steps 2–5 with distinct workspace counts + rates
+- `rates` — `firstValueRate7d` (7-day activation window), `templateAdoptionRate`, `teammateInviteRate`, `day2ReturnRate`
+- `engagement` — meaningful-action counts over 7d and 30d
+
+5 unit tests in `FunnelMetricsServiceTest`: non-member 404, member-non-admin 403, null-workspace 404,
+happy-path shape + values, zero-workspace zero-rates.
+
+**Frontend:** "Funnel" tab added to `AdminOpsView` (9th tab, `TrendingUp` icon). `adminOpsClient.heartMetrics()`
+added to `adminOps.js`. `FunnelTab` component: 4 KPI `Stat` cards (rates), activation funnel with
+labeled progress bars per step, engagement action counts. Empty state shown when no funnel data yet.
+All five interactive states, WCAG-AA (role=progressbar + aria labels), design tokens only.
+
+Branch: `feat/uiux-wi10-heart-dashboard`. Execution Plan WI-10 marked ✅.
+
+---
+
 ## WI-07 [consistency] — Retire App.jsx arbitrary-value exemption (2026-06-15)
 
 `text-2xs` token (10px / 0.625rem) was already present in `tailwind.config.js`; no arbitrary

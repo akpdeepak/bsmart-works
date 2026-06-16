@@ -1524,6 +1524,7 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
   }, [handleUndo, handleRedo]);
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- editor surface with global keyboard-shortcut + text-selection handlers, not an interactive control; the interactive widgets inside carry their own roles/labels
     <div id="block-editor-root" className="space-y-2" onKeyDown={handleEditorKeyDown} onMouseUp={handleEditorMouseUp}>
       <BlockToolbar onInsert={addBlockAtCursor} />
       <div role="listbox" aria-label="Block editor" aria-multiselectable="false" className="space-y-2">

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-exports the TEMPLATE_ICONS constant consumed across the knowledge UI; DX/HMR-only rule */
 // Article icon / emoji picker — KR-010 · P0.
 // Displays a clickable icon slot beside the article title. Opens a popover with two tabs:
 // a flat emoji grid (40 common emoji) and a small Lucide icon grid. "Clear" resets to the
@@ -5,7 +6,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   BookOpen, Terminal, Scale, AlertTriangle, Users, Wrench, FileText,
-  Smile, LayoutTemplate,
+  LayoutTemplate,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-exports the COVER_GRADIENTS constant consumed elsewhere; DX/HMR-only rule */
 // Article cover image / gradient banner — shown above the article title in both edit and read
 // mode. KR-009 · P0. Stores a gradient key ("gradient:brand-navy-to-orange") or an HTTPS URL.
 // 12 preset gradients use only brand + semantic design tokens (RB-30 §2). Image URLs are passed

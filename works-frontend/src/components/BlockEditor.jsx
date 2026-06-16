@@ -7,19 +7,21 @@
 // WCAG 2.2 AA: keyboard-navigable blocks (arrow keys), visible focus rings, labelled controls.
 // Design tokens only — no raw values (RB-30 §1).
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   Plus, Trash2, ChevronUp, ChevronDown, Code, AlignLeft,
   Heading1, Heading2, Heading3, Minus, Image, Table,
   GitBranch, ChevronDown as ChevronDownIcon,
   Info, CheckSquare, Quote, ChevronRight,
   Grid, BarChart3, PenTool, Link2, Bookmark, GripVertical, List, Sparkles,
-  LayoutDashboard, Smile, Paperclip,
+  LayoutDashboard, Smile, Paperclip, Search, X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { evaluateSheet, indexToCol } from '@/lib/sheet-engine';
 import { CHART_TYPES } from '@/lib/chart-data';
 import { docStats, blocksOutline } from '@/lib/doc-stats';
+import { fleschKincaid, gradeLabel } from '@/lib/readability';
+import { computeMatches } from '@/lib/find-replace';
 import { CALLOUT_VARIANTS, STICKY_COLORS, CANVAS_H, NOTE_W, NOTE_H, fileKind, padRows } from '@/lib/block-kit';
 import { ChartPreview } from '@/components/blocks/chart-preview';
 import { CODE_LANGUAGES } from '@/components/blocks/CodeBlockRenderer';
@@ -1322,6 +1324,111 @@ function AddBlockButton({ onAdd }) {
   );
 }
 
+// ── Find & Replace bar (KR-006) ───────────────────────────────────────────────── — rendered at the top of the editor when open (Ctrl+F / Ctrl+H).
+// Not shown in read-only mode (editingArticle=false in the parent, which simply omits onChange).
+function FindBar({
+  findQuery, setFindQuery,
+  replaceQuery, setReplaceQuery,
+  replaceOpen,
+  matches, activeMatchIndex,
+  onPrev, onNext,
+  onReplace, onReplaceAll,
+  onClose,
+}) {
+  const findRef = useRef(null);
+
+  // Auto-focus the find input when the bar opens.
+  useEffect(() => { findRef.current?.focus(); }, []);
+
+  const matchLabel = matches.length === 0
+    ? 'No matches'
+    : `${activeMatchIndex + 1} / ${matches.length}`;
+
+  return (
+    <div
+      role="search"
+      aria-label="Find and replace"
+      className="flex flex-col gap-1.5 px-3 py-2 bg-neutral-50 dark:bg-neutral-900/70 border border-neutral-200 dark:border-neutral-700 rounded-lg"
+    >
+      {/* Find row */}
+      <div className="flex items-center gap-2">
+        <Search aria-hidden="true" className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
+        <input
+          ref={findRef}
+          type="text"
+          aria-label="Find text"
+          value={findQuery}
+          onChange={(e) => setFindQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.shiftKey ? onPrev() : onNext(); }
+            if (e.key === 'Escape') { onClose(); }
+          }}
+          placeholder="Find…"
+          className="flex-1 bg-transparent text-sm text-neutral-900 dark:text-neutral-100 focus-visible:outline-none"
+        />
+        <span aria-live="polite" className="text-xs text-neutral-500 tabular-nums shrink-0">{matchLabel}</span>
+        <button
+          type="button"
+          onClick={onPrev}
+          aria-label="Previous match"
+          disabled={matches.length === 0}
+          className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+        >
+          <ChevronUp aria-hidden="true" className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={onNext}
+          aria-label="Next match"
+          disabled={matches.length === 0}
+          className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+        >
+          <ChevronDown aria-hidden="true" className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close find bar"
+          className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+        >
+          <X aria-hidden="true" className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* Replace row — only shown when Ctrl+H was used */}
+      {replaceOpen && (
+        <div className="flex items-center gap-2 pl-5">
+          <input
+            type="text"
+            aria-label="Replace with"
+            value={replaceQuery}
+            onChange={(e) => setReplaceQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+            placeholder="Replace with…"
+            className="flex-1 bg-transparent text-sm text-neutral-900 dark:text-neutral-100 focus-visible:outline-none"
+          />
+          <button
+            type="button"
+            onClick={onReplace}
+            disabled={matches.length === 0}
+            className="text-xs font-medium text-brand-navy hover:underline disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded px-1"
+          >
+            Replace
+          </button>
+          <button
+            type="button"
+            onClick={onReplaceAll}
+            disabled={matches.length === 0}
+            className="text-xs font-medium text-brand-navy hover:underline disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded px-1"
+          >
+            Replace all
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main BlockEditor component ──────────────────────────────────────────────────
 
 /**
@@ -1340,6 +1447,28 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [saveStatus, setSaveStatus] = useState(null); // 'Undone' | 'Redone' | null (KR-003)
   const [selTool, setSelTool] = useState(null);        // { blockIndex, start, end, rect } | null (KR-002)
+
+  // KR-006: Find & Replace state
+  const [findBarOpen, setFindBarOpen] = useState(false);
+  const [replaceOpen, setReplaceOpen] = useState(false);
+  const [findQuery, setFindQuery] = useState('');
+  const [replaceQuery, setReplaceQuery] = useState('');
+  const [activeMatchIndex, setActiveMatchIndex] = useState(0);
+
+  // KR-013: relative "Saved X ago" label — stored as a string so Date.now() is never called
+  // during render (avoids the react-hooks/purity rule violation). Updated on every save.
+  const [savedRelative, setSavedRelative] = useState(null);
+
+  // KR-006: compute matches whenever find query or blocks change
+  const matches = useMemo(() => computeMatches(findQuery, blocks), [findQuery, blocks]);
+
+  // KR-013: all plain text for readability + char count
+  const allText = useMemo(
+    () => blocks.filter((b) => b.content).map((b) => b.content).join(' '),
+    [blocks],
+  );
+  const charCount = useMemo(() => allText.replace(/\s/g, '').length, [allText]);
+  const grade = useMemo(() => fleschKincaid(allText), [allText]);
 
   // Per-block DOM node map for auto-scroll; populated via the blockRef callback prop on Block.
   const blockElsRef = useRef({});
@@ -1371,6 +1500,8 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
         return next;
       });
       onChange?.(next);
+      // KR-013: record "just now" on every save; the label stays until the next save.
+      setSavedRelative('Saved just now');
     },
     [onChange],
   );
@@ -1514,18 +1645,98 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
 
   const stats = docStats(blocks);
 
+  // KR-006: Find & Replace navigation helpers
+  const handleFindNext = useCallback(() => {
+    if (matches.length === 0) return;
+    setActiveMatchIndex((i) => (i + 1) % matches.length);
+  }, [matches.length]);
+
+  const handleFindPrev = useCallback(() => {
+    if (matches.length === 0) return;
+    setActiveMatchIndex((i) => (i - 1 + matches.length) % matches.length);
+  }, [matches.length]);
+
+  const handleReplace = useCallback(() => {
+    if (matches.length === 0) return;
+    const match = matches[activeMatchIndex] || matches[0];
+    const { blockIndex, start, end } = match;
+    const content = blocks[blockIndex]?.content || '';
+    const next = content.slice(0, start) + replaceQuery + content.slice(end);
+    emit(blocks.map((b, i) => (i === blockIndex ? { ...b, content: next } : b)));
+  }, [matches, activeMatchIndex, blocks, replaceQuery, emit]);
+
+  const handleReplaceAll = useCallback(() => {
+    if (matches.length === 0) return;
+    // Group matches by blockIndex (already sorted; apply right-to-left within each block
+    // so earlier offsets aren't invalidated by replacements in the same block).
+    const byBlock = {};
+    for (const m of matches) {
+      if (!byBlock[m.blockIndex]) byBlock[m.blockIndex] = [];
+      byBlock[m.blockIndex].push(m);
+    }
+    const next = blocks.map((block, i) => {
+      if (!byBlock[i]) return block;
+      let content = block.content || '';
+      // Apply right-to-left within the block to preserve earlier offsets.
+      const mList = [...byBlock[i]].sort((a, b) => b.start - a.start);
+      for (const m of mList) {
+        content = content.slice(0, m.start) + replaceQuery + content.slice(m.end);
+      }
+      return { ...block, content };
+    });
+    emit(next);
+    setActiveMatchIndex(0);
+  }, [matches, blocks, replaceQuery, emit]);
+
   const handleEditorKeyDown = useCallback((e) => {
-    if (e.key === 'Escape') { setSelTool(null); return; }
+    if (e.key === 'Escape') {
+      if (findBarOpen) { setFindBarOpen(false); setReplaceOpen(false); }
+      else { setSelTool(null); }
+      return;
+    }
     const ctrl = e.ctrlKey || e.metaKey;
     if (!ctrl) return;
+    // KR-006: Ctrl+F = find, Ctrl+H = find+replace
+    if (!e.shiftKey && e.key === 'f') {
+      e.preventDefault();
+      setFindBarOpen(true);
+      setReplaceOpen(false);
+      return;
+    }
+    if (!e.shiftKey && e.key === 'h') {
+      e.preventDefault();
+      setFindBarOpen(true);
+      setReplaceOpen(true);
+      return;
+    }
     if (!e.shiftKey && e.key === 'z') { e.preventDefault(); handleUndo(); }
     else if (!e.shiftKey && e.key === 'y') { e.preventDefault(); handleRedo(); }
     else if (e.shiftKey && e.key === 'Z') { e.preventDefault(); handleRedo(); }
-  }, [handleUndo, handleRedo]);
+  }, [handleUndo, handleRedo, findBarOpen]);
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div id="block-editor-root" className="space-y-2" onKeyDown={handleEditorKeyDown} onMouseUp={handleEditorMouseUp}>
       <BlockToolbar onInsert={addBlockAtCursor} />
+
+      {/* KR-006: Find & Replace bar — only shown in edit mode (when onChange is provided) */}
+      {findBarOpen && onChange && (
+        <FindBar
+          findQuery={findQuery}
+          setFindQuery={(q) => { setFindQuery(q); setActiveMatchIndex(0); }}
+          replaceQuery={replaceQuery}
+          setReplaceQuery={setReplaceQuery}
+          replaceOpen={replaceOpen}
+          matches={matches}
+          activeMatchIndex={Math.min(activeMatchIndex, Math.max(0, matches.length - 1))}
+          onPrev={handleFindPrev}
+          onNext={handleFindNext}
+          onReplace={handleReplace}
+          onReplaceAll={handleReplaceAll}
+          onClose={() => { setFindBarOpen(false); setReplaceOpen(false); setFindQuery(''); setReplaceQuery(''); }}
+        />
+      )}
+
       <div role="listbox" aria-label="Block editor" aria-multiselectable="false" className="space-y-2">
         {blocks.map((block, index) => (
           <Block
@@ -1550,14 +1761,26 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
       {aiAssist && <AiComposeBar aiAssist={aiAssist} onInsert={insertParagraph} />}
       <AddBlockButton onAdd={addBlock} />
       <SelectionToolbar rect={selTool?.rect ?? null} onWrap={handleWrapToolbar} onDismiss={() => setSelTool(null)} />
-      {/* MS Word-style live status bar — word count + reading time, always current, no file to sync. */}
+      {/* MS Word-style live status bar — word count + reading time + readability + last saved (KR-013). */}
       <div className="flex items-center justify-end gap-3 text-2xs text-neutral-600 dark:text-neutral-400 pt-1" aria-live="polite">
         {saveStatus && <span className="text-brand-navy dark:text-brand-orange font-medium">{saveStatus}</span>}
         <span>{stats.words} {stats.words === 1 ? 'word' : 'words'}</span>
         <span aria-hidden="true">·</span>
-        <span>{stats.characters} characters</span>
+        <span>{charCount} chars</span>
         <span aria-hidden="true">·</span>
         <span>{stats.readingMinutes} min read</span>
+        {stats.words > 0 && (
+          <>
+            <span aria-hidden="true">·</span>
+            <span>{gradeLabel(grade)}</span>
+          </>
+        )}
+        {savedRelative && (
+          <>
+            <span aria-hidden="true">·</span>
+            <span>{savedRelative}</span>
+          </>
+        )}
       </div>
     </div>
   );

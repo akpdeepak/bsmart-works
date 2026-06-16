@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BlockEditor } from '@/components/BlockEditor';
+import { computeMatches } from '@/lib/find-replace';
 
 describe('BlockEditor — Know Studio blocks', () => {
   it('starts with one paragraph block and a grouped insert menu', async () => {
@@ -198,5 +199,99 @@ describe('BlockEditor — Know Studio blocks', () => {
 
     fireEvent.keyDown(textarea, { key: 'y', ctrlKey: true });
     expect(onChange.mock.calls.at(-1)[0][0].content).toBe('a');
+  });
+
+  // KR-006: Find & Replace — computeMatches unit tests
+  describe('computeMatches (KR-006)', () => {
+    it('returns empty array for empty query', () => {
+      const blocks = [{ id: 'b1', content: 'hello world', type: 'paragraph' }];
+      expect(computeMatches('', blocks)).toEqual([]);
+    });
+
+    it('returns matches for a case-insensitive substring', () => {
+      const blocks = [
+        { id: 'b1', content: 'Hello world', type: 'paragraph' },
+        { id: 'b2', content: 'say hello again', type: 'paragraph' },
+        { id: 'b3', content: 'no match here', type: 'paragraph' },
+      ];
+      const m = computeMatches('hello', blocks);
+      expect(m).toHaveLength(2);
+      expect(m[0]).toMatchObject({ blockIndex: 0, start: 0, end: 5 });
+      expect(m[1]).toMatchObject({ blockIndex: 1, start: 4, end: 9 });
+    });
+
+    it('returns multiple matches within the same block', () => {
+      const blocks = [{ id: 'b1', content: 'hello hello hello', type: 'paragraph' }];
+      expect(computeMatches('hello', blocks)).toHaveLength(3);
+    });
+
+    it('returns no matches when query is not found', () => {
+      const blocks = [{ id: 'b1', content: 'foo bar', type: 'paragraph' }];
+      expect(computeMatches('xyz', blocks)).toHaveLength(0);
+    });
+  });
+
+  // KR-006: Find bar UI
+  it('Ctrl+F opens the find bar (KR-006)', async () => {
+    render(<BlockEditor blocks={[]} onChange={() => {}} />);
+    const root = document.getElementById('block-editor-root');
+    fireEvent.keyDown(root, { key: 'f', ctrlKey: true });
+    expect(screen.getByRole('search', { name: /find and replace/i })).toBeInTheDocument();
+  });
+
+  it('Escape closes the find bar (KR-006)', async () => {
+    render(<BlockEditor blocks={[]} onChange={() => {}} />);
+    const root = document.getElementById('block-editor-root');
+    fireEvent.keyDown(root, { key: 'f', ctrlKey: true });
+    expect(screen.getByRole('search', { name: /find and replace/i })).toBeInTheDocument();
+    fireEvent.keyDown(root, { key: 'Escape' });
+    expect(screen.queryByRole('search', { name: /find and replace/i })).not.toBeInTheDocument();
+  });
+
+  it('Replace All replaces all occurrences across blocks (KR-006)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const blocks = [
+      { id: 'b1', type: 'paragraph', content: 'hello world', metadata: {} },
+      { id: 'b2', type: 'paragraph', content: 'say hello', metadata: {} },
+      { id: 'b3', type: 'paragraph', content: 'hello again', metadata: {} },
+    ];
+    render(<BlockEditor blocks={blocks} onChange={onChange} />);
+
+    // Open find bar
+    const root = document.getElementById('block-editor-root');
+    fireEvent.keyDown(root, { key: 'h', ctrlKey: true });
+
+    const findInput = screen.getByLabelText('Find text');
+    const replaceInput = screen.getByLabelText('Replace with');
+    await user.type(findInput, 'hello');
+    await user.type(replaceInput, 'hi');
+
+    await user.click(screen.getByRole('button', { name: /replace all/i }));
+
+    const emitted = onChange.mock.calls.at(-1)[0];
+    expect(emitted[0].content).toBe('hi world');
+    expect(emitted[1].content).toBe('say hi');
+    expect(emitted[2].content).toBe('hi again');
+  });
+
+  it('find bar is not shown in read-only mode (KR-006)', () => {
+    render(<BlockEditor blocks={[]} />);
+    const root = document.getElementById('block-editor-root');
+    fireEvent.keyDown(root, { key: 'f', ctrlKey: true });
+    // Bar opens via keyboard but onChange is absent so the bar should not render
+    expect(screen.queryByRole('search', { name: /find and replace/i })).not.toBeInTheDocument();
+  });
+
+  // KR-013: Enhanced status bar
+  it('shows char count and readability grade in status bar (KR-013)', async () => {
+    const user = userEvent.setup();
+    render(<BlockEditor blocks={[]} onChange={() => {}} />);
+    const textarea = screen.getByLabelText('Paragraph content');
+    await user.type(textarea, 'The cat sat on the mat.');
+    // Should show chars (no spaces)
+    expect(screen.getByText(/chars/)).toBeInTheDocument();
+    // Grade label should appear once there is text
+    expect(screen.getByText(/Grade/)).toBeInTheDocument();
   });
 });

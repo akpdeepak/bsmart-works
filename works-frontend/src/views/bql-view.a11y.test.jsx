@@ -1,6 +1,11 @@
 import { describe, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { expectNoA11yViolations } from '@/test/a11y';
+
+// BqlView calls useQueryClient(), so renders need a QueryClientProvider.
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const renderWithClient = (ui) => render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 
 vi.mock('@/lib/apiClient', () => ({ api: { send: vi.fn(() => Promise.resolve({})) } }));
 vi.mock('@/lib/saved-views', () => ({
@@ -38,14 +43,14 @@ const baseProps = {
 
 describe('BqlView a11y', () => {
   it('the query editor (NL panel + schema chips) has no serious/critical violations', async () => {
-    const { container } = render(<BqlView {...baseProps} />);
+    const { container } = renderWithClient(<BqlView {...baseProps} />);
     await screen.findByLabelText('Plain-English filter query');
     await screen.findByLabelText('Insert status');
     await expectNoA11yViolations(container);
   });
 
   it('the results navigator has no serious/critical violations', async () => {
-    const { container } = render(<BqlView {...baseProps} bqlResults={RESULTS} />);
+    const { container } = renderWithClient(<BqlView {...baseProps} bqlResults={RESULTS} />);
     await screen.findByText('Login bug');
     await expectNoA11yViolations(container);
   });

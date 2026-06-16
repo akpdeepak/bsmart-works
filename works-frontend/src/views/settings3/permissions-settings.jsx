@@ -1,11 +1,15 @@
-import { Check, Lock } from 'lucide-react';
+import { Fragment, useState } from 'react';
+import { Check, Lock, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { groupPermissions } from '@/lib/permission-groups';
 
 /**
  * PermissionsSettings — the "Permissions" sub-tab: roles & permissions matrix
  * (create custom roles, toggle per-role permissions).
- * Pure rendering shell — all data + handlers come from props.
+ * Pure rendering shell — all data + handlers come from props. WI-32c adds a
+ * presentation-only grouping/collapse over the same matrix; grant semantics and
+ * server-side enforcement are unchanged.
  */
 export default function PermissionsSettings({
   permMatrix,
@@ -16,6 +20,18 @@ export default function PermissionsSettings({
   togglePermission,
   createRole,
 }) {
+  // Collapsed permission-domain groups (presentational UI state only).
+  const [collapsed, setCollapsed] = useState(() => new Set());
+  const toggleGroup = (domain) => setCollapsed((prev) => {
+    const next = new Set(prev);
+    if (next.has(domain)) next.delete(domain); else next.add(domain);
+    return next;
+  });
+
+  const groups = permMatrix ? groupPermissions(permMatrix.allPermissions) : [];
+  // Per-role granted count across all permissions (derived; no mutation).
+  const grantedCount = (row) => Object.values(row.permissions).filter(Boolean).length;
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
@@ -82,29 +98,50 @@ export default function PermissionsSettings({
                     <thead className="bg-neutral-50 dark:bg-neutral-900">
                       <tr>
                         <th className="text-left px-4 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 sticky left-0 bg-neutral-50 dark:bg-neutral-900">Permission</th>
-                        {permMatrix.roles.map(r => (
-                          <th key={r.id} className="px-3 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 text-center min-w-24">
-                            <div>{r.name}</div>
-                            <div className="font-normal text-neutral-600 dark:text-neutral-400">Tier {r.tier}</div>
-                          </th>
-                        ))}
+                        {permMatrix.roles.map(r => {
+                          const row = permMatrix.matrix.find(m => m.role.id === r.id);
+                          return (
+                            <th key={r.id} className="px-3 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 text-center min-w-24">
+                              <div>{r.name}</div>
+                              <div className="font-normal text-neutral-600 dark:text-neutral-400">Tier {r.tier}</div>
+                              {row && <div className="font-normal text-2xs text-neutral-500">{grantedCount(row)} granted</div>}
+                            </th>
+                          );
+                        })}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                      {permMatrix.allPermissions.map(perm => (
-                        <tr key={perm} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
-                          <td className="px-4 py-2 font-mono sticky left-0 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200">{perm}</td>
-                          {permMatrix.matrix.map(row => (
-                            <td key={row.role.id} className="px-3 py-2 text-center">
-                              <button onClick={() => togglePermission(row.role.id, perm, row.permissions[perm])}
-                                className={`w-7 h-7 rounded transition-colors text-sm font-bold ${row.permissions[perm] ? 'bg-semantic-success text-white hover:opacity-80' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-brand-navy/10'}`}
-                                title={row.permissions[perm] ? 'Click to revoke' : 'Click to grant'}>
-                                {row.permissions[perm] ? <Check className="inline-block h-4 w-4 text-semantic-success" aria-label="Permitted" /> : <span aria-label="Not permitted">—</span>}
-                              </button>
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
+                      {groups.map(group => {
+                        const isCollapsed = collapsed.has(group.domain);
+                        return (
+                          <Fragment key={group.domain}>
+                            <tr className="bg-neutral-50 dark:bg-neutral-900">
+                              <td colSpan={permMatrix.roles.length + 1} className="px-2 py-1.5 sticky left-0 bg-neutral-50 dark:bg-neutral-900">
+                                <Button variant="ghost" size="sm" onClick={() => toggleGroup(group.domain)} aria-expanded={!isCollapsed}
+                                  className="h-auto gap-1.5 px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wider">
+                                  {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />}
+                                  {group.label}
+                                  <span className="font-normal text-neutral-400 normal-case">({group.permissions.length})</span>
+                                </Button>
+                              </td>
+                            </tr>
+                            {!isCollapsed && group.permissions.map(perm => (
+                              <tr key={perm} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
+                                <td className="px-4 py-2 font-mono sticky left-0 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200">{perm}</td>
+                                {permMatrix.matrix.map(row => (
+                                  <td key={row.role.id} className="px-3 py-2 text-center">
+                                    <button onClick={() => togglePermission(row.role.id, perm, row.permissions[perm])}
+                                      className={`w-7 h-7 rounded transition-colors text-sm font-bold ${row.permissions[perm] ? 'bg-semantic-success text-white hover:opacity-80' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-brand-navy/10'}`}
+                                      title={row.permissions[perm] ? 'Click to revoke' : 'Click to grant'}>
+                                      {row.permissions[perm] ? <Check className="inline-block h-4 w-4 text-semantic-success" aria-label="Permitted" /> : <span aria-label="Not permitted">—</span>}
+                                    </button>
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </Fragment>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

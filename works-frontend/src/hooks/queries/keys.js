@@ -36,3 +36,10 @@ export const savedViewsKeys = {
   all: ['saved-views'],
   list: (workspaceId, projectId) => ['saved-views', workspaceId, projectId ?? null],
 };
+
+export const workItemActivityKeys = {
+  all: ['work-item-activity'],
+  // Both workspaceId and workItemId are required to scope the cache entry correctly — the
+  // event list is per-item and must be workspace-scoped server-side (RB-40 §1).
+  list: (workspaceId, workItemId) => ['work-item-activity', workspaceId, workItemId],
+};

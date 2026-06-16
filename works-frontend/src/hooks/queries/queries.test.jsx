@@ -5,7 +5,8 @@ import { useWorkspaceUsers } from './useWorkspaceUsers';
 import { useProjects } from './useProjects';
 import { useFeatureFlags, useFeatureFlag } from './useFeatureFlags';
 import { useWorkspaceSetup } from './useWorkspaceSetup';
-import { usersKeys, projectsKeys, featureFlagsKeys, workspaceSetupKeys } from './keys';
+import { useWorkItems } from './useWorkItems';
+import { usersKeys, projectsKeys, featureFlagsKeys, workspaceSetupKeys, workItemsKeys, savedViewsKeys } from './keys';
 import { api } from '@/lib/apiClient';
 
 vi.mock('@/lib/apiClient', () => ({ api: { send: vi.fn() } }));
@@ -24,6 +25,9 @@ describe('query key factories', () => {
     expect(projectsKeys.list('ws-9')).toEqual(['projects', 'ws-9']);
     expect(featureFlagsKeys.list('ws-9')).toEqual(['feature-flags', 'ws-9']);
     expect(workspaceSetupKeys.status('ws-9')).toEqual(['workspace-setup', 'ws-9', 'status']);
+    expect(workItemsKeys.list('ws-9', 'p-1')).toEqual(['work-items', 'ws-9', 'p-1']);
+    expect(workItemsKeys.list('ws-9', null)).toEqual(['work-items', 'ws-9', null]);
+    expect(savedViewsKeys.list('ws-9', null)).toEqual(['saved-views', 'ws-9', null]);
   });
 });
 
@@ -103,6 +107,29 @@ describe('useWorkspaceSetup', () => {
 
   it('is disabled when workspaceId is missing', () => {
     const { result } = renderHook(() => useWorkspaceSetup(undefined), { wrapper: makeWrapper() });
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(api.send).not.toHaveBeenCalled();
+  });
+});
+
+describe('useWorkItems', () => {
+  it('fetches /work-items for the workspace', async () => {
+    api.send.mockResolvedValue([{ id: 'WRK-1' }]);
+    const { result } = renderHook(() => useWorkItems('ws-1'), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(api.send).toHaveBeenCalledWith('/work-items?workspaceId=ws-1');
+    expect(result.current.data).toEqual([{ id: 'WRK-1' }]);
+  });
+
+  it('appends projectId when provided', async () => {
+    api.send.mockResolvedValue([]);
+    const { result } = renderHook(() => useWorkItems('ws-1', { projectId: 'p-1' }), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(api.send).toHaveBeenCalledWith('/work-items?workspaceId=ws-1&projectId=p-1');
+  });
+
+  it('is disabled when workspaceId is missing', () => {
+    const { result } = renderHook(() => useWorkItems(''), { wrapper: makeWrapper() });
     expect(result.current.fetchStatus).toBe('idle');
     expect(api.send).not.toHaveBeenCalled();
   });

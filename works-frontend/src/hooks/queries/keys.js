@@ -43,3 +43,9 @@ export const workItemActivityKeys = {
   // event list is per-item and must be workspace-scoped server-side (RB-40 §1).
   list: (workspaceId, workItemId) => ['work-item-activity', workspaceId, workItemId],
 };
+
+export const searchKeys = {
+  // filters is an object of facet constraints (e.g. { types: ['work_items'] }) — serialised
+  // into the key so switching facets invalidates the cached result correctly.
+  results: (workspaceId, query, filters) => ['search', workspaceId, query, filters],
+};

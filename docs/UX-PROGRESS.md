@@ -7,6 +7,53 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-24 [premium] — Motion choreography: DURATION/EASING tokens, modal/drawer/collapsible animations, optimistic shimmer, SuccessCheck (2026-06-16)
+
+**Motion constants module (`src/lib/motion.js`):**
+Single source of truth for all animation decisions: `DURATION` (instant/fast/base/slow/slower in ms),
+`EASING` (outQuint/spring/linear cubic-bezier strings), `MOTION_ROLE` (maps surface roles — hover,
+press, panel, modal, drawer, accordion, toast, page — to their duration+easing pair), and a
+`motionTransition(role, property?)` helper that returns a CSS transition shorthand string. All
+values match `tailwind.config.js` exactly so Tailwind classes and inline styles never drift.
+
+**Modal entrance animation (`src/components/works/molecules/modal.jsx`):**
+Backdrop fades in (`opacity-0 → opacity-100`); dialog panel scales + fades in (`opacity-0 scale-95
+→ opacity-100 scale-100`). Uses a `mounted` → `requestAnimationFrame` → `setVisible(true)` pattern
+so the initial CSS state is painted before the transition fires. Tokens: `duration-base ease-out-quint`.
+No raw values; existing API, focus-trap, scroll-lock, and a11y unchanged.
+
+**Drawer entrance animation (`src/components/works/molecules/drawer.jsx`):**
+Backdrop fades in identically to modal. Panel slides in from the correct edge: right side →
+`translate-x-full → translate-x-0`, left side → `-translate-x-full → translate-x-0`.
+Same rAF mount pattern; `useLayoutEffect` resets `visible` to false when `open` goes false
+(avoids `react-hooks/set-state-in-effect` lint warning on the passive-effect path).
+
+**Collapsible animation upgrade (`src/components/works/atoms/collapsible.jsx`):**
+Grid-rows `0fr → 1fr` height transition and chevron rotation both upgraded from the ad-hoc
+`duration-200 ease-out` to the canonical `duration-base ease-out-quint` tokens (WI-24 alignment).
+
+**Optimistic-update shimmer (`src/index.css`):**
+`.shimmer` utility class: a 90-degree gradient sweep (`neutral-100 → neutral-200 → neutral-100`,
+dark: `neutral-800 → neutral-700 → neutral-800`) over 200% width, animated in 1.5s with
+`out-quint` easing. Apply to any element in an optimistic-pending state. Respects
+`prefers-reduced-motion` (existing global block collapses `animation-duration` to 0.01ms).
+Uses hex values matching the token config (Tailwind v4 CSS custom-property availability is
+environment-dependent; hex is always reliable).
+
+**SuccessCheck atom (`src/components/works/atoms/success-check.jsx`):**
+SVG circle + check-path that draws itself via `stroke-dashoffset` on mount. `getTotalLength()`
+measures the path at runtime; rAF-deferred transition (`220ms out-quint`) draws the check in.
+Props: `size` (default 24), `className`, `aria-label` (default `'Success'`). Fully accessible
+(`role="img"`, labelled). Uses `text-semantic-success` token on both circle and path.
+
+**Tests (24 passing):**
+`src/lib/motion.test.js` — 17 tests covering DURATION values, EASING strings, MOTION_ROLE
+mappings, `motionTransition()` output for named roles, custom property override, and unknown-role
+fallback to panel defaults.
+`src/components/works/atoms/success-check.test.jsx` — 7 tests: renders, `role="img"`, default
+aria-label, custom aria-label, size prop (width/height attributes), default size 24, className prop.
+jsdom's missing `getTotalLength` is stubbed via `SVGElement.prototype.getTotalLength` in `beforeAll`.
+
 ## WI-23 [premium] — Elevation/density spec: `useDensity()` hook, `DensityToggle` atom, CSS custom properties, shared `DENSITY_PAD` token map (2026-06-16)
 
 **Density configuration library (`src/lib/density.js`):**
@@ -47,6 +94,7 @@ Board-view density feature is fully preserved — only the implementation source
   tracks prop change, click calls setDensity with correct level, role+label on container, className forwarding.
 
 Branch: `claude/bsmart-uiux-program-u9u4os`
+
 
 ## WI-22 [consistency] — WCAG 2.2 AA inclusivity: CB-safe palette, high-contrast theme, SR chart fallback, neutral-400 audit (2026-06-15)
 

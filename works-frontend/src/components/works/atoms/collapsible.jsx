@@ -48,15 +48,16 @@ export function Collapsible({ id, title, count, defaultOpen = true, children, cl
         <ChevronDown
           aria-hidden="true"
           className={cn(
-            'ml-auto h-4 w-4 shrink-0 text-neutral-400 transition-transform duration-200',
+            'ml-auto h-4 w-4 shrink-0 text-neutral-400 transition-transform duration-base ease-out-quint',
             open && 'rotate-180'
           )}
         />
       </button>
+      {/* WI-24: height transition via grid-rows 0fr→1fr on duration-base + out-quint. */}
       <div
         id={regionId}
         className={cn(
-          'grid transition-[grid-template-rows] duration-200 ease-out',
+          'grid transition-[grid-template-rows] duration-base ease-out-quint',
           open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
         )}
       >

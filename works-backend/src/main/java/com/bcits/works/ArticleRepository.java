@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,6 +52,21 @@ public interface ArticleRepository extends JpaRepository<Article, String> {
     // KR-066: look up a published article by its public share token (no workspace scope —
     // this is the ONE intended public-facing lookup; the controller verifies PUBLISHED status).
     Optional<Article> findByPublicShareToken(String publicShareToken);
+
+    // KR-020: scheduled publish — find SCHEDULED articles whose publish time has elapsed.
+    List<Article> findByStatusAndScheduledPublishAtBefore(String status, OffsetDateTime before);
+
+    // KR-021: stale check — PUBLISHED articles with a passed review_by_date, not yet flagged.
+    // Joins knowledge_spaces to ensure workspace_id exists on every row (RB-40 §1).
+    // System job: intentionally crosses workspaces so staleness can be flagged tenant-wide.
+    @Query(nativeQuery = true,
+           value = "SELECT a.* FROM articles a " +
+                   "JOIN knowledge_spaces ks ON ks.id = a.space_id " +
+                   "WHERE a.status = 'PUBLISHED' " +
+                   "AND a.review_by_date IS NOT NULL AND a.review_by_date < CURRENT_DATE " +
+                   "AND (a.is_stale IS NULL OR a.is_stale = false) " +
+                   "AND ks.workspace_id IS NOT NULL")
+    List<Article> findPublishedWithPassedReviewByDate();
 
     /** Workspace-scoped search (RB-40 §1). */
     @Query(nativeQuery = true,

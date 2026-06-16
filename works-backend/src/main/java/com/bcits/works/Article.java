@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import org.hibernate.annotations.ColumnTransformer;
 
@@ -53,6 +54,21 @@ public class Article {
     @ColumnTransformer(write = "?::jsonb")
     @Column(name = "content_blocks", columnDefinition = "jsonb")
     private String contentBlocks;
+
+    // KR-019: whether this article requires explicit approval before publishing.
+    @Column(name = "requires_approval") private Boolean requiresApproval = false;
+
+    // KR-020: scheduled publish timestamp — article moves to PUBLISHED at this time.
+    @Column(name = "scheduled_publish_at") private OffsetDateTime scheduledPublishAt;
+
+    // KR-021: date by which the article must be reviewed before it is flagged as stale.
+    @Column(name = "review_by_date") private LocalDate reviewByDate;
+
+    // KR-018: deadline given to the assigned reviewer (different from review_by_date).
+    @Column(name = "reviewer_due_date") private OffsetDateTime reviewerDueDate;
+
+    // KR-021: set by ArticleStalenessChecker when review_by_date has passed on a published article.
+    @Column(name = "is_stale") private Boolean isStale = false;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -112,4 +128,15 @@ public class Article {
     public void setContentFormat(String contentFormat) { this.contentFormat = contentFormat; }
     public String getContentBlocks() { return contentBlocks; }
     public void setContentBlocks(String contentBlocks) { this.contentBlocks = contentBlocks; }
+
+    public Boolean getRequiresApproval() { return requiresApproval; }
+    public void setRequiresApproval(Boolean requiresApproval) { this.requiresApproval = requiresApproval; }
+    public OffsetDateTime getScheduledPublishAt() { return scheduledPublishAt; }
+    public void setScheduledPublishAt(OffsetDateTime scheduledPublishAt) { this.scheduledPublishAt = scheduledPublishAt; }
+    public LocalDate getReviewByDate() { return reviewByDate; }
+    public void setReviewByDate(LocalDate reviewByDate) { this.reviewByDate = reviewByDate; }
+    public OffsetDateTime getReviewerDueDate() { return reviewerDueDate; }
+    public void setReviewerDueDate(OffsetDateTime reviewerDueDate) { this.reviewerDueDate = reviewerDueDate; }
+    public Boolean getIsStale() { return isStale; }
+    public void setIsStale(Boolean isStale) { this.isStale = isStale; }
 }

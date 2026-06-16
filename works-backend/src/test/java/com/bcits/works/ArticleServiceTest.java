@@ -36,11 +36,13 @@ class ArticleServiceTest {
     private final ArticleRepository articleRepository = mock(ArticleRepository.class);
     private final ArticleVersionRepository articleVersionRepository = mock(ArticleVersionRepository.class);
     private final KnowledgeSpaceRepository knowledgeSpaceRepository = mock(KnowledgeSpaceRepository.class);
+    private final ArticleApprovalRepository approvalRepository = mock(ArticleApprovalRepository.class);
     private final EventService eventService = mock(EventService.class);
     private final RbacService rbac = mock(RbacService.class);
 
     private final ArticleService service = new ArticleService(
-            articleRepository, articleVersionRepository, knowledgeSpaceRepository, eventService, rbac);
+            articleRepository, articleVersionRepository, knowledgeSpaceRepository,
+            approvalRepository, eventService, rbac);
 
     @BeforeEach
     void setUp() {

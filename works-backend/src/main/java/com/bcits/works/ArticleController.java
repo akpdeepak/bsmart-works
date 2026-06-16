@@ -361,6 +361,29 @@ public class ArticleController {
         return saved;
     }
 
+    // ── KR-020: Schedule for later publish ───────────────────────────────────────
+    @PostMapping("/{id}/schedule-publish")
+    public Article schedulePublish(@PathVariable String id,
+                                   @RequestBody Map<String, String> body) {
+        String userId = authenticatedUser.id();
+        String raw = body.get("scheduledAt");
+        if (raw == null || raw.isBlank()) {
+            throw ApiException.badRequest("SCHEDULED_AT_REQUIRED",
+                    "scheduledAt is required.", "scheduledAt");
+        }
+        OffsetDateTime scheduledAt;
+        try {
+            scheduledAt = OffsetDateTime.parse(raw);
+        } catch (Exception e) {
+            throw ApiException.badRequest("INVALID_DATE_FORMAT",
+                    "scheduledAt must be an ISO-8601 datetime with offset.", "scheduledAt");
+        }
+        Article article = requireArticleById(id);
+        KnowledgeSpace space = knowledgeSpaceRepository.findById(article.getSpaceId())
+                .orElseThrow(() -> ApiException.notFound("Article", id));
+        return articleService.schedulePublish(id, userId, space.getWorkspaceId(), scheduledAt);
+    }
+
     @PostMapping("/{id}/vote")
     public Article voteHelpful(@PathVariable String id) {
         requireArticleById(id);

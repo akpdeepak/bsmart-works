@@ -64,8 +64,8 @@
 | KR-031 | Comment draft auto-save | P2 | ⬜ open |
 | KR-032 | External reviewer comments | P2 | ⬜ open |
 | KR-033 | Persistent page tree sidebar | P0 | ✅ done · 2026-06-16 |
-| KR-034 | Tags / labels | P1 | ⬜ open |
-| KR-035 | Starred / favorites | P1 | ⬜ open |
+| KR-034 | Tags / labels | P1 | ✅ done |
+| KR-035 | Starred / favorites | P1 | ✅ done |
 | KR-036 | Recently viewed | P1 | ⬜ open |
 | KR-037 | Space home page | P1 | ⬜ open |
 | KR-038 | Bulk operations | P1 | ⬜ open |
@@ -73,9 +73,9 @@
 | KR-040 | Backlinks pane | P2 | ⬜ open |
 | KR-041 | Full-text search across content | P0 | ✅ done · 2026-06-16 |
 | KR-042 | Search result excerpts | P0 | ✅ done · 2026-06-16 |
-| KR-043 | Advanced search filters | P1 | ⬜ open |
+| KR-043 | Advanced search filters | P1 | ✅ done |
 | KR-044 | AI semantic search | P1 | ⬜ open |
-| KR-045 | Related articles recommendations | P1 | ⬜ open |
+| KR-045 | Related articles recommendations | P1 | ✅ done |
 | KR-046 | Content knowledge graph | P2 | ⬜ open |
 | KR-047 | Popular & trending section | P2 | ⬜ open |
 | KR-048 | Saved search views | P2 | ⬜ open |

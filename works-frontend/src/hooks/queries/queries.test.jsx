@@ -4,7 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useWorkspaceUsers } from './useWorkspaceUsers';
 import { useProjects } from './useProjects';
 import { useFeatureFlags, useFeatureFlag } from './useFeatureFlags';
-import { usersKeys, projectsKeys, featureFlagsKeys } from './keys';
+import { useWorkspaceSetup } from './useWorkspaceSetup';
+import { usersKeys, projectsKeys, featureFlagsKeys, workspaceSetupKeys } from './keys';
 import { api } from '@/lib/apiClient';
 
 vi.mock('@/lib/apiClient', () => ({ api: { send: vi.fn() } }));
@@ -22,6 +23,7 @@ describe('query key factories', () => {
     expect(usersKeys.list('ws-9')).toEqual(['users', 'ws-9']);
     expect(projectsKeys.list('ws-9')).toEqual(['projects', 'ws-9']);
     expect(featureFlagsKeys.list('ws-9')).toEqual(['feature-flags', 'ws-9']);
+    expect(workspaceSetupKeys.status('ws-9')).toEqual(['workspace-setup', 'ws-9', 'status']);
   });
 });
 
@@ -86,5 +88,22 @@ describe('useFeatureFlag', () => {
     const { result } = renderHook(() => useFeatureFlag('ws-1', 'nonexistent_flag'), { wrapper: makeWrapper() });
     await waitFor(() => expect(result.current.enabled).toBe(false));
     expect(result.current.variant).toBeNull();
+  });
+});
+
+describe('useWorkspaceSetup', () => {
+  it('fetches /workspace-setup/status and returns setup data', async () => {
+    const fixture = { needsWizard: true, score: 0, steps: [], templates: [] };
+    api.send.mockResolvedValue(fixture);
+    const { result } = renderHook(() => useWorkspaceSetup('ws-1'), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(api.send).toHaveBeenCalledWith('/workspace-setup/status?workspaceId=ws-1');
+    expect(result.current.data).toEqual(fixture);
+  });
+
+  it('is disabled when workspaceId is missing', () => {
+    const { result } = renderHook(() => useWorkspaceSetup(undefined), { wrapper: makeWrapper() });
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(api.send).not.toHaveBeenCalled();
   });
 });

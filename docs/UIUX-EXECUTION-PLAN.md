@@ -147,7 +147,7 @@ visual source before building).
 
 | ID | Work item | Maps to | Depends on | Status | PR |
 |----|-----------|---------|-----------|--------|----|
-| WI-12 | First-run onboarding wizard + project templates (Scrum / Kanban / Bug / RAID) + setup-completeness meter | D H1 #1 | WI-05, WI-11 | ☐ | |
+| WI-12 | First-run onboarding wizard + project templates (Scrum / Kanban / Bug / RAID) + setup-completeness meter | D H1 #1 | WI-05, WI-11 | ✅ | feat/uiux-wi12-onboarding-wizard |
 | WI-13 | Inline quick-add on lists (`N`/`+` → editable row) | D H1 #2 | WI-05 | ☐ | |
 | WI-14 | List-level keyboard rhythm (`j/k/e/n/Enter`) | D H1 #3 | — | ☐ | |
 | WI-15 | Surface saved views (rename / delete / reorder UI over `lib/saved-views.js`) | D H1 #4 | WI-05 | ☐ | |

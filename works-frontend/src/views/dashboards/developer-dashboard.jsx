@@ -6,9 +6,44 @@ import { onPressKey } from '@/lib/utils';
 import { SegmentBar, DayBars } from '@/components/works/molecules';
 import { aggregateByDimension } from '@/lib/dashboard-metrics';
 import { dueBuckets, dailyHours } from '@/lib/today-metrics';
-import { Pin, Zap, Timer, Ban, Clock, Layers, Target } from 'lucide-react';
+import { Pin, Zap, Timer, Ban, Clock, Layers, Target, CheckCircle2 } from 'lucide-react';
 import { TodayCard, HealthRing, Empty, TodaySurface } from './_shared';
 import { getTimeOfDay as getGreeting } from '@/lib/utils';
+import { useWorkspaceSetup } from '@/hooks/queries/useWorkspaceSetup';
+
+// ── Setup-completeness widget ─────────────────────────────────────────────────
+
+function SetupCompletenessWidget({ workspaceId }) {
+  const { data, isLoading } = useWorkspaceSetup(workspaceId);
+  if (isLoading || !data) return null;
+  // Hide once all steps are done and workspace is no longer new
+  if (!data.needsWizard && data.score === 100) return null;
+  const steps = data.steps ?? [];
+  const score = data.score ?? 0;
+  return (
+    <TodayCard title="Workspace setup" icon={CheckCircle2} iconColor="text-brand-orange">
+      <div className="mb-4 flex items-center gap-4">
+        <HealthRing pct={score} size={56} stroke="stroke-brand-orange" label="done" />
+        <p className="text-xs text-neutral-600 dark:text-neutral-400">
+          {score < 100
+            ? 'Complete these steps to get the most out of bSmart Works.'
+            : 'Your workspace is fully set up!'}
+        </p>
+      </div>
+      <ul className="space-y-2">
+        {steps.map((step) => (
+          <li key={step.id} className="flex items-center gap-2 text-sm">
+            <CheckCircle2 className={`h-4 w-4 flex-shrink-0 ${step.done ? 'text-semantic-success' : 'text-neutral-200 dark:text-neutral-600'}`}
+              aria-hidden="true" />
+            <span className={step.done ? 'text-neutral-600 dark:text-neutral-400 line-through' : 'text-neutral-700 dark:text-neutral-300'}>
+              {step.label}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </TodayCard>
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DEVELOPER
@@ -176,6 +211,9 @@ const DEVELOPER_REGISTRY = {
           </div>
         ))}
     </TodayCard>
+  ),
+  'setup-completeness': (ctx) => (
+    <SetupCompletenessWidget workspaceId={ctx.currentUser?.workspaceId} />
   ),
 };
 

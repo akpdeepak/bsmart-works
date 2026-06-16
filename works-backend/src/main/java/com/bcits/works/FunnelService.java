@@ -22,8 +22,9 @@ import java.util.Map;
  *   <li>Idempotent events (FIRST_VALUE, DAY_2_RETURN) check the events table before emitting.</li>
  * </ul>
  *
- * <p>Step 1 (WORKSPACE_CREATED) is deferred to WI-12 (onboarding wizard), where the workspace
- * creation flow will be built. Steps 2–5 are instrumented here.
+ * <p>Step 1 (WORKSPACE_CREATED) is emitted via {@link #onWorkspaceCreated} called from
+ * {@link WorkspaceSetupService} when the first-run wizard status is first requested (WI-12).
+ * Steps 2–5 are instrumented here.
  */
 @Service
 public class FunnelService {
@@ -42,6 +43,20 @@ public class FunnelService {
         this.eventService = eventService;
         this.eventRepository = eventRepository;
         this.jdbc = jdbc;
+    }
+
+    // ── Step 1 ───────────────────────────────────────────────────────────────
+
+    /** Workspace activated — the first-run wizard was requested (funnel step 1). Idempotent. */
+    public void onWorkspaceCreated(String workspaceId, String actorId) {
+        if (workspaceId == null) return;
+        try {
+            if (alreadyEmitted(workspaceId, "WORKSPACE_CREATED")) return;
+            eventService.recordInWorkspace(workspaceId, workspaceId, "WORKSPACE_CREATED", actorId,
+                    Map.of());
+        } catch (Exception e) {
+            log.warn("funnel: WORKSPACE_CREATED skipped for {}: {}", workspaceId, e.getMessage());
+        }
     }
 
     // ── Step 2 ───────────────────────────────────────────────────────────────

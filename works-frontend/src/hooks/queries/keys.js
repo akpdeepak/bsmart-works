@@ -18,3 +18,8 @@ export const featureFlagsKeys = {
   all: ['feature-flags'],
   list: (workspaceId) => ['feature-flags', workspaceId],
 };
+
+export const workspaceSetupKeys = {
+  all: ['workspace-setup'],
+  status: (workspaceId) => ['workspace-setup', workspaceId, 'status'],
+};

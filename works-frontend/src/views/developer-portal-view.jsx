@@ -57,7 +57,7 @@ export default function DeveloperPortalView({ workspaceId }) {
       )}
 
       {loading ? (
-        <div className="space-y-3" aria-busy="true">
+        <div className="space-y-3" aria-busy="true" aria-label="Loading developer portal">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-24 rounded-xl bg-neutral-100 dark:bg-neutral-800 animate-pulse" />
           ))}

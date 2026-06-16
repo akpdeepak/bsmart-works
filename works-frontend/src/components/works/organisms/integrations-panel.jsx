@@ -143,7 +143,7 @@ export function IntegrationsPanel({ workspaceId, can = () => true, onToast = () 
       {error && <div role="alert" className="mb-4 rounded-lg bg-semantic-danger-surface p-4 text-sm text-semantic-danger">{error}</div>}
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="Loading integrations">
           {[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
         </div>
       ) : tab === 'connectors' ? (

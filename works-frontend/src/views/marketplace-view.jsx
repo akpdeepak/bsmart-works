@@ -112,7 +112,7 @@ export default function MarketplaceView({ workspaceId }) {
       )}
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" aria-busy="true">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" aria-busy="true" aria-label="Loading marketplace">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-36 rounded-xl bg-neutral-100 dark:bg-neutral-800 animate-pulse" />
           ))}

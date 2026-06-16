@@ -780,7 +780,7 @@ export default function BqlView({
 
       {/* Loading — skeleton rows while a query runs and we have nothing to show yet (RB-30 §6). */}
       {bqlLoading && !groups && bqlResults.length === 0 && (
-        <Card variant="outlined" padding="sm" aria-busy="true">
+        <Card variant="outlined" padding="sm" aria-busy="true" aria-label="Loading query results">
           <ListSkeleton rows={6} />
         </Card>
       )}

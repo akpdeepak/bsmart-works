@@ -137,7 +137,7 @@ export default function AdminOpsView({ workspaceId, onToast }) {
               action={<Button variant="secondary" size="sm" leftIcon={<RefreshCw className="h-4 w-4" />} onClick={refresh}>Try again</Button>}
             />
           ) : loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4" aria-busy="true">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4" aria-busy="true" aria-label="Loading">
               <Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" />
             </div>
           ) : (

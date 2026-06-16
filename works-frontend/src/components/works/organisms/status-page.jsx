@@ -37,7 +37,7 @@ export function StatusPage() {
 
   if (loading) {
     return (
-      <div className="space-y-3" aria-busy="true">
+      <div className="space-y-3" aria-busy="true" aria-label="Loading status">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-16 w-full" />
         <Skeleton className="h-16 w-full" />

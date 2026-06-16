@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Settings, X, ChevronRight, ArrowRight, ChevronDown, GripVertical } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { WorkflowDiagram } from '@/components/works/organisms/workflow-diagram';
 import { onPressKey } from '@/lib/utils';
 import { BRAND_NAVY } from '@/lib/brand-tokens';
 
@@ -83,6 +84,9 @@ export default function WorkflowSettings({
                     <div className="border-t border-neutral-100 dark:border-neutral-700 p-5 bg-neutral-50 dark:bg-neutral-900 space-y-6">
                       {!detail ? <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-4">Loading...</p> : (
                         <>
+                          {/* Visual workflow map (WI-32a) — read-only overview above the editors */}
+                          {statuses.length > 0 && <WorkflowDiagram statuses={statuses} transitions={transitions} />}
+
                           {/* Statuses */}
                           <div>
                             <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-3">Statuses ({statuses.length})</p>

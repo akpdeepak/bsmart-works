@@ -7,6 +7,24 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-30 [benchmark] — Search overhaul: standalone search surface, useSearch hook, facet tabs (2026-06-16)
+
+**`src/lib/search.js` (new):** Unified search API client (`searchClient.search`) that fans out to two endpoints in parallel via `Promise.allSettled`: work items (BQL `title contains "…"` query to `/api/v1/work-items`) and articles (FTS endpoint `/api/v1/knowledge/search`). All HTTP routes through the single `apiClient` (RB-10 §1). Returns `{ workItems, articles, total }`. Each leg is independently fault-tolerant — one failing endpoint does not suppress the other.
+
+**`src/hooks/queries/useSearch.js` (new):** TanStack Query hook with 300 ms debounce (state-in-timeout, not `useEffect`-on-setTimeout — avoids cascading-render warnings). `enabled` gates on `workspaceId` and `debouncedQuery.length >= 2` to avoid wasted requests. `staleTime: 30_000` keeps repeat searches cheap. Re-exports `searchKeys` from `keys.js` for consumer convenience.
+
+**`src/hooks/queries/keys.js` (updated):** Added `searchKeys.results(workspaceId, query, filters)` — the canonical cache key for search results. Follows the same factory pattern as `workItemsKeys` / `savedViewsKeys`.
+
+**`src/views/search-view.jsx` (new):** Full-page search surface (WI-30). Wired via `PageLayout width="reading"`. Structure: full-width search input (autofocused, `role="searchbox"`, `aria-label`) → three facet tabs (All / Work Items / Articles, using the canonical `Tabs/TabList/Tab/TabPanel` atoms) → result list. Work-item rows show `TypeBadge` + title + project name + `PriorityBadge` + `StatusBadge`. Article rows show `FileText` icon + title + space name + excerpt. Loading: `ListSkeleton` (6 rows). Empty (query < 2 chars): inline prompt text. Empty (no results): `EmptyState` with `Search` icon. Error: `EmptyState` with `AlertCircle` icon. Keyboard: Up/Down arrows cycle `safeFocusIdx` (clamped at render time, not via setState-in-effect), Enter activates focused row. Result rows use `<Button variant="ghost">` so the `works-view/no-raw-button` guardrail is satisfied; aria attributes (`role="option"`, `aria-selected`) pass through `...props`. WCAG 2.1 AA: labelled input, `role="list"` on results container, `role="option"` on rows, `aria-selected` on focused row, keyboard-full operability.
+
+**`src/lib/routes.js` (updated):** Added `search: '/search'` to `VIEW_PATHS` so the search surface is deep-linkable.
+
+**`src/App.jsx` (updated):** Added `SearchView` lazy import; added `{ id: 'act-search-all', label: 'Search everything', … }` action to the command palette (navigates to `search` view); added `{view === 'search' && <SearchView … />}` rendering block.
+
+**`src/views/search-view.test.jsx` (new):** 12 unit tests (Vitest + RTL): renders and autofocuses the search input; "type to search" prompt on empty query; skeleton visible during loading; empty state on no results; work item result titles rendered; article result titles rendered; `onSelectItem` called on row click; `onSelectArticle` called on article row click; error state shown; Work Items tab selected; Articles tab selected. Mocks `useSearch` via `vi.mock`; wraps in `QueryClientProvider`. All 12 tests green.
+
+**ESLint / guardrails:** zero new violations from the new files. Pre-existing baseline debt (hex in `status-management-tab.jsx`, `max-w-[880px]` in `page-layout.jsx`) unchanged.
+
 ## WI-29 [benchmark] — Real-time collaborative knowledge editor: SSE presence, soft-lock, template picker (2026-06-16)
 
 **`src/lib/presence.js` (new):** SSE-based article co-presence client. `joinArticlePresence` opens an EventSource at `/api/v1/knowledge/presence?workspaceId=&articleId=&userId=`, parses `presence` events into `PresenceUser[]`, sends a POST heartbeat every 15 s so the server can detect stale viewers, and auto-reconnects on error after 3 s. Returns a `leave()` cleanup function that closes the SSE stream and posts `/knowledge/presence/leave`. `requestEditLock` and `releaseEditLock` hit the soft-lock endpoints with graceful degradation — if the lock endpoint is unavailable, `requestEditLock` returns `{ granted: true }` so the user can always edit (optimistic mode). All calls go through `api.send` (no inline fetch).

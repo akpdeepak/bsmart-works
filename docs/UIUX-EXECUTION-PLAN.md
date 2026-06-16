@@ -180,7 +180,7 @@ visual source before building).
 | WI-27 | AI-native UX: contextual (inline draft/fill) + proactive Today nudges + token-streaming + Artifacts-style canvas — all via the AI Control Plane + documented fallback | D H3 #10; H.5 4.1–4.2 | WI-20 | ✅ | |
 | WI-28 | Content-first detail panel + narrative activity feed (events → human sentences) | D H3 #11; H.5 3.4 | WI-05 | ✅ | |
 | WI-29 | Real-time collaborative knowledge editor (presence/soft-lock) + inline block comments + article templates | D H3 #12 | WI-20 | ✅ | |
-| WI-30 | Search overhaul: standalone search surface + full-text body search + facets | D H3 #13 | WI-05 | ☐ | |
+| WI-30 | Search overhaul: standalone search surface + full-text body search + facets | D H3 #13 | WI-05 | ✅ | |
 | WI-31 | Board swimlanes/grouping + bulk-change preview wizard | D H3 #14 | WI-04 | ☐ | |
 | WI-32 | Visual admin builders (workflow / chart / permission matrix / field-layout) + live preview | D H3 #15 | WI-04 | ☐ ⚠️ | |
 | WI-33 | Premium `DataTable` upgrade: virtualization, multi-sort, column ops, inline edit, density-aware | H.5 3.1; D H3 #13/#14 | WI-04, WI-25 | ☐ | |

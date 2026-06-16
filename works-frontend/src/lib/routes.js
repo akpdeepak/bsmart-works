@@ -40,6 +40,7 @@ export const VIEW_PATHS = {
   workspace: '/settings',
   account: '/account',
   trash: '/trash',
+  search: '/search',
 };
 
 const PATH_VIEWS = Object.fromEntries(Object.entries(VIEW_PATHS).map(([v, p]) => [p, v]));

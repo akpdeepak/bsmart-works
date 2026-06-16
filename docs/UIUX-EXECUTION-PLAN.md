@@ -166,7 +166,7 @@ visual source before building).
 | WI-23 | Elevation/density spec + `useDensity()` hook + density preference (compact/comfortable/spacious) | H.5 1.2; D H4 #17 | WI-04 | ✅ | claude/bsmart-uiux-program-u9u4os |
 | WI-24 | Motion choreography recipe (panel/modal/toast/accordion on `duration-base`+`out-quint`; optimistic shimmer; success check-morph) | H.5 1.3 | — | ✅ | claude/bsmart-uiux-program-u9u4os |
 | WI-25 | Performance pass: TanStack Query adoption + virtual scrolling (`@tanstack/react-virtual`) + prefetch-on-hover + CI perf budget (Doherty < 400 ms) | D H2 #6; H.5 3.2 | WI-16 | ✅ | claude/bsmart-uiux-program-u9u4os |
-| WI-26 | Notification center + toast queue/stacking + preferences UI (mute/snooze/quiet-hours) | D H2 #9 | WI-20 | ☐ | |
+| WI-26 | Notification center + toast queue/stacking + preferences UI (mute/snooze/quiet-hours) | D H2 #9 | WI-20 | ✅ | claude/bsmart-uiux-program-u9u4os |
 | WI-41 | **Typography system** — tokenized type scale (display/title/heading/body/caption/overline + mono), line-height, tracking, weights, reading measure, vertical rhythm; applied via `PageHeader`/`Card`/prose (subsumes `text-2xs/3xs`) | H.5 5.1 | WI-04, WI-05 | ☐ | |
 | WI-42 | **Iconography system** — Lucide, sizes 16/20/24/32, one-icon-one-meaning; audit + converge usage across views; add icon guardrail | H.5 5.2 | WI-04 | ☐ | |
 | WI-43 | **Visual source-of-truth** — reference mockups (Figma/in-repo) for elevated surfaces + `docs/VISUAL-SPEC.md`, linked to the brand doc | H.5 5.7 | — | ☐ 🎨 | |

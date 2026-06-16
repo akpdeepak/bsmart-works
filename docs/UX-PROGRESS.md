@@ -7,6 +7,36 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-26 [benchmark] — Notification center: toast queue/stacking + preferences UI (mute/snooze/quiet-hours) (2026-06-16)
+
+**`src/lib/toast-queue.js` (new):**
+Lightweight framework-free pub-sub singleton. `pushToast({ message, tone, duration, action })` either adds to `visible` (up to `MAX_VISIBLE = 3` simultaneous) or pushes to the `queue`. `dismissToast(id)` removes from visible and promotes the next queued item. `subscribeToasts(fn)` delivers an immediate snapshot + all subsequent state changes; returns an unsubscribe function. `_resetToastQueue()` resets state for test isolation. No Zustand or Redux — pure module-level state with a fan-out notify pattern. Tones: `info | success | warning | danger` mapping to `semantic-*` design tokens.
+
+**`src/hooks/use-toast-queue.js` (new):**
+React hook that subscribes to the global toast queue singleton. Returns `{ visible, queue }` and re-renders the consumer on every change. Unsubscribes automatically on unmount via `useEffect` cleanup.
+
+**`src/components/works/atoms/toast-stack.jsx` (new):**
+Fixed bottom-right stacking container (`z-toast` from the named z-index scale). Renders up to `MAX_VISIBLE` toasts in reverse order (newest at bottom, older stack up). Each `ToastItem` auto-dismisses after `duration` ms via `setTimeout`, and is manually dismissable via an × button. Shows a `+N more` badge when pending toasts are queued. Tone classes use `semantic-*-surface` / `semantic-*` tokens only — no raw hex. All five interactive states present (default, hover, focus-visible, active, disabled-not-applicable). `role="status"` / `aria-live="polite"` on each toast for screen-reader announcements.
+
+**`src/lib/report-error.js` (updated):**
+`reportError()` now also calls `pushToast({ tone: 'danger', ... })` so all error reporting surfaces through the stacking queue. The legacy `setToastEmitter`/`emit` path is retained for the transitional period while `App.jsx` still hosts the old `Toast` atom.
+
+**`src/lib/notification-prefs.js` (new):**
+localStorage-backed preference store. `getNotifPrefs()` reads and merges over `DEFAULTS` (muted, quietHoursEnabled, quietStart/End, snoozeUntil). `setNotifPrefs(partial)` merges and persists. `isQuietHours()` implements the three-layer suppression check: muted → snoozed → inside quiet-hours window (with midnight-spanning support when `startMins > endMins`). Silent on storage errors.
+
+**`src/views/notifications-view.jsx` (updated):**
+Added a "Preferences" tab using the canonical `Tabs / TabList / Tab / TabPanel` atoms. The new `PreferencesPanel` component renders:
+- Mute all toggle (`Toggle` atom)
+- Quiet-hours toggle + `<input type="time">` start/end pair (shown conditionally when enabled)
+- Snooze row with `Button` atoms for 1h / 4h / 8h / Tomorrow; "Tomorrow" resolves to 08:00 next calendar day
+- "Restore notifications" `Button` visible only when muted or snoozed; clears both on click
+Each change writes through `setNotifPrefs`. The inbox tab is behaviour-preserved from before. Local React state mirrors `localStorage` so the UI stays live within the session.
+
+**Tests (39 new, all passing):**
+- `src/lib/toast-queue.test.js` (15 tests): push to visible/queue, fill-to-MAX, queue promotion on dismiss, multiple subscribers, unsubscribe stops callbacks
+- `src/lib/notification-prefs.test.js` (15 tests): defaults when empty/invalid JSON, partial update merge, muted/snoozed/quiet-hours detection, midnight-spanning window
+- `src/components/works/atoms/toast-stack.test.jsx` (9 tests): renders from state, +N badge, dismiss calls `dismissToast`, action button, tone class, `aria-label`
+
 ## WI-25 [benchmark] — Performance pass: virtual list hook, DataTable virtualization, prefetch-on-hover, CI perf budget (2026-06-16)
 
 **`@tanstack/react-virtual` installed** (`^3.14.3`). Enables DOM-count-bounded rendering for large lists, directly supporting the Doherty threshold (< 400 ms interactive) goal.

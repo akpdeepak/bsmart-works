@@ -10,6 +10,7 @@ public class ArticleTreeNode {
     private String icon;
     private String parentId;
     private Integer sortOrder;
+    private String templateType;
     private List<ArticleTreeNode> children;
 
     public String getId() { return id; }
@@ -24,6 +25,8 @@ public class ArticleTreeNode {
     public void setParentId(String parentId) { this.parentId = parentId; }
     public Integer getSortOrder() { return sortOrder; }
     public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
+    public String getTemplateType() { return templateType; }
+    public void setTemplateType(String templateType) { this.templateType = templateType; }
     public List<ArticleTreeNode> getChildren() { return children; }
     public void setChildren(List<ArticleTreeNode> children) { this.children = children; }
 }

@@ -17,7 +17,7 @@ export function fleschKincaid(text) {
   if (!words.length) return 0;
   const syllables = words.reduce((acc, w) => acc + countSyllables(w), 0);
   const grade = 0.39 * (words.length / sentences) + 11.8 * (syllables / words.length) - 15.59;
-  return Math.max(0, Math.round(grade * 10) / 10);
+  return Math.min(18, Math.max(0, Math.round(grade * 10) / 10));
 }
 
 export function gradeLabel(grade) {

@@ -63,4 +63,51 @@ describe('SelectionToolbar', () => {
     await user.click(screen.getByRole('button', { name: /bold/i }));
     expect(onWrap).toHaveBeenCalledWith('**', '**');
   });
+
+  // KR-005: text color and highlight palette tests
+  it('renders the Text color and Highlight color toggle buttons (KR-005)', () => {
+    render(<SelectionToolbar rect={RECT} onWrap={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /text color/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /highlight color/i })).toBeInTheDocument();
+  });
+
+  it('opens the text color palette when Text color button is clicked (KR-005)', async () => {
+    const user = userEvent.setup();
+    render(<SelectionToolbar rect={RECT} onWrap={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: /text color/i }));
+    expect(screen.getByRole('group', { name: /text color palette/i })).toBeInTheDocument();
+  });
+
+  it('opens the highlight palette when Highlight color button is clicked (KR-005)', async () => {
+    const user = userEvent.setup();
+    render(<SelectionToolbar rect={RECT} onWrap={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: /highlight color/i }));
+    expect(screen.getByRole('group', { name: /highlight color palette/i })).toBeInTheDocument();
+  });
+
+  it('calls onWrap with a span tag when a text color swatch is clicked (KR-005)', async () => {
+    const onWrap = vi.fn();
+    const user = userEvent.setup();
+    render(<SelectionToolbar rect={RECT} onWrap={onWrap} />);
+    await user.click(screen.getByRole('button', { name: /text color/i }));
+    await user.click(screen.getByRole('button', { name: 'Text: Red' }));
+    expect(onWrap).toHaveBeenCalledWith('<span class="text-semantic-danger">', '</span>');
+  });
+
+  it('calls onWrap with a highlight span when a highlight swatch is clicked (KR-005)', async () => {
+    const onWrap = vi.fn();
+    const user = userEvent.setup();
+    render(<SelectionToolbar rect={RECT} onWrap={onWrap} />);
+    await user.click(screen.getByRole('button', { name: /highlight color/i }));
+    await user.click(screen.getByRole('button', { name: 'Highlight: Yellow' }));
+    expect(onWrap).toHaveBeenCalledWith(expect.stringContaining('bg-yellow-100'), '</span>');
+  });
+
+  it('closes the color palette after a swatch is chosen (KR-005)', async () => {
+    const user = userEvent.setup();
+    render(<SelectionToolbar rect={RECT} onWrap={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: /text color/i }));
+    await user.click(screen.getByRole('button', { name: 'Text: Navy' }));
+    expect(screen.queryByRole('group', { name: /text color palette/i })).not.toBeInTheDocument();
+  });
 });

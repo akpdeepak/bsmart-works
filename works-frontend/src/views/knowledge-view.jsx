@@ -1,7 +1,8 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import {
   Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen,
   AlertTriangle, Pencil, Eye, ChevronRight, LayoutTemplate,
+  Copy, SlidersHorizontal, Share2, CheckSquare, Square, Filter, X, Home,
 } from 'lucide-react';
 import { MeetingNotesAssistant } from '@/components/knowledge/MeetingNotesAssistant';
 import { CreateWorkItemsFromChecklist } from '@/components/knowledge/CreateWorkItemsFromChecklist';
@@ -24,8 +25,18 @@ import { SearchModeToggle } from '@/components/knowledge/SearchModeToggle';
 import { useSearchMode } from '@/hooks/use-search-mode';
 import { SearchAIAnswer } from '@/components/knowledge/SearchAIAnswer';
 import { PresenceAvatarRow } from '@/components/knowledge/PresenceAvatarRow';
+import { ArticlePropertiesPanel } from '@/components/knowledge/ArticlePropertiesPanel';
+import { ArticleReactions } from '@/components/knowledge/ArticleReactions';
+import { ArticleTags } from '@/components/knowledge/ArticleTags';
+import { StarButton } from '@/components/knowledge/StarButton';
+import { WatchButton } from '@/components/knowledge/WatchButton';
+import { FollowSpaceButton } from '@/components/knowledge/FollowSpaceButton';
+import { BulkActionBar } from '@/components/knowledge/BulkActionBar';
+import { RelatedArticles } from '@/components/knowledge/RelatedArticles';
+import { ArticleSharePopover } from '@/components/knowledge/ArticleSharePopover';
+import { useRecentArticles } from '@/hooks/use-recent-articles';
 import { onPressKey, renderMd } from '@/lib/utils';
-import { blocksText } from '@/lib/doc-stats';
+import { blocksText, countWords } from '@/lib/doc-stats';
 import { makeAiAssist, knowledgeAi } from '@/lib/knowledge-ai';
 import { capabilityEnabled } from '@/lib/ai';
 import { api } from '@/lib/apiClient';
@@ -61,18 +72,41 @@ const STATUS_CHIP = {
 };
 
 // Shared article list card — used in both the space view and search results.
-function ArticleCard({ art, onClick }) {
+// KR-038: selectable — shows a checkbox when bulkMode is true.
+function ArticleCard({ art, onClick, selected = false, onToggleSelect, bulkMode = false }) {
   const preview = articlePreview(art);
   return (
     <div
-      onClick={onClick}
-      role="button"
+      onClick={bulkMode ? undefined : onClick}
+      role={bulkMode ? 'checkbox' : 'button'}
+      aria-checked={bulkMode ? selected : undefined}
       tabIndex={0}
-      onKeyDown={onPressKey}
-      className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 cursor-pointer hover:border-brand-navy/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40"
+      onKeyDown={bulkMode ? undefined : onPressKey}
+      className={`bg-white dark:bg-neutral-800 border rounded-xl p-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40 ${
+        selected
+          ? 'border-brand-navy bg-brand-navy/5 dark:bg-brand-navy/10'
+          : 'border-neutral-200 dark:border-neutral-700 hover:border-brand-navy/40 hover:shadow-sm cursor-pointer'
+      }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
+      <div className="flex items-start gap-3">
+        {/* KR-038: checkbox — shown in bulk mode */}
+        {bulkMode && (
+          <button
+            type="button"
+            aria-label={selected ? `Deselect ${art.title}` : `Select ${art.title}`}
+            onClick={(e) => { e.stopPropagation(); onToggleSelect?.(art.id); }}
+            className="mt-0.5 flex-shrink-0 text-neutral-400 hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
+          >
+            {selected
+              ? <CheckSquare className="h-4 w-4 text-brand-navy" aria-hidden="true" />
+              : <Square className="h-4 w-4" aria-hidden="true" />}
+          </button>
+        )}
+        <div
+          className="flex-1 min-w-0"
+          onClick={bulkMode ? () => onToggleSelect?.(art.id) : onClick}
+          role="presentation"
+        >
           <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{art.title}</p>
           {preview && (
             <p className="text-xs text-neutral-500 mt-0.5 line-clamp-2">{preview}</p>
@@ -157,6 +191,93 @@ export default function KnowledgeView({
 }) {
   const aiGenEnabled = capabilityEnabled(aiCapabilities, 'generation');
   const aiAssist = makeAiAssist(workspaceId, aiGenEnabled);
+
+  // KR-036: recently-viewed articles (localStorage, no backend)
+  const [recentArticles, addRecent] = useRecentArticles(workspaceId, currentUser?.id);
+
+  // KR-038: bulk-operation selection state
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const bulkMode = selectedIds.size > 0;
+
+  const toggleSelect = useCallback((id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  // KR-038: bulk archive handler — calls POST /api/v1/articles/bulk-archive
+  const handleBulkArchive = useCallback(() => {
+    if (!workspaceId || selectedIds.size === 0) return;
+    setBulkBusy(true);
+    api.send('/articles/bulk-archive', {
+      method: 'POST',
+      body: { ids: [...selectedIds], workspaceId },
+    })
+      .then(() => { clearSelection(); fetchKnowledgeArticles(selectedSpace?.id); })
+      .catch(() => {})
+      .finally(() => setBulkBusy(false));
+  }, [workspaceId, selectedIds, selectedSpace, clearSelection, fetchKnowledgeArticles]);
+
+  // KR-038: bulk delete handler — calls POST /api/v1/articles/bulk-delete
+  const handleBulkDelete = useCallback(() => {
+    if (!workspaceId || selectedIds.size === 0) return;
+    setBulkBusy(true);
+    api.send('/articles/bulk-delete', {
+      method: 'POST',
+      body: { ids: [...selectedIds], workspaceId },
+    })
+      .then(() => { clearSelection(); fetchKnowledgeArticles(selectedSpace?.id); })
+      .catch(() => {})
+      .finally(() => setBulkBusy(false));
+  }, [workspaceId, selectedIds, selectedSpace, clearSelection, fetchKnowledgeArticles]);
+
+  // KR-011: Properties panel — persisted across sessions
+  const [propertiesOpen, setPropertiesOpen] = useState(() => {
+    try { return localStorage.getItem('know_props_open') === 'true'; } catch { return false; }
+  });
+
+  // KR-012: Focus mode — keyboard shortcut Ctrl+Shift+F
+  const [focusMode, setFocusMode] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'F') {
+        setFocusMode(prev => !prev);
+      } else if (e.key === 'Escape' && focusMode) {
+        setFocusMode(false);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [focusMode]);
+
+  // KR-043: search filters
+  const [searchStatusFilter, setSearchStatusFilter] = useState([]);   // [] = all
+  const [searchTypeFilter, setSearchTypeFilter] = useState([]);        // [] = all
+  const [searchDateFilter, setSearchDateFilter] = useState('all');     // 'all' | '7d' | '30d'
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const TEMPLATE_TYPES = ['KB', 'RUNBOOK', 'ADR', 'POSTMORTEM', 'ONBOARDING', 'TROUBLESHOOTING', 'MEETING_NOTES', 'CUSTOM'];
+  const STATUS_FILTERS = ['PUBLISHED', 'DRAFT', 'IN_REVIEW', 'ARCHIVED'];
+
+  const filteredSearchResults = (knowledgeSearchResults || []).filter((art) => {
+    if (searchStatusFilter.length > 0 && !searchStatusFilter.includes(art.status)) return false;
+    if (searchTypeFilter.length > 0 && !searchTypeFilter.includes(art.templateType)) return false;
+    if (searchDateFilter !== 'all' && art.updatedAt) {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - (searchDateFilter === '7d' ? 7 : 30));
+      if (new Date(art.updatedAt) < cutoff) return false;
+    }
+    return true;
+  });
+
+  // KR-066: share popover state
+  const [sharePopoverOpen, setSharePopoverOpen] = useState(false);
 
   // KR-044: AI semantic search — search mode toggle + AI answer state
   const [searchMode, setSearchMode] = useSearchMode();
@@ -298,6 +419,9 @@ export default function KnowledgeView({
     setSelectedArticle(art);
     setEditingArticle(false);
     setArticlePanel(null);
+    setSharePopoverOpen(false);
+    setSelectedIds(new Set()); // clear any bulk selection
+    addRecent(art); // KR-036: track recently viewed
     fetchArticleChildren?.(art.id);
     fetchArticleDetail?.(art.id);
   };
@@ -336,11 +460,31 @@ export default function KnowledgeView({
     if (found) selectArticle(found);
   };
 
+  // KR-011: word count for the properties panel
+  const wordCount = (() => {
+    if (!selectedArticle) return 0;
+    let blocks;
+    try { blocks = JSON.parse(selectedArticle.contentBlocks || '[]'); } catch { blocks = []; }
+    if (Array.isArray(blocks) && blocks.length > 0) return countWords(blocksText(blocks));
+    return countWords(selectedArticle.content || '');
+  })();
+
+  // KR-022: duplicate the current article
+  const handleDuplicate = async () => {
+    if (!selectedArticle || !workspaceId) return;
+    const newArticle = await api.send(
+      '/articles/' + encodeURIComponent(selectedArticle.id) + '/duplicate?workspaceId=' + encodeURIComponent(workspaceId),
+      { method: 'POST' },
+    );
+    await fetchKnowledgeArticles(selectedSpace?.id || null);
+    if (newArticle) setSelectedArticle(newArticle);
+  };
+
   return (
     <div className="flex h-full overflow-hidden">
 
       {/* ── Left sidebar — spaces ──────────────────────────────────── */}
-      <div className="w-64 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col">
+      <div className={`w-64 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col ${focusMode ? 'hidden' : ''}`}>
         <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">Knowledge Spaces</h2>
@@ -432,6 +576,26 @@ export default function KnowledgeView({
           </button>
         </div>
 
+        {/* KR-036: Recently viewed */}
+        {recentArticles.length > 0 && (
+          <section aria-label="Recently viewed" className="px-2 py-1 border-t border-neutral-100 dark:border-neutral-700">
+            <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider px-3 py-1">Recent</p>
+            {recentArticles.map(r => (
+              <button
+                key={r.id}
+                onClick={() => {
+                  const art = [...(knowledgeArticles || []), ...(knowledgeSearchResults || [])].find(a => a.id === r.id) || r;
+                  selectArticle(art);
+                }}
+                className="w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 truncate"
+              >
+                {r.icon ? <span aria-hidden="true">{r.icon}</span> : <FileText className="h-3 w-3 flex-shrink-0" aria-hidden="true" />}
+                <span className="truncate">{r.title}</span>
+              </button>
+            ))}
+          </section>
+        )}
+
         {/* Space list */}
         <div className="flex-1 overflow-y-auto px-2 pb-2">
           {knowledgeSpacesLoading && knowledgeSpaces.length === 0 ? (
@@ -465,6 +629,7 @@ export default function KnowledgeView({
                     key={`${space.id}-${treeVersion}`}
                     spaceId={space.id}
                     activeArticleId={selectedArticle?.id}
+                    recentArticles={recentArticles.slice(0, 5)}
                     onSelectArticle={(node) => {
                       const art = knowledgeArticles?.find(a => a.id === node.id) || node;
                       selectArticle(art);
@@ -497,18 +662,91 @@ export default function KnowledgeView({
             {knowledgeTab === 'search' ? (
               /* ── Search results ── */
               <div>
-                <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center gap-3 mb-4 flex-wrap">
                   <h1 className="text-xl font-bold text-brand-navy dark:text-white">Search Results</h1>
                   <span className="text-sm text-neutral-500">
-                    {knowledgeSearchResults.length} result{knowledgeSearchResults.length !== 1 ? 's' : ''} for &ldquo;{knowledgeSearch}&rdquo;
+                    {filteredSearchResults.length} result{filteredSearchResults.length !== 1 ? 's' : ''} for &ldquo;{knowledgeSearch}&rdquo;
                   </span>
+                  {/* KR-043: filter toggle */}
                   <button
-                    onClick={() => { setKnowledgeTab('spaces'); setKnowledgeSearch(''); setAiAnswer(null); }}
+                    type="button"
+                    onClick={() => setFiltersOpen((o) => !o)}
+                    aria-expanded={filtersOpen}
+                    className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${filtersOpen ? 'border-brand-navy bg-brand-navy/10 text-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy'}`}
+                  >
+                    <Filter className="h-3.5 w-3.5" aria-hidden="true" />
+                    Filters
+                    {(searchStatusFilter.length > 0 || searchTypeFilter.length > 0 || searchDateFilter !== 'all') && (
+                      <span className="ml-1 h-4 w-4 flex items-center justify-center bg-brand-navy text-white rounded-full text-xs font-semibold">
+                        {searchStatusFilter.length + searchTypeFilter.length + (searchDateFilter !== 'all' ? 1 : 0)}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => { setKnowledgeTab('spaces'); setKnowledgeSearch(''); setAiAnswer(null); setSearchStatusFilter([]); setSearchTypeFilter([]); setSearchDateFilter('all'); setFiltersOpen(false); }}
                     className="text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
                   >
                     Clear
                   </button>
                 </div>
+
+                {/* KR-043: filter panel */}
+                {filtersOpen && (
+                  <div className="mb-4 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/60 p-3 space-y-3">
+                    <div>
+                      <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-1.5">Status</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {STATUS_FILTERS.map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setSearchStatusFilter((prev) =>
+                              prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
+                            )}
+                            aria-pressed={searchStatusFilter.includes(s)}
+                            className={`text-xs px-2 py-0.5 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${searchStatusFilter.includes(s) ? 'border-brand-navy bg-brand-navy/10 text-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-500'}`}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-1.5">Template</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {TEMPLATE_TYPES.map((t) => (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => setSearchTypeFilter((prev) =>
+                              prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
+                            )}
+                            aria-pressed={searchTypeFilter.includes(t)}
+                            className={`text-xs px-2 py-0.5 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${searchTypeFilter.includes(t) ? 'border-brand-navy bg-brand-navy/10 text-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-500'}`}
+                          >
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-1.5">Updated</p>
+                      <div className="flex gap-1.5">
+                        {[['all', 'All time'], ['7d', 'Last 7 days'], ['30d', 'Last 30 days']].map(([v, label]) => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => setSearchDateFilter(v)}
+                            aria-pressed={searchDateFilter === v}
+                            className={`text-xs px-2 py-0.5 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${searchDateFilter === v ? 'border-brand-navy bg-brand-navy/10 text-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-500'}`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* KR-044: AI answer — shown above keyword results when AI mode is active */}
                 {aiSearchBusy && (
@@ -528,12 +766,19 @@ export default function KnowledgeView({
                   </div>
                 )}
 
-                {knowledgeSearchResults.length === 0 && !aiAnswer ? (
-                  <EmptyState icon={Search} title="No results found" subtitle={`No articles match "${knowledgeSearch}". Try different keywords.`} />
+                {filteredSearchResults.length === 0 && !aiAnswer ? (
+                  <EmptyState icon={Search} title="No results found" subtitle={`No articles match "${knowledgeSearch}". Try different keywords or adjust filters.`} />
                 ) : (
                   <div className="space-y-2">
-                    {knowledgeSearchResults.map(art => (
-                      <ArticleCard key={art.id} art={art} onClick={() => selectArticle(art)} />
+                    <BulkActionBar
+                      selectedIds={selectedIds}
+                      onArchive={handleBulkArchive}
+                      onDelete={handleBulkDelete}
+                      onClear={clearSelection}
+                      busy={bulkBusy}
+                    />
+                    {filteredSearchResults.map(art => (
+                      <ArticleCard key={art.id} art={art} onClick={() => selectArticle(art)} selected={selectedIds.has(art.id)} onToggleSelect={toggleSelect} bulkMode={bulkMode} />
                     ))}
                   </div>
                 )}
@@ -562,6 +807,15 @@ export default function KnowledgeView({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* KR-068: follow space button */}
+                    {selectedSpace && (
+                      <FollowSpaceButton
+                        spaceId={selectedSpace.id}
+                        workspaceId={workspaceId}
+                        initialFollowing={selectedSpace.following ?? false}
+                        initialCount={selectedSpace.followerCount ?? 0}
+                      />
+                    )}
                     {selectedSpace && can('manage_projects') && (
                       <button
                         onClick={() => deleteKnowledgeSpace(selectedSpace.id)}
@@ -591,6 +845,15 @@ export default function KnowledgeView({
                   </div>
                 </div>
 
+                {/* KR-038: bulk action bar — shown when ≥1 article is selected */}
+                <BulkActionBar
+                  selectedIds={selectedIds}
+                  onArchive={handleBulkArchive}
+                  onDelete={handleBulkDelete}
+                  onClear={clearSelection}
+                  busy={bulkBusy}
+                />
+
                 {knowledgeArticlesLoading && knowledgeArticles.length === 0 ? (
                   <div className="space-y-2" aria-busy="true" aria-label="Loading articles">
                     {[0, 1, 2, 3].map(i => <div key={i} className="h-20 rounded-xl animate-pulse bg-neutral-100 dark:bg-neutral-800" />)}
@@ -607,7 +870,14 @@ export default function KnowledgeView({
                 ) : (
                   <div className="space-y-2">
                     {knowledgeArticles.map(art => (
-                      <ArticleCard key={art.id} art={art} onClick={() => selectArticle(art)} />
+                      <ArticleCard
+                        key={art.id}
+                        art={art}
+                        onClick={() => selectArticle(art)}
+                        selected={selectedIds.has(art.id)}
+                        onToggleSelect={toggleSelect}
+                        bulkMode={bulkMode}
+                      />
                     ))}
                   </div>
                 )}
@@ -705,6 +975,12 @@ export default function KnowledgeView({
                         Updated {new Date(selectedArticle.updatedAt).toLocaleDateString()}
                       </span>
                     )}
+                    {/* KR-034: article tags — shown in both view and edit mode */}
+                    <ArticleTags
+                      articleId={selectedArticle.id}
+                      workspaceId={workspaceId}
+                      readOnly={!editingArticle}
+                    />
                   </div>
                 </div>
               </div>
@@ -734,6 +1010,63 @@ export default function KnowledgeView({
                     {p.label}
                   </button>
                 ))}
+
+                <span className="text-neutral-200 dark:text-neutral-700 select-none mx-0.5" aria-hidden="true">|</span>
+
+                {/* KR-035: star/favorite */}
+                <StarButton articleId={selectedArticle.id} workspaceId={workspaceId} />
+
+                {/* KR-067: watch/subscribe */}
+                <WatchButton
+                  articleId={selectedArticle.id}
+                  workspaceId={workspaceId}
+                  initialWatching={selectedArticle.watching ?? false}
+                  initialCount={selectedArticle.watcherCount ?? 0}
+                />
+
+                {/* KR-066: share link — only for PUBLISHED articles */}
+                {selectedArticle.status === 'PUBLISHED' && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setSharePopoverOpen((o) => !o)}
+                      aria-expanded={sharePopoverOpen}
+                      aria-label="Share article"
+                      className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${sharePopoverOpen ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy'}`}
+                    >
+                      <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      Share
+                    </button>
+                    {sharePopoverOpen && (
+                      <ArticleSharePopover
+                        articleId={selectedArticle.id}
+                        articleTitle={selectedArticle.title}
+                        token={selectedArticle.publicShareToken ?? null}
+                        onTokenChange={(tok) => setSelectedArticle(a => ({ ...a, publicShareToken: tok }))}
+                        onClose={() => setSharePopoverOpen(false)}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* KR-037: set as space home — available to managers in edit mode */}
+                {editingArticle && selectedSpace && can('manage_projects') && (
+                  <button
+                    type="button"
+                    title="Set as space home page"
+                    aria-label="Set as space home"
+                    onClick={() => {
+                      api.send(`/knowledge-spaces/${encodeURIComponent(selectedSpace.id)}/home-article`, {
+                        method: 'PATCH',
+                        body: { articleId: selectedArticle.id },
+                      }).catch(() => {});
+                    }}
+                    className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+                  >
+                    <Home className="h-3.5 w-3.5" aria-hidden="true" />
+                    Set home
+                  </button>
+                )}
 
                 <span className="text-neutral-200 dark:text-neutral-700 select-none mx-0.5" aria-hidden="true">|</span>
 
@@ -767,6 +1100,30 @@ export default function KnowledgeView({
                     ? <><Eye className="h-3.5 w-3.5" aria-hidden="true" />View</>
                     : <><Pencil className="h-3.5 w-3.5" aria-hidden="true" />Edit</>
                   }
+                </button>
+
+                {/* KR-022: Duplicate article */}
+                <button
+                  aria-label="Duplicate this article"
+                  onClick={handleDuplicate}
+                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+                >
+                  <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                  Duplicate
+                </button>
+
+                {/* KR-011: Properties panel toggle */}
+                <button
+                  onClick={() => {
+                    const next = !propertiesOpen;
+                    setPropertiesOpen(next);
+                    try { localStorage.setItem('know_props_open', String(next)); } catch { /* non-fatal */ }
+                  }}
+                  aria-pressed={propertiesOpen}
+                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${propertiesOpen ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy'}`}
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+                  Properties
                 </button>
 
                 <button
@@ -979,6 +1336,20 @@ export default function KnowledgeView({
                       );
                     })()}
 
+                    {/* KR-029: emoji reactions strip */}
+                    <ArticleReactions
+                      articleId={selectedArticle.id}
+                      workspaceId={workspaceId}
+                      currentUserId={currentUser?.id}
+                    />
+
+                    {/* KR-045: related articles — below content, above sub-articles */}
+                    <RelatedArticles
+                      articleId={selectedArticle.id}
+                      workspaceId={workspaceId}
+                      onOpenArticle={openArticleById}
+                    />
+
                     {/* Sub-articles — placed below the article body, inside the scrollable content
                         area. Previously they were a flex-row sibling of this div which broke the
                         layout by rendering them as a narrow column next to the content. */}
@@ -1019,6 +1390,22 @@ export default function KnowledgeView({
                 open={blockCommentPanel.open}
                 onClose={() => setBlockCommentPanel({ open: false, blockId: null })}
               />
+
+              {/* KR-011: Article properties panel */}
+              {propertiesOpen && (
+                <ArticlePropertiesPanel
+                  article={selectedArticle}
+                  wordCount={wordCount}
+                  onClose={() => {
+                    setPropertiesOpen(false);
+                    try { localStorage.setItem('know_props_open', 'false'); } catch { /* non-fatal */ }
+                  }}
+                  readOnly={!editingArticle}
+                  workspaceId={workspaceId}
+                  articleText={articleText(selectedArticle)}
+                  onAcceptTag={() => {}}
+                />
+              )}
 
               {/* ── Contextual side panels ── */}
               {articlePanel === 'history' && (
@@ -1158,6 +1545,17 @@ export default function KnowledgeView({
           </div>
         )}
       </div>
+
+      {/* KR-012: Focus mode exit button — fixed at top-right when focus mode is active */}
+      {focusMode && (
+        <button
+          aria-label="Exit focus mode"
+          onClick={() => setFocusMode(false)}
+          className="fixed top-4 right-4 z-modal text-xs px-3 py-1.5 rounded-lg bg-neutral-900/80 text-white hover:bg-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 flex items-center gap-1.5"
+        >
+          Exit focus <X className="h-3 w-3" aria-hidden="true" />
+        </button>
+      )}
 
       {/* WI-29: template picker modal */}
       {templatePickerOpen && (

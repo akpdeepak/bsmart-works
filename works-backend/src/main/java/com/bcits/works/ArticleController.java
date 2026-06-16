@@ -31,6 +31,7 @@ public class ArticleController {
     private final ArticleDao articleDao;
     private final KnowledgeSpaceRepository knowledgeSpaceRepository;
     private final RbacService rbac;
+    private final ArticleService articleService;
 
     public ArticleController(ArticleRepository articleRepository,
                               ArticleVersionRepository articleVersionRepository,
@@ -41,7 +42,8 @@ public class ArticleController {
                               EventService eventService, AuthenticatedUser authenticatedUser,
                               ArticleDao articleDao,
                               KnowledgeSpaceRepository knowledgeSpaceRepository,
-                              RbacService rbac) {
+                              RbacService rbac,
+                              ArticleService articleService) {
         this.articleRepository = articleRepository;
         this.articleVersionRepository = articleVersionRepository;
         this.articleCommentRepository = articleCommentRepository;
@@ -53,6 +55,7 @@ public class ArticleController {
         this.articleDao = articleDao;
         this.knowledgeSpaceRepository = knowledgeSpaceRepository;
         this.rbac = rbac;
+        this.articleService = articleService;
     }
 
     @GetMapping
@@ -267,6 +270,53 @@ public class ArticleController {
     @PutMapping("/{id}/restore")
     public Article restore(@PathVariable String id) { return applyTransition(id, "restore"); }
 
+    // ── KR-022: Duplicate article ─────────────────────────────────────────────
+
+    /**
+     * POST /api/v1/articles/{id}/duplicate?workspaceId=...
+     * Creates a copy of the article as a fresh DRAFT with "(copy)" title suffix.
+     * RBAC and workspace isolation are enforced in ArticleService (RB-10 §2, RB-40 §1).
+     */
+    @PostMapping("/{id}/duplicate")
+    public Article duplicate(@PathVariable String id, @RequestParam String workspaceId) {
+        String userId = authenticatedUser.id();
+        return articleService.duplicate(id, userId, workspaceId);
+    }
+
+    // ── KR-038: Bulk operations ───────────────────────────────────────────────
+
+    /**
+     * POST /api/v1/articles/bulk-archive?workspaceId=...
+     * Body: { "ids": ["ART-1", "ART-2", ...] }
+     */
+    @PostMapping("/bulk-archive")
+    public ArticleService.BulkResult bulkArchive(@RequestBody Map<String, Object> body,
+                                                  @RequestParam String workspaceId) {
+        String userId = authenticatedUser.id();
+        @SuppressWarnings("unchecked")
+        List<String> ids = (List<String>) body.get("ids");
+        if (ids == null || ids.isEmpty()) {
+            return new ArticleService.BulkResult(java.util.List.of(), java.util.List.of());
+        }
+        return articleService.bulkArchive(ids, userId, workspaceId);
+    }
+
+    /**
+     * POST /api/v1/articles/bulk-delete?workspaceId=...
+     * Body: { "ids": ["ART-1", "ART-2", ...] }
+     */
+    @PostMapping("/bulk-delete")
+    public ArticleService.BulkResult bulkDelete(@RequestBody Map<String, Object> body,
+                                                 @RequestParam String workspaceId) {
+        String userId = authenticatedUser.id();
+        @SuppressWarnings("unchecked")
+        List<String> ids = (List<String>) body.get("ids");
+        if (ids == null || ids.isEmpty()) {
+            return new ArticleService.BulkResult(java.util.List.of(), java.util.List.of());
+        }
+        return articleService.bulkDelete(ids, userId, workspaceId);
+    }
+
     private Article applyTransition(String id, String action) {
         String userId = authenticatedUser.id();
         Article a = articleRepository.findById(id).orElseThrow();
@@ -311,6 +361,29 @@ public class ArticleController {
         return saved;
     }
 
+    // ── KR-020: Schedule for later publish ───────────────────────────────────────
+    @PostMapping("/{id}/schedule-publish")
+    public Article schedulePublish(@PathVariable String id,
+                                   @RequestBody Map<String, String> body) {
+        String userId = authenticatedUser.id();
+        String raw = body.get("scheduledAt");
+        if (raw == null || raw.isBlank()) {
+            throw ApiException.badRequest("SCHEDULED_AT_REQUIRED",
+                    "scheduledAt is required.", "scheduledAt");
+        }
+        OffsetDateTime scheduledAt;
+        try {
+            scheduledAt = OffsetDateTime.parse(raw);
+        } catch (Exception e) {
+            throw ApiException.badRequest("INVALID_DATE_FORMAT",
+                    "scheduledAt must be an ISO-8601 datetime with offset.", "scheduledAt");
+        }
+        Article article = requireArticleById(id);
+        KnowledgeSpace space = knowledgeSpaceRepository.findById(article.getSpaceId())
+                .orElseThrow(() -> ApiException.notFound("Article", id));
+        return articleService.schedulePublish(id, userId, space.getWorkspaceId(), scheduledAt);
+    }
+
     @PostMapping("/{id}/vote")
     public Article voteHelpful(@PathVariable String id) {
         requireArticleById(id);
@@ -334,6 +407,142 @@ public class ArticleController {
         requireArticleById(id);
         articleDao.unlinkWorkItem(id, workItemId);
         return ResponseEntity.noContent().build();
+    }
+
+    // ── KR-066: public share link ──────────────────────────────────────────────
+
+    /**
+     * Generate (or return existing) public share token for a PUBLISHED article.
+     * POST /api/v1/articles/{id}/share  →  { token }
+     * RBAC: edit_items. Only PUBLISHED articles may be publicly shared.
+     */
+    @PostMapping("/{id}/share")
+    public Map<String, String> generateShareToken(@PathVariable String id) {
+        String userId = authenticatedUser.id();
+        Article a = articleRepository.findById(id).orElseThrow(() -> ApiException.notFound("Article", id));
+        KnowledgeSpace space = knowledgeSpaceRepository.findById(a.getSpaceId())
+                .orElseThrow(() -> ApiException.notFound("Article", id));
+        rbac.require(userId, space.getWorkspaceId(), "edit_items");
+        if (!ArticleWorkflowService.PUBLISHED.equals(a.getStatus())) {
+            throw ApiException.badRequest("NOT_PUBLISHED",
+                    "Only a published article can be shared publicly.", "status");
+        }
+        if (a.getPublicShareToken() == null) {
+            a.setPublicShareToken(java.util.UUID.randomUUID().toString().replace("-", ""));
+            a.setUpdatedAt(OffsetDateTime.now());
+            articleRepository.save(a);
+            eventService.record(id, "ARTICLE_SHARE_GENERATED", userId, "{}");
+        }
+        return Map.of("token", a.getPublicShareToken());
+    }
+
+    /**
+     * Revoke the public share token for an article.
+     * DELETE /api/v1/articles/{id}/share
+     * RBAC: edit_items.
+     */
+    @DeleteMapping("/{id}/share")
+    public ResponseEntity<Void> revokeShareToken(@PathVariable String id) {
+        String userId = authenticatedUser.id();
+        Article a = articleRepository.findById(id).orElseThrow(() -> ApiException.notFound("Article", id));
+        KnowledgeSpace space = knowledgeSpaceRepository.findById(a.getSpaceId())
+                .orElseThrow(() -> ApiException.notFound("Article", id));
+        rbac.require(userId, space.getWorkspaceId(), "edit_items");
+        a.setPublicShareToken(null);
+        a.setUpdatedAt(OffsetDateTime.now());
+        articleRepository.save(a);
+        eventService.record(id, "ARTICLE_SHARE_REVOKED", userId, "{}");
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── KR-038: bulk operations ────────────────────────────────────────────────
+
+    /**
+     * Bulk-archive a list of articles.
+     * POST /api/v1/articles/bulk-archive  body: { ids: [string], workspaceId: string }
+     * RBAC: edit_items (enforced in ArticleService).
+     */
+    @PostMapping("/bulk-archive")
+    public Map<String, Object> bulkArchive(@RequestBody Map<String, Object> body) {
+        String userId = authenticatedUser.id();
+        String workspaceId = (String) body.get("workspaceId");
+        @SuppressWarnings("unchecked")
+        List<String> ids = (List<String>) body.get("ids");
+        if (workspaceId == null || workspaceId.isBlank()) {
+            throw ApiException.badRequest("WORKSPACE_REQUIRED", "workspaceId is required.", "workspaceId");
+        }
+        if (ids == null || ids.isEmpty()) {
+            return Map.of("processed", List.of(), "skipped", List.of());
+        }
+        ArticleService.BulkResult result = articleService.bulkArchive(ids, userId, workspaceId);
+        return Map.of("processed", result.processed(), "skipped", result.skipped());
+    }
+
+    /**
+     * Bulk-delete a list of articles.
+     * POST /api/v1/articles/bulk-delete  body: { ids: [string], workspaceId: string }
+     * RBAC: delete_items (enforced in ArticleService).
+     */
+    @PostMapping("/bulk-delete")
+    public Map<String, Object> bulkDelete(@RequestBody Map<String, Object> body) {
+        String userId = authenticatedUser.id();
+        String workspaceId = (String) body.get("workspaceId");
+        @SuppressWarnings("unchecked")
+        List<String> ids = (List<String>) body.get("ids");
+        if (workspaceId == null || workspaceId.isBlank()) {
+            throw ApiException.badRequest("WORKSPACE_REQUIRED", "workspaceId is required.", "workspaceId");
+        }
+        if (ids == null || ids.isEmpty()) {
+            return Map.of("processed", List.of(), "skipped", List.of());
+        }
+        ArticleService.BulkResult result = articleService.bulkDelete(ids, userId, workspaceId);
+        return Map.of("processed", result.processed(), "skipped", result.skipped());
+    }
+
+    /**
+     * Bulk-publish a list of articles (workflow shortcut for managers).
+     * POST /api/v1/articles/bulk-publish  body: { ids: [string], workspaceId: string }
+     * RBAC: approve_items (enforced in service/workflow). Articles not in IN_REVIEW are skipped.
+     */
+    @PostMapping("/bulk-publish")
+    public Map<String, Object> bulkPublish(@RequestBody Map<String, Object> body) {
+        String userId = authenticatedUser.id();
+        String workspaceId = (String) body.get("workspaceId");
+        @SuppressWarnings("unchecked")
+        List<String> ids = (List<String>) body.get("ids");
+        if (workspaceId == null || workspaceId.isBlank()) {
+            throw ApiException.badRequest("WORKSPACE_REQUIRED", "workspaceId is required.", "workspaceId");
+        }
+        rbac.require(userId, workspaceId, "approve_items");
+        if (ids == null || ids.isEmpty()) {
+            return Map.of("processed", List.of(), "skipped", List.of());
+        }
+        List<String> processed = new java.util.ArrayList<>();
+        List<String> skipped = new java.util.ArrayList<>();
+        OffsetDateTime now = OffsetDateTime.now();
+        for (String id : ids) {
+            Article a = articleRepository.findById(id).orElse(null);
+            if (a == null) {
+                skipped.add(id);
+                continue;
+            }
+            KnowledgeSpace space = knowledgeSpaceRepository.findById(a.getSpaceId()).orElse(null);
+            if (space == null || !workspaceId.equals(space.getWorkspaceId())) {
+                skipped.add(id);
+                continue;
+            }
+            if (!ArticleWorkflowService.IN_REVIEW.equals(a.getStatus())) {
+                skipped.add(id);
+                continue;
+            }
+            a.setStatus(ArticleWorkflowService.PUBLISHED);
+            a.setPublishedAt(now);
+            a.setUpdatedAt(now);
+            articleRepository.save(a);
+            eventService.record(id, "ARTICLE_PUBLISHED", userId, "{\"bulk\":true}");
+            processed.add(id);
+        }
+        return Map.of("processed", processed, "skipped", skipped);
     }
 
     @DeleteMapping("/{id}")

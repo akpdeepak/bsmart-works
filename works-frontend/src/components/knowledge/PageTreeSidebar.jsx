@@ -7,7 +7,6 @@ import { ChevronRight, FileText, Plus } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { cn } from '@/lib/utils';
 import { TEMPLATE_ICONS } from '@/components/knowledge/ArticleIconPicker';
-import { STATUS_COLORS } from '@/components/knowledge/StatusBadge';
 
 function storageKey(spaceId) {
   return `know-tree-${spaceId}`;
@@ -34,8 +33,8 @@ function NodeIcon({ node }) {
   }
   if (node.icon.startsWith('lucide:')) {
     const name = node.icon.slice(7);
-    const LucideIcon = Object.values(TEMPLATE_ICONS).find((_, i) => Object.keys(TEMPLATE_ICONS)[i] === name) || FileText;
-    return <LucideIcon aria-hidden="true" className="h-3.5 w-3.5 flex-shrink-0 text-neutral-400" />;
+    const ResolvedIcon = TEMPLATE_ICONS[name] || FileText;
+    return <ResolvedIcon aria-hidden="true" className="h-3.5 w-3.5 flex-shrink-0 text-neutral-400" />;
   }
   return <span aria-hidden="true" className="text-sm leading-none">{node.icon}</span>;
 }
@@ -143,9 +142,10 @@ function PageTreeNode({
  *   onSelectArticle: (node: object) => void,
  *   onNewArticle: () => void,
  *   onReorder: (articleId: string, newSortOrder: number) => void,
+ *   recentArticles: Array<{id: string, title: string}>,
  * }} props
  */
-export function PageTreeSidebar({ spaceId, activeArticleId, onSelectArticle, onNewArticle, onReorder }) {
+export function PageTreeSidebar({ spaceId, activeArticleId, onSelectArticle, onNewArticle, onReorder, recentArticles = [] }) {
   const [tree, setTree] = useState([]);
   const [loading, setLoading] = useState(false);
   const [collapsed, setCollapsed] = useState(() => loadCollapsed(spaceId));
@@ -228,6 +228,35 @@ export function PageTreeSidebar({ spaceId, activeArticleId, onSelectArticle, onN
             />
           ))}
         </ul>
+      )}
+
+      {/* KR-036: recently viewed articles */}
+      {recentArticles.length > 0 && (
+        <div className="border-t border-neutral-100 dark:border-neutral-700 px-2 py-2">
+          <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider px-1 mb-1">
+            Recently viewed
+          </p>
+          <ul data-testid="recent-articles" className="space-y-0.5">
+            {recentArticles.map((art) => (
+              <li key={art.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelectArticle(art)}
+                  className={cn(
+                    'flex items-center gap-1.5 w-full text-left rounded-md px-2 py-1 text-xs truncate transition-colors',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40',
+                    art.id === activeArticleId
+                      ? 'bg-brand-navy/10 text-brand-navy dark:text-blue-300'
+                      : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800',
+                  )}
+                >
+                  <FileText className="h-3 w-3 flex-shrink-0 text-neutral-400" aria-hidden="true" />
+                  <span className="truncate">{art.title || 'Untitled'}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {/* New article button at bottom */}

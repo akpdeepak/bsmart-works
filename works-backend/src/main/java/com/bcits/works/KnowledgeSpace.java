@@ -24,6 +24,11 @@ public class KnowledgeSpace {
     @Column(name = "home_article_id")
     private String homeArticleId;
 
+    // KR-019: number of APPROVED decisions required before an article auto-publishes (default 1).
+    // Added by V108.
+    @Column(name = "required_approvals")
+    private Integer requiredApprovals = 1;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getWorkspaceId() { return workspaceId; }
@@ -44,4 +49,6 @@ public class KnowledgeSpace {
     public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
     public String getHomeArticleId() { return homeArticleId; }
     public void setHomeArticleId(String homeArticleId) { this.homeArticleId = homeArticleId; }
+    public Integer getRequiredApprovals() { return requiredApprovals; }
+    public void setRequiredApprovals(Integer requiredApprovals) { this.requiredApprovals = requiredApprovals; }
 }

@@ -35,47 +35,47 @@
 | KR-002 | Floating selection toolbar | P0 | ✅ done · 2026-06-16 |
 | KR-003 | Undo / redo | P0 | ✅ done · 2026-06-16 |
 | KR-004 | Syntax highlighting in code blocks | P0 | ✅ done · 2026-06-16 |
-| KR-005 | Text color & highlight | P1 | ⬜ open |
-| KR-006 | Find & Replace | P1 | ⬜ open |
+| KR-005 | Text color & highlight | P1 | ✅ done · 2026-06-16 |
+| KR-006 | Find & Replace | P1 | ✅ done · 2026-06-16 |
 | KR-007 | Block indent / nesting | P2 | ⬜ open |
 | KR-008 | Footnotes | P2 | ⬜ open |
 | KR-009 | Cover image / gradient | P0 | ✅ done · 2026-06-16 |
 | KR-010 | Article icon / emoji | P0 | ✅ done · 2026-06-16 |
-| KR-011 | Article properties panel | P1 | ⬜ open |
-| KR-012 | Focus / distraction-free mode | P1 | ⬜ open |
-| KR-013 | Enhanced status bar | P1 | ⬜ open |
+| KR-011 | Article properties panel | P1 | ✅ done · 2026-06-16 |
+| KR-012 | Focus / distraction-free mode | P1 | ✅ done · 2026-06-16 |
+| KR-013 | Enhanced status bar | P1 | ✅ done · 2026-06-16 |
 | KR-014 | In-article TOC pane | P2 | ⬜ open |
 | KR-015 | Print / PDF / DOCX / Markdown export | P2 | ⬜ open |
 | KR-016 | Article reading view | P2 | ⬜ open |
 | KR-017 | Status badge + transition popover | P0 | ✅ done · 2026-06-16 |
-| KR-018 | Reviewer assignment | P1 | ⬜ open |
-| KR-019 | Approval requirements | P1 | ⬜ open |
-| KR-020 | Scheduled publish | P1 | ⬜ open |
-| KR-021 | Article expiry / review-by date | P1 | ⬜ open |
-| KR-022 | Duplicate / clone article | P1 | ⬜ open |
+| KR-018 | Reviewer assignment | P1 | ✅ done · 2026-06-16 |
+| KR-019 | Approval requirements | P1 | ✅ done · 2026-06-16 |
+| KR-020 | Scheduled publish | P1 | ✅ done · 2026-06-16 |
+| KR-021 | Article expiry / review-by date | P1 | ✅ done · 2026-06-16 |
+| KR-022 | Duplicate / clone article | P1 | ✅ done · 2026-06-16 |
 | KR-023 | Suggestions mode (track changes) | P2 | ⬜ open |
 | KR-024 | Content health score | P2 | ⬜ open |
 | KR-025 | Block-level comment threads | P0 | ✅ done · 2026-06-16 |
 | KR-026 | Text-selection inline comments | P0 | ✅ done · 2026-06-16 |
 | KR-027 | Threaded replies | P0 | ✅ done · 2026-06-16 |
 | KR-028 | @mention in comments & blocks | P0 | ✅ done · 2026-06-16 |
-| KR-029 | Reactions on comments & articles | P1 | ⬜ open |
+| KR-029 | Reactions on comments & articles | P1 | ✅ done · 2026-06-16 |
 | KR-030 | Comment digest notifications | P1 | ✅ done · 2026-06-16 |
 | KR-031 | Comment draft auto-save | P2 | ⬜ open |
 | KR-032 | External reviewer comments | P2 | ⬜ open |
 | KR-033 | Persistent page tree sidebar | P0 | ✅ done · 2026-06-16 |
-| KR-034 | Tags / labels | P1 | ⬜ open |
-| KR-035 | Starred / favorites | P1 | ⬜ open |
-| KR-036 | Recently viewed | P1 | ⬜ open |
-| KR-037 | Space home page | P1 | ⬜ open |
-| KR-038 | Bulk operations | P1 | ⬜ open |
+| KR-034 | Tags / labels | P1 | ✅ done · 2026-06-16 |
+| KR-035 | Starred / favorites | P1 | ✅ done · 2026-06-16 |
+| KR-036 | Recently viewed | P1 | ✅ done · 2026-06-16 |
+| KR-037 | Space home page | P1 | ✅ done · 2026-06-16 |
+| KR-038 | Bulk operations | P1 | ✅ done · 2026-06-16 |
 | KR-039 | Article moves across spaces | P2 | ⬜ open |
 | KR-040 | Backlinks pane | P2 | ⬜ open |
 | KR-041 | Full-text search across content | P0 | ✅ done · 2026-06-16 |
 | KR-042 | Search result excerpts | P0 | ✅ done · 2026-06-16 |
-| KR-043 | Advanced search filters | P1 | ⬜ open |
+| KR-043 | Advanced search filters | P1 | ✅ done · 2026-06-16 |
 | KR-044 | AI semantic search | P1 | ✅ done · 2026-06-16 |
-| KR-045 | Related articles recommendations | P1 | ⬜ open |
+| KR-045 | Related articles recommendations | P1 | ✅ done · 2026-06-16 |
 | KR-046 | Content knowledge graph | P2 | ⬜ open |
 | KR-047 | Popular & trending section | P2 | ⬜ open |
 | KR-048 | Saved search views | P2 | ⬜ open |
@@ -96,9 +96,9 @@
 | KR-063 | Rich embed block | P2 | ⬜ open |
 | KR-064 | Whiteboard export | P2 | ⬜ open |
 | KR-065 | Real-time presence indicators | P1 | ✅ done · 2026-06-16 |
-| KR-066 | Article public share link | P1 | ⬜ open |
-| KR-067 | Article subscriptions / watch | P1 | ⬜ open |
-| KR-068 | Follow a space | P1 | ⬜ open |
+| KR-066 | Article public share link | P1 | ✅ done · 2026-06-16 |
+| KR-067 | Article subscriptions / watch | P1 | ✅ done · 2026-06-16 |
+| KR-068 | Follow a space | P1 | ✅ done · 2026-06-16 |
 | KR-069 | Embed article anywhere | P1 | ✅ done · 2026-06-16 |
 | KR-070 | Live co-editing cursors | P2 | ⬜ open |
 | KR-071 | Activity timeline tab | P2 | ⬜ open |

@@ -4,6 +4,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import jakarta.validation.Valid;
 
@@ -92,6 +94,7 @@ public class KnowledgeSpaceController {
                 node.setIcon(a.getIcon());
                 node.setParentId(a.getParentId());
                 node.setSortOrder(a.getSortOrder());
+                node.setTemplateType(a.getTemplateType());
                 node.setChildren(buildTree(all, a.getId(), depth + 1));
                 return node;
             }).collect(Collectors.toList());
@@ -132,5 +135,35 @@ public class KnowledgeSpaceController {
         rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "view_items");
         knowledgeSpaceRepository.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * KR-037: set or clear the home article for a space.
+     * PATCH /api/v1/knowledge-spaces/{id}/home-article
+     * Body: { "articleId": "ART-..." }  (null or empty to clear)
+     * RBAC: manage_projects.
+     */
+    @PatchMapping("/{id}/home-article")
+    public KnowledgeSpace setHomeArticle(@PathVariable String id,
+                                          @RequestBody Map<String, String> body) {
+        String userId = authenticatedUser.id();
+        KnowledgeSpace space = knowledgeSpaceRepository.findById(id).orElseThrow();
+        rbac.require(userId, space.getWorkspaceId(), "manage_projects");
+        String articleId = body.get("articleId");
+        // Validate that the article belongs to this space (cross-space hijack prevention).
+        if (articleId != null && !articleId.isBlank()) {
+            Article article = articleRepository.findById(articleId)
+                    .orElseThrow(() -> ApiException.notFound("Article", articleId));
+            if (!id.equals(article.getSpaceId())) {
+                throw ApiException.badRequest("ARTICLE_NOT_IN_SPACE",
+                        "The article does not belong to this space.", "articleId");
+            }
+        }
+        space.setHomeArticleId(articleId == null || articleId.isBlank() ? null : articleId);
+        space.setUpdatedAt(OffsetDateTime.now());
+        KnowledgeSpace saved = knowledgeSpaceRepository.save(space);
+        eventService.record(id, "SPACE_HOME_ARTICLE_SET", userId,
+                "{\"articleId\":\"" + (articleId == null ? "null" : articleId) + "\"}");
+        return saved;
     }
 }

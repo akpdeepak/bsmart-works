@@ -7,6 +7,25 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## WI-25 [benchmark] — Performance pass: virtual list hook, DataTable virtualization, prefetch-on-hover, CI perf budget (2026-06-16)
+
+**`@tanstack/react-virtual` installed** (`^3.14.3`). Enables DOM-count-bounded rendering for large lists, directly supporting the Doherty threshold (< 400 ms interactive) goal.
+
+**`src/hooks/use-virtual-list.js` (new):**
+Thin wrapper around `useVirtualizer` with a stable interface: `useVirtualList({ count, estimateSize?, overscan? })` returns `{ parentRef, virtualRows, totalSize }`. Keeps virtualizer wiring in one place; consumers attach `parentRef` to a scroll container and render only `virtualRows`.
+
+**`src/components/works/atoms/data-table.jsx` — opt-in virtual scrolling:**
+New props `virtualThreshold` (default: 100) and `maxHeight` (default: `'37.5rem'`). When `rows.length > virtualThreshold`, the table switches to virtual mode: a height-capped inner scroll div is bound to `parentRef`; padding rows at the top and bottom of `<tbody>` simulate off-screen item height without breaking table column layout (the padding-row approach is the only table-compatible strategy — absolutepositioned `<tr>` elements break column widths). Non-virtual path is unchanged.
+
+**`src/hooks/use-prefetch-nav.js` (new):**
+`usePrefetchNav(workspaceId)` returns `{ onProjectsHover, onWorkItemsHover }` event-handler pairs. Each fires `queryClient.prefetchQuery` with a 5-minute staleTime on `mouseenter` — warming the TanStack Query cache for the two highest-traffic views before the user clicks. Safe to wire to any `onMouseEnter` prop on sidebar nav items; no refetch if data is fresh.
+
+**`src/hooks/use-virtual-list.test.js` (new):**
+7 unit tests covering: shape of return value, ref object, array/number types, count-0 edge case, item count, and total-size arithmetic. `@tanstack/react-virtual` is mocked via `vi.mock`.
+
+**`.github/workflows/ci.yml` — `perf-budget` job (new):**
+Builds the frontend and gzips all `dist/assets/*.js` files; fails if total exceeds 512 000 bytes (500 KB gzipped). Acts as a Doherty-proxy gate — bundle size is the one signal CI can check without a browser. Runs independently (no `needs:` chain) so it is visible but does not block the existing lint/test flow.
+
 ## WI-24 [premium] — Motion choreography: DURATION/EASING tokens, modal/drawer/collapsible animations, optimistic shimmer, SuccessCheck (2026-06-16)
 
 **Motion constants module (`src/lib/motion.js`):**

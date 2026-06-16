@@ -331,6 +331,32 @@ jobs:
       - name: Build JetBrains plugin
         run: gradle buildPlugin --no-daemon
 
+  perf-budget:
+    name: Performance budget (bundle size)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: works-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: works-frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Bundle size check (Doherty proxy — JS < 500 KB gzipped)
+        run: |
+          TOTAL=$(find dist/assets -name "*.js" -exec gzip -c {} \; | wc -c)
+          echo "Total gzipped JS: ${TOTAL} bytes"
+          # 512000 = 500 KB gzipped — Doherty threshold proxy budget
+          if [ "$TOTAL" -gt 512000 ]; then
+            echo "Bundle exceeds 500 KB gzipped (${TOTAL} bytes). Optimize before merging."
+            exit 1
+          fi
+          echo "Bundle within budget (${TOTAL} / 512000 bytes)"
+
   chromatic:
     name: Chromatic (visual regression)
     runs-on: ubuntu-latest

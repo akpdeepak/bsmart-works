@@ -17,6 +17,7 @@ import { StatusBadge } from '@/components/knowledge/StatusBadge';
 import { StatusTransitionPopover } from '@/components/knowledge/StatusTransitionPopover';
 import { PageTreeSidebar } from '@/components/knowledge/PageTreeSidebar';
 import { BlockCommentsPanel } from '@/components/knowledge/BlockCommentsPanel';
+import { ArticleReactions } from '@/components/knowledge/ArticleReactions';
 import { onPressKey, renderMd } from '@/lib/utils';
 import { blocksText } from '@/lib/doc-stats';
 import { makeAiAssist } from '@/lib/knowledge-ai';
@@ -142,6 +143,7 @@ export default function KnowledgeView({
   knowledgeSpacesLoading = false,
   knowledgeArticlesLoading = false,
   workspaceId,
+  currentUserId,
   aiCapabilities = [],
 }) {
   const aiGenEnabled = capabilityEnabled(aiCapabilities, 'generation');
@@ -741,6 +743,106 @@ export default function KnowledgeView({
 
                     </div>
 
+                    {/* KR-018 / KR-019 / KR-020 / KR-021 — workflow metadata */}
+                    <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/60 p-4 space-y-3">
+                      <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                        Workflow
+                      </p>
+
+                      {/* KR-018: reviewer assignment */}
+                      <div className="flex items-center gap-2">
+                        <label
+                          htmlFor="article-reviewer"
+                          className="text-xs text-neutral-500 dark:text-neutral-400 w-28 flex-shrink-0"
+                        >
+                          Reviewer
+                        </label>
+                        <input
+                          id="article-reviewer"
+                          type="text"
+                          aria-label="Reviewer ID"
+                          defaultValue={selectedArticle.reviewerId || ''}
+                          onBlur={e => {
+                            const val = e.target.value.trim() || null;
+                            setSelectedArticle(a => ({ ...a, reviewerId: val }));
+                            updateArticle(selectedArticle.id, { reviewerId: val });
+                          }}
+                          placeholder="Assign reviewer\u2026"
+                          className="flex-1 text-sm border border-neutral-200 dark:border-neutral-700 rounded px-2 py-0.5 bg-white dark:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+                        />
+                      </div>
+
+                      {/* KR-021: review-by date */}
+                      <div className="flex items-center gap-2">
+                        <label
+                          htmlFor="article-review-by"
+                          className="text-xs text-neutral-500 dark:text-neutral-400 w-28 flex-shrink-0"
+                        >
+                          Review by
+                        </label>
+                        <input
+                          id="article-review-by"
+                          type="date"
+                          aria-label="Review-by date"
+                          value={selectedArticle.reviewByDate || ''}
+                          onChange={e => {
+                            const val = e.target.value || null;
+                            setSelectedArticle(a => ({ ...a, reviewByDate: val }));
+                            updateArticle(selectedArticle.id, { reviewByDate: val });
+                          }}
+                          className="flex-1 text-sm border border-neutral-200 dark:border-neutral-700 rounded px-2 py-0.5 bg-white dark:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+                        />
+                      </div>
+
+                      {/* KR-020: scheduled publish — only for DRAFT or IN_REVIEW */}
+                      {(!selectedArticle.status || selectedArticle.status === 'DRAFT' || selectedArticle.status === 'IN_REVIEW') && (
+                        <div className="flex items-center gap-2">
+                          <label
+                            htmlFor="article-scheduled-publish"
+                            className="text-xs text-neutral-500 dark:text-neutral-400 w-28 flex-shrink-0"
+                          >
+                            Scheduled publish
+                          </label>
+                          <input
+                            id="article-scheduled-publish"
+                            type="datetime-local"
+                            aria-label="Scheduled publish date and time"
+                            value={selectedArticle.scheduledPublishAt
+                              ? selectedArticle.scheduledPublishAt.substring(0, 16)
+                              : ''}
+                            onChange={e => {
+                              const val = e.target.value ? e.target.value + ':00Z' : null;
+                              setSelectedArticle(a => ({ ...a, scheduledPublishAt: val }));
+                              updateArticle(selectedArticle.id, { scheduledPublishAt: val });
+                            }}
+                            className="flex-1 text-sm border border-neutral-200 dark:border-neutral-700 rounded px-2 py-0.5 bg-white dark:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+                          />
+                        </div>
+                      )}
+
+                      {/* KR-019: requires approval toggle */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-neutral-500 dark:text-neutral-400 w-28 flex-shrink-0">
+                          Requires approval
+                        </span>
+                        <input
+                          id="article-requires-approval"
+                          type="checkbox"
+                          aria-label="Requires approval before publishing"
+                          checked={!!selectedArticle.requiresApproval}
+                          onChange={e => {
+                            const val = e.target.checked;
+                            setSelectedArticle(a => ({ ...a, requiresApproval: val }));
+                            updateArticle(selectedArticle.id, { requiresApproval: val });
+                          }}
+                          className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-600 text-brand-navy focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+                        />
+                        <label htmlFor="article-requires-approval" className="text-xs text-neutral-600 dark:text-neutral-400">
+                          Approval required before publish
+                        </label>
+                      </div>
+                    </div>
+
                     {/* Block editor — always used; markdown articles are migrated to a paragraph block on first edit */}
                     <div>
                       <div className="flex items-center gap-2 mb-2">
@@ -819,6 +921,13 @@ export default function KnowledgeView({
                         />
                       );
                     })()}
+
+                    {/* KR-029: emoji reactions strip below article content */}
+                    <ArticleReactions
+                      articleId={selectedArticle.id}
+                      workspaceId={workspaceId}
+                      currentUserId={currentUserId}
+                    />
 
                     {/* Sub-articles — placed below the article body, inside the scrollable content
                         area. Previously they were a flex-row sibling of this div which broke the

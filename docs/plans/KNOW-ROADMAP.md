@@ -48,10 +48,10 @@
 | KR-015 | Print / PDF / DOCX / Markdown export | P2 | ⬜ open |
 | KR-016 | Article reading view | P2 | ⬜ open |
 | KR-017 | Status badge + transition popover | P0 | ✅ done · 2026-06-16 |
-| KR-018 | Reviewer assignment | P1 | ⬜ open |
-| KR-019 | Approval requirements | P1 | ⬜ open |
-| KR-020 | Scheduled publish | P1 | ⬜ open |
-| KR-021 | Article expiry / review-by date | P1 | ⬜ open |
+| KR-018 | Reviewer assignment | P1 | ✅ done · 2026-06-16 |
+| KR-019 | Approval requirements | P1 | ✅ done · 2026-06-16 |
+| KR-020 | Scheduled publish | P1 | ✅ done · 2026-06-16 |
+| KR-021 | Article expiry / review-by date | P1 | ✅ done · 2026-06-16 |
 | KR-022 | Duplicate / clone article | P1 | ⬜ open |
 | KR-023 | Suggestions mode (track changes) | P2 | ⬜ open |
 | KR-024 | Content health score | P2 | ⬜ open |
@@ -59,7 +59,7 @@
 | KR-026 | Text-selection inline comments | P0 | ✅ done · 2026-06-16 |
 | KR-027 | Threaded replies | P0 | ✅ done · 2026-06-16 |
 | KR-028 | @mention in comments & blocks | P0 | ✅ done · 2026-06-16 |
-| KR-029 | Reactions on comments & articles | P1 | ⬜ open |
+| KR-029 | Reactions on comments & articles | P1 | ✅ done · 2026-06-16 |
 | KR-030 | Comment digest notifications | P1 | ⬜ open |
 | KR-031 | Comment draft auto-save | P2 | ⬜ open |
 | KR-032 | External reviewer comments | P2 | ⬜ open |

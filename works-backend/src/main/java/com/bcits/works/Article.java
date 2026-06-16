@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import org.hibernate.annotations.ColumnTransformer;
 
@@ -44,6 +45,15 @@ public class Article {
 
     // KR-041: maintained by @PrePersist/@PreUpdate for PostgreSQL full-text search.
     @Column(name = "text_content", columnDefinition = "TEXT") private String textContent;
+
+    // KR-019: approval requirement flag
+    @Column(name = "requires_approval") private boolean requiresApproval = false;
+
+    // KR-020: scheduled publish — article should auto-publish at this timestamp
+    @Column(name = "scheduled_publish_at") private OffsetDateTime scheduledPublishAt;
+
+    // KR-021: review-by date — content expiry / editorial review deadline
+    @Column(name = "review_by_date") private LocalDate reviewByDate;
 
     @Column(name = "content_format", nullable = false)
     private String contentFormat = "markdown";
@@ -107,6 +117,13 @@ public class Article {
     public void setCoverImage(String coverImage) { this.coverImage = coverImage; }
     public String getIcon() { return icon; }
     public void setIcon(String icon) { this.icon = icon; }
+
+    public boolean isRequiresApproval() { return requiresApproval; }
+    public void setRequiresApproval(boolean requiresApproval) { this.requiresApproval = requiresApproval; }
+    public OffsetDateTime getScheduledPublishAt() { return scheduledPublishAt; }
+    public void setScheduledPublishAt(OffsetDateTime scheduledPublishAt) { this.scheduledPublishAt = scheduledPublishAt; }
+    public LocalDate getReviewByDate() { return reviewByDate; }
+    public void setReviewByDate(LocalDate reviewByDate) { this.reviewByDate = reviewByDate; }
 
     public String getContentFormat() { return contentFormat; }
     public void setContentFormat(String contentFormat) { this.contentFormat = contentFormat; }

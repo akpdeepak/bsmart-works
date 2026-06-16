@@ -239,6 +239,14 @@ public class ArticleController {
             }
             // KR-010: icon — null to reset; short emoji or lucide: prefix
             a.setIcon(updated.getIcon());
+            // KR-018: reviewer assignment — null to unassign
+            a.setReviewerId(updated.getReviewerId());
+            // KR-019: approval requirement
+            a.setRequiresApproval(updated.isRequiresApproval());
+            // KR-020: scheduled publish
+            a.setScheduledPublishAt(updated.getScheduledPublishAt());
+            // KR-021: review-by date
+            a.setReviewByDate(updated.getReviewByDate());
             a.setVersionNumber(a.getVersionNumber() + 1);
             a.setUpdatedAt(OffsetDateTime.now());
             Article saved = articleRepository.save(a);

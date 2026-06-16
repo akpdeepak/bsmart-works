@@ -13,3 +13,8 @@ export const projectsKeys = {
   all: ['projects'],
   list: (workspaceId) => ['projects', workspaceId],
 };
+
+export const featureFlagsKeys = {
+  all: ['feature-flags'],
+  list: (workspaceId) => ['feature-flags', workspaceId],
+};

@@ -113,6 +113,7 @@ const KnowledgeView = React.lazy(() => import('@/views/knowledge-view'));
 const PmView = React.lazy(() => import('@/views/pm-view'));
 const Settings3View = React.lazy(() => import('@/views/settings3-view'));
 import { DashboardWidgetCard } from '@/components/works/organisms/dashboard-widget-card';
+import { FlagDevtools } from '@/components/works/organisms/flag-devtools';
 // DashboardDrillModal extracted to src/components/works/organisms/dashboard-drill-modal.jsx (TD-003).
 // ExportButtons extracted to src/components/works/export-buttons.jsx (TD-003).
 // ReportSectionCard extracted to src/components/works/organisms/report-section-card.jsx (TD-003).
@@ -4465,6 +4466,7 @@ export default function App() {
           </div>
         </Modal>
       )}
+      {import.meta.env.DEV && <FlagDevtools />}
     </div>
   );
 }

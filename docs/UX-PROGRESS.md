@@ -152,6 +152,32 @@ guard-null, window boundary (too soon / too old), and EventService resilience.
 
 ---
 
+## WI-11 [benchmark] — Feature-flag layer (2026-06-15)
+
+Minimal, server-side feature-flag system for safe UX rollout and A/B variant testing.
+No third-party SDK — DPDP-safe (RB-40 §3). Prerequisite for WI-12 (onboarding wizard).
+
+**Migration V92** (`workspace_feature_flags.sql`): two tables —
+- `feature_flags`: global catalog (id, name, enabled, description). Seeded with 3 flags:
+  `onboarding_wizard` (WI-12), `inline_quick_add` (WI-13), `keyboard_navigation` (WI-14), all
+  defaulting to disabled until each WI enables via workspace override.
+- `workspace_feature_flags`: per-workspace overrides (workspace_id, flag_name, enabled, variant).
+  Absence means inherit the global default.
+
+**Backend**: `FeatureFlagService` + `FeatureFlagController` at `GET /api/v1/feature-flags?workspaceId=`.
+Read access: any workspace member. Write access (`PUT`/`DELETE` override): ADMIN tier.
+7 unit tests in `FeatureFlagServiceTest` covering all access-control paths and flag resolution.
+
+**Frontend**: `lib/featureFlags.js` (API client), `hooks/queries/useFeatureFlags.js` (TanStack Query
+hook + `useFeatureFlag(workspaceId, flagName)` selector). `featureFlagsKeys` added to `keys.js`.
+4 new tests in `queries.test.jsx` covering fetch, disabled-when-absent, flag-present/absent logic.
+Stale time 5 min — flags don't change frequently.
+
+Branch: `feat/uiux-wi11-feature-flags`. Execution Plan WI-11 marked ✅.
+Milestone 1 (Measurement) complete: WI-08 ✅ WI-09 ✅ WI-10 ✅ WI-11 ✅. WI-12 unblocked.
+
+---
+
 ## WI-07 [consistency] — Retire App.jsx arbitrary-value exemption (2026-06-15)
 
 `text-2xs` token (10px / 0.625rem) was already present in `tailwind.config.js`; no arbitrary

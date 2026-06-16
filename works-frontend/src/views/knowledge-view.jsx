@@ -12,6 +12,8 @@ import { ArticleSummarizeButton } from '@/components/knowledge/ArticleSummarizeB
 import { AiTextAssist } from '@/components/knowledge/AiTextAssist';
 import { ArticleCover, COVER_GRADIENTS } from '@/components/knowledge/ArticleCover';
 import { ArticleIconPicker, TEMPLATE_ICONS } from '@/components/knowledge/ArticleIconPicker';
+import { StatusBadge } from '@/components/knowledge/StatusBadge';
+import { StatusTransitionPopover } from '@/components/knowledge/StatusTransitionPopover';
 import { onPressKey, renderMd } from '@/lib/utils';
 import { blocksText } from '@/lib/doc-stats';
 import { makeAiAssist } from '@/lib/knowledge-ai';
@@ -172,6 +174,9 @@ export default function KnowledgeView({
     setSelectedArticle((a) => ({ ...a, icon: val }));
     updateArticle(selectedArticle.id, { icon: val });
   };
+
+  // KR-017: status transition popover
+  const [statusPopoverOpen, setStatusPopoverOpen] = useState(false);
 
   // Navigation stack for sub-article drilling: Back returns to the direct parent article
   // rather than jumping to the flat list. Breadcrumbs show the full ancestor path.
@@ -461,9 +466,23 @@ export default function KnowledgeView({
                     </h1>
                   </div>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${STATUS_CHIP[selectedArticle.status] || STATUS_CHIP.DRAFT}`}>
-                      {selectedArticle.status || 'DRAFT'}
-                    </span>
+                    {/* KR-017: clickable status badge + transition popover */}
+                    <div className="relative">
+                      <StatusBadge
+                        status={selectedArticle.status}
+                        onClick={() => setStatusPopoverOpen((o) => !o)}
+                      />
+                      <StatusTransitionPopover
+                        status={selectedArticle.status}
+                        open={statusPopoverOpen}
+                        onClose={() => setStatusPopoverOpen(false)}
+                        onSubmit={() => { submitArticleForReview(selectedArticle.id); setSelectedArticle(a => ({ ...a, status: 'IN_REVIEW' })); }}
+                        onPublish={() => { publishArticle(selectedArticle.id); setSelectedArticle(a => ({ ...a, status: 'PUBLISHED' })); }}
+                        onReject={() => { rejectArticle(selectedArticle.id); setSelectedArticle(a => ({ ...a, status: 'DRAFT' })); }}
+                        onArchive={() => { archiveArticle(selectedArticle.id); setSelectedArticle(a => ({ ...a, status: 'ARCHIVED' })); }}
+                        onRestore={() => { restoreArticle(selectedArticle.id); setSelectedArticle(a => ({ ...a, status: 'DRAFT' })); }}
+                      />
+                    </div>
                     <span className="text-xs font-mono bg-brand-navy/10 text-brand-navy px-1.5 py-0.5 rounded">
                       {selectedArticle.templateType || 'KB'}
                     </span>
@@ -495,30 +514,6 @@ export default function KnowledgeView({
                 ))}
 
                 <span className="text-neutral-200 dark:text-neutral-700 select-none mx-0.5" aria-hidden="true">|</span>
-
-                {/* Workflow actions — one primary action visible per status */}
-                {selectedArticle.status === 'IN_REVIEW' && (
-                  <button
-                    onClick={() => rejectArticle(selectedArticle.id)}
-                    className="text-xs text-semantic-warning hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-semantic-warning/40 rounded"
-                  >
-                    Request changes
-                  </button>
-                )}
-                {(!selectedArticle.status || selectedArticle.status === 'DRAFT') && (
-                  <Button variant="action" onClick={() => submitArticleForReview(selectedArticle.id)}>
-                    Submit for review
-                  </Button>
-                )}
-                {selectedArticle.status === 'IN_REVIEW' && (
-                  <Button variant="action" onClick={() => publishArticle(selectedArticle.id)}>Publish</Button>
-                )}
-                {selectedArticle.status === 'PUBLISHED' && (
-                  <Button variant="secondary" onClick={() => archiveArticle(selectedArticle.id)}>Archive</Button>
-                )}
-                {selectedArticle.status === 'ARCHIVED' && (
-                  <Button variant="secondary" onClick={() => restoreArticle(selectedArticle.id)}>Restore</Button>
-                )}
 
                 {aiAssist && (
                   <ArticleSummarizeButton workspaceId={workspaceId} text={articleText(selectedArticle)} />

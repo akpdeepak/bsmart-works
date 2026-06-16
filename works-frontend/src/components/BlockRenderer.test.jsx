@@ -60,6 +60,23 @@ describe('BlockRenderer', () => {
     expect(screen.getByRole('link', { name: /Runbook/ })).toHaveAttribute('href', 'https://example.com');
   });
 
+  it('renders inline bold, strikethrough and link marks in paragraph content (KR-001)', () => {
+    render(<BlockRenderer blocks={[block('paragraph', '**bold** ~~strike~~ [click](https://example.com)')]} />);
+    expect(document.querySelector('strong')).toHaveTextContent('bold');
+    expect(document.querySelector('s')).toHaveTextContent('strike');
+    const a = document.querySelector('a[href="https://example.com"]');
+    expect(a).toHaveTextContent('click');
+  });
+
+  it('renders inline marks inside headings and callouts (KR-001)', () => {
+    render(<BlockRenderer blocks={[
+      block('heading1', '**Bold** heading'),
+      block('callout', '__underline__ note', { variant: 'info' }),
+    ]} />);
+    expect(document.querySelector('h2 strong')).toHaveTextContent('Bold');
+    expect(document.querySelector('p u')).toHaveTextContent('underline');
+  });
+
   it('renders a sticker emoji and a type-aware file card', () => {
     render(<BlockRenderer blocks={[
       block('sticker', '🚀', { size: 'xl' }),

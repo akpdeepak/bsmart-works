@@ -21,7 +21,7 @@ function CalloutView({ block }) {
   return (
     <div className={cn('rounded-md border-l-2 p-3 flex gap-3', v.box)}>
       <Icon aria-hidden="true" className={cn('h-5 w-5 shrink-0 mt-0.5', v.accent)} />
-      <p className="text-sm text-neutral-900 dark:text-neutral-100 whitespace-pre-wrap">{block.content}</p>
+      <p className="text-sm text-neutral-900 dark:text-neutral-100" dangerouslySetInnerHTML={{ __html: renderMd(block.content || '') }} />
     </div>
   );
 }
@@ -181,13 +181,13 @@ function OneBlock({ block, allBlocks, workspaceId }) {
     case 'paragraph':
       return <div className="text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMd(block.content || '') }} />;
     case 'heading1':
-      return <h2 id={block.id} className="mt-8 text-2xl font-bold text-neutral-900 dark:text-neutral-100 scroll-mt-4">{block.content}</h2>;
+      return <h2 id={block.id} className="mt-8 text-2xl font-bold text-neutral-900 dark:text-neutral-100 scroll-mt-4" dangerouslySetInnerHTML={{ __html: renderMd(block.content || '') }} />;
     case 'heading2':
-      return <h3 id={block.id} className="mt-6 text-xl font-semibold text-neutral-900 dark:text-neutral-100 scroll-mt-4">{block.content}</h3>;
+      return <h3 id={block.id} className="mt-6 text-xl font-semibold text-neutral-900 dark:text-neutral-100 scroll-mt-4" dangerouslySetInnerHTML={{ __html: renderMd(block.content || '') }} />;
     case 'heading3':
-      return <h4 id={block.id} className="mt-5 text-base font-semibold text-neutral-900 dark:text-neutral-100 scroll-mt-4">{block.content}</h4>;
+      return <h4 id={block.id} className="mt-5 text-base font-semibold text-neutral-900 dark:text-neutral-100 scroll-mt-4" dangerouslySetInnerHTML={{ __html: renderMd(block.content || '') }} />;
     case 'quote':
-      return <blockquote className="my-2 border-l-2 border-brand-navy-tint pl-4 text-sm italic text-neutral-600 dark:text-neutral-300 whitespace-pre-wrap">{block.content}</blockquote>;
+      return <blockquote className="my-2 border-l-2 border-brand-navy-tint pl-4 text-sm italic text-neutral-600 dark:text-neutral-300" dangerouslySetInnerHTML={{ __html: renderMd(block.content || '') }} />;
     case 'callout':
       return <CalloutView block={block} />;
     case 'checklist':

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BlockEditor } from '@/components/BlockEditor';
 
@@ -113,5 +113,46 @@ describe('BlockEditor — Know Studio blocks', () => {
     render(<BlockEditor blocks={[]} onChange={() => {}} />);
     await user.type(screen.getByLabelText('Paragraph content'), 'see the path/to file');
     expect(screen.queryByRole('listbox', { name: 'Insert block' })).not.toBeInTheDocument();
+  });
+
+  it('Ctrl+B wraps the selected text with ** bold markers (KR-001)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BlockEditor blocks={[]} onChange={onChange} />);
+    const textarea = screen.getByLabelText('Paragraph content');
+
+    await user.type(textarea, 'hello world');
+    textarea.setSelectionRange(0, 5);
+    fireEvent.keyDown(textarea, { key: 'b', ctrlKey: true });
+
+    const emitted = onChange.mock.calls.at(-1)[0];
+    expect(emitted[0].content).toBe('**hello** world');
+  });
+
+  it('Ctrl+Z undoes the last committed block change (KR-003)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BlockEditor blocks={[]} onChange={onChange} />);
+    const textarea = screen.getByLabelText('Paragraph content');
+
+    await user.type(textarea, 'a');
+    expect(onChange.mock.calls.at(-1)[0][0].content).toBe('a');
+
+    fireEvent.keyDown(textarea, { key: 'z', ctrlKey: true });
+    expect(onChange.mock.calls.at(-1)[0][0].content).toBe('');
+  });
+
+  it('Ctrl+Y redoes after an undo (KR-003)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BlockEditor blocks={[]} onChange={onChange} />);
+    const textarea = screen.getByLabelText('Paragraph content');
+
+    await user.type(textarea, 'a');
+    fireEvent.keyDown(textarea, { key: 'z', ctrlKey: true });
+    expect(onChange.mock.calls.at(-1)[0][0].content).toBe('');
+
+    fireEvent.keyDown(textarea, { key: 'y', ctrlKey: true });
+    expect(onChange.mock.calls.at(-1)[0][0].content).toBe('a');
   });
 });

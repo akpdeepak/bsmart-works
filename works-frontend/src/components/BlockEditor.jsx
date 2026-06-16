@@ -119,6 +119,33 @@ const TOOLBAR_GROUPS = [
 
 const blockLabel = (type) => BLOCK_TYPES.find((t) => t.type === type)?.label || type;
 
+// Wrap the current textarea/input selection with a markdown syntax pair (KR-001).
+// The element's selectionStart/End define what gets wrapped; caret is restored after.
+function wrapSyntax(el, syntax, value, onChange) {
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  if (start === end) return;
+  const next = `${value.slice(0, start)}${syntax}${value.slice(start, end)}${syntax}${value.slice(end)}`;
+  onChange({ content: next });
+  requestAnimationFrame(() => {
+    if (document.activeElement === el) {
+      el.selectionStart = start + syntax.length;
+      el.selectionEnd = end + syntax.length;
+    }
+  });
+}
+
+// Shared format-shortcut handler — usable in any text-bearing block's onKeyDown (KR-001).
+function handleFormatKey(e, el, value, onChange) {
+  const ctrl = e.ctrlKey || e.metaKey;
+  if (!ctrl) return false;
+  if (!e.shiftKey && e.key === 'b') { e.preventDefault(); wrapSyntax(el, '**', value, onChange); return true; }
+  if (!e.shiftKey && e.key === 'i') { e.preventDefault(); wrapSyntax(el, '*', value, onChange); return true; }
+  if (e.shiftKey  && e.key === 'X') { e.preventDefault(); wrapSyntax(el, '~~', value, onChange); return true; }
+  if (!e.shiftKey && e.key === '`') { e.preventDefault(); wrapSyntax(el, '`', value, onChange); return true; }
+  return false;
+}
+
 function blockId() {
   return `blk-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -225,6 +252,8 @@ function ParagraphBlock({ block, onChange, onReplace, onAddAfter, focused }) {
       else if (e.key === 'Escape') { e.preventDefault(); setDismissedFor(block.content); }
       return;
     }
+    // Format shortcuts (Ctrl+B/I/Shift+X/`) — must run before the Enter check (KR-001).
+    if (handleFormatKey(e, e.currentTarget, block.content, onChange)) return;
     // Enter at cursor-end creates a new paragraph block below — Shift+Enter and mid-text Enter
     // remain default textarea behavior (they insert a newline within the same block).
     if (e.key === 'Enter' && !e.shiftKey && e.currentTarget.selectionStart === e.currentTarget.value.length) {
@@ -287,6 +316,7 @@ function HeadingBlock({ block, onChange, level }) {
       aria-label={`Heading ${level}`}
       value={block.content}
       onChange={(e) => onChange({ content: e.target.value })}
+      onKeyDown={(e) => handleFormatKey(e, e.currentTarget, block.content, onChange)}
       className={cn(
         'w-full bg-transparent border-b border-neutral-200 dark:border-neutral-700 pb-1',
         'text-neutral-900 dark:text-neutral-100 focus-visible:outline-none',
@@ -476,6 +506,7 @@ function CalloutBlock({ block, onChange }) {
           aria-label="Callout text"
           value={block.content}
           onChange={(e) => onChange({ content: e.target.value })}
+          onKeyDown={(e) => handleFormatKey(e, e.currentTarget, block.content, onChange)}
           rows={2}
           className="w-full resize-y bg-transparent text-sm text-neutral-900 dark:text-neutral-100 focus-visible:outline-none"
           placeholder="Something worth highlighting…"
@@ -492,6 +523,7 @@ function QuoteBlock({ block, onChange }) {
         aria-label="Quote text"
         value={block.content}
         onChange={(e) => onChange({ content: e.target.value })}
+        onKeyDown={(e) => handleFormatKey(e, e.currentTarget, block.content, onChange)}
         rows={2}
         className="w-full resize-y bg-transparent text-sm italic text-neutral-700 dark:text-neutral-300 focus-visible:outline-none"
         placeholder="A quote or callout sentence…"
@@ -1292,16 +1324,72 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
     initialBlocks.length > 0 ? initialBlocks : [newBlock('paragraph')]
   );
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const [saveStatus, setSaveStatus] = useState(null); // 'Undone' | 'Redone' | null (KR-003)
 
   // Per-block DOM node map for auto-scroll; populated via the blockRef callback prop on Block.
   const blockElsRef = useRef({});
   // Track previous block count so we only scroll on insertions, not on user focus clicks.
   const prevBlockCountRef = useRef(initialBlocks.length > 0 ? initialBlocks.length : 1);
+  // Undo / redo stacks (KR-003). useRef avoids re-renders on stack mutations.
+  const undoStack = useRef([]);
+  const redoStack = useRef([]);
+  const UNDO_MAX = 100;
 
-  const emit = useCallback(
-    (next) => { setBlocks(next); onChange?.(next); },
+  // Clear undo state when the editor is re-used for a different article (first block id change).
+  const firstBlockIdRef = useRef(initialBlocks[0]?.id);
+  useEffect(() => {
+    const incoming = initialBlocks[0]?.id;
+    if (incoming !== firstBlockIdRef.current) {
+      undoStack.current = [];
+      redoStack.current = [];
+      firstBlockIdRef.current = incoming;
+    }
+  }, [initialBlocks]);
+
+  // commitBlocks: the write path. Every user mutation calls this so the undo history is captured.
+  // Direct setBlocks (e.g. handleUndo) bypasses it intentionally.
+  const commitBlocks = useCallback(
+    (next) => {
+      setBlocks((prev) => {
+        undoStack.current = [...undoStack.current.slice(-UNDO_MAX + 1), prev];
+        redoStack.current = [];
+        return next;
+      });
+      onChange?.(next);
+    },
     [onChange],
   );
+
+  const emit = commitBlocks;
+
+  const flashStatus = (msg) => {
+    setSaveStatus(msg);
+    setTimeout(() => setSaveStatus(null), 800);
+  };
+
+  const handleUndo = useCallback(() => {
+    if (undoStack.current.length === 0) return;
+    const prev = undoStack.current[undoStack.current.length - 1];
+    undoStack.current = undoStack.current.slice(0, -1);
+    setBlocks((cur) => {
+      redoStack.current = [...redoStack.current, cur];
+      return prev;
+    });
+    onChange?.(prev);
+    flashStatus('Undone');
+  }, [onChange]);
+
+  const handleRedo = useCallback(() => {
+    if (redoStack.current.length === 0) return;
+    const next = redoStack.current[redoStack.current.length - 1];
+    redoStack.current = redoStack.current.slice(0, -1);
+    setBlocks((cur) => {
+      undoStack.current = [...undoStack.current, cur];
+      return next;
+    });
+    onChange?.(next);
+    flashStatus('Redone');
+  }, [onChange]);
 
   // Scroll the focused block into view whenever a new block is inserted (count grows).
   useEffect(() => {
@@ -1374,8 +1462,16 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
 
   const stats = docStats(blocks);
 
+  const handleEditorKeyDown = useCallback((e) => {
+    const ctrl = e.ctrlKey || e.metaKey;
+    if (!ctrl) return;
+    if (!e.shiftKey && e.key === 'z') { e.preventDefault(); handleUndo(); }
+    else if (!e.shiftKey && e.key === 'y') { e.preventDefault(); handleRedo(); }
+    else if (e.shiftKey && e.key === 'Z') { e.preventDefault(); handleRedo(); }
+  }, [handleUndo, handleRedo]);
+
   return (
-    <div className="space-y-2">
+    <div id="block-editor-root" className="space-y-2" onKeyDown={handleEditorKeyDown}>
       <BlockToolbar onInsert={addBlockAtCursor} />
       <div role="listbox" aria-label="Block editor" aria-multiselectable="false" className="space-y-2">
         {blocks.map((block, index) => (
@@ -1402,6 +1498,7 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
       <AddBlockButton onAdd={addBlock} />
       {/* MS Word-style live status bar — word count + reading time, always current, no file to sync. */}
       <div className="flex items-center justify-end gap-3 text-2xs text-neutral-600 dark:text-neutral-400 pt-1" aria-live="polite">
+        {saveStatus && <span className="text-brand-navy dark:text-brand-orange font-medium">{saveStatus}</span>}
         <span>{stats.words} {stats.words === 1 ? 'word' : 'words'}</span>
         <span aria-hidden="true">·</span>
         <span>{stats.characters} characters</span>

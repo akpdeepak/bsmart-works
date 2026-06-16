@@ -12,6 +12,8 @@ import { detailFieldsFor, orderByPrefs, SECTION_LABELS } from '@/lib/type-detail
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { onPressKey } from '@/lib/utils';
 import { RichTextEditor } from './rich-text-editor';
+import { AiAssistButton } from '@/components/works/molecules/ai-assist-button';
+import { useAiAssist } from '@/hooks/use-ai-assist';
 
 export function DetailsTab({
   selectedItem, setSelectedItem, handleUpdateItem,
@@ -23,6 +25,23 @@ export function DetailsTab({
 }) {
   // "Configure fields" edit mode — reveals per-field visibility checkboxes.
   const [editFields, setEditFields] = useState(false);
+
+  // AI assist — description suggestion (WI-27).
+  // Fallback: when AI is off / unavailable, AiAssistButton renders null and the description
+  // textarea remains the only path (it is always present — AI is additive, never a replacement).
+  const { suggesting, fallback: aiFallback, suggestDescription } = useAiAssist(activeWorkspaceId);
+
+  async function handleSuggestDescription() {
+    const suggestion = await suggestDescription({
+      title: selectedItem.title || '',
+      type: selectedItem.type || '',
+    });
+    if (suggestion) {
+      const updated = { ...selectedItem, description: suggestion };
+      setSelectedItem(updated);
+      handleUpdateItem(updated);
+    }
+  }
 
   // Per-type status resolution + time-in-status lapse (S3/S4).
   const typeStatuses = statusResolver?.statusesForType?.(selectedItem.type) ?? [];
@@ -190,7 +209,18 @@ export function DetailsTab({
         {/* MAIN content column */}
         <div className="flex-1 min-w-0 space-y-4">
       <div>
-        <label htmlFor="detail-description" className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-medium">Description</label>
+        <div className="flex items-center justify-between mb-1">
+          <label htmlFor="detail-description" className="block text-xs text-neutral-600 dark:text-neutral-400 font-medium">Description</label>
+          {/* AI assist button — renders null when fallback=true (AI is off/unavailable).
+              The textarea below is always present as the deterministic fallback (RB-40 §2). */}
+          <AiAssistButton
+            onClick={handleSuggestDescription}
+            suggesting={suggesting}
+            fallback={aiFallback}
+            disabled={!activeWorkspaceId || !selectedItem.title}
+            label="AI suggest"
+          />
+        </div>
         <RichTextEditor
           id="detail-description"
           value={selectedItem.description || ''}

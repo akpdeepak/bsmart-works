@@ -9,11 +9,24 @@ import { aiClient } from '@/lib/ai';
 const ws = (workspaceId) => encodeURIComponent(workspaceId);
 
 export const knowledgeAi = {
-  // mode ∈ write | improve | expand | summarize | shorten. Returns { mode, text, meta }.
+  // mode ∈ write | improve | expand | summarize | shorten | outline | simplify | …
+  // Returns { mode, text, meta }.
   compose: (workspaceId, { mode, text, instruction }) =>
     api.send(`/knowledge/ai/compose?workspaceId=${ws(workspaceId)}`, {
       method: 'POST',
       body: { mode, text, instruction },
+    }),
+  // KR-074: grammar & style check. Returns WritingIssue[].
+  checkWriting: (workspaceId, text) =>
+    api.send(`/knowledge/ai/compose/writing-check?workspaceId=${ws(workspaceId)}`, {
+      method: 'POST',
+      body: { text },
+    }),
+  // KR-075: auto-tag suggestions. Returns string[].
+  suggestTags: (workspaceId, text) =>
+    api.send(`/knowledge/ai/compose/suggest-tags?workspaceId=${ws(workspaceId)}`, {
+      method: 'POST',
+      body: { text },
     }),
   // Ask the knowledge base (RAG). Returns { answer, citations, meta }.
   ask: (workspaceId, question) => aiClient.kbAsk(workspaceId, question),

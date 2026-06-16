@@ -100,4 +100,86 @@ class KnowledgeAiServiceTest {
         assertThat(r.meta().usedAi()).isTrue();
         assertThat(r.meta().fallback()).isFalse();
     }
+
+    // ── KR-073: Outline generator ──────────────────────────────────────────────
+
+    @Test
+    void outlineDeterministic_runbookContainsPrerequisites() {
+        String out = KnowledgeAiService.outlineDeterministic("Deployment guide", "RUNBOOK");
+        assertThat(out).contains("Prerequisites");
+        assertThat(out).contains("Deployment guide");
+        assertThat(out).contains("## Steps");
+        assertThat(out).contains("## Rollback");
+    }
+
+    @Test
+    void outlineDeterministic_kbUsesGenericSections() {
+        String out = KnowledgeAiService.outlineDeterministic("My topic", "KB");
+        assertThat(out).contains("## Background");
+        assertThat(out).contains("## Details");
+        assertThat(out).contains("## References");
+    }
+
+    @Test
+    void outlineDeterministic_unknownTemplateUsesDefault() {
+        String out = KnowledgeAiService.outlineDeterministic("Custom report", "CUSTOM");
+        assertThat(out).startsWith("# Custom report");
+        assertThat(out).contains("## Section 1");
+        assertThat(out).contains("## Conclusion");
+    }
+
+    // ── KR-074: Writing check ─────────────────────────────────────────────────
+
+    @Test
+    void checkWritingDeterministic_detectsItsAAndUtilize() {
+        List<KnowledgeAiService.WritingIssue> issues =
+            KnowledgeAiService.checkWritingDeterministic("Its a great day. Use utilize when possible.");
+        assertThat(issues).isNotEmpty();
+        boolean hasItsA = issues.stream().anyMatch(i -> i.text().contains("its a"));
+        boolean hasUtilize = issues.stream().anyMatch(i -> i.text().equals("utilize"));
+        assertThat(hasItsA).isTrue();
+        assertThat(hasUtilize).isTrue();
+    }
+
+    @Test
+    void checkWritingDeterministic_emptyText_returnsNoIssues() {
+        assertThat(KnowledgeAiService.checkWritingDeterministic("")).isEmpty();
+        assertThat(KnowledgeAiService.checkWritingDeterministic(null)).isEmpty();
+    }
+
+    // ── KR-075: Auto-tagging ──────────────────────────────────────────────────
+
+    @Test
+    void suggestTagsDeterministic_returnsHighFrequencyTerms() {
+        String content = "kubernetes kubernetes kubernetes deployment deployment deployment "
+            + "production production production cluster cluster cluster nodes pods pods pods";
+        List<String> tags = KnowledgeAiService.suggestTagsDeterministic(content, List.of());
+        assertThat(tags).isNotEmpty();
+        boolean hasKubernetes = tags.contains("kubernetes");
+        boolean hasDeployment = tags.contains("deployment");
+        assertThat(hasKubernetes || hasDeployment).isTrue();
+    }
+
+    @Test
+    void suggestTagsDeterministic_emptyContent_returnsEmpty() {
+        assertThat(KnowledgeAiService.suggestTagsDeterministic("", List.of())).isEmpty();
+    }
+
+    // ── KR-076: Simplify ──────────────────────────────────────────────────────
+
+    @Test
+    void simplifyDeterministic_replacesVerbosePhrases() {
+        String result = KnowledgeAiService.simplifyDeterministic(
+            "In order to utilize the system you must implement the solution.", "6");
+        assertThat(result).contains("use");
+        assertThat(result).contains("to");
+        assertThat(result).doesNotContain("utilize");
+        assertThat(result).doesNotContain("in order to");
+    }
+
+    @Test
+    void simplifyDeterministic_emptyText_returnsEmpty() {
+        assertThat(KnowledgeAiService.simplifyDeterministic("", "6")).isEqualTo("");
+        assertThat(KnowledgeAiService.simplifyDeterministic(null, "6")).isEqualTo("");
+    }
 }

@@ -1,8 +1,9 @@
 // KR-066 — Article public share link popover.
 // Shown when a PUBLISHED article is selected. Lets the author generate, copy, and revoke
 // the public share link. The link is served at /p/{token} (no auth required).
+// KR-069: also shows an "Embed" section with an iframe snippet when a share token exists.
 import { useState, useEffect, useRef } from 'react';
-import { Copy, Check, Trash2 } from 'lucide-react';
+import { Copy, Check, Trash2, Code2 } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { Button } from '@/components/works/button';
 
@@ -18,6 +19,7 @@ export function ArticleSharePopover({ articleId, token: initialToken, onTokenCha
   const [token, setToken] = useState(initialToken);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [embedCopied, setEmbedCopied] = useState(false);
   const [error, setError] = useState(null);
   const popoverRef = useRef(null);
 
@@ -39,6 +41,14 @@ export function ArticleSharePopover({ articleId, token: initialToken, onTokenCha
 
   const shareUrl = token
     ? `${window.location.origin}/p/${token}`
+    : null;
+
+  // KR-069: iframe embed snippet for the /embed/article/:token route.
+  const embedUrl = token
+    ? `${window.location.origin}/embed/article/${token}`
+    : null;
+  const embedSnippet = embedUrl
+    ? `<iframe src="${embedUrl}" width="100%" height="600" frameborder="0" title="Article embed"></iframe>`
     : null;
 
   function handleGenerate() {
@@ -71,6 +81,15 @@ export function ArticleSharePopover({ articleId, token: initialToken, onTokenCha
     navigator.clipboard.writeText(shareUrl).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  // KR-069: copy the iframe embed snippet to clipboard.
+  function handleCopyEmbed() {
+    if (!embedSnippet) return;
+    navigator.clipboard.writeText(embedSnippet).then(() => {
+      setEmbedCopied(true);
+      setTimeout(() => setEmbedCopied(false), 2000);
     });
   }
 
@@ -125,6 +144,40 @@ export function ArticleSharePopover({ articleId, token: initialToken, onTokenCha
               }
             </button>
           </div>
+          {/* KR-069: Embed section — iframe snippet for external embedding */}
+          <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
+            <div className="flex items-center gap-1.5">
+              <Code2 aria-hidden="true" className="h-3.5 w-3.5 text-neutral-400" />
+              <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 uppercase tracking-wide">
+                Embed
+              </p>
+            </div>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400">
+              Paste this snippet into any external page to embed this article.
+            </p>
+            <div className="flex items-start gap-2">
+              <textarea
+                readOnly
+                value={embedSnippet}
+                aria-label="Iframe embed code"
+                rows={3}
+                className="flex-1 text-xs font-mono bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md px-2 py-1.5 text-neutral-700 dark:text-neutral-300 resize-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+              />
+              <button
+                type="button"
+                onClick={handleCopyEmbed}
+                aria-label={embedCopied ? 'Embed code copied' : 'Copy embed code'}
+                disabled={loading}
+                className="flex-shrink-0 p-1.5 rounded-md border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {embedCopied
+                  ? <Check className="h-3.5 w-3.5 text-semantic-success" aria-hidden="true" />
+                  : <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                }
+              </button>
+            </div>
+          </div>
+
           <button
             type="button"
             onClick={handleRevoke}

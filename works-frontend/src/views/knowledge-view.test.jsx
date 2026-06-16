@@ -50,6 +50,13 @@ const baseProps = {
 };
 
 describe('KnowledgeView', () => {
+  // Default mock so components that call api.send() in useEffect (e.g. RelatedArticles, AiTextAssist)
+  // get a resolved promise instead of crashing with "Cannot read properties of undefined".
+  // Individual tests that need specific return values override this with their own mockResolvedValue.
+  beforeEach(() => {
+    api.send.mockResolvedValue([]);
+  });
+
   it('renders the Knowledge Spaces sidebar heading', () => {
     render(<KnowledgeView {...baseProps} />);
     expect(screen.getByRole('heading', { name: /^knowledge spaces$/i, level: 2 })).toBeInTheDocument();

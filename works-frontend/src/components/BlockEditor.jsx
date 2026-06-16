@@ -14,7 +14,7 @@ import {
   GitBranch, ChevronDown as ChevronDownIcon,
   Info, CheckSquare, Quote, ChevronRight,
   Grid, BarChart3, PenTool, Link2, Bookmark, GripVertical, List, Sparkles,
-  LayoutDashboard, Smile, Paperclip, X,
+  LayoutDashboard, Smile, Paperclip, X, BookOpen,
 } from 'lucide-react';
 import { fleschKincaid, gradeLabel } from '@/lib/readability';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,8 @@ import { BqlWidget } from '@/components/blocks/bql-widget';
 import { EmojiPicker } from '@/components/blocks/emoji-picker';
 import { SelectionToolbar } from '@/components/blocks/SelectionToolbar';
 import { AiMetaBadge } from '@/components/works/ai-meta-badge';
+// KR-069: article_ref block — embed a reference to another article in the same workspace.
+import { ArticleRefBlock } from '@/components/blocks/ArticleRefBlock';
 
 // KR-006: computeMatches lives in lib/block-search (pure function, kept separate for react-refresh).
 import { computeMatches } from '@/lib/block-search';
@@ -62,9 +64,11 @@ const BLOCK_TYPES = [
   { type: 'mermaid',   label: 'Diagram (Mermaid)', Icon: GitBranch, group: 'Visual' },
   { type: 'whiteboard', label: 'Whiteboard', Icon: PenTool, group: 'Visual' },
   { type: 'sticker',   label: 'Sticker / emoji', Icon: Smile, group: 'Visual' },
-  { type: 'workitem',  label: 'Work item', Icon: Link2, group: 'Connect' },
-  { type: 'bookmark',  label: 'Bookmark / link', Icon: Bookmark, group: 'Connect' },
-  { type: 'file',      label: 'File (any type)', Icon: Paperclip, group: 'Connect' },
+  { type: 'workitem',     label: 'Work item', Icon: Link2, group: 'Connect' },
+  { type: 'bookmark',     label: 'Bookmark / link', Icon: Bookmark, group: 'Connect' },
+  { type: 'file',         label: 'File (any type)', Icon: Paperclip, group: 'Connect' },
+  // KR-069: embed a reference card linking to another article in the same workspace.
+  { type: 'article_ref', label: 'Article reference', Icon: BookOpen, group: 'Connect' },
 ];
 
 const BLOCK_GROUPS = ['Basic', 'Data', 'Visual', 'Connect'];
@@ -116,9 +120,10 @@ const TOOLBAR_GROUPS = [
   {
     label: 'Connect',
     items: [
-      { type: 'workitem',   title: 'Work item',           Icon: Link2 },
-      { type: 'bookmark',   title: 'Bookmark / link',     Icon: Bookmark },
-      { type: 'file',       title: 'File (any type)',     Icon: Paperclip },
+      { type: 'workitem',    title: 'Work item',           Icon: Link2 },
+      { type: 'bookmark',    title: 'Bookmark / link',     Icon: Bookmark },
+      { type: 'file',        title: 'File (any type)',     Icon: Paperclip },
+      { type: 'article_ref', title: 'Article reference',   Icon: BookOpen },
     ],
   },
 ];
@@ -185,6 +190,9 @@ function newBlock(type) {
       return { id, type, content: '', metadata: { fileName: '' } };
     case 'toc':
       return { id, type, content: '', metadata: {} };
+    // KR-069: article reference — links to another article in the same workspace.
+    case 'article_ref':
+      return { id, type, content: '', metadata: { articleId: null, displayMode: 'card' } };
     default:
       return { id, type, content: '', metadata: {} };
   }
@@ -1263,6 +1271,10 @@ function Block({ block, index, total, focused, onFocus, onChange, onMove, onDele
       {block.type === 'workitem' && <WorkItemBlock block={block} onChange={onChange} />}
       {block.type === 'bookmark' && <BookmarkBlock block={block} onChange={onChange} />}
       {block.type === 'file' && <FileBlock block={block} onChange={onChange} />}
+      {/* KR-069: article_ref block — edit mode uses ArticleRefBlock with search; read mode shows the card */}
+      {block.type === 'article_ref' && (
+        <ArticleRefBlock block={block} onChange={onChange} editMode workspaceId={workspaceId} />
+      )}
     </div>
   );
 }

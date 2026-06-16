@@ -3,6 +3,8 @@ package com.bcits.works;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import org.hibernate.annotations.ColumnTransformer;
@@ -39,6 +41,9 @@ public class Article {
     // content_format: 'markdown' (default) | 'blocks' (JSON block array in content_blocks)
     // KR-033: drag-to-reorder position within the parent in the page tree sidebar
     @Column(name = "sort_order") private Integer sortOrder;
+
+    // KR-041: maintained by @PrePersist/@PreUpdate for PostgreSQL full-text search.
+    @Column(name = "text_content", columnDefinition = "TEXT") private String textContent;
 
     @Column(name = "content_format", nullable = false)
     private String contentFormat = "markdown";
@@ -88,6 +93,15 @@ public class Article {
 
     public Integer getSortOrder() { return sortOrder; }
     public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
+
+    // KR-041: keep text_content in sync for the GIN full-text-search index.
+    @PrePersist @PreUpdate
+    void syncTextContent() {
+        this.textContent = (title == null ? "" : title) + " " + (content == null ? "" : content);
+    }
+
+    public String getTextContent() { return textContent; }
+    public void setTextContent(String textContent) { this.textContent = textContent; }
 
     public String getCoverImage() { return coverImage; }
     public void setCoverImage(String coverImage) { this.coverImage = coverImage; }

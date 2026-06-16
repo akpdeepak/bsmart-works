@@ -190,6 +190,25 @@ export default function KnowledgeView({
   // KR-025: block comments panel
   const [blockCommentPanel, setBlockCommentPanel] = useState({ open: false, blockId: null });
 
+  // KR-041: full-text search with 300ms debounce
+  const [ftsResults, setFtsResults] = useState([]);
+  const [ftsOpen, setFtsOpen] = useState(false);
+  const ftsTimer = useRef(null);
+  const handleSearchInput = (e) => {
+    const q = e.target.value;
+    setKnowledgeSearch(q);
+    if (ftsTimer.current) clearTimeout(ftsTimer.current);
+    if (!q.trim()) { setFtsResults([]); setFtsOpen(false); return; }
+    ftsTimer.current = setTimeout(() => {
+      import('@/lib/apiClient').then(({ api }) => {
+        api.send(`/articles/search?q=${encodeURIComponent(q)}`)
+          .then(data => { setFtsResults(Array.isArray(data) ? data : []); setFtsOpen(true); })
+          .catch(() => { setFtsResults([]); setFtsOpen(false); });
+      });
+    }, 300);
+  };
+  useEffect(() => () => { if (ftsTimer.current) clearTimeout(ftsTimer.current); }, []);
+
   // Navigation stack for sub-article drilling: Back returns to the direct parent article
   // rather than jumping to the flat list. Breadcrumbs show the full ancestor path.
   const [navStack, setNavStack] = useState([]);
@@ -253,19 +272,61 @@ export default function KnowledgeView({
               title="New space"
             >+</button>
           </div>
+          {/* KR-041: search bar with 300ms debounce FTS + KR-042 excerpt dropdown */}
           <div className="relative">
             <input
-              type="text"
+              type="search"
+              role="combobox"
               aria-label="Search articles"
-              placeholder="Search articles…"
+              aria-expanded={ftsOpen}
+              aria-haspopup="listbox"
+              aria-controls="fts-listbox"
+              aria-autocomplete="list"
+              placeholder="Search articles… (Ctrl+K)"
               value={knowledgeSearch}
-              onChange={e => setKnowledgeSearch(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') { searchKnowledge(); setKnowledgeTab('search'); } }}
+              onChange={handleSearchInput}
+              onKeyDown={e => {
+                if (e.key === 'Escape') { setFtsOpen(false); }
+                if (e.key === 'Enter') { searchKnowledge(); setKnowledgeTab('search'); setFtsOpen(false); }
+              }}
+              onBlur={() => setTimeout(() => setFtsOpen(false), 150)}
               className="input text-xs pl-6 py-1.5 w-full"
             />
             <span className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
               <Search className="h-3.5 w-3.5" aria-hidden="true" />
             </span>
+
+            {/* KR-042: FTS results dropdown with excerpt highlights */}
+            {ftsOpen && ftsResults.length > 0 && (
+              <ul
+                id="fts-listbox"
+                role="listbox"
+                aria-label="Search results"
+                className="absolute left-0 top-full mt-1 z-dropdown w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg py-1 max-h-72 overflow-y-auto"
+              >
+                {ftsResults.map(r => (
+                  <li key={r.id} role="option" aria-selected="false">
+                    <button
+                      type="button"
+                      onMouseDown={() => { selectArticle(r); setFtsOpen(false); setKnowledgeSearch(''); }}
+                      className="w-full text-left px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+                    >
+                      <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 truncate">{r.title}</p>
+                      {r.excerpt && (
+                        <p
+                          className="text-xs text-neutral-500 mt-0.5 line-clamp-2 [&_mark]:bg-brand-orange/20 [&_mark]:text-brand-orange [&_mark]:font-medium [&_mark]:rounded-sm"
+                          dangerouslySetInnerHTML={{
+                            __html: typeof DOMPurify !== 'undefined'
+                              ? DOMPurify.sanitize(r.excerpt, { ALLOWED_TAGS: ['mark'] })
+                              : r.excerpt.replace(/<(?!\/?(mark))[^>]+>/g, '')
+                          }}
+                        />
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 

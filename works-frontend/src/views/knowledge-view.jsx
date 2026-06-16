@@ -1,8 +1,8 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import DOMPurify from 'dompurify';
 import {
   Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen,
-  AlertTriangle, Pencil, Eye, ChevronRight,
+  AlertTriangle, Pencil, Eye, ChevronRight, PanelRight,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -21,6 +21,7 @@ import { ArticleReactions } from '@/components/knowledge/ArticleReactions';
 import { ArticleTags } from '@/components/knowledge/ArticleTags';
 import { StarButton } from '@/components/knowledge/StarButton';
 import { RelatedArticles } from '@/components/knowledge/RelatedArticles';
+import { ArticlePropertiesPanel } from '@/components/knowledge/ArticlePropertiesPanel';
 import { onPressKey, renderMd } from '@/lib/utils';
 import { blocksText } from '@/lib/doc-stats';
 import { makeAiAssist } from '@/lib/knowledge-ai';
@@ -168,6 +169,54 @@ export default function KnowledgeView({
   const aiGenEnabled = capabilityEnabled(aiCapabilities, 'generation');
   const aiAssist = makeAiAssist(workspaceId, aiGenEnabled);
 
+  // KR-011: article properties panel state (persisted in localStorage)
+  const [showProperties, setShowProperties] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('know-show-properties') || 'false'); } catch { return false; }
+  });
+  const toggleProperties = useCallback(() => {
+    setShowProperties(p => {
+      const next = !p;
+      try { localStorage.setItem('know-show-properties', JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+  // KR-012: focus / distraction-free mode
+  const [focusMode, setFocusMode] = useState(false);
+
+  // KR-036: recently viewed articles (localStorage, capped at 10, deduped by id)
+  const recentKey = workspaceId ? `know-recent-${workspaceId}` : 'know-recent';
+  const [recentlyViewed, setRecentlyViewed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(recentKey) || '[]'); } catch { return []; }
+  });
+
+  // KR-036: push article to recently viewed when selected
+  useEffect(() => {
+    if (!selectedArticle) return;
+    setRecentlyViewed(prev => {
+      const entry = { id: selectedArticle.id, title: selectedArticle.title, icon: selectedArticle.icon };
+      const deduped = [entry, ...prev.filter(r => r.id !== selectedArticle.id)].slice(0, 10);
+      try { localStorage.setItem(recentKey, JSON.stringify(deduped)); } catch { /* ignore */ }
+      return deduped;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedArticle?.id]);
+
+  // KR-012: Ctrl+Shift+F toggles focus mode; Escape exits
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
+        e.preventDefault();
+        setFocusMode(f => !f);
+      }
+      if (e.key === 'Escape' && focusMode) {
+        setFocusMode(false);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [focusMode]);
+
   // Block-editor autosave: persist quietly ~900ms after the last change instead of
   // PUT-on-every-keystroke (which previously fired a toast + version + list refetch per character).
   const saveTimer = useRef(null);
@@ -295,7 +344,7 @@ export default function KnowledgeView({
     <div className="flex h-full overflow-hidden">
 
       {/* ── Left sidebar — spaces ──────────────────────────────────── */}
-      <div className="w-64 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col">
+      <div className={`w-64 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col${focusMode ? ' hidden' : ''}`}>
         <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">Knowledge Spaces</h2>
@@ -384,6 +433,24 @@ export default function KnowledgeView({
             All Articles
           </button>
         </div>
+
+        {/* KR-036: Recently viewed articles */}
+        {recentlyViewed.length > 0 && !knowledgeSearch && (
+          <section aria-label="Recently viewed" className="px-2 pb-1">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500 px-3 py-1">Recent</h3>
+            {recentlyViewed.slice(0, 5).map(item => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => openArticleById(item.id)}
+                className="w-full text-left px-3 py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 truncate rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+              >
+                {item.icon ? <span className="mr-1.5">{item.icon}</span> : null}
+                {item.title || 'Untitled'}
+              </button>
+            ))}
+          </section>
+        )}
 
         {/* Space list */}
         <div className="flex-1 overflow-y-auto px-2 pb-2">
@@ -716,8 +783,30 @@ export default function KnowledgeView({
                     )}
                   </>
                 )}
+                {/* KR-011: Properties panel toggle */}
+                <button
+                  type="button"
+                  onClick={toggleProperties}
+                  aria-pressed={showProperties}
+                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${showProperties ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy'}`}
+                >
+                  <PanelRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  Properties
+                </button>
               </div>
             </div>
+
+            {/* KR-012: Exit focus mode chip */}
+            {focusMode && (
+              <button
+                type="button"
+                aria-label="Exit focus mode"
+                onClick={() => setFocusMode(false)}
+                className="fixed top-3 right-4 z-modal text-xs bg-neutral-800/80 text-neutral-200 px-3 py-1.5 rounded-full hover:bg-neutral-700 transition-colors"
+              >
+                Exit focus
+              </button>
+            )}
 
             {/* Body: content area + optional side panel */}
             <div className="flex flex-1 overflow-hidden">
@@ -726,7 +815,7 @@ export default function KnowledgeView({
               <div className="flex-1 overflow-y-auto p-6">
                 {editingArticle ? (
                   /* ── Edit mode ── */
-                  <div className="max-w-3xl space-y-4">
+                  <div className={`space-y-4${focusMode ? ' max-w-3xl mx-auto' : ' max-w-3xl'}`}>
                     {/* KR-009: cover banner */}
                     <ArticleCover image={selectedArticle.coverImage} />
 
@@ -913,6 +1002,7 @@ export default function KnowledgeView({
                         key={selectedArticle.id}
                         aiAssist={aiAssist}
                         workspaceId={workspaceId}
+                        editingArticle={editingArticle}
                         blocks={(() => {
                           try {
                             const parsed = JSON.parse(selectedArticle.contentBlocks || '[]');
@@ -945,7 +1035,7 @@ export default function KnowledgeView({
                   </div>
                 ) : (
                   /* ── Read mode ── */
-                  <div className="max-w-3xl">
+                  <div className={focusMode ? 'max-w-3xl mx-auto' : 'max-w-3xl'}>
                     {/* KR-009: cover banner in read mode */}
                     <ArticleCover image={selectedArticle.coverImage} />
                     {(() => {
@@ -1032,8 +1122,24 @@ export default function KnowledgeView({
                 onClose={() => setBlockCommentPanel({ open: false, blockId: null })}
               />
 
+              {/* KR-011: Article properties panel */}
+              {showProperties && selectedArticle && !focusMode && (
+                <ArticlePropertiesPanel
+                  article={selectedArticle}
+                  wordCount={(() => {
+                    try {
+                      const blocks = JSON.parse(selectedArticle.contentBlocks || '[]');
+                      if (Array.isArray(blocks) && blocks.length > 0) return blocksText(blocks).trim().split(/\s+/).filter(Boolean).length;
+                    } catch { /* ignore */ }
+                    return (selectedArticle.content || '').trim().split(/\s+/).filter(Boolean).length;
+                  })()}
+                  onClose={toggleProperties}
+                  readOnly={!editingArticle}
+                />
+              )}
+
               {/* ── Contextual side panels ── */}
-              {articlePanel === 'history' && (
+              {!focusMode && articlePanel === 'history' && (
                 <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
                   <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Version history</h3>
                   {articleVersions.length === 0 ? (
@@ -1064,7 +1170,7 @@ export default function KnowledgeView({
                 </div>
               )}
 
-              {articlePanel === 'comments' && (
+              {!focusMode && articlePanel === 'comments' && (
                 <div className="w-72 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4 flex flex-col">
                   <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">
                     Comments ({articleComments.length})
@@ -1126,7 +1232,7 @@ export default function KnowledgeView({
                 </div>
               )}
 
-              {articlePanel === 'analytics' && (
+              {!focusMode && articlePanel === 'analytics' && (
                 <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
                   <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Analytics</h3>
                   {!articleAnalytics ? (

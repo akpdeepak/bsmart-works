@@ -60,6 +60,79 @@ describe('BlockRenderer', () => {
     expect(screen.getByRole('link', { name: /Runbook/ })).toHaveAttribute('href', 'https://example.com');
   });
 
+  it('renders a code block with its content (KR-004 plain fallback)', () => {
+    render(<BlockRenderer blocks={[block('code', 'const x = 1', { language: 'javascript' })]} />);
+    // The CodeBlockRenderer is async; before Shiki resolves it renders the plain-text fallback.
+    expect(screen.getByText('const x = 1')).toBeInTheDocument();
+    // Language badge is shown next to the code block.
+    expect(screen.getByText('javascript')).toBeInTheDocument();
+  });
+
+  it('renders inline bold, strikethrough and link marks in paragraph content (KR-001)', () => {
+    render(<BlockRenderer blocks={[block('paragraph', '**bold** ~~strike~~ [click](https://example.com)')]} />);
+    expect(document.querySelector('strong')).toHaveTextContent('bold');
+    expect(document.querySelector('s')).toHaveTextContent('strike');
+    const a = document.querySelector('a[href="https://example.com"]');
+    expect(a).toHaveTextContent('click');
+  });
+
+  it('renders inline marks inside headings and callouts (KR-001)', () => {
+    render(<BlockRenderer blocks={[
+      block('heading1', '**Bold** heading'),
+      block('callout', '__underline__ note', { variant: 'info' }),
+    ]} />);
+    expect(document.querySelector('h2 strong')).toHaveTextContent('Bold');
+    expect(document.querySelector('p u')).toHaveTextContent('underline');
+  });
+
+  it('highlights inline comment selection ranges with <mark> (KR-026)', () => {
+    const paragraph = { id: 'para-1', type: 'paragraph', content: 'Hello world today', metadata: {} };
+    const comments = [
+      {
+        id: 'ABC-001', blockId: 'para-1', resolved: false,
+        metadata: JSON.stringify({ selectionStart: 6, selectionEnd: 11 }),
+      },
+    ];
+    const { container } = render(<BlockRenderer blocks={[paragraph]} blockComments={comments} />);
+    const mark = container.querySelector('mark');
+    expect(mark).toBeTruthy();
+    expect(mark.textContent).toContain('world');
+  });
+
+  it('does not highlight resolved inline comments (KR-026)', () => {
+    const paragraph = { id: 'para-2', type: 'paragraph', content: 'Hello world today', metadata: {} };
+    const comments = [
+      {
+        id: 'ABC-002', blockId: 'para-2', resolved: true,
+        metadata: JSON.stringify({ selectionStart: 0, selectionEnd: 5 }),
+      },
+    ];
+    const { container } = render(<BlockRenderer blocks={[paragraph]} blockComments={comments} />);
+    expect(container.querySelector('mark')).toBeNull();
+  });
+
+  it('renders <span> text-color marks in paragraph content (KR-005)', () => {
+    render(<BlockRenderer blocks={[block('paragraph', 'Normal <span class="text-semantic-danger">red</span> text')]} />);
+    const span = document.querySelector('span.text-semantic-danger');
+    expect(span).toBeInTheDocument();
+    expect(span.textContent).toBe('red');
+  });
+
+  it('renders <span> highlight marks in a heading (KR-005)', () => {
+    render(<BlockRenderer blocks={[block('heading1', '<span class="bg-yellow-100 dark:bg-yellow-900/30">bright</span>')]} />);
+    // The span class contains the first class token (DOMPurify keeps all listed classes).
+    const span = document.querySelector('h2 span');
+    expect(span).toBeInTheDocument();
+    expect(span.textContent).toBe('bright');
+  });
+
+  it('strips dangerous attributes from span color marks (KR-005 / XSS)', () => {
+    render(<BlockRenderer blocks={[block('paragraph', '<span class="text-semantic-danger" onclick="alert(1)">safe</span>')]} />);
+    const span = document.querySelector('span.text-semantic-danger');
+    expect(span).toBeInTheDocument();
+    expect(span).not.toHaveAttribute('onclick');
+  });
+
   it('renders a sticker emoji and a type-aware file card', () => {
     render(<BlockRenderer blocks={[
       block('sticker', '🚀', { size: 'xl' }),

@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.time.OffsetDateTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 import jakarta.validation.Valid;
 
 @RestController
@@ -66,6 +68,33 @@ public class KnowledgeSpaceController {
         return status != null
             ? articleRepository.findBySpaceIdAndStatusOrderByUpdatedAtDesc(id, status, pr).getContent()
             : articleRepository.findBySpaceIdOrderByUpdatedAtDesc(id, pr).getContent();
+    }
+
+    /** KR-033: returns a depth-limited (4) article tree for the given space (KR-033). */
+    @GetMapping("/{id}/tree")
+    public List<ArticleTreeNode> getSpaceTree(@PathVariable String id) {
+        KnowledgeSpace space = knowledgeSpaceRepository.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), space.getWorkspaceId(), "view_items");
+        List<Article> all = articleRepository.findBySpaceIdOrderByUpdatedAtDesc(id);
+        return buildTree(all, null, 0);
+    }
+
+    private List<ArticleTreeNode> buildTree(List<Article> all, String parentId, int depth) {
+        if (depth >= 4) return List.of();
+        return all.stream()
+            .filter(a -> parentId == null ? a.getParentId() == null : parentId.equals(a.getParentId()))
+            .sorted(Comparator.comparingInt(a -> a.getSortOrder() != null ? a.getSortOrder() : 0))
+            .map(a -> {
+                ArticleTreeNode node = new ArticleTreeNode();
+                node.setId(a.getId());
+                node.setTitle(a.getTitle());
+                node.setStatus(a.getStatus());
+                node.setIcon(a.getIcon());
+                node.setParentId(a.getParentId());
+                node.setSortOrder(a.getSortOrder());
+                node.setChildren(buildTree(all, a.getId(), depth + 1));
+                return node;
+            }).collect(Collectors.toList());
     }
 
     @PostMapping

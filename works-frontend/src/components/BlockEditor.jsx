@@ -22,8 +22,10 @@ import { CHART_TYPES } from '@/lib/chart-data';
 import { docStats, blocksOutline } from '@/lib/doc-stats';
 import { CALLOUT_VARIANTS, STICKY_COLORS, CANVAS_H, NOTE_W, NOTE_H, fileKind, padRows } from '@/lib/block-kit';
 import { ChartPreview } from '@/components/blocks/chart-preview';
+import { CODE_LANGUAGES } from '@/components/blocks/CodeBlockRenderer';
 import { BqlWidget } from '@/components/blocks/bql-widget';
 import { EmojiPicker } from '@/components/blocks/emoji-picker';
+import { SelectionToolbar } from '@/components/blocks/SelectionToolbar';
 import { AiMetaBadge } from '@/components/works/ai-meta-badge';
 
 // Text-bearing blocks that the per-block AI menu can rewrite (improve / expand / summarize / shorten).
@@ -118,6 +120,33 @@ const TOOLBAR_GROUPS = [
 ];
 
 const blockLabel = (type) => BLOCK_TYPES.find((t) => t.type === type)?.label || type;
+
+// Wrap the current textarea/input selection with a markdown syntax pair (KR-001).
+// The element's selectionStart/End define what gets wrapped; caret is restored after.
+function wrapSyntax(el, syntax, value, onChange) {
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  if (start === end) return;
+  const next = `${value.slice(0, start)}${syntax}${value.slice(start, end)}${syntax}${value.slice(end)}`;
+  onChange({ content: next });
+  requestAnimationFrame(() => {
+    if (document.activeElement === el) {
+      el.selectionStart = start + syntax.length;
+      el.selectionEnd = end + syntax.length;
+    }
+  });
+}
+
+// Shared format-shortcut handler — usable in any text-bearing block's onKeyDown (KR-001).
+function handleFormatKey(e, el, value, onChange) {
+  const ctrl = e.ctrlKey || e.metaKey;
+  if (!ctrl) return false;
+  if (!e.shiftKey && e.key === 'b') { e.preventDefault(); wrapSyntax(el, '**', value, onChange); return true; }
+  if (!e.shiftKey && e.key === 'i') { e.preventDefault(); wrapSyntax(el, '*', value, onChange); return true; }
+  if (e.shiftKey  && e.key === 'X') { e.preventDefault(); wrapSyntax(el, '~~', value, onChange); return true; }
+  if (!e.shiftKey && e.key === '`') { e.preventDefault(); wrapSyntax(el, '`', value, onChange); return true; }
+  return false;
+}
 
 function blockId() {
   return `blk-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -225,6 +254,8 @@ function ParagraphBlock({ block, onChange, onReplace, onAddAfter, focused }) {
       else if (e.key === 'Escape') { e.preventDefault(); setDismissedFor(block.content); }
       return;
     }
+    // Format shortcuts (Ctrl+B/I/Shift+X/`) — must run before the Enter check (KR-001).
+    if (handleFormatKey(e, e.currentTarget, block.content, onChange)) return;
     // Enter at cursor-end creates a new paragraph block below — Shift+Enter and mid-text Enter
     // remain default textarea behavior (they insert a newline within the same block).
     if (e.key === 'Enter' && !e.shiftKey && e.currentTarget.selectionStart === e.currentTarget.value.length) {
@@ -287,6 +318,7 @@ function HeadingBlock({ block, onChange, level }) {
       aria-label={`Heading ${level}`}
       value={block.content}
       onChange={(e) => onChange({ content: e.target.value })}
+      onKeyDown={(e) => handleFormatKey(e, e.currentTarget, block.content, onChange)}
       className={cn(
         'w-full bg-transparent border-b border-neutral-200 dark:border-neutral-700 pb-1',
         'text-neutral-900 dark:text-neutral-100 focus-visible:outline-none',
@@ -299,10 +331,22 @@ function HeadingBlock({ block, onChange, level }) {
 }
 
 function CodeBlock({ block, onChange }) {
-  // A distinct dark slab in both themes — code reads as code, set apart from prose.
+  const lang = block.metadata?.language || 'plaintext';
   return (
     <div className="rounded-md overflow-hidden ring-1 ring-neutral-800">
-      <div className="bg-neutral-800 px-3 py-1 text-xs text-neutral-400 font-mono">Code</div>
+      <div className="flex items-center gap-2 bg-neutral-800 px-3 py-1">
+        <span className="text-xs text-neutral-400 font-mono">Code</span>
+        <label htmlFor={`code-lang-${block.id}`} className="sr-only">Language</label>
+        <select
+          id={`code-lang-${block.id}`}
+          value={lang}
+          onChange={(e) => onChange({ metadata: { ...block.metadata, language: e.target.value } })}
+          className="ml-auto text-xs bg-neutral-700 text-neutral-200 border border-neutral-600 rounded px-2 py-0.5 font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+          aria-label="Code language"
+        >
+          {CODE_LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+        </select>
+      </div>
       <textarea
         aria-label="Code block content"
         value={block.content}
@@ -476,6 +520,7 @@ function CalloutBlock({ block, onChange }) {
           aria-label="Callout text"
           value={block.content}
           onChange={(e) => onChange({ content: e.target.value })}
+          onKeyDown={(e) => handleFormatKey(e, e.currentTarget, block.content, onChange)}
           rows={2}
           className="w-full resize-y bg-transparent text-sm text-neutral-900 dark:text-neutral-100 focus-visible:outline-none"
           placeholder="Something worth highlighting…"
@@ -492,6 +537,7 @@ function QuoteBlock({ block, onChange }) {
         aria-label="Quote text"
         value={block.content}
         onChange={(e) => onChange({ content: e.target.value })}
+        onKeyDown={(e) => handleFormatKey(e, e.currentTarget, block.content, onChange)}
         rows={2}
         className="w-full resize-y bg-transparent text-sm italic text-neutral-700 dark:text-neutral-300 focus-visible:outline-none"
         placeholder="A quote or callout sentence…"
@@ -1292,16 +1338,110 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
     initialBlocks.length > 0 ? initialBlocks : [newBlock('paragraph')]
   );
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const [saveStatus, setSaveStatus] = useState(null); // 'Undone' | 'Redone' | null (KR-003)
+  const [selTool, setSelTool] = useState(null);        // { blockIndex, start, end, rect } | null (KR-002)
 
   // Per-block DOM node map for auto-scroll; populated via the blockRef callback prop on Block.
   const blockElsRef = useRef({});
   // Track previous block count so we only scroll on insertions, not on user focus clicks.
   const prevBlockCountRef = useRef(initialBlocks.length > 0 ? initialBlocks.length : 1);
+  // Undo / redo stacks (KR-003). useRef avoids re-renders on stack mutations.
+  const undoStack = useRef([]);
+  const redoStack = useRef([]);
+  const UNDO_MAX = 100;
 
-  const emit = useCallback(
-    (next) => { setBlocks(next); onChange?.(next); },
+  // Clear undo state when the editor is re-used for a different article (first block id change).
+  const firstBlockIdRef = useRef(initialBlocks[0]?.id);
+  useEffect(() => {
+    const incoming = initialBlocks[0]?.id;
+    if (incoming !== firstBlockIdRef.current) {
+      undoStack.current = [];
+      redoStack.current = [];
+      firstBlockIdRef.current = incoming;
+    }
+  }, [initialBlocks]);
+
+  // commitBlocks: the write path. Every user mutation calls this so the undo history is captured.
+  // Direct setBlocks (e.g. handleUndo) bypasses it intentionally.
+  const commitBlocks = useCallback(
+    (next) => {
+      setBlocks((prev) => {
+        undoStack.current = [...undoStack.current.slice(-UNDO_MAX + 1), prev];
+        redoStack.current = [];
+        return next;
+      });
+      onChange?.(next);
+    },
     [onChange],
   );
+
+  const emit = commitBlocks;
+
+  const flashStatus = (msg) => {
+    setSaveStatus(msg);
+    setTimeout(() => setSaveStatus(null), 800);
+  };
+
+  const handleUndo = useCallback(() => {
+    if (undoStack.current.length === 0) return;
+    const prev = undoStack.current[undoStack.current.length - 1];
+    undoStack.current = undoStack.current.slice(0, -1);
+    setBlocks((cur) => {
+      redoStack.current = [...redoStack.current, cur];
+      return prev;
+    });
+    onChange?.(prev);
+    flashStatus('Undone');
+  }, [onChange]);
+
+  const handleRedo = useCallback(() => {
+    if (redoStack.current.length === 0) return;
+    const next = redoStack.current[redoStack.current.length - 1];
+    redoStack.current = redoStack.current.slice(0, -1);
+    setBlocks((cur) => {
+      undoStack.current = [...undoStack.current, cur];
+      return next;
+    });
+    onChange?.(next);
+    flashStatus('Redone');
+  }, [onChange]);
+
+  // ── Selection toolbar (KR-002) ─────────────────────────────────────────────────
+
+  // Show the floating toolbar when the user finishes a mouseup with an active text selection
+  // inside a text-bearing block. Uses the active element's selectionStart/End (textarea API)
+  // since window.getSelection() returns an empty range for textarea selections in most browsers.
+  const handleEditorMouseUp = useCallback(() => {
+    const el = document.activeElement;
+    if (!(el instanceof HTMLTextAreaElement) && !(el instanceof HTMLInputElement && el.type === 'text')) {
+      setSelTool(null);
+      return;
+    }
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    if (start === end) { setSelTool(null); return; }
+
+    // Identify which block this textarea/input belongs to.
+    let blockIndex = -1;
+    for (const [idx, wrapper] of Object.entries(blockElsRef.current)) {
+      if (wrapper?.contains(el)) { blockIndex = parseInt(idx, 10); break; }
+    }
+    if (blockIndex === -1) { setSelTool(null); return; }
+
+    // Position relative to the textarea element (viewport-fixed). A textarea's selection range
+    // isn't exposed as a DOM Range, so we use the textarea's bounding box instead.
+    setSelTool({ blockIndex, start, end, rect: el.getBoundingClientRect() });
+  }, []);
+
+  // Apply a format wrap from the toolbar to the stored selection, then dismiss.
+  const handleWrapToolbar = useCallback((startSyntax, endSyntax) => {
+    if (!selTool) return;
+    const { blockIndex, start, end } = selTool;
+    const content = blocks[blockIndex]?.content || '';
+    const next = `${content.slice(0, start)}${startSyntax}${content.slice(start, end)}${endSyntax}${content.slice(end)}`;
+    emit(blocks.map((b, i) => (i === blockIndex ? { ...b, content: next } : b)));
+    setSelTool(null);
+  }, [selTool, blocks, emit]);
 
   // Scroll the focused block into view whenever a new block is inserted (count grows).
   useEffect(() => {
@@ -1374,8 +1514,17 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
 
   const stats = docStats(blocks);
 
+  const handleEditorKeyDown = useCallback((e) => {
+    if (e.key === 'Escape') { setSelTool(null); return; }
+    const ctrl = e.ctrlKey || e.metaKey;
+    if (!ctrl) return;
+    if (!e.shiftKey && e.key === 'z') { e.preventDefault(); handleUndo(); }
+    else if (!e.shiftKey && e.key === 'y') { e.preventDefault(); handleRedo(); }
+    else if (e.shiftKey && e.key === 'Z') { e.preventDefault(); handleRedo(); }
+  }, [handleUndo, handleRedo]);
+
   return (
-    <div className="space-y-2">
+    <div id="block-editor-root" className="space-y-2" onKeyDown={handleEditorKeyDown} onMouseUp={handleEditorMouseUp}>
       <BlockToolbar onInsert={addBlockAtCursor} />
       <div role="listbox" aria-label="Block editor" aria-multiselectable="false" className="space-y-2">
         {blocks.map((block, index) => (
@@ -1400,8 +1549,10 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
       </div>
       {aiAssist && <AiComposeBar aiAssist={aiAssist} onInsert={insertParagraph} />}
       <AddBlockButton onAdd={addBlock} />
+      <SelectionToolbar rect={selTool?.rect ?? null} onWrap={handleWrapToolbar} onDismiss={() => setSelTool(null)} />
       {/* MS Word-style live status bar — word count + reading time, always current, no file to sync. */}
       <div className="flex items-center justify-end gap-3 text-2xs text-neutral-600 dark:text-neutral-400 pt-1" aria-live="polite">
+        {saveStatus && <span className="text-brand-navy dark:text-brand-orange font-medium">{saveStatus}</span>}
         <span>{stats.words} {stats.words === 1 ? 'word' : 'words'}</span>
         <span aria-hidden="true">·</span>
         <span>{stats.characters} characters</span>

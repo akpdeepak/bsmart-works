@@ -11,9 +11,48 @@ import { blocksOutline } from '@/lib/doc-stats';
 import { CALLOUT_VARIANTS, STICKY_COLORS, CANVAS_H, NOTE_W, NOTE_H, fileKind, padRows } from '@/lib/block-kit';
 import { ChartPreview } from '@/components/blocks/chart-preview';
 import { BqlWidget } from '@/components/blocks/bql-widget';
+import { CodeBlockRenderer } from '@/components/blocks/CodeBlockRenderer';
 
 const STICKER_SIZE = { md: 'text-4xl', lg: 'text-6xl', xl: 'text-8xl' };
 const FILE_KIND_LABEL = { image: 'Image', pdf: 'PDF', doc: 'Document', sheet: 'Spreadsheet', slide: 'Slides', archive: 'Archive', video: 'Video', audio: 'Audio', code: 'Code', link: 'File' };
+
+// KR-026: merge overlapping/adjacent character ranges and sort them.
+function mergeRanges(ranges) {
+  if (!ranges.length) return [];
+  const sorted = [...ranges].sort((a, b) => a.start - b.start);
+  const merged = [{ ...sorted[0] }];
+  for (let i = 1; i < sorted.length; i++) {
+    const last = merged[merged.length - 1];
+    if (sorted[i].start <= last.end) {
+      last.end = Math.max(last.end, sorted[i].end);
+    } else {
+      merged.push({ ...sorted[i] });
+    }
+  }
+  return merged;
+}
+
+// KR-026: split `content` at highlight ranges, render each segment via renderMd(),
+// and wrap highlighted segments in <mark>. Returns an HTML string safe for dangerouslySetInnerHTML.
+function highlightContent(content, ranges) {
+  if (!ranges || ranges.length === 0) return renderMd(content || '');
+  const merged = mergeRanges(ranges.map(r => ({ start: r.selectionStart, end: r.selectionEnd })));
+  const parts = [];
+  let pos = 0;
+  for (const range of merged) {
+    const s = Math.max(0, range.start);
+    const e = Math.min(content.length, range.end);
+    if (s > pos) parts.push({ text: content.slice(pos, s), highlight: false });
+    if (s < e)   parts.push({ text: content.slice(s, e), highlight: true });
+    pos = e;
+  }
+  if (pos < content.length) parts.push({ text: content.slice(pos), highlight: false });
+  return parts.map(p =>
+    p.highlight
+      ? `<mark class="bg-yellow-200/60 dark:bg-yellow-500/25 rounded-sm">${renderMd(p.text)}</mark>`
+      : renderMd(p.text)
+  ).join('');
+}
 
 function CalloutView({ block }) {
   const v = CALLOUT_VARIANTS[block.metadata?.variant] || CALLOUT_VARIANTS.info;
@@ -21,7 +60,7 @@ function CalloutView({ block }) {
   return (
     <div className={cn('rounded-md border-l-2 p-3 flex gap-3', v.box)}>
       <Icon aria-hidden="true" className={cn('h-5 w-5 shrink-0 mt-0.5', v.accent)} />
-      <p className="text-sm text-neutral-900 dark:text-neutral-100 whitespace-pre-wrap">{block.content}</p>
+      <p className="text-sm text-neutral-900 dark:text-neutral-100" dangerouslySetInnerHTML={{ __html: renderMd(block.content || '') }} />
     </div>
   );
 }
@@ -176,18 +215,36 @@ function FileView({ block }) {
   );
 }
 
-function OneBlock({ block, allBlocks, workspaceId }) {
+// KR-026: extract unresolved inline comment ranges for a block.
+function inlineRanges(blockComments, blockId) {
+  if (!blockComments) return [];
+  return blockComments
+    .filter(c => c.blockId === blockId && !c.resolved && c.metadata)
+    .map(c => {
+      try {
+        const m = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : c.metadata;
+        if (m && typeof m.selectionStart === 'number' && typeof m.selectionEnd === 'number') {
+          return { selectionStart: m.selectionStart, selectionEnd: m.selectionEnd };
+        }
+      } catch { /* skip */ }
+      return null;
+    })
+    .filter(Boolean);
+}
+
+function OneBlock({ block, allBlocks, workspaceId, blockComments }) {
+  const ranges = inlineRanges(blockComments, block.id);
   switch (block.type) {
     case 'paragraph':
-      return <div className="text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMd(block.content || '') }} />;
+      return <div className="text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed" dangerouslySetInnerHTML={{ __html: highlightContent(block.content || '', ranges) }} />;
     case 'heading1':
-      return <h2 id={block.id} className="mt-8 text-2xl font-bold text-neutral-900 dark:text-neutral-100 scroll-mt-4">{block.content}</h2>;
+      return <h2 id={block.id} className="mt-8 text-2xl font-bold text-neutral-900 dark:text-neutral-100 scroll-mt-4" dangerouslySetInnerHTML={{ __html: highlightContent(block.content || '', ranges) }} />;
     case 'heading2':
-      return <h3 id={block.id} className="mt-6 text-xl font-semibold text-neutral-900 dark:text-neutral-100 scroll-mt-4">{block.content}</h3>;
+      return <h3 id={block.id} className="mt-6 text-xl font-semibold text-neutral-900 dark:text-neutral-100 scroll-mt-4" dangerouslySetInnerHTML={{ __html: highlightContent(block.content || '', ranges) }} />;
     case 'heading3':
-      return <h4 id={block.id} className="mt-5 text-base font-semibold text-neutral-900 dark:text-neutral-100 scroll-mt-4">{block.content}</h4>;
+      return <h4 id={block.id} className="mt-5 text-base font-semibold text-neutral-900 dark:text-neutral-100 scroll-mt-4" dangerouslySetInnerHTML={{ __html: highlightContent(block.content || '', ranges) }} />;
     case 'quote':
-      return <blockquote className="my-2 border-l-2 border-brand-navy-tint pl-4 text-sm italic text-neutral-600 dark:text-neutral-300 whitespace-pre-wrap">{block.content}</blockquote>;
+      return <blockquote className="my-2 border-l-2 border-brand-navy-tint pl-4 text-sm italic text-neutral-600 dark:text-neutral-300" dangerouslySetInnerHTML={{ __html: highlightContent(block.content || '', ranges) }} />;
     case 'callout':
       return <CalloutView block={block} />;
     case 'checklist':
@@ -201,8 +258,17 @@ function OneBlock({ block, allBlocks, workspaceId }) {
       );
     case 'toc':
       return <TocView allBlocks={allBlocks} />;
-    case 'code':
-      return <pre className="rounded-md ring-1 ring-neutral-800 bg-neutral-900 p-3.5 text-sm font-mono text-neutral-100 overflow-x-auto whitespace-pre-wrap">{block.content}</pre>;
+    case 'code': {
+      const lang = block.metadata?.language || 'plaintext';
+      return (
+        <div className="space-y-1">
+          {lang !== 'plaintext' && (
+            <span className="text-2xs px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 font-mono">{lang}</span>
+          )}
+          <CodeBlockRenderer content={block.content} language={lang} />
+        </div>
+      );
+    }
     case 'divider':
       return <hr className="border-neutral-300 dark:border-neutral-600" aria-label="Divider" />;
     case 'sheet':
@@ -236,10 +302,12 @@ function OneBlock({ block, allBlocks, workspaceId }) {
 
 /**
  * @param {Object} props
- * @param {Array|string} props.blocks  Blocks array, or the raw content_blocks JSON string.
- * @param {string} [props.workspaceId] Enables live BQL widget blocks in read mode.
+ * @param {Array|string} props.blocks       Blocks array, or the raw content_blocks JSON string.
+ * @param {string} [props.workspaceId]      Enables live BQL widget blocks in read mode.
+ * @param {Array}  [props.blockComments]    KR-026: unresolved block comments with metadata.selectionStart/End
+ *                                          — ranges in those comments are highlighted with <mark>.
  */
-export function BlockRenderer({ blocks, workspaceId }) {
+export function BlockRenderer({ blocks, workspaceId, blockComments }) {
   let list = blocks;
   if (typeof blocks === 'string') {
     try { list = JSON.parse(blocks || '[]'); } catch { list = []; }
@@ -248,7 +316,7 @@ export function BlockRenderer({ blocks, workspaceId }) {
   return (
     <div className="space-y-4">
       {list.map((block) => (
-        <div key={block.id}><OneBlock block={block} allBlocks={list} workspaceId={workspaceId} /></div>
+        <div key={block.id}><OneBlock block={block} allBlocks={list} workspaceId={workspaceId} blockComments={blockComments} /></div>
       ))}
     </div>
   );

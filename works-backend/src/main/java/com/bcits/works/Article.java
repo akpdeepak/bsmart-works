@@ -3,6 +3,8 @@ package com.bcits.works;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import org.hibernate.annotations.ColumnTransformer;
@@ -29,8 +31,20 @@ public class Article {
     private OffsetDateTime updatedAt;
     private Boolean portalPublished = false; // iteration 9: surfaced on the customer portal KB
 
+    // KR-009: cover image (HTTPS URL or gradient key e.g. "gradient:brand-navy-to-orange")
+    @Column(name = "cover_image", length = 500) private String coverImage;
+
+    // KR-010: article icon — emoji string ("📝") or Lucide icon name ("lucide:FileText")
+    @Column(name = "icon", length = 50) private String icon;
+
     // B09: block-based editor (iteration 20, Cap I)
     // content_format: 'markdown' (default) | 'blocks' (JSON block array in content_blocks)
+    // KR-033: drag-to-reorder position within the parent in the page tree sidebar
+    @Column(name = "sort_order") private Integer sortOrder;
+
+    // KR-041: maintained by @PrePersist/@PreUpdate for PostgreSQL full-text search.
+    @Column(name = "text_content", columnDefinition = "TEXT") private String textContent;
+
     @Column(name = "content_format", nullable = false)
     private String contentFormat = "markdown";
 
@@ -76,6 +90,23 @@ public class Article {
     public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
     public Boolean getPortalPublished() { return portalPublished; }
     public void setPortalPublished(Boolean portalPublished) { this.portalPublished = portalPublished; }
+
+    public Integer getSortOrder() { return sortOrder; }
+    public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
+
+    // KR-041: keep text_content in sync for the GIN full-text-search index.
+    @PrePersist @PreUpdate
+    void syncTextContent() {
+        this.textContent = (title == null ? "" : title) + " " + (content == null ? "" : content);
+    }
+
+    public String getTextContent() { return textContent; }
+    public void setTextContent(String textContent) { this.textContent = textContent; }
+
+    public String getCoverImage() { return coverImage; }
+    public void setCoverImage(String coverImage) { this.coverImage = coverImage; }
+    public String getIcon() { return icon; }
+    public void setIcon(String icon) { this.icon = icon; }
 
     public String getContentFormat() { return contentFormat; }
     public void setContentFormat(String contentFormat) { this.contentFormat = contentFormat; }

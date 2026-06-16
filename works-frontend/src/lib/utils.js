@@ -34,19 +34,24 @@ export function getTimeOfDay() {
   return 'evening';
 }
 
-// Render user-supplied Markdown-lite text to sanitised HTML for dangerouslySetInnerHTML.
-// Only **bold**, *italic*, `code`, list bullets, and newlines are supported.
-// DOMPurify strips everything else (RB-10 §8 — never inject unsanitised user content).
+// Render CommonMark-subset text to sanitised HTML for dangerouslySetInnerHTML (KR-001).
+// Marks: **bold**, *italic*, ~~strikethrough~~, __underline__, `code`, [text](url), list bullets.
+// DOMPurify allows only the mark tags — XSS vectors (scripts, event attrs) are stripped (RB-10 §8).
 export function renderMd(text) {
   if (!text) return '';
   const html = text
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/\*\*(.+?)\*\*/gs, '<strong>$1</strong>')
+    .replace(/~~(.+?)~~/gs, '<s>$1</s>')
+    .replace(/__(.+?)__/gs, '<u>$1</u>')
+    .replace(/\*(.+?)\*/gs, '<em>$1</em>')
     .replace(/`(.+?)`/g, '<code class="prose-md-code">$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
     .replace(/^- (.+)$/gm, '• $1')
     .replace(/\n/g, '<br/>');
+  // KR-005: span is allowed so text-color / highlight marks can pass through.
+  // DOMPurify strips event handlers and dangerous attributes; Tailwind class names are safe.
   return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['strong', 'em', 'code', 'br'],
-    ALLOWED_ATTR: ['class'],
+    ALLOWED_TAGS: ['strong', 'em', 's', 'u', 'code', 'br', 'a', 'span'],
+    ALLOWED_ATTR: ['class', 'href', 'target', 'rel'],
   });
 }

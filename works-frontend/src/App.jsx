@@ -2450,6 +2450,11 @@ export default function App() {
     api.send(`/roadmap-themes/${theme.id}`, { method: 'PUT', body: JSON.stringify({ ...theme, status }) })
       .then(() => fetchRoadmapThemes()).catch(() => showToast('Failed to update', 'error'));
   }
+  function deleteTheme(id) {
+    api.send(`/roadmap-themes/${id}`, { method: 'DELETE' })
+      .then(() => { showToast('Theme deleted'); fetchRoadmapThemes(); })
+      .catch(() => showToast('Failed to delete theme', 'error'));
+  }
   function fetchIdeas() {
     api.raw(`/ideas?workspaceId=${activeWorkspaceId}`).then(r => r.json())
       .then(d => setIdeas(Array.isArray(d) ? d : [])).catch(() => setIdeas([]));
@@ -4136,6 +4141,7 @@ export default function App() {
               createObjective={createObjective}
               runReleaseNotes={runReleaseNotes}
               fetchStakeholders={fetchStakeholders}
+              deleteTheme={deleteTheme}
             />
           )}
           {/* COMPLIANCE — extracted to src/views/compliance-view.jsx (TD-003) */}

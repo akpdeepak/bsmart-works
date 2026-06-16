@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BlockEditor } from '@/components/BlockEditor';
 
@@ -113,5 +113,90 @@ describe('BlockEditor — Know Studio blocks', () => {
     render(<BlockEditor blocks={[]} onChange={() => {}} />);
     await user.type(screen.getByLabelText('Paragraph content'), 'see the path/to file');
     expect(screen.queryByRole('listbox', { name: 'Insert block' })).not.toBeInTheDocument();
+  });
+
+  it('Ctrl+B wraps the selected text with ** bold markers (KR-001)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BlockEditor blocks={[]} onChange={onChange} />);
+    const textarea = screen.getByLabelText('Paragraph content');
+
+    await user.type(textarea, 'hello world');
+    textarea.setSelectionRange(0, 5);
+    fireEvent.keyDown(textarea, { key: 'b', ctrlKey: true });
+
+    const emitted = onChange.mock.calls.at(-1)[0];
+    expect(emitted[0].content).toBe('**hello** world');
+  });
+
+  it('Ctrl+Z undoes the last committed block change (KR-003)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BlockEditor blocks={[]} onChange={onChange} />);
+    const textarea = screen.getByLabelText('Paragraph content');
+
+    await user.type(textarea, 'a');
+    expect(onChange.mock.calls.at(-1)[0][0].content).toBe('a');
+
+    fireEvent.keyDown(textarea, { key: 'z', ctrlKey: true });
+    expect(onChange.mock.calls.at(-1)[0][0].content).toBe('');
+  });
+
+  it('mouseup with selected text shows the floating toolbar (KR-002)', async () => {
+    const user = userEvent.setup();
+    render(<BlockEditor blocks={[]} onChange={() => {}} />);
+    const textarea = screen.getByLabelText('Paragraph content');
+
+    await user.type(textarea, 'hello world');
+    textarea.setSelectionRange(0, 5);
+    // The toolbar is triggered by mouseup on the editor root
+    fireEvent.mouseUp(document.getElementById('block-editor-root'));
+
+    expect(screen.getByRole('toolbar', { name: 'Text formatting' })).toBeInTheDocument();
+  });
+
+  it('Bold button in the floating toolbar wraps the selection (KR-002)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BlockEditor blocks={[]} onChange={onChange} />);
+    const textarea = screen.getByLabelText('Paragraph content');
+
+    await user.type(textarea, 'hello world');
+    textarea.setSelectionRange(0, 5);
+    fireEvent.mouseUp(document.getElementById('block-editor-root'));
+
+    const toolbar = screen.getByRole('toolbar', { name: 'Text formatting' });
+    await user.click(within(toolbar).getByRole('button', { name: 'Bold' }));
+
+    const emitted = onChange.mock.calls.at(-1)[0];
+    expect(emitted[0].content).toBe('**hello** world');
+  });
+
+  it('Escape dismisses the floating toolbar without modifying content (KR-002)', async () => {
+    const user = userEvent.setup();
+    render(<BlockEditor blocks={[]} onChange={() => {}} />);
+    const textarea = screen.getByLabelText('Paragraph content');
+
+    await user.type(textarea, 'hello');
+    textarea.setSelectionRange(0, 5);
+    fireEvent.mouseUp(document.getElementById('block-editor-root'));
+    expect(screen.getByRole('toolbar', { name: 'Text formatting' })).toBeInTheDocument();
+
+    fireEvent.keyDown(textarea, { key: 'Escape' });
+    expect(screen.queryByRole('toolbar', { name: 'Text formatting' })).not.toBeInTheDocument();
+  });
+
+  it('Ctrl+Y redoes after an undo (KR-003)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BlockEditor blocks={[]} onChange={onChange} />);
+    const textarea = screen.getByLabelText('Paragraph content');
+
+    await user.type(textarea, 'a');
+    fireEvent.keyDown(textarea, { key: 'z', ctrlKey: true });
+    expect(onChange.mock.calls.at(-1)[0][0].content).toBe('');
+
+    fireEvent.keyDown(textarea, { key: 'y', ctrlKey: true });
+    expect(onChange.mock.calls.at(-1)[0][0].content).toBe('a');
   });
 });

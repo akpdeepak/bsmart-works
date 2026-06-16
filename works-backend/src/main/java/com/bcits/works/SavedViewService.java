@@ -40,9 +40,9 @@ public class SavedViewService {
     public List<SavedView> list(String callerId, String workspaceId, String projectId) {
         rbac.require(callerId, workspaceId, "view_items");
         if (projectId != null && !projectId.isBlank()) {
-            return views.findByWorkspaceIdAndProjectIdAndDeletedAtIsNullOrderByNameAsc(workspaceId, projectId);
+            return views.findByWorkspaceIdAndProjectIdAndDeletedAtIsNullOrderByDisplayOrderAscNameAsc(workspaceId, projectId);
         }
-        return views.findByWorkspaceIdAndDeletedAtIsNullOrderByNameAsc(workspaceId);
+        return views.findByWorkspaceIdAndDeletedAtIsNullOrderByDisplayOrderAscNameAsc(workspaceId);
     }
 
     @Transactional
@@ -59,6 +59,7 @@ public class SavedViewService {
         view.setUpdatedAt(now);
         if (view.getIsShared() == null) view.setIsShared(false);
         if (view.getColumnKeys() == null || view.getColumnKeys().isBlank()) view.setColumnKeys("[]");
+        view.setDisplayOrder(views.maxDisplayOrder(workspaceId) + 1);
         return views.save(view);
     }
 
@@ -71,6 +72,7 @@ public class SavedViewService {
         if (patch.getBqlFilter() != null) existing.setBqlFilter(patch.getBqlFilter());
         if (patch.getColumnKeys() != null) existing.setColumnKeys(patch.getColumnKeys());
         if (patch.getIsShared() != null) existing.setIsShared(patch.getIsShared());
+        if (patch.getDisplayOrder() != null) existing.setDisplayOrder(patch.getDisplayOrder());
         if (patch.getProjectId() != null) existing.setProjectId(patch.getProjectId());
         if (patch.getItemType() != null) existing.setItemType(patch.getItemType());
         existing.setUpdatedAt(OffsetDateTime.now());

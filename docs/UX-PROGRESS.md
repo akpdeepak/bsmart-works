@@ -319,6 +319,37 @@ Branch: `feat/uiux-wi18-async-boundary`.
 
 ---
 
+## WI-15 [benchmark] — Surface saved views: rename / reorder / delete (2026-06-15)
+
+Saved views promoted from invisible chips to a first-class `SavedViewsPanel` molecule with
+inline rename, move-up/move-down reorder, and delete-with-confirm. Replaces the chip-based
+list in the BQL workspace.
+
+**Backend (V92 migration + entity changes):**
+- `V94__saved_view_display_order.sql`: adds `display_order INT NOT NULL DEFAULT 0` to `saved_views`
+- `SavedView.java`: `displayOrder` field + getter/setter
+- `SavedViewRepository.java`: new derived query `findByWorkspaceId...OrderByDisplayOrderAscNameAsc`
+  replaces the alphabetical-only `OrderByNameAsc`; JPQL `maxDisplayOrder` query for auto-setting on create
+- `SavedViewService.java`: `create()` sets `displayOrder = max + 1`; `update()` applies `displayOrder` from patch
+
+**Frontend:**
+- `savedViewsKeys` added to `keys.js`
+- `useSavedViews` + `useSavedViewMutations` hook (`useSavedViews.js`): TanStack Query with
+  optimistic delete (rollback on error) and optimistic reorder (sort by displayOrder)
+- `SavedViewsPanel` molecule: ul list, per-row bookmark icon + click-to-load button (aria-current
+  on active view) + hover-reveal ▲▼ reorder buttons + pencil → inline rename input (Enter saves,
+  Esc cancels) + X → confirm row (Yes/No); skeleton loading + empty state
+- `BqlView` wired: chip section replaced by `<SavedViewsPanel>`; `saveView()` calls
+  `queryClient.invalidateQueries()` after success; removed `savedViews` local state, `toggleSubscribe`,
+  `deleteView`, `refreshSubscriptions` (subscription feature surfaced separately when needed)
+- `bql-view.test.jsx`: wrapped all render calls in `QueryClientProvider` (BqlView now uses `useQueryClient`)
+
+**Tests:** 11 unit tests in `saved-views-panel.test.jsx` (loading skeleton, empty state, list render,
+click-to-load, aria-current, rename flow, Escape cancel, delete confirm, Yes/No paths); 16 bql-view
+tests all passing.
+
+Branch: `feat/uiux-wi15-saved-views`
+
 ## WI-09 [benchmark] — HEART activation-funnel instrumentation (2026-06-15)
 
 Server-side funnel telemetry wired into the events store via a new `FunnelService`. No PII,

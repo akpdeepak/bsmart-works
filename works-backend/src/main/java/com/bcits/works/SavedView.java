@@ -20,6 +20,7 @@ public class SavedView {
     @Column(name = "bql_filter", columnDefinition = "TEXT") private String bqlFilter;
     @Column(name = "column_keys", columnDefinition = "TEXT") private String columnKeys;
     private Boolean isShared = false;
+    @Column(name = "display_order") private Integer displayOrder = 0;
     private String createdBy;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
@@ -43,6 +44,8 @@ public class SavedView {
     public void setColumnKeys(String columnKeys) { this.columnKeys = columnKeys; }
     public Boolean getIsShared() { return isShared; }
     public void setIsShared(Boolean isShared) { this.isShared = isShared; }
+    public Integer getDisplayOrder() { return displayOrder; }
+    public void setDisplayOrder(Integer displayOrder) { this.displayOrder = displayOrder; }
     public String getCreatedBy() { return createdBy; }
     public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
     public OffsetDateTime getCreatedAt() { return createdAt; }

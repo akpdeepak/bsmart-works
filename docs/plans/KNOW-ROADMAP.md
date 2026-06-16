@@ -67,7 +67,7 @@
 | KR-034 | Tags / labels | P1 | ✅ done |
 | KR-035 | Starred / favorites | P1 | ✅ done |
 | KR-036 | Recently viewed | P1 | ✅ done · 2026-06-16 |
-| KR-037 | Space home page | P1 | ⬜ open |
+| KR-037 | Space home page | P1 | ✅ done · 2026-06-16 |
 | KR-038 | Bulk operations | P1 | ✅ done · 2026-06-16 |
 | KR-039 | Article moves across spaces | P2 | ⬜ open |
 | KR-040 | Backlinks pane | P2 | ⬜ open |
@@ -96,7 +96,7 @@
 | KR-063 | Rich embed block | P2 | ⬜ open |
 | KR-064 | Whiteboard export | P2 | ⬜ open |
 | KR-065 | Real-time presence indicators | P1 | ⬜ open |
-| KR-066 | Article public share link | P1 | ⬜ open |
+| KR-066 | Article public share link | P1 | ✅ done · 2026-06-16 |
 | KR-067 | Article subscriptions / watch | P1 | ⬜ open |
 | KR-068 | Follow a space | P1 | ⬜ open |
 | KR-069 | Embed article anywhere | P1 | ⬜ open |

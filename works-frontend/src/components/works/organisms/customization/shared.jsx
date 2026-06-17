@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { SlidersHorizontal, AlertTriangle, CheckCircle2, Lock, Unlock, Plus, Save } from 'lucide-react';
 
 // Shared building blocks for the Customization surface tabs (RB-30 §6: tokens only, every
@@ -113,8 +113,11 @@ export function ImpactDialog({ impact, onCancel, onConfirm }) {
   // dismisses it. Without these the dialog could only be closed by tabbing to the Cancel button.
   // The Escape listener lives on document (not the dialog node) because `role="dialog"` is a
   // non-interactive element and jsx-a11y forbids key handlers on it.
-  useEffect(() => {
+  useLayoutEffect(() => {
     cancelRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onCancel(); };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -191,4 +194,3 @@ export function Empty({ title, hint }) {
     </div>
   );
 }
-

@@ -51,26 +51,25 @@ Format: What · Why accepted · Impact · Trigger to fix.
 
 ## Tooling debt
 
-### TD-006 — OpenAPI / Swagger not wired
-- **What:** No auto-generated API documentation
-- **Why accepted:** springdoc-openapi compatibility with Spring Boot 4.0.x needs verification
-- **Impact:** New team members must read source code to understand the API contract
-- **Trigger:** When springdoc-openapi 2.9+ confirms Spring Boot 4.0 support; add the dependency then
+### TD-006 — OpenAPI / Swagger not wired — **CLOSED 2026-06-17**
+- **What:** No auto-generated API documentation.
+- **Resolution:** `springdoc-openapi-starter-webmvc-ui` and `OpenApiConfig` are wired. Runtime docs are served at `/api-docs` and `/swagger-ui.html`.
+- **Remaining:** Keep controller annotations/summaries current as APIs evolve.
 
-### TD-007 — No E2E test suite
-- **What:** Playwright is the chosen framework but not yet installed
-- **Why accepted:** No stable deployment environment to run E2E tests against
-- **Trigger:** When a staging environment is running and the first 5 user flows (CLAUDE.md §10.4) are stable
+### TD-007 — E2E suite not merge-gated
+- **What:** Playwright is installed and an E2E cockpit smoke suite exists under `works-frontend/e2e/`, with `.github/workflows/e2e.yml` available on manual dispatch. It is not part of the normal PR merge gate.
+- **Why accepted:** The suite needs a full stack and seeded user/workspace credentials, so running it on every PR would be slow and more operationally fragile than unit/component tests.
+- **Trigger:** When a stable staging environment and seed-data workflow are always available, move the first 5 critical flows into required CI.
 
 ### TD-008 — HSTS header missing
 - **What:** `Strict-Transport-Security` is not set
 - **Why accepted:** HSTS must not be sent over HTTP (breaks local dev); needs a Spring profile condition
 - **Trigger:** When staging and production are on HTTPS; add via `if (production profile) headers.httpStrictTransportSecurity(...)`
 
-### TD-009 — Rate limiting not implemented
-- **What:** No per-IP or per-user rate limiting on API endpoints
-- **Why accepted:** Single-tenant internal use currently; attack surface is low
-- **Trigger:** Before any endpoint is exposed to external/untrusted callers; implement at API gateway or via Bucket4j (CLAUDE.md §17.4)
+### TD-009 — General API rate limiting not implemented
+- **What:** Auth/customer-auth and AI calls use the in-memory `RateLimiter`, but there is no universal per-IP/per-user rate limit across every API endpoint.
+- **Why accepted:** Single-instance internal use currently; external exposure should be fronted by gateway-level throttling.
+- **Trigger:** Before broad external/untrusted exposure, add API-gateway limits or a distributed limiter such as Bucket4j/Redis.
 
 ### TD-010 — CD pipeline stubs not wired
 - **What:** `deploy.yml` has TODO stubs for actual deployment commands
@@ -83,28 +82,25 @@ Format: What · Why accepted · Impact · Trigger to fix.
 - **Impact:** Inconsistent date display (locale-ambiguous `05/31/26` risk), hard to change the format globally
 - **Trigger:** Remediate as App.jsx is extracted; all new components must use `@/lib/format.js` from day one
 
-### TD-012 — `molecules/` and `organisms/` component layers not yet populated
-- **What:** Atomic Design directories exist as scaffolds only; no molecules or organisms have been extracted yet (CLAUDE.md §4.19)
-- **Why accepted:** Features were built as organisms-in-App.jsx; extraction happens progressively per iteration
-- **Impact:** No reusable mid-level components → developers either duplicate or inflate atoms
-- **Trigger:** Extract the first molecule (SearchInput or FormField) and organism (WorkItemRow) during the next UI iteration
+### TD-012 — `molecules/` and `organisms/` component layers not yet populated — **CLOSED 2026-06-17**
+- **What:** Atomic Design directories were scaffolds only.
+- **Resolution:** `src/components/works/molecules/` and `src/components/works/organisms/` are populated with extracted production components and tests.
+- **Remaining:** Continue extracting legacy `App.jsx` surfaces under TD-003.
 
-### TD-013 — No integration test infrastructure (Testcontainers)
-- **What:** The integration test tier (§10.1) is documented but not set up; no `@Tag("integration")` tests exist. There is no failsafe/integration CI job — `ci.yml` runs `-Dgroups=unit` only.
-- **Why accepted:** Integration tests require Docker, which is not available in the current dev/CI environment; the CI job for them is a future addition.
-- **Impact:** Flyway migrations and service-to-repository wiring are only verified against a live local DB, not in CI. Most importantly, **row-level cross-tenant isolation** (does `findByWorkspaceId…` actually refuse another workspace's rows?) cannot be asserted with mocks — it needs a real Postgres (RB-40 §1). The cross-tenant/unauthorized *authorization wiring* at the controller boundary is now covered at the unit level (`WorkItemControllerAccessTest`, `RbacServiceTest`); the DB-level row-filtering proof is the remaining gap.
-- **Trigger:** When Docker is available in CI, add `spring-boot-testcontainers`, an `@Tag("integration")` group + a failsafe job, and write the **cross-tenant row-isolation test first** (seed two workspaces, assert each repository query returns only its own rows), then the first `MigrationTest`. This is a tenant-isolation change → confirm the approach with Deepak first (CLAUDE.md §5).
+### TD-013 — No integration test infrastructure (Testcontainers) — **CLOSED 2026-06-17**
+- **What:** The integration test tier was documented but not set up.
+- **Resolution:** Spring Boot Testcontainers/Failsafe are configured, and integration tests now cover Flyway migration, tenant isolation, BQL/workspace scope, widget data, SLA bulk apply, public embeds/shares, and other repository-backed flows.
+- **Remaining:** Keep the integration job available where Docker is supported; unit `verify` intentionally excludes integration tests via groups.
 
-### TD-014 — Storybook not installed
-- **What:** §4.19 requires each component to have a co-located `.stories.jsx`; Storybook is not set up
-- **Why accepted:** Visual component library is not the immediate priority; components are tested via Vitest + RTL
-- **Trigger:** When the component library reaches ~10 components and visual regression testing becomes valuable
+### TD-014 — Storybook not installed — **CLOSED 2026-06-17**
+- **What:** §4.19 requires component stories, but Storybook was absent.
+- **Resolution:** Storybook is installed with scripts and existing `.stories.jsx` coverage in the component library.
+- **Remaining:** Add stories for newly extracted components as part of feature work.
 
-### TD-015 — Code-extension execution runtime not built (iteration 17, Cap R — Extension API)
-- **What:** The Universal Customization Engine **stores, validates, versions and audits** code extensions and exposes a server-owned extension-point catalog (`ConfigExtensionPoints`), but it does **not execute** customer-authored JavaScript. An extension is defined and surfaced but never evaluated.
-- **Why accepted:** Running tenant-supplied code is a security-critical capability (RB-40 — stop-and-ask territory). It must run in an isolated, resource-capped, time-bounded sandbox (e.g. a worker/V8 isolate) with no access to other tenants' data, the event log, or secrets — and that design must be reviewed before any code runs. Shipping execution half-built would be an RCE surface. The definition/validation/versioning/audit half (which the rest of the engine needs) is genuinely done.
-- **Impact:** Admins can author and save extensions and bind them to hooks; the hooks do not yet fire. The UI states this explicitly so it is not mistaken for working behavior.
-- **Trigger:** A dedicated, security-reviewed task — sandbox runtime selection + isolation model + per-extension resource/timeout budgets + tenant-scoped capability allow-list — signed off with Deepak before execution is enabled (CLAUDE.md §5).
+### TD-015 — Code-extension execution runtime not built (iteration 17, Cap R — Extension API) — **CLOSED 2026-06-17**
+- **What:** The Universal Customization Engine stored extension definitions but did not execute hooks.
+- **Resolution:** `ExtensionExecutionService` executes declarative, server-owned actions (`SET_FIELD`, `REJECT`, `SEND_NOTIFICATION`, `EMIT_EVENT`) for approved hooks. It deliberately does **not** execute arbitrary customer JavaScript.
+- **Remaining:** A true tenant-supplied JavaScript sandbox remains out of scope unless Deepak explicitly approves a separate security-reviewed runtime.
 
 ---
 
@@ -141,7 +137,7 @@ The following items from the Layer A validation (Prompt A, 2026-06-07) cannot be
 - **Remaining impact:** Load test scripts are committed and ready; live execution pending staging.
 
 ### TD-022 — BYOK key rotation and SOC 2 / ISO 27001 certifications (B31, B32, iteration 19) — **PARTIALLY CLOSED 2026-06-08**
-- **B31 — BYOK key rotation (CLOSED):** `KeyRotationService` implemented. Rotates the workspace data key via the KMS ARN stored in `security_admin_settings`. Re-encrypts all `pii_vault` entries for the workspace under the new key. Rotation event written to the tamper-evident audit chain. The `KmsProvider` interface abstracts the actual KMS implementation: `AwsKmsProvider` uses the KMS ARN and requires `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` env vars in production; `LocalKmsProvider` is used in dev/test. BYOK is opt-in: workspaces without a KMS ARN use the server-managed master key.
+- **B31 — BYOK key rotation (PARTIAL):** `KeyRotationService` and the `KmsProvider` seam are implemented. `LocalKmsProvider` supports dev/test. `AwsKmsProvider` is an explicit stub that throws until the AWS SDK dependency, KMS key policy, and legal/DPO handling of key material are approved.
 - **B32 — SOC 2 / ISO 27001 (EXTERNAL — permanently open):** All technical controls are implemented (audit hash chain, access reviews, evidence bundles, anomaly detection, conditional access, WebAuthn). SOC 2 Type 2 and ISO 27001 require an external audit firm engagement — approximately 6 months evidence collection + remediation cycle. No code changes required. **Action for Deepak:** Select audit firm (common choices: Prescient Assurance, Schellman, A-LIGN) and target certification alongside first enterprise customer contract.
 - **Trigger for remaining:** AWS credentials + audit firm selection.
 
@@ -150,13 +146,10 @@ The following items from the Layer A validation (Prompt A, 2026-06-07) cannot be
 - **SOURCE-OF-TRUTH update:** Added to §4 reconciliation ledger — spec says WebSocket, code uses SSE, SSE wins per tech-stack authority rule.
 - **Remaining impact:** None — SSE delivers the spec's co-presence requirements.
 
-### TD-024 — Performance panel wired with wrong props in App.jsx (Cap L, iteration 12) — **OPEN, needs owner sign-off**
-- **Found (2026-06-14, feat/performance-insights):** `App.jsx` renders `<PerformancePanel workspaceId={...} can={can} onToast={showToast} />`, but the component's contract is `({ workspaceId, aiCapabilities = [], onOpenItem })`. The `can` and `onToast` props are ignored, so in production:
-  - `aiCapabilities` always defaults to `[]` → the AI "Explain anomaly" buttons and the AI budget notice never render (graceful — not a crash, but the AI affordances are dead on this surface);
-  - `onOpenItem` is `undefined` → the cycle-time histogram's outlier chips render as inert text instead of drilling into the work item.
-- **Why not fixed here:** `App.jsx` is explicitly out of scope for the `feat/performance-insights` task (it is owned by other concurrent work). The panel/molecule code already handles both props correctly; only the call site is wrong.
-- **Fix (for the App.jsx owner):** pass `aiCapabilities={<the workspace's enabled AI capabilities for KPI anomaly explain>}` and `onOpenItem={<the open-work-item handler used elsewhere in App.jsx>}`. No component changes required.
-- **Remaining impact:** AI explain + outlier drill-down inert on the Performance surface until the call site is corrected.
+### TD-024 — Performance panel wired with wrong props in App.jsx (Cap L, iteration 12) — **CLOSED 2026-06-17**
+- **Found (2026-06-14, feat/performance-insights):** `App.jsx` rendered `<PerformancePanel workspaceId={...} can={can} onToast={showToast} />`, but the component contract is `({ workspaceId, aiCapabilities = [], onOpenItem })`.
+- **Resolution:** The `App.jsx` call site now passes `aiCapabilities={aiCapabilities}` and an `onOpenItem` handler that opens the selected work item, so AI anomaly affordances and outlier drill-down are wired.
+- **Remaining impact:** None known.
 
 ### TD-025 — KPI metric snapshots are ORG-scope only (Cap L trends) — **OPEN, product/eng decision**
 - **Found (2026-06-14, feat/performance-insights):** `KpiSnapshotScheduler` writes only ORG-scope hourly snapshots. The new sprint-over-sprint trend ("vs last period") on `MetricValue.trend` therefore populates for the ORG layer but is honestly absent (renders "No prior period to compare yet.") for Individual / Team / Project, because no history exists for those scopes. The `/kpi/history` endpoint and the trend computation already support any scope; only the writer is limited.

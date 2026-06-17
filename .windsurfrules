@@ -34,6 +34,43 @@ Three standing rules that override convenience:
 
 ---
 
+### 0.1 Transformation roadmap triggers
+
+Deepak may use these exact trigger phrases in Claude Code, Codex, or GPT Code. Treat them as
+repository-level operating commands, not casual prose:
+
+- **"Start the bSmart Transformation Roadmap"**
+- **"Resume the bSmart Transformation Roadmap"**
+
+When either trigger appears, the agent owns the work end to end until the current roadmap slice is
+complete locally and on GitHub `main`, subject to normal GitHub review/CI constraints and explicit
+human approval requirements in RB-05.
+
+The transformation source of truth is:
+
+1. `docs/implementation/BSMART-TRANSFORMATION-ROADMAP.md`
+2. `docs/implementation/ROADMAP-STATE.md`
+3. `C:\Users\user\Downloads\bSmart_Works_Implementation_Blueprint_Epic_Roadmap.md`
+4. `C:\Users\user\Downloads\bSmart_Works_Implementation_Blueprint_Epic_Roadmap_UIUX_Expanded.md`
+5. `C:\Users\user\Downloads\bSmart_Works_AI_Agent_Implementation_Instructions.md`
+6. This orchestrator, SOURCE-OF-TRUTH, and all applicable rule books.
+
+If the local Downloads files are unavailable in a remote/GitHub-only session, continue from the
+repo-tracked roadmap and state files, and record that limitation in the EPIC plan.
+
+**Start behavior:** sync from latest `main`, inspect the current worktree and open PR/branch state,
+read the transformation source of truth, begin with the next incomplete EPIC in roadmap order, create
+or update the required EPIC plan under `docs/implementation/epics/`, implement, verify, open a PR,
+merge only after required gates pass, pull latest `main`, run post-merge validation, and update
+`docs/implementation/ROADMAP-STATE.md`.
+
+**Resume behavior:** do not restart blindly. First inspect git status, current branch, recent commits,
+open local changes, existing EPIC plans/completion notes, and `docs/implementation/ROADMAP-STATE.md`.
+Continue from the latest safe point, preserving user/developer changes. If state and code disagree,
+trust the current code and GitHub state, then update the state file after verification.
+
+---
+
 ## 1. The rule books
 
 Authority is split by domain. Decide what the task touches, then open the rule book(s) that own it.

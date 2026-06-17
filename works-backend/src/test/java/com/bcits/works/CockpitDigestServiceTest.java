@@ -4,7 +4,10 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
+import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -57,6 +60,16 @@ class CockpitDigestServiceTest {
     @Test
     void rag_nullAttendanceIsNotAmber() {
         assertThat(CockpitDigestService.rag(0, 0, null, 90, 30).get("status")).isEqualTo("GREEN");
+    }
+
+    @Test
+    void jdbcDay_acceptsTimestampTypesReturnedByPostgresDrivers() {
+        assertThat(CockpitDigestService.jdbcDay(Timestamp.valueOf("2026-06-17 12:00:00")))
+                .isEqualTo(LocalDate.parse("2026-06-17"));
+        assertThat(CockpitDigestService.jdbcDay(OffsetDateTime.parse("2026-06-17T12:00:00+05:30")))
+                .isEqualTo(LocalDate.parse("2026-06-17"));
+        assertThat(CockpitDigestService.jdbcDay(LocalDateTime.parse("2026-06-17T12:00:00")))
+                .isEqualTo(LocalDate.parse("2026-06-17"));
     }
 
     @Test

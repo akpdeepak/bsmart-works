@@ -4,6 +4,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -106,7 +108,7 @@ public class CockpitDigestService {
                     "SELECT status_changed_at, COALESCE(story_points,0) AS pts FROM work_items "
                     + "WHERE sprint_id = ? AND deleted_at IS NULL AND status = 'Done' "
                     + "AND status_changed_at IS NOT NULL", sprint.getId())) {
-                LocalDate day = ((java.sql.Timestamp) row.get("status_changed_at")).toLocalDateTime().toLocalDate();
+                LocalDate day = jdbcDay(row.get("status_changed_at"));
                 doneByDay.merge(day, ((Number) row.get("pts")).intValue(), Integer::sum);
             }
             LocalDate upTo = sprint.getEndDate() == null || today.isBefore(sprint.getEndDate())
@@ -161,5 +163,14 @@ public class CockpitDigestService {
         out.put("burndown", burndown);
         out.put("rag", rag(slaBreached, criticalOpen, attendanceRate, deliveryRate, progressPct));
         return out;
+    }
+
+    static LocalDate jdbcDay(Object value) {
+        if (value instanceof java.sql.Timestamp ts) return ts.toLocalDateTime().toLocalDate();
+        if (value instanceof OffsetDateTime odt) return odt.toLocalDate();
+        if (value instanceof LocalDateTime ldt) return ldt.toLocalDate();
+        if (value instanceof LocalDate day) return day;
+        throw new IllegalArgumentException("Unsupported timestamp value: "
+                + (value == null ? "null" : value.getClass().getName()));
     }
 }

@@ -2260,6 +2260,27 @@ export default function App() {
     api.raw(`/cockpit/digest?workspaceId=${activeWorkspaceId}&projectId=${pid}`).then(r => r.json())
       .then(d => setDigest(d && d.rag ? d : null)).catch(() => setDigest(null));
   }
+
+  useEffect(() => {
+    if (view !== 'smcockpit' || projects.length === 0) return;
+    const projectIds = new Set(projects.map(p => p.id));
+    const pid = projectIds.has(i15ProjectId) ? i15ProjectId : projects[0].id;
+    if (pid !== i15ProjectId) {
+      queueMicrotask(() => setI15ProjectId(pid));
+    }
+    if (!pid) return;
+    fetchCockpitContext(pid);
+    fetchCoachTips(pid);
+    fetchDigest(pid);
+    fetchCeremonies(pid);
+    fetchMyDay(pid);
+    fetchImpediments(pid);
+    fetchStandups(pid);
+    fetchRetros(pid);
+    fetchSprints(pid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, projects, i15ProjectId, activeWorkspaceId]);
+
   function clusterRetro() {
     if (!activeRetro?.session?.id) return;
     api.send(`/cockpit/retro-cluster?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ retroId: activeRetro.session.id }) })

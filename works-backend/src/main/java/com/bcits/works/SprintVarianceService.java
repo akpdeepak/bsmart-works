@@ -3,7 +3,6 @@ package com.bcits.works;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -84,7 +83,7 @@ public class SprintVarianceService {
                 "SELECT status_changed_at, COALESCE(story_points, 0) AS pts FROM work_items "
                 + "WHERE sprint_id = ? AND deleted_at IS NULL AND status = 'Done' "
                 + "AND status_changed_at IS NOT NULL", sprintId)) {
-            LocalDate day = ((Timestamp) row.get("status_changed_at")).toLocalDateTime().toLocalDate();
+            LocalDate day = CockpitDigestService.jdbcDay(row.get("status_changed_at"));
             doneByDay.merge(day, ((Number) row.get("pts")).intValue(), Integer::sum);
         }
         LocalDate today = LocalDate.now();

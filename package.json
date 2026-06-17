@@ -6,9 +6,10 @@
   "scripts": {
     "prepare": "husky",
     "guardrails": "bash scripts/guardrails.sh",
+    "premium-bar": "node scripts/uiux-premium-bar.mjs",
     "ai-rules": "node scripts/generate-ai-rules.mjs",
     "ai-rules:check": "node scripts/generate-ai-rules.mjs --check",
-    "verify": "npm run guardrails && npm run ai-rules:check"
+    "verify": "npm run guardrails && npm run ai-rules:check && npm run premium-bar"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.0.2",

@@ -45,8 +45,17 @@ export default {
         },
       },
       fontSize: {
+        display: ['2.5rem', { lineHeight: '3rem', fontWeight: '700' }],
+        title: ['2rem', { lineHeight: '2.5rem', fontWeight: '700' }],
+        heading: ['1.5rem', { lineHeight: '2rem', fontWeight: '700' }],
+        subheading: ['1.125rem', { lineHeight: '1.75rem', fontWeight: '600' }],
+        body: ['0.875rem', { lineHeight: '1.375rem' }],
+        'body-sm': ['0.8125rem', { lineHeight: '1.25rem' }],
+        caption: ['0.75rem', { lineHeight: '1rem' }],
+        overline: ['0.6875rem', { lineHeight: '0.875rem', fontWeight: '700', letterSpacing: '0' }],
         // Sub-12px label used on the narrow icon mode-rail (mockup). Token, not an arbitrary value.
         '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
+        '3xs': ['0.5625rem', { lineHeight: '0.75rem' }],
       },
       fontFamily: {
         sans: ['Inter', 'Segoe UI', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],

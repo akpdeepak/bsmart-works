@@ -70,3 +70,23 @@ export function parseEntityRoute(pathname) {
   if (m) return { kind: 'work-item', id: m[1] };
   return null;
 }
+
+// Query-state helpers for view sub-state. These keep the current dependency-free router honest:
+// a view can encode state like board grouping without every screen hand-rolling URLSearchParams.
+export function routeQueryState(search = '') {
+  const params = new URLSearchParams(search || '');
+  return Object.fromEntries(params.entries());
+}
+
+export function mergeRouteQueryState(pathname = '/', search = '', updates = {}, defaults = {}) {
+  const params = new URLSearchParams(search || '');
+  for (const [key, value] of Object.entries(updates)) {
+    if (value == null || value === '' || value === defaults[key]) {
+      params.delete(key);
+    } else {
+      params.set(key, String(value));
+    }
+  }
+  const query = params.toString();
+  return `${pathname || '/'}${query ? `?${query}` : ''}`;
+}

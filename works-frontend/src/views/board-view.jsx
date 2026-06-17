@@ -6,8 +6,10 @@ import { DENSITY_PAD } from '@/lib/density';
 import { BoardWipBadge } from '@/components/works/organisms/board-wip-badge';
 import { WorkItemFilterBar } from '@/components/works/organisms/work-item-filter-bar';
 import { BulkEditBar } from '@/components/works/organisms/bulk-edit-bar';
+import { VirtualCardStack } from '@/components/works/organisms/virtual-card-stack';
 import { filterItems, sortItems, EMPTY_FILTERS, DEFAULT_SORT } from '@/lib/work-item-filter';
 import { GROUP_BY_OPTIONS, groupItemsIntoLanes } from '@/lib/board-swimlanes';
+import { mergeRouteQueryState, routeQueryState } from '@/lib/routes';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { Avatar } from '@/components/works/atoms/avatar';
 import { CardFieldsPopover } from '@/components/works/organisms/card-fields-popover';
@@ -27,6 +29,26 @@ const FALLBACK_COLUMNS = [
   { key: 'in_progress', name: 'In Progress', category: 'IN_PROGRESS', labelKey: 'deliver.board.colInProgress', dot: 'bg-brand-navy-tint',  limitKey: 'inProgressLimit' },
   { key: 'done',        name: 'Done',        category: 'DONE',        labelKey: 'deliver.board.colDone',       dot: 'bg-semantic-success', limitKey: 'doneLimit' },
 ];
+
+const readInitialGroupBy = () => {
+  if (typeof window === 'undefined') return 'none';
+  const candidate = routeQueryState(window.location.search).groupBy;
+  return GROUP_BY_OPTIONS.includes(candidate) ? candidate : 'none';
+};
+
+const replaceGroupByRouteState = (groupBy) => {
+  if (typeof window === 'undefined') return;
+  const nextUrl = mergeRouteQueryState(
+    window.location.pathname,
+    window.location.search,
+    { groupBy },
+    { groupBy: 'none' },
+  );
+  const currentUrl = `${window.location.pathname}${window.location.search}`;
+  if (nextUrl !== currentUrl) {
+    window.history.replaceState({ ...(window.history.state || {}), groupBy }, '', nextUrl);
+  }
+};
 
 
 // Returns the localized due-date label + urgency for a card; `t` is the i18n translator.
@@ -95,7 +117,7 @@ export default function BoardView({
   // edit rights per item (RB-40 §1). Selection is by id so it survives filter/sort re-renders.
   const [selected, setSelected] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
-  const [groupBy, setGroupBy] = useState('none');
+  const [groupBy, setGroupBy] = useState(readInitialGroupBy);
   const [collapsedLanes, setCollapsedLanes] = useState(() => new Set());
   const bulkEnabled = typeof onBulkEdit === 'function';
   const toggleSelect = (id) => setSelected((prev) => {
@@ -141,6 +163,45 @@ export default function BoardView({
         : t('deliver.board.group.uncategorized'),
   });
 
+  const setBoardGroupBy = (nextGroupBy) => {
+    setGroupBy(nextGroupBy);
+    setCollapsedLanes(new Set());
+    replaceGroupByRouteState(nextGroupBy);
+  };
+
+  const renderColumnCards = (colItems, category) => (
+    <VirtualCardStack
+      items={colItems}
+      density={density}
+      aria-label={`${category} cards`}
+      emptyState={(
+        <div className="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed border-neutral-200 rounded-lg">
+          <p className="text-xs text-neutral-600 dark:text-neutral-400">{t('deliver.board.dropItemsHere')}</p>
+        </div>
+      )}
+      renderItem={(item) => (
+        <WorkCard
+          key={item.id}
+          item={item}
+          category={category}
+          density={density}
+          densityPad={densityPad}
+          iv={iv}
+          userName={userName}
+          customFieldDefs={customFieldDefs}
+          statusResolver={statusResolver}
+          onStar={toggleStar}
+          onEdit={setSelectedItem}
+          onDelete={handleDelete}
+          onDragStart={handleDragStart}
+          selectable={bulkEnabled}
+          selected={selected.has(item.id)}
+          onToggleSelect={toggleSelect}
+        />
+      )}
+    />
+  );
+
   const renderColumns = (itemsForLane, laneKey = 'all') => (
     <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
       {columns.map(col => {
@@ -179,33 +240,7 @@ export default function BoardView({
               {overWip && <p className="mt-1 text-xs font-medium text-semantic-danger">{t('deliver.board.overWipLimit')}</p>}
             </div>
 
-            <div className="space-y-2 flex-1">
-              {colItems.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed border-neutral-200 rounded-lg">
-                  <p className="text-xs text-neutral-600 dark:text-neutral-400">{t('deliver.board.dropItemsHere')}</p>
-                </div>
-              )}
-              {colItems.map(item => (
-                <WorkCard
-                  key={item.id}
-                  item={item}
-                  category={col.key}
-                  density={density}
-                  densityPad={densityPad}
-                  iv={iv}
-                  userName={userName}
-                  customFieldDefs={customFieldDefs}
-                  statusResolver={statusResolver}
-                  onStar={toggleStar}
-                  onEdit={setSelectedItem}
-                  onDelete={handleDelete}
-                  onDragStart={handleDragStart}
-                  selectable={bulkEnabled}
-                  selected={selected.has(item.id)}
-                  onToggleSelect={toggleSelect}
-                />
-              ))}
-            </div>
+            {renderColumnCards(colItems, col.key)}
 
             <button onClick={() => {
               setNewItem(p => ({
@@ -248,8 +283,7 @@ export default function BoardView({
               selectSize="sm"
               value={groupBy}
               onChange={(event) => {
-                setGroupBy(event.target.value);
-                setCollapsedLanes(new Set());
+                setBoardGroupBy(event.target.value);
               }}
               aria-label={t('deliver.board.groupBy')}
               className="min-w-32"
@@ -358,33 +392,7 @@ export default function BoardView({
                   {overWip && <p className="mt-1 text-xs font-medium text-semantic-danger">{t('deliver.board.overWipLimit')}</p>}
                 </div>
 
-                <div className="space-y-2 flex-1">
-                  {colItems.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed border-neutral-200 rounded-lg">
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400">{t('deliver.board.dropItemsHere')}</p>
-                    </div>
-                  )}
-                  {colItems.map(item => (
-                    <WorkCard
-                      key={item.id}
-                      item={item}
-                      category={col.key}
-                      density={density}
-                      densityPad={densityPad}
-                      iv={iv}
-                      userName={userName}
-                      customFieldDefs={customFieldDefs}
-                      statusResolver={statusResolver}
-                      onStar={toggleStar}
-                      onEdit={setSelectedItem}
-                      onDelete={handleDelete}
-                      onDragStart={handleDragStart}
-                      selectable={bulkEnabled}
-                      selected={selected.has(item.id)}
-                      onToggleSelect={toggleSelect}
-                    />
-                  ))}
-                </div>
+                {renderColumnCards(colItems, col.key)}
 
                 <button onClick={() => {
                   // Workflow columns: col.name IS the concrete target status.

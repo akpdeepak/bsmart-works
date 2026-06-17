@@ -1,4 +1,11 @@
-import { VIEW_PATHS, viewToPath, pathToView, parseEntityRoute } from './routes';
+import {
+  VIEW_PATHS,
+  viewToPath,
+  pathToView,
+  parseEntityRoute,
+  routeQueryState,
+  mergeRouteQueryState,
+} from './routes';
 
 describe('routes', () => {
   it('round-trips every view through its path', () => {
@@ -66,5 +73,23 @@ describe('parseEntityRoute', () => {
   it('does not match paths with extra segments', () => {
     // /items/WI-1/sub would be a sub-path — not a single entity link
     expect(parseEntityRoute('/items/WI-1/comments')).toBeNull();
+  });
+});
+
+describe('route query state', () => {
+  it('reads query params into a plain object', () => {
+    expect(routeQueryState('?groupBy=assignee&tab=activity')).toEqual({
+      groupBy: 'assignee',
+      tab: 'activity',
+    });
+  });
+
+  it('merges query params without losing existing state', () => {
+    expect(mergeRouteQueryState('/board', '?tab=activity', { groupBy: 'assignee' })).toBe('/board?tab=activity&groupBy=assignee');
+  });
+
+  it('removes default and empty state from the URL', () => {
+    expect(mergeRouteQueryState('/board', '?groupBy=assignee&tab=activity', { groupBy: 'none' }, { groupBy: 'none' })).toBe('/board?tab=activity');
+    expect(mergeRouteQueryState('/board', '?q=login', { q: '' })).toBe('/board');
   });
 });

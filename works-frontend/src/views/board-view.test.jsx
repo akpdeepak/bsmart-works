@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import BoardView from './board-view';
 
@@ -24,6 +24,10 @@ const baseProps = {
 };
 
 describe('BoardView', () => {
+  beforeEach(() => {
+    window.history.replaceState({}, '', '/board');
+  });
+
   it('renders without crashing with empty state', () => {
     render(<BoardView {...baseProps} />);
     expect(screen.getByRole('heading', { name: /board/i })).toBeInTheDocument();
@@ -102,6 +106,21 @@ describe('BoardView', () => {
     fireEvent.click(screen.getByRole('button', { name: /u11/i }));
     expect(screen.queryByText('Fix login bug')).not.toBeInTheDocument();
     expect(screen.getByText('Write the docs')).toBeInTheDocument();
+  });
+
+  it('initializes board grouping from the URL query state', () => {
+    window.history.replaceState({}, '', '/board?groupBy=assignee');
+    render(<BoardView {...baseProps} workItems={twoItems} currentUserId="u1" />);
+    expect(screen.getByRole('button', { name: /u11/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /u21/i })).toBeInTheDocument();
+  });
+
+  it('keeps board grouping shareable in the URL and removes the default state', () => {
+    render(<BoardView {...baseProps} workItems={twoItems} currentUserId="u1" />);
+    fireEvent.change(screen.getByLabelText(/group by/i), { target: { value: 'assignee' } });
+    expect(window.location.search).toBe('?groupBy=assignee');
+    fireEvent.change(screen.getByLabelText(/group by/i), { target: { value: 'none' } });
+    expect(window.location.search).toBe('');
   });
 
   it('does not render selection checkboxes when bulk is disabled', () => {

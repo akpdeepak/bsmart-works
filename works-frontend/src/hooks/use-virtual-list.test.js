@@ -8,6 +8,7 @@ vi.mock('@tanstack/react-virtual', () => ({
     getVirtualItems: () =>
       Array.from({ length: count }, (_, i) => ({ index: i, start: i * 48, size: 48 })),
     getTotalSize: () => count * 48,
+    measureElement: vi.fn(),
   })),
 }));
 
@@ -21,6 +22,7 @@ describe('useVirtualList', () => {
     expect(result.current).toHaveProperty('parentRef');
     expect(result.current).toHaveProperty('virtualRows');
     expect(result.current).toHaveProperty('totalSize');
+    expect(result.current).toHaveProperty('measureElement');
   });
 
   it('parentRef is a ref object (has .current)', () => {

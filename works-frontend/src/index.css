@@ -23,6 +23,15 @@
 @utility w-rail                { width: var(--width-rail); }
 @utility w-subrail             { width: var(--width-subrail); }
 @utility max-w-reading         { max-width: var(--width-reading); }
+@utility text-display          { font-size: 2.5rem; line-height: 3rem; font-weight: 700; letter-spacing: 0; }
+@utility text-title            { font-size: 2rem; line-height: 2.5rem; font-weight: 700; letter-spacing: 0; }
+@utility text-heading          { font-size: 1.5rem; line-height: 2rem; font-weight: 700; letter-spacing: 0; }
+@utility text-subheading       { font-size: 1.125rem; line-height: 1.75rem; font-weight: 600; letter-spacing: 0; }
+@utility text-body             { font-size: 0.875rem; line-height: 1.375rem; letter-spacing: 0; }
+@utility text-body-sm          { font-size: 0.8125rem; line-height: 1.25rem; letter-spacing: 0; }
+@utility text-caption          { font-size: 0.75rem; line-height: 1rem; letter-spacing: 0; }
+@utility text-overline         { font-size: 0.6875rem; line-height: 0.875rem; font-weight: 700; letter-spacing: 0; text-transform: uppercase; }
+@utility text-3xs              { font-size: 0.5625rem; line-height: 0.75rem; letter-spacing: 0; }
 
 @layer base {
   * { box-sizing: border-box; }

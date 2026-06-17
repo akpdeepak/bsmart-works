@@ -6,6 +6,7 @@ import { statusToCategory } from '@/components/works/status';
 import { PriorityBadge } from '@/components/works/priority-badge';
 import { LapseBadge } from '@/components/works/atoms/lapse-badge';
 import { computeLapse } from '@/lib/status-lapse';
+import { VirtualCardStack } from '@/components/works/organisms/virtual-card-stack';
 
 /**
  * SprintBoard — kanban board with swimlane support for the sprint view.
@@ -77,6 +78,65 @@ export function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, on
     return [{ key: 'all', label: null, items }];
   };
 
+  const renderSprintCard = (item) => {
+    const customVisible = customFieldDefs.filter(d => iv(`fd_${d.id}`) && item.fieldValues?.[d.id] != null);
+    const lapse = computeLapse(item.statusChangedAt, statusResolver?.metaFor(item.type, item.status) ?? null);
+    const showLapse = itemCat(item) !== 'done' && (lapse.state === 'at_risk' || lapse.state === 'breached');
+    return (
+      <div draggable onDragStart={(e) => onDragStart(e, item.id)}
+        className={`bg-white dark:bg-neutral-700 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-600 cursor-grab hover:shadow-md transition-shadow group ${pad[density]}`}>
+        <div className="flex items-start justify-between mb-1.5">
+          <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.autoId || item.id}</span>
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onClick={() => onSelect(item)} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-xs p-0.5" aria-label="Edit"><SquarePen className="h-3.5 w-3.5" aria-hidden="true" /></button>
+            <button onClick={() => onDelete(item.id)} className="text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label="Delete"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+          </div>
+        </div>
+        <button type="button" className="text-sm font-medium text-neutral-900 dark:text-neutral-100 leading-snug mb-2 cursor-pointer text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => onSelect(item)}>{item.title}</button>
+        <div className="flex items-center justify-between flex-wrap gap-1">
+          <TypeBadge type={item.type} compact={density === 'compact'} />
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {iv('priority') && item.priority && <PriorityBadge priority={item.priority} />}
+            {iv('status') && <StatusBadge category={itemCat(item)}>{item.status}</StatusBadge>}
+            {showLapse && <LapseBadge lapse={lapse} compact />}
+            {iv('storyPoints') && item.storyPoints > 0 && <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">{item.storyPoints}pt</span>}
+            {iv('assignee') && item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={5} />}
+          </div>
+        </div>
+        {iv('tags') && item.tags && item.tags.length > 0 && density !== 'compact' && (
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {item.tags.map(t => (
+              <span key={t} className="text-xs bg-neutral-100 dark:bg-neutral-600 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{t}</span>
+            ))}
+          </div>
+        )}
+        {customVisible.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {customVisible.map(d => (
+              <span key={d.id} className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded" title={d.name}>
+                {d.name}: {String(item.fieldValues[d.id])}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderColumnCards = (colItems, columnName) => (
+    <VirtualCardStack
+      items={colItems}
+      density={density}
+      aria-label={`${columnName} sprint cards`}
+      emptyState={(
+        <div className="flex items-center justify-center py-6 border-2 border-dashed border-neutral-200 rounded-lg">
+          <p className="text-xs text-neutral-300">Drop here</p>
+        </div>
+      )}
+      renderItem={renderSprintCard}
+    />
+  );
+
   return (
     <div className="flex-1 overflow-auto dark:bg-neutral-900">
       {getSwimlanes().map(lane => (
@@ -103,53 +163,7 @@ export function SprintBoard({ items, columns, users, swimlaneBy, onDragStart, on
                       <span className="text-xs bg-white dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full shadow-sm">{colItems.length}</span>
                     </div>
                   )}
-                  <div className="space-y-2 flex-1">
-                    {colItems.length === 0 && <div className="flex items-center justify-center py-6 border-2 border-dashed border-neutral-200 rounded-lg"><p className="text-xs text-neutral-300">Drop here</p></div>}
-                    {colItems.map(item => {
-                      const customVisible = customFieldDefs.filter(d => iv(`fd_${d.id}`) && item.fieldValues?.[d.id] != null);
-                      const lapse = computeLapse(item.statusChangedAt, statusResolver?.metaFor(item.type, item.status) ?? null);
-                      const showLapse = itemCat(item) !== 'done' && (lapse.state === 'at_risk' || lapse.state === 'breached');
-                      return (
-                        <div key={item.id} draggable onDragStart={(e) => onDragStart(e, item.id)}
-                          className={`bg-white dark:bg-neutral-700 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-600 cursor-grab hover:shadow-md transition-shadow group ${pad[density]}`}>
-                          <div className="flex items-start justify-between mb-1.5">
-                            <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.autoId || item.id}</span>
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => onSelect(item)} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-xs p-0.5" aria-label="Edit"><SquarePen className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                              <button onClick={() => onDelete(item.id)} className="text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label="Delete"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
-                            </div>
-                          </div>
-                          <button type="button" className="text-sm font-medium text-neutral-900 dark:text-neutral-100 leading-snug mb-2 cursor-pointer text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => onSelect(item)}>{item.title}</button>
-                          <div className="flex items-center justify-between flex-wrap gap-1">
-                            <TypeBadge type={item.type} compact={density === 'compact'} />
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              {iv('priority') && item.priority && <PriorityBadge priority={item.priority} />}
-                              {iv('status') && <StatusBadge category={itemCat(item)}>{item.status}</StatusBadge>}
-                              {showLapse && <LapseBadge lapse={lapse} compact />}
-                              {iv('storyPoints') && item.storyPoints > 0 && <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">{item.storyPoints}pt</span>}
-                              {iv('assignee') && item.assigneeId && <Avatar name={users.find(u => u.id === item.assigneeId)?.fullName || ''} size={5} />}
-                            </div>
-                          </div>
-                          {iv('tags') && item.tags && item.tags.length > 0 && density !== 'compact' && (
-                            <div className="flex flex-wrap gap-1 mt-1.5">
-                              {item.tags.map(t => (
-                                <span key={t} className="text-xs bg-neutral-100 dark:bg-neutral-600 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">{t}</span>
-                              ))}
-                            </div>
-                          )}
-                          {customVisible.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1.5">
-                              {customVisible.map(d => (
-                                <span key={d.id} className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded" title={d.name}>
-                                  {d.name}: {String(item.fieldValues[d.id])}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                  {renderColumnCards(colItems, col.name)}
                 </div>
               );
             })}

@@ -24,7 +24,7 @@ function SortIcon({ col, sortKey, sortDir, sortModel = [] }) {
         {modelDir === 'asc'
           ? <ChevronUp className="h-3.5 w-3.5 shrink-0 text-brand-navy" aria-hidden="true" />
           : <ChevronDown className="h-3.5 w-3.5 shrink-0 text-brand-navy" aria-hidden="true" />}
-        {sortModel.length > 1 && <span className="text-[10px] font-bold text-brand-navy">{priority}</span>}
+        {sortModel.length > 1 && <span className="text-2xs font-bold text-brand-navy">{priority}</span>}
       </span>
     );
   }

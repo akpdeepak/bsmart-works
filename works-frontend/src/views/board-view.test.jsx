@@ -87,11 +87,21 @@ describe('BoardView', () => {
   it('selecting a card reveals the bulk-edit bar (when bulk is enabled)', () => {
     render(<BoardView {...baseProps} workItems={twoItems} currentUserId="u1" onBulkEdit={() => Promise.resolve()} users={[{ id: 'u1', fullName: 'Alice' }]} />);
     // No bar until something is selected.
-    expect(screen.queryByRole('button', { name: /apply/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /review/i })).not.toBeInTheDocument();
     const checkboxes = screen.getAllByRole('checkbox', { name: /select item/i });
     fireEvent.click(checkboxes[0]);
-    expect(screen.getByRole('button', { name: /apply/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /review/i })).toBeInTheDocument();
     expect(screen.getByText(/1 selected/i)).toBeInTheDocument();
+  });
+
+  it('groups board cards into swimlanes and collapses a lane', () => {
+    render(<BoardView {...baseProps} workItems={twoItems} currentUserId="u1" />);
+    fireEvent.change(screen.getByLabelText(/group by/i), { target: { value: 'assignee' } });
+    expect(screen.getByRole('button', { name: /u11/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /u21/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /u11/i }));
+    expect(screen.queryByText('Fix login bug')).not.toBeInTheDocument();
+    expect(screen.getByText('Write the docs')).toBeInTheDocument();
   });
 
   it('does not render selection checkboxes when bulk is disabled', () => {

@@ -16,7 +16,7 @@ describe('BulkEditBar', () => {
     render(<BulkEditBar count={2} users={users} onApply={onApply} onClear={vi.fn()} />);
     // default action is priority — choose a value, then Apply
     fireEvent.change(screen.getByLabelText(/set priority/i), { target: { value: 'HIGH' } });
-    fireEvent.click(screen.getByRole('button', { name: /apply/i }));
+    fireEvent.click(screen.getByRole('button', { name: /review/i }));
     expect(onApply).toHaveBeenCalledWith('priority', 'HIGH');
   });
 
@@ -25,14 +25,35 @@ describe('BulkEditBar', () => {
     render(<BulkEditBar count={1} users={users} onApply={onApply} onClear={vi.fn()} />);
     // switch to assignee — empty value means "Unassigned", which is allowed
     fireEvent.change(screen.getByLabelText(/field/i), { target: { value: 'assignee' } });
-    fireEvent.click(screen.getByRole('button', { name: /apply/i }));
+    fireEvent.click(screen.getByRole('button', { name: /review/i }));
     expect(onApply).toHaveBeenCalledWith('assignee', '');
 
     onApply.mockClear();
     // switch to addLabel — empty text is blocked (Apply disabled)
     fireEvent.change(screen.getByLabelText(/field/i), { target: { value: 'addLabel' } });
-    fireEvent.click(screen.getByRole('button', { name: /apply/i }));
+    fireEvent.click(screen.getByRole('button', { name: /review/i }));
     expect(onApply).not.toHaveBeenCalled();
+  });
+
+  it('previews selected item changes before confirming', async () => {
+    const onApply = vi.fn(() => Promise.resolve());
+    render(
+      <BulkEditBar
+        count={1}
+        users={users}
+        userName={(id) => users.find((user) => user.id === id)?.fullName || id}
+        selectedItems={[{ id: 'WI-1', title: 'Fix login', priority: 'LOW', assigneeId: 'u1', tags: [] }]}
+        onApply={onApply}
+        onClear={vi.fn()}
+      />
+    );
+    fireEvent.change(screen.getByLabelText(/set priority/i), { target: { value: 'HIGH' } });
+    fireEvent.click(screen.getByRole('button', { name: /review/i }));
+    expect(screen.getByRole('dialog', { name: /review bulk changes/i })).toBeInTheDocument();
+    expect(screen.getAllByText('LOW').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('HIGH').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: /apply changes/i }));
+    expect(onApply).toHaveBeenCalledWith('priority', 'HIGH');
   });
 
   it('calls onClear', () => {

@@ -75,13 +75,22 @@ const STATUS_CHIP = {
 // KR-038: selectable — shows a checkbox when bulkMode is true.
 function ArticleCard({ art, onClick, selected = false, onToggleSelect, bulkMode = false }) {
   const preview = articlePreview(art);
+  const toggle = () => onToggleSelect?.(art.id);
+  const handleKeyDown = (event) => {
+    if (bulkMode && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault();
+      toggle();
+      return;
+    }
+    if (!bulkMode) onPressKey(event);
+  };
   return (
     <div
-      onClick={bulkMode ? undefined : onClick}
+      onClick={bulkMode ? toggle : onClick}
       role={bulkMode ? 'checkbox' : 'button'}
       aria-checked={bulkMode ? selected : undefined}
       tabIndex={0}
-      onKeyDown={bulkMode ? undefined : onPressKey}
+      onKeyDown={handleKeyDown}
       className={`bg-white dark:bg-neutral-800 border rounded-xl p-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40 ${
         selected
           ? 'border-brand-navy bg-brand-navy/5 dark:bg-brand-navy/10'
@@ -94,7 +103,7 @@ function ArticleCard({ art, onClick, selected = false, onToggleSelect, bulkMode 
           <button
             type="button"
             aria-label={selected ? `Deselect ${art.title}` : `Select ${art.title}`}
-            onClick={(e) => { e.stopPropagation(); onToggleSelect?.(art.id); }}
+            onClick={(e) => { e.stopPropagation(); toggle(); }}
             className="mt-0.5 flex-shrink-0 text-neutral-400 hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
           >
             {selected
@@ -104,7 +113,7 @@ function ArticleCard({ art, onClick, selected = false, onToggleSelect, bulkMode 
         )}
         <div
           className="flex-1 min-w-0"
-          onClick={bulkMode ? () => onToggleSelect?.(art.id) : onClick}
+          onClick={bulkMode ? undefined : onClick}
           role="presentation"
         >
           <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{art.title}</p>
@@ -198,7 +207,7 @@ export default function KnowledgeView({
   // KR-038: bulk-operation selection state
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
-  const bulkMode = selectedIds.size > 0;
+  const bulkMode = can('manage_projects') || selectedIds.size > 0;
 
   const toggleSelect = useCallback((id) => {
     setSelectedIds((prev) => {

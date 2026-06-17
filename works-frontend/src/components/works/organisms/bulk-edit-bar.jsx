@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/works/button';
+import { BulkPreviewModal } from '@/components/works/organisms/bulk-preview-modal';
 import { useI18n } from '@/lib/i18n';
 
 const ACTIONS = ['assignee', 'priority', 'addLabel', 'removeLabel'];
@@ -12,18 +13,28 @@ const PRIORITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
  * (RB-40 §1 — enforcement is server-side, this is just the control). Status is intentionally not a
  * bulk field (it must run the DoD + workflow engine per item), matching WorkItemBulkService.
  */
-export function BulkEditBar({ count, users = [], onApply, onClear, busy = false }) {
+export function BulkEditBar({ count, users = [], onApply, onClear, busy = false, selectedItems = [], userName }) {
   const { t } = useI18n();
   const [action, setAction] = useState('priority');
   const [value, setValue] = useState('');
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const needsText = action === 'addLabel' || action === 'removeLabel';
   const canApply = !busy && count > 0 && (action === 'assignee' || (needsText ? value.trim() : value));
 
-  const apply = () => {
+  const confirmApply = () => {
     if (!canApply) return;
     Promise.resolve(onApply(action, (action === 'assignee' ? value : value.trim())))
-      .then(() => setValue(''));
+      .then(() => {
+        setValue('');
+        setPreviewOpen(false);
+      });
+  };
+
+  const review = () => {
+    if (!canApply) return;
+    if (selectedItems.length > 0) setPreviewOpen(true);
+    else confirmApply();
   };
 
   return (
@@ -64,10 +75,21 @@ export function BulkEditBar({ count, users = [], onApply, onClear, busy = false 
         />
       )}
 
-      <Button variant="action" size="sm" onClick={apply} disabled={!canApply}>{t('deliver.bulk.apply')}</Button>
+      <Button variant="action" size="sm" onClick={review} disabled={!canApply}>{t('deliver.bulk.review')}</Button>
       <button type="button" onClick={onClear} className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger">
         <X className="h-3.5 w-3.5" aria-hidden="true" />{t('deliver.bulk.clear')}
       </button>
+      {previewOpen && (
+        <BulkPreviewModal
+          items={selectedItems}
+          action={action}
+          value={action === 'assignee' ? value : value.trim()}
+          userName={userName}
+          busy={busy}
+          onCancel={() => setPreviewOpen(false)}
+          onConfirm={confirmApply}
+        />
+      )}
     </div>
   );
 }

@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { Star, SquarePen, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ChevronDown, ChevronRight, Star, SquarePen, X } from 'lucide-react';
 import { DensityToggle } from '@/components/works/atoms/density-toggle';
+import { Select } from '@/components/works/atoms/select';
 import { DENSITY_PAD } from '@/lib/density';
 import { BoardWipBadge } from '@/components/works/organisms/board-wip-badge';
 import { WorkItemFilterBar } from '@/components/works/organisms/work-item-filter-bar';
 import { BulkEditBar } from '@/components/works/organisms/bulk-edit-bar';
 import { filterItems, sortItems, EMPTY_FILTERS, DEFAULT_SORT } from '@/lib/work-item-filter';
+import { GROUP_BY_OPTIONS, groupItemsIntoLanes } from '@/lib/board-swimlanes';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { Avatar } from '@/components/works/atoms/avatar';
 import { CardFieldsPopover } from '@/components/works/organisms/card-fields-popover';
@@ -93,6 +95,8 @@ export default function BoardView({
   // edit rights per item (RB-40 §1). Selection is by id so it survives filter/sort re-renders.
   const [selected, setSelected] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [groupBy, setGroupBy] = useState('none');
+  const [collapsedLanes, setCollapsedLanes] = useState(() => new Set());
   const bulkEnabled = typeof onBulkEdit === 'function';
   const toggleSelect = (id) => setSelected((prev) => {
     const next = new Set(prev);
@@ -122,6 +126,104 @@ export default function BoardView({
   };
   // Apply the shared filter model once; columns then group + sort the visible subset.
   const visibleItems = filterItems(workItems, filters, currentUserId);
+  const selectedItems = useMemo(
+    () => workItems.filter((item) => selected.has(item.id)),
+    [workItems, selected],
+  );
+  const parentTitle = (id) => workItems.find((item) => item.id === id)?.title || id;
+  const lanes = groupItemsIntoLanes(visibleItems, groupBy, {
+    userName,
+    parentTitle,
+    emptyLabel: groupBy === 'parent'
+      ? t('deliver.board.group.noParent')
+      : groupBy === 'assignee'
+        ? t('deliver.board.group.unassigned')
+        : t('deliver.board.group.uncategorized'),
+  });
+
+  const renderColumns = (itemsForLane, laneKey = 'all') => (
+    <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
+      {columns.map(col => {
+        // When workflow columns are active, bucket by exact status name match.
+        // When fallback columns are active, bucket by category key.
+        const colItems = sortItems(
+          itemsForLane.filter(i => catOf(i) === col.key),
+          sort,
+        );
+        const wipLimit = wipLimits[col.limitKey] ?? null;
+        const overWip = wipLimit != null && colItems.length > wipLimit;
+        // Category-based column background (design tokens - RB-30 section 1).
+        const colBg = col.category === 'IN_PROGRESS'
+          ? 'bg-brand-navy/5 dark:bg-neutral-800'
+          : col.category === 'DONE'
+            ? 'bg-semantic-success/5 dark:bg-neutral-800'
+            : 'bg-neutral-100 dark:bg-neutral-800';
+        return (
+          <div key={`${laneKey}-${col.key}`}
+            className={`flex-1 min-w-56 flex flex-col ${colBg} rounded-xl p-3 ${overWip ? 'ring-1 ring-semantic-danger/40' : ''}`}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, col.key)}>
+            <div className="mb-3 px-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${col.dot}`}
+                    style={col.color ? { backgroundColor: col.color } : undefined}
+                    aria-hidden="true" />
+                  <h3 className="text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider">
+                    {col.label ?? t(col.labelKey)}
+                  </h3>
+                </div>
+                <BoardWipBadge count={colItems.length} limit={wipLimit}
+                  canEdit={can('manage_projects')} onSet={(next) => setWipLimit(col.limitKey, next)} />
+              </div>
+              {overWip && <p className="mt-1 text-xs font-medium text-semantic-danger">{t('deliver.board.overWipLimit')}</p>}
+            </div>
+
+            <div className="space-y-2 flex-1">
+              {colItems.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed border-neutral-200 rounded-lg">
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400">{t('deliver.board.dropItemsHere')}</p>
+                </div>
+              )}
+              {colItems.map(item => (
+                <WorkCard
+                  key={item.id}
+                  item={item}
+                  category={col.key}
+                  density={density}
+                  densityPad={densityPad}
+                  iv={iv}
+                  userName={userName}
+                  customFieldDefs={customFieldDefs}
+                  statusResolver={statusResolver}
+                  onStar={toggleStar}
+                  onEdit={setSelectedItem}
+                  onDelete={handleDelete}
+                  onDragStart={handleDragStart}
+                  selectable={bulkEnabled}
+                  selected={selected.has(item.id)}
+                  onToggleSelect={toggleSelect}
+                />
+              ))}
+            </div>
+
+            <button onClick={() => {
+              setNewItem(p => ({
+                ...p,
+                status: workflowColumns
+                  ? col.name
+                  : (statusResolver?.firstStatusOfCategory(p.type, col.key) || p.status),
+              }));
+              setIsCreateOpen(true);
+            }}
+              className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-700 rounded-lg transition-colors">
+              <span>+</span> {t('deliver.board.addItem')}
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
 
   return (
     <div className="p-6 h-full flex flex-col">
@@ -140,6 +242,23 @@ export default function BoardView({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <label className="flex items-center gap-2 text-xs font-medium text-neutral-600 dark:text-neutral-400">
+            <span>{t('deliver.board.groupBy')}</span>
+            <Select
+              selectSize="sm"
+              value={groupBy}
+              onChange={(event) => {
+                setGroupBy(event.target.value);
+                setCollapsedLanes(new Set());
+              }}
+              aria-label={t('deliver.board.groupBy')}
+              className="min-w-32"
+            >
+              {GROUP_BY_OPTIONS.map((option) => (
+                <option key={option} value={option}>{t(`deliver.board.group.${option}`)}</option>
+              ))}
+            </Select>
+          </label>
           {/* Fields popover */}
           {cardPrefs && (
             <CardFieldsPopover
@@ -167,7 +286,15 @@ export default function BoardView({
 
       {bulkEnabled && selected.size > 0 && (
         <div className="mb-4">
-          <BulkEditBar count={selected.size} users={users} busy={bulkBusy} onApply={applyBulk} onClear={clearSelection} />
+          <BulkEditBar
+            count={selected.size}
+            users={users}
+            busy={bulkBusy}
+            selectedItems={selectedItems}
+            userName={userName}
+            onApply={applyBulk}
+            onClear={clearSelection}
+          />
         </div>
       )}
 
@@ -193,7 +320,7 @@ export default function BoardView({
             </div>
           ))}
         </div>
-      ) : (
+      ) : groupBy === 'none' ? (
         <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
           {columns.map(col => {
             // When workflow columns are active, bucket by exact status name match.
@@ -276,6 +403,37 @@ export default function BoardView({
               </div>
             );
           })}
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto">
+          <div className="space-y-4">
+            {lanes.map((lane) => {
+              const collapsed = collapsedLanes.has(lane.key);
+              return (
+                <section key={lane.key} className="min-w-full">
+                  <button
+                    type="button"
+                    onClick={() => setCollapsedLanes((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(lane.key)) next.delete(lane.key); else next.add(lane.key);
+                      return next;
+                    })}
+                    className="mb-2 flex items-center gap-2 rounded-md px-1 py-1 text-sm font-semibold text-brand-navy hover:bg-neutral-100 dark:text-neutral-100 dark:hover:bg-neutral-800"
+                    aria-expanded={!collapsed}
+                  >
+                    {collapsed
+                      ? <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                      : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
+                    <span>{lane.label}</span>
+                    <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300">
+                      {lane.items.length}
+                    </span>
+                  </button>
+                  {!collapsed && renderColumns(lane.items, lane.key)}
+                </section>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

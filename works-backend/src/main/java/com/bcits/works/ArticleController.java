@@ -291,38 +291,6 @@ public class ArticleController {
 
     // ── KR-038: Bulk operations ───────────────────────────────────────────────
 
-    /**
-     * POST /api/v1/articles/bulk-archive?workspaceId=...
-     * Body: { "ids": ["ART-1", "ART-2", ...] }
-     */
-    @PostMapping("/bulk-archive")
-    public ArticleService.BulkResult bulkArchive(@RequestBody Map<String, Object> body,
-                                                  @RequestParam String workspaceId) {
-        String userId = authenticatedUser.id();
-        @SuppressWarnings("unchecked")
-        List<String> ids = (List<String>) body.get("ids");
-        if (ids == null || ids.isEmpty()) {
-            return new ArticleService.BulkResult(java.util.List.of(), java.util.List.of());
-        }
-        return articleService.bulkArchive(ids, userId, workspaceId);
-    }
-
-    /**
-     * POST /api/v1/articles/bulk-delete?workspaceId=...
-     * Body: { "ids": ["ART-1", "ART-2", ...] }
-     */
-    @PostMapping("/bulk-delete")
-    public ArticleService.BulkResult bulkDelete(@RequestBody Map<String, Object> body,
-                                                 @RequestParam String workspaceId) {
-        String userId = authenticatedUser.id();
-        @SuppressWarnings("unchecked")
-        List<String> ids = (List<String>) body.get("ids");
-        if (ids == null || ids.isEmpty()) {
-            return new ArticleService.BulkResult(java.util.List.of(), java.util.List.of());
-        }
-        return articleService.bulkDelete(ids, userId, workspaceId);
-    }
-
     private Article applyTransition(String id, String action) {
         String userId = authenticatedUser.id();
         Article a = articleRepository.findById(id).orElseThrow();

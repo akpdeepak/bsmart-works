@@ -94,4 +94,36 @@ describe('DataTable', () => {
     );
     expect(screen.getByText('Mr. Alice')).toBeInTheDocument();
   });
+
+  it('supports additive sort model changes with shift-click', () => {
+    const fn = vi.fn();
+    render(
+      <DataTable
+        columns={[...COLS, { key: 'created', label: 'Created', sortable: true }]}
+        rows={ROWS}
+        multiSort
+        sortModel={[{ key: 'name', dir: 'asc' }]}
+        onSortModelChange={fn}
+      />
+    );
+    fireEvent.click(screen.getByRole('columnheader', { name: /created/i }), { shiftKey: true });
+    expect(fn).toHaveBeenCalledWith([{ key: 'name', dir: 'asc' }, { key: 'created', dir: 'asc' }]);
+  });
+
+  it('supports column visibility controls', () => {
+    const fn = vi.fn();
+    render(
+      <DataTable
+        columns={COLS}
+        rows={ROWS}
+        columnControls
+        columnState={{ order: ['name', 'status'], hidden: ['status'] }}
+        onColumnStateChange={fn}
+      />
+    );
+    expect(screen.queryByRole('columnheader', { name: /status/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Columns'));
+    fireEvent.click(screen.getByLabelText('Status'));
+    expect(fn).toHaveBeenCalledWith({ order: ['name', 'status'], hidden: [] });
+  });
 });

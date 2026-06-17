@@ -201,13 +201,13 @@ describe('KnowledgeView', () => {
   // KR-036: Recently viewed
   it('shows recently viewed section when articles have been opened (KR-036)', () => {
     // Pre-seed localStorage
-    localStorage.setItem('know-recent-ws1', JSON.stringify([
+    localStorage.setItem('know_recent_ws1_u1', JSON.stringify([
       { id: 'A1', title: 'My Article', icon: null },
     ]));
-    render(<KnowledgeView {...baseProps} workspaceId="ws1" />);
+    render(<KnowledgeView {...baseProps} workspaceId="ws1" currentUser={{ id: 'u1' }} />);
     expect(screen.getByRole('region', { name: /recently viewed/i })).toBeInTheDocument();
     expect(screen.getByText('My Article')).toBeInTheDocument();
-    localStorage.removeItem('know-recent-ws1');
+    localStorage.removeItem('know_recent_ws1_u1');
   });
 
   // KR-011: Properties panel toggle
@@ -263,7 +263,7 @@ describe('KnowledgeView', () => {
 
   it('shows checkboxes on article cards in the list view (KR-038)', () => {
     render(
-      <KnowledgeView {...baseProps} knowledgeTab="all"
+      <KnowledgeView {...baseProps} knowledgeTab="all" can={() => true}
         knowledgeArticles={[
           { id: 'A1', title: 'First', status: 'DRAFT', versionNumber: 1 },
           { id: 'A2', title: 'Second', status: 'PUBLISHED', versionNumber: 2 },
@@ -275,7 +275,7 @@ describe('KnowledgeView', () => {
 
   it('shows the BulkActionBar when at least one article is selected (KR-038)', async () => {
     render(
-      <KnowledgeView {...baseProps} knowledgeTab="all"
+      <KnowledgeView {...baseProps} knowledgeTab="all" can={() => true}
         knowledgeArticles={[
           { id: 'A1', title: 'First', status: 'DRAFT', versionNumber: 1 },
         ]} />,
@@ -290,7 +290,7 @@ describe('KnowledgeView', () => {
     const fetchKnowledgeArticles = vi.fn().mockResolvedValue([]);
 
     render(
-      <KnowledgeView {...baseProps} workspaceId="ws-1" knowledgeTab="all"
+      <KnowledgeView {...baseProps} workspaceId="ws-1" knowledgeTab="all" can={() => true}
         fetchKnowledgeArticles={fetchKnowledgeArticles}
         knowledgeArticles={[{ id: 'A1', title: 'First', status: 'DRAFT', versionNumber: 1 }]} />,
     );

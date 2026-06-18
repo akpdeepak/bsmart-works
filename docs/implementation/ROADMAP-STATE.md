@@ -1,4 +1,4 @@
-# bSmart Works Roadmap State
+# bSmart Works Roadmap State V.20
 
 This file is the durable resume ledger for Claude Code, Codex, GPT Code, and future AI coding
 sessions.
@@ -7,12 +7,12 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 
 ## Current status
 
-- Roadmap mode: Not started from this state file
+- Roadmap mode: V.20 source documents synchronized to GitHub
 - Active EPIC: None
 - Active branch: `main`
 - Last completed EPIC: None recorded here
 - Next recommended EPIC: EPIC 0 - Current-State Hardening, Truth, and Delivery Baseline
-- Last state update: 2026-06-17
+- Last state update: 2026-06-18
 
 ## Trigger contract
 
@@ -26,12 +26,31 @@ resume point.
 ## Source material
 
 - `docs/implementation/BSMART-TRANSFORMATION-ROADMAP.md`
+- `docs/implementation/source-documents/bSmart_Works_Final_Execution_Decision_Document.md`
+- `docs/implementation/source-documents/bSmart_Works_Implementation_Blueprint_Epic_Roadmap.md`
+- `docs/implementation/source-documents/bSmart_Works_Implementation_Blueprint_Epic_Roadmap_UIUX_Expanded.md`
+- `docs/implementation/source-documents/bSmart_Works_AI_Agent_Implementation_Instructions.md`
+- `C:\Users\user\Downloads\bSmart_Works_Final_Execution_Decision_Document.md`
 - `C:\Users\user\Downloads\bSmart_Works_Implementation_Blueprint_Epic_Roadmap.md`
 - `C:\Users\user\Downloads\bSmart_Works_Implementation_Blueprint_Epic_Roadmap_UIUX_Expanded.md`
 - `C:\Users\user\Downloads\bSmart_Works_AI_Agent_Implementation_Instructions.md`
 - `AGENTS.md`
 - `CLAUDE.md`
 - `ai-rules/*`
+
+## V.20 execution decision
+
+- Final priority: harden, simplify, consolidate, and polish before adding breadth.
+- V1 product shape: minimal AI-native work command center for enterprise project, delivery, service,
+  knowledge, and engineering visibility.
+- Product principle: minimal by default, powerful on demand, accurate always.
+- Execution priority layer:
+  `docs/implementation/source-documents/bSmart_Works_Final_Execution_Decision_Document.md`
+- Phase 1 remains mandatory before major expansion: EPIC 0, EPIC 1, EPIC 2, and EPIC 25 partial.
+- Visible navigation target: Today, Inbox, Messages, Work, Projects, Knowledge, Reports, More.
+- Do-not-start-yet constraints: broad messaging platform, full low-code suite, autonomous agents,
+  marketplace expansion, advanced analytics, public community, heavy DevSync dashboards, and all
+  admin builders at once.
 
 ## Resume checklist
 
@@ -78,6 +97,6 @@ resume point.
 
 ## Latest handoff
 
-Created the cross-session trigger contract and state ledger. The repo already had unrelated local
-changes before this file was created; preserve them when starting the roadmap.
-
+2026-06-18: synchronized V.20 source documents into the repo and updated the roadmap contract to
+include the Final Execution Decision Document as the execution prioritization layer. EPIC 0 remains
+the next implementation step. Preserve unrelated local changes if present when starting/resuming.

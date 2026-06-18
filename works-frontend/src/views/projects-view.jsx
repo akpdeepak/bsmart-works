@@ -24,9 +24,9 @@ export default function ProjectsView({
   const { t } = useI18n();
   if (loading && projects.length === 0) {
     return (
-      <div className="p-8 max-w-4xl">
+      <PageLayout header={null}>
         <ListSkeleton rows={4} />
-      </div>
+      </PageLayout>
     );
   }
   // "Done" is resolved from the item's status category, not a literal string, so teams using

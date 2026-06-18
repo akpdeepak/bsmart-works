@@ -35,6 +35,11 @@ const baseProps = {
 };
 
 describe('ReportBuilderView', () => {
+  it('uses the sanctioned dashboard page shell', () => {
+    const { container } = render(<ReportBuilderView {...baseProps} />);
+    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+  });
+
   it('renders the heading and empty state with no reports', () => {
     render(<ReportBuilderView {...baseProps} />);
     expect(screen.getByRole('heading', { name: /report builder/i })).toBeInTheDocument();

@@ -38,7 +38,7 @@ export default function ReleasesView({
   const [itemSearch, setItemSearch] = useState('');
   if (loading && releases.length === 0) {
     return (
-      <div className="p-8 max-w-3xl">
+      <div className="p-6">
         <ListSkeleton rows={4} />
       </div>
     );

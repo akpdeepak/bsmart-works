@@ -5,6 +5,7 @@ import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { ExportButtons } from '@/components/works/export-buttons';
 import { Modal } from '@/components/works/molecules/modal';
 import { ReportSectionCard } from '@/components/works/organisms/report-section-card';
+import { PageLayout } from '@/components/works/templates/page-layout';
 import { useI18n } from '@/lib/i18n';
 import { absoluteDate } from '@/lib/format';
 
@@ -50,14 +51,14 @@ export default function ReportBuilderView({
 
   if (loading && reports.length === 0 && !selectedReport) {
     return (
-      <div className="p-6 max-w-4xl">
+      <PageLayout header={null}>
         <ListSkeleton rows={4} />
-      </div>
+      </PageLayout>
     );
   }
   return (
     <>
-      <div className="p-6 overflow-y-auto h-full">
+      <PageLayout header={null}>
         {!selectedReport ? (
           <>
             <div className="flex items-center justify-between mb-5">
@@ -146,7 +147,7 @@ export default function ReportBuilderView({
                 subtitle={t('insights.reportBuilder.emptyReportSubtitle')}
                 action={<Button variant="action" onClick={() => setReportEditMode(true)}>{t('insights.reportBuilder.editReport')}</Button>} />
             ) : (
-              <div id="report-export-area" className="space-y-4 max-w-4xl">
+              <div id="report-export-area" className="space-y-4">
                 {reportSections.map((sec, i) => (
                   <ReportSectionCard key={i} section={sec} index={i} total={reportSections.length}
                     workItems={workItems} editMode={reportEditMode} workspaceId={activeWorkspaceId}
@@ -158,7 +159,7 @@ export default function ReportBuilderView({
             )}
           </>
         )}
-      </div>
+      </PageLayout>
 
       {/* Scheduled delivery modal */}
       {scheduleManagerOpen && selectedReport && (

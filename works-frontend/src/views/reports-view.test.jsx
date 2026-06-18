@@ -14,6 +14,12 @@ const baseProps = {
 };
 
 describe('ReportsView', () => {
+  it('uses the dashboard page width for report analytics', () => {
+    const { container } = render(<ReportsView {...baseProps} />);
+    expect(container.firstChild).toHaveClass('max-w-7xl');
+    expect(container.firstChild).not.toHaveClass('max-w-reading');
+  });
+
   it('shows the empty state when there are no sprints', () => {
     render(<ReportsView {...baseProps} />);
     expect(screen.getByText('No sprints to report on')).toBeInTheDocument();

@@ -10,6 +10,7 @@ import { DashboardDrillModal } from '@/components/works/organisms/dashboard-dril
 import { ConversationalDashboardPanel } from '@/components/works/organisms/conversational-dashboard-panel';
 import { DashboardSuggestionPanel } from '@/components/works/organisms/dashboard-suggestion-panel';
 import { WidgetBuilder } from '@/components/works/organisms/widget-builder';
+import { PageLayout } from '@/components/works/templates/page-layout';
 import { capabilityEnabled } from '@/lib/ai';
 import { DashboardAiSummary } from '@/components/works/organisms/dashboard-ai-summary';
 import { useI18n } from '@/lib/i18n';
@@ -122,14 +123,14 @@ export default function DashboardsView({
 
   if (loading && customDashboards.length === 0 && !selectedDashboard) {
     return (
-      <div className="p-6 max-w-4xl">
+      <PageLayout header={null}>
         <ListSkeleton rows={4} />
-      </div>
+      </PageLayout>
     );
   }
   return (
     <>
-      <div className="p-6 overflow-y-auto h-full">
+      <PageLayout header={null}>
         {!selectedDashboard ? (
           <>
             <div className="flex items-center justify-between mb-5">
@@ -315,7 +316,7 @@ export default function DashboardsView({
             )}
           </>
         )}
-      </div>
+      </PageLayout>
 
       {dashboardDrill && (
         <DashboardDrillModal drill={dashboardDrill} onClose={() => setDashboardDrill(null)}

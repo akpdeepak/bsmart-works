@@ -39,7 +39,7 @@ export default function ServiceView({
 }) {
   if (loading && serviceRequests.length === 0 && serviceCustomers.length === 0) {
     return (
-      <div className="p-8 max-w-4xl">
+      <div className="p-6">
         <ListSkeleton rows={4} />
       </div>
     );

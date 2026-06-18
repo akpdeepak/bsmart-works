@@ -84,7 +84,7 @@ function SprintPicker({ sprints, selectedSprintId, onSelect }) {
     !q.trim() || `${s.name} ${s.status}`.toLowerCase().includes(q.trim().toLowerCase()));
 
   return (
-    <div className="relative max-w-md mb-5" ref={ref}>
+    <div className="relative mb-5 w-full sm:w-96" ref={ref}>
       <button type="button" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}
         className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm text-neutral-900 dark:text-neutral-100 hover:border-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
         <span className="flex items-center gap-2 min-w-0">
@@ -257,7 +257,7 @@ export default function ReportsView({
 
   if (loading && sprints.length === 0) {
     return (
-      <PageLayout title={t('insights.reports.title')} width="reading">
+      <PageLayout title={t('insights.reports.title')}>
         <ListSkeleton rows={4} />
       </PageLayout>
     );
@@ -266,7 +266,6 @@ export default function ReportsView({
     <PageLayout
       title={t('insights.reports.title')}
       description={t('insights.reports.subtitle')}
-      width="reading"
     >
 
       {sprints.length === 0
@@ -497,7 +496,7 @@ export default function ReportsView({
                       <div className="flex flex-col justify-end h-32"><div className="w-5 rounded-t bg-brand-navy-tint" style={{ height: `${totalH}px` }} title={`Committed: ${s.totalPoints}pt`}></div></div>
                       <div className="flex flex-col justify-end h-32"><div className="w-5 rounded-t bg-semantic-success" style={{ height: `${doneH}px` }} title={`Delivered: ${s.donePoints}pt`}></div></div>
                     </div>
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center leading-tight max-w-20 truncate">{s.sprintName.replace('Sprint ', 'S').replace(' — ', ' ')}</p>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center leading-tight w-20 truncate">{s.sprintName.replace('Sprint ', 'S').replace(' — ', ' ')}</p>
                     <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${s.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'}`}>{s.status}</span>
                   </div>
                 );

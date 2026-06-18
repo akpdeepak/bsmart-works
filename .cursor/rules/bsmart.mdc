@@ -71,10 +71,10 @@ The Final Execution Decision Document is the V.20 execution prioritization layer
 consolidate, and polish before adding breadth. Complete EPIC 0, EPIC 1, EPIC 2, and EPIC 25 partial
 before major feature expansion. The V1.6 roadmap is a requirements overlay to map into the existing
 EPIC sequence; do not implement it as one broad branch or let it bypass Phase 1. Preserve the current
-mode model (`Today`, `Deliver`, `Service`, `Insights`, `Extend`) and the existing work-item hierarchy
-as the baseline. Add only logically needed, backwards-compatible work-item hierarchy/type extensions
-through explicit EPIC plans. If the local Downloads files are unavailable in a remote/GitHub-only
-session, continue from the repo-tracked source documents and state files.
+mode rail exactly as `Home`, `Deliver`, `Insight`, `Service`, `Know`, `Extend`, and preserve the
+existing work-item hierarchy as the baseline. Add only logically needed, backwards-compatible work-item
+hierarchy/type extensions through explicit EPIC plans. If the local Downloads files are unavailable in
+a remote/GitHub-only session, continue from the repo-tracked source documents and state files.
 
 **Start behavior:** sync from latest `main`, inspect the current worktree and open PR/branch state,
 read the transformation source of truth, begin with the next incomplete EPIC in roadmap order, create

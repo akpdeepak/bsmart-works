@@ -59,7 +59,7 @@ Reconciliation rules:
 - V1.6 requirements do not override Phase 1. EPIC 0, EPIC 1, EPIC 2, and EPIC 25 partial still come
   first.
 - V1.6 navigation suggestions do not replace the existing bSmart mode model. The product modes remain
-  `Today`, `Deliver`, `Service`, `Insights`, and `Extend`.
+  `Home`, `Deliver`, `Insight`, `Service`, `Know`, and `Extend`.
 - V1.6 work item suggestions do not replace the existing work-item hierarchy. Preserve the current
   hierarchy and taxonomy as the baseline; add only new types, links, or hierarchy behaviors that are
   logically needed, backwards-compatible, tenant-safe, and explicitly documented in the relevant EPIC
@@ -135,25 +135,28 @@ EPIC plan only if the repo copies are also missing.
 
 The product keeps the existing top-level mode model:
 
-1. Today
+1. Home
 2. Deliver
-3. Service
-4. Insights
-5. Extend
+3. Insight
+4. Service
+5. Know
+6. Extend
 
 These modes remain stable unless Deepak explicitly approves a navigation model change. V1.6 and V.20
 requirements must be mapped inside these modes rather than replacing them.
 
 Mode intent:
 
-- **Today:** personal and role-aware focus, priorities, next best actions, briefings, and daily work
-  clarity.
+- **Home:** personal and role-aware focus, priorities, next best actions, briefings, and daily work
+  clarity. Today-style cockpit capabilities live inside Home.
 - **Deliver:** work items, boards, backlogs, projects, releases, DevSync-linked execution,
   framework-aware delivery flows, and team operating model surfaces.
+- **Insight:** reports, dashboards, BQL, executive briefs, analytics, health, risks, compliance
+  posture, and source-backed leadership intelligence.
 - **Service:** service desk, customers, SLA, support/customer portal, incidents, escalations, and
   customer resolution workflows.
-- **Insights:** reports, dashboards, BQL, executive briefs, analytics, health, risks, compliance
-  posture, and source-backed leadership intelligence.
+- **Know:** knowledge base, articles, templates, decisions, lessons learned, evidence, documents, and
+  source-of-truth workflows.
 - **Extend:** admin, settings, security, automations, integrations, AI Studio, marketplace,
   configuration builders, operating model policy, and platform extension surfaces.
 
@@ -206,7 +209,7 @@ Low-code/no-code starts only with a configuration kernel and these three practic
 
 1. Field/form/layout builder
 2. Status/workflow builder
-3. Saved views/Today widgets builder
+3. Saved views/Home widgets builder
 
 Messaging must be work-aware, not social-media-first. Do not build social feeds, infinite-scroll
 engagement loops, popularity metrics, or vanity reactions as the core loop.
@@ -371,8 +374,9 @@ Intent -> Smart default -> Minimal input -> Preview -> Confirm -> Output -> Next
 
 V1 focuses on:
 
-1. Today: What matters now?
+1. Home: What matters now?
 2. Deliver: What work is being executed, blocked, planned, or ready to move?
-3. Service: Which customer/service commitments need attention?
-4. Insights: What progress, risk, health, and evidence should leaders see?
-5. Extend: What configuration, automation, AI, integration, or governance should admins control?
+3. Insight: What progress, risk, health, and evidence should leaders see?
+4. Service: Which customer/service commitments need attention?
+5. Know: What is the trusted source of knowledge, decisions, and evidence?
+6. Extend: What configuration, automation, AI, integration, or governance should admins control?

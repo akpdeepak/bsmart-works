@@ -2,9 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { expectNoA11yViolations } from '@/test/a11y';
 import { api } from '@/lib/apiClient';
+import { downloadMarkdown } from '@/lib/export';
 import KnowledgeView from './knowledge-view';
 
-vi.mock('@/lib/apiClient', () => ({ api: { send: vi.fn() } }));
+vi.mock('@/lib/apiClient', () => ({ api: { send: vi.fn(), raw: vi.fn() } }));
+vi.mock('@/lib/export', () => ({ downloadMarkdown: vi.fn() }));
 
 const noop = () => {};
 
@@ -55,6 +57,11 @@ describe('KnowledgeView', () => {
   // Individual tests that need specific return values override this with their own mockResolvedValue.
   beforeEach(() => {
     api.send.mockResolvedValue([]);
+    api.raw.mockResolvedValue({ ok: true, blob: () => Promise.resolve(new Blob(['x'])) });
+    downloadMarkdown.mockClear();
+    Object.defineProperty(window, 'print', { value: vi.fn(), writable: true });
+    global.URL.createObjectURL = vi.fn(() => 'blob:test');
+    global.URL.revokeObjectURL = vi.fn();
   });
 
   it('renders the Knowledge Spaces sidebar heading', () => {
@@ -257,6 +264,79 @@ describe('KnowledgeView', () => {
       expect.objectContaining({ method: 'POST' }),
     );
     expect(fetchKnowledgeArticles).toHaveBeenCalled();
+  });
+
+  it('renders an article outline from heading blocks (KR-014)', () => {
+    const blocks = JSON.stringify([
+      { id: 'h1', type: 'heading1', content: 'Overview', metadata: {} },
+      { id: 'p1', type: 'paragraph', content: 'Body', metadata: {} },
+      { id: 'h2', type: 'heading2', content: 'Next steps', metadata: {} },
+    ]);
+    render(
+      <KnowledgeView {...baseProps}
+        selectedArticle={{ id: 'A1', title: 'Doc', status: 'DRAFT', contentFormat: 'blocks', contentBlocks: blocks }} />,
+    );
+    expect(screen.getByRole('complementary', { name: /article outline/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next steps' })).toBeInTheDocument();
+  });
+
+  it('downloads article PDF through the server export endpoint (KR-015)', async () => {
+    render(
+      <KnowledgeView {...baseProps} workspaceId="ws-1"
+        selectedArticle={{ id: 'A1', title: 'Runbook', status: 'DRAFT', content: 'hi' }} />,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^pdf$/i }));
+    });
+    expect(api.raw).toHaveBeenCalledWith('/articles/A1/export/pdf?workspaceId=ws-1');
+  });
+
+  it('exports Markdown from article blocks (KR-015)', () => {
+    const blocks = JSON.stringify([{ id: 'p1', type: 'paragraph', content: 'Body', metadata: {} }]);
+    render(
+      <KnowledgeView {...baseProps} workspaceId="ws-1"
+        selectedArticle={{ id: 'A1', title: 'Runbook', status: 'DRAFT', contentFormat: 'blocks', contentBlocks: blocks }} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /markdown/i }));
+    expect(downloadMarkdown).toHaveBeenCalledWith('Runbook', expect.arrayContaining([
+      expect.objectContaining({ id: 'p1', content: 'Body' }),
+    ]));
+  });
+
+  it('invokes browser print for article print export (KR-015)', () => {
+    render(
+      <KnowledgeView {...baseProps} workspaceId="ws-1"
+        selectedArticle={{ id: 'A1', title: 'Runbook', status: 'DRAFT', content: 'hi' }} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /print/i }));
+    expect(window.print).toHaveBeenCalled();
+  });
+
+  it('loads and renders version diffs in the history panel (KR-072)', async () => {
+    api.send.mockResolvedValueOnce({
+      fromVersion: 1,
+      toVersion: 2,
+      titleChanged: false,
+      lines: [
+        { type: 'REMOVED', text: 'old line' },
+        { type: 'ADDED', text: 'new line' },
+      ],
+    });
+    render(
+      <KnowledgeView {...baseProps} articlePanel="history"
+        selectedArticle={{ id: 'A1', title: 'Doc', status: 'DRAFT', content: 'hi' }}
+        articleVersions={[
+          { id: 'v2', versionNumber: 2, savedBy: 'A' },
+          { id: 'v1', versionNumber: 1, savedBy: 'A' },
+        ]} />,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^diff$/i }));
+    });
+    expect(api.send).toHaveBeenCalledWith('/articles/A1/versions/1/diff/2');
+    expect(await screen.findByText('old line')).toBeInTheDocument();
+    expect(screen.getByText('new line')).toBeInTheDocument();
   });
 
   // ── KR-038: Bulk operations ────────────────────────────────────────────────

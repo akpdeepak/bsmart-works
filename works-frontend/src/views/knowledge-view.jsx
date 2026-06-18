@@ -3,6 +3,7 @@ import {
   Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen,
   AlertTriangle, Pencil, Eye, ChevronRight, LayoutTemplate,
   Copy, SlidersHorizontal, Share2, CheckSquare, Square, Filter, X, Home,
+  ListTree, Download, Printer,
 } from 'lucide-react';
 import { MeetingNotesAssistant } from '@/components/knowledge/MeetingNotesAssistant';
 import { CreateWorkItemsFromChecklist } from '@/components/knowledge/CreateWorkItemsFromChecklist';
@@ -37,6 +38,7 @@ import { ArticleSharePopover } from '@/components/knowledge/ArticleSharePopover'
 import { useRecentArticles } from '@/hooks/use-recent-articles';
 import { onPressKey, renderMd } from '@/lib/utils';
 import { blocksText, countWords } from '@/lib/doc-stats';
+import { downloadMarkdown } from '@/lib/export';
 import { makeAiAssist, knowledgeAi } from '@/lib/knowledge-ai';
 import { capabilityEnabled } from '@/lib/ai';
 import { api } from '@/lib/apiClient';
@@ -62,6 +64,42 @@ function articlePreview(art, maxLen = 120) {
   } catch { /* keep art.content fallback */ }
   const trimmed = text.trim();
   return trimmed.length > maxLen ? `${trimmed.substring(0, maxLen)}…` : trimmed;
+}
+
+function parseArticleBlocks(article) {
+  if (!article?.contentBlocks) return [];
+  try {
+    const parsed = JSON.parse(article.contentBlocks || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function articleOutline(article) {
+  return parseArticleBlocks(article)
+    .filter((block) => ['heading1', 'heading2', 'heading3'].includes(block.type) && String(block.content || '').trim())
+    .map((block, index) => ({
+      id: block.id || `heading-${index}`,
+      text: String(block.content || '').trim(),
+      level: block.type === 'heading1' ? 1 : block.type === 'heading2' ? 2 : 3,
+    }));
+}
+
+function safeDownloadName(title, extension) {
+  const base = String(title || 'article').replace(/[^a-zA-Z0-9 _-]/g, '').trim() || 'article';
+  return `${base}.${extension}`;
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 const STATUS_CHIP = {
@@ -287,6 +325,7 @@ export default function KnowledgeView({
 
   // KR-066: share popover state
   const [sharePopoverOpen, setSharePopoverOpen] = useState(false);
+  const [exportBusy, setExportBusy] = useState(null);
 
   // KR-044: AI semantic search — search mode toggle + AI answer state
   const [searchMode, setSearchMode] = useSearchMode();
@@ -472,11 +511,68 @@ export default function KnowledgeView({
   // KR-011: word count for the properties panel
   const wordCount = (() => {
     if (!selectedArticle) return 0;
-    let blocks;
-    try { blocks = JSON.parse(selectedArticle.contentBlocks || '[]'); } catch { blocks = []; }
+    const blocks = parseArticleBlocks(selectedArticle);
     if (Array.isArray(blocks) && blocks.length > 0) return countWords(blocksText(blocks));
     return countWords(selectedArticle.content || '');
   })();
+
+  const outline = articleOutline(selectedArticle);
+  const articleBlocks = parseArticleBlocks(selectedArticle);
+
+  const handleHeadingJump = (id) => {
+    const safeId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(id) : id.replace(/"/g, '\\"');
+    const target = document.querySelector(`[data-block-id="${safeId}"]`);
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleArticleExport = async (format) => {
+    if (!selectedArticle) return;
+    if (format === 'print') {
+      window.print();
+      return;
+    }
+    if (format === 'md') {
+      downloadMarkdown(selectedArticle.title, articleBlocks.length > 0
+        ? articleBlocks
+        : [{ id: 'content', type: 'paragraph', content: selectedArticle.content || '', metadata: {} }]);
+      return;
+    }
+    if (!workspaceId) return;
+    setExportBusy(format);
+    try {
+      const res = await api.raw(`/articles/${encodeURIComponent(selectedArticle.id)}/export/${format}?workspaceId=${encodeURIComponent(workspaceId)}`);
+      if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+      downloadBlob(await res.blob(), safeDownloadName(selectedArticle.title, format));
+    } finally {
+      setExportBusy(null);
+    }
+  };
+
+  const [diffVersions, setDiffVersions] = useState({ from: '', to: '', loading: false, data: null, error: '' });
+  useEffect(() => {
+    if (articlePanel !== 'history' || articleVersions.length < 2) {
+      setDiffVersions({ from: '', to: '', loading: false, data: null, error: '' });
+      return;
+    }
+    setDiffVersions((prev) => ({
+      ...prev,
+      from: prev.from || String(articleVersions[1]?.versionNumber || ''),
+      to: prev.to || String(articleVersions[0]?.versionNumber || ''),
+    }));
+  }, [articlePanel, articleVersions]);
+
+  const loadVersionDiff = async () => {
+    if (!selectedArticle?.id || !diffVersions.from || !diffVersions.to) return;
+    setDiffVersions((prev) => ({ ...prev, loading: true, data: null, error: '' }));
+    try {
+      const data = await api.send(
+        `/articles/${encodeURIComponent(selectedArticle.id)}/versions/${encodeURIComponent(diffVersions.from)}/diff/${encodeURIComponent(diffVersions.to)}`,
+      );
+      setDiffVersions((prev) => ({ ...prev, loading: false, data, error: '' }));
+    } catch (error) {
+      setDiffVersions((prev) => ({ ...prev, loading: false, data: null, error: error.message || 'Could not load diff.' }));
+    }
+  };
 
   // KR-022: duplicate the current article
   const handleDuplicate = async () => {
@@ -1083,10 +1179,46 @@ export default function KnowledgeView({
                   <ArticleSummarizeButton workspaceId={workspaceId} text={articleText(selectedArticle)} />
                 )}
 
+                <span className="text-neutral-200 dark:text-neutral-700 select-none mx-0.5" aria-hidden="true">|</span>
+
+                <button
+                  type="button"
+                  onClick={() => handleArticleExport('pdf')}
+                  disabled={exportBusy === 'pdf'}
+                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 disabled:opacity-60"
+                >
+                  <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                  PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleArticleExport('docx')}
+                  disabled={exportBusy === 'docx'}
+                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 disabled:opacity-60"
+                >
+                  <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                  DOCX
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleArticleExport('md')}
+                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+                >
+                  <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                  Markdown
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleArticleExport('print')}
+                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+                >
+                  <Printer className="h-3.5 w-3.5" aria-hidden="true" />
+                  Print
+                </button>
+
                 {/* KR-077: convert unchecked action items to work items */}
                 {selectedArticle.templateType === 'MEETING_NOTES' && (() => {
-                  let blocks = [];
-                  try { blocks = JSON.parse(selectedArticle.contentBlocks || '[]'); } catch { /* ignore */ }
+                  const blocks = parseArticleBlocks(selectedArticle);
                   return Array.isArray(blocks) && blocks.some(b => b.type === 'checklist' && (b.metadata?.items || []).some(i => !i.done)) ? (
                     <CreateWorkItemsFromChecklist
                       blocks={blocks}
@@ -1284,10 +1416,8 @@ export default function KnowledgeView({
                         workspaceId={workspaceId}
                         readOnly={!lockGranted}
                         blocks={(() => {
-                          try {
-                            const parsed = JSON.parse(selectedArticle.contentBlocks || '[]');
-                            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-                          } catch { /* fall through */ }
+                          const parsed = parseArticleBlocks(selectedArticle);
+                          if (parsed.length > 0) return parsed;
                           if (selectedArticle.content) {
                             return [{ id: `blk-migrate-${selectedArticle.id}`, type: 'paragraph', content: selectedArticle.content, metadata: {} }];
                           }
@@ -1321,8 +1451,7 @@ export default function KnowledgeView({
                     {(() => {
                       // Block-format articles render via BlockRenderer.
                       // Markdown articles render via renderMd. Neither should ever show nothing.
-                      let blocks;
-                      try { blocks = JSON.parse(selectedArticle.contentBlocks || '[]'); } catch { blocks = []; }
+                      const blocks = parseArticleBlocks(selectedArticle);
 
                       if (Array.isArray(blocks) && blocks.length > 0) {
                         return <BlockRenderer blocks={blocks} workspaceId={workspaceId} />;
@@ -1390,6 +1519,27 @@ export default function KnowledgeView({
                 )}
               </div>
 
+              {outline.length > 0 && (
+                <aside className="hidden xl:block w-56 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 overflow-y-auto p-4" aria-label="Article outline">
+                  <h3 className="flex items-center gap-1.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">
+                    <ListTree className="h-3.5 w-3.5" aria-hidden="true" />
+                    Outline
+                  </h3>
+                  <nav className="space-y-1">
+                    {outline.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleHeadingJump(item.id)}
+                        className={`block w-full text-left rounded px-2 py-1 text-xs text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${item.level === 2 ? 'pl-4' : item.level === 3 ? 'pl-6' : ''}`}
+                      >
+                        {item.text}
+                      </button>
+                    ))}
+                  </nav>
+                </aside>
+              )}
+
               {/* ── KR-025: Block comments panel ── */}
               <BlockCommentsPanel
                 articleId={selectedArticle?.id}
@@ -1418,7 +1568,7 @@ export default function KnowledgeView({
 
               {/* ── Contextual side panels ── */}
               {articlePanel === 'history' && (
-                <div className="w-64 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
+                <div className="w-80 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
                   <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Version history</h3>
                   {articleVersions.length === 0 ? (
                     <p className="text-xs text-neutral-500">No versions saved yet.</p>
@@ -1443,6 +1593,71 @@ export default function KnowledgeView({
                           </button>
                         </div>
                       ))}
+                    </div>
+                  )}
+                  {articleVersions.length >= 2 && (
+                    <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700">
+                      <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">Compare versions</h4>
+                      <div className="flex items-end gap-2">
+                        <label className="flex-1 text-xs text-neutral-500">
+                          From
+                          <select
+                            aria-label="Compare from version"
+                            className="input mt-1 text-xs w-full"
+                            value={diffVersions.from}
+                            onChange={(e) => setDiffVersions((prev) => ({ ...prev, from: e.target.value, data: null }))}
+                          >
+                            {articleVersions.map(v => <option key={v.id} value={v.versionNumber}>v{v.versionNumber}</option>)}
+                          </select>
+                        </label>
+                        <label className="flex-1 text-xs text-neutral-500">
+                          To
+                          <select
+                            aria-label="Compare to version"
+                            className="input mt-1 text-xs w-full"
+                            value={diffVersions.to}
+                            onChange={(e) => setDiffVersions((prev) => ({ ...prev, to: e.target.value, data: null }))}
+                          >
+                            {articleVersions.map(v => <option key={v.id} value={v.versionNumber}>v{v.versionNumber}</option>)}
+                          </select>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={loadVersionDiff}
+                          disabled={diffVersions.loading || !diffVersions.from || !diffVersions.to}
+                          className="text-xs px-2.5 py-1.5 rounded-lg bg-brand-navy text-white hover:bg-brand-navy-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 disabled:opacity-60"
+                        >
+                          {diffVersions.loading ? 'Loading' : 'Diff'}
+                        </button>
+                      </div>
+                      {diffVersions.error && (
+                        <p className="mt-2 text-xs text-semantic-danger">{diffVersions.error}</p>
+                      )}
+                      {diffVersions.data && (
+                        <div className="mt-3 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden">
+                          <div className="px-3 py-2 border-b border-neutral-200 dark:border-neutral-700 text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                            v{diffVersions.data.fromVersion} to v{diffVersions.data.toVersion}
+                            {diffVersions.data.titleChanged ? ' - title changed' : ''}
+                          </div>
+                          <div className="max-h-80 overflow-auto font-mono text-xs">
+                            {(diffVersions.data.lines || []).map((line, idx) => (
+                              <div
+                                key={`${line.type}-${idx}`}
+                                className={`px-3 py-1 whitespace-pre-wrap ${
+                                  line.type === 'ADDED'
+                                    ? 'bg-semantic-success-surface text-semantic-success'
+                                    : line.type === 'REMOVED'
+                                      ? 'bg-semantic-danger/10 text-semantic-danger'
+                                      : 'text-neutral-600 dark:text-neutral-300'
+                                }`}
+                              >
+                                <span aria-hidden="true">{line.type === 'ADDED' ? '+ ' : line.type === 'REMOVED' ? '- ' : '  '}</span>
+                                {line.text}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

@@ -3,6 +3,7 @@ import { Lightbulb, Sparkles } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { useI18n } from '@/lib/i18n';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
+import { PageLayout } from '@/components/works/templates/page-layout';
 import {
   CEREMONY_LABELS, ROLE_TABS, RUN_TABS, INSIGHTS_TABS,
   TIP_TONE, RAG_TONE, RAG_DOT,
@@ -104,13 +105,13 @@ export default function ScrumMasterCockpitView({
 
   if (loading && projects.length === 0 && sprints.length === 0) {
     return (
-      <div className="p-6">
+      <PageLayout header={null}>
         <ListSkeleton rows={4} />
-      </div>
+      </PageLayout>
     );
   }
   return (
-    <div className="flex flex-col h-full overflow-y-auto p-6 max-w-7xl mx-auto w-full">
+    <PageLayout header={null} className="flex h-full flex-col">
       <div className="flex items-center justify-between mb-5">
         <div>
           <div className="flex items-center gap-2">
@@ -308,6 +309,6 @@ export default function ScrumMasterCockpitView({
       {tab === 'patterns' && (
         <PatternsTab runPatterns={runPatterns} patternsResult={patternsResult} cockpitLoading={cockpitLoading} />
       )}
-    </div>
+    </PageLayout>
   );
 }

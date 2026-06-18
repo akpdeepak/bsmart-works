@@ -87,6 +87,11 @@ beforeEach(() => {
 });
 
 describe('PerformancePanel', () => {
+  it('uses the sanctioned dashboard page shell', () => {
+    const { container } = renderWith(<PerformancePanel workspaceId="ws-1" />);
+    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+  });
+
   it('shows the personal layer with a privacy message by default', async () => {
     renderWith(<PerformancePanel workspaceId="ws-1" />);
     await waitFor(() => expect(kpiClient.personal).toHaveBeenCalledWith('ws-1'));

@@ -11,7 +11,7 @@ export default function AccountView({
   setMfaSetup, setMfaSetupCode, saveNotifPrefs, handleMfaEnroll, handleMfaConfirm,
 }) {
   return (
-    <PageLayout title="My Account" description="Personal settings and security" width="reading">
+    <PageLayout title="My Account" description="Personal settings and security">
 
       {/* Profile */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 mb-6">

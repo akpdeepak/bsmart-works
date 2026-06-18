@@ -15,7 +15,7 @@ export default function WorkspaceView({
   addProjectMember, can, showToast,
 }) {
   return (
-            <PageLayout title="Workspace Settings" description="BCITS Master Workspace" width="reading">
+            <PageLayout title="Workspace Settings" description="BCITS Master Workspace">
               <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 mb-6">
                 <h2 className="font-semibold text-neutral-900 mb-1">Members</h2>
                 <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">People who have access to this workspace</p>

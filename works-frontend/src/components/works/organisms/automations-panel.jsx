@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Zap, Play, FlaskConical, Plus } from 'lucide-react';
 import { automationClient, runTone } from '@/lib/automation';
 import { Badge } from '@/components/works/atoms/badge';
+import { PageLayout } from '@/components/works/templates/page-layout';
 
 // Organism — the iteration-13 Automation surface (Cap C). Lists "When/If/Then" rules, supports
 // creating a rule, toggling it on/off, a no-mutation test (dry-run) preview, and the run audit log.
@@ -102,7 +103,7 @@ export function AutomationsPanel({ workspaceId, can = () => true, onToast = () =
   }
 
   return (
-    <div className="p-8 max-w-7xl">
+    <PageLayout header={null}>
       <div className="mb-6 flex items-center gap-2">
         <Zap aria-hidden="true" className="h-6 w-6 text-brand-orange" />
         <div>
@@ -231,6 +232,6 @@ export function AutomationsPanel({ workspaceId, can = () => true, onToast = () =
           ))}
         </ul>
       )}
-    </div>
+    </PageLayout>
   );
 }

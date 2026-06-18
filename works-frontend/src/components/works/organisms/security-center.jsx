@@ -17,6 +17,7 @@ import { securityClient } from '@/lib/security';
 import { DEFAULT_PAGE_SIZE } from '@/lib/pagination';
 import { registerPasskey, passkeysSupported } from '@/lib/passkey';
 import { exportRowsToCsv } from '@/lib/export';
+import { PageLayout } from '@/components/works/templates/page-layout';
 
 const REGIONS = [
   { id: 'IN', label: 'India (Mumbai)' }, { id: 'EU', label: 'EU (Frankfurt)' },
@@ -208,16 +209,16 @@ export function SecurityCenter({ workspaceId, can, onToast }) {
 
   if (loading) {
     return (
-      <div className="p-6 space-y-4">
+      <PageLayout header={null} className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-32 w-full" />
-      </div>
+      </PageLayout>
     );
   }
   if (error) {
     return (
-      <div className="p-6">
+      <PageLayout header={null}>
         <EmptyState
           icon={AlertTriangle} title="Couldn’t load the Security Center" subtitle={error}
           action={(
@@ -226,12 +227,12 @@ export function SecurityCenter({ workspaceId, can, onToast }) {
             </Button>
           )}
         />
-      </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="p-6 overflow-y-auto h-full max-w-7xl">
+    <PageLayout header={null}>
       <div className="flex items-start justify-between gap-3 mb-5">
         <div>
           <h1 className="text-2xl font-bold text-brand-navy dark:text-white flex items-center gap-2">
@@ -570,6 +571,6 @@ export function SecurityCenter({ workspaceId, can, onToast }) {
           </p>
         </Card>
       )}
-    </div>
+    </PageLayout>
   );
 }

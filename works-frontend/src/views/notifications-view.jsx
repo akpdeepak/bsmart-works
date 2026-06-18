@@ -182,7 +182,7 @@ export default function NotificationsView({
 
   if (loading && notifications.length === 0) {
     return (
-      <PageLayout width="reading">
+      <PageLayout>
         <Skeleton className="h-7 w-36 mb-6" />
         <ListSkeleton rows={5} />
       </PageLayout>
@@ -206,7 +206,6 @@ export default function NotificationsView({
           className="text-sm text-brand-navy-tint hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
         >Mark all as read</button>
       )}
-      width="reading"
     >
       <Tabs defaultValue="inbox">
         <TabList aria-label="Notifications sections">

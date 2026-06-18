@@ -4,6 +4,7 @@ import { Field } from '@/components/works/field';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { AiMetaBadge } from '@/components/works/ai-meta-badge';
+import { PageLayout } from '@/components/works/templates/page-layout';
 
 // Product Owner Workspace — extracted from the App.jsx monolith (UX finding A3/H2). Behaviour-
 // preserving: the parent owns all roadmap/idea/feedback/OKR/release-note state and handlers; this
@@ -20,9 +21,9 @@ export default function PoWorkspaceView({
 }) {
   if (loading && projects.length === 0) {
     return (
-      <div className="p-6 max-w-7xl mx-auto w-full">
+      <PageLayout header={null}>
         <ListSkeleton rows={4} />
-      </div>
+      </PageLayout>
     );
   }
 
@@ -49,7 +50,7 @@ export default function PoWorkspaceView({
   }
 
   return (
-            <div className="flex flex-col h-full overflow-y-auto p-6 max-w-7xl mx-auto w-full">
+            <PageLayout header={null} className="flex h-full flex-col">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Product Owner Workspace</h1>
@@ -301,6 +302,6 @@ export default function PoWorkspaceView({
                   <EmptyState icon={Megaphone} title="Targeted communication" subtitle="Send release/status updates to the stakeholders who care — built on the stakeholder map (I15-S14)." />
                 </div>
               )}
-            </div>
+            </PageLayout>
   );
 }

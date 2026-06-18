@@ -33,6 +33,11 @@ function renderView(overrides = {}) {
 // Personal settings moved here from WorkspaceView (audit finding #29) — this file carries the
 // coverage those sections had in workspace-view.test.jsx.
 describe('AccountView', () => {
+  it('uses the sanctioned dashboard page shell', () => {
+    const { container } = renderView();
+    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+  });
+
   it('shows the profile identity and the notification preferences', () => {
     renderView();
     expect(screen.getByRole('heading', { name: 'My Account' })).toBeInTheDocument();

@@ -51,6 +51,11 @@ const admin = (perm) => perm === 'manage_security';
 describe('SecurityCenter', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('uses the sanctioned dashboard page shell while loading', () => {
+    const { container } = render(<SecurityCenter workspaceId="WS-001" can={admin} onToast={() => {}} />);
+    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+  });
+
   it('renders the posture overview once loaded', async () => {
     render(<SecurityCenter workspaceId="WS-001" can={admin} onToast={() => {}} />);
     expect(await screen.findByText('Security Center')).toBeInTheDocument();

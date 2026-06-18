@@ -23,6 +23,11 @@ const sampleThemes = [
 ];
 
 describe('PoWorkspaceView', () => {
+  it('uses the sanctioned dashboard page shell', () => {
+    const { container } = render(<PoWorkspaceView {...baseProps} />);
+    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+  });
+
   it('renders the roadmap tab empty state by default', () => {
     render(<PoWorkspaceView {...baseProps} />);
     expect(screen.getByRole('heading', { name: 'Product Owner Workspace' })).toBeInTheDocument();

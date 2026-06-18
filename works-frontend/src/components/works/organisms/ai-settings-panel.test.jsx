@@ -44,6 +44,11 @@ beforeEach(() => {
 });
 
 describe('AiSettingsPanel', () => {
+  it('uses the sanctioned dashboard page shell while loading', () => {
+    const { container } = render(<AiSettingsPanel workspaceId="WS-001" can={admin} onToast={() => {}} />);
+    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+  });
+
   it('renders capabilities, the master toggle and the budget once loaded', async () => {
     render(<AiSettingsPanel workspaceId="WS-001" can={admin} onToast={() => {}} />);
     expect(await screen.findByText('AI Control')).toBeInTheDocument();

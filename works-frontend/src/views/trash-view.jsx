@@ -10,7 +10,7 @@ import { TypeBadge } from '@/components/works/work-item-type';
 export default function TrashView({ loading = false, trashItems, restoreFromTrash, permanentDelete }) {
   if (loading && trashItems.length === 0) {
     return (
-      <PageLayout width="reading">
+      <PageLayout>
         <Skeleton className="h-7 w-24 mb-6" />
         <ListSkeleton rows={4} />
       </PageLayout>
@@ -18,7 +18,7 @@ export default function TrashView({ loading = false, trashItems, restoreFromTras
   }
 
   return (
-    <PageLayout title="Trash" description="Deleted items are kept for 30 days" width="reading">
+    <PageLayout title="Trash" description="Deleted items are kept for 30 days">
       {trashItems.length === 0
         ? <EmptyState icon={Trash2} title="Trash is empty" subtitle="Deleted work items will appear here for 30 days before permanent removal." />
         : (

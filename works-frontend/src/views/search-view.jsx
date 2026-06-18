@@ -198,7 +198,7 @@ export default function SearchView({ workspaceId, onSelectItem, onSelectArticle 
   const showResults = !isLoading && !isError && !showPrompt && allResults.length > 0;
 
   return (
-    <PageLayout title="Search" width="reading">
+    <PageLayout title="Search">
       {/* Search input */}
       <div className="relative mb-6">
         <Search

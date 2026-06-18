@@ -32,6 +32,11 @@ const baseProps = {
 // Personal settings (MFA, notification prefs, language) moved to AccountView —
 // covered in account-view.test.jsx.
 describe('WorkspaceView', () => {
+  it('uses the sanctioned dashboard page shell', () => {
+    const { container } = render(<WorkspaceView {...baseProps} />);
+    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+  });
+
   it('lists workspace members', () => {
     render(<WorkspaceView {...baseProps} />);
     expect(screen.getByRole('heading', { name: 'Workspace Settings' })).toBeInTheDocument();

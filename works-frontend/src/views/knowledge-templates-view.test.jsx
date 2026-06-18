@@ -22,6 +22,12 @@ const TEMPLATES = [
 describe('KnowledgeTemplatesView', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('uses the sanctioned dashboard page shell', () => {
+    templatesClient.list.mockResolvedValue([]);
+    const { container } = render(<KnowledgeTemplatesView workspaceId="WS-001" />);
+    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+  });
+
   it('renders the templates returned from the API', async () => {
     templatesClient.list.mockResolvedValue(TEMPLATES);
 

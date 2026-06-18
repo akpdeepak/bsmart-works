@@ -4,6 +4,7 @@ import { integrationsClient } from '@/lib/integrations';
 import { useDialog } from '@/lib/dialog';
 import { Badge } from '@/components/works/atoms/badge';
 import { Skeleton } from '@/components/works/atoms/skeleton';
+import { PageLayout } from '@/components/works/templates/page-layout';
 
 // Organism — the iteration-13 Integrations surface (Cap Q / Cap A). Three tabs: connectors
 // (Slack/GitHub/GitLab/email/calendar + SSO/SCIM), outbound webhooks, and public-API tokens.
@@ -105,7 +106,7 @@ export function IntegrationsPanel({ workspaceId, can = () => true, onToast = () 
   }
 
   return (
-    <div className="p-8 max-w-7xl">
+    <PageLayout header={null}>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-brand-navy">Integrations</h1>
         <p className="mt-0.5 text-sm text-neutral-600">Connect Works to the tools your teams already use.</p>
@@ -218,6 +219,6 @@ export function IntegrationsPanel({ workspaceId, can = () => true, onToast = () 
           )}
         </div>
       )}
-    </div>
+    </PageLayout>
   );
 }

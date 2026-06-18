@@ -5,6 +5,7 @@ import { Field } from '@/components/works/field';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { templatesClient, extractionClient } from '@/lib/knowledge-advanced';
 import { KnowAiPanel } from '@/components/knowledge/KnowAiPanel';
+import { PageLayout } from '@/components/works/templates/page-layout';
 
 // Advanced Knowledge — Document templates + AI structured-data extraction (iteration-20 Cap I).
 // Self-fetching like DeveloperWorkspace: the parent supplies workspaceId + an optional toast handler.
@@ -69,7 +70,7 @@ export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onT
   }, [workspaceId, text, notify]);
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto p-6 max-w-7xl mx-auto w-full">
+    <PageLayout header={null} className="flex h-full flex-col">
       <div className="mb-5">
         <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Advanced Knowledge</h1>
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
@@ -224,7 +225,7 @@ export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onT
           </div>
         </div>
       </section>
-    </div>
+    </PageLayout>
   );
 }
 

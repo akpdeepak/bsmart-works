@@ -77,9 +77,9 @@ export default function PmView({
   const [noteStatus, setNoteStatus] = useState({});
   if (loading && projects.length === 0) {
     return (
-      <div className="p-6 max-w-6xl">
+      <PageLayout header={null}>
         <ListSkeleton rows={4} />
-      </div>
+      </PageLayout>
     );
   }
   const saveMeetingNote = (section, content) => {

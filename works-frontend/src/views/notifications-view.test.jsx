@@ -27,6 +27,11 @@ const baseProps = {
 };
 
 describe('NotificationsView', () => {
+  it('uses the sanctioned dashboard page shell', () => {
+    const { container } = render(<NotificationsView {...baseProps} />);
+    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+  });
+
   it('shows the empty state when there are no notifications', () => {
     render(<NotificationsView {...baseProps} />);
     expect(screen.getByText("You're all caught up")).toBeInTheDocument();

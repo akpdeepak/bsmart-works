@@ -25,6 +25,12 @@ describe('AutomationsPanel', () => {
     automationClient.runs.mockResolvedValue({ items: [] });
   });
 
+  it('uses the sanctioned dashboard page shell', () => {
+    automationClient.list.mockResolvedValue([]);
+    const { container } = render(<AutomationsPanel workspaceId="ws-1" />);
+    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+  });
+
   it('lists existing rules', async () => {
     automationClient.list.mockResolvedValue([
       { id: 'AUTO-1', name: 'Triage P0', triggerType: 'ITEM_CREATED', conditionExpr: 'priority = Critical', enabled: true, runCount: 2 },

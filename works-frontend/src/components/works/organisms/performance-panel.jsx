@@ -11,6 +11,7 @@ import { AiBudgetNotice } from '@/components/works/organisms/ai-budget-notice';
 import { CycleTimeHistogram } from '@/components/works/molecules/cycle-time-histogram';
 import { MetricShareControl } from '@/components/works/molecules/metric-share-control';
 import { useI18n } from '@/lib/i18n';
+import { PageLayout } from '@/components/works/templates/page-layout';
 
 // Organism — the iteration-12 Performance surface (Cap L). Layered metrics with a prominent layer
 // switcher and a privacy banner. Individual/Manager/Org need no entity id; Team and Project pick an
@@ -344,7 +345,7 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem 
   const selectorValue = layer === 'TEAM' ? teamId : effectiveProjectId;
 
   return (
-    <div className="p-8 max-w-7xl">
+    <PageLayout header={null}>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-brand-navy">{t('insights.performance.title')}</h1>
         <p className="mt-0.5 text-sm text-neutral-600">
@@ -469,6 +470,6 @@ export function PerformancePanel({ workspaceId, aiCapabilities = [], onOpenItem 
         <Sparkles aria-hidden="true" className="h-3.5 w-3.5 text-brand-orange" />
         AI team-health narratives are available on team views when AI is enabled (with a deterministic fallback).
       </p>
-    </div>
+    </PageLayout>
   );
 }

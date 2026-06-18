@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { aiClient } from '@/lib/ai';
+import { PageLayout } from '@/components/works/templates/page-layout';
 
 const inr = new Intl.NumberFormat('en-IN');
 const rupees = (cents) => `₹${inr.format(Math.round((cents || 0) / 100))}`;
@@ -157,21 +158,23 @@ export function AiSettingsPanel({ workspaceId, can, onToast }) {
 
   if (loading) {
     return (
-      <div className="space-y-6 max-w-4xl" aria-busy="true" aria-label="Loading AI settings">
+      <PageLayout header={null} className="space-y-6" aria-busy="true" aria-label="Loading AI settings">
         <div className="h-8 w-48 rounded-md bg-neutral-100 dark:bg-neutral-800 animate-pulse" />
         {[0, 1, 2].map((i) => <div key={i} className="h-40 rounded-lg bg-neutral-100 dark:bg-neutral-800 animate-pulse" />)}
-      </div>
+      </PageLayout>
     );
   }
 
   if (error) {
     return (
-      <div className="max-w-4xl bg-white dark:bg-neutral-900 border border-semantic-danger/30 rounded-lg p-6 text-center">
+      <PageLayout header={null}>
+      <div className="bg-white dark:bg-neutral-900 border border-semantic-danger/30 rounded-lg p-6 text-center">
         <PowerOff className="h-10 w-10 text-semantic-danger mx-auto mb-3" aria-hidden="true" />
         <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-1">AI settings unavailable</h3>
         <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">{error}</p>
         <Button variant="secondary" size="sm" leftIcon={<RefreshCw className="h-4 w-4" />} onClick={refresh}>Retry</Button>
       </div>
+      </PageLayout>
     );
   }
 
@@ -179,7 +182,7 @@ export function AiSettingsPanel({ workspaceId, can, onToast }) {
   const barTone = budget?.disabled ? 'bg-semantic-danger' : budget?.degraded ? 'bg-semantic-warning' : 'bg-brand-navy';
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <PageLayout header={null} className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">AI Control</h2>
@@ -388,7 +391,7 @@ export function AiSettingsPanel({ workspaceId, can, onToast }) {
           )}
         </Card>
       )}
-    </div>
+    </PageLayout>
   );
 }
 

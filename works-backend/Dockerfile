@@ -18,7 +18,7 @@ RUN apt-get update \
 # The app pins the JVM to UTC at startup (Postgres 16 connection requirement);
 # keep the container OS in UTC too for consistent log timestamps.
 ENV TZ=UTC
-COPY --from=build /build/target/demo-*.jar app.jar
+COPY --from=build /build/target/works-*.jar app.jar
 EXPOSE 8080
 # Liveness probe. NOTE: /actuator/health currently sits behind Spring Security
 # (SecurityConfig: .anyRequest().authenticated()), so an unauthenticated probe gets

@@ -3,6 +3,7 @@ import { Headset, Send, CheckCircle2, UserPlus, Bot, User, MessageSquare } from 
 import { Button } from '@/components/works/button';
 import { Badge } from '@/components/works/atoms/badge';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { PageLayout } from '@/components/works/templates/page-layout';
 import { smartDate } from '@/lib/format';
 import { agentChatClient, chatStatusTone, chatStatusLabel } from '@/lib/supportChat';
 import { connectRealtime } from '@/lib/realtime';
@@ -106,7 +107,7 @@ export default function SupportInboxView({ workspaceId }) {
   };
 
   return (
-    <div className="flex h-full flex-col p-6">
+    <PageLayout header={null} className="flex h-full flex-col">
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Support inbox</h1>
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
@@ -225,7 +226,7 @@ export default function SupportInboxView({ workspaceId }) {
           )}
         </div>
       </div>
-    </div>
+    </PageLayout>
   );
 }
 

@@ -1,17 +1,25 @@
-import { isIconComponent } from '@/lib/utils';
+import { isIconComponent, cn } from '@/lib/utils';
 
-// Empty-state primitive (RB-30 §6): explains why a surface is empty and what to do next. `icon`
-// accepts a Lucide component, an already-created element, or a string; `action` is an optional CTA
-// node. The illustration uses the neutral-300 placeholder tone, which is the one sanctioned use of
-// neutral-300 (RB-30 §2/§6).
-export function EmptyState({ icon: Icon, title, subtitle, action }) {
+const VARIANTS = {
+  empty: 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300',
+  onboarding: 'bg-brand-navy/10 text-brand-navy dark:bg-brand-navy-tint/20 dark:text-neutral-100',
+  error: 'bg-semantic-danger-surface text-semantic-danger dark:bg-semantic-danger/20',
+  success: 'bg-semantic-success-surface text-semantic-success dark:bg-semantic-success/20',
+};
+
+// Unified zero-data illustration treatment. Callers keep providing a Lucide icon; this atom gives
+// the icon a consistent product illustration frame across empty/onboarding/error/success states.
+export function EmptyState({ icon: Icon, title, subtitle, action, variant = 'empty' }) {
+  const tone = VARIANTS[variant] ?? VARIANTS.empty;
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="h-10 w-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-300 mb-4">
-        {isIconComponent(Icon) ? <Icon aria-hidden="true" className="h-5 w-5" /> : Icon}
+      <div className={cn('relative mb-4 flex h-14 w-14 items-center justify-center rounded-xl', tone)}>
+        <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-brand-orange" aria-hidden="true" />
+        <span className="absolute -bottom-1 left-2 h-2 w-6 rounded-full bg-current opacity-20" aria-hidden="true" />
+        {isIconComponent(Icon) ? <Icon aria-hidden="true" className="h-6 w-6" /> : Icon}
       </div>
-      <h3 className="text-base font-semibold text-neutral-700 mb-1">{title}</h3>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5 max-w-xs">{subtitle}</p>
+      <h3 className="text-subheading mb-1 text-neutral-700 dark:text-neutral-100">{title}</h3>
+      <p className="mb-5 max-w-xs text-sm text-neutral-600 dark:text-neutral-400">{subtitle}</p>
       {action}
     </div>
   );

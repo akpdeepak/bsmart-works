@@ -17,4 +17,16 @@ describe('Avatar', () => {
     render(<Avatar name="" />);
     expect(screen.getByText('??')).toBeInTheDocument();
   });
+
+  it('uses a deterministic labelled initials avatar', () => {
+    const { rerender } = render(<Avatar name="Deepak Pandey" />);
+    const first = screen.getByLabelText('Deepak Pandey avatar').className;
+    rerender(<Avatar name="Deepak Pandey" />);
+    expect(screen.getByLabelText('Deepak Pandey avatar').className).toBe(first);
+  });
+
+  it('renders an image avatar when imageUrl is supplied', () => {
+    render(<Avatar name="Deepak Pandey" imageUrl="/avatar.png" />);
+    expect(screen.getByRole('img', { name: 'Deepak Pandey avatar' })).toHaveAttribute('src', '/avatar.png');
+  });
 });

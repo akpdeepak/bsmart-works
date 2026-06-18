@@ -20,4 +20,9 @@ describe('EmptyState', () => {
     render(<EmptyState icon={Bell} title="t" subtitle="s" action={<button>Do it</button>} />);
     expect(screen.getByRole('button', { name: 'Do it' })).toBeInTheDocument();
   });
+
+  it('applies a sanctioned illustration variant', () => {
+    const { container } = render(<EmptyState icon={Bell} title="Saved" subtitle="Done." variant="success" />);
+    expect(container.querySelector('.bg-semantic-success-surface')).toBeInTheDocument();
+  });
 });

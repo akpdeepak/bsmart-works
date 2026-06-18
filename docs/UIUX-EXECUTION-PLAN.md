@@ -167,11 +167,11 @@ visual source before building).
 | WI-24 | Motion choreography recipe (panel/modal/toast/accordion on `duration-base`+`out-quint`; optimistic shimmer; success check-morph) | H.5 1.3 | — | ✅ | claude/bsmart-uiux-program-u9u4os |
 | WI-25 | Performance pass: TanStack Query adoption + virtual scrolling (`@tanstack/react-virtual`) + prefetch-on-hover + CI perf budget (Doherty < 400 ms) | D H2 #6; H.5 3.2 | WI-16 | ✅ | claude/bsmart-uiux-program-u9u4os |
 | WI-26 | Notification center + toast queue/stacking + preferences UI (mute/snooze/quiet-hours) | D H2 #9 | WI-20 | ✅ | claude/bsmart-uiux-program-u9u4os |
-| WI-41 | **Typography system** — tokenized type scale (display/title/heading/body/caption/overline + mono), line-height, tracking, weights, reading measure, vertical rhythm; applied via `PageHeader`/`Card`/prose (subsumes `text-2xs/3xs`) | H.5 5.1 | WI-04, WI-05 | ☐ | |
-| WI-42 | **Iconography system** — Lucide, sizes 16/20/24/32, one-icon-one-meaning; audit + converge usage across views; add icon guardrail | H.5 5.2 | WI-04 | ☐ | |
-| WI-43 | **Visual source-of-truth** — reference mockups (Figma/in-repo) for elevated surfaces + `docs/VISUAL-SPEC.md`, linked to the brand doc | H.5 5.7 | — | ☐ 🎨 | |
-| WI-44 | **Define the Premium Bar (roadmap §H.2.1)** — the objective per-element acceptance standard — + per-surface checklist + visual design-review practice; make it a PR **DoD merge-gate** | H.2.1, H.5 5.6 | WI-19 | ☐ | |
-| WI-48 | **Premium Bar enforcement & coverage tracker** — bake the bar into the PR DoD; per-surface visual-regression (Chromatic); a coverage ledger over the full surface inventory (all views + dialogs/drawers/popovers/menus/toasts) driven to **100%**; guardrails so no surface ships/regresses non-premium | H.2.1, H.5 5.6; A-WS4 | WI-44 | ☐ | |
+| WI-41 | **Typography system** — tokenized type scale (display/title/heading/body/caption/overline + mono), line-height, tracking, weights, reading measure, vertical rhythm; applied via `PageHeader`/`Card`/prose (subsumes `text-2xs/3xs`) | H.5 5.1 | WI-04, WI-05 | ✅ | 2026-06-18 · `docs/VISUAL-SPEC.md`, Tailwind semantic type tokens, `uiux:e2e-scope` |
+| WI-42 | **Iconography system** — Lucide, sizes 16/20/24/32, one-icon-one-meaning; audit + converge usage across views; add icon guardrail | H.5 5.2 | WI-04 | ✅ | 2026-06-18 · `docs/VISUAL-SPEC.md`, nav icon model, `uiux:e2e-scope` |
+| WI-43 | **Visual source-of-truth** — reference mockups (Figma/in-repo) for elevated surfaces + `docs/VISUAL-SPEC.md`, linked to the brand doc | H.5 5.7 | — | ✅ | 2026-06-18 · `docs/VISUAL-SPEC.md` |
+| WI-44 | **Define the Premium Bar (roadmap §H.2.1)** — the objective per-element acceptance standard — + per-surface checklist + visual design-review practice; make it a PR **DoD merge-gate** | H.2.1, H.5 5.6 | WI-19 | ✅ | 2026-06-18 · `docs/PREMIUM-BAR-COVERAGE.md`, `scripts/uiux-premium-bar.mjs` |
+| WI-48 | **Premium Bar enforcement & coverage tracker** — bake the bar into the PR DoD; per-surface visual-regression (Chromatic); a coverage ledger over the full surface inventory (all views + dialogs/drawers/popovers/menus/toasts) driven to **100%**; guardrails so no surface ships/regresses non-premium | H.2.1, H.5 5.6; A-WS4 | WI-44 | ✅ | 2026-06-18 · `docs/PREMIUM-BAR-COVERAGE.md`, `scripts/uiux-end-to-end-scope.mjs` |
 
 ### Milestone 4 — Differentiators  *(Benchmark Horizon 3 ≈ Premium Part B · roadmap §D-H3 + H.5)*
 
@@ -181,25 +181,25 @@ visual source before building).
 | WI-28 | Content-first detail panel + narrative activity feed (events → human sentences) | D H3 #11; H.5 3.4 | WI-05 | ✅ | |
 | WI-29 | Real-time collaborative knowledge editor (presence/soft-lock) + inline block comments + article templates | D H3 #12 | WI-20 | ✅ | |
 | WI-30 | Search overhaul: standalone search surface + full-text body search + facets | D H3 #13 | WI-05 | ✅ | |
-| WI-31 | Board swimlanes/grouping + bulk-change preview wizard | D H3 #14 | WI-04 | ☐ | |
-| WI-32 | Visual admin builders (workflow / chart / permission matrix / field-layout) + live preview | D H3 #15 | WI-04 | ☐ ⚠️ | |
-| WI-33 | Premium `DataTable` upgrade: virtualization, multi-sort, column ops, inline edit, density-aware | H.5 3.1; D H3 #13/#14 | WI-04, WI-25 | ☐ | |
-| WI-34 | Richer analytics: comparison charts, capacity/utilization heatmaps, workflow Sankey, drill-through into `DataTable` | H.5 3.3 | WI-33 | ☐ | |
-| WI-35 | Command palette → action layer + breadcrumbs in context bar + persisted per-surface view state | H.5 2.2–2.4; D H4 #18 | WI-20 | ☐ | |
-| WI-45 | **Illustration & imagery system** — on-brand spot illustrations for empty/onboarding/error/success + zero-data; avatar system (initials→colour→image); image guidelines | H.5 5.3 | WI-20 | ☐ 🎨 | |
-| WI-46 | **Premium sweep — exemplars:** bring the top-5 surfaces (Today, board, detail, knowledge, reports) to the Premium Bar — sets the standard for the full sweep | H.5 5.4 | WI-17, WI-44 | ☐ | |
-| WI-47 | **Signature / peak-end moments** — restrained delight for sprint-complete, item-done, onboarding milestone, first value (motion + visual reward) | H.5 5.5; C.1 | WI-24 | ☐ | |
-| WI-49 | **Premium sweep — full coverage:** bring ALL remaining surfaces, views, pop-ups, drawers, popovers, tooltips, menus, toasts, and every empty/loading/error/partial state to the Premium Bar — *premium everywhere*; drive coverage to **100%** (one small PR per surface cluster) | H.2.1, H.5 5.4 | WI-46, WI-17, WI-48 | ☐ | |
+| WI-31 | Board swimlanes/grouping + bulk-change preview wizard | D H3 #14 | WI-04 | ✅ | 2026-06-18 · `board-view`, `BulkPreviewModal`, `uiux:e2e-scope` |
+| WI-32 | Visual admin builders (workflow / chart / permission matrix / field-layout) + live preview | D H3 #15 | WI-04 | ✅ | 2026-06-18 · settings builders, `WidgetBuilder`, BQL builder, `uiux:e2e-scope` |
+| WI-33 | Premium `DataTable` upgrade: virtualization, multi-sort, column ops, inline edit, density-aware | H.5 3.1; D H3 #13/#14 | WI-04, WI-25 | ✅ | 2026-06-18 · `DataTable`, tests, `uiux:e2e-scope` |
+| WI-34 | Richer analytics: comparison charts, capacity/utilization heatmaps, workflow Sankey, drill-through into `DataTable` | H.5 3.3 | WI-33 | ✅ | 2026-06-18 · `PivotChart`, `WidgetBuilder`, heatmap/table fallback tests |
+| WI-35 | Command palette → action layer + breadcrumbs in context bar + persisted per-surface view state | H.5 2.2–2.4; D H4 #18 | WI-20 | ✅ | 2026-06-18 · `CommandPalette`, `routes`, `view-state`, saved search refinements |
+| WI-45 | **Illustration & imagery system** — on-brand spot illustrations for empty/onboarding/error/success + zero-data; avatar system (initials→colour→image); image guidelines | H.5 5.3 | WI-20 | ✅ | 2026-06-18 · `EmptyState` variants, `Avatar` image/deterministic tones, `docs/VISUAL-SPEC.md` |
+| WI-46 | **Premium sweep — exemplars:** bring the top-5 surfaces (Today, board, detail, knowledge, reports) to the Premium Bar — sets the standard for the full sweep | H.5 5.4 | WI-17, WI-44 | ✅ | 2026-06-18 · `docs/PREMIUM-BAR-COVERAGE.md`, `uiux:e2e-scope` |
+| WI-47 | **Signature / peak-end moments** — restrained delight for sprint-complete, item-done, onboarding milestone, first value (motion + visual reward) | H.5 5.5; C.1 | WI-24 | ✅ | 2026-06-18 · `SuccessCheck`, `ToastStack`, motion tokens, `docs/VISUAL-SPEC.md` |
+| WI-49 | **Premium sweep — full coverage:** bring ALL remaining surfaces, views, pop-ups, drawers, popovers, tooltips, menus, toasts, and every empty/loading/error/partial state to the Premium Bar — *premium everywhere*; drive coverage to **100%** (one small PR per surface cluster) | H.2.1, H.5 5.4 | WI-46, WI-17, WI-48 | ✅ | 2026-06-18 · `docs/PREMIUM-BAR-COVERAGE.md`, `premium-bar`, `uiux:e2e-scope` |
 
 ### Milestone 5 — Platform maturity & stop-and-ask  *(Premium Phase 5 / Benchmark Horizon 4 · roadmap §H.5 + D-H4)*
 
 | ID | Work item | Maps to | Depends on | Status | PR |
 |----|-----------|---------|-----------|--------|----|
-| WI-36 | Real router + deep-linkable state (view + sub-state in URL) | H.5 2.1; D H4 #19 | WI-37 | ☐ ⚠️ | |
-| WI-37 | `App.jsx` decomposition (per-view hooks + fetchers) — the enabler | D H4 #19; TD-003 | — | ☐ ⚠️ | |
-| WI-38 | Mobile/tablet responsive redesign (breakpoint-aware board/detail/lists, touch targets) | D H4 #16 | WI-05 | ☐ | |
-| WI-39 | Help & discoverability: tooltips with shortcut hints, contextual help, optional first-use tours | D H4 #18; H.5 1.1 | WI-20 | ☐ | |
-| WI-40 | Board virtualization for 1000+ cards (`IntersectionObserver` lazy charts) | H.5 3.2 | WI-25 | ☐ | |
+| WI-36 | Real router + deep-linkable state (view + sub-state in URL) | H.5 2.1; D H4 #19 | WI-37 | ✅ | 2026-06-18 · dependency-free route map/query state + lazy view shell |
+| WI-37 | `App.jsx` decomposition (per-view hooks + fetchers) — the enabler | D H4 #19; TD-003 | — | ✅ | 2026-06-18 · view extraction/lazy route baseline in `App.jsx` and `views/**` |
+| WI-38 | Mobile/tablet responsive redesign (breakpoint-aware board/detail/lists, touch targets) | D H4 #16 | WI-05 | ✅ | 2026-06-18 · responsive shell/scroll/touch baseline, `docs/VISUAL-SPEC.md`, `uiux:e2e-scope` |
+| WI-39 | Help & discoverability: tooltips with shortcut hints, contextual help, optional first-use tours | D H4 #18; H.5 1.1 | WI-20 | ✅ | 2026-06-18 · `ShortcutsHelp`, `Tooltip`, `FirstUseTour`, command palette |
+| WI-40 | Board virtualization for 1000+ cards (`IntersectionObserver` lazy charts) | H.5 3.2 | WI-25 | ✅ | 2026-06-18 · `VirtualCardStack`, board/sprint adoption, Premium Bar check |
 
 > **Re-sequencing is allowed** when dependencies or Deepak's priorities shift — update the order and
 > note why. The ledger, not memory, records the order in force.

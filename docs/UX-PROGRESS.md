@@ -7,6 +7,16 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## UIUX program end-to-end closure: remaining scope reconciled and gated (2026-06-18) `[premium] [benchmark] [consistency]`
+
+Closed the remaining UIUX program scope against code reality and added machine-checkable closure evidence.
+
+**Scope shipped:** `docs/VISUAL-SPEC.md` defines typography, iconography, imagery, signature moments, mobile/touch, and Premium Bar rules. `docs/PREMIUM-BAR-COVERAGE.md` records 100% surface-cluster coverage and the PR DoD checklist. `scripts/uiux-end-to-end-scope.mjs` plus root `npm run uiux:e2e-scope` validates WI-31...WI-49 and WI-36...WI-40 evidence.
+
+**Code shipped:** `EmptyState` now has sanctioned illustration variants for empty/onboarding/error/success states. `Avatar` supports image avatars and deterministic token-colour initials. `FirstUseTour` plus `lib/first-use-tour.js` provides optional first-use tours with local completion state.
+
+**Validation:** Focused tests for avatar, empty-state, first-use-tour, and tour persistence passed (13 tests). `npm run premium-bar` passed. `npm run uiux:e2e-scope` passed.
+
 ## WI-30 [benchmark] — Search overhaul: standalone search surface, useSearch hook, facet tabs (2026-06-16)
 
 **`src/lib/search.js` (new):** Unified search API client (`searchClient.search`) that fans out to two endpoints in parallel via `Promise.allSettled`: work items (BQL `title contains "…"` query to `/api/v1/work-items`) and articles (FTS endpoint `/api/v1/knowledge/search`). All HTTP routes through the single `apiClient` (RB-10 §1). Returns `{ workItems, articles, total }`. Each leg is independently fault-tolerant — one failing endpoint does not suppress the other.

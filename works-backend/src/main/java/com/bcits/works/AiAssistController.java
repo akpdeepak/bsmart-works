@@ -2,6 +2,7 @@ package com.bcits.works;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -121,6 +122,16 @@ public class AiAssistController {
         List<Number> raw = (List<Number>) body.getOrDefault("series", List.of());
         List<Double> series = raw.stream().map(Number::doubleValue).toList();
         return assist.explainAnomaly(workspaceId, userId, str(body, "metric"), series, inContext(body));
+    }
+
+    @Operation(summary = "AI Today nudges",
+        description = "Returns proactive Today dashboard focus nudges. Falls back to deterministic workspace-scoped assigned-work heuristics when AI is off.")
+    @GetMapping("/today-nudges")
+    public AiAssistService.TodayNudgesResult todayNudges(@RequestParam String workspaceId,
+                                                         @RequestParam(required = false) String userId) {
+        String callerId = requireMember(workspaceId);
+        String targetUserId = (userId == null || userId.isBlank()) ? callerId : userId;
+        return assist.todayNudges(workspaceId, callerId, targetUserId, true);
     }
 
     // ── Cap K · compliance suggestions ─────────────────────────────────────────────

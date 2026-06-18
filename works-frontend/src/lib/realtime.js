@@ -15,7 +15,11 @@ function token() {
 // Build the SSE URL. The browser EventSource API cannot set an Authorization header, so the JWT
 // rides as the access_token query param (the backend JWT filter honours it). Pure + tested.
 export function streamUrl(workspaceId, base = api.base, tok = token()) {
-  const u = new URL(`${base}/realtime/stream`);
+  const origin = typeof window !== 'undefined' && window.location?.origin
+    ? window.location.origin
+    : 'http://localhost';
+  const normalizedBase = String(base || '').replace(/\/$/, '');
+  const u = new URL(`${normalizedBase}/realtime/stream`, origin);
   u.searchParams.set('workspaceId', workspaceId);
   if (tok) u.searchParams.set('access_token', tok);
   return u.toString();

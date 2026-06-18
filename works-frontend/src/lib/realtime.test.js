@@ -23,6 +23,13 @@ describe('realtime', () => {
     expect(url).not.toContain('access_token');
   });
 
+  it('supports relative API bases used by the deployed nginx frontend', () => {
+    const url = streamUrl('WS-1', '/api/v1', null);
+    const parsed = new URL(url);
+    expect(parsed.pathname).toBe('/api/v1/realtime/stream');
+    expect(parsed.searchParams.get('workspaceId')).toBe('WS-1');
+  });
+
   it('connectRealtime returns a no-op disposer when EventSource is unavailable', () => {
     const dispose = connectRealtime('WS-1', { event: vi.fn() });
     expect(typeof dispose).toBe('function');

@@ -3,6 +3,7 @@ package com.bcits.works;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -198,6 +199,31 @@ class AiAssistServiceTest {
         when(teams.findByWorkspaceIdOrderByNameAsc("ws")).thenReturn(List.of(web, infra));
         var r = assist.route("ws", "me", "portal billing issue", true);
         assertThat(r.get("teamName")).isEqualTo("Web Portal");
+    }
+
+    @Test
+    void todayNudges_prioritizesAssignedOverdueAndHighPriorityWork() {
+        aiOn();
+        when(projects.findByWorkspaceId("ws")).thenReturn(List.of(project("PROJ-1")));
+        WorkItem overdue = item("WEB-1", "Renew expiring certificate", "");
+        overdue.setAssigneeId("me");
+        overdue.setStatus("In Progress");
+        overdue.setPriority("Medium");
+        overdue.setDueDate(LocalDate.now().minusDays(1));
+        WorkItem high = item("WEB-2", "Fix login outage", "");
+        high.setAssigneeId("me");
+        high.setStatus("Todo");
+        high.setPriority("High");
+        when(workItems.findByProjectId("PROJ-1")).thenReturn(List.of(high, overdue));
+
+        var result = assist.todayNudges("ws", "caller", "me", true);
+
+        assertThat(result.nudges()).extracting(AiAssistService.TodayNudge::text)
+            .containsExactly(
+                "Focus on WEB-1 - due overdue: Renew expiring certificate",
+                "Pull forward WEB-2 - High priority and still open: Fix login outage"
+            );
+        assertThat(result.meta().usedAi()).isTrue();
     }
 
     @Test

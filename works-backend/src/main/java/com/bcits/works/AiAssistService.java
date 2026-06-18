@@ -3,6 +3,7 @@ package com.bcits.works;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -290,6 +291,49 @@ public class AiAssistService {
 
     // ── Cap K · AI-suggested compliance rules ────────────────────────────────────
 
+    public record TodayNudge(String text) { }
+    public record TodayNudgesResult(List<TodayNudge> nudges, boolean fallback, AiMeta meta) { }
+
+    public TodayNudgesResult todayNudges(String workspaceId, String callerId, String targetUserId, boolean inContext) {
+        LocalDate today = LocalDate.now();
+        List<WorkItem> assigned = scopedItems(workspaceId).stream()
+            .filter(w -> targetUserId != null && targetUserId.equals(w.getAssigneeId()))
+            .filter(AiAssistService::isOpenItem)
+            .sorted(Comparator
+                .comparing((WorkItem w) -> w.getDueDate() == null ? LocalDate.MAX : w.getDueDate())
+                .thenComparingInt(w -> priorityRank(w.getPriority()))
+                .thenComparing(w -> nv(w.getId())))
+            .toList();
+
+        List<TodayNudge> nudges = new ArrayList<>();
+        assigned.stream()
+            .filter(w -> w.getDueDate() != null && !w.getDueDate().isAfter(today))
+            .limit(2)
+            .map(w -> new TodayNudge("Focus on " + w.getId() + " - due " +
+                (w.getDueDate().isBefore(today) ? "overdue" : "today") + ": " + nv(w.getTitle())))
+            .forEach(nudges::add);
+
+        assigned.stream()
+            .filter(w -> nudges.stream().noneMatch(n -> n.text().contains(w.getId())))
+            .filter(w -> priorityRank(w.getPriority()) <= 1)
+            .limit(Math.max(0, 3 - nudges.size()))
+            .map(w -> new TodayNudge("Pull forward " + w.getId() + " - " + nv(w.getPriority()) +
+                " priority and still open: " + nv(w.getTitle())))
+            .forEach(nudges::add);
+
+        if (nudges.isEmpty() && !assigned.isEmpty()) {
+            WorkItem next = assigned.get(0);
+            nudges.add(new TodayNudge("Start with " + next.getId() + " - next assigned open item: " + nv(next.getTitle())));
+        }
+
+        String draft = nudges.isEmpty()
+            ? "No proactive Today nudges; assigned work is clear."
+            : nudges.stream().map(TodayNudge::text).collect(Collectors.joining(" "));
+        AiControlPlaneService.AiOutcome out = controlPlane.invoke(new AiControlPlaneService.AiCall(
+            workspaceId, callerId, AiCapabilities.COCKPIT_PROTIPS, "Generate Today focus nudges", draft, null, inContext));
+        return new TodayNudgesResult(nudges, out.fallback(), AiMeta.of(out));
+    }
+
     public record RuleSuggestion(String name, String scopeBql, String assertionBql, String rationale) { }
 
     public Map<String, Object> suggestComplianceRules(String workspaceId, String userId, boolean inContext) {
@@ -484,6 +528,20 @@ public class AiAssistService {
 
     private List<String> recentItemIds(String workspaceId, int limit) {
         return scopedItems(workspaceId).stream().limit(limit).map(WorkItem::getId).collect(Collectors.toList());
+    }
+
+    private static boolean isOpenItem(WorkItem w) {
+        return w.getDeletedAt() == null && !"Done".equalsIgnoreCase(nv(w.getStatus()));
+    }
+
+    private static int priorityRank(String priority) {
+        return switch (nv(priority).toUpperCase(Locale.ROOT)) {
+            case "CRITICAL" -> 0;
+            case "HIGH" -> 1;
+            case "MEDIUM" -> 2;
+            case "LOW" -> 3;
+            default -> 4;
+        };
     }
 
     private String resolveUser(String name, String email, String workspaceId) {

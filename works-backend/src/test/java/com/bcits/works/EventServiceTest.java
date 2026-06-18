@@ -11,6 +11,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Proves the event payload is valid JSON even when field values contain quotes
@@ -81,5 +82,14 @@ class EventServiceTest {
         JsonNode node = mapper.readTree(captor.getValue().getPayload());
         assertThat(node.get("title").asText()).isEqualTo("say \"hi\"");
         assertThat(node.get("type").asText()).isEqualTo("Bug");
+    }
+
+    @Test
+    void eventsFor_returnsAggregateTimelineNewestFirst() {
+        AppEvent event = new AppEvent();
+        event.setAggregateId("ART-1");
+        when(repo.findByAggregateIdOrderByOccurredAtDesc("ART-1")).thenReturn(java.util.List.of(event));
+
+        assertThat(service.eventsFor("ART-1")).containsExactly(event);
     }
 }

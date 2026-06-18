@@ -126,4 +126,35 @@ describe('DataTable', () => {
     fireEvent.click(screen.getByLabelText('Status'));
     expect(fn).toHaveBeenCalledWith({ order: ['name', 'status'], hidden: [] });
   });
+
+  it('supports column reordering controls', () => {
+    const fn = vi.fn();
+    render(
+      <DataTable
+        columns={COLS}
+        rows={ROWS}
+        columnControls
+        columnState={{ order: ['name', 'status'], hidden: [] }}
+        onColumnStateChange={fn}
+      />
+    );
+    fireEvent.click(screen.getByText('Columns'));
+    fireEvent.click(screen.getByRole('button', { name: /move status left/i }));
+    expect(fn).toHaveBeenCalledWith({ order: ['status', 'name'], hidden: [] });
+  });
+
+  it('supports inline editable cells', () => {
+    const fn = vi.fn();
+    render(
+      <DataTable
+        columns={[{ key: 'name', label: 'Name', editable: true }, { key: 'status', label: 'Status' }]}
+        rows={ROWS}
+        onCellEdit={fn}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /alice/i }));
+    fireEvent.change(screen.getByLabelText(/edit name/i), { target: { value: 'Alicia' } });
+    fireEvent.click(screen.getByRole('button', { name: /save cell/i }));
+    expect(fn).toHaveBeenCalledWith(ROWS[0], 'name', 'Alicia');
+  });
 });

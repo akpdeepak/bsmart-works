@@ -69,9 +69,16 @@ const BLOCK_TYPES = [
   { type: 'workitem',  label: 'Work item', Icon: Link2, group: 'Connect' },
   { type: 'bookmark',  label: 'Bookmark / link', Icon: Bookmark, group: 'Connect' },
   { type: 'file',      label: 'File (any type)', Icon: Paperclip, group: 'Connect' },
+  { type: 'decision',  label: 'Decision log', Icon: CheckSquare, group: 'Knowledge' },
+  { type: 'retro',     label: 'Retrospective', Icon: Smile, group: 'Knowledge' },
+  { type: 'okr',       label: 'OKR tracker', Icon: LayoutDashboard, group: 'Knowledge' },
+  { type: 'risk_register', label: 'Risk register', Icon: Table, group: 'Knowledge' },
+  { type: 'raci',      label: 'RACI matrix', Icon: Grid, group: 'Knowledge' },
+  { type: 'release_notes', label: 'Release notes', Icon: List, group: 'Knowledge' },
+  { type: 'dashboard', label: 'Embedded dashboard', Icon: LayoutDashboard, group: 'Knowledge' },
 ];
 
-const BLOCK_GROUPS = ['Basic', 'Data', 'Visual', 'Connect'];
+const BLOCK_GROUPS = ['Basic', 'Data', 'Visual', 'Connect', 'Knowledge'];
 
 // ── Top toolbar — every block type as a compact icon, grouped like a minimal ribbon ─────────────
 // Inserts after the currently focused block so the new block appears where the author is looking.
@@ -129,6 +136,18 @@ const TOOLBAR_GROUPS = [
       { type: 'workitem',   title: 'Work item',           Icon: Link2 },
       { type: 'bookmark',   title: 'Bookmark / link',     Icon: Bookmark },
       { type: 'file',       title: 'File (any type)',     Icon: Paperclip },
+    ],
+  },
+  {
+    label: 'Knowledge',
+    items: [
+      { type: 'decision',   title: 'Decision log',        Icon: CheckSquare },
+      { type: 'retro',      title: 'Retrospective',       Icon: Smile },
+      { type: 'okr',        title: 'OKR tracker',         Icon: LayoutDashboard },
+      { type: 'risk_register', title: 'Risk register',    Icon: Table },
+      { type: 'raci',       title: 'RACI matrix',         Icon: Grid },
+      { type: 'release_notes', title: 'Release notes',    Icon: List },
+      { type: 'dashboard',  title: 'Embedded dashboard',  Icon: LayoutDashboard },
     ],
   },
 ];
@@ -199,6 +218,20 @@ function newBlock(type) {
       return { id, type, content: 'E = mc^2', metadata: { display: true } };
     case 'embed':
       return { id, type, content: '', metadata: { title: '', description: '' } };
+    case 'decision':
+      return { id, type, content: '', metadata: { status: 'proposed', owner: '', date: '', options: ['Option A', 'Option B'], rationale: '', consequences: '' } };
+    case 'retro':
+      return { id, type, content: 'Sprint retrospective', metadata: { wentWell: '', improve: '', actions: '', shoutouts: '' } };
+    case 'okr':
+      return { id, type, content: '', metadata: { owner: '', keyResults: [{ title: 'Key result', target: '100', current: '0' }] } };
+    case 'risk_register':
+      return { id, type, content: '', metadata: { risks: [{ risk: 'Risk', impact: '3', probability: '3', owner: '', mitigation: '' }] } };
+    case 'raci':
+      return { id, type, content: '', metadata: { rows: [['Task', 'Responsible', 'Accountable', 'Consulted', 'Informed'], ['Launch checklist', '', '', '', '']] } };
+    case 'release_notes':
+      return { id, type, content: '', metadata: { version: '', date: '', added: '', changed: '', fixed: '', knownIssues: '' } };
+    case 'dashboard':
+      return { id, type, content: '', metadata: { title: '', url: '', description: '', refresh: 'Manual' } };
     case 'workitem':
       return { id, type, content: '', metadata: { title: '', status: '' } };
     case 'bookmark':
@@ -1098,6 +1131,130 @@ function EmbedBlock({ block, onChange }) {
   );
 }
 
+function Field({ label, value, onChange, multiline = false, placeholder = '' }) {
+  const cls = 'w-full text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 text-neutral-900 dark:text-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40';
+  return (
+    <label className="block space-y-1">
+      <span className="text-2xs uppercase tracking-wide font-semibold text-neutral-500">{label}</span>
+      {multiline ? (
+        <textarea rows={3} value={value || ''} onChange={(e) => onChange(e.target.value)} className={cls} placeholder={placeholder} />
+      ) : (
+        <input value={value || ''} onChange={(e) => onChange(e.target.value)} className={cls} placeholder={placeholder} />
+      )}
+    </label>
+  );
+}
+
+function DecisionBlock({ block, onChange }) {
+  const m = block.metadata || {};
+  const set = (patch) => onChange({ metadata: { ...m, ...patch } });
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      <Field label="Decision" value={block.content} onChange={(content) => onChange({ content })} placeholder="What was decided?" />
+      <Field label="Owner" value={m.owner} onChange={(owner) => set({ owner })} />
+      <Field label="Status" value={m.status} onChange={(status) => set({ status })} />
+      <Field label="Date" value={m.date} onChange={(date) => set({ date })} />
+      <div className="sm:col-span-2 grid gap-2 sm:grid-cols-2">
+        <Field label="Rationale" value={m.rationale} onChange={(rationale) => set({ rationale })} multiline />
+        <Field label="Consequences" value={m.consequences} onChange={(consequences) => set({ consequences })} multiline />
+      </div>
+    </div>
+  );
+}
+
+function RetroBlock({ block, onChange }) {
+  const m = block.metadata || {};
+  const set = (patch) => onChange({ metadata: { ...m, ...patch } });
+  return (
+    <div className="space-y-2">
+      <Field label="Retro title" value={block.content} onChange={(content) => onChange({ content })} />
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Field label="Went well" value={m.wentWell} onChange={(wentWell) => set({ wentWell })} multiline />
+        <Field label="Improve" value={m.improve} onChange={(improve) => set({ improve })} multiline />
+        <Field label="Actions" value={m.actions} onChange={(actions) => set({ actions })} multiline />
+        <Field label="Shoutouts" value={m.shoutouts} onChange={(shoutouts) => set({ shoutouts })} multiline />
+      </div>
+    </div>
+  );
+}
+
+function OkrBlock({ block, onChange }) {
+  const m = block.metadata || {};
+  const keyResults = m.keyResults || [];
+  const set = (patch) => onChange({ metadata: { ...m, ...patch } });
+  const updateKr = (i, patch) => set({ keyResults: keyResults.map((kr, idx) => idx === i ? { ...kr, ...patch } : kr) });
+  return (
+    <div className="space-y-2">
+      <Field label="Objective" value={block.content} onChange={(content) => onChange({ content })} />
+      <Field label="Owner" value={m.owner} onChange={(owner) => set({ owner })} />
+      {keyResults.map((kr, i) => (
+        <div key={i} className="grid gap-2 sm:grid-cols-[1fr_5rem_5rem]">
+          <Field label={`Key result ${i + 1}`} value={kr.title} onChange={(title) => updateKr(i, { title })} />
+          <Field label="Current" value={kr.current} onChange={(current) => updateKr(i, { current })} />
+          <Field label="Target" value={kr.target} onChange={(target) => updateKr(i, { target })} />
+        </div>
+      ))}
+      <button type="button" onClick={() => set({ keyResults: [...keyResults, { title: 'Key result', target: '100', current: '0' }] })} className="text-xs text-brand-navy hover:underline">+ Key result</button>
+    </div>
+  );
+}
+
+function RiskRegisterBlock({ block, onChange }) {
+  const m = block.metadata || {};
+  const risks = m.risks || [];
+  const setRisks = (next) => onChange({ metadata: { ...m, risks: next } });
+  const update = (i, patch) => setRisks(risks.map((r, idx) => idx === i ? { ...r, ...patch } : r));
+  return (
+    <div className="space-y-2">
+      {risks.map((risk, i) => (
+        <div key={i} className="grid gap-2 sm:grid-cols-[1fr_4rem_4rem_8rem]">
+          <Field label={`Risk ${i + 1}`} value={risk.risk} onChange={(v) => update(i, { risk: v })} />
+          <Field label="Impact" value={risk.impact} onChange={(v) => update(i, { impact: v })} />
+          <Field label="Prob." value={risk.probability} onChange={(v) => update(i, { probability: v })} />
+          <Field label="Owner" value={risk.owner} onChange={(v) => update(i, { owner: v })} />
+          <div className="sm:col-span-4"><Field label="Mitigation" value={risk.mitigation} onChange={(v) => update(i, { mitigation: v })} multiline /></div>
+        </div>
+      ))}
+      <button type="button" onClick={() => setRisks([...risks, { risk: 'Risk', impact: '3', probability: '3', owner: '', mitigation: '' }])} className="text-xs text-brand-navy hover:underline">+ Risk</button>
+    </div>
+  );
+}
+
+function RaciBlock({ block, onChange }) {
+  return <TableBlock block={block} onChange={onChange} />;
+}
+
+function ReleaseNotesBlock({ block, onChange }) {
+  const m = block.metadata || {};
+  const set = (patch) => onChange({ metadata: { ...m, ...patch } });
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      <Field label="Release title" value={block.content} onChange={(content) => onChange({ content })} />
+      <Field label="Version" value={m.version} onChange={(version) => set({ version })} />
+      <Field label="Date" value={m.date} onChange={(date) => set({ date })} />
+      <div className="sm:col-span-2 grid gap-2 sm:grid-cols-2">
+        <Field label="Added" value={m.added} onChange={(added) => set({ added })} multiline />
+        <Field label="Changed" value={m.changed} onChange={(changed) => set({ changed })} multiline />
+        <Field label="Fixed" value={m.fixed} onChange={(fixed) => set({ fixed })} multiline />
+        <Field label="Known issues" value={m.knownIssues} onChange={(knownIssues) => set({ knownIssues })} multiline />
+      </div>
+    </div>
+  );
+}
+
+function DashboardBlock({ block, onChange }) {
+  const m = block.metadata || {};
+  const set = (patch) => onChange({ metadata: { ...m, ...patch } });
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      <Field label="Dashboard title" value={m.title} onChange={(title) => set({ title })} />
+      <Field label="Refresh" value={m.refresh} onChange={(refresh) => set({ refresh })} />
+      <div className="sm:col-span-2"><Field label="URL" value={m.url || block.content} onChange={(url) => onChange({ content: url, metadata: { ...m, url } })} placeholder="https://..." /></div>
+      <div className="sm:col-span-2"><Field label="Description" value={m.description} onChange={(description) => set({ description })} multiline /></div>
+    </div>
+  );
+}
+
 function WorkItemBlock({ block, onChange }) {
   return (
     <div className="space-y-2">
@@ -1408,6 +1565,13 @@ function Block({ block, index, total, focused, onFocus, onChange, onMove, onDele
       {block.type === 'flowchart' && <FlowchartBlock block={block} onChange={onChange} />}
       {block.type === 'math' && <MathBlock block={block} onChange={onChange} />}
       {block.type === 'embed' && <EmbedBlock block={block} onChange={onChange} />}
+      {block.type === 'decision' && <DecisionBlock block={block} onChange={onChange} />}
+      {block.type === 'retro' && <RetroBlock block={block} onChange={onChange} />}
+      {block.type === 'okr' && <OkrBlock block={block} onChange={onChange} />}
+      {block.type === 'risk_register' && <RiskRegisterBlock block={block} onChange={onChange} />}
+      {block.type === 'raci' && <RaciBlock block={block} onChange={onChange} />}
+      {block.type === 'release_notes' && <ReleaseNotesBlock block={block} onChange={onChange} />}
+      {block.type === 'dashboard' && <DashboardBlock block={block} onChange={onChange} />}
       {block.type === 'workitem' && <WorkItemBlock block={block} onChange={onChange} />}
       {block.type === 'bookmark' && <BookmarkBlock block={block} onChange={onChange} />}
       {block.type === 'file' && <FileBlock block={block} onChange={onChange} />}

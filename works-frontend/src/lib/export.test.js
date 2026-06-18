@@ -120,6 +120,19 @@ describe('blocksToMarkdown (KR-083)', () => {
     expect(blocksToMarkdown([{ type: 'whiteboard', content: '' }])).toBe('<!-- block:whiteboard -->\n\n');
   });
 
+  it('converts bSmart knowledge blocks', () => {
+    const md = blocksToMarkdown([
+      { type: 'decision', content: 'Use PostgreSQL', metadata: { status: 'accepted', owner: 'Platform', rationale: 'Fits relational data' } },
+      { type: 'okr', content: 'Improve adoption', metadata: { keyResults: [{ title: 'Editors', current: '40', target: '80' }] } },
+      { type: 'risk_register', metadata: { risks: [{ risk: 'Delay', impact: '4', probability: '3', owner: 'PM', mitigation: 'Pilot' }] } },
+      { type: 'dashboard', metadata: { title: 'Know health', url: 'https://example.com/health' } },
+    ]);
+    expect(md).toContain('Decision: Use PostgreSQL');
+    expect(md).toContain('- Editors: 40/80');
+    expect(md).toContain('| Delay | 12 | PM | Pilot |');
+    expect(md).toContain('[Know health](https://example.com/health)');
+  });
+
   it('handles a mixed block array end-to-end', () => {
     const blocks = [
       { type: 'heading1', content: 'Guide' },

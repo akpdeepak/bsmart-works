@@ -63,6 +63,25 @@ describe('BlockRenderer', () => {
     expect(screen.getByRole('link', { name: /Dashboard/ })).toHaveAttribute('href', 'https://example.com/dashboard');
   });
 
+  it('renders bSmart knowledge blocks', () => {
+    render(<BlockRenderer blocks={[
+      block('decision', 'Use PostgreSQL', { status: 'accepted', owner: 'Platform', rationale: 'Relational data' }),
+      block('retro', 'Sprint 12', { wentWell: 'Fast review', actions: 'Automate checks' }),
+      block('okr', 'Improve Know adoption', { keyResults: [{ title: 'Weekly active editors', current: '40', target: '80' }] }),
+      block('risk_register', '', { risks: [{ risk: 'Migration delay', impact: '4', probability: '3', owner: 'PM', mitigation: 'Pilot first' }] }),
+      block('raci', '', { rows: [['Task', 'Responsible'], ['Launch', 'Asha']] }),
+      block('release_notes', 'June release', { version: 'v2', added: 'Decision blocks' }),
+      block('dashboard', '', { title: 'Know health', url: 'https://example.com/health', description: 'Coverage' }),
+    ]} />);
+    expect(screen.getByText('Use PostgreSQL')).toBeInTheDocument();
+    expect(screen.getByText('Sprint 12')).toBeInTheDocument();
+    expect(screen.getByText('Weekly active editors')).toBeInTheDocument();
+    expect(screen.getByText('Migration delay')).toBeInTheDocument();
+    expect(screen.getByText('Asha')).toBeInTheDocument();
+    expect(screen.getByText('June release')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Know health/ })).toHaveAttribute('href', 'https://example.com/health');
+  });
+
   it('builds an auto table of contents from headings', () => {
     render(<BlockRenderer blocks={[
       block('toc'),

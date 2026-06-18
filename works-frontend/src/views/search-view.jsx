@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Search, FileText, AlertCircle } from 'lucide-react';
+import { Search, FileText, AlertCircle, Bookmark, X } from 'lucide-react';
 import { PageLayout } from '@/components/works/templates/page-layout';
 import { Tabs, TabList, Tab, TabPanel } from '@/components/works/atoms/tabs';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { Button } from '@/components/works/button';
+import { IconButton } from '@/components/works/atoms/icon-button';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { PriorityBadge } from '@/components/works/priority-badge';
 import { StatusBadge } from '@/components/works/status-badge';
 import { useSearch } from '@/hooks/queries/useSearch';
+import { mergeViewState, readViewState } from '@/lib/view-state';
 
 // Facet tab id → types array passed to searchClient.
 const FACET_TYPES = {
@@ -103,8 +105,10 @@ function ArticleRow({ article, onSelect, isFocused, onFocus }) {
 //   onSelectItem  (fn)      — called with the work item object when a row is activated.
 //   onSelectArticle (fn)    — called with the article object when a row is activated.
 export default function SearchView({ workspaceId, onSelectItem, onSelectArticle }) {
-  const [query, setQuery]   = useState('');
-  const [facet, setFacet]   = useState('all');
+  const [initialState] = useState(() => readViewState('search', { query: '', facet: 'all', saved: [] }));
+  const [query, setQuery]   = useState(initialState.query);
+  const [facet, setFacet]   = useState(FACET_TYPES[initialState.facet] ? initialState.facet : 'all');
+  const [saved, setSaved]   = useState(Array.isArray(initialState.saved) ? initialState.saved : []);
   const [focusIdx, setFocusIdx] = useState(0);
   const inputRef    = useRef(null);
   const resultsRef  = useRef(null);
@@ -134,6 +138,40 @@ export default function SearchView({ workspaceId, onSelectItem, onSelectArticle 
     if (entry.kind === 'work_item') onSelectItem?.(entry.data);
     else onSelectArticle?.(entry.data);
   }, [onSelectItem, onSelectArticle]);
+
+  function updateQuery(nextQuery) {
+    setQuery(nextQuery);
+    setFocusIdx(0);
+    mergeViewState('search', { query: nextQuery, facet, saved });
+  }
+
+  function updateFacet(nextFacet) {
+    setFacet(nextFacet);
+    setFocusIdx(0);
+    mergeViewState('search', { query, facet: nextFacet, saved });
+  }
+
+  function saveRefinement() {
+    const trimmed = query.trim();
+    if (trimmed.length < 2) return;
+    const id = `${facet}:${trimmed.toLowerCase()}`;
+    const next = [{ id, query: trimmed, facet }, ...saved.filter((item) => item.id !== id)].slice(0, 8);
+    setSaved(next);
+    mergeViewState('search', { query: trimmed, facet, saved: next });
+  }
+
+  function applyRefinement(refinement) {
+    setQuery(refinement.query);
+    setFacet(FACET_TYPES[refinement.facet] ? refinement.facet : 'all');
+    setFocusIdx(0);
+    mergeViewState('search', { query: refinement.query, facet: refinement.facet, saved });
+  }
+
+  function removeRefinement(id) {
+    const next = saved.filter((item) => item.id !== id);
+    setSaved(next);
+    mergeViewState('search', { query, facet, saved: next });
+  }
 
   function onKeyDown(e) {
     if (!allResults.length) return;
@@ -176,7 +214,7 @@ export default function SearchView({ workspaceId, onSelectItem, onSelectArticle 
           aria-autocomplete="list"
           placeholder="Search work items, articles, and more…"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => updateQuery(e.target.value)}
           onKeyDown={onKeyDown}
           className={[
             'h-12 w-full rounded-xl border border-neutral-200 bg-white pl-11 pr-4 text-sm',
@@ -190,8 +228,43 @@ export default function SearchView({ workspaceId, onSelectItem, onSelectArticle 
         />
       </div>
 
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={saveRefinement}
+          disabled={query.trim().length < 2}
+        >
+          <Bookmark className="h-3.5 w-3.5" aria-hidden="true" />
+          Save search
+        </Button>
+        {saved.map((refinement) => (
+          <span key={refinement.id} className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => applyRefinement(refinement)}
+              className="h-auto px-0 py-0 text-xs"
+            >
+              {refinement.query}
+              <span className="ml-1 text-neutral-500">/{refinement.facet.replace('_', ' ')}</span>
+            </Button>
+            <IconButton
+              type="button"
+              onClick={() => removeRefinement(refinement.id)}
+              aria-label={`Remove saved search ${refinement.query}`}
+              size="xs"
+            >
+              <X className="h-3 w-3" aria-hidden="true" />
+            </IconButton>
+          </span>
+        ))}
+      </div>
+
       {/* Facet tabs */}
-      <Tabs value={facet} onValueChange={(v) => { setFacet(v); setFocusIdx(0); }}>
+      <Tabs value={facet} onValueChange={updateFacet}>
         <TabList aria-label="Search result type">
           <Tab value="all">All</Tab>
           <Tab value="work_items">Work Items</Tab>

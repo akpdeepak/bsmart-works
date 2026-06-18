@@ -52,6 +52,20 @@ function blockToMd(block) {
       return `$$\n${c}\n$$\n\n`;
     case 'embed':
       return `[${block.metadata?.title || c}](${c})\n\n${block.metadata?.description || ''}\n\n`;
+    case 'decision':
+      return `### Decision: ${c || 'Untitled'}\n\n- Status: ${block.metadata?.status || 'proposed'}\n- Owner: ${block.metadata?.owner || ''}\n- Date: ${block.metadata?.date || ''}\n\n**Rationale**\n\n${block.metadata?.rationale || ''}\n\n**Consequences**\n\n${block.metadata?.consequences || ''}\n\n`;
+    case 'retro':
+      return `### ${c || 'Retrospective'}\n\n**Went well**\n\n${block.metadata?.wentWell || ''}\n\n**Improve**\n\n${block.metadata?.improve || ''}\n\n**Actions**\n\n${block.metadata?.actions || ''}\n\n**Shoutouts**\n\n${block.metadata?.shoutouts || ''}\n\n`;
+    case 'okr':
+      return `### Objective: ${c || 'Untitled'}\n\n${(block.metadata?.keyResults || []).map((kr) => `- ${kr.title || 'Key result'}: ${kr.current || 0}/${kr.target || 0}`).join('\n')}\n\n`;
+    case 'risk_register':
+      return `### Risk register\n\n| Risk | Score | Owner | Mitigation |\n| --- | --- | --- | --- |\n${(block.metadata?.risks || []).map((r) => `| ${r.risk || ''} | ${(Number(r.impact) || 0) * (Number(r.probability) || 0)} | ${r.owner || ''} | ${r.mitigation || ''} |`).join('\n')}\n\n`;
+    case 'raci':
+      return `### RACI matrix\n\n${blockToMd({ ...block, type: 'table' })}`;
+    case 'release_notes':
+      return `### Release notes ${block.metadata?.version || ''}\n\n**Added**\n\n${block.metadata?.added || ''}\n\n**Changed**\n\n${block.metadata?.changed || ''}\n\n**Fixed**\n\n${block.metadata?.fixed || ''}\n\n**Known issues**\n\n${block.metadata?.knownIssues || ''}\n\n`;
+    case 'dashboard':
+      return `[${block.metadata?.title || 'Embedded dashboard'}](${block.metadata?.url || c || '#'})\n\n${block.metadata?.description || ''}\n\n`;
     case 'toggle': return `**${c}**\n\n${block.metadata?.children ? blocksToMarkdown(block.metadata.children) : ''}`;
     default: return c ? `${c}\n\n` : `<!-- block:${block.type} -->\n\n`;
   }

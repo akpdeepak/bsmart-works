@@ -24,6 +24,13 @@ describe('blockPlainText', () => {
     expect(blockPlainText(b('whiteboard', '', { notes: [{ text: 'idea' }] }))).toBe('idea');
     expect(blockPlainText(b('divider'))).toBe('');
   });
+
+  it('extracts text from bSmart knowledge blocks', () => {
+    expect(blockPlainText(b('decision', 'Use PostgreSQL', { rationale: 'Relational fit' }))).toContain('Relational fit');
+    expect(blockPlainText(b('okr', 'Adoption', { keyResults: [{ title: 'Editors', current: '40', target: '80' }] }))).toContain('Editors 40 80');
+    expect(blockPlainText(b('risk_register', '', { risks: [{ risk: 'Delay', mitigation: 'Pilot' }] }))).toContain('Pilot');
+    expect(blockPlainText(b('release_notes', 'June', { added: 'Decision block' }))).toContain('Decision block');
+  });
 });
 
 describe('blocksText + countWords', () => {

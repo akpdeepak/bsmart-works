@@ -37,6 +37,20 @@ export function blockPlainText(block) {
       return content;
     case 'embed':
       return `${content} ${meta.title || ''} ${meta.description || ''}`;
+    case 'decision':
+      return `${content} ${meta.status || ''} ${meta.owner || ''} ${meta.rationale || ''} ${meta.consequences || ''} ${(meta.options || []).join(' ')}`;
+    case 'retro':
+      return `${content} ${meta.wentWell || ''} ${meta.improve || ''} ${meta.actions || ''} ${meta.shoutouts || ''}`;
+    case 'okr':
+      return `${content} ${meta.owner || ''} ${(meta.keyResults || []).map((kr) => `${kr.title || ''} ${kr.current || ''} ${kr.target || ''}`).join(' ')}`;
+    case 'risk_register':
+      return (meta.risks || []).map((r) => `${r.risk || ''} ${r.owner || ''} ${r.mitigation || ''}`).join(' ');
+    case 'raci':
+      return (meta.rows || []).flat().map((c) => (c == null ? '' : String(c))).join(' ');
+    case 'release_notes':
+      return `${content} ${meta.version || ''} ${meta.added || ''} ${meta.changed || ''} ${meta.fixed || ''} ${meta.knownIssues || ''}`;
+    case 'dashboard':
+      return `${content} ${meta.title || ''} ${meta.description || ''} ${meta.url || ''}`;
     case 'workitem':
       return `${content} ${meta.title || ''}`;
     case 'bookmark':

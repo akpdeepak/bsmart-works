@@ -13,7 +13,7 @@ describe('BlockEditor — Know Studio blocks', () => {
     await user.click(screen.getByRole('button', { name: 'Add block' }));
     const menu = screen.getByRole('listbox', { name: 'Block type' });
     // The new Know Studio block types are offered (exact accessible names = the labels).
-    for (const label of ['Sheet (formulas)', 'Chart', 'Database', 'Pivot table', 'Live widget (BQL)', 'Whiteboard', 'Mind map', 'Flowchart', 'Math / LaTeX', 'Rich embed', 'Sticker / emoji', 'Callout / panel', 'Work item', 'File (any type)', 'Table of contents']) {
+    for (const label of ['Sheet (formulas)', 'Chart', 'Database', 'Pivot table', 'Live widget (BQL)', 'Whiteboard', 'Mind map', 'Flowchart', 'Math / LaTeX', 'Rich embed', 'Sticker / emoji', 'Callout / panel', 'Work item', 'File (any type)', 'Table of contents', 'Decision log', 'OKR tracker', 'Risk register', 'RACI matrix', 'Release notes', 'Embedded dashboard']) {
       expect(within(menu).getByRole('option', { name: label })).toBeInTheDocument();
     }
   });
@@ -55,6 +55,19 @@ describe('BlockEditor — Know Studio blocks', () => {
     const emitted = onChange.mock.calls.at(-1)[0][0];
     expect(emitted.metadata.view).toBe('board');
     expect(emitted.metadata.filters).toContain('status=draft');
+  });
+
+  it('edits bSmart knowledge blocks as first-class content', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BlockEditor blocks={[{ id: 'd1', type: 'decision', content: '', metadata: { status: 'proposed' } }]} onChange={onChange} />);
+
+    await user.type(screen.getByLabelText('Decision'), 'Use PostgreSQL');
+    await user.type(screen.getByLabelText('Owner'), 'Platform');
+
+    const emitted = onChange.mock.calls.at(-1)[0][0];
+    expect(emitted.type).toBe('decision');
+    expect(emitted.metadata.owner).toBe('Platform');
   });
 
   it('offers whiteboard shapes, connectors, zoom and snap controls (KR-057/KR-059/KR-064)', async () => {

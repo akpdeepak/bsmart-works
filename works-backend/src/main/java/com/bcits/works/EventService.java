@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -64,6 +65,10 @@ public class EventService {
                 // Webhook delivery is best-effort and must not break the business write.
             }
         }
+    }
+
+    public List<AppEvent> eventsFor(String aggregateId) {
+        return eventRepository.findByAggregateIdOrderByOccurredAtDesc(aggregateId);
     }
 
     public void recordDiff(String aggregateId, String eventType, String actorId,

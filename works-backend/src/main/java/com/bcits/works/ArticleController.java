@@ -191,6 +191,12 @@ public class ArticleController {
         return articleDao.countCitations(articleId);
     }
 
+    @GetMapping("/{id}/activity")
+    public List<AppEvent> getActivity(@PathVariable String id) {
+        requireArticleById(id);
+        return eventService.eventsFor(id);
+    }
+
     @PostMapping
     public Article createArticle(@Valid @RequestBody Article article) {
         String userId = authenticatedUser.id();
@@ -306,8 +312,19 @@ public class ArticleController {
         }
         a.setUpdatedAt(now);
         Article saved = articleRepository.save(a);
-        eventService.record(id, "ARTICLE_" + action.toUpperCase(), userId,
-                "{\"status\":\"" + newStatus + "\"}");
+        KnowledgeSpace space = knowledgeSpaceRepository.findById(saved.getSpaceId()).orElse(null);
+        String eventType = ArticleWorkflowService.PUBLISHED.equals(newStatus)
+                ? "ARTICLE_PUBLISHED" : "ARTICLE_" + action.toUpperCase();
+        if (space != null) {
+            eventService.recordInWorkspace(space.getWorkspaceId(), id, eventType, userId,
+                    Map.of("status", newStatus, "action", action));
+            if (ArticleWorkflowService.PUBLISHED.equals(newStatus)) {
+                spaceFollowerService.notifyFollowers(saved.getSpaceId(), space.getWorkspaceId(),
+                        saved.getId(), userId);
+            }
+        } else {
+            eventService.record(id, eventType, userId, "{\"status\":\"" + newStatus + "\"}");
+        }
         return saved;
     }
 
@@ -381,6 +398,29 @@ public class ArticleController {
         requireArticleById(id);
         articleDao.unlinkWorkItem(id, workItemId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/move")
+    public Article moveArticle(@PathVariable String id, @RequestBody Map<String, String> body) {
+        String userId = authenticatedUser.id();
+        Article article = articleRepository.findById(id).orElseThrow(() -> ApiException.notFound("Article", id));
+        requireArticleAccess(article);
+        String targetSpaceId = body.get("spaceId");
+        if (targetSpaceId == null || targetSpaceId.isBlank()) {
+            throw ApiException.badRequest("SPACE_REQUIRED", "spaceId is required.", "spaceId");
+        }
+        KnowledgeSpace targetSpace = knowledgeSpaceRepository.findById(targetSpaceId)
+                .orElseThrow(() -> ApiException.notFound("Space", targetSpaceId));
+        rbac.require(userId, targetSpace.getWorkspaceId(), "edit_items");
+        String oldSpaceId = article.getSpaceId();
+        article.setSpaceId(targetSpaceId);
+        String parentId = body.get("parentId");
+        article.setParentId(parentId == null || parentId.isBlank() ? null : parentId);
+        article.setUpdatedAt(OffsetDateTime.now());
+        Article saved = articleRepository.save(article);
+        eventService.recordInWorkspace(targetSpace.getWorkspaceId(), id, "ARTICLE_MOVED", userId,
+                Map.of("fromSpaceId", oldSpaceId == null ? "" : oldSpaceId, "toSpaceId", targetSpaceId));
+        return saved;
     }
 
     // ── KR-066: public share link ──────────────────────────────────────────────
@@ -513,7 +553,8 @@ public class ArticleController {
             a.setPublishedAt(now);
             a.setUpdatedAt(now);
             articleRepository.save(a);
-            eventService.record(id, "ARTICLE_PUBLISHED", userId, "{\"bulk\":true}");
+            eventService.recordInWorkspace(workspaceId, id, "ARTICLE_PUBLISHED", userId, Map.of("bulk", true));
+            spaceFollowerService.notifyFollowers(a.getSpaceId(), workspaceId, a.getId(), userId);
             processed.add(id);
         }
         return Map.of("processed", processed, "skipped", skipped);

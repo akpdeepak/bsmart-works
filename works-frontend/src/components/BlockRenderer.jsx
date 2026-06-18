@@ -251,6 +251,126 @@ function EmbedView({ block }) {
   );
 }
 
+function SectionText({ title, text }) {
+  if (!text) return null;
+  return (
+    <div>
+      <p className="text-2xs uppercase tracking-wide font-semibold text-neutral-500">{title}</p>
+      <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-800 dark:text-neutral-200">{text}</p>
+    </div>
+  );
+}
+
+function DecisionView({ block }) {
+  const m = block.metadata || {};
+  return (
+    <div className="rounded-md border border-neutral-200 dark:border-neutral-700 p-3 space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{block.content || 'Decision'}</p>
+        <span className="rounded-full bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 text-2xs font-semibold text-neutral-600 dark:text-neutral-300">{m.status || 'proposed'}</span>
+        {m.owner && <span className="text-xs text-neutral-500">Owner: {m.owner}</span>}
+        {m.date && <span className="text-xs text-neutral-500">{m.date}</span>}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <SectionText title="Rationale" text={m.rationale} />
+        <SectionText title="Consequences" text={m.consequences} />
+      </div>
+    </div>
+  );
+}
+
+function RetroView({ block }) {
+  const m = block.metadata || {};
+  return (
+    <div className="rounded-md border border-neutral-200 dark:border-neutral-700 p-3 space-y-3">
+      <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{block.content || 'Retrospective'}</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <SectionText title="Went well" text={m.wentWell} />
+        <SectionText title="Improve" text={m.improve} />
+        <SectionText title="Actions" text={m.actions} />
+        <SectionText title="Shoutouts" text={m.shoutouts} />
+      </div>
+    </div>
+  );
+}
+
+function OkrView({ block }) {
+  const m = block.metadata || {};
+  const keyResults = m.keyResults || [];
+  return (
+    <div className="rounded-md border border-neutral-200 dark:border-neutral-700 p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{block.content || 'Objective'}</p>
+        {m.owner && <span className="text-xs text-neutral-500">{m.owner}</span>}
+      </div>
+      {keyResults.map((kr, i) => {
+        const current = Number(kr.current) || 0;
+        const target = Number(kr.target) || 0;
+        const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
+        return (
+          <div key={i} className="space-y-1">
+            <div className="flex justify-between gap-3 text-xs text-neutral-600 dark:text-neutral-300"><span>{kr.title}</span><span>{pct}%</span></div>
+            <div className="h-2 rounded bg-neutral-100 dark:bg-neutral-800 overflow-hidden"><div className="h-full bg-brand-navy" style={{ width: `${pct}%` }} /></div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function RiskRegisterView({ block }) {
+  const risks = block.metadata?.risks || [];
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-sm">
+        <thead><tr>{['Risk', 'Score', 'Owner', 'Mitigation'].map((h) => <th key={h} className="border border-neutral-200 dark:border-neutral-700 px-2 py-1 text-left bg-neutral-50 dark:bg-neutral-800">{h}</th>)}</tr></thead>
+        <tbody>
+          {risks.map((r, i) => <tr key={i}>
+            <td className="border border-neutral-200 dark:border-neutral-700 px-2 py-1.5">{r.risk}</td>
+            <td className="border border-neutral-200 dark:border-neutral-700 px-2 py-1.5 tabular-nums">{(Number(r.impact) || 0) * (Number(r.probability) || 0)}</td>
+            <td className="border border-neutral-200 dark:border-neutral-700 px-2 py-1.5">{r.owner}</td>
+            <td className="border border-neutral-200 dark:border-neutral-700 px-2 py-1.5">{r.mitigation}</td>
+          </tr>)}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ReleaseNotesView({ block }) {
+  const m = block.metadata || {};
+  return (
+    <div className="rounded-md border border-neutral-200 dark:border-neutral-700 p-3 space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{block.content || 'Release notes'}</p>
+        {m.version && <span className="rounded bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 text-2xs">{m.version}</span>}
+        {m.date && <span className="text-xs text-neutral-500">{m.date}</span>}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <SectionText title="Added" text={m.added} />
+        <SectionText title="Changed" text={m.changed} />
+        <SectionText title="Fixed" text={m.fixed} />
+        <SectionText title="Known issues" text={m.knownIssues} />
+      </div>
+    </div>
+  );
+}
+
+function DashboardView({ block }) {
+  const m = block.metadata || {};
+  const href = m.url || block.content || '#';
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="block rounded-md border border-neutral-200 dark:border-neutral-700 p-3 hover:border-brand-navy-tint">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{m.title || 'Embedded dashboard'}</span>
+        <ExternalLink aria-hidden="true" className="h-3.5 w-3.5 text-neutral-400 ml-auto" />
+      </div>
+      {m.description && <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">{m.description}</p>}
+      {m.refresh && <p className="mt-2 text-2xs uppercase tracking-wide text-neutral-500">Refresh: {m.refresh}</p>}
+    </a>
+  );
+}
+
 function WorkItemView({ block }) {
   return (
     <div className="rounded-md border border-neutral-200 dark:border-neutral-700 p-3 flex items-center gap-3">
@@ -385,6 +505,20 @@ function OneBlock({ block, allBlocks, workspaceId, blockComments }) {
       return <MathView block={block} />;
     case 'embed':
       return <EmbedView block={block} />;
+    case 'decision':
+      return <DecisionView block={block} />;
+    case 'retro':
+      return <RetroView block={block} />;
+    case 'okr':
+      return <OkrView block={block} />;
+    case 'risk_register':
+      return <RiskRegisterView block={block} />;
+    case 'raci':
+      return <TableView block={block} />;
+    case 'release_notes':
+      return <ReleaseNotesView block={block} />;
+    case 'dashboard':
+      return <DashboardView block={block} />;
     case 'workitem':
       return <WorkItemView block={block} />;
     case 'bookmark':

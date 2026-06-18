@@ -36,6 +36,7 @@ function typeQuery(value = 'test') {
 }
 
 beforeEach(() => {
+  window.localStorage.clear();
   useSearch.mockReset();
   // Default: idle / no results.
   useSearch.mockReturnValue({ data: undefined, isLoading: false, isError: false });
@@ -129,5 +130,36 @@ describe('SearchView', () => {
     renderWith(<SearchView {...BASE} />);
     fireEvent.click(screen.getByRole('tab', { name: /articles/i }));
     expect(screen.getByRole('tab', { name: /articles/i })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('restores the last persisted query and facet', () => {
+    window.localStorage.setItem('bsmart:view-state:search', JSON.stringify({ query: 'runbook', facet: 'articles', saved: [] }));
+    renderWith(<SearchView {...BASE} />);
+    expect(screen.getByRole('searchbox')).toHaveValue('runbook');
+    expect(screen.getByRole('tab', { name: /articles/i })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('saves and reapplies a search refinement', () => {
+    renderWith(<SearchView {...BASE} />);
+    typeQuery('login');
+    fireEvent.click(screen.getByRole('tab', { name: /work items/i }));
+    fireEvent.click(screen.getByRole('button', { name: /save search/i }));
+    expect(screen.getByRole('button', { name: /^login/i })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'other' } });
+    fireEvent.click(screen.getByRole('button', { name: /^login/i }));
+    expect(screen.getByRole('searchbox')).toHaveValue('login');
+    expect(screen.getByRole('tab', { name: /work items/i })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('removes a saved search refinement', () => {
+    window.localStorage.setItem('bsmart:view-state:search', JSON.stringify({
+      query: '',
+      facet: 'all',
+      saved: [{ id: 'all:login', query: 'login', facet: 'all' }],
+    }));
+    renderWith(<SearchView {...BASE} />);
+    fireEvent.click(screen.getByRole('button', { name: /remove saved search login/i }));
+    expect(screen.queryByRole('button', { name: /^login/i })).not.toBeInTheDocument();
   });
 });

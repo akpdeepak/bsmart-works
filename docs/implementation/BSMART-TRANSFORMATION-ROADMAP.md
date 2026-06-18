@@ -58,6 +58,12 @@ Reconciliation rules:
 
 - V1.6 requirements do not override Phase 1. EPIC 0, EPIC 1, EPIC 2, and EPIC 25 partial still come
   first.
+- V1.6 navigation suggestions do not replace the existing bSmart mode model. The product modes remain
+  `Today`, `Deliver`, `Service`, `Insights`, and `Extend`.
+- V1.6 work item suggestions do not replace the existing work-item hierarchy. Preserve the current
+  hierarchy and taxonomy as the baseline; add only new types, links, or hierarchy behaviors that are
+  logically needed, backwards-compatible, tenant-safe, and explicitly documented in the relevant EPIC
+  plan.
 - V1.6 repository safety/docs items may be handled during EPIC 0.
 - V1.6 guardrails, validation, and e2e-scope items may be handled during EPIC 25 partial.
 - V1.6 architecture items map primarily to EPIC 3, EPIC 4, and EPIC 27.
@@ -125,45 +131,63 @@ EPIC plan only if the repo copies are also missing.
 - Do not claim an EPIC is complete until code is merged to GitHub `main`, local `main` is updated,
   verification is run, and the completion note plus `ROADMAP-STATE.md` are updated.
 
-## Final visible navigation
+## Preserved product modes
 
-The product must converge to this visible navigation:
+The product keeps the existing top-level mode model:
 
 1. Today
-2. Inbox
-3. Messages
-4. Work
-5. Projects
-6. Knowledge
-7. Reports
-8. More
+2. Deliver
+3. Service
+4. Insights
+5. Extend
 
-Under More:
+These modes remain stable unless Deepak explicitly approves a navigation model change. V1.6 and V.20
+requirements must be mapped inside these modes rather than replacing them.
 
-- Service Desk
-- Customers
-- DevSync
-- Triage
-- Cycles
-- Initiatives
-- Releases
-- Automations
-- Integrations
-- AI Studio
-- BQL
-- Admin
-- Security
-- Marketplace
-- Settings
+Mode intent:
+
+- **Today:** personal and role-aware focus, priorities, next best actions, briefings, and daily work
+  clarity.
+- **Deliver:** work items, boards, backlogs, projects, releases, DevSync-linked execution,
+  framework-aware delivery flows, and team operating model surfaces.
+- **Service:** service desk, customers, SLA, support/customer portal, incidents, escalations, and
+  customer resolution workflows.
+- **Insights:** reports, dashboards, BQL, executive briefs, analytics, health, risks, compliance
+  posture, and source-backed leadership intelligence.
+- **Extend:** admin, settings, security, automations, integrations, AI Studio, marketplace,
+  configuration builders, operating model policy, and platform extension surfaces.
 
 Acceptance rules:
 
-- Maximum 8 primary navigation items.
-- No advanced feature gets a new primary nav item without explicit product approval.
-- Existing features remain discoverable through More or command palette.
+- Do not create a new primary mode without explicit product approval.
+- Existing features remain discoverable through their owning mode, contextual entry points, or command
+  palette.
 - Role-based navigation may hide irrelevant surfaces, but server-side RBAC still enforces
   permissions.
 - Deep links continue to work.
+- V1.6 additions such as BQL drawers, query boards, bSmart Messenger, profile preferences, framework
+  policies, and Admin Studio capabilities must attach to the appropriate existing mode.
+
+## Preserved work-item hierarchy
+
+The current work-item hierarchy and taxonomy remain the baseline. V1.6 requirements may extend them
+only when the addition is product-logical and compatible with existing data, API contracts, reporting,
+permissions, and user mental models.
+
+Rules:
+
+- Keep internal work item identity stable.
+- Preserve existing parent/child/link hierarchy behavior.
+- Preserve existing work type taxonomy unless an EPIC plan proves a new type or relationship is
+  necessary.
+- Add team-key display IDs, if implemented, as a user-facing identity layer without breaking existing
+  internal IDs.
+- New work types, hierarchy links, or artifact conversions must be configurable where appropriate and
+  workspace-scoped.
+- Message-to-artifact conversion may create or link to existing artifact types first; introduce a new
+  type only when no existing type fits.
+- Any hierarchy extension needs migration, API, frontend, BQL, reports, audit, and regression-test
+  coverage.
 
 ## Do not do now
 
@@ -348,10 +372,7 @@ Intent -> Smart default -> Minimal input -> Preview -> Confirm -> Output -> Next
 V1 focuses on:
 
 1. Today: What matters now?
-2. Inbox: What needs my action?
-3. Work: What is being executed?
-4. Projects: Are we on track?
-5. Knowledge: What is the source of truth?
-6. Messages: What discussion should become action?
-7. Reports: What progress/risk should leadership see?
-8. AI: What can be summarized, drafted, explained, or prepared with sources?
+2. Deliver: What work is being executed, blocked, planned, or ready to move?
+3. Service: Which customer/service commitments need attention?
+4. Insights: What progress, risk, health, and evidence should leaders see?
+5. Extend: What configuration, automation, AI, integration, or governance should admins control?

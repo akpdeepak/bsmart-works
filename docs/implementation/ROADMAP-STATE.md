@@ -7,7 +7,7 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 
 ## Current status
 
-- Roadmap mode: V.20 source documents synchronized to GitHub with V1.6 overlay
+- Roadmap mode: V.20 source documents synchronized to GitHub with V1.6 overlay and preserved mode model
 - Active EPIC: None
 - Active branch: `main`
 - Last completed EPIC: None recorded here
@@ -49,7 +49,10 @@ resume point.
 - Execution priority layer:
   `docs/implementation/source-documents/bSmart_Works_Final_Execution_Decision_Document.md`
 - Phase 1 remains mandatory before major expansion: EPIC 0, EPIC 1, EPIC 2, and EPIC 25 partial.
-- Visible navigation target: Today, Inbox, Messages, Work, Projects, Knowledge, Reports, More.
+- Preserved product modes: Today, Deliver, Service, Insights, Extend.
+- Work-item hierarchy: preserve the current hierarchy/taxonomy as baseline. Add only logically needed,
+  backwards-compatible extensions through explicit EPIC plans with migration/API/frontend/BQL/reporting
+  and regression-test coverage.
 - Do-not-start-yet constraints: broad messaging platform, full low-code suite, autonomous agents,
   marketplace expansion, advanced analytics, public community, heavy DevSync dashboards, and all
   admin builders at once.
@@ -104,6 +107,8 @@ resume point.
 
 ## Latest handoff
 
-2026-06-18: added `bSmart_Works_V1_6_Claude_Codex_Roadmap.md` as a repo-tracked source document and
-reconciled it into the V.20 roadmap as a requirements overlay. EPIC 0 remains the next implementation
-step. Preserve unrelated local changes if present when starting/resuming.
+2026-06-18: updated reconciliation to preserve the existing modes (`Today`, `Deliver`, `Service`,
+`Insights`, `Extend`) and preserve the current work-item hierarchy/taxonomy as baseline. V1.6 remains
+a requirements overlay, but navigation and hierarchy changes must fit the existing product model.
+EPIC 0 remains the next implementation step. Preserve unrelated local changes if present when
+starting/resuming.

@@ -31,8 +31,8 @@ export default function WorkspaceView({
                         </div>
                         <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full">{m.role}</span>
                         {m.id !== currentUser.id && (
-                          <button onClick={() => handleRemoveMember(m.id)}
-                            className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger transition-colors">Remove</button>
+                          <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveMember(m.id)}
+                            className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger transition-colors">Remove</Button>
                         )}
                       </div>
                     ))
@@ -134,10 +134,10 @@ export default function WorkspaceView({
                 <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">Manage per-project team membership</p>
                 <div className="flex gap-2 mb-4 flex-wrap">
                   {projects.filter(p => !p.archived).map(p => (
-                    <button key={p.id} onClick={() => fetchProjectMembers(p.id)}
+                    <Button key={p.id} type="button" variant="secondary" size="sm" onClick={() => fetchProjectMembers(p.id)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${selectedProjectId === p.id ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white text-neutral-600 border-neutral-200 hover:border-brand-navy'}`}>
                       {p.name}
-                    </button>
+                    </Button>
                   ))}
                 </div>
                 {selectedProjectId && (

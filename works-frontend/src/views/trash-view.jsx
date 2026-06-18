@@ -32,10 +32,10 @@ export default function TrashView({ loading = false, trashItems, restoreFromTras
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <Button variant="secondary" size="sm" onClick={() => restoreFromTrash(item.id)}>Restore</Button>
-                  <button onClick={() => permanentDelete(item.id)}
+                  <Button type="button" variant="danger" size="sm" onClick={() => permanentDelete(item.id)}
                     className="text-xs text-semantic-danger hover:text-semantic-danger/80 px-2 py-1 rounded border border-semantic-danger/30 hover:bg-semantic-danger-surface transition-colors">
                     Delete permanently
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}

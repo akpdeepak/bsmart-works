@@ -148,12 +148,15 @@ export default function SprintView({
             <div className="flex items-center gap-2 flex-wrap">
               {savedFilters.map(f => (
                 <div key={f.id} className="flex items-center gap-0.5">
-                  <button onClick={() => setSprintFilters(normalizeSavedFilter(JSON.parse(f.filterJson)))}
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setSprintFilters(normalizeSavedFilter(JSON.parse(f.filterJson)))}
                     className={`text-xs px-2.5 py-1.5 rounded-l-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/10 text-semantic-success' : 'bg-brand-navy/10 text-brand-navy'} hover:opacity-80`}>
                     {f.shared ? <Globe className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /> : <Star className="inline-block h-3.5 w-3.5 align-text-bottom fill-current" aria-hidden="true" />}{f.name}
-                  </button>
+                  </Button>
                   {f.createdBy === currentUser?.id && (
-                    <button
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => {
                         api.send(`/saved-filters/${f.id}/share`, { method: 'PUT' })
                           .then(() => fetchSavedFilters())
@@ -162,21 +165,21 @@ export default function SprintView({
                       title={f.shared ? t('deliver.sprint.makePrivate') : t('deliver.sprint.shareWithTeam')}
                       className={`text-xs px-1.5 py-1.5 rounded-r-full font-medium transition-colors ${f.shared ? 'bg-semantic-success/20 text-semantic-success hover:bg-semantic-success/30' : 'bg-neutral-100 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200'}`}>
                       {f.shared ? <Unlock className="h-3.5 w-3.5" aria-hidden="true" /> : <Lock className="h-3.5 w-3.5" aria-hidden="true" />}
-                    </button>
+                    </Button>
                   )}
                 </div>
               ))}
               {hasActiveFilters(sprintFilters) && (
                 <div className="flex items-center gap-1">
                   {!showSaveFilter
-                    ? <button onClick={() => setShowSaveFilter(true)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy">{t('deliver.sprint.saveFilter')}</button>
+                    ? <Button type="button" variant="ghost" size="sm" onClick={() => setShowSaveFilter(true)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy">{t('deliver.sprint.saveFilter')}</Button>
                     : <div className="flex gap-1">
                         <input type="text" value={saveFilterName} onChange={e => setSaveFilterName(e.target.value)}
                           placeholder={t('deliver.sprint.filterName')} className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 rounded px-2 py-1 focus:outline-none" />
                         <Button size="sm" variant="secondary" onClick={handleSaveFilter}>{t('common.save')}</Button>
-                        <button onClick={() => setShowSaveFilter(false)} className="text-xs text-neutral-600 dark:text-neutral-400 px-1" aria-label={t('deliver.sprint.cancelSaveFilter')}>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setShowSaveFilter(false)} className="text-xs text-neutral-600 dark:text-neutral-400 px-1" aria-label={t('deliver.sprint.cancelSaveFilter')}>
                           <X className="h-3.5 w-3.5" aria-hidden="true" />
-                        </button>
+                        </Button>
                       </div>
                   }
                 </div>

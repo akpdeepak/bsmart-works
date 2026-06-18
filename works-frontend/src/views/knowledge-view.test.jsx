@@ -60,8 +60,8 @@ describe('KnowledgeView', () => {
     api.raw.mockResolvedValue({ ok: true, blob: () => Promise.resolve(new Blob(['x'])) });
     downloadMarkdown.mockClear();
     Object.defineProperty(window, 'print', { value: vi.fn(), writable: true });
-    global.URL.createObjectURL = vi.fn(() => 'blob:test');
-    global.URL.revokeObjectURL = vi.fn();
+    globalThis.URL.createObjectURL = vi.fn(() => 'blob:test');
+    globalThis.URL.revokeObjectURL = vi.fn();
   });
 
   it('renders the Knowledge Spaces sidebar heading', () => {

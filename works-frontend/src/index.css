@@ -171,3 +171,52 @@
   );
   background-size: 200% 100%;
 }
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  button,
+  nav,
+  aside,
+  [role="toolbar"],
+  [aria-label="Knowledge health dashboard"],
+  [aria-label="Article outline"],
+  [aria-label="Article properties"],
+  [aria-label="Block comments"] {
+    display: none !important;
+  }
+
+  main,
+  article,
+  [class*="overflow-y-auto"],
+  [class*="overflow-hidden"] {
+    overflow: visible !important;
+  }
+
+  [class*="bg-neutral"],
+  [class*="dark:bg"],
+  [class*="bg-white"] {
+    background: #ffffff !important;
+  }
+
+  [class*="text-neutral"],
+  [class*="dark:text"] {
+    color: #111827 !important;
+  }
+
+  [class*="border-neutral"] {
+    border-color: #d1d5db !important;
+  }
+
+  h1,
+  h2,
+  h3,
+  table,
+  pre,
+  blockquote {
+    break-inside: avoid;
+  }
+}

@@ -35,6 +35,7 @@ import { FollowSpaceButton } from '@/components/knowledge/FollowSpaceButton';
 import { BulkActionBar } from '@/components/knowledge/BulkActionBar';
 import { RelatedArticles } from '@/components/knowledge/RelatedArticles';
 import { ArticleSharePopover } from '@/components/knowledge/ArticleSharePopover';
+import { KnowledgeRoadmapPanel } from '@/components/knowledge/KnowledgeRoadmapPanel';
 import { useRecentArticles } from '@/hooks/use-recent-articles';
 import { onPressKey, renderMd } from '@/lib/utils';
 import { blocksText, countWords } from '@/lib/doc-stats';
@@ -1567,6 +1568,17 @@ export default function KnowledgeView({
               )}
 
               {/* ── Contextual side panels ── */}
+              {!focusMode && !propertiesOpen && !articlePanel && (
+                <KnowledgeRoadmapPanel
+                  article={selectedArticle}
+                  articles={[...(knowledgeArticles || []), ...(knowledgeSearchResults || [])]}
+                  related={articleChildren}
+                  comments={articleComments}
+                  searchQuery={knowledgeSearch}
+                  onOpenArticle={openArticleById}
+                />
+              )}
+
               {articlePanel === 'history' && (
                 <div className="w-80 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-y-auto p-4">
                   <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Version history</h3>

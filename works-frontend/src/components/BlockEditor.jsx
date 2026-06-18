@@ -14,7 +14,7 @@ import {
   GitBranch, ChevronDown as ChevronDownIcon,
   Info, CheckSquare, Quote, ChevronRight,
   Grid, BarChart3, PenTool, Link2, Bookmark, GripVertical, List, Sparkles,
-  LayoutDashboard, Smile, Paperclip, Search, X,
+  LayoutDashboard, Smile, Paperclip, Search, X, IndentIncrease, IndentDecrease,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { evaluateSheet, indexToCol } from '@/lib/sheet-engine';
@@ -52,6 +52,7 @@ const BLOCK_TYPES = [
   { type: 'toc',       label: 'Table of contents', Icon: List, group: 'Basic' },
   { type: 'code',      label: 'Code block', Icon: Code, group: 'Basic' },
   { type: 'divider',   label: 'Divider', Icon: Minus, group: 'Basic' },
+  { type: 'footnote',  label: 'Footnote', Icon: List, group: 'Basic' },
   { type: 'sheet',     label: 'Sheet (formulas)', Icon: Grid, group: 'Data' },
   { type: 'chart',     label: 'Chart', Icon: BarChart3, group: 'Data' },
   { type: 'database',  label: 'Database', Icon: Table, group: 'Data' },
@@ -104,6 +105,7 @@ const TOOLBAR_GROUPS = [
       { type: 'toc',        title: 'Table of contents',   Icon: List },
       { type: 'code',       title: 'Code block',          Icon: Code },
       { type: 'divider',    title: 'Divider',             Icon: Minus },
+      { type: 'footnote',   title: 'Footnote',            Icon: List },
     ],
   },
   {
@@ -208,6 +210,8 @@ function newBlock(type) {
       return { id, type, content: '', metadata: { items: [{ text: '', done: false }] } };
     case 'toggle':
       return { id, type, content: '', metadata: { body: '', open: true } };
+    case 'footnote':
+      return { id, type, content: '', metadata: { number: '', reference: '' } };
     case 'whiteboard':
       return { id, type, content: '', metadata: { notes: [], shapes: [], connectors: [], zoom: 1, snap: true } };
     case 'mindmap':
@@ -219,21 +223,21 @@ function newBlock(type) {
     case 'embed':
       return { id, type, content: '', metadata: { title: '', description: '' } };
     case 'decision':
-      return { id, type, content: '', metadata: { status: 'proposed', owner: '', date: '', options: ['Option A', 'Option B'], rationale: '', consequences: '' } };
+      return { id, type, content: '', metadata: { status: 'proposed', owner: '', decisionMaker: '', stakeholders: '', date: '', options: ['Option A', 'Option B'], rationale: '', consequences: '' } };
     case 'retro':
-      return { id, type, content: 'Sprint retrospective', metadata: { wentWell: '', improve: '', actions: '', shoutouts: '' } };
+      return { id, type, content: 'Sprint retrospective', metadata: { wentWell: '', didNotWork: '', improve: '', actions: '', shoutouts: '', votes: '' } };
     case 'okr':
-      return { id, type, content: '', metadata: { owner: '', keyResults: [{ title: 'Key result', target: '100', current: '0' }] } };
+      return { id, type, content: '', metadata: { owner: '', statusSummary: '', linkedBql: '', keyResults: [{ title: 'Key result', owner: '', unit: '%', target: '100', current: '0', status: 'On track' }] } };
     case 'risk_register':
-      return { id, type, content: '', metadata: { risks: [{ risk: 'Risk', impact: '3', probability: '3', owner: '', mitigation: '' }] } };
+      return { id, type, content: '', metadata: { sortByScore: true, risks: [{ risk: 'Risk', impact: '3', probability: '3', owner: '', status: 'Open', mitigation: '' }] } };
     case 'raci':
-      return { id, type, content: '', metadata: { rows: [['Task', 'Responsible', 'Accountable', 'Consulted', 'Informed'], ['Launch checklist', '', '', '', '']] } };
+      return { id, type, content: '', metadata: { rows: [['Task', 'Responsible', 'Accountable', 'Consulted', 'Informed'], ['Launch checklist', '', '', '', '']], roleHints: 'Use one accountable owner per row.' } };
     case 'release_notes':
-      return { id, type, content: '', metadata: { version: '', date: '', added: '', changed: '', fixed: '', knownIssues: '' } };
+      return { id, type, content: '', metadata: { version: '', date: '', sprint: '', linkedItems: '', added: '', changed: '', fixed: '', knownIssues: '' } };
     case 'dashboard':
-      return { id, type, content: '', metadata: { title: '', url: '', description: '', refresh: 'Manual' } };
+      return { id, type, content: '', metadata: { title: '', url: '', description: '', refresh: 'Manual', embedMode: 'link', bql: '' } };
     case 'workitem':
-      return { id, type, content: '', metadata: { title: '', status: '' } };
+      return { id, type, content: '', metadata: { title: '', status: '', assignee: '', priority: '', syncedAt: '' } };
     case 'bookmark':
       return { id, type, content: '', metadata: { title: '', description: '' } };
     case 'file':
@@ -697,6 +701,19 @@ function ToggleBlock({ block, onChange }) {
 // Sheet — the "Excel" block: an inline grid with live formulas (=SUM(A1:A3), =A1+B2, …). The
 // Formulas/Values toggle flips between editing raw cells and the evaluated read-out so a reviewer
 // sees the computed result without leaving the doc. Evaluation is the pure sheet-engine (testable).
+function FootnoteBlock({ block, onChange }) {
+  const m = block.metadata || {};
+  return (
+    <div className="grid gap-2 sm:grid-cols-[6rem_1fr]">
+      <Field label="Number" value={m.number} onChange={(number) => onChange({ metadata: { ...m, number } })} placeholder="1" />
+      <Field label="Reference" value={m.reference} onChange={(reference) => onChange({ metadata: { ...m, reference } })} placeholder="Section or source" />
+      <div className="sm:col-span-2">
+        <Field label="Footnote text" value={block.content} onChange={(content) => onChange({ content })} multiline />
+      </div>
+    </div>
+  );
+}
+
 function SheetBlock({ block, onChange }) {
   const [showValues, setShowValues] = useState(false);
   const cols = block.metadata?.cols || (block.metadata?.rows?.[0] ? block.metadata.rows[0].length : 3);
@@ -1147,13 +1164,18 @@ function Field({ label, value, onChange, multiline = false, placeholder = '' }) 
 function DecisionBlock({ block, onChange }) {
   const m = block.metadata || {};
   const set = (patch) => onChange({ metadata: { ...m, ...patch } });
+  const options = Array.isArray(m.options) ? m.options : [];
+  const setOptions = (raw) => set({ options: raw.split('\n').map((item) => item.trim()).filter(Boolean) });
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       <Field label="Decision" value={block.content} onChange={(content) => onChange({ content })} placeholder="What was decided?" />
       <Field label="Owner" value={m.owner} onChange={(owner) => set({ owner })} />
+      <Field label="Decision maker" value={m.decisionMaker} onChange={(decisionMaker) => set({ decisionMaker })} />
+      <Field label="Stakeholders" value={m.stakeholders} onChange={(stakeholders) => set({ stakeholders })} />
       <Field label="Status" value={m.status} onChange={(status) => set({ status })} />
       <Field label="Date" value={m.date} onChange={(date) => set({ date })} />
       <div className="sm:col-span-2 grid gap-2 sm:grid-cols-2">
+        <Field label="Options considered" value={options.join('\n')} onChange={setOptions} multiline />
         <Field label="Rationale" value={m.rationale} onChange={(rationale) => set({ rationale })} multiline />
         <Field label="Consequences" value={m.consequences} onChange={(consequences) => set({ consequences })} multiline />
       </div>
@@ -1169,9 +1191,11 @@ function RetroBlock({ block, onChange }) {
       <Field label="Retro title" value={block.content} onChange={(content) => onChange({ content })} />
       <div className="grid gap-2 sm:grid-cols-2">
         <Field label="Went well" value={m.wentWell} onChange={(wentWell) => set({ wentWell })} multiline />
+        <Field label="Did not work" value={m.didNotWork} onChange={(didNotWork) => set({ didNotWork })} multiline />
         <Field label="Improve" value={m.improve} onChange={(improve) => set({ improve })} multiline />
         <Field label="Actions" value={m.actions} onChange={(actions) => set({ actions })} multiline />
         <Field label="Shoutouts" value={m.shoutouts} onChange={(shoutouts) => set({ shoutouts })} multiline />
+        <Field label="Votes" value={m.votes} onChange={(votes) => set({ votes })} multiline />
       </div>
     </div>
   );
@@ -1186,41 +1210,56 @@ function OkrBlock({ block, onChange }) {
     <div className="space-y-2">
       <Field label="Objective" value={block.content} onChange={(content) => onChange({ content })} />
       <Field label="Owner" value={m.owner} onChange={(owner) => set({ owner })} />
+      <Field label="Status summary" value={m.statusSummary} onChange={(statusSummary) => set({ statusSummary })} />
+      <Field label="Linked BQL" value={m.linkedBql} onChange={(linkedBql) => set({ linkedBql })} />
       {keyResults.map((kr, i) => (
-        <div key={i} className="grid gap-2 sm:grid-cols-[1fr_5rem_5rem]">
+        <div key={i} className="grid gap-2 sm:grid-cols-[1fr_7rem_5rem_5rem_6rem_7rem]">
           <Field label={`Key result ${i + 1}`} value={kr.title} onChange={(title) => updateKr(i, { title })} />
+          <Field label="Owner" value={kr.owner} onChange={(owner) => updateKr(i, { owner })} />
           <Field label="Current" value={kr.current} onChange={(current) => updateKr(i, { current })} />
           <Field label="Target" value={kr.target} onChange={(target) => updateKr(i, { target })} />
+          <Field label="Unit" value={kr.unit} onChange={(unit) => updateKr(i, { unit })} />
+          <Field label="Status" value={kr.status} onChange={(status) => updateKr(i, { status })} />
         </div>
       ))}
-      <button type="button" onClick={() => set({ keyResults: [...keyResults, { title: 'Key result', target: '100', current: '0' }] })} className="text-xs text-brand-navy hover:underline">+ Key result</button>
+      <button type="button" onClick={() => set({ keyResults: [...keyResults, { title: 'Key result', owner: '', unit: '%', target: '100', current: '0', status: 'On track' }] })} className="text-xs text-brand-navy hover:underline">+ Key result</button>
     </div>
   );
 }
 
 function RiskRegisterBlock({ block, onChange }) {
   const m = block.metadata || {};
-  const risks = m.risks || [];
+  const risks = m.sortByScore === false ? (m.risks || []) : [...(m.risks || [])].sort((a, b) => ((Number(b.impact) || 0) * (Number(b.probability) || 0)) - ((Number(a.impact) || 0) * (Number(a.probability) || 0)));
   const setRisks = (next) => onChange({ metadata: { ...m, risks: next } });
   const update = (i, patch) => setRisks(risks.map((r, idx) => idx === i ? { ...r, ...patch } : r));
   return (
     <div className="space-y-2">
+      <label className="inline-flex items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400">
+        <input type="checkbox" checked={m.sortByScore !== false} onChange={(e) => onChange({ metadata: { ...m, sortByScore: e.target.checked } })} />
+        Sort by risk score
+      </label>
       {risks.map((risk, i) => (
-        <div key={i} className="grid gap-2 sm:grid-cols-[1fr_4rem_4rem_8rem]">
+        <div key={i} className="grid gap-2 sm:grid-cols-[1fr_4rem_4rem_8rem_7rem]">
           <Field label={`Risk ${i + 1}`} value={risk.risk} onChange={(v) => update(i, { risk: v })} />
           <Field label="Impact" value={risk.impact} onChange={(v) => update(i, { impact: v })} />
           <Field label="Prob." value={risk.probability} onChange={(v) => update(i, { probability: v })} />
           <Field label="Owner" value={risk.owner} onChange={(v) => update(i, { owner: v })} />
-          <div className="sm:col-span-4"><Field label="Mitigation" value={risk.mitigation} onChange={(v) => update(i, { mitigation: v })} multiline /></div>
+          <Field label="Status" value={risk.status} onChange={(v) => update(i, { status: v })} />
+          <div className="sm:col-span-5"><Field label="Mitigation" value={risk.mitigation} onChange={(v) => update(i, { mitigation: v })} multiline /></div>
         </div>
       ))}
-      <button type="button" onClick={() => setRisks([...risks, { risk: 'Risk', impact: '3', probability: '3', owner: '', mitigation: '' }])} className="text-xs text-brand-navy hover:underline">+ Risk</button>
+      <button type="button" onClick={() => setRisks([...risks, { risk: 'Risk', impact: '3', probability: '3', owner: '', status: 'Open', mitigation: '' }])} className="text-xs text-brand-navy hover:underline">+ Risk</button>
     </div>
   );
 }
 
 function RaciBlock({ block, onChange }) {
-  return <TableBlock block={block} onChange={onChange} />;
+  return (
+    <div className="space-y-2">
+      <Field label="RACI guidance" value={block.metadata?.roleHints} onChange={(roleHints) => onChange({ metadata: { ...block.metadata, roleHints } })} />
+      <TableBlock block={block} onChange={onChange} />
+    </div>
+  );
 }
 
 function ReleaseNotesBlock({ block, onChange }) {
@@ -1231,6 +1270,8 @@ function ReleaseNotesBlock({ block, onChange }) {
       <Field label="Release title" value={block.content} onChange={(content) => onChange({ content })} />
       <Field label="Version" value={m.version} onChange={(version) => set({ version })} />
       <Field label="Date" value={m.date} onChange={(date) => set({ date })} />
+      <Field label="Sprint" value={m.sprint} onChange={(sprint) => set({ sprint })} />
+      <Field label="Linked work items" value={m.linkedItems} onChange={(linkedItems) => set({ linkedItems })} />
       <div className="sm:col-span-2 grid gap-2 sm:grid-cols-2">
         <Field label="Added" value={m.added} onChange={(added) => set({ added })} multiline />
         <Field label="Changed" value={m.changed} onChange={(changed) => set({ changed })} multiline />
@@ -1248,7 +1289,9 @@ function DashboardBlock({ block, onChange }) {
     <div className="grid gap-2 sm:grid-cols-2">
       <Field label="Dashboard title" value={m.title} onChange={(title) => set({ title })} />
       <Field label="Refresh" value={m.refresh} onChange={(refresh) => set({ refresh })} />
+      <Field label="Embed mode" value={m.embedMode} onChange={(embedMode) => set({ embedMode })} />
       <div className="sm:col-span-2"><Field label="URL" value={m.url || block.content} onChange={(url) => onChange({ content: url, metadata: { ...m, url } })} placeholder="https://..." /></div>
+      <div className="sm:col-span-2"><Field label="Live BQL" value={m.bql} onChange={(bql) => set({ bql })} placeholder="status = Done group by assignee" /></div>
       <div className="sm:col-span-2"><Field label="Description" value={m.description} onChange={(description) => set({ description })} multiline /></div>
     </div>
   );
@@ -1284,6 +1327,11 @@ function WorkItemBlock({ block, onChange }) {
         className="w-full text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 text-neutral-900 dark:text-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
         placeholder="Title (so the reference reads well even before it resolves)"
       />
+      <div className="grid gap-2 sm:grid-cols-3">
+        <Field label="Assignee" value={block.metadata?.assignee} onChange={(assignee) => onChange({ metadata: { ...block.metadata, assignee } })} />
+        <Field label="Priority" value={block.metadata?.priority} onChange={(priority) => onChange({ metadata: { ...block.metadata, priority } })} />
+        <Field label="Synced at" value={block.metadata?.syncedAt} onChange={(syncedAt) => onChange({ metadata: { ...block.metadata, syncedAt } })} />
+      </div>
     </div>
   );
 }
@@ -1465,6 +1513,8 @@ function AiComposeBar({ aiAssist, onInsert }) {
 
 function Block({ block, index, total, focused, onFocus, onChange, onMove, onDelete, onReplace, onAddAfter, allBlocks, aiAssist, workspaceId, blockRef }) {
   const wrapRef = useRef(null);
+  const indent = Math.max(0, Math.min(4, Number(block.metadata?.indent || 0)));
+  const setIndent = (nextIndent) => onChange({ metadata: { ...block.metadata, indent: Math.max(0, Math.min(4, nextIndent)) } });
 
   // Merge the internal wrapRef (used for keyboard nav) with the external blockRef callback
   // (used by BlockEditor for auto-scroll). Both need to point at the same DOM node.
@@ -1496,6 +1546,7 @@ function Block({ block, index, total, focused, onFocus, onChange, onMove, onDele
           ? 'border-brand-navy-tint/50 bg-white dark:bg-neutral-900'
           : 'border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 hover:border-neutral-200 dark:hover:border-neutral-700',
       )}
+      style={{ marginLeft: `${indent * 1.5}rem` }}
     >
       {/* Block type label */}
       <div className="flex items-center gap-1 mb-2">
@@ -1507,6 +1558,24 @@ function Block({ block, index, total, focused, onFocus, onChange, onMove, onDele
           {aiAssist && AI_TEXT_TYPES.has(block.type) && (
             <AiBlockMenu block={block} onChange={onChange} aiAssist={aiAssist} />
           )}
+          <button
+            type="button"
+            onClick={() => setIndent(indent - 1)}
+            disabled={indent === 0}
+            aria-label="Outdent block"
+            className="w-6 h-6 rounded flex items-center justify-center text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+          >
+            <IndentDecrease aria-hidden="true" className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIndent(indent + 1)}
+            disabled={indent >= 4}
+            aria-label="Indent block"
+            className="w-6 h-6 rounded flex items-center justify-center text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+          >
+            <IndentIncrease aria-hidden="true" className="h-3.5 w-3.5" />
+          </button>
           <button
             type="button"
             onClick={() => onMove(index, -1)}
@@ -1545,6 +1614,7 @@ function Block({ block, index, total, focused, onFocus, onChange, onMove, onDele
       {block.type === 'callout' && <CalloutBlock block={block} onChange={onChange} />}
       {block.type === 'checklist' && <ChecklistBlock block={block} onChange={onChange} />}
       {block.type === 'toggle' && <ToggleBlock block={block} onChange={onChange} />}
+      {block.type === 'footnote' && <FootnoteBlock block={block} onChange={onChange} />}
       {block.type === 'toc' && <TocBlock allBlocks={allBlocks} />}
       {block.type === 'code' && <CodeBlock block={block} onChange={onChange} />}
       {block.type === 'divider' && (

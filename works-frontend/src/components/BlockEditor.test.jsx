@@ -64,10 +64,26 @@ describe('BlockEditor — Know Studio blocks', () => {
 
     await user.type(screen.getByLabelText('Decision'), 'Use PostgreSQL');
     await user.type(screen.getByLabelText('Owner'), 'Platform');
+    await user.type(screen.getByLabelText('Decision maker'), 'CTO');
+    await user.type(screen.getByLabelText('Options considered'), 'PostgreSQL');
 
     const emitted = onChange.mock.calls.at(-1)[0][0];
     expect(emitted.type).toBe('decision');
     expect(emitted.metadata.owner).toBe('Platform');
+    expect(emitted.metadata.options).toContain('PostgreSQL');
+  });
+
+  it('supports footnotes and block indentation (KR-007/KR-008)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BlockEditor blocks={[{ id: 'f1', type: 'footnote', content: '', metadata: {} }]} onChange={onChange} />);
+
+    await user.type(screen.getByLabelText('Number'), '1');
+    await user.type(screen.getByLabelText('Footnote text'), 'Source note');
+    expect(onChange.mock.calls.at(-1)[0][0].content).toBe('Source note');
+
+    await user.click(screen.getByRole('button', { name: 'Indent block' }));
+    expect(onChange.mock.calls.at(-1)[0][0].metadata.indent).toBe(1);
   });
 
   it('offers whiteboard shapes, connectors, zoom and snap controls (KR-057/KR-059/KR-064)', async () => {

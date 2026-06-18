@@ -261,6 +261,19 @@ function SectionText({ title, text }) {
   );
 }
 
+function FootnoteView({ block }) {
+  const number = block.metadata?.number || '*';
+  return (
+    <div className="rounded-md border-l-2 border-neutral-300 dark:border-neutral-600 bg-neutral-50 dark:bg-neutral-900 px-3 py-2">
+      <p className="text-xs text-neutral-700 dark:text-neutral-300">
+        <sup className="font-semibold text-brand-navy">{number}</sup>{' '}
+        <span className="whitespace-pre-wrap">{block.content}</span>
+      </p>
+      {block.metadata?.reference && <p className="mt-1 text-2xs text-neutral-500">{block.metadata.reference}</p>}
+    </div>
+  );
+}
+
 function DecisionView({ block }) {
   const m = block.metadata || {};
   return (
@@ -269,9 +282,19 @@ function DecisionView({ block }) {
         <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{block.content || 'Decision'}</p>
         <span className="rounded-full bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 text-2xs font-semibold text-neutral-600 dark:text-neutral-300">{m.status || 'proposed'}</span>
         {m.owner && <span className="text-xs text-neutral-500">Owner: {m.owner}</span>}
+        {m.decisionMaker && <span className="text-xs text-neutral-500">Decider: {m.decisionMaker}</span>}
         {m.date && <span className="text-xs text-neutral-500">{m.date}</span>}
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
+        {Array.isArray(m.options) && m.options.length > 0 && (
+          <div>
+            <p className="text-2xs uppercase tracking-wide font-semibold text-neutral-500">Options considered</p>
+            <ul className="mt-1 list-disc pl-4 text-sm text-neutral-800 dark:text-neutral-200">
+              {m.options.map((option) => <li key={option}>{option}</li>)}
+            </ul>
+          </div>
+        )}
+        <SectionText title="Stakeholders" text={m.stakeholders} />
         <SectionText title="Rationale" text={m.rationale} />
         <SectionText title="Consequences" text={m.consequences} />
       </div>
@@ -286,9 +309,11 @@ function RetroView({ block }) {
       <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{block.content || 'Retrospective'}</p>
       <div className="grid gap-3 sm:grid-cols-2">
         <SectionText title="Went well" text={m.wentWell} />
+        <SectionText title="Did not work" text={m.didNotWork} />
         <SectionText title="Improve" text={m.improve} />
         <SectionText title="Actions" text={m.actions} />
         <SectionText title="Shoutouts" text={m.shoutouts} />
+        <SectionText title="Votes" text={m.votes} />
       </div>
     </div>
   );
@@ -303,13 +328,18 @@ function OkrView({ block }) {
         <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{block.content || 'Objective'}</p>
         {m.owner && <span className="text-xs text-neutral-500">{m.owner}</span>}
       </div>
+      {m.statusSummary && <p className="text-xs text-neutral-600 dark:text-neutral-400">{m.statusSummary}</p>}
+      {m.linkedBql && <p className="font-mono text-2xs text-neutral-500">BQL: {m.linkedBql}</p>}
       {keyResults.map((kr, i) => {
         const current = Number(kr.current) || 0;
         const target = Number(kr.target) || 0;
         const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
         return (
           <div key={i} className="space-y-1">
-            <div className="flex justify-between gap-3 text-xs text-neutral-600 dark:text-neutral-300"><span>{kr.title}</span><span>{pct}%</span></div>
+            <div className="flex justify-between gap-3 text-xs text-neutral-600 dark:text-neutral-300">
+              <span>{kr.title}{kr.owner ? ` - ${kr.owner}` : ''}</span>
+              <span>{pct}% {kr.unit || ''} {kr.status ? `- ${kr.status}` : ''}</span>
+            </div>
             <div className="h-2 rounded bg-neutral-100 dark:bg-neutral-800 overflow-hidden"><div className="h-full bg-brand-navy" style={{ width: `${pct}%` }} /></div>
           </div>
         );
@@ -319,15 +349,17 @@ function OkrView({ block }) {
 }
 
 function RiskRegisterView({ block }) {
-  const risks = block.metadata?.risks || [];
+  const source = block.metadata?.risks || [];
+  const risks = block.metadata?.sortByScore === false ? source : [...source].sort((a, b) => ((Number(b.impact) || 0) * (Number(b.probability) || 0)) - ((Number(a.impact) || 0) * (Number(a.probability) || 0)));
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
-        <thead><tr>{['Risk', 'Score', 'Owner', 'Mitigation'].map((h) => <th key={h} className="border border-neutral-200 dark:border-neutral-700 px-2 py-1 text-left bg-neutral-50 dark:bg-neutral-800">{h}</th>)}</tr></thead>
+        <thead><tr>{['Risk', 'Score', 'Status', 'Owner', 'Mitigation'].map((h) => <th key={h} className="border border-neutral-200 dark:border-neutral-700 px-2 py-1 text-left bg-neutral-50 dark:bg-neutral-800">{h}</th>)}</tr></thead>
         <tbody>
           {risks.map((r, i) => <tr key={i}>
             <td className="border border-neutral-200 dark:border-neutral-700 px-2 py-1.5">{r.risk}</td>
             <td className="border border-neutral-200 dark:border-neutral-700 px-2 py-1.5 tabular-nums">{(Number(r.impact) || 0) * (Number(r.probability) || 0)}</td>
+            <td className="border border-neutral-200 dark:border-neutral-700 px-2 py-1.5">{r.status}</td>
             <td className="border border-neutral-200 dark:border-neutral-700 px-2 py-1.5">{r.owner}</td>
             <td className="border border-neutral-200 dark:border-neutral-700 px-2 py-1.5">{r.mitigation}</td>
           </tr>)}
@@ -345,7 +377,9 @@ function ReleaseNotesView({ block }) {
         <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{block.content || 'Release notes'}</p>
         {m.version && <span className="rounded bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 text-2xs">{m.version}</span>}
         {m.date && <span className="text-xs text-neutral-500">{m.date}</span>}
+        {m.sprint && <span className="text-xs text-neutral-500">{m.sprint}</span>}
       </div>
+      {m.linkedItems && <p className="font-mono text-2xs text-neutral-500">Items: {m.linkedItems}</p>}
       <div className="grid gap-3 sm:grid-cols-2">
         <SectionText title="Added" text={m.added} />
         <SectionText title="Changed" text={m.changed} />
@@ -367,6 +401,8 @@ function DashboardView({ block }) {
       </div>
       {m.description && <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">{m.description}</p>}
       {m.refresh && <p className="mt-2 text-2xs uppercase tracking-wide text-neutral-500">Refresh: {m.refresh}</p>}
+      {m.bql && <p className="mt-1 font-mono text-2xs text-neutral-500">BQL: {m.bql}</p>}
+      {m.embedMode && <p className="mt-1 text-2xs uppercase tracking-wide text-neutral-500">Mode: {m.embedMode}</p>}
     </a>
   );
 }
@@ -378,6 +414,8 @@ function WorkItemView({ block }) {
       <span className="font-mono text-sm font-semibold text-brand-navy dark:text-brand-amber">{block.content || 'WRK-?'}</span>
       {block.metadata?.title && <span className="text-sm text-neutral-700 dark:text-neutral-300 truncate">{block.metadata.title}</span>}
       {block.metadata?.status && <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">{block.metadata.status}</span>}
+      {block.metadata?.assignee && <span className="text-xs text-neutral-500">{block.metadata.assignee}</span>}
+      {block.metadata?.priority && <span className="text-xs text-neutral-500">{block.metadata.priority}</span>}
     </div>
   );
 }
@@ -460,6 +498,8 @@ function OneBlock({ block, allBlocks, workspaceId, blockComments }) {
           <p className="text-sm text-neutral-700 dark:text-neutral-300 mt-2 whitespace-pre-wrap">{block.metadata?.body}</p>
         </details>
       );
+    case 'footnote':
+      return <FootnoteView block={block} />;
     case 'toc':
       return <TocView allBlocks={allBlocks} />;
     case 'code': {
@@ -546,7 +586,9 @@ export function BlockRenderer({ blocks, workspaceId, blockComments }) {
   return (
     <div className="space-y-4">
       {list.map((block) => (
-        <div key={block.id}><OneBlock block={block} allBlocks={list} workspaceId={workspaceId} blockComments={blockComments} /></div>
+        <div key={block.id} style={{ marginLeft: `${Math.max(0, Math.min(4, Number(block.metadata?.indent || 0))) * 1.5}rem` }}>
+          <OneBlock block={block} allBlocks={list} workspaceId={workspaceId} blockComments={blockComments} />
+        </div>
       ))}
     </div>
   );

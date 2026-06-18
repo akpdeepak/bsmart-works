@@ -156,8 +156,8 @@ public class ArticleController {
         a.setUpdatedAt(OffsetDateTime.now());
         Article saved = articleRepository.save(a);
         saveVersion(saved, userId);
-        eventService.record(id, "ARTICLE_VERSION_RESTORED", userId,
-                "{\"restoredFrom\":" + versionNumber + ",\"newVersion\":" + saved.getVersionNumber() + "}");
+        recordArticleEvent(saved, "ARTICLE_VERSION_RESTORED", userId,
+                Map.of("restoredFrom", versionNumber, "newVersion", saved.getVersionNumber()));
         return saved;
     }
 
@@ -219,7 +219,8 @@ public class ArticleController {
         Article saved = articleRepository.save(article);
         // Snapshot version 1
         saveVersion(saved, userId);
-        eventService.record(saved.getId(), "ARTICLE_CREATED", userId, "{\"title\":\"" + saved.getTitle() + "\"}");
+        recordArticleEvent(saved, "ARTICLE_CREATED", userId,
+                Map.of("title", saved.getTitle() == null ? "" : saved.getTitle()));
         return saved;
     }
 
@@ -261,7 +262,8 @@ public class ArticleController {
             a.setUpdatedAt(OffsetDateTime.now());
             Article saved = articleRepository.save(a);
             saveVersion(saved, userId);
-            eventService.record(id, "ARTICLE_UPDATED", userId, "{\"version\":" + saved.getVersionNumber() + "}");
+            recordArticleEvent(saved, "ARTICLE_UPDATED", userId,
+                    Map.of("version", saved.getVersionNumber()));
             return saved;
         }).orElseThrow();
     }
@@ -347,7 +349,7 @@ public class ArticleController {
         a.setPortalPublished(published);
         a.setUpdatedAt(OffsetDateTime.now());
         Article saved = articleRepository.save(a);
-        eventService.record(id, published ? "ARTICLE_PORTAL_PUBLISHED" : "ARTICLE_PORTAL_UNPUBLISHED",
+        recordArticleEvent(saved, published ? "ARTICLE_PORTAL_PUBLISHED" : "ARTICLE_PORTAL_UNPUBLISHED",
                 userId, Map.of("title", a.getTitle() == null ? "" : a.getTitle()));
         return saved;
     }
@@ -445,7 +447,7 @@ public class ArticleController {
             a.setPublicShareToken(java.util.UUID.randomUUID().toString().replace("-", ""));
             a.setUpdatedAt(OffsetDateTime.now());
             articleRepository.save(a);
-            eventService.record(id, "ARTICLE_SHARE_GENERATED", userId, "{}");
+            recordArticleEvent(a, "ARTICLE_SHARE_GENERATED", userId, Map.of());
         }
         return Map.of("token", a.getPublicShareToken());
     }
@@ -465,7 +467,7 @@ public class ArticleController {
         a.setPublicShareToken(null);
         a.setUpdatedAt(OffsetDateTime.now());
         articleRepository.save(a);
-        eventService.record(id, "ARTICLE_SHARE_REVOKED", userId, "{}");
+        recordArticleEvent(a, "ARTICLE_SHARE_REVOKED", userId, Map.of());
         return ResponseEntity.noContent().build();
     }
 
@@ -603,5 +605,14 @@ public class ArticleController {
         v.setSavedBy(userId);
         v.setSavedAt(OffsetDateTime.now());
         articleVersionRepository.save(v);
+    }
+
+    private void recordArticleEvent(Article article, String eventType, String userId, Map<String, ?> payload) {
+        KnowledgeSpace space = knowledgeSpaceRepository.findById(article.getSpaceId()).orElse(null);
+        if (space != null) {
+            eventService.recordInWorkspace(space.getWorkspaceId(), article.getId(), eventType, userId, payload);
+        } else {
+            eventService.record(article.getId(), eventType, userId, payload);
+        }
     }
 }

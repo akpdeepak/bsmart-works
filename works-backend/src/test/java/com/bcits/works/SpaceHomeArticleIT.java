@@ -60,13 +60,13 @@ class SpaceHomeArticleIT {
         jdbc.execute("DELETE FROM workspaces WHERE id = '" + WS_ID + "'");
         jdbc.execute("DELETE FROM users WHERE id = '" + USER_ID + "'");
 
-        jdbc.update("INSERT INTO users(id,email,full_name,password_hash,role,created_at,updated_at) " +
-                "VALUES(?,?,?,?,?,?,?)",
-                USER_ID, "sha@test.io", "SHA User", "x", "MEMBER", now, now);
-        jdbc.update("INSERT INTO workspaces(id,name,created_by,created_at,updated_at) VALUES(?,?,?,?,?)",
-                WS_ID, "SHA WS", USER_ID, now, now);
-        jdbc.update("INSERT INTO workspace_members(workspace_id,user_id,role,joined_at) VALUES(?,?,?,?)",
-                WS_ID, USER_ID, "MEMBER", now);
+        jdbc.update("INSERT INTO users(id,email,full_name,password_hash,created_at) " +
+                "VALUES(?,?,?,?,?)",
+                USER_ID, "sha@test.io", "SHA User", "x", now);
+        jdbc.update("INSERT INTO workspaces(id,name,slug,created_at,updated_at) VALUES(?,?,?,?,?)",
+                WS_ID, "SHA WS", "sha-ws", now, now);
+        jdbc.update("INSERT INTO workspace_members(workspace_id,user_id,system_role,role_id) VALUES(?,?,?,?)",
+                WS_ID, USER_ID, "MEMBER", "MEMBER");
 
         jdbc.update("INSERT INTO knowledge_spaces(id,workspace_id,name,visibility,created_by,created_at,updated_at) " +
                 "VALUES(?,?,?,?,?,?,?)", SPACE_ID, WS_ID, "Space 1", "TEAM", USER_ID, now, now);

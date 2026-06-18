@@ -50,16 +50,20 @@ The transformation source of truth is:
 4. `docs/implementation/source-documents/bSmart_Works_Implementation_Blueprint_Epic_Roadmap.md`
 5. `docs/implementation/source-documents/bSmart_Works_Implementation_Blueprint_Epic_Roadmap_UIUX_Expanded.md`
 6. `docs/implementation/source-documents/bSmart_Works_AI_Agent_Implementation_Instructions.md`
-7. `C:\Users\user\Downloads\bSmart_Works_Final_Execution_Decision_Document.md`
-8. `C:\Users\user\Downloads\bSmart_Works_Implementation_Blueprint_Epic_Roadmap.md`
-9. `C:\Users\user\Downloads\bSmart_Works_Implementation_Blueprint_Epic_Roadmap_UIUX_Expanded.md`
-10. `C:\Users\user\Downloads\bSmart_Works_AI_Agent_Implementation_Instructions.md`
-11. This orchestrator, SOURCE-OF-TRUTH, and all applicable rule books.
+7. `docs/implementation/source-documents/bSmart_Works_V1_6_Claude_Codex_Roadmap.md`
+8. `C:\Users\user\Downloads\bSmart_Works_Final_Execution_Decision_Document.md`
+9. `C:\Users\user\Downloads\bSmart_Works_Implementation_Blueprint_Epic_Roadmap.md`
+10. `C:\Users\user\Downloads\bSmart_Works_Implementation_Blueprint_Epic_Roadmap_UIUX_Expanded.md`
+11. `C:\Users\user\Downloads\bSmart_Works_AI_Agent_Implementation_Instructions.md`
+12. `C:\Users\user\Downloads\bSmart_Works_V1_6_Claude_Codex_Roadmap.md`
+13. This orchestrator, SOURCE-OF-TRUTH, and all applicable rule books.
 
 The Final Execution Decision Document is the V.20 execution prioritization layer: harden, simplify,
 consolidate, and polish before adding breadth. Complete EPIC 0, EPIC 1, EPIC 2, and EPIC 25 partial
-before major feature expansion. If the local Downloads files are unavailable in a remote/GitHub-only
-session, continue from the repo-tracked source documents and state files.
+before major feature expansion. The V1.6 roadmap is a requirements overlay to map into the existing
+EPIC sequence; do not implement it as one broad branch or let it bypass Phase 1. If the local
+Downloads files are unavailable in a remote/GitHub-only session, continue from the repo-tracked
+source documents and state files.
 
 **Start behavior:** sync from latest `main`, inspect the current worktree and open PR/branch state,
 read the transformation source of truth, begin with the next incomplete EPIC in roadmap order, create

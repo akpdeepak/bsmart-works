@@ -25,6 +25,56 @@ it beside the implementation roadmap, UI/UX expanded roadmap, and AI agent imple
 instructions. If documents overlap, use the stricter requirement. If priority conflicts arise, follow
 the Final Execution Decision Document for sequencing and the blueprint files for detailed epic scope.
 
+## V1.6 requirements overlay
+
+`bSmart_Works_V1_6_Claude_Codex_Roadmap.md` is now part of the roadmap source set. Reconcile it as
+a requirements overlay, not as a replacement for V.20 execution discipline.
+
+V1.6 adds detailed target requirements for:
+
+- team-first onboarding with team keys and framework selection
+- framework-aware behavior for Scrum, Kanban, Waterfall, Lean, DSDM, and XP
+- five business-facing user types: Individual, Team Lead, Management, Admin, Owner
+- Admin/Owner-configurable operating model, permissions, framework policies, work types, fields,
+  workflows, AI, integrations, and security
+- team-key-based work item display IDs such as `PLAT-42`
+- inline BQL filters on current surfaces, with BQL Lab retained for advanced usage
+- dynamic BQL-powered query boards
+- bSmart Messenger as a separate internal work-context messaging domain, not reused customer support
+  chat
+- message-to-work-artifact conversion for work items, actions, decisions, risks, dependencies, and
+  meeting notes
+- profile and preference center from the user display picture
+- logo/brand placement system for shell, onboarding, portal, reports, exports, email, and PWA
+- premium microcopy, positive states, next-best-action cards, and guided empty/error/success states
+- contextual AI work coach and executive brief, with deterministic fallback and Admin/Owner policy
+  controls
+- knowledge, service desk, SLA, and reporting refinement toward outcome-focused flows
+- API-first modular monolith boundaries and future microservice path without premature service split
+- performance, observability, pagination, caching, virtualization, and scalable indexes
+- V1.6-specific backend, frontend, and E2E validation scenarios
+
+Reconciliation rules:
+
+- V1.6 requirements do not override Phase 1. EPIC 0, EPIC 1, EPIC 2, and EPIC 25 partial still come
+  first.
+- V1.6 repository safety/docs items may be handled during EPIC 0.
+- V1.6 guardrails, validation, and e2e-scope items may be handled during EPIC 25 partial.
+- V1.6 architecture items map primarily to EPIC 3, EPIC 4, and EPIC 27.
+- V1.6 premium UX, brand, microcopy, and state components map primarily to EPIC 5 and EPIC 6, then
+  apply continuously to frontend EPICs.
+- V1.6 team-first onboarding, framework engine, user types, permissions, operating model, and work
+  display keys map to EPIC 6, EPIC 7, EPIC 10, EPIC 22, and EPIC 23.
+- V1.6 BQL inline filters and query boards map to EPIC 20 and relevant Work/Reports surfaces.
+- V1.6 bSmart Messenger maps to EPIC 9, but must remain work-aware and separate from customer
+  support chat.
+- V1.6 AI coach and executive brief map to EPIC 13, EPIC 14, EPIC 15, and EPIC 20.
+- V1.6 service, knowledge, SLA, and reporting refinements map to EPIC 16, EPIC 17, EPIC 18, and
+  EPIC 20.
+
+Do not implement the whole V1.6 roadmap as one branch. Break it into the existing EPIC sequence and
+document the selected V1.6 requirements in each EPIC plan.
+
 ## Trigger phrases
 
 When Deepak says either phrase below, treat it as a command to work the roadmap end to end:
@@ -40,16 +90,18 @@ Read these before planning or coding:
 2. `docs/implementation/source-documents/bSmart_Works_Implementation_Blueprint_Epic_Roadmap.md`
 3. `docs/implementation/source-documents/bSmart_Works_Implementation_Blueprint_Epic_Roadmap_UIUX_Expanded.md`
 4. `docs/implementation/source-documents/bSmart_Works_AI_Agent_Implementation_Instructions.md`
-5. `C:\Users\user\Downloads\bSmart_Works_Final_Execution_Decision_Document.md`
-6. `C:\Users\user\Downloads\bSmart_Works_Implementation_Blueprint_Epic_Roadmap.md`
-7. `C:\Users\user\Downloads\bSmart_Works_Implementation_Blueprint_Epic_Roadmap_UIUX_Expanded.md`
-8. `C:\Users\user\Downloads\bSmart_Works_AI_Agent_Implementation_Instructions.md`
-9. `AGENTS.md`
-10. `CLAUDE.md`
-11. `ai-rules/00-ORCHESTRATOR.md`
-12. `ai-rules/SOURCE-OF-TRUTH.md`
-13. Applicable `ai-rules/rulebooks/*`
-14. `docs/implementation/ROADMAP-STATE.md`
+5. `docs/implementation/source-documents/bSmart_Works_V1_6_Claude_Codex_Roadmap.md`
+6. `C:\Users\user\Downloads\bSmart_Works_Final_Execution_Decision_Document.md`
+7. `C:\Users\user\Downloads\bSmart_Works_Implementation_Blueprint_Epic_Roadmap.md`
+8. `C:\Users\user\Downloads\bSmart_Works_Implementation_Blueprint_Epic_Roadmap_UIUX_Expanded.md`
+9. `C:\Users\user\Downloads\bSmart_Works_AI_Agent_Implementation_Instructions.md`
+10. `C:\Users\user\Downloads\bSmart_Works_V1_6_Claude_Codex_Roadmap.md`
+11. `AGENTS.md`
+12. `CLAUDE.md`
+13. `ai-rules/00-ORCHESTRATOR.md`
+14. `ai-rules/SOURCE-OF-TRUTH.md`
+15. Applicable `ai-rules/rulebooks/*`
+16. `docs/implementation/ROADMAP-STATE.md`
 
 The repo-tracked source documents are canonical for remote/GitHub-only sessions. If local Downloads
 files are unavailable, continue from the repo-tracked copies and record that limitation in the active
@@ -260,6 +312,30 @@ Complete these before building new major features:
 19. Align frontend AI client endpoints with backend AI APIs.
 20. Add guardrails for API contract drift, `WS-001`, raw fetch, unsafe workspace queries, and silent
     AI fallback.
+
+## V1.6 implementation iterations, reconciled
+
+The V1.6 roadmap lists 15 implementation iterations. Use them as detailed work packages inside the
+main EPIC order, not as a competing sequence:
+
+1. Repository safety and docs -> EPIC 0
+2. Shell and architecture setup -> EPIC 4, EPIC 5, EPIC 6
+3. Brand and profile -> EPIC 5, EPIC 22
+4. Team-first onboarding -> EPIC 23, with policy prerequisites from EPIC 6/22
+5. User types and permission policy -> EPIC 1, EPIC 6, EPIC 22
+6. Operating model and framework engine -> EPIC 6, EPIC 10, EPIC 23
+7. Work type policy and display keys -> EPIC 10, EPIC 22, EPIC 23
+8. BQL inline filters -> EPIC 20 and Work/Reports surfaces
+9. Dynamic query boards -> EPIC 10, EPIC 20
+10. bSmart Messenger MVP -> EPIC 9
+11. Messenger intelligence -> EPIC 9, EPIC 13, EPIC 14
+12. Premium UX pass -> EPIC 5 and continuous UI/UX overlay
+13. AI coach and executive brief -> EPIC 13, EPIC 14, EPIC 15, EPIC 20
+14. Service, knowledge, insights refinement -> EPIC 16, EPIC 17, EPIC 18, EPIC 20
+15. Performance and hardening -> EPIC 24, EPIC 25, EPIC 27
+
+When planning an EPIC, explicitly state which V1.6 requirements are in scope, out of scope, or
+deferred.
 
 ## Universal workflow pattern
 

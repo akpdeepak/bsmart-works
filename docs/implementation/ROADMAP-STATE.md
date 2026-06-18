@@ -7,7 +7,7 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 
 ## Current status
 
-- Roadmap mode: V.20 source documents synchronized to GitHub
+- Roadmap mode: V.20 source documents synchronized to GitHub with V1.6 overlay
 - Active EPIC: None
 - Active branch: `main`
 - Last completed EPIC: None recorded here
@@ -30,10 +30,12 @@ resume point.
 - `docs/implementation/source-documents/bSmart_Works_Implementation_Blueprint_Epic_Roadmap.md`
 - `docs/implementation/source-documents/bSmart_Works_Implementation_Blueprint_Epic_Roadmap_UIUX_Expanded.md`
 - `docs/implementation/source-documents/bSmart_Works_AI_Agent_Implementation_Instructions.md`
+- `docs/implementation/source-documents/bSmart_Works_V1_6_Claude_Codex_Roadmap.md`
 - `C:\Users\user\Downloads\bSmart_Works_Final_Execution_Decision_Document.md`
 - `C:\Users\user\Downloads\bSmart_Works_Implementation_Blueprint_Epic_Roadmap.md`
 - `C:\Users\user\Downloads\bSmart_Works_Implementation_Blueprint_Epic_Roadmap_UIUX_Expanded.md`
 - `C:\Users\user\Downloads\bSmart_Works_AI_Agent_Implementation_Instructions.md`
+- `C:\Users\user\Downloads\bSmart_Works_V1_6_Claude_Codex_Roadmap.md`
 - `AGENTS.md`
 - `CLAUDE.md`
 - `ai-rules/*`
@@ -51,6 +53,11 @@ resume point.
 - Do-not-start-yet constraints: broad messaging platform, full low-code suite, autonomous agents,
   marketplace expansion, advanced analytics, public community, heavy DevSync dashboards, and all
   admin builders at once.
+- V1.6 is accepted as a requirements overlay, not as a competing implementation sequence. It adds
+  team-first onboarding, delivery framework policies, five user types, Admin/Owner configurability,
+  team-key work item IDs, inline BQL filters, dynamic query boards, bSmart Messenger, profile
+  preferences, brand placement, premium states/microcopy, AI work coach, and modular monolith
+  requirements. These must be mapped into the existing EPIC order.
 
 ## Resume checklist
 
@@ -97,6 +104,6 @@ resume point.
 
 ## Latest handoff
 
-2026-06-18: synchronized V.20 source documents into the repo and updated the roadmap contract to
-include the Final Execution Decision Document as the execution prioritization layer. EPIC 0 remains
-the next implementation step. Preserve unrelated local changes if present when starting/resuming.
+2026-06-18: added `bSmart_Works_V1_6_Claude_Codex_Roadmap.md` as a repo-tracked source document and
+reconciled it into the V.20 roadmap as a requirements overlay. EPIC 0 remains the next implementation
+step. Preserve unrelated local changes if present when starting/resuming.

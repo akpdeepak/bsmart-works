@@ -4249,7 +4249,7 @@ export default function App() {
               anyCapabilityEnabled={anyCapabilityEnabled}
             />
           )}
-\n          {/* SERVICE DESK — extracted to src/views/service-view.jsx (TD-003) */}
+          {/* SERVICE DESK — extracted to src/views/service-view.jsx (TD-003) */}
           {view === 'service' && (
             <ServiceView
               loading={loading}

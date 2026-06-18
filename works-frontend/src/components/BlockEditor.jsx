@@ -784,7 +784,6 @@ function DatabaseBlock({ block, onChange }) {
   const cols = block.metadata?.cols || (rows[0]?.length || 2);
   const view = block.metadata?.view || 'table';
   const setMeta = (patch) => onChange({ metadata: { ...block.metadata, ...patch } });
-  const setCell = (r, c, val) => setMeta({ rows: rows.map((row, ri) => row.map((cell, ci) => (ri === r && ci === c ? val : cell))), cols });
   const addRow = () => setMeta({ rows: [...rows, Array(cols).fill('')], cols });
   const addCol = () => setMeta({ rows: rows.map((row) => [...row, '']), cols: cols + 1 });
   const setList = (key, raw) => setMeta({ [key]: raw.split(',').map((x) => x.trim()).filter(Boolean) });

@@ -1,4 +1,5 @@
 import { PageLayout } from '@/components/works/templates/page-layout';
+import { Button } from '@/components/works/button';
 import StatusManagementTab from '@/components/works/organisms/status-management-tab';
 import FieldConfigEditor from '@/components/works/organisms/field-config-editor';
 import WorkflowSettings from './settings3/workflow-settings';
@@ -96,7 +97,7 @@ export default function Settings3View({
       {/* Sub-tabs */}
       <div className="flex gap-1 mb-6 border-b border-neutral-200 dark:border-neutral-700">
         {SUB_TABS.map(t => (
-          <button key={t.key} onClick={() => {
+          <Button key={t.key} type="button" variant="ghost" onClick={() => {
             setSettings3Tab(t.key);
             if (t.key === 'permissions') fetchPermMatrix();
             if (t.key === 'layout') { fetchFieldDefs(); fetchFieldLayouts(); }
@@ -104,7 +105,7 @@ export default function Settings3View({
           }}
             className={`text-sm font-medium px-4 py-2 border-b-2 transition-colors ${settings3Tab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}>
             {t.label}
-          </button>
+          </Button>
         ))}
       </div>
 

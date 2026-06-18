@@ -11,11 +11,13 @@ public class EventService {
 
     private final EventRepository eventRepository;
     private final RealtimeService realtime;
+    private final WebhookService webhooks;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public EventService(EventRepository eventRepository, RealtimeService realtime) {
+    public EventService(EventRepository eventRepository, RealtimeService realtime, WebhookService webhooks) {
         this.eventRepository = eventRepository;
         this.realtime = realtime;
+        this.webhooks = webhooks;
     }
 
     public void record(String aggregateId, String eventType, String actorId, String payload) {
@@ -48,6 +50,18 @@ public class EventService {
                         "actorId", actorId == null ? "" : actorId));
             } catch (Exception ignored) {
                 // swallow — audit + business write already succeeded
+            }
+        }
+        if (webhooks != null) {
+            try {
+                webhooks.enqueue(workspaceId, eventType, Map.of(
+                        "workspaceId", workspaceId == null ? "" : workspaceId,
+                        "aggregateId", aggregateId == null ? "" : aggregateId,
+                        "eventType", eventType == null ? "" : eventType,
+                        "actorId", actorId == null ? "" : actorId,
+                        "payload", payload == null ? Map.of() : payload));
+            } catch (Exception ignored) {
+                // Webhook delivery is best-effort and must not break the business write.
             }
         }
     }

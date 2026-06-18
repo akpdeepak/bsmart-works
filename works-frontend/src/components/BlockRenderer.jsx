@@ -148,8 +148,38 @@ function TableView({ block }) {
   );
 }
 
+function DatabaseView({ block }) {
+  const meta = block.metadata || {};
+  const badges = [
+    `View: ${meta.view || 'table'}`,
+    ...(meta.filters || []).map((x) => `Filter: ${x}`),
+    ...(meta.sorts || []).map((x) => `Sort: ${x}`),
+    ...(meta.groups || []).map((x) => `Group: ${x}`),
+    ...(meta.relations || []).map((x) => `Relation: ${x}`),
+  ];
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1">{badges.map((b) => <span key={b} className="text-2xs rounded bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 text-neutral-600 dark:text-neutral-400">{b}</span>)}</div>
+      <TableView block={block} />
+    </div>
+  );
+}
+
+function PivotView({ block }) {
+  const rows = block.metadata?.rows || [];
+  const total = rows.slice(1).reduce((sum, row) => sum + (Number(row[1]) || 0), 0);
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Pivot total: <span className="text-neutral-900 dark:text-neutral-100">{total}</span></p>
+      <TableView block={block} />
+    </div>
+  );
+}
+
 function WhiteboardView({ block }) {
   const notes = block.metadata?.notes || [];
+  const shapes = block.metadata?.shapes || [];
+  const connectors = block.metadata?.connectors || [];
   return (
     <div className="relative rounded-md border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/50 overflow-hidden" style={{ height: CANVAS_H }} role="img" aria-label={`Whiteboard with ${notes.length} note${notes.length === 1 ? '' : 's'}`}>
       {notes.map((note) => (
@@ -163,7 +193,61 @@ function WhiteboardView({ block }) {
           </div>
         </div>
       ))}
+      <svg className="absolute inset-0 pointer-events-none" aria-hidden="true">
+        {connectors.map((c) => {
+          const all = [...notes, ...shapes];
+          const from = all.find((x) => x.id === c.from);
+          const to = all.find((x) => x.id === c.to);
+          if (!from || !to) return null;
+          return <line key={c.id} x1={(from.x || 0) + 40} y1={(from.y || 0) + 30} x2={(to.x || 0) + 40} y2={(to.y || 0) + 30} stroke="currentColor" className="text-neutral-400" strokeWidth="2" />;
+        })}
+      </svg>
+      {shapes.map((shape) => (
+        <div key={shape.id} className="absolute rounded-md border-2 border-brand-navy/50 bg-white/80 dark:bg-neutral-800/80 px-3 py-2 text-xs text-neutral-800 dark:text-neutral-100" style={{ left: shape.x, top: shape.y }}>
+          {shape.text || shape.shape}
+        </div>
+      ))}
     </div>
+  );
+}
+
+function MindMapView({ block }) {
+  const nodes = block.metadata?.nodes || [];
+  if (!nodes.length) return null;
+  return (
+    <div className="rounded-md border border-neutral-200 dark:border-neutral-700 p-3">
+      <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{nodes[0]}</p>
+      <div className="mt-2 ml-5 space-y-1 border-l border-neutral-200 dark:border-neutral-700 pl-3">
+        {nodes.slice(1).map((n, i) => <p key={i} className="text-sm text-neutral-700 dark:text-neutral-300">{n}</p>)}
+      </div>
+    </div>
+  );
+}
+
+function FlowchartView({ block }) {
+  const steps = String(block.content || '').split('->').map((s) => s.trim()).filter(Boolean);
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {steps.map((step, i) => (
+        <div key={`${step}-${i}`} className="flex items-center gap-2">
+          <span className="rounded-md border border-neutral-200 dark:border-neutral-700 px-3 py-1.5 text-sm text-neutral-800 dark:text-neutral-100">{step}</span>
+          {i < steps.length - 1 && <span className="text-neutral-400" aria-hidden="true">-&gt;</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MathView({ block }) {
+  return <div className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 px-3 py-2 font-mono text-sm text-neutral-900 dark:text-neutral-100">{block.content}</div>;
+}
+
+function EmbedView({ block }) {
+  return (
+    <a href={block.content || '#'} target="_blank" rel="noopener noreferrer" className="block rounded-md border border-neutral-200 dark:border-neutral-700 p-3 hover:border-brand-navy-tint">
+      <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{block.metadata?.title || block.content || 'Embed'}</p>
+      {block.metadata?.description && <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">{block.metadata.description}</p>}
+    </a>
   );
 }
 
@@ -275,6 +359,10 @@ function OneBlock({ block, allBlocks, workspaceId, blockComments }) {
       return <SheetView block={block} />;
     case 'chart':
       return <ChartPreview chartType={block.metadata?.chartType} rows={block.metadata?.rows} />;
+    case 'database':
+      return <DatabaseView block={block} />;
+    case 'pivot':
+      return <PivotView block={block} />;
     case 'bqlwidget':
       return <BqlWidget block={block} workspaceId={workspaceId} readOnly />;
     case 'sticker':
@@ -289,6 +377,14 @@ function OneBlock({ block, allBlocks, workspaceId, blockComments }) {
       return <pre className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 p-3 text-xs font-mono text-neutral-700 dark:text-neutral-300 overflow-x-auto whitespace-pre-wrap">{block.content}</pre>;
     case 'whiteboard':
       return <WhiteboardView block={block} />;
+    case 'mindmap':
+      return <MindMapView block={block} />;
+    case 'flowchart':
+      return <FlowchartView block={block} />;
+    case 'math':
+      return <MathView block={block} />;
+    case 'embed':
+      return <EmbedView block={block} />;
     case 'workitem':
       return <WorkItemView block={block} />;
     case 'bookmark':

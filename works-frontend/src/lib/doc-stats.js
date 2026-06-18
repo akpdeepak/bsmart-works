@@ -23,11 +23,20 @@ export function blockPlainText(block) {
       return `${content} ${meta.body || ''}`;
     case 'table':
     case 'sheet':
+    case 'database':
+    case 'pivot':
       return (meta.rows || []).flat().map((c) => (c == null ? '' : String(c))).join(' ');
     case 'chart':
       return (meta.rows || []).flat().map((c) => (c == null ? '' : String(c))).join(' ');
     case 'whiteboard':
-      return (meta.notes || []).map((n) => n.text || '').join(' ');
+      return [...(meta.notes || []).map((n) => n.text || ''), ...(meta.shapes || []).map((s) => s.text || '')].join(' ');
+    case 'mindmap':
+      return (meta.nodes || []).join(' ');
+    case 'flowchart':
+    case 'math':
+      return content;
+    case 'embed':
+      return `${content} ${meta.title || ''} ${meta.description || ''}`;
     case 'workitem':
       return `${content} ${meta.title || ''}`;
     case 'bookmark':

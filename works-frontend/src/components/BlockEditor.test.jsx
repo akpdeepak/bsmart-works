@@ -13,7 +13,7 @@ describe('BlockEditor — Know Studio blocks', () => {
     await user.click(screen.getByRole('button', { name: 'Add block' }));
     const menu = screen.getByRole('listbox', { name: 'Block type' });
     // The new Know Studio block types are offered (exact accessible names = the labels).
-    for (const label of ['Sheet (formulas)', 'Chart', 'Live widget (BQL)', 'Whiteboard', 'Sticker / emoji', 'Callout / panel', 'Work item', 'File (any type)', 'Table of contents']) {
+    for (const label of ['Sheet (formulas)', 'Chart', 'Database', 'Pivot table', 'Live widget (BQL)', 'Whiteboard', 'Mind map', 'Flowchart', 'Math / LaTeX', 'Rich embed', 'Sticker / emoji', 'Callout / panel', 'Work item', 'File (any type)', 'Table of contents']) {
       expect(within(menu).getByRole('option', { name: label })).toBeInTheDocument();
     }
   });
@@ -44,6 +44,28 @@ describe('BlockEditor — Know Studio blocks', () => {
     render(<BlockEditor blocks={blocks} onChange={() => {}} />);
     await user.click(screen.getByRole('button', { name: 'Show values' }));
     expect(screen.getByText('10')).toBeInTheDocument();
+  });
+
+  it('edits database views and metadata (KR-049/KR-051)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BlockEditor blocks={[{ id: 'db1', type: 'database', content: '', metadata: { view: 'table', rows: [['Name', 'Status']], cols: 2 } }]} onChange={onChange} />);
+    await user.selectOptions(screen.getByLabelText('Database view'), 'board');
+    await user.type(screen.getByLabelText('Database filters'), 'status=draft');
+    const emitted = onChange.mock.calls.at(-1)[0][0];
+    expect(emitted.metadata.view).toBe('board');
+    expect(emitted.metadata.filters).toContain('status=draft');
+  });
+
+  it('offers whiteboard shapes, connectors, zoom and snap controls (KR-057/KR-059/KR-064)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BlockEditor blocks={[{ id: 'wb1', type: 'whiteboard', content: '', metadata: { notes: [], shapes: [], connectors: [] } }]} onChange={onChange} />);
+    await user.click(screen.getByRole('button', { name: '+ Shape' }));
+    expect(onChange.mock.calls.at(-1)[0][0].metadata.shapes).toHaveLength(1);
+    expect(screen.getByLabelText('Whiteboard zoom')).toBeInTheDocument();
+    expect(screen.getByLabelText('Snap to grid')).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument();
   });
 
   it('hides AI affordances when no aiAssist is provided', () => {

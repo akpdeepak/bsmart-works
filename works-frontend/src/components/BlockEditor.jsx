@@ -54,11 +54,17 @@ const BLOCK_TYPES = [
   { type: 'divider',   label: 'Divider', Icon: Minus, group: 'Basic' },
   { type: 'sheet',     label: 'Sheet (formulas)', Icon: Grid, group: 'Data' },
   { type: 'chart',     label: 'Chart', Icon: BarChart3, group: 'Data' },
+  { type: 'database',  label: 'Database', Icon: Table, group: 'Data' },
+  { type: 'pivot',     label: 'Pivot table', Icon: Grid, group: 'Data' },
   { type: 'bqlwidget', label: 'Live widget (BQL)', Icon: LayoutDashboard, group: 'Data' },
   { type: 'table',     label: 'Table', Icon: Table, group: 'Data' },
   { type: 'image',     label: 'Image (URL)', Icon: Image, group: 'Visual' },
   { type: 'mermaid',   label: 'Diagram (Mermaid)', Icon: GitBranch, group: 'Visual' },
   { type: 'whiteboard', label: 'Whiteboard', Icon: PenTool, group: 'Visual' },
+  { type: 'mindmap',   label: 'Mind map', Icon: GitBranch, group: 'Visual' },
+  { type: 'flowchart', label: 'Flowchart', Icon: GitBranch, group: 'Visual' },
+  { type: 'math',      label: 'Math / LaTeX', Icon: Code, group: 'Visual' },
+  { type: 'embed',     label: 'Rich embed', Icon: Bookmark, group: 'Visual' },
   { type: 'sticker',   label: 'Sticker / emoji', Icon: Smile, group: 'Visual' },
   { type: 'workitem',  label: 'Work item', Icon: Link2, group: 'Connect' },
   { type: 'bookmark',  label: 'Bookmark / link', Icon: Bookmark, group: 'Connect' },
@@ -99,6 +105,8 @@ const TOOLBAR_GROUPS = [
       { type: 'table',      title: 'Table',               Icon: Table },
       { type: 'sheet',      title: 'Sheet (formulas)',    Icon: Grid },
       { type: 'chart',      title: 'Chart',               Icon: BarChart3 },
+      { type: 'database',   title: 'Database',            Icon: Table },
+      { type: 'pivot',      title: 'Pivot table',         Icon: Grid },
       { type: 'bqlwidget',  title: 'Live widget (BQL)',   Icon: LayoutDashboard },
     ],
   },
@@ -108,6 +116,10 @@ const TOOLBAR_GROUPS = [
       { type: 'image',      title: 'Image',               Icon: Image },
       { type: 'mermaid',    title: 'Diagram (Mermaid)',   Icon: GitBranch },
       { type: 'whiteboard', title: 'Whiteboard (Miro)',   Icon: PenTool },
+      { type: 'mindmap',    title: 'Mind map',            Icon: GitBranch },
+      { type: 'flowchart',  title: 'Flowchart',           Icon: GitBranch },
+      { type: 'math',       title: 'Math / LaTeX',        Icon: Code },
+      { type: 'embed',      title: 'Rich embed',          Icon: Bookmark },
       { type: 'sticker',    title: 'Sticker / emoji',     Icon: Smile },
     ],
   },
@@ -161,6 +173,10 @@ function newBlock(type) {
       return { id, type, content: '', metadata: { rows: [['', ''], ['', '']], cols: 2 } };
     case 'sheet':
       return { id, type, content: '', metadata: { rows: [['', '', ''], ['', '', ''], ['', '', '']], cols: 3 } };
+    case 'database':
+      return { id, type, content: '', metadata: { view: 'table', filters: [], sorts: [], groups: [], relations: [], rows: [['Name', 'Status'], ['Runbook', 'Draft']], cols: 2 } };
+    case 'pivot':
+      return { id, type, content: '', metadata: { rows: [['Status', 'Count'], ['Draft', '2'], ['Published', '5']], groupBy: 'Status', valueBy: 'Count' } };
     case 'chart':
       return { id, type, content: '', metadata: { chartType: 'bar', rows: [['Label', 'Value'], ['A', '3'], ['B', '5']] } };
     case 'bqlwidget':
@@ -174,7 +190,15 @@ function newBlock(type) {
     case 'toggle':
       return { id, type, content: '', metadata: { body: '', open: true } };
     case 'whiteboard':
-      return { id, type, content: '', metadata: { notes: [] } };
+      return { id, type, content: '', metadata: { notes: [], shapes: [], connectors: [], zoom: 1, snap: true } };
+    case 'mindmap':
+      return { id, type, content: '', metadata: { nodes: ['Central idea', 'Branch one', 'Branch two'] } };
+    case 'flowchart':
+      return { id, type, content: 'Start -> Step -> Done', metadata: {} };
+    case 'math':
+      return { id, type, content: 'E = mc^2', metadata: { display: true } };
+    case 'embed':
+      return { id, type, content: '', metadata: { title: '', description: '' } };
     case 'workitem':
       return { id, type, content: '', metadata: { title: '', status: '' } };
     case 'bookmark':
@@ -722,6 +746,52 @@ function SheetBlock({ block, onChange }) {
   );
 }
 
+function DatabaseBlock({ block, onChange }) {
+  const rows = block.metadata?.rows || [['Name', 'Status'], ['Runbook', 'Draft']];
+  const cols = block.metadata?.cols || (rows[0]?.length || 2);
+  const view = block.metadata?.view || 'table';
+  const setMeta = (patch) => onChange({ metadata: { ...block.metadata, ...patch } });
+  const setCell = (r, c, val) => setMeta({ rows: rows.map((row, ri) => row.map((cell, ci) => (ri === r && ci === c ? val : cell))), cols });
+  const addRow = () => setMeta({ rows: [...rows, Array(cols).fill('')], cols });
+  const addCol = () => setMeta({ rows: rows.map((row) => [...row, '']), cols: cols + 1 });
+  const setList = (key, raw) => setMeta({ [key]: raw.split(',').map((x) => x.trim()).filter(Boolean) });
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="text-xs text-neutral-600 dark:text-neutral-400">View
+          <select aria-label="Database view" value={view} onChange={(e) => setMeta({ view: e.target.value })} className="ml-1 text-xs bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1">
+            {['table', 'board', 'list', 'calendar'].map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+        </label>
+        {['filters', 'sorts', 'groups', 'relations'].map((key) => (
+          <input key={key} aria-label={`Database ${key}`} value={(block.metadata?.[key] || []).join(', ')} onChange={(e) => setList(key, e.target.value)}
+            className="text-xs bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 text-neutral-700 dark:text-neutral-300" placeholder={key} />
+        ))}
+      </div>
+      <TableBlock block={{ ...block, metadata: { ...block.metadata, rows, cols } }} onChange={({ metadata }) => setMeta(metadata)} />
+      <div className="flex gap-2">
+        <button type="button" onClick={addRow} className="text-xs text-brand-navy hover:underline">+ Record</button>
+        <button type="button" onClick={addCol} className="text-xs text-brand-navy hover:underline">+ Field</button>
+      </div>
+    </div>
+  );
+}
+
+function PivotBlock({ block, onChange }) {
+  const rows = block.metadata?.rows || [['Status', 'Count'], ['Draft', '2'], ['Published', '5']];
+  const totals = rows.slice(1).reduce((sum, row) => sum + (Number(row[1]) || 0), 0);
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
+        <span>Pivot total</span>
+        <strong className="text-neutral-900 dark:text-neutral-100">{totals}</strong>
+      </div>
+      <TableBlock block={{ ...block, metadata: { ...block.metadata, rows, cols: 2 } }} onChange={({ metadata }) => onChange({ metadata: { ...block.metadata, ...metadata } })} />
+    </div>
+  );
+}
+
 // Table of contents — the "MS Word" auto-TOC. Generated live from the document's heading blocks,
 // so it never goes stale the way a hand-maintained Word TOC does. Read-only in the editor (preview).
 function TocBlock({ allBlocks }) {
@@ -843,10 +913,15 @@ function ChartBlock({ block, onChange }) {
 // RB-30 §6). Token surfaces only; geometry constants live in block-kit.
 function WhiteboardBlock({ block, onChange }) {
   const notes = block.metadata?.notes || [];
+  const shapes = block.metadata?.shapes || [];
+  const connectors = block.metadata?.connectors || [];
+  const zoom = block.metadata?.zoom || 1;
+  const snap = block.metadata?.snap !== false;
   const canvasRef = useRef(null);
   const drag = useRef(null);
 
-  const setNotes = (next) => onChange({ metadata: { ...block.metadata, notes: next } });
+  const setMeta = (patch) => onChange({ metadata: { ...block.metadata, ...patch } });
+  const setNotes = (next) => setMeta({ notes: next });
   const clampX = (x) => {
     const w = canvasRef.current?.clientWidth || 600;
     return Math.max(0, Math.min(x, w - NOTE_W));
@@ -857,6 +932,21 @@ function WhiteboardBlock({ block, onChange }) {
     ...notes,
     { id: blockId(), x: clampX(16 + notes.length * 24), y: clampY(16 + notes.length * 16), text: '', emoji: '', color: notes.length % STICKY_COLORS.length },
   ]);
+  const addShape = (shape = 'rectangle') => setMeta({ shapes: [...shapes, { id: blockId(), shape, x: 40 + shapes.length * 20, y: 180, text: shape }] });
+  const addConnector = () => {
+    if (notes.length + shapes.length < 2) return;
+    const points = [...notes, ...shapes];
+    setMeta({ connectors: [...connectors, { id: blockId(), from: points[0].id, to: points[1].id, label: '' }] });
+  };
+  const exportWhiteboard = () => {
+    const blob = new Blob([JSON.stringify({ notes, shapes, connectors }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'whiteboard.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
   const updateNote = (id, patch) => setNotes(notes.map((n) => (n.id === id ? { ...n, ...patch } : n)));
   const removeNote = (id) => setNotes(notes.filter((n) => n.id !== id));
 
@@ -890,6 +980,13 @@ function WhiteboardBlock({ block, onChange }) {
       <div className="flex items-center gap-2">
         <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Whiteboard</span>
         <button type="button" onClick={addNote} className="text-xs text-brand-navy hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded">+ Sticky note</button>
+        <button type="button" onClick={() => addShape('rectangle')} className="text-xs text-brand-navy hover:underline">+ Shape</button>
+        <button type="button" onClick={addConnector} className="text-xs text-brand-navy hover:underline">+ Connector</button>
+        <button type="button" onClick={exportWhiteboard} className="text-xs text-brand-navy hover:underline">Export</button>
+        <label className="text-xs text-neutral-500">Zoom
+          <input aria-label="Whiteboard zoom" type="range" min="0.5" max="1.5" step="0.1" value={zoom} onChange={(e) => setMeta({ zoom: Number(e.target.value) })} className="ml-1 align-middle" />
+        </label>
+        <label className="text-xs text-neutral-500"><input aria-label="Snap to grid" type="checkbox" checked={snap} onChange={(e) => setMeta({ snap: e.target.checked })} className="mr-1" />Snap</label>
       </div>
       <div
         ref={canvasRef}
@@ -901,6 +998,15 @@ function WhiteboardBlock({ block, onChange }) {
         role="group"
         aria-label="Whiteboard canvas"
       >
+        <svg className="absolute inset-0 pointer-events-none" aria-hidden="true">
+          {connectors.map((c) => {
+            const all = [...notes, ...shapes];
+            const from = all.find((x) => x.id === c.from);
+            const to = all.find((x) => x.id === c.to);
+            if (!from || !to) return null;
+            return <line key={c.id} x1={(from.x || 0) + 40} y1={(from.y || 0) + 30} x2={(to.x || 0) + 40} y2={(to.y || 0) + 30} stroke="currentColor" className="text-neutral-400" strokeWidth="2" />;
+          })}
+        </svg>
         {notes.length === 0 && (
           <p className="absolute inset-0 flex items-center justify-center text-xs text-neutral-600 dark:text-neutral-400 select-none">Add a sticky note to start.</p>
         )}
@@ -949,7 +1055,45 @@ function WhiteboardBlock({ block, onChange }) {
             </div>
           </div>
         ))}
+        {shapes.map((shape) => (
+          <div key={shape.id} className="absolute rounded-md border-2 border-brand-navy/50 bg-white/80 dark:bg-neutral-800/80 px-3 py-2 text-xs text-neutral-800 dark:text-neutral-100"
+            style={{ left: shape.x, top: shape.y, transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
+            {shape.text || shape.shape}
+          </div>
+        ))}
       </div>
+    </div>
+  );
+}
+
+function MindMapBlock({ block, onChange }) {
+  const nodes = block.metadata?.nodes || ['Central idea'];
+  const setNodes = (next) => onChange({ metadata: { ...block.metadata, nodes: next } });
+  return (
+    <div className="space-y-2">
+      {nodes.map((node, i) => (
+        <input key={i} aria-label={i === 0 ? 'Mind map root' : `Mind map node ${i}`} value={node} onChange={(e) => setNodes(nodes.map((n, idx) => idx === i ? e.target.value : n))}
+          className={`block text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 ${i > 0 ? 'ml-6' : 'font-semibold'}`} />
+      ))}
+      <button type="button" onClick={() => setNodes([...nodes, 'New branch'])} className="text-xs text-brand-navy hover:underline">+ Branch</button>
+    </div>
+  );
+}
+
+function FlowchartBlock({ block, onChange }) {
+  return <textarea aria-label="Flowchart steps" value={block.content} onChange={(e) => onChange({ content: e.target.value })} rows={3} className="w-full text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-3 py-2" placeholder="Start -> Review -> Publish" />;
+}
+
+function MathBlock({ block, onChange }) {
+  return <input aria-label="LaTeX expression" value={block.content} onChange={(e) => onChange({ content: e.target.value })} className="w-full font-mono text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-3 py-2" placeholder="E = mc^2" />;
+}
+
+function EmbedBlock({ block, onChange }) {
+  return (
+    <div className="space-y-2">
+      <input type="url" aria-label="Embed URL" value={block.content} onChange={(e) => onChange({ content: e.target.value })} className="w-full text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1" placeholder="https://..." />
+      <input aria-label="Embed title" value={block.metadata?.title || ''} onChange={(e) => onChange({ metadata: { ...block.metadata, title: e.target.value } })} className="w-full text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1" placeholder="Title" />
+      <input aria-label="Embed description" value={block.metadata?.description || ''} onChange={(e) => onChange({ metadata: { ...block.metadata, description: e.target.value } })} className="w-full text-xs bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1" placeholder="Description" />
     </div>
   );
 }
@@ -1252,12 +1396,18 @@ function Block({ block, index, total, focused, onFocus, onChange, onMove, onDele
       )}
       {block.type === 'sheet' && <SheetBlock block={block} onChange={onChange} />}
       {block.type === 'chart' && <ChartBlock block={block} onChange={onChange} />}
+      {block.type === 'database' && <DatabaseBlock block={block} onChange={onChange} />}
+      {block.type === 'pivot' && <PivotBlock block={block} onChange={onChange} />}
       {block.type === 'bqlwidget' && <BqlWidget block={block} onChange={onChange} workspaceId={workspaceId} />}
       {block.type === 'table' && <TableBlock block={block} onChange={onChange} />}
       {block.type === 'sticker' && <StickerBlock block={block} onChange={onChange} />}
       {block.type === 'image' && <ImageBlock block={block} onChange={onChange} />}
       {block.type === 'mermaid' && <MermaidBlock block={block} onChange={onChange} />}
       {block.type === 'whiteboard' && <WhiteboardBlock block={block} onChange={onChange} />}
+      {block.type === 'mindmap' && <MindMapBlock block={block} onChange={onChange} />}
+      {block.type === 'flowchart' && <FlowchartBlock block={block} onChange={onChange} />}
+      {block.type === 'math' && <MathBlock block={block} onChange={onChange} />}
+      {block.type === 'embed' && <EmbedBlock block={block} onChange={onChange} />}
       {block.type === 'workitem' && <WorkItemBlock block={block} onChange={onChange} />}
       {block.type === 'bookmark' && <BookmarkBlock block={block} onChange={onChange} />}
       {block.type === 'file' && <FileBlock block={block} onChange={onChange} />}

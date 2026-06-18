@@ -21,7 +21,8 @@ class EventServiceTest {
 
     private final EventRepository repo = mock(EventRepository.class);
     private final RealtimeService realtime = mock(RealtimeService.class);
-    private final EventService service = new EventService(repo, realtime);
+    private final WebhookService webhooks = mock(WebhookService.class);
+    private final EventService service = new EventService(repo, realtime, webhooks);
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Test
@@ -64,6 +65,9 @@ class EventServiceTest {
         assertThat(saved.getEventType()).isEqualTo("PROJECT_MEMBER_ADDED");
         JsonNode node = mapper.readTree(saved.getPayload());
         assertThat(node.get("userId").asText()).isEqualTo("USR-2");
+        verify(webhooks).enqueue(org.mockito.ArgumentMatchers.eq("WS-001"),
+                org.mockito.ArgumentMatchers.eq("PROJECT_MEMBER_ADDED"),
+                org.mockito.ArgumentMatchers.anyMap());
     }
 
     @Test

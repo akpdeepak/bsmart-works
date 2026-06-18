@@ -40,6 +40,18 @@ function blockToMd(block) {
       ];
       return lines.join('\n') + '\n\n';
     }
+    case 'database':
+      return `**Database view:** ${block.metadata?.view || 'table'}\n\n${blockToMd({ ...block, type: 'table' })}`;
+    case 'pivot':
+      return `**Pivot table**\n\n${blockToMd({ ...block, type: 'table' })}`;
+    case 'mindmap':
+      return (block.metadata?.nodes || []).map((n, i) => `${'  '.repeat(Math.min(i, 1))}- ${n}`).join('\n') + '\n\n';
+    case 'flowchart':
+      return `\`\`\`mermaid\ngraph LR\n${String(c).split('->').map((s) => s.trim()).filter(Boolean).map((s, i, arr) => i < arr.length - 1 ? `  ${i}[${s}] --> ${i + 1}[${arr[i + 1]}]` : '').filter(Boolean).join('\n')}\n\`\`\`\n\n`;
+    case 'math':
+      return `$$\n${c}\n$$\n\n`;
+    case 'embed':
+      return `[${block.metadata?.title || c}](${c})\n\n${block.metadata?.description || ''}\n\n`;
     case 'toggle': return `**${c}**\n\n${block.metadata?.children ? blocksToMarkdown(block.metadata.children) : ''}`;
     default: return c ? `${c}\n\n` : `<!-- block:${block.type} -->\n\n`;
   }

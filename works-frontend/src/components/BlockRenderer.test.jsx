@@ -40,6 +40,29 @@ describe('BlockRenderer', () => {
     expect(screen.getByRole('img', { name: /Bar chart/ })).toBeInTheDocument();
   });
 
+  it('renders database and pivot table blocks (KR-049/KR-054)', () => {
+    render(<BlockRenderer blocks={[
+      block('database', '', { view: 'board', filters: ['status=draft'], rows: [['Name', 'Status'], ['Runbook', 'Draft']], cols: 2 }),
+      block('pivot', '', { rows: [['Status', 'Count'], ['Draft', '2'], ['Published', '5']] }),
+    ]} />);
+    expect(screen.getByText('View: board')).toBeInTheDocument();
+    expect(screen.getByText('Filter: status=draft')).toBeInTheDocument();
+    expect(screen.getByText(/Pivot total:/)).toHaveTextContent('7');
+  });
+
+  it('renders mind map, flowchart, math and rich embed blocks (KR-060/KR-061/KR-062/KR-063)', () => {
+    render(<BlockRenderer blocks={[
+      block('mindmap', '', { nodes: ['Know', 'Search', 'Publish'] }),
+      block('flowchart', 'Start -> Review -> Publish'),
+      block('math', 'E = mc^2'),
+      block('embed', 'https://example.com/dashboard', { title: 'Dashboard', description: 'Live metrics' }),
+    ]} />);
+    expect(screen.getByText('Know')).toBeInTheDocument();
+    expect(screen.getByText('Review')).toBeInTheDocument();
+    expect(screen.getByText('E = mc^2')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Dashboard/ })).toHaveAttribute('href', 'https://example.com/dashboard');
+  });
+
   it('builds an auto table of contents from headings', () => {
     render(<BlockRenderer blocks={[
       block('toc'),

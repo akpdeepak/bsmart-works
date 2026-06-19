@@ -64,7 +64,7 @@ export function PresenceAvatarRow({ presences = [] }) {
               }}
               aria-hidden="true"
             >
-              <span className="h-0 w-0 border-l-[7px] border-l-brand-orange border-y-[5px] border-y-transparent rotate-45" />
+              <span className="h-0 w-0 border-l-8 border-l-brand-orange border-y-4 border-y-transparent rotate-45" />
               <span className="rounded bg-brand-navy px-1.5 py-0.5 shadow-sm">
                 {initial}
               </span>

@@ -148,10 +148,11 @@ class SprintReportTest {
         shipped.setName("Shipped");
         shipped.setCategory("DONE");
         when(statusConfig.statusesForType("WS-A", "Story")).thenReturn(List.of(shipped));
-        // 2 "Shipped" (5+3=8 pts, both DONE by config) + 1 Todo (2 pts)
+        // 2 "Shipped" (5+3=8 pts, both DONE by config) + 1 Todo (2 pts).
+        // Mixed casing pins the shared resolver's case-insensitive config lookup.
         List<Map<String, Object>> items = List.of(
             itemRow("WI-1", "T1", "Shipped", "Story", 5, "u1"),
-            itemRow("WI-2", "T2", "Shipped", "Story", 3, "u1"),
+            itemRow("WI-2", "T2", "shipped", "Story", 3, "u1"),
             itemRow("WI-3", "T3", "Todo",    "Story", 2, null)
         );
         when(sprintDao.reportItems(eq(SPRINT_A))).thenReturn(items);

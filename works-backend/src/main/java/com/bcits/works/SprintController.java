@@ -55,21 +55,19 @@ public class SprintController {
     // Cached per workspace|type so a multi-item report reads each type's config at most once.
     private String resolveCategory(String wsId, String type, String status,
                                    Map<String, Map<String, String>> cache) {
-        if (status == null) return "TODO";
+        if (status == null) return StatusCategoryResolver.TODO;
         Map<String, String> byName = (wsId == null || type == null)
                 ? Map.of()
                 : cache.computeIfAbsent(wsId + "|" + type, k -> {
                     Map<String, String> m = new HashMap<>();
                     for (WorkflowStatus ws : statusConfig.statusesForType(wsId, type)) {
-                        if (ws.getName() != null) m.put(ws.getName(), ws.getCategory());
+                        if (ws.getName() != null) {
+                            m.put(StatusCategoryResolver.normalize(ws.getName()), ws.getCategory());
+                        }
                     }
                     return m;
                 });
-        String cat = byName.get(status);
-        if (cat != null) return cat;
-        if ("Done".equals(status)) return "DONE";
-        if ("In Progress".equals(status)) return "IN_PROGRESS";
-        return "TODO";
+        return StatusCategoryResolver.from(byName).apply(status);
     }
 
     @Operation(summary = "List sprints", description = "Returns sprints for the authenticated user's workspaces. Filter by projectId to scope to a single project.")
@@ -202,7 +200,8 @@ public class SprintController {
             // Count by resolved status category, not the literal "Done" — so renamed/custom done
             // statuses are credited (RB-20 §4); was previously under-counting those workspaces.
             java.util.function.Predicate<Map<String, Object>> isDone = i ->
-                    "DONE".equals(resolveCategory(wsId, (String) i.get("type"), (String) i.get("status"), catCache));
+                    StatusCategoryResolver.DONE.equals(
+                            resolveCategory(wsId, (String) i.get("type"), (String) i.get("status"), catCache));
             int donePoints = items.stream().filter(isDone)
                     .mapToInt(i -> i.get("story_points") != null ? ((Number) i.get("story_points")).intValue() : 0).sum();
             int totalItems = items.size();
@@ -241,11 +240,12 @@ public class SprintController {
                 resolveCategory(wsId, (String) i.get("type"), (String) i.get("status"), catCache);
 
         int total = items.size();
-        long done = items.stream().filter(i -> "DONE".equals(catOf.apply(i))).count();
-        long inProgress = items.stream().filter(i -> "IN_PROGRESS".equals(catOf.apply(i))).count();
-        long todo = items.stream().filter(i -> "TODO".equals(catOf.apply(i))).count();
+        long done = items.stream().filter(i -> StatusCategoryResolver.DONE.equals(catOf.apply(i))).count();
+        long inProgress = items.stream()
+                .filter(i -> StatusCategoryResolver.IN_PROGRESS.equals(catOf.apply(i))).count();
+        long todo = items.stream().filter(i -> StatusCategoryResolver.TODO.equals(catOf.apply(i))).count();
         int totalPoints = items.stream().mapToInt(i -> i.get("story_points") != null ? (int)i.get("story_points") : 0).sum();
-        long donePoints = items.stream().filter(i -> "DONE".equals(catOf.apply(i)))
+        long donePoints = items.stream().filter(i -> StatusCategoryResolver.DONE.equals(catOf.apply(i)))
                 .mapToInt(i -> i.get("story_points") != null ? (int)i.get("story_points") : 0).sum();
 
         Map<String, Object> report = new LinkedHashMap<>();
@@ -281,4 +281,3 @@ public class SprintController {
         return all;
     }
 }
-

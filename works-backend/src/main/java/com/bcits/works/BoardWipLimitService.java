@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -81,20 +82,20 @@ public class BoardWipLimitService {
     // ── private helpers ────────────────────────────────────────────────────────
 
     private String categoryFor(String statusName) {
-        if (statusName == null) return "TODO";
+        if (statusName == null) return StatusCategoryResolver.TODO;
         // Use RowMapper form to avoid JdbcTemplate overload ambiguity at the call site.
         List<String> rows = jdbc.query(
             "SELECT category FROM workflow_status WHERE LOWER(name) = LOWER(?) LIMIT 1",
             (rs, i) -> rs.getString("category"),
             statusName);
-        return rows.isEmpty() ? "TODO" : rows.get(0);
+        return rows.isEmpty() ? StatusCategoryResolver.from(Map.of()).apply(statusName) : rows.get(0);
     }
 
     private static Integer columnLimit(BoardWipLimit limits, String category) {
         return switch (category) {
-            case "TODO"        -> limits.getTodoLimit();
-            case "IN_PROGRESS" -> limits.getInProgressLimit();
-            case "DONE"        -> limits.getDoneLimit();
+            case StatusCategoryResolver.TODO -> limits.getTodoLimit();
+            case StatusCategoryResolver.IN_PROGRESS -> limits.getInProgressLimit();
+            case StatusCategoryResolver.DONE -> limits.getDoneLimit();
             default            -> null;
         };
     }

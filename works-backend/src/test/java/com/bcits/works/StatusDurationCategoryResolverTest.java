@@ -9,7 +9,7 @@ import java.util.function.Function;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Pins {@link StatusDurationController#categoryResolver}'s status-name → category contract.
+ * Pins {@link StatusCategoryResolver}'s status-name → category contract.
  *
  * <p>The V87 backfill migration synthesizes status history using the literal status names
  * {@code 'Todo' | 'In Progress' | 'Done'} (the values the seed data uses). Those names are NOT in
@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class StatusDurationCategoryResolverTest {
 
     // Empty config map → forces the heuristic path, which is exactly V87's real-world situation.
-    private final Function<String, String> heuristic = StatusDurationController.categoryResolver(Map.of());
+    private final Function<String, String> heuristic = StatusCategoryResolver.from(Map.of());
 
     @Test
     void v87SeedStatusNamesResolveToTheExpectedCategories() {
@@ -41,7 +41,7 @@ class StatusDurationCategoryResolverTest {
     void configuredCategoryWinsOverTheHeuristic() {
         // A workspace that maps a custom name takes precedence over any heuristic guess.
         Function<String, String> withConfig =
-            StatusDurationController.categoryResolver(Map.of("backlog", "TODO", "shipping", "DONE"));
+            StatusCategoryResolver.from(Map.of("backlog", "TODO", "shipping", "DONE"));
         assertEquals("DONE", withConfig.apply("Shipping"));   // config-first, case-insensitive
         assertEquals("TODO", withConfig.apply("Backlog"));
         // names not in the config still fall through to the heuristic

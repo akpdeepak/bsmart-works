@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 
 /**
  * Exposes the auto status-duration projection (iteration 7, Cap B) plus lead/cycle time for a work
@@ -53,28 +52,11 @@ public class StatusDurationController {
         Map<String, String> nameToCategory = new HashMap<>();
         if (workspaceId != null && type != null) {
             for (WorkflowStatus s : statusConfig.statusesForType(workspaceId, type)) {
-                if (s.getName() != null) nameToCategory.put(s.getName().toLowerCase(), s.getCategory());
+                if (s.getName() != null) {
+                    nameToCategory.put(StatusCategoryResolver.normalize(s.getName()), s.getCategory());
+                }
             }
         }
-        return statusDurations.metricsForWorkItem(id, categoryResolver(nameToCategory));
-    }
-
-    /**
-     * Status name → TODO | IN_PROGRESS | DONE; config first, then a heuristic for legacy values.
-     * Package-private (not private) so its mapping is pinned by a unit test — the V87 backfill
-     * migration relies on the heuristic resolving 'Todo'/'In Progress'/'Done' correctly.
-     */
-    static Function<String, String> categoryResolver(Map<String, String> nameToCategory) {
-        return name -> {
-            if (name == null) return "TODO";
-            String mapped = nameToCategory.get(name.toLowerCase());
-            if (mapped != null) return mapped;
-            String n = name.toLowerCase();
-            if (n.contains("progress") || n.contains("review") || n.contains("test")
-                || n.equals("blocked") || n.contains("doing")) return "IN_PROGRESS";
-            if (n.equals("done") || n.contains("closed") || n.contains("resolved")
-                || n.contains("complete") || n.contains("fixed")) return "DONE";
-            return "TODO";
-        };
+        return statusDurations.metricsForWorkItem(id, StatusCategoryResolver.from(nameToCategory));
     }
 }

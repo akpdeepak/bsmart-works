@@ -1,9 +1,18 @@
 name: Deploy
 
-# Manual-trigger deploy workflow (CLAUDE.md §13).
-# Triggered manually from GitHub Actions UI → select environment.
-# TODO: wire up the actual deployment steps once a hosting target is confirmed.
-# Until then this workflow documents the expected shape and validates the build is deployable.
+# Manual-trigger deploy workflow (RB-05 / RB-40 gated).
+# Required environment secrets:
+#   DEPLOY_SSH_HOST      target host
+#   DEPLOY_SSH_USER      SSH user with write access to deploy dirs
+#   DEPLOY_SSH_KEY       private key for the SSH user
+# Required environment vars:
+#   DEPLOY_BACKEND_DIR       directory that receives app.jar, e.g. /opt/bsmart/backend
+#   DEPLOY_FRONTEND_DIR      directory served by nginx/CDN origin, e.g. /var/www/bsmart
+#   DEPLOY_BACKEND_SERVICE   systemd unit to restart, e.g. bsmart-backend
+# Optional environment vars:
+#   DEPLOY_FRONTEND_RELOAD   command run after frontend sync, e.g. sudo systemctl reload nginx
+#   BACKEND_HEALTH_URL       endpoint checked after backend deploy
+#   FRONTEND_HEALTH_URL      endpoint checked after frontend deploy
 on:
   workflow_dispatch:
     inputs:
@@ -12,6 +21,12 @@ on:
         required: true
         type: choice
         options: [staging, production]
+      component:
+        description: Component to deploy
+        required: true
+        type: choice
+        default: full-stack
+        options: [full-stack, backend, frontend]
       confirm_production:
         description: "Type DEPLOY to confirm production deploy (ignored for staging)"
         required: false
@@ -24,6 +39,7 @@ jobs:
   pre-flight:
     name: Pre-flight checks
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     steps:
       - name: Block unconfirmed production deploy
         if: inputs.environment == 'production' && inputs.confirm_production != 'DEPLOY'
@@ -31,9 +47,38 @@ jobs:
           echo "Production deploy requires confirm_production = 'DEPLOY'" >&2
           exit 1
 
+      - name: Validate deployment configuration
+        env:
+          DEPLOY_SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          DEPLOY_SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_BACKEND_DIR: ${{ vars.DEPLOY_BACKEND_DIR }}
+          DEPLOY_FRONTEND_DIR: ${{ vars.DEPLOY_FRONTEND_DIR }}
+          DEPLOY_BACKEND_SERVICE: ${{ vars.DEPLOY_BACKEND_SERVICE }}
+        run: |
+          missing=0
+          require() {
+            if [ -z "${!1}" ]; then
+              echo "::error::$1 is required for the ${{ inputs.environment }} environment"
+              missing=1
+            fi
+          }
+          require DEPLOY_SSH_HOST
+          require DEPLOY_SSH_USER
+          require DEPLOY_SSH_KEY
+          if [ "${{ inputs.component }}" != "frontend" ]; then
+            require DEPLOY_BACKEND_DIR
+            require DEPLOY_BACKEND_SERVICE
+          fi
+          if [ "${{ inputs.component }}" != "backend" ]; then
+            require DEPLOY_FRONTEND_DIR
+          fi
+          exit "$missing"
+
   build-backend:
     name: Build backend JAR
     needs: pre-flight
+    if: inputs.component == 'full-stack' || inputs.component == 'backend'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -45,7 +90,7 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - name: Package (skip tests — CI already ran them)
+      - name: Package backend
         run: ./mvnw -B -DskipTests package
       - name: Upload JAR
         uses: actions/upload-artifact@v4
@@ -57,12 +102,13 @@ jobs:
   build-frontend:
     name: Build frontend static files
     needs: pre-flight
+    if: inputs.component == 'full-stack' || inputs.component == 'frontend'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: works-frontend
     env:
-      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || '/api/v1' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -81,25 +127,79 @@ jobs:
 
   deploy:
     name: Deploy to ${{ inputs.environment }}
-    needs: [build-backend, build-frontend]
+    needs: [pre-flight, build-backend, build-frontend]
+    if: always() && needs.pre-flight.result == 'success' && (needs.build-backend.result == 'success' || needs.build-backend.result == 'skipped') && (needs.build-frontend.result == 'success' || needs.build-frontend.result == 'skipped')
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
+    env:
+      DEPLOY_SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+      DEPLOY_SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_BACKEND_DIR: ${{ vars.DEPLOY_BACKEND_DIR }}
+      DEPLOY_FRONTEND_DIR: ${{ vars.DEPLOY_FRONTEND_DIR }}
+      DEPLOY_BACKEND_SERVICE: ${{ vars.DEPLOY_BACKEND_SERVICE }}
+      DEPLOY_FRONTEND_RELOAD: ${{ vars.DEPLOY_FRONTEND_RELOAD }}
+      BACKEND_HEALTH_URL: ${{ vars.BACKEND_HEALTH_URL }}
+      FRONTEND_HEALTH_URL: ${{ vars.FRONTEND_HEALTH_URL }}
     steps:
-      - name: Download artifacts
+      - name: Download backend artifact
+        if: inputs.component == 'full-stack' || inputs.component == 'backend'
         uses: actions/download-artifact@v4
-      # ── TODO: replace the steps below with your actual deployment mechanism ──────
-      # Options (choose one):
-      #   A) SSH + systemd:   scp the JAR, restart the service
-      #   B) Docker:          build image, push to registry, deploy to host
-      #   C) PaaS (Render, Railway, Fly.io): use their CLI action
-      #   D) Kubernetes:      apply updated deployment manifest
-      # See CLAUDE.md §13 for the deployment decision checklist.
-      - name: Deploy backend (TODO)
-        run: echo "TODO — wire actual backend deploy for ${{ inputs.environment }}"
-      - name: Deploy frontend (TODO)
-        run: echo "TODO — wire actual frontend deploy (CDN/static host) for ${{ inputs.environment }}"
-      - name: Health check
+        with:
+          name: backend-jar
+          path: deploy/backend
+
+      - name: Download frontend artifact
+        if: inputs.component == 'full-stack' || inputs.component == 'frontend'
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: deploy/frontend
+
+      - name: Configure SSH
         run: |
-          echo "TODO — curl https://<host>/actuator/health and assert {status:UP}"
-          # Example:
-          # curl -f https://api.bsmart.example.com/actuator/health | jq '.status == "UP"'
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$DEPLOY_SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy backend
+        if: inputs.component == 'full-stack' || inputs.component == 'backend'
+        run: |
+          jar_path="$(find deploy/backend -name '*.jar' -type f | head -n 1)"
+          if [ -z "$jar_path" ]; then
+            echo "::error::Backend JAR artifact not found"
+            exit 1
+          fi
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST" "mkdir -p '$DEPLOY_BACKEND_DIR'"
+          scp -i ~/.ssh/deploy_key "$jar_path" "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST:$DEPLOY_BACKEND_DIR/app.jar.next"
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST" \
+            "mv '$DEPLOY_BACKEND_DIR/app.jar.next' '$DEPLOY_BACKEND_DIR/app.jar' && sudo systemctl restart '$DEPLOY_BACKEND_SERVICE'"
+
+      - name: Deploy frontend
+        if: inputs.component == 'full-stack' || inputs.component == 'frontend'
+        run: |
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST" "mkdir -p '$DEPLOY_FRONTEND_DIR'"
+          rsync -az --delete -e "ssh -i ~/.ssh/deploy_key" deploy/frontend/ "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST:$DEPLOY_FRONTEND_DIR/"
+          if [ -n "$DEPLOY_FRONTEND_RELOAD" ]; then
+            ssh -i ~/.ssh/deploy_key "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST" "$DEPLOY_FRONTEND_RELOAD"
+          fi
+
+      - name: Backend health check
+        if: (inputs.component == 'full-stack' || inputs.component == 'backend') && env.BACKEND_HEALTH_URL != ''
+        run: |
+          for i in $(seq 1 24); do
+            if curl -fsS "$BACKEND_HEALTH_URL" >/tmp/backend-health.json; then
+              cat /tmp/backend-health.json
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Backend health check failed: $BACKEND_HEALTH_URL"
+          exit 1
+
+      - name: Frontend health check
+        if: (inputs.component == 'full-stack' || inputs.component == 'frontend') && env.FRONTEND_HEALTH_URL != ''
+        run: |
+          curl -fsSI "$FRONTEND_HEALTH_URL" >/tmp/frontend-health.txt
+          cat /tmp/frontend-health.txt

@@ -66,3 +66,25 @@ compose file points the app at the sibling containers:
 - **ClamAV virus scanning** is disabled here because the app's default points at a
   WSL2 IP. Re-enable by adding a `clamav` service and setting
   `APP_ATTACHMENTS_VIRUS_SCAN_ENABLED=true` + the clamav host env.
+
+## GitHub Actions Deployment
+
+`.github/workflows/deploy.yml` is the remote deployment gate for staging and
+production. It builds the same backend JAR and frontend bundle, then deploys them
+over SSH. Configure these as environment-level GitHub secrets/variables for each
+target environment before running the workflow:
+
+| Name | Type | Required for | Purpose |
+|------|------|--------------|---------|
+| `DEPLOY_SSH_HOST` | secret | backend/frontend | Target host |
+| `DEPLOY_SSH_USER` | secret | backend/frontend | SSH user |
+| `DEPLOY_SSH_KEY` | secret | backend/frontend | Private key for the SSH user |
+| `DEPLOY_BACKEND_DIR` | variable | backend | Directory that receives `app.jar` |
+| `DEPLOY_BACKEND_SERVICE` | variable | backend | systemd service restarted after JAR deploy |
+| `DEPLOY_FRONTEND_DIR` | variable | frontend | Directory served by nginx/CDN origin |
+| `DEPLOY_FRONTEND_RELOAD` | variable | frontend | Optional reload command, such as `sudo systemctl reload nginx` |
+| `BACKEND_HEALTH_URL` | variable | backend | Optional health URL polled after backend deploy |
+| `FRONTEND_HEALTH_URL` | variable | frontend | Optional URL checked after frontend deploy |
+| `VITE_API_BASE_URL` | variable | frontend build | Optional API base, defaults to `/api/v1` |
+
+Production runs require the workflow input `confirm_production=DEPLOY`.

@@ -7,9 +7,9 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 
 ## Current status
 
-- Roadmap mode: V.20 EPIC 1 merged; ready for EPIC 2
-- Active EPIC: None
-- Active branch: `main`
+- Roadmap mode: V.20 EPIC 2 production configuration/secrets safety in progress
+- Active EPIC: EPIC 2 - Production Configuration, Deployment, and Secrets Safety
+- Active branch: `epic/02-production-config-secrets`
 - Last completed EPIC: EPIC 1 - Multi-Tenant Security and RBAC Hardening
 - Next recommended EPIC: EPIC 2 - Production Configuration, Deployment, and Secrets Safety
 - Last state update: 2026-06-19
@@ -78,7 +78,7 @@ resume point.
 |---|---|---|---|---|---|---|
 | EPIC 0 - Current-State Hardening, Truth, and Delivery Baseline | Completed | `main` | [#393](https://github.com/akpdeepak/bsmart-works/pull/393) | `npm run verify`; `cd works-backend && .\mvnw.cmd -Dgroups=unit verify` | `docs/implementation/epics/EPIC-00-current-state-hardening-completion.md` | Baseline docs, source hygiene, JWT query-token scope, verified shared status category resolver |
 | EPIC 1 - Multi-Tenant Security and RBAC Hardening | Completed | `main` | [#394](https://github.com/akpdeepak/bsmart-works/pull/394) | `cd works-backend && .\mvnw.cmd -Dgroups=unit verify`; `npm run guardrails`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-01-tenant-rbac-hardening-completion.md` | Starred items, SCIM token issuance, dashboards, field layouts, RBAC workspace scope, BQL fallback |
-| EPIC 2 - Production Configuration, Deployment, and Secrets Safety | Not started | | | | | |
+| EPIC 2 - Production Configuration, Deployment, and Secrets Safety | PR-ready | `epic/02-production-config-secrets` | | `cd works-backend && .\mvnw.cmd -Dgroups=unit verify`; Compose env config validation; `npm run guardrails` | `docs/implementation/epics/EPIC-02-production-config-secrets-completion.md` | Prod/staging secret guard, health probes, env templates, Compose smoke, backup/restore runbook |
 | EPIC 25 partial - Reliability, Testing, Accessibility, Performance, and Quality Gates | Not started | | | | | |
 | EPIC 3 - Backend Modularization and Service Boundaries | Not started | | | | | |
 | EPIC 4 - Frontend Architecture Refactor | Not started | | | | | |
@@ -125,5 +125,13 @@ baseline warnings.
 [#394](https://github.com/akpdeepak/bsmart-works/pull/394), merge commit
 `b1cc91c46c4a870bbfcaa8266afa991d2b6614aa`. GitHub CI passed all required jobs, including
 frontend lint/build/test, backend compile/unit/integration/smoke, guardrails, secrets scan,
-Storybook, Chromatic, bundle budget, and JetBrains plugin build. Local `main` and `origin/main` are
-synced at `b1cc91c`. Resume with EPIC 2.
+Storybook, Chromatic, bundle budget, and JetBrains plugin build. Local `main` and `origin/main` were
+then updated with `d60d062` to mark EPIC 1 merged. Resume with EPIC 2.
+
+2026-06-19: EPIC 2 implemented and locally validated on `epic/02-production-config-secrets`. Scope
+covers prod/staging startup secret validation, dev-token exposure default hardening, public health
+probes, deployment health indicators, env templates, Compose readiness, CI Compose smoke validation,
+and Postgres/uploads backup/restore documentation. Validation: focused backend tests passed 8/8;
+broader `cd works-backend && .\mvnw.cmd -Dgroups=unit verify` passed 1,341 tests with 0 Checkstyle
+violations; Compose config validation passed for local/staging/production env templates; `npm run
+guardrails` passed all blocking rules with the existing non-blocking raw-hex baseline warning.

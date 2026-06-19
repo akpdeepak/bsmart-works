@@ -52,6 +52,8 @@ released as a PATCH; only the latest release is supported.
 **Application controls:**
 
 - **Authentication:** Spring Security with stateless JWT; MFA (TOTP) for sensitive accounts.
+- **Production secret guard:** staging/production startup fails if `BSMART_JWT_SECRET` is missing,
+  too short, still uses the dev value, or if development verification-token exposure is enabled.
 - **Authorization:** `RbacService` enforced in the service layer; tier hierarchy
   VIEWER < MEMBER < LEAD < ADMIN < OWNER, permission-gated.
 - **Multi-tenant isolation (RB-40 §1):** every row is workspace-owned; every repository query is
@@ -66,6 +68,24 @@ released as a PATCH; only the latest release is supported.
 - **Auditability:** state changes are event-sourced to an append-only `events` store; personal data
   is tokenized into a PII vault and crypto-shredded on erasure, so the audit trail stays immutable
   while DPDP/GDPR erasure is honoured (RB-40 §3).
+
+## Operational readiness
+
+Public Actuator liveness/readiness probes expose only status and component names. Deployment health
+includes database, Flyway migration, attachment storage, AI provider, and realtime transport status.
+
+## Production-required secrets
+
+These values must be set through a private environment file, GitHub environment secrets, or the
+target runtime secret manager. Never commit filled values.
+
+| Secret/config | Required in production | Notes |
+|---------------|------------------------|-------|
+| `BSMART_JWT_SECRET` | Yes | Random non-dev value, at least 32 bytes |
+| `POSTGRES_PASSWORD` / `BSMART_DB_PASSWORD` | Yes | Use separate app and admin DB users where possible |
+| `ENCRYPTION_KEY` | Yes for durable encrypted data | Base64 AES-256 key; rotate through the approved key process |
+| `ANTHROPIC_API_KEY` | Optional | Enables live AI provider; blank uses deterministic offline provider |
+| OAuth client secrets | Optional | Required only for enabled Slack/GitHub/GitLab integrations |
 
 ## Certification roadmap
 

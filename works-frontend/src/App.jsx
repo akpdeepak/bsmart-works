@@ -3668,6 +3668,7 @@ export default function App() {
           {/* WORKSPACE SETTINGS — tier ADMIN+ */}
           {view === 'workspace' && (
             <WorkspaceView
+              activeWorkspaceId={activeWorkspaceId}
               workspaceMembers={workspaceMembers}
               currentUser={currentUser}
               userRole={userRole}

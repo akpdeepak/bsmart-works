@@ -55,6 +55,18 @@ jobs:
       - name: Run guardrails
         run: bash scripts/guardrails.sh
 
+  deploy-compose-smoke:
+    name: Deployment smoke (compose config)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Docker Compose deploy templates
+        run: |
+          for env_file in deploy/env/local.example deploy/env/staging.example deploy/env/production.example; do
+            echo "Validating ${env_file}"
+            docker compose --env-file "${env_file}" -f docker-compose.deploy.yml config --quiet
+          done
+
   ai-rules-in-sync:
     name: AI rules in sync with CLAUDE.md
     runs-on: ubuntu-latest

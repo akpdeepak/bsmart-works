@@ -285,7 +285,7 @@ export function FieldVisibilitySettings({
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => api.send(`/field-visibility/${fv.id}`, { method: 'DELETE' }).then(() => { showToast('Rule deleted'); fetchFieldVisibility(); }).catch(reportError)}
+                    <button onClick={() => api.send(`/permission-schemes/field-visibility/rules/${fv.id}`, { method: 'DELETE' }).then(() => { showToast('Rule deleted'); fetchFieldVisibility(); }).catch(reportError)}
                       className="text-xs text-semantic-danger hover:underline">Delete</button>
                   </td>
                 </tr>

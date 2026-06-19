@@ -28,7 +28,7 @@ public class ArticlePresenceStore {
 
     /** Per-viewer record stored in the map. */
     public record PresenceRecord(String userId, String displayName, String avatarInitial,
-                                 Instant lastSeen) { }
+                                 Double cursorX, Double cursorY, Instant lastSeen) { }
 
     // articleId → userId → PresenceRecord
     private final Map<String, ConcurrentHashMap<String, PresenceRecord>> byArticle =

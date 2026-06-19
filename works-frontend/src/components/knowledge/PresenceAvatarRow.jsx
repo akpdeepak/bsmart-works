@@ -10,7 +10,7 @@ const MAX_SHOWN = 4;
  * PresenceAvatarRow — renders presence avatars for viewers of an article.
  *
  * @param {{
- *   presences: Array<{ userId: string, displayName: string, avatarInitial?: string }>,
+ *   presences: Array<{ userId: string, displayName: string, avatarInitial?: string, cursorX?: number, cursorY?: number }>,
  * }} props
  */
 export function PresenceAvatarRow({ presences = [] }) {
@@ -49,6 +49,28 @@ export function PresenceAvatarRow({ presences = [] }) {
           +{overflow}
         </div>
       )}
+
+      {presences
+        .filter((p) => Number.isFinite(Number(p.cursorX)) && Number.isFinite(Number(p.cursorY)))
+        .map((p) => {
+          const initial = p.avatarInitial || (p.displayName ? p.displayName.charAt(0).toUpperCase() : '?');
+          return (
+            <div
+              key={`${p.userId}-cursor`}
+              className="pointer-events-none fixed z-50 flex items-center gap-1.5 text-2xs font-semibold text-white"
+              style={{
+                left: `${Math.max(0, Math.min(100, Number(p.cursorX)))}vw`,
+                top: `${Math.max(0, Math.min(100, Number(p.cursorY)))}vh`,
+              }}
+              aria-hidden="true"
+            >
+              <span className="h-0 w-0 border-l-[7px] border-l-brand-orange border-y-[5px] border-y-transparent rotate-45" />
+              <span className="rounded bg-brand-navy px-1.5 py-0.5 shadow-sm">
+                {initial}
+              </span>
+            </div>
+          );
+        })}
     </div>
   );
 }

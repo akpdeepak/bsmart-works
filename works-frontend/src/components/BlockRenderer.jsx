@@ -12,6 +12,7 @@ import { CALLOUT_VARIANTS, STICKY_COLORS, CANVAS_H, NOTE_W, NOTE_H, fileKind, pa
 import { ChartPreview } from '@/components/blocks/chart-preview';
 import { BqlWidget } from '@/components/blocks/bql-widget';
 import { CodeBlockRenderer } from '@/components/blocks/CodeBlockRenderer';
+import { ArticleRefBlock } from '@/components/blocks/ArticleRefBlock';
 
 const STICKER_SIZE = { md: 'text-4xl', lg: 'text-6xl', xl: 'text-8xl' };
 const FILE_KIND_LABEL = { image: 'Image', pdf: 'PDF', doc: 'Document', sheet: 'Spreadsheet', slide: 'Slides', archive: 'Archive', video: 'Video', audio: 'Audio', code: 'Code', link: 'File' };
@@ -561,6 +562,8 @@ function OneBlock({ block, allBlocks, workspaceId, blockComments }) {
       return <DashboardView block={block} />;
     case 'workitem':
       return <WorkItemView block={block} />;
+    case 'article_ref':
+      return <ArticleRefBlock block={block} editMode={false} workspaceId={workspaceId} />;
     case 'bookmark':
       return <BookmarkView block={block} />;
     case 'file':

@@ -21,7 +21,7 @@ class ArticlePresenceStoreTest {
     private final RealtimeService realtime = mock(RealtimeService.class);
 
     private ArticlePresenceStore.PresenceRecord rec(String userId, Instant t) {
-        return new ArticlePresenceStore.PresenceRecord(userId, "User " + userId, "U", t);
+        return new ArticlePresenceStore.PresenceRecord(userId, "User " + userId, "U", 25.0, 40.0, t);
     }
 
     @Test
@@ -33,6 +33,8 @@ class ArticlePresenceStoreTest {
         List<ArticlePresenceStore.PresenceRecord> result = store.getPresences("ART-1");
         assertEquals(1, result.size());
         assertEquals("U-1", result.get(0).userId());
+        assertEquals(25.0, result.get(0).cursorX());
+        assertEquals(40.0, result.get(0).cursorY());
     }
 
     @Test

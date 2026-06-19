@@ -10,7 +10,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   Plus, Trash2, ChevronUp, ChevronDown, Code, AlignLeft,
-  Heading1, Heading2, Heading3, Minus, Image, Table,
+  Heading1, Heading2, Heading3, Minus, Image, Table, BookOpen,
   GitBranch, ChevronDown as ChevronDownIcon,
   Info, CheckSquare, Quote, ChevronRight,
   Grid, BarChart3, PenTool, Link2, Bookmark, GripVertical, List, Sparkles,
@@ -29,6 +29,7 @@ import { BqlWidget } from '@/components/blocks/bql-widget';
 import { EmojiPicker } from '@/components/blocks/emoji-picker';
 import { SelectionToolbar } from '@/components/blocks/SelectionToolbar';
 import { AiMetaBadge } from '@/components/works/ai-meta-badge';
+import { ArticleRefBlock } from '@/components/blocks/ArticleRefBlock';
 
 // Text-bearing blocks that the per-block AI menu can rewrite (improve / expand / summarize / shorten).
 const AI_TEXT_TYPES = new Set(['paragraph', 'heading1', 'heading2', 'heading3', 'quote', 'callout']);
@@ -68,6 +69,7 @@ const BLOCK_TYPES = [
   { type: 'embed',     label: 'Rich embed', Icon: Bookmark, group: 'Visual' },
   { type: 'sticker',   label: 'Sticker / emoji', Icon: Smile, group: 'Visual' },
   { type: 'workitem',  label: 'Work item', Icon: Link2, group: 'Connect' },
+  { type: 'article_ref', label: 'Article reference', Icon: BookOpen, group: 'Connect' },
   { type: 'bookmark',  label: 'Bookmark / link', Icon: Bookmark, group: 'Connect' },
   { type: 'file',      label: 'File (any type)', Icon: Paperclip, group: 'Connect' },
   { type: 'decision',  label: 'Decision log', Icon: CheckSquare, group: 'Knowledge' },
@@ -136,6 +138,7 @@ const TOOLBAR_GROUPS = [
     label: 'Connect',
     items: [
       { type: 'workitem',   title: 'Work item',           Icon: Link2 },
+      { type: 'article_ref', title: 'Article reference',   Icon: BookOpen },
       { type: 'bookmark',   title: 'Bookmark / link',     Icon: Bookmark },
       { type: 'file',       title: 'File (any type)',     Icon: Paperclip },
     ],
@@ -238,6 +241,8 @@ function newBlock(type) {
       return { id, type, content: '', metadata: { title: '', url: '', description: '', refresh: 'Manual', embedMode: 'link', bql: '' } };
     case 'workitem':
       return { id, type, content: '', metadata: { title: '', status: '', assignee: '', priority: '', syncedAt: '' } };
+    case 'article_ref':
+      return { id, type, content: '', metadata: { articleId: '', displayMode: 'card' } };
     case 'bookmark':
       return { id, type, content: '', metadata: { title: '', description: '' } };
     case 'file':
@@ -1642,6 +1647,7 @@ function Block({ block, index, total, focused, onFocus, onChange, onMove, onDele
       {block.type === 'release_notes' && <ReleaseNotesBlock block={block} onChange={onChange} />}
       {block.type === 'dashboard' && <DashboardBlock block={block} onChange={onChange} />}
       {block.type === 'workitem' && <WorkItemBlock block={block} onChange={onChange} />}
+      {block.type === 'article_ref' && <ArticleRefBlock block={block} onChange={onChange} editMode workspaceId={workspaceId} />}
       {block.type === 'bookmark' && <BookmarkBlock block={block} onChange={onChange} />}
       {block.type === 'file' && <FileBlock block={block} onChange={onChange} />}
     </div>

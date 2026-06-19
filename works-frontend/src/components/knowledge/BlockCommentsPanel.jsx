@@ -10,6 +10,23 @@ import { MentionPicker, renderMentions } from '@/components/knowledge/MentionPic
 
 const REPLIES_SHOW_THRESHOLD = 3;
 
+function draftKey(articleId, blockId, currentUserId, suffix = 'new') {
+  return ['know_comment_draft', articleId || 'article', blockId || 'article', currentUserId || 'anonymous', suffix].join(':');
+}
+
+function readDraft(key) {
+  if (typeof window === 'undefined' || !key) return '';
+  try { return window.localStorage.getItem(key) || ''; } catch { return ''; }
+}
+
+function writeDraft(key, value) {
+  if (typeof window === 'undefined' || !key) return;
+  try {
+    if (value) window.localStorage.setItem(key, value);
+    else window.localStorage.removeItem(key);
+  } catch { /* storage is best-effort */ }
+}
+
 function groupComments(flat) {
   const roots = flat.filter(c => !c.parentId);
   return roots.map(root => ({
@@ -54,17 +71,27 @@ function CommentItem({ comment, currentUserId, onResolve, onDelete }) {
   );
 }
 
-function ThreadGroup({ group, currentUserId, onResolve, onDelete, onReply, articleId }) {
+function ThreadGroup({ group, currentUserId, onResolve, onDelete, onReply, articleId, blockId }) {
   const { root, replies } = group;
   const [showReplyBox, setShowReplyBox] = useState(false);
-  const [replyText, setReplyText] = useState('');
+  const replyDraftKey = draftKey(articleId, blockId || root.blockId, currentUserId, `reply:${root.id}`);
+  const [replyText, setReplyText] = useState(() => readDraft(replyDraftKey));
   const [showAll, setShowAll] = useState(false);
   const visibleReplies = showAll ? replies : replies.slice(0, REPLIES_SHOW_THRESHOLD);
   const hiddenCount = replies.length - REPLIES_SHOW_THRESHOLD;
 
-  const handleReply = () => {
+  useEffect(() => {
+    setReplyText(readDraft(replyDraftKey));
+  }, [replyDraftKey]);
+
+  useEffect(() => {
+    writeDraft(replyDraftKey, replyText);
+  }, [replyDraftKey, replyText]);
+
+  const handleReply = async () => {
     if (!replyText.trim()) return;
-    onReply(root.id, root.blockId, replyText.trim());
+    const posted = await onReply(root.id, root.blockId, replyText.trim());
+    if (!posted) return;
     setReplyText('');
     setShowReplyBox(false);
   };
@@ -112,7 +139,7 @@ function ThreadGroup({ group, currentUserId, onResolve, onDelete, onReply, artic
               className="text-xs px-2.5 py-1 rounded-md bg-brand-navy text-white hover:bg-brand-navy-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
               Reply
             </button>
-            <button type="button" onClick={() => { setShowReplyBox(false); setReplyText(''); }}
+            <button type="button" onClick={() => { setShowReplyBox(false); setReplyText(''); writeDraft(replyDraftKey, ''); }}
               className="text-xs text-neutral-500 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded px-1">
               Cancel
             </button>
@@ -136,8 +163,17 @@ function ThreadGroup({ group, currentUserId, onResolve, onDelete, onReply, artic
 export function BlockCommentsPanel({ articleId, blockId, workspaceId, currentUserId, open, onClose }) {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [newComment, setNewComment] = useState('');
+  const newDraftKey = draftKey(articleId, blockId, currentUserId, 'new');
+  const [newComment, setNewComment] = useState(() => readDraft(newDraftKey));
   const [posting, setPosting] = useState(false);
+
+  useEffect(() => {
+    setNewComment(readDraft(newDraftKey));
+  }, [newDraftKey]);
+
+  useEffect(() => {
+    writeDraft(newDraftKey, newComment);
+  }, [newDraftKey, newComment]);
 
   useEffect(() => {
     if (!open || !articleId) { setComments([]); return; }
@@ -159,6 +195,7 @@ export function BlockCommentsPanel({ articleId, blockId, workspaceId, currentUse
       });
       setComments(prev => [...prev, created]);
       setNewComment('');
+      writeDraft(newDraftKey, '');
     } catch {
       // error is surfaced in the UI via the posting state remaining false
     } finally {
@@ -173,7 +210,9 @@ export function BlockCommentsPanel({ articleId, blockId, workspaceId, currentUse
         body: { blockId: bId, content, parentId },
       });
       setComments(prev => [...prev, created]);
-    } catch { /* ignore */ }
+      writeDraft(draftKey(articleId, bId, currentUserId, `reply:${parentId}`), '');
+      return true;
+    } catch { return false; }
   };
 
   const handleResolve = async (commentId) => {
@@ -230,6 +269,7 @@ export function BlockCommentsPanel({ articleId, blockId, workspaceId, currentUse
               onDelete={handleDelete}
               onReply={handleReply}
               articleId={articleId}
+              blockId={blockId}
             />
           ))
         )}

@@ -53,6 +53,8 @@ export function blockPlainText(block) {
       return `${content} ${meta.title || ''} ${meta.description || ''} ${meta.url || ''}`;
     case 'workitem':
       return `${content} ${meta.title || ''}`;
+    case 'article_ref':
+      return `${content} ${meta.title || ''} ${meta.articleId || ''}`;
     case 'bookmark':
       return `${content} ${meta.title || ''} ${meta.description || ''}`;
     case 'divider':

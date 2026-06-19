@@ -22,6 +22,7 @@ const REPLY = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
 });
 
 // URL-routing mock: MentionPicker fetches /members on mount (child effect fires before parent),
@@ -100,6 +101,13 @@ describe('BlockCommentsPanel (KR-025, KR-027)', () => {
       '/articles/ART-001/block-comments',
       expect.objectContaining({ method: 'POST', body: expect.objectContaining({ content: 'New comment' }) })
     ));
+  });
+
+  it('restores an unsent comment draft for the same article and block', async () => {
+    localStorage.setItem('know_comment_draft:ART-001:blk-1:user-1:new', 'Draft survives refresh');
+    renderPanel();
+    await waitFor(() => screen.getByText('First comment'));
+    expect(screen.getByRole('textbox', { name: /new comment/i }).value).toBe('Draft survives refresh');
   });
 
   it('shows Resolve button for unresolved comments', async () => {

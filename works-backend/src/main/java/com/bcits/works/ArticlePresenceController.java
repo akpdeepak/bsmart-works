@@ -15,7 +15,8 @@ import java.util.Map;
  * Article-level presence signalling (KR-065 — real-time presence indicators in Know Studio).
  *
  * <p>{@code POST /api/v1/articles/{id}/presence?workspaceId=…}
- * body: {@code { "action": "join"|"leave" }}  (action is optional; defaults to "join")
+ * body: {@code { "action": "join"|"leave", "cursorX": 50.0, "cursorY": 25.0 }}
+ * (action is optional; defaults to "join")
  *
  * <p>On <b>join</b>: upserts the caller into {@link ArticlePresenceStore} and broadcasts a
  * {@code PRESENCE_UPDATE} SSE event to all clients subscribed to the workspace. Returns the
@@ -55,7 +56,7 @@ public class ArticlePresenceController {
         this.rbac = rbac;
     }
 
-    public record PresenceRequest(String action) { }
+    public record PresenceRequest(String action, Double cursorX, Double cursorY) { }
 
     public record PresenceResponse(List<ArticlePresenceStore.PresenceRecord> presences) { }
 
@@ -95,7 +96,9 @@ public class ArticlePresenceController {
                 : "?";
 
         ArticlePresenceStore.PresenceRecord record =
-                new ArticlePresenceStore.PresenceRecord(userId, displayName, initial, Instant.now());
+                new ArticlePresenceStore.PresenceRecord(
+                        userId, displayName, initial, body == null ? null : body.cursorX(),
+                        body == null ? null : body.cursorY(), Instant.now());
 
         List<ArticlePresenceStore.PresenceRecord> presences =
                 store.upsert(articleId, workspaceId, record);

@@ -393,6 +393,18 @@ export default function KnowledgeView({
   // Separate from the workspace-level SSE presence (useArticlePresence); this tracks per-article viewers.
   const [articlePresences, setArticlePresences] = useState([]);
   const presenceIntervalRef = useRef(null);
+  const cursorRef = useRef({ cursorX: null, cursorY: null });
+  useEffect(() => {
+    const handlePointerMove = (event) => {
+      cursorRef.current = {
+        cursorX: Math.round((event.clientX / Math.max(1, window.innerWidth)) * 1000) / 10,
+        cursorY: Math.round((event.clientY / Math.max(1, window.innerHeight)) * 1000) / 10,
+      };
+    };
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
+    return () => window.removeEventListener('pointermove', handlePointerMove);
+  }, []);
+
   useEffect(() => {
     const articleId = selectedArticle?.id;
     if (!articleId || !workspaceId || !currentUser?.id) return;
@@ -402,7 +414,7 @@ export default function KnowledgeView({
     const join = () => {
       api.send(`/articles/${encodeURIComponent(articleId)}/presence?workspaceId=${wsParam}`, {
         method: 'POST',
-        body: { action: 'join' },
+        body: { action: 'join', ...cursorRef.current },
       })
         .then((res) => {
           if (Array.isArray(res?.presences)) {
@@ -1546,7 +1558,7 @@ export default function KnowledgeView({
                 articleId={selectedArticle?.id}
                 blockId={blockCommentPanel.blockId}
                 workspaceId={workspaceId}
-                currentUserId={null}
+                currentUserId={currentUser?.id}
                 open={blockCommentPanel.open}
                 onClose={() => setBlockCommentPanel({ open: false, blockId: null })}
               />

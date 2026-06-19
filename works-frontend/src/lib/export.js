@@ -66,6 +66,8 @@ function blockToMd(block) {
       return `### Release notes ${block.metadata?.version || ''}\n\n**Added**\n\n${block.metadata?.added || ''}\n\n**Changed**\n\n${block.metadata?.changed || ''}\n\n**Fixed**\n\n${block.metadata?.fixed || ''}\n\n**Known issues**\n\n${block.metadata?.knownIssues || ''}\n\n`;
     case 'dashboard':
       return `[${block.metadata?.title || 'Embedded dashboard'}](${block.metadata?.url || c || '#'})\n\n${block.metadata?.description || ''}\n\n`;
+    case 'article_ref':
+      return `[[Article: ${block.metadata?.articleId || 'unselected'}]]\n\n`;
     case 'toggle': return `**${c}**\n\n${block.metadata?.children ? blocksToMarkdown(block.metadata.children) : ''}`;
     default: return c ? `${c}\n\n` : `<!-- block:${block.type} -->\n\n`;
   }

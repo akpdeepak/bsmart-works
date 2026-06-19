@@ -87,4 +87,22 @@ class WorkItemTenantScopeTest {
         assertThat(controller.search("   ")).isEmpty();
         verifyNoInteractions(jdbc);   // a blank query must not run an unbounded scan
     }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void getStarred_confinesResultsToCallersWorkspaces() {
+        when(authenticatedUser.id()).thenReturn("USR-1");
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object.class), any(Object.class),
+                any(Object.class), any(Object.class))).thenReturn(List.of());
+
+        controller.getStarred(0, 50);
+
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        verify(jdbc).query(sql.capture(), any(RowMapper.class), any(Object.class), any(Object.class),
+                any(Object.class), any(Object.class));
+        assertThat(sql.getValue())
+                .contains("starred_items")
+                .contains("workspace_members")
+                .contains("wm.user_id = ?");
+    }
 }

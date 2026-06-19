@@ -85,7 +85,7 @@ export default function WorkspaceView({
                               onChange={e => {
                                 api.raw(`/rbac/members/${m.id}/role`, {
                                   method: 'PUT',
-                                  body: JSON.stringify({ roleId: e.target.value })
+                                  body: JSON.stringify({ roleId: e.target.value, workspaceId })
                                 }).then(r => r.json()).then(d => showToast(d.message || 'Role updated'))
                                   .catch(err => showToast(err.message, 'error'));
                               }}

@@ -7,9 +7,9 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 
 ## Current status
 
-- Roadmap mode: V.20 EPIC 0 baseline merged; ready for EPIC 1
-- Active EPIC: None
-- Active branch: `main`
+- Roadmap mode: V.20 EPIC 1 security/RBAC hardening validated; PR/merge pending
+- Active EPIC: EPIC 1 - Multi-Tenant Security and RBAC Hardening
+- Active branch: `epic/01-tenant-rbac-hardening`
 - Last completed EPIC: EPIC 0 - Current-State Hardening, Truth, and Delivery Baseline
 - Next recommended EPIC: EPIC 1 - Multi-Tenant Security and RBAC Hardening
 - Last state update: 2026-06-19
@@ -77,7 +77,7 @@ resume point.
 | EPIC | Status | Branch | PR | Local validation | Completion note | Notes |
 |---|---|---|---|---|---|---|
 | EPIC 0 - Current-State Hardening, Truth, and Delivery Baseline | Completed | `main` | [#393](https://github.com/akpdeepak/bsmart-works/pull/393) | `npm run verify`; `cd works-backend && .\mvnw.cmd -Dgroups=unit verify` | `docs/implementation/epics/EPIC-00-current-state-hardening-completion.md` | Baseline docs, source hygiene, JWT query-token scope, verified shared status category resolver |
-| EPIC 1 - Multi-Tenant Security and RBAC Hardening | Not started | | | | | |
+| EPIC 1 - Multi-Tenant Security and RBAC Hardening | PR-ready | `epic/01-tenant-rbac-hardening` | | `cd works-backend && .\mvnw.cmd -Dgroups=unit verify`; `npm run guardrails` | `docs/implementation/epics/EPIC-01-tenant-rbac-hardening-completion.md` | Starred items, SCIM token issuance, dashboards, field layouts, RBAC workspace scope, BQL fallback |
 | EPIC 2 - Production Configuration, Deployment, and Secrets Safety | Not started | | | | | |
 | EPIC 25 partial - Reliability, Testing, Accessibility, Performance, and Quality Gates | Not started | | | | | |
 | EPIC 3 - Backend Modularization and Service Boundaries | Not started | | | | | |
@@ -112,3 +112,11 @@ resume point.
 repo/deploy facts, removes generated artifacts from Git tracking, restricts query-param JWT auth to
 the realtime SSE stream, verifies shared status category resolver coverage, and records validation.
 Resume with EPIC 1 unless GitHub evidence shows a newer EPIC has already been completed.
+
+2026-06-19: EPIC 1 implemented and locally validated on `epic/01-tenant-rbac-hardening`. Scope covers
+starred work-item tenant scoping, SCIM token issuance permission enforcement, dashboard
+workspace-scoping, field layout project/workspace resolution, RBAC workspace-explicit role APIs, and
+BQL membership-based workspace fallback. Validation: focused backend unit tests passed 37/37; broader
+`cd works-backend && .\mvnw.cmd -Dgroups=unit verify` passed 1,335 tests with 0 Checkstyle
+violations; `npm run guardrails` passed all blocking rules with the two existing non-blocking
+baseline warnings.

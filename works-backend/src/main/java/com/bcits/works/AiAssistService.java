@@ -1,7 +1,6 @@
 package com.bcits.works;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -11,7 +10,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static com.bcits.works.AiHeuristics.bestTeam;
@@ -20,7 +18,6 @@ import static com.bcits.works.AiHeuristics.blankScaffold;
 import static com.bcits.works.AiHeuristics.deterministicNlToBql;
 import static com.bcits.works.AiHeuristics.detectType;
 import static com.bcits.works.AiHeuristics.heuristicPriority;
-import static com.bcits.works.AiHeuristics.matches;
 import static com.bcits.works.AiHeuristics.nv;
 import static com.bcits.works.AiHeuristics.parseSteps;
 import static com.bcits.works.AiHeuristics.rankArticles;
@@ -47,8 +44,6 @@ import static com.bcits.works.AiHeuristics.str;
 @Service
 public class AiAssistService {
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AiAssistService.class);
-
     private final AiControlPlaneService controlPlane;
     private final WorkItemRepository workItems;
     private final ProjectRepository projects;
@@ -56,10 +51,8 @@ public class AiAssistService {
     private final ArticleRepository articles;
     private final KnowledgeSpaceRepository spaces;
     private final TeamRepository teams;
-    private final CommentRepository comments;
-    private final EventService events;
-    private final RbacService rbac;
-    private final AutomationService automations;
+    private final AiCommandExecutionService commandExecution;
+    private final AiSummarizationService summarization;
 
     public AiAssistService(AiControlPlaneService controlPlane, WorkItemRepository workItems,
                            ProjectRepository projects, UserRepository users, ArticleRepository articles,
@@ -72,10 +65,9 @@ public class AiAssistService {
         this.articles = articles;
         this.spaces = spaces;
         this.teams = teams;
-        this.comments = comments;
-        this.events = events;
-        this.rbac = rbac;
-        this.automations = automations;
+        this.commandExecution = new AiCommandExecutionService(workItems, projects, users, comments, events,
+            rbac, automations);
+        this.summarization = new AiSummarizationService(controlPlane, workItems, projects, comments);
     }
 
     // ── Shared result envelope ───────────────────────────────────────────────────
@@ -112,111 +104,8 @@ public class AiAssistService {
 
     /** Execute a confirmed plan. Each mutating step is RBAC-gated in the service (RB-10 §2) and
      *  recorded as an event (RB-10 §3). Read-only FIND steps return matches. */
-    @Transactional
     public Map<String, Object> executePlan(String workspaceId, String userId, List<PlanStep> steps) {
-        List<Map<String, Object>> results = new ArrayList<>();
-        for (PlanStep step : steps) {
-            results.add(executeStep(workspaceId, userId, step));
-        }
-        return Map.of("executed", results.size(), "results", results);
-    }
-
-    private Map<String, Object> executeStep(String workspaceId, String userId, PlanStep step) {
-        ActionType type;
-        try {
-            type = ActionType.valueOf(step.action());
-        } catch (Exception e) {
-            type = ActionType.UNKNOWN;
-        }
-        Map<String, Object> params = step.params() == null ? Map.of() : step.params();
-        switch (type) {
-            case CREATE_ITEM -> {
-                rbac.require(userId, workspaceId, "create_items");
-                String projectId = firstProjectId(workspaceId);
-                WorkItem w = new WorkItem();
-                String prefix = projectId != null ? projectId.replace("PROJ-", "") : "WEB";
-                w.setId(prefix + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase());
-                w.setTitle(str(params.get("title")));
-                w.setType(str(params.getOrDefault("type", "Task")));
-                w.setPriority(str(params.getOrDefault("priority", "Medium")));
-                w.setStatus("Todo");
-                w.setProjectId(projectId != null ? projectId : "PROJ-001");
-                w.setCreatedBy(userId);
-                w.setCreatedAt(OffsetDateTime.now());
-                WorkItem saved = workItems.save(w);
-                events.record(saved.getId(), "WORK_ITEM_CREATED", userId,
-                    Map.of("title", nv(saved.getTitle()), "via", "ai_command_bar"));
-                // Fire ITEM_CREATED automations (non-fatal — must not abort the AI plan execution).
-                try {
-                    automations.evaluateForItem(workspaceId, AutomationCatalog.TR_ITEM_CREATED, saved, userId);
-                } catch (Exception ex) {
-                    log.warn("Automation evaluation failed after AI-created item {}: {}", saved.getId(), ex.getMessage());
-                }
-                return Map.of("action", type.name(), "ok", true, "id", saved.getId());
-            }
-            case ASSIGN -> {
-                String id = str(params.get("workItemId"));
-                WorkItem w = workItems.findById(id).orElse(null);
-                if (w == null) {
-                    return Map.of("action", type.name(), "ok", false, "error", String.format("Item not found: %s", id));
-                }
-                String wsId = rbac.workspaceForProject(w.getProjectId());
-                requireSameWorkspace(workspaceId, wsId);
-                rbac.require(userId, workspaceId, "edit_any_item");
-                String assigneeId = resolveUser(str(params.get("assigneeName")), str(params.get("email")), workspaceId);
-                w.setAssigneeId(assigneeId);
-                workItems.save(w);
-                events.recordDiff(id, "ASSIGNED", userId, "assignee", null, assigneeId);
-                return Map.of("action", type.name(), "ok", true, "id", id, "assigneeId", nv(assigneeId));
-            }
-            case MOVE_STATUS -> {
-                String id = str(params.get("workItemId"));
-                WorkItem w = workItems.findById(id).orElse(null);
-                if (w == null) {
-                    return Map.of("action", type.name(), "ok", false, "error", String.format("Item not found: %s", id));
-                }
-                String wsId = rbac.workspaceForProject(w.getProjectId());
-                requireSameWorkspace(workspaceId, wsId);
-                rbac.require(userId, workspaceId, "edit_any_item");
-                String old = w.getStatus();
-                w.setStatus(str(params.getOrDefault("status", w.getStatus())));
-                workItems.save(w);
-                events.recordDiff(id, "STATUS_CHANGED", userId, "status", old, w.getStatus());
-                return Map.of("action", type.name(), "ok", true, "id", id, "status", nv(w.getStatus()));
-            }
-            case COMMENT -> {
-                String id = str(params.get("workItemId"));
-                WorkItem w = workItems.findById(id).orElse(null);
-                if (w == null) {
-                    return Map.of("action", type.name(), "ok", false, "error", String.format("Item not found: %s", id));
-                }
-                String wsId = rbac.workspaceForProject(w.getProjectId());
-                requireSameWorkspace(workspaceId, wsId);
-                rbac.require(userId, workspaceId, "view_items");
-                Comment c = new Comment();
-                c.setWorkItemId(id);
-                c.setAuthorId(userId);
-                c.setBody(str(params.get("body")));
-                c.setCreatedAt(OffsetDateTime.now());
-                Comment saved = comments.save(c);
-                events.record(id, "COMMENT_ADDED", userId, Map.of("via", "ai_command_bar"));
-                return Map.of("action", type.name(), "ok", true, "id", id, "commentId", saved.getId());
-            }
-            case FIND -> {
-                rbac.require(userId, workspaceId, "view_items");
-                String q = str(params.get("query"));
-                List<Map<String, Object>> hits = scopedItems(workspaceId).stream()
-                    .filter(w -> matches(w, q))
-                    .limit(20)
-                    .map(w -> Map.<String, Object>of("id", w.getId(), "title", nv(w.getTitle()),
-                        "status", nv(w.getStatus())))
-                    .collect(Collectors.toList());
-                return Map.of("action", type.name(), "ok", true, "matches", hits);
-            }
-            default -> {
-                return Map.of("action", "UNKNOWN", "ok", false, "error", "Unsupported step");
-            }
-        }
+        return commandExecution.executePlan(workspaceId, userId, steps);
     }
 
     // ── Cap O · Smart triage ─────────────────────────────────────────────────────
@@ -448,46 +337,7 @@ public class AiAssistService {
      */
     public SummarizeResult summarize(String workspaceId, String userId, String kind, String subjectId,
                                      boolean inContext) {
-        String k = kind == null ? "comments" : kind.toLowerCase(Locale.ROOT);
-        String draft = buildSummarizationDraft(workspaceId, k, subjectId);
-        AiControlPlaneService.AiOutcome out = controlPlane.invoke(new AiControlPlaneService.AiCall(
-            workspaceId, userId, AiCapabilities.SUMMARIZATION,
-            "Summarize " + k + (subjectId != null ? " for " + subjectId : ""), draft, null, inContext));
-        String summary = out.fallback() ? draft : (out.text() != null && !out.text().isBlank() ? out.text() : draft);
-        return new SummarizeResult(k, summary, AiMeta.of(out));
-    }
-
-    private String buildSummarizationDraft(String workspaceId, String kind, String subjectId) {
-        return switch (kind) {
-            case "comments" -> {
-                if (subjectId == null) {
-                    yield "No subject specified.";
-                }
-                List<Comment> threadComments = comments.findByWorkItemIdOrderByCreatedAtAsc(subjectId);
-                if (threadComments.isEmpty()) {
-                    yield "No comments yet.";
-                }
-                Comment last = threadComments.get(threadComments.size() - 1);
-                yield threadComments.size() + " comment(s). Most recent: " + snippet(last.getBody());
-            }
-            case "sprint" -> {
-                String projId = subjectId != null ? subjectId : firstProjectId(workspaceId);
-                if (projId == null) {
-                    yield "No project found.";
-                }
-                List<WorkItem> items = workItems.findByProjectId(projId);
-                long done = items.stream().filter(w -> "Done".equalsIgnoreCase(nv(w.getStatus()))).count();
-                long total = items.size();
-                yield total + " item(s) in project — " + done + " done (" +
-                    (total == 0 ? 0 : Math.round(done * 100.0 / total)) + "% complete).";
-            }
-            default -> { // dashboard
-                List<WorkItem> allItems = scopedItems(workspaceId);
-                long open = allItems.stream().filter(w -> !"Done".equalsIgnoreCase(nv(w.getStatus()))).count();
-                long doneCount = allItems.size() - open;
-                yield allItems.size() + " item(s) workspace-wide — " + doneCount + " done, " + open + " open.";
-            }
-        };
+        return summarization.summarize(workspaceId, userId, kind, subjectId, inContext);
     }
 
     // ── Cap N · Smart request routing ─────────────────────────────────────────────
@@ -544,21 +394,4 @@ public class AiAssistService {
         };
     }
 
-    private String resolveUser(String name, String email, String workspaceId) {
-        if (email != null && !email.isBlank()) {
-            return users.findByEmail(email).map(User::getId).orElse(null);
-        }
-        if (name == null || name.isBlank()) {
-            return null;
-        }
-        // Scoped to workspace members only — prevents cross-tenant user resolution (RB-40 §1)
-        return users.findByWorkspaceIdAndFullNameContaining(workspaceId, name.trim())
-            .stream().map(User::getId).findFirst().orElse(null);
-    }
-
-    private void requireSameWorkspace(String expected, String actual) {
-        if (actual == null || !actual.equals(expected)) {
-            throw ApiException.forbidden("Item belongs to a different workspace.");
-        }
-    }
 }

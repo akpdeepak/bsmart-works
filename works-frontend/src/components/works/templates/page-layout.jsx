@@ -49,7 +49,7 @@ export function PageLayout({
   return (
     <div
       className={cn(
-        'mx-auto w-full',
+        'mx-auto w-full overflow-x-hidden',
         WIDTHS[width] ?? WIDTHS.dashboard,
         !noPadding && 'px-6 py-6 md:px-8',
         className

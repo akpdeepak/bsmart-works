@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { CHART_PALETTE } from './chart-palette';
+import { CHART_SR_TABLE_CLASS } from './chart-a11y';
 
 // Molecule — presentational donut/pie chart for a categorical distribution.
 // Takes pre-aggregated [{ label, value }] data and carries no domain knowledge
@@ -29,7 +30,7 @@ export function DonutChart({ data = [], onSelect, className }) {
     <div className={cn('flex items-center gap-4', className)}
       role="img" aria-label={`Donut chart: ${summary}`}>
       {/* Screen-reader table — conveying data without relying on visual colour (WI-22, WCAG 1.4.1). */}
-      <table className="sr-only">
+      <table className={CHART_SR_TABLE_CLASS}>
         <caption>Donut chart data</caption>
         <thead><tr><th scope="col">Category</th><th scope="col">Value</th><th scope="col">Percent</th></tr></thead>
         <tbody>

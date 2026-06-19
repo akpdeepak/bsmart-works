@@ -56,6 +56,11 @@ describe('CustomizationView', () => {
     configClient.settings.mockResolvedValue(LIVE);
   });
 
+  it('uses the sanctioned adaptive dashboard page shell', () => {
+    const { container } = render(<CustomizationView workspaceId="WS-1" canManage onToast={() => {}} />);
+    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6', 'overflow-x-hidden');
+  });
+
   it('renders the Settings tab with the live version and branding field', async () => {
     render(<CustomizationView workspaceId="WS-1" canManage onToast={() => {}} />);
     expect(await screen.findByText(/Live version 3/i)).toBeInTheDocument();

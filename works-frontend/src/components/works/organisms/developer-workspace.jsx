@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { devClient, focusUntilLabel } from '@/lib/developer';
+import { PageLayout } from '@/components/works/templates/page-layout';
 
 function Card({ title, icon, count, children, action }) {
   return (
@@ -118,25 +119,27 @@ export function DeveloperWorkspace({ workspaceId, onOpenItem, onToast }) {
 
   if (loading) {
     return (
-      <div className="space-y-6" aria-busy="true" aria-label="Loading Developer Workspace">
+      <PageLayout header={null} className="space-y-6" aria-busy="true" aria-label="Loading Developer Workspace">
         <div className="h-8 w-64 rounded-md bg-neutral-100 dark:bg-neutral-800 animate-pulse" />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="h-44 rounded-lg bg-neutral-100 dark:bg-neutral-800 animate-pulse" />
           ))}
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-neutral-900 border border-semantic-danger/30 rounded-lg p-6 text-center">
-        <OctagonAlert className="h-10 w-10 text-semantic-danger mx-auto mb-3" aria-hidden="true" />
-        <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-1">Developer Workspace unavailable</h3>
-        <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">{error}</p>
-        <Button variant="secondary" size="sm" leftIcon={<RefreshCw className="h-4 w-4" />} onClick={refresh}>Retry</Button>
-      </div>
+      <PageLayout header={null}>
+        <div className="bg-white dark:bg-neutral-900 border border-semantic-danger/30 rounded-lg p-6 text-center">
+          <OctagonAlert className="h-10 w-10 text-semantic-danger mx-auto mb-3" aria-hidden="true" />
+          <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-1">Developer Workspace unavailable</h3>
+          <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">{error}</p>
+          <Button variant="secondary" size="sm" leftIcon={<RefreshCw className="h-4 w-4" />} onClick={refresh}>Retry</Button>
+        </div>
+      </PageLayout>
     );
   }
 
@@ -149,7 +152,7 @@ export function DeveloperWorkspace({ workspaceId, onOpenItem, onToast }) {
   const activity = home?.recentActivity || [];
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <PageLayout header={null} className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Developer Workspace</h2>
@@ -333,6 +336,6 @@ export function DeveloperWorkspace({ workspaceId, onOpenItem, onToast }) {
           )}
         </Card>
       </div>
-    </div>
+    </PageLayout>
   );
 }

@@ -14,6 +14,11 @@ describe('SlaView', () => {
     api.send.mockResolvedValue([]);
   });
 
+  it('uses the sanctioned adaptive dashboard page shell', () => {
+    const { container } = render(<SlaView workspaceId="WS-001" />);
+    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6', 'overflow-x-hidden');
+  });
+
   it('renders the header and section tabs', async () => {
     render(<SlaView workspaceId="WS-001" />);
     expect(screen.getByRole('heading', { name: /SLA Engine/i })).toBeInTheDocument();

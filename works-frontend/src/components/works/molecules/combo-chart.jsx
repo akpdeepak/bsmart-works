@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { CHART_SR_TABLE_CLASS } from './chart-a11y';
 
 // Molecule — combo chart: bars for the first measure + an overlaid line for the second, over a
 // shared category axis. Consumes [{ label, a, b }] (from `toPaired`). Domain-free (CLAUDE.md
@@ -34,7 +35,7 @@ export function ComboChart({ data = [], aLabel = 'Bars', bLabel = 'Line', classN
         <li className="flex items-center gap-1.5"><span aria-hidden="true" className="inline-block h-2 w-2 rounded-sm bg-brand-navy-tint" />{aLabel}</li>
         <li className="flex items-center gap-1.5"><span aria-hidden="true" className="inline-block h-2 w-2 rounded-sm bg-brand-orange" />{bLabel}</li>
       </ul>
-      <table className="sr-only">
+      <table className={CHART_SR_TABLE_CLASS}>
         <caption>Combo chart data</caption>
         <thead><tr><th scope="col">Category</th><th scope="col">{aLabel}</th><th scope="col">{bLabel}</th></tr></thead>
         <tbody>{items.map((d) => <tr key={d.label}><th scope="row">{d.label}</th><td>{d.a || 0}</td><td>{d.b || 0}</td></tr>)}</tbody>

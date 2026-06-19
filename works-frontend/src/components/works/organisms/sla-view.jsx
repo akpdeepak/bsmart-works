@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/works/atoms/badge';
 import { SlaCountdownBadge } from '@/components/works/molecules/sla-countdown-badge';
 import { absoluteDateTime, formatMinutes } from '@/lib/format';
+import { PageLayout } from '@/components/works/templates/page-layout';
 
 // Organism — SLA Engine surface (iteration 8, Cap M). Four tabs: Policies (define + targets +
 // escalations + activate/preview), Live clocks (the visible countdowns), Report (met/breached
@@ -87,7 +88,7 @@ export function SlaView({ workspaceId, canManage = false, onToast }) {
   }
 
   return (
-    <div className="mx-auto max-w-7xl p-6">
+    <PageLayout header={null}>
       <header className="mb-6 flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-semantic-info-surface">
           <Timer aria-hidden="true" className="h-5 w-5 text-semantic-info" />
@@ -134,7 +135,7 @@ export function SlaView({ workspaceId, canManage = false, onToast }) {
       {!loading && !error && tab === 'audit' && (
         <AuditTab workspaceId={workspaceId} audit={audit} toast={toast} />
       )}
-    </div>
+    </PageLayout>
   );
 }
 

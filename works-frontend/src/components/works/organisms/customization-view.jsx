@@ -12,6 +12,7 @@ import { SandboxTab } from './customization/sandbox-tab';
 import { FormsTab } from './customization/forms-tab';
 import { PagesTab } from './customization/pages-tab';
 import { ExtensionsTab } from './customization/extensions-tab';
+import { PageLayout } from '@/components/works/templates/page-layout';
 
 // Organism — Universal Customization Engine surface (iteration 17, Cap R). One configuration place
 // for a workspace: centralized Settings (branding/locale/timezone/working calendar/defaults) with
@@ -136,10 +137,16 @@ export function CustomizationView({ workspaceId, canManage = false, isOwner = fa
     }
   }
 
-  if (loading) return <Loading />;
+  if (loading) {
+    return (
+      <PageLayout header={null}>
+        <Loading />
+      </PageLayout>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-7xl p-6">
+    <PageLayout header={null}>
       <header className="mb-5 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Customization</h1>
@@ -226,6 +233,6 @@ export function CustomizationView({ workspaceId, canManage = false, isOwner = fa
           }}
         />
       )}
-    </div>
+    </PageLayout>
   );
 }

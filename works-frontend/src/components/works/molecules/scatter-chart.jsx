@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { CHART_SR_TABLE_CLASS } from './chart-a11y';
 
 // Molecule — scatter / bubble plot of [{ x, y, r?, label }] points (from `toPoints`).
 // Domain-free (CLAUDE.md §4.19), token classes only (§4.2). A data table backs the plot
@@ -28,7 +29,7 @@ export function ScatterChart({ points = [], bubble = false, className }) {
           <circle key={i} cx={px(p.x)} cy={py(p.y)} r={radius(p.r)} fill="currentColor" className="opacity-70" />
         ))}
       </svg>
-      <table className="sr-only">
+      <table className={CHART_SR_TABLE_CLASS}>
         <caption>Plotted points</caption>
         <thead><tr><th scope="col">Point</th><th scope="col">X</th><th scope="col">Y</th>{bubble && <th scope="col">Size</th>}</tr></thead>
         <tbody>

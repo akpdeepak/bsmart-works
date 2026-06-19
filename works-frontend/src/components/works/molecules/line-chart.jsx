@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { CHART_SR_TABLE_CLASS } from './chart-a11y';
 
 // Molecule — presentational line / area chart for an ordered categorical series.
 // Takes pre-aggregated [{ label, value }] data and carries no domain knowledge
@@ -34,7 +35,7 @@ export function LineChart({ data = [], area = false, className }) {
         <span className="truncate">{items[0].label}</span>
         <span className="truncate">{items[items.length - 1].label}</span>
       </div>
-      <table className="sr-only">
+      <table className={CHART_SR_TABLE_CLASS}>
         <caption>Series data</caption>
         <tbody>
           {items.map((d) => (

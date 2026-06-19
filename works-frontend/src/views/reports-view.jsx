@@ -98,7 +98,7 @@ function SprintPicker({ sprints, selectedSprintId, onSelect }) {
         <ChevronDown className="h-4 w-4 text-neutral-600 dark:text-neutral-400 flex-shrink-0" aria-hidden="true" />
       </button>
       {open && (
-        <div className="absolute z-dropdown mt-1 w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 shadow-lg overflow-hidden">
+        <div className="absolute z-dropdown mt-1 w-full min-w-0 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 shadow-lg overflow-hidden">
           <div className="p-2 border-b border-neutral-100 dark:border-neutral-700 flex items-center gap-2">
             <Search className="h-4 w-4 text-neutral-400 flex-shrink-0" aria-hidden="true" />
             <input ref={inputRef} type="text" value={q} onChange={(e) => setQ(e.target.value)}
@@ -113,7 +113,7 @@ function SprintPicker({ sprints, selectedSprintId, onSelect }) {
                 <button type="button" role="option" aria-selected={s.id === selectedSprintId}
                   onClick={() => { onSelect(s.id); setOpen(false); setQ(''); }}
                   className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 text-sm hover:bg-neutral-50 dark:hover:bg-neutral-700/50 ${s.id === selectedSprintId ? 'bg-brand-navy/5 dark:bg-brand-navy-tint/10' : ''}`}>
-                  <span className="min-w-0">
+                  <span className="min-w-0 flex-1">
                     <span className="block truncate text-neutral-900 dark:text-neutral-100 font-medium">{s.name}</span>
                     {(s.startDate || s.endDate) && (
                       <span className="block text-xs text-neutral-500 dark:text-neutral-400">{s.startDate || '—'} → {s.endDate || '—'}</span>
@@ -287,8 +287,8 @@ export default function ReportsView({
                   </div>
                   {p && (
                     <div className="pt-3 border-t border-neutral-100 dark:border-neutral-700">
-                      <div className="flex items-center justify-between gap-3 mb-2">
-                        <span className="flex items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400">
+                      <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                        <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400">
                           <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
                           {sprintReport.sprint?.startDate} → {sprintReport.sprint?.endDate}
                           <span className="text-neutral-400">·</span>
@@ -480,10 +480,11 @@ export default function ReportsView({
       <div className="mt-8 pt-6 border-t border-neutral-200 dark:border-neutral-700">
         <h2 className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-4">{t('insights.reports.acrossSprints')}</h2>
         {velocityData.length > 0 && (
-          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 mb-6">
+          <div className="min-w-0 overflow-hidden bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 mb-6">
             <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">{t('insights.reports.velocityAll')}</h3>
             <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-4">{t('insights.reports.velocityHint')}</p>
-            <div className="flex items-end gap-3 overflow-x-auto pb-2">
+            <div className="max-w-full overflow-x-auto pb-2">
+              <div className="flex w-max items-end gap-3">
               {velocityData.map((s) => {
                 const maxVal = Math.max(...velocityData.map(x => Math.max(x.capacity || 0, x.totalPoints, 1)));
                 const capH = Math.round(((s.capacity || 0) / maxVal) * 120);
@@ -501,6 +502,7 @@ export default function ReportsView({
                   </div>
                 );
               })}
+              </div>
             </div>
             <div className="flex items-center gap-4 mt-3 text-xs text-neutral-600 dark:text-neutral-400">
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-neutral-200 dark:bg-neutral-600 inline-block"></span>{t('insights.reports.capacity')}</span>

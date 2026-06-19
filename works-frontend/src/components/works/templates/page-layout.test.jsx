@@ -72,6 +72,11 @@ describe('PageLayout', () => {
     expect(container.firstChild).toHaveClass('px-6', 'py-6');
   });
 
+  it('prevents document-level horizontal overflow from page content', () => {
+    const { container } = render(<PageLayout title="Page" />);
+    expect(container.firstChild).toHaveClass('overflow-x-hidden');
+  });
+
   it('omits padding when noPadding is true', () => {
     const { container } = render(<PageLayout title="Page" noPadding />);
     expect(container.firstChild).not.toHaveClass('px-6');

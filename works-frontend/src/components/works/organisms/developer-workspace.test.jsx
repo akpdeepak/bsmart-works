@@ -30,6 +30,14 @@ const VELOCITY = { private: true, assigned: 8, completed: 6, completionRate: 75,
 describe('DeveloperWorkspace', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('uses the sanctioned adaptive dashboard page shell', () => {
+    devClient.home.mockResolvedValue(HOME);
+    devClient.velocity.mockResolvedValue(VELOCITY);
+
+    const { container } = render(<DeveloperWorkspace workspaceId="WS-001" />);
+    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6', 'overflow-x-hidden');
+  });
+
   it('renders the engineer home surfaces from the API', async () => {
     devClient.home.mockResolvedValue(HOME);
     devClient.velocity.mockResolvedValue(VELOCITY);

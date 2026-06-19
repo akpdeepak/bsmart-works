@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { CHART_SR_TABLE_CLASS } from './chart-a11y';
 
 // Molecule — presentational horizontal bar chart for a categorical distribution.
 // Takes pre-aggregated [{ label, value }] data and carries no domain knowledge
@@ -21,7 +22,7 @@ export function BarChart({ data = [], onSelect, className }) {
     <div className={cn('space-y-1.5', className)}
       role={onSelect ? 'group' : 'img'} aria-label={`Bar chart: ${summary}`}>
       {/* Screen-reader table — conveying data without relying on visual bar width (WI-22, WCAG 1.4.1). */}
-      <table className="sr-only">
+      <table className={CHART_SR_TABLE_CLASS}>
         <caption>Bar chart data</caption>
         <thead><tr><th scope="col">Category</th><th scope="col">Value</th></tr></thead>
         <tbody>

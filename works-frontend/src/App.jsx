@@ -3502,16 +3502,14 @@ export default function App() {
 
           {/* NOTIFICATIONS */}
           {view === 'developer' && (
-            <div className="p-8">
-              <DeveloperWorkspace
-                workspaceId={activeWorkspaceId}
-                onToast={showToast}
-                onOpenItem={(id) => api.raw(`/work-items/${id}`)
-                  .then((r) => (r.ok ? r.json() : null))
-                  .then((it) => { if (it) setSelectedItem(it); })
-                  .catch(reportError)}
-              />
-            </div>
+            <DeveloperWorkspace
+              workspaceId={activeWorkspaceId}
+              onToast={showToast}
+              onOpenItem={(id) => api.raw(`/work-items/${id}`)
+                .then((r) => (r.ok ? r.json() : null))
+                .then((it) => { if (it) setSelectedItem(it); })
+                .catch(reportError)}
+            />
           )}
 
           {view === 'aistudio' && (

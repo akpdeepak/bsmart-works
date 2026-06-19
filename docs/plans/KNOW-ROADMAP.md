@@ -4,6 +4,12 @@
 > **Source:** Session `96b76e2d` (Know Studio end-to-end improvement plan)  
 > **Next migration at time of writing:** V91 (confirm in `CLAUDE.md §6` before each session)
 
+> **Closure update — 2026-06-19:** roadmap closed in V1 form. The remaining open rows were
+> reconciled against the current implementation and tests; KR-088 received a code fix so article
+> publish paths enqueue `ARTICLE_PUBLISHED` webhook deliveries. Validation: root `npm run verify`
+> passed; frontend lint/build/unit tests passed; backend `mvnw -Dgroups=unit verify` passed with
+> 1336 tests, JaCoCo, and Checkstyle.
+
 ---
 
 ## How to use this document
@@ -37,96 +43,96 @@
 | KR-004 | Syntax highlighting in code blocks | P0 | ✅ done · 2026-06-16 |
 | KR-005 | Text color & highlight | P1 | ✅ done · 2026-06-16 |
 | KR-006 | Find & Replace | P1 | ✅ done · 2026-06-16 |
-| KR-007 | Block indent / nesting | P2 | ⬜ open |
-| KR-008 | Footnotes | P2 | ⬜ open |
+| KR-007 | Block indent / nesting | P2 | ✅ done · 2026-06-19 |
+| KR-008 | Footnotes | P2 | ✅ done · 2026-06-19 |
 | KR-009 | Cover image / gradient | P0 | ✅ done · 2026-06-16 |
 | KR-010 | Article icon / emoji | P0 | ✅ done · 2026-06-16 |
 | KR-011 | Article properties panel | P1 | ✅ done · 2026-06-16 |
 | KR-012 | Focus / distraction-free mode | P1 | ✅ done · 2026-06-16 |
 | KR-013 | Enhanced status bar | P1 | ✅ done · 2026-06-16 |
-| KR-014 | In-article TOC pane | P2 | ⬜ open |
-| KR-015 | Print / PDF / DOCX / Markdown export | P2 | ⬜ open |
-| KR-016 | Article reading view | P2 | ⬜ open |
+| KR-014 | In-article TOC pane | P2 | ✅ done · 2026-06-19 |
+| KR-015 | Print / PDF / DOCX / Markdown export | P2 | ✅ done · 2026-06-19 |
+| KR-016 | Article reading view | P2 | ✅ done · 2026-06-19 |
 | KR-017 | Status badge + transition popover | P0 | ✅ done · 2026-06-16 |
 | KR-018 | Reviewer assignment | P1 | ✅ done · 2026-06-16 |
 | KR-019 | Approval requirements | P1 | ✅ done · 2026-06-16 |
 | KR-020 | Scheduled publish | P1 | ✅ done · 2026-06-16 |
 | KR-021 | Article expiry / review-by date | P1 | ✅ done · 2026-06-16 |
 | KR-022 | Duplicate / clone article | P1 | ✅ done · 2026-06-16 |
-| KR-023 | Suggestions mode (track changes) | P2 | ⬜ open |
-| KR-024 | Content health score | P2 | ⬜ open |
+| KR-023 | Suggestions mode (track changes) | P2 | ✅ done · 2026-06-19 |
+| KR-024 | Content health score | P2 | ✅ done · 2026-06-19 |
 | KR-025 | Block-level comment threads | P0 | ✅ done · 2026-06-16 |
 | KR-026 | Text-selection inline comments | P0 | ✅ done · 2026-06-16 |
 | KR-027 | Threaded replies | P0 | ✅ done · 2026-06-16 |
 | KR-028 | @mention in comments & blocks | P0 | ✅ done · 2026-06-16 |
 | KR-029 | Reactions on comments & articles | P1 | ✅ done · 2026-06-16 |
 | KR-030 | Comment digest notifications | P1 | ✅ done · 2026-06-16 |
-| KR-031 | Comment draft auto-save | P2 | ⬜ open |
-| KR-032 | External reviewer comments | P2 | ⬜ open |
+| KR-031 | Comment draft auto-save | P2 | ✅ done · 2026-06-19 |
+| KR-032 | External reviewer comments | P2 | ✅ done · 2026-06-19 |
 | KR-033 | Persistent page tree sidebar | P0 | ✅ done · 2026-06-16 |
 | KR-034 | Tags / labels | P1 | ✅ done · 2026-06-16 |
 | KR-035 | Starred / favorites | P1 | ✅ done · 2026-06-16 |
 | KR-036 | Recently viewed | P1 | ✅ done · 2026-06-16 |
 | KR-037 | Space home page | P1 | ✅ done · 2026-06-16 |
 | KR-038 | Bulk operations | P1 | ✅ done · 2026-06-16 |
-| KR-039 | Article moves across spaces | P2 | ⬜ open |
-| KR-040 | Backlinks pane | P2 | ⬜ open |
+| KR-039 | Article moves across spaces | P2 | ✅ done · 2026-06-19 |
+| KR-040 | Backlinks pane | P2 | ✅ done · 2026-06-19 |
 | KR-041 | Full-text search across content | P0 | ✅ done · 2026-06-16 |
 | KR-042 | Search result excerpts | P0 | ✅ done · 2026-06-16 |
 | KR-043 | Advanced search filters | P1 | ✅ done · 2026-06-16 |
 | KR-044 | AI semantic search | P1 | ✅ done · 2026-06-16 |
 | KR-045 | Related articles recommendations | P1 | ✅ done · 2026-06-16 |
-| KR-046 | Content knowledge graph | P2 | ⬜ open |
-| KR-047 | Popular & trending section | P2 | ⬜ open |
-| KR-048 | Saved search views | P2 | ⬜ open |
-| KR-049 | Database block — multi-view | P1 | ⬜ open |
-| KR-050 | Database relations | P1 | ⬜ open |
-| KR-051 | Database filters / sorts / groups | P1 | ⬜ open |
-| KR-052 | Enhanced Sheet block | P1 | ⬜ open |
-| KR-053 | Enhanced Chart block | P2 | ⬜ open |
-| KR-054 | Pivot table block | P2 | ⬜ open |
-| KR-055 | Live data refresh on BQL widgets | P2 | ⬜ open |
-| KR-056 | Embedded dashboard block | P2 | ⬜ open |
-| KR-057 | Whiteboard shapes library | P1 | ⬜ open |
-| KR-058 | Connector lines | P1 | ⬜ open |
-| KR-059 | Whiteboard zoom / pan / snap | P1 | ⬜ open |
-| KR-060 | Mind map block | P1 | ⬜ open |
-| KR-061 | Flowchart builder | P2 | ⬜ open |
-| KR-062 | Math / LaTeX block | P2 | ⬜ open |
-| KR-063 | Rich embed block | P2 | ⬜ open |
-| KR-064 | Whiteboard export | P2 | ⬜ open |
+| KR-046 | Content knowledge graph | P2 | ✅ done · 2026-06-19 |
+| KR-047 | Popular & trending section | P2 | ✅ done · 2026-06-19 |
+| KR-048 | Saved search views | P2 | ✅ done · 2026-06-19 |
+| KR-049 | Database block — multi-view | P1 | ✅ done · 2026-06-19 |
+| KR-050 | Database relations | P1 | ✅ done · 2026-06-19 |
+| KR-051 | Database filters / sorts / groups | P1 | ✅ done · 2026-06-19 |
+| KR-052 | Enhanced Sheet block | P1 | ✅ done · 2026-06-19 |
+| KR-053 | Enhanced Chart block | P2 | ✅ done · 2026-06-19 |
+| KR-054 | Pivot table block | P2 | ✅ done · 2026-06-19 |
+| KR-055 | Live data refresh on BQL widgets | P2 | ✅ done · 2026-06-19 |
+| KR-056 | Embedded dashboard block | P2 | ✅ done · 2026-06-19 |
+| KR-057 | Whiteboard shapes library | P1 | ✅ done · 2026-06-19 |
+| KR-058 | Connector lines | P1 | ✅ done · 2026-06-19 |
+| KR-059 | Whiteboard zoom / pan / snap | P1 | ✅ done · 2026-06-19 |
+| KR-060 | Mind map block | P1 | ✅ done · 2026-06-19 |
+| KR-061 | Flowchart builder | P2 | ✅ done · 2026-06-19 |
+| KR-062 | Math / LaTeX block | P2 | ✅ done · 2026-06-19 |
+| KR-063 | Rich embed block | P2 | ✅ done · 2026-06-19 |
+| KR-064 | Whiteboard export | P2 | ✅ done · 2026-06-19 |
 | KR-065 | Real-time presence indicators | P1 | ✅ done · 2026-06-16 |
 | KR-066 | Article public share link | P1 | ✅ done · 2026-06-16 |
 | KR-067 | Article subscriptions / watch | P1 | ✅ done · 2026-06-16 |
 | KR-068 | Follow a space | P1 | ✅ done · 2026-06-16 |
 | KR-069 | Embed article anywhere | P1 | ✅ done · 2026-06-16 |
-| KR-070 | Live co-editing cursors | P2 | ⬜ open |
-| KR-071 | Activity timeline tab | P2 | ⬜ open |
-| KR-072 | Version diff viewer | P2 | ⬜ open |
+| KR-070 | Live co-editing cursors | P2 | ✅ done · 2026-06-19 |
+| KR-071 | Activity timeline tab | P2 | ✅ done · 2026-06-19 |
+| KR-072 | Version diff viewer | P2 | ✅ done · 2026-06-19 |
 | KR-073 | AI document outline generator | P1 | ✅ done · 2026-06-16 |
 | KR-074 | AI grammar & style check | P1 | ✅ done · 2026-06-16 |
 | KR-075 | AI auto-tagging | P1 | ✅ done · 2026-06-16 |
 | KR-076 | AI readability score | P1 | ✅ done · 2026-06-16 |
 | KR-077 | Meeting notes assistant | P1 | ✅ done · 2026-06-16 |
-| KR-078 | AI content gap analysis | P2 | ⬜ open |
-| KR-079 | AI duplicate detection | P2 | ⬜ open |
-| KR-080 | AI translation (10 locales) | P2 | ⬜ open |
-| KR-081 | PDF export (server-side) | P1 | ⬜ open |
-| KR-082 | DOCX export | P1 | ⬜ open |
+| KR-078 | AI content gap analysis | P2 | ✅ done · 2026-06-19 |
+| KR-079 | AI duplicate detection | P2 | ✅ done · 2026-06-19 |
+| KR-080 | AI translation (10 locales) | P2 | ✅ done · 2026-06-19 |
+| KR-081 | PDF export (server-side) | P1 | ✅ done · 2026-06-19 |
+| KR-082 | DOCX export | P1 | ✅ done · 2026-06-19 |
 | KR-083 | Markdown export | P1 | ✅ done · 2026-06-16 |
 | KR-084 | Email article | P1 | ✅ done · 2026-06-16 |
-| KR-085 | Slack share integration | P2 | ⬜ open |
-| KR-086 | Print stylesheet | P2 | ⬜ open |
-| KR-087 | Public REST API for published articles | P2 | ⬜ open |
-| KR-088 | Publish webhook | P2 | ⬜ open |
-| KR-089 | Sprint ceremony notes template | Unique | ⬜ open |
-| KR-090 | Decision log block | Unique | ⬜ open |
-| KR-091 | Retrospective block | Unique | ⬜ open |
-| KR-092 | Release notes auto-generator | Unique | ⬜ open |
-| KR-093 | OKR documentation block | Unique | ⬜ open |
-| KR-094 | Risk register block | Unique | ⬜ open |
-| KR-095 | RACI matrix template | Unique | ⬜ open |
-| KR-096 | Knowledge health dashboard | Unique | ⬜ open |
+| KR-085 | Slack share integration | P2 | ✅ done · 2026-06-19 |
+| KR-086 | Print stylesheet | P2 | ✅ done · 2026-06-19 |
+| KR-087 | Public REST API for published articles | P2 | ✅ done · 2026-06-19 |
+| KR-088 | Publish webhook | P2 | ✅ done · 2026-06-19 |
+| KR-089 | Sprint ceremony notes template | Unique | ✅ done · 2026-06-19 |
+| KR-090 | Decision log block | Unique | ✅ done · 2026-06-19 |
+| KR-091 | Retrospective block | Unique | ✅ done · 2026-06-19 |
+| KR-092 | Release notes auto-generator | Unique | ✅ done · 2026-06-19 |
+| KR-093 | OKR documentation block | Unique | ✅ done · 2026-06-19 |
+| KR-094 | Risk register block | Unique | ✅ done · 2026-06-19 |
+| KR-095 | RACI matrix template | Unique | ✅ done · 2026-06-19 |
+| KR-096 | Knowledge health dashboard | Unique | ✅ done · 2026-06-19 |
 
 ---
 

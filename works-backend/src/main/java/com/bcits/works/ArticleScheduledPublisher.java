@@ -22,13 +22,16 @@ public class ArticleScheduledPublisher {
     private final ArticleRepository articleRepository;
     private final KnowledgeSpaceRepository knowledgeSpaceRepository;
     private final EventService eventService;
+    private final WebhookService webhookService;
 
     public ArticleScheduledPublisher(ArticleRepository articleRepository,
                                      KnowledgeSpaceRepository knowledgeSpaceRepository,
-                                     EventService eventService) {
+                                     EventService eventService,
+                                     WebhookService webhookService) {
         this.articleRepository = articleRepository;
         this.knowledgeSpaceRepository = knowledgeSpaceRepository;
         this.eventService = eventService;
+        this.webhookService = webhookService;
     }
 
     @Scheduled(fixedDelay = 60_000)
@@ -50,6 +53,9 @@ public class ArticleScheduledPublisher {
                         "ARTICLE_PUBLISHED", "system",
                         Map.of("trigger", "scheduled", "scheduledAt",
                                 article.getScheduledPublishAt().toString()));
+                webhookService.enqueue(workspaceId, "ARTICLE_PUBLISHED",
+                        Map.of("articleId", article.getId(), "trigger", "scheduled",
+                                "scheduledAt", article.getScheduledPublishAt().toString()));
             } else {
                 eventService.record(article.getId(), "ARTICLE_PUBLISHED", "system",
                         "{\"trigger\":\"scheduled\"}");

@@ -28,9 +28,10 @@ class ArticleScheduledPublisherTest {
     private final ArticleRepository articleRepository         = mock(ArticleRepository.class);
     private final KnowledgeSpaceRepository spaceRepository    = mock(KnowledgeSpaceRepository.class);
     private final EventService eventService                   = mock(EventService.class);
+    private final WebhookService webhookService               = mock(WebhookService.class);
 
     private final ArticleScheduledPublisher publisher =
-            new ArticleScheduledPublisher(articleRepository, spaceRepository, eventService);
+            new ArticleScheduledPublisher(articleRepository, spaceRepository, eventService, webhookService);
 
     // ── Test 1: due article gets published ──────────────────────────────────────
 
@@ -53,6 +54,7 @@ class ArticleScheduledPublisherTest {
         assertThat(article.getPublishedAt()).isNotNull();
         verify(eventService).recordInWorkspace(eq("WS-001"), eq("ART-001"),
                 eq("ARTICLE_PUBLISHED"), eq("system"), any());
+        verify(webhookService).enqueue(eq("WS-001"), eq("ARTICLE_PUBLISHED"), any());
     }
 
     // ── Test 2: future article is untouched ─────────────────────────────────────
@@ -67,6 +69,7 @@ class ArticleScheduledPublisherTest {
 
         verify(articleRepository, never()).save(any());
         verify(eventService, never()).recordInWorkspace(any(), any(), any(), any(), any());
+        verify(webhookService, never()).enqueue(any(), any(), any());
     }
 
     private Article scheduledArticle(String id, String spaceId, OffsetDateTime scheduledAt) {

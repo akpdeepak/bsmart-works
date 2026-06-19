@@ -28,19 +28,22 @@ public class ArticleService {
     private final ArticleApprovalRepository approvalRepository;
     private final EventService eventService;
     private final RbacService rbac;
+    private final WebhookService webhookService;
 
     public ArticleService(ArticleRepository articleRepository,
                           ArticleVersionRepository articleVersionRepository,
                           KnowledgeSpaceRepository knowledgeSpaceRepository,
                           ArticleApprovalRepository approvalRepository,
                           EventService eventService,
-                          RbacService rbac) {
+                          RbacService rbac,
+                          WebhookService webhookService) {
         this.articleRepository = articleRepository;
         this.articleVersionRepository = articleVersionRepository;
         this.knowledgeSpaceRepository = knowledgeSpaceRepository;
         this.approvalRepository = approvalRepository;
         this.eventService = eventService;
         this.rbac = rbac;
+        this.webhookService = webhookService;
     }
 
     // ── KR-020: Schedule publish ──────────────────────────────────────────────
@@ -129,6 +132,9 @@ public class ArticleService {
                 eventService.recordInWorkspace(workspaceId, articleId,
                         "ARTICLE_PUBLISHED", userId,
                         Map.of("trigger", "auto_approval", "approvals", approvals));
+                webhookService.enqueue(workspaceId, "ARTICLE_PUBLISHED",
+                        Map.of("articleId", articleId, "trigger", "auto_approval",
+                                "approvals", approvals));
             }
         }
 

@@ -12,7 +12,7 @@
 > - [`UX-PROGRESS.md`](./UX-PROGRESS.md) — the **append-only progress log** (newest-first). Every
 >   completed work-item is logged there *and* checked off in the ledger here (§5).
 >
-> Status: **active plan (not yet started)** · created 2026-06-14 · owner: Deepak Pandey · governed by
+> Status: **closed and gated** · created 2026-06-14 · closed 2026-06-19 · owner: Deepak Pandey · governed by
 > RB-30 (design) / RB-05 (process) / RB-40 (governance, AI, NFR). No feature change — Feature Parity
 > Ledger (RB-20 §1) holds.
 

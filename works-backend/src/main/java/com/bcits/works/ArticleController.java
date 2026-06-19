@@ -34,6 +34,7 @@ public class ArticleController {
     private final ArticleService articleService;
     private final ArticleWatcherService articleWatcherService;
     private final SpaceFollowerService spaceFollowerService;
+    private final WebhookService webhookService;
 
     public ArticleController(ArticleRepository articleRepository,
                               ArticleVersionRepository articleVersionRepository,
@@ -47,7 +48,8 @@ public class ArticleController {
                               RbacService rbac,
                               ArticleService articleService,
                               ArticleWatcherService articleWatcherService,
-                              SpaceFollowerService spaceFollowerService) {
+                              SpaceFollowerService spaceFollowerService,
+                              WebhookService webhookService) {
         this.articleRepository = articleRepository;
         this.articleVersionRepository = articleVersionRepository;
         this.articleCommentRepository = articleCommentRepository;
@@ -62,6 +64,7 @@ public class ArticleController {
         this.articleService = articleService;
         this.articleWatcherService = articleWatcherService;
         this.spaceFollowerService = spaceFollowerService;
+        this.webhookService = webhookService;
     }
 
     @GetMapping
@@ -323,6 +326,9 @@ public class ArticleController {
             if (ArticleWorkflowService.PUBLISHED.equals(newStatus)) {
                 spaceFollowerService.notifyFollowers(saved.getSpaceId(), space.getWorkspaceId(),
                         saved.getId(), userId);
+                webhookService.enqueue(space.getWorkspaceId(), "ARTICLE_PUBLISHED",
+                        Map.of("articleId", saved.getId(), "trigger", "workflow",
+                                "action", action));
             }
         } else {
             eventService.record(id, eventType, userId, "{\"status\":\"" + newStatus + "\"}");
@@ -557,6 +563,8 @@ public class ArticleController {
             articleRepository.save(a);
             eventService.recordInWorkspace(workspaceId, id, "ARTICLE_PUBLISHED", userId, Map.of("bulk", true));
             spaceFollowerService.notifyFollowers(a.getSpaceId(), workspaceId, a.getId(), userId);
+            webhookService.enqueue(workspaceId, "ARTICLE_PUBLISHED",
+                    Map.of("articleId", a.getId(), "trigger", "bulk"));
             processed.add(id);
         }
         return Map.of("processed", processed, "skipped", skipped);
@@ -611,6 +619,10 @@ public class ArticleController {
         KnowledgeSpace space = knowledgeSpaceRepository.findById(article.getSpaceId()).orElse(null);
         if (space != null) {
             eventService.recordInWorkspace(space.getWorkspaceId(), article.getId(), eventType, userId, payload);
+            if ("ARTICLE_PUBLISHED".equals(eventType)) {
+                webhookService.enqueue(space.getWorkspaceId(), eventType,
+                        Map.of("articleId", article.getId(), "trigger", "article_event"));
+            }
         } else {
             eventService.record(article.getId(), eventType, userId, payload);
         }

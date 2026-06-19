@@ -11,6 +11,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -39,10 +40,11 @@ class ArticleServiceTest {
     private final ArticleApprovalRepository approvalRepository = mock(ArticleApprovalRepository.class);
     private final EventService eventService = mock(EventService.class);
     private final RbacService rbac = mock(RbacService.class);
+    private final WebhookService webhookService = mock(WebhookService.class);
 
     private final ArticleService service = new ArticleService(
             articleRepository, articleVersionRepository, knowledgeSpaceRepository,
-            approvalRepository, eventService, rbac);
+            approvalRepository, eventService, rbac, webhookService);
 
     @BeforeEach
     void setUp() {
@@ -187,6 +189,27 @@ class ArticleServiceTest {
         assertThrows(ApiException.class,
                 () -> service.bulkDelete(List.of(ARTICLE_A1), USER_A, WS_A));
         verify(articleRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void approveArticle_autoPublishesAndEnqueuesWebhook() {
+        Article article = article(ARTICLE_A1, SPACE_A, "Release notes");
+        article.setStatus("IN_REVIEW");
+        article.setAuthorId("author-1");
+        KnowledgeSpace space = space(SPACE_A, WS_A);
+        space.setRequiredApprovals(1);
+        when(articleRepository.findById(ARTICLE_A1)).thenReturn(Optional.of(article));
+        when(knowledgeSpaceRepository.findById(SPACE_A)).thenReturn(Optional.of(space));
+        when(approvalRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(approvalRepository.countByArticleIdAndWorkspaceIdAndDecision(ARTICLE_A1, WS_A, "APPROVED"))
+                .thenReturn(1);
+
+        service.approveArticle(ARTICLE_A1, USER_A, WS_A, "APPROVED", "Looks good");
+
+        assertThat(article.getStatus()).isEqualTo("PUBLISHED");
+        verify(eventService).recordInWorkspace(eq(WS_A), eq(ARTICLE_A1),
+                eq("ARTICLE_PUBLISHED"), eq(USER_A), any());
+        verify(webhookService).enqueue(eq(WS_A), eq("ARTICLE_PUBLISHED"), any());
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

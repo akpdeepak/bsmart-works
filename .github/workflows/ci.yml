@@ -375,6 +375,8 @@ jobs:
     defaults:
       run:
         working-directory: works-frontend
+    env:
+      CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -388,10 +390,10 @@ jobs:
       - name: Publish to Chromatic
         # Skip gracefully when the secret is not configured (forks, local PRs without the token).
         # The job succeeds (no step fails) so this check is non-blocking even without a token.
-        if: ${{ secrets.CHROMATIC_PROJECT_TOKEN != '' }}
+        if: ${{ env.CHROMATIC_PROJECT_TOKEN != '' }}
         uses: chromaui/action@latest
         with:
-          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          projectToken: ${{ env.CHROMATIC_PROJECT_TOKEN }}
           workingDir: works-frontend
           # Exit zero even if there are visual diffs so this job stays non-blocking.
           # The Chromatic UI is the review surface for visual changes.

@@ -7,11 +7,11 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 
 ## Current status
 
-- Roadmap mode: V.20 EPIC execution started with current-state hardening baseline
-- Active EPIC: EPIC 0 - Current-State Hardening, Truth, and Delivery Baseline
-- Active branch: `epic/00-current-state-hardening`
-- Last completed EPIC: None recorded here
-- Next recommended EPIC: EPIC 1 - Multi-Tenant Security and RBAC Hardening, after EPIC 0 merges
+- Roadmap mode: V.20 EPIC 0 baseline merged; ready for EPIC 1
+- Active EPIC: None
+- Active branch: `main`
+- Last completed EPIC: EPIC 0 - Current-State Hardening, Truth, and Delivery Baseline
+- Next recommended EPIC: EPIC 1 - Multi-Tenant Security and RBAC Hardening
 - Last state update: 2026-06-19
 
 ## Trigger contract
@@ -76,7 +76,7 @@ resume point.
 
 | EPIC | Status | Branch | PR | Local validation | Completion note | Notes |
 |---|---|---|---|---|---|---|
-| EPIC 0 - Current-State Hardening, Truth, and Delivery Baseline | PR open | `epic/00-current-state-hardening` | [#393](https://github.com/akpdeepak/bsmart-works/pull/393) | `npm run verify`; `cd works-backend && .\mvnw.cmd -Dgroups=unit verify` | `docs/implementation/epics/EPIC-00-current-state-hardening-completion.md` | Baseline docs, source hygiene, JWT query-token scope, verified shared status category resolver |
+| EPIC 0 - Current-State Hardening, Truth, and Delivery Baseline | Completed | `main` | [#393](https://github.com/akpdeepak/bsmart-works/pull/393) | `npm run verify`; `cd works-backend && .\mvnw.cmd -Dgroups=unit verify` | `docs/implementation/epics/EPIC-00-current-state-hardening-completion.md` | Baseline docs, source hygiene, JWT query-token scope, verified shared status category resolver |
 | EPIC 1 - Multi-Tenant Security and RBAC Hardening | Not started | | | | | |
 | EPIC 2 - Production Configuration, Deployment, and Secrets Safety | Not started | | | | | |
 | EPIC 25 partial - Reliability, Testing, Accessibility, Performance, and Quality Gates | Not started | | | | | |
@@ -107,9 +107,8 @@ resume point.
 
 ## Latest handoff
 
-2026-06-19: EPIC 0 implementation is open as
-[#393](https://github.com/akpdeepak/bsmart-works/pull/393) on `epic/00-current-state-hardening`. It
-adds `CURRENT-STATE.md`, updates stale repo/deploy facts, removes generated artifacts from Git
-tracking, restricts query-param JWT auth to the realtime SSE stream, verifies shared status category
-resolver coverage, and records validation. After merge, resume with EPIC 1 unless GitHub evidence
-shows a newer EPIC has already been completed.
+2026-06-19: EPIC 0 was merged to `main` via
+[#393](https://github.com/akpdeepak/bsmart-works/pull/393). It adds `CURRENT-STATE.md`, updates stale
+repo/deploy facts, removes generated artifacts from Git tracking, restricts query-param JWT auth to
+the realtime SSE stream, verifies shared status category resolver coverage, and records validation.
+Resume with EPIC 1 unless GitHub evidence shows a newer EPIC has already been completed.

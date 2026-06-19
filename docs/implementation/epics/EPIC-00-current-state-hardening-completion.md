@@ -8,6 +8,10 @@
 
 `epic/00-current-state-hardening`
 
+## Pull request
+
+[#393](https://github.com/akpdeepak/bsmart-works/pull/393)
+
 ## Summary
 
 EPIC 0 establishes the safe baseline for continuing the bSmart Transformation Roadmap V.20 across

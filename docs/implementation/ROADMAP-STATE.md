@@ -76,7 +76,7 @@ resume point.
 
 | EPIC | Status | Branch | PR | Local validation | Completion note | Notes |
 |---|---|---|---|---|---|---|
-| EPIC 0 - Current-State Hardening, Truth, and Delivery Baseline | Ready for PR | `epic/00-current-state-hardening` | Pending | `npm run verify`; `cd works-backend && .\mvnw.cmd -Dgroups=unit verify` | `docs/implementation/epics/EPIC-00-current-state-hardening-completion.md` | Baseline docs, source hygiene, JWT query-token scope, verified shared status category resolver |
+| EPIC 0 - Current-State Hardening, Truth, and Delivery Baseline | PR open | `epic/00-current-state-hardening` | [#393](https://github.com/akpdeepak/bsmart-works/pull/393) | `npm run verify`; `cd works-backend && .\mvnw.cmd -Dgroups=unit verify` | `docs/implementation/epics/EPIC-00-current-state-hardening-completion.md` | Baseline docs, source hygiene, JWT query-token scope, verified shared status category resolver |
 | EPIC 1 - Multi-Tenant Security and RBAC Hardening | Not started | | | | | |
 | EPIC 2 - Production Configuration, Deployment, and Secrets Safety | Not started | | | | | |
 | EPIC 25 partial - Reliability, Testing, Accessibility, Performance, and Quality Gates | Not started | | | | | |
@@ -107,8 +107,9 @@ resume point.
 
 ## Latest handoff
 
-2026-06-19: EPIC 0 implementation is ready for PR on `epic/00-current-state-hardening`. It adds
-`CURRENT-STATE.md`, updates stale repo/deploy facts, removes generated artifacts from Git tracking,
-restricts query-param JWT auth to the realtime SSE stream, verifies shared status category resolver
-coverage, and records validation. After merge, resume with EPIC 1 unless GitHub evidence shows a
-newer EPIC has already been completed.
+2026-06-19: EPIC 0 implementation is open as
+[#393](https://github.com/akpdeepak/bsmart-works/pull/393) on `epic/00-current-state-hardening`. It
+adds `CURRENT-STATE.md`, updates stale repo/deploy facts, removes generated artifacts from Git
+tracking, restricts query-param JWT auth to the realtime SSE stream, verifies shared status category
+resolver coverage, and records validation. After merge, resume with EPIC 1 unless GitHub evidence
+shows a newer EPIC has already been completed.

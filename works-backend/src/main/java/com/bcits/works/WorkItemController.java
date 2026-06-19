@@ -2,9 +2,6 @@ package com.bcits.works;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,39 +15,24 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Tag(name = "Work Items", description = "CRUD, search, backlog ordering, and trash management for work items")
 @RestController
 @RequestMapping("/api/v1/work-items")
 public class WorkItemController {
 
-    private static final Logger log = LoggerFactory.getLogger(WorkItemController.class);
-
     private final WorkItemRepository repository;
-    private final EventService eventService;
     private final JdbcTemplate jdbc;
-    private final NotificationRepository notificationRepository;
-    private final UserRepository userRepository;
-    private final EmailService emailService;
-    private final NotificationBatchService batchService;
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
-    private final DodChecklistService dodChecklists;
-    private final ExtensionExecutionService extensions;
-    private final WorkflowRuleEngine workflowRules;
-    private final StatusConfigService statusConfig;
-    private final BoardWipLimitService wipLimits;
     private final WorkItemBulkService bulkService;
     private final WatcherService watcherService;
-    private final AutomationService automations;
-    private final FunnelService funnelService;
+    private final WorkItemReadService readService;
+    private final WorkItemCommandService commandService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public WorkItemController(WorkItemRepository repository, EventService eventService,
@@ -67,23 +49,15 @@ public class WorkItemController {
                               AutomationService automations,
                               FunnelService funnelService) {
         this.repository = repository;
-        this.eventService = eventService;
         this.jdbc = jdbc;
-        this.notificationRepository = notificationRepository;
-        this.userRepository = userRepository;
-        this.emailService = emailService;
-        this.batchService = batchService;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
-        this.dodChecklists = dodChecklists;
-        this.extensions = extensions;
-        this.workflowRules = workflowRules;
-        this.statusConfig = statusConfig;
-        this.wipLimits = wipLimits;
         this.bulkService = bulkService;
         this.watcherService = watcherService;
-        this.automations = automations;
-        this.funnelService = funnelService;
+        this.readService = new WorkItemReadService(jdbc, authenticatedUser, objectMapper);
+        this.commandService = new WorkItemCommandService(repository, eventService, jdbc, userRepository, emailService,
+            batchService, authenticatedUser, rbac, dodChecklists, extensions, workflowRules, statusConfig,
+            wipLimits, watcherService, automations, funnelService, readService, objectMapper);
     }
 
     // ── Watchers (followers) ─────────────────────────────────────────────────────
@@ -142,12 +116,6 @@ public class WorkItemController {
         return bulkService.apply(userId, ids, action, value);
     }
 
-    // Tenant-isolation predicate (RB-40 §1): an item is visible only when its project lives in a
-    // workspace the caller is a member of. Binds one parameter — the caller's user id.
-    private static final String MEMBER_PROJECTS =
-        "project_id IN (SELECT p.id FROM projects p "
-        + "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id WHERE wm.user_id = ?)";
-
     @Operation(summary = "List work items", description = "Returns work items visible to the authenticated user"
         + " (workspace-scoped). Paginated; default page=0 size=200 max=500."
         + " Response carries X-Total-Count (full filtered count) and X-Has-More (boolean).")
@@ -156,37 +124,7 @@ public class WorkItemController {
                                           @RequestParam(required = false) String parentId,
                                           @RequestParam(defaultValue = "0") int page,
                                           @RequestParam(defaultValue = "200") int size) {
-        String userId = authenticatedUser.id();
-        int limit = Math.min(Math.max(size, 1), 500);
-        int offset = Math.max(page, 0) * limit;
-        List<WorkItem> items;
-        long totalCount;
-        if (parentId != null) {
-            items = jdbc.query("SELECT * FROM work_items WHERE parent_id = ? AND deleted_at IS NULL "
-                + "AND " + MEMBER_PROJECTS + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
-                this::mapRow, parentId, userId, limit, offset);
-            Long cnt = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM work_items WHERE parent_id = ? AND deleted_at IS NULL "
-                + "AND " + MEMBER_PROJECTS,
-                Long.class, parentId, userId);
-            totalCount = cnt != null ? cnt : 0L;
-        } else {
-            items = jdbc.query("SELECT * FROM work_items WHERE deleted_at IS NULL "
-                + "AND " + MEMBER_PROJECTS + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
-                this::mapRow, userId, limit, offset);
-            Long cnt = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM work_items WHERE deleted_at IS NULL AND " + MEMBER_PROJECTS,
-                Long.class, userId);
-            totalCount = cnt != null ? cnt : 0L;
-        }
-        attachTagsBatch(items);
-        attachFieldValuesBatch(items);
-        attachStarred(items, userId);
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-Total-Count", String.valueOf(totalCount));
-        headers.set("X-Has-More", String.valueOf(totalCount > (long) offset + items.size()));
-        headers.add("Access-Control-Expose-Headers", "X-Total-Count, X-Has-More");
-        return ResponseEntity.ok().headers(headers).body(items);
+        return readService.getAllWorkItems(parentId, page, size);
     }
 
     // Trash — soft-deleted items recoverable within 30 days. Must be declared before /{id} so the
@@ -195,16 +133,7 @@ public class WorkItemController {
     @GetMapping("/trash")
     public List<WorkItem> getTrash(@RequestParam(defaultValue = "0") int page,
                                    @RequestParam(defaultValue = "50") int size) {
-        String userId = authenticatedUser.id();
-        int limit = Math.min(Math.max(size, 1), 200);
-        int offset = Math.max(page, 0) * limit;
-        List<WorkItem> items = jdbc.query(
-            "SELECT * FROM work_items WHERE deleted_at IS NOT NULL AND deleted_at > NOW() - INTERVAL '30 days' "
-            + "AND " + MEMBER_PROJECTS + " ORDER BY deleted_at DESC LIMIT ? OFFSET ?",
-            this::mapRow, userId, limit, offset);
-        attachTagsBatch(items);
-        attachFieldValuesBatch(items);
-        return items;
+        return readService.getTrash(page, size);
     }
 
     // Single work item by id (added iteration 14 — the IDE extensions, the `works` CLI and the
@@ -212,28 +141,12 @@ public class WorkItemController {
     // (RB-40 §1): an item outside the caller's workspaces is indistinguishable from a missing one.
     @GetMapping("/{id}")
     public WorkItem getWorkItem(@PathVariable String id) {
-        String userId = authenticatedUser.id();
-        List<WorkItem> items = jdbc.query(
-            "SELECT * FROM work_items WHERE id = ? AND deleted_at IS NULL AND " + MEMBER_PROJECTS,
-            this::mapRow, id, userId);
-        if (items.isEmpty()) throw ApiException.notFound("Work item", id);
-        attachTagsBatch(items);
-        attachFieldValuesBatch(items);
-        attachStarred(items, userId);
-        return items.get(0);
+        return readService.getWorkItem(id);
     }
 
     @PutMapping("/{id}/restore")
     public WorkItem restoreFromTrash(@PathVariable String id) {
-        String userId = authenticatedUser.id();
-        String wsId = rbac.workspaceForWorkItem(id);
-        if (wsId == null) throw ApiException.notFound("Work item", id);
-        rbac.require(userId, wsId, "delete_items");   // same right that trashed it
-        jdbc.update("UPDATE work_items SET deleted_at = NULL, deleted_by = NULL WHERE id = ?", id);
-        var opt = repository.findById(id);
-        if (opt.isEmpty()) throw ApiException.notFound("Work item", id);
-        attachTags(opt.get());
-        return opt.get();
+        return commandService.restoreFromTrash(id);
     }
 
     // Star / unstar
@@ -256,154 +169,23 @@ public class WorkItemController {
     @GetMapping("/starred")
     public List<WorkItem> getStarred(@RequestParam(defaultValue = "0") int page,
                                       @RequestParam(defaultValue = "50") int size) {
-        String userId = authenticatedUser.id();
-        int limit = Math.min(Math.max(size, 1), 200);
-        int offset = Math.max(page, 0) * limit;
-        List<WorkItem> items = jdbc.query(
-            "SELECT wi.* FROM work_items wi JOIN starred_items si ON si.work_item_id = wi.id "
-            + "WHERE si.user_id = ? AND wi.deleted_at IS NULL AND wi." + MEMBER_PROJECTS
-            + " ORDER BY si.created_at DESC LIMIT ? OFFSET ?",
-            this::mapRow, userId, userId, limit, offset);
-        attachTagsBatch(items);
-        attachFieldValuesBatch(items);
-        items.forEach(i -> i.setStarred(true));
-        return items;
+        return readService.getStarred(page, size);
     }
 
     @GetMapping("/search")
     public List<WorkItem> search(@RequestParam String q) {
-        String userId = authenticatedUser.id();
-        if (q == null || q.isBlank()) return List.of();
-        // Starred items get priority in search results. Match spans title, description,
-        // and any comment body (spec: full-text search covers comments too). EXISTS keeps
-        // one row per item — no duplicates from the comment join. ESCAPE makes a user-typed
-        // % or _ match literally instead of acting as a LIKE wildcard.
-        String sql = "SELECT wi.*, (CASE WHEN si.work_item_id IS NOT NULL THEN 1 ELSE 0 END) AS is_starred " +
-            "FROM work_items wi LEFT JOIN starred_items si ON si.work_item_id = wi.id AND si.user_id = ? " +
-            "WHERE wi.deleted_at IS NULL AND wi." + MEMBER_PROJECTS + " AND (wi.title ILIKE ? ESCAPE '\\' " +
-            "OR wi.description ILIKE ? ESCAPE '\\' " +
-            "OR EXISTS (SELECT 1 FROM comments c WHERE c.work_item_id = wi.id AND c.body ILIKE ? ESCAPE '\\')) " +
-            "ORDER BY is_starred DESC, wi.created_at DESC LIMIT 20";
-        String escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
-        String pattern = "%" + escaped + "%";
-        List<WorkItem> items = jdbc.query(sql, (rs, row) -> {
-            WorkItem w = mapRow(rs, row);
-            try { w.setStarred(rs.getInt("is_starred") == 1); } catch (Exception ignored) {}
-            return w;
-        }, userId, userId, pattern, pattern, pattern);
-        attachTagsBatch(items);
-        attachFieldValuesBatch(items);
-        return items;
+        return readService.search(q);
     }
 
     @GetMapping("/backlog")
     public List<WorkItem> getBacklog(@RequestParam(required = false) String projectId,
                                      @RequestParam(defaultValue = "300") int size) {
-        String userId = authenticatedUser.id();
-        int limit = Math.min(Math.max(size, 1), 1000);
-        String sql = "SELECT * FROM work_items WHERE sprint_id IS NULL AND " + MEMBER_PROJECTS +
-                (projectId != null ? " AND project_id = ?" : "") +
-                " ORDER BY backlog_order ASC, created_at ASC LIMIT " + limit;
-        return projectId != null
-                ? jdbc.query(sql, this::mapRow, userId, projectId)
-                : jdbc.query(sql, this::mapRow, userId);
+        return readService.getBacklog(projectId, size);
     }
 
     @PutMapping("/backlog/reorder")
     public void reorderBacklog(@Valid @RequestBody java.util.List<java.util.Map<String, Object>> items) {
-        String userId = authenticatedUser.id();
-        // Scope the update to the caller's workspaces so a stray id can't reorder another tenant's item.
-        items.forEach(item -> {
-            int order = ((Number) item.get("order")).intValue();
-            jdbc.update("UPDATE work_items SET backlog_order = ? WHERE id = ? AND " + MEMBER_PROJECTS,
-                order, item.get("id"), userId);
-        });
-    }
-
-    private WorkItem mapRow(java.sql.ResultSet rs, int row) throws java.sql.SQLException {
-        WorkItem w = new WorkItem();
-        w.setId(rs.getString("id"));
-        w.setAutoId(rs.getString("auto_id"));
-        w.setTitle(rs.getString("title"));
-        w.setStatus(rs.getString("status"));
-        w.setType(rs.getString("type"));
-        w.setAssigneeId(rs.getString("assignee_id"));
-        w.setSprintId(rs.getString("sprint_id"));
-        w.setStoryPoints(rs.getObject("story_points") != null ? rs.getInt("story_points") : 0);
-        w.setPriority(rs.getString("priority"));
-        w.setDueDate(rs.getDate("due_date") != null ? rs.getDate("due_date").toLocalDate() : null);
-        w.setStartDate(rs.getDate("start_date") != null ? rs.getDate("start_date").toLocalDate() : null);
-        w.setProjectId(rs.getString("project_id"));
-        w.setParentId(rs.getString("parent_id"));
-        w.setAcceptanceCriteria(rs.getString("acceptance_criteria"));
-        w.setVersion(rs.getObject("version") != null ? rs.getInt("version") : 0);
-        w.setDescription(rs.getString("description"));
-        try {
-            java.sql.Timestamp sca = rs.getTimestamp("status_changed_at");
-            w.setStatusChangedAt(sca != null ? sca.toInstant().atOffset(java.time.ZoneOffset.UTC) : null);
-        } catch (Exception ignored) {}
-        // Type-specific fields (nullable; absent on old rows before V68)
-        try { w.setReporterId(rs.getString("reporter_id")); } catch (Exception ignored) {}
-        try { w.setSeverity(rs.getString("severity")); } catch (Exception ignored) {}
-        try { w.setEnvironmentDetail(rs.getString("environment_detail")); } catch (Exception ignored) {}
-        try { w.setBusinessImpact(rs.getString("business_impact")); } catch (Exception ignored) {}
-        try { w.setResponseSpeed(rs.getString("response_speed")); } catch (Exception ignored) {}
-        try { w.setRespondingTeam(rs.getString("responding_team")); } catch (Exception ignored) {}
-        try { w.setResolutionType(rs.getString("resolution_type")); } catch (Exception ignored) {}
-        try { w.setRootCause(rs.getString("root_cause")); } catch (Exception ignored) {}
-        try { w.setProbability(rs.getString("probability")); } catch (Exception ignored) {}
-        try { w.setImpactLevel(rs.getString("impact_level")); } catch (Exception ignored) {}
-        try { w.setRiskScore(rs.getObject("risk_score") != null ? rs.getShort("risk_score") : null); } catch (Exception ignored) {}
-        try { w.setDependencyType(rs.getString("dependency_type")); } catch (Exception ignored) {}
-        try { w.setSourceItemId(rs.getString("source_item_id")); } catch (Exception ignored) {}
-        try { w.setTargetItemId(rs.getString("target_item_id")); } catch (Exception ignored) {}
-        try { w.setApproverId(rs.getString("approver_id")); } catch (Exception ignored) {}
-        try { w.setRequestedForId(rs.getString("requested_for_id")); } catch (Exception ignored) {}
-        try { var nd = rs.getDate("needed_by_date");
-              w.setNeededByDate(nd != null ? nd.toLocalDate() : null); } catch (Exception ignored) {}
-
-        try { w.setItemCategory(rs.getString("item_category")); } catch (Exception ignored) {}
-        try { w.setSubArea(rs.getString("sub_area")); } catch (Exception ignored) {}
-        try { w.setDepartment(rs.getString("department")); } catch (Exception ignored) {}
-        try { w.setRegressionRisk(rs.getString("regression_risk")); } catch (Exception ignored) {}
-        try { w.setStepsToReproduce(rs.getString("steps_to_reproduce")); } catch (Exception ignored) {}
-        try { w.setExpectedBehavior(rs.getString("expected_behavior")); } catch (Exception ignored) {}
-        try { w.setActualBehavior(rs.getString("actual_behavior")); } catch (Exception ignored) {}
-        try { w.setAffectedVersion(rs.getString("affected_version")); } catch (Exception ignored) {}
-        try { w.setFixedInVersion(rs.getString("fixed_in_version")); } catch (Exception ignored) {}
-        try { w.setFixDescription(rs.getString("fix_description")); } catch (Exception ignored) {}
-        try { w.setMitigationPlan(rs.getString("mitigation_plan")); } catch (Exception ignored) {}
-        try { w.setContingencyPlan(rs.getString("contingency_plan")); } catch (Exception ignored) {}
-        try { w.setBasisRationale(rs.getString("basis_rationale")); } catch (Exception ignored) {}
-        try { var vd = rs.getDate("validation_date");
-              w.setValidationDate(vd != null ? vd.toLocalDate() : null); } catch (Exception ignored) {}
-        try { w.setRiskIfWrong(rs.getString("risk_if_wrong")); } catch (Exception ignored) {}
-        try { w.setImpactIfDelayed(rs.getString("impact_if_delayed")); } catch (Exception ignored) {}
-        try { var erd = rs.getDate("expected_resolution_date");
-              w.setExpectedResolutionDate(erd != null ? erd.toLocalDate() : null); } catch (Exception ignored) {}
-        try { w.setBusinessJustification(rs.getString("business_justification")); } catch (Exception ignored) {}
-        try { w.setAffectedSystem(rs.getString("affected_system")); } catch (Exception ignored) {}
-        try { w.setBusinessService(rs.getString("business_service")); } catch (Exception ignored) {}
-        try { w.setResolutionSummary(rs.getString("resolution_summary")); } catch (Exception ignored) {}
-        try { w.setClosureNotes(rs.getString("closure_notes")); } catch (Exception ignored) {}
-        try { w.setStakeholderUpdate(rs.getString("stakeholder_update")); } catch (Exception ignored) {}
-        try { w.setSlaBreachFlag(rs.getBoolean("sla_breach_flag")); } catch (Exception ignored) {}
-        try { w.setProductId(rs.getString("product_id")); } catch (Exception ignored) {}
-        try {
-            String cf = rs.getString("custom_fields");
-            if (cf != null && !cf.isBlank()) {
-                w.setCustomFields(objectMapper.readValue(cf, new TypeReference<Map<String, Object>>() {}));
-            }
-        } catch (Exception ignored) {}
-        return w;
-    }
-
-    private void persistCustomFields(String itemId, Map<String, Object> fields) {
-        if (fields == null || fields.isEmpty()) return;
-        try {
-            jdbc.update("UPDATE work_items SET custom_fields = ?::jsonb WHERE id = ?",
-                objectMapper.writeValueAsString(fields), itemId);
-        } catch (Exception ignored) {}
+        readService.reorderBacklog(items);
     }
 
     /** Personal home (I01-S12): the signed-in user's assigned items. Identity comes from the JWT —
@@ -411,356 +193,32 @@ public class WorkItemController {
     @GetMapping("/my")
     public List<WorkItem> myWorkItems() {
         List<WorkItem> items = repository.findMyItemsScoped(authenticatedUser.id());
-        attachTagsBatch(items);
-        attachFieldValuesBatch(items);
+        readService.attachTagsBatch(items);
+        readService.attachFieldValuesBatch(items);
         return items;
     }
 
     @Operation(summary = "Create work item", description = "Creates a new work item. Requires create_items permission in the target project's workspace.")
     @PostMapping
     public WorkItem createWorkItem(@Valid @RequestBody WorkItem newItem) {
-        String userId = authenticatedUser.id();
-        String wsId = rbac.workspaceForProject(newItem.getProjectId());
-        if (wsId != null) rbac.require(userId, wsId, "create_items");
-
-        // Parent-child hierarchy enforcement (DefaultWorkItemTypes.VALID_CHILDREN)
-        if (newItem.getParentId() != null) {
-            validateParentType(newItem.getParentId(), newItem.getType());
-        }
-
-        String prefix = newItem.getProjectId() != null ? newItem.getProjectId().replace("PROJ-", "") : "WEB";
-        newItem.setId(prefix + "-" + java.util.UUID.randomUUID().toString().substring(0, 6).toUpperCase());
-
-        // Generate human-readable auto-ID (EP-0001, INC-0042, …)
-        String effectiveWsId = wsId != null ? wsId : "default";
-        String autoIdPrefix = DefaultWorkItemTypes.prefixFor(newItem.getType());
-        Long counter = jdbc.queryForObject(
-            "INSERT INTO work_item_counters (workspace_id, type_key, next_val) VALUES (?, ?, 1) "
-            + "ON CONFLICT (workspace_id, type_key) DO UPDATE "
-            + "  SET next_val = work_item_counters.next_val + 1 "
-            + "RETURNING next_val",
-            Long.class, effectiveWsId, newItem.getType().toUpperCase());
-        newItem.setAutoId(autoIdPrefix + "-" + String.format("%04d", counter));
-
-        // Initial status = the type's workflow initial status (seeded if needed), else legacy default.
-        String initialStatus = statusConfig.initialStatus(effectiveWsId, newItem.getType());
-        newItem.setStatus(initialStatus != null ? initialStatus : defaultStatusFor(newItem.getType()));
-        newItem.setCreatedBy(userId);
-        // Reporter defaults to the creator (JIRA-style), unless one was supplied. Universal field.
-        if (newItem.getReporterId() == null || newItem.getReporterId().isBlank()) {
-            newItem.setReporterId(userId);
-        }
-        newItem.setCreatedAt(OffsetDateTime.now());
-        newItem.setStatusChangedAt(newItem.getCreatedAt());
-        if (newItem.getProjectId() == null) newItem.setProjectId("PROJ-001");
-
-        // Extension hook: work_item.before_create — may enrich fields or reject (B26).
-        ExtensionExecutionService.ExtensionResult extResult =
-                extensions.beforeWorkItemCreate(wsId, newItem, userId);
-        if (extResult.rejected()) {
-            throw ApiException.badRequest("EXTENSION_REJECTED", extResult.rejectionMessage());
-        }
-
-        WorkItem saved = repository.save(newItem);
-        persistCustomFields(saved.getId(), newItem.getCustomFields());
-        syncParentLink(saved.getId(), saved.getParentId());
-
-        if (newItem.getTags() != null) {
-            saveTags(saved.getId(), newItem.getTags());
-        }
-
-        eventService.record(saved.getId(), "WORK_ITEM_CREATED", userId,
-                "{\"title\":\"" + saved.getTitle() + "\",\"type\":\"" + saved.getType() + "\"}");
-
-        // HEART activation funnel (WI-09): emit FIRST_VALUE + DAY_2_RETURN only for items in a
-        // real workspace (wsId != null). Non-fatal — telemetry must not roll back the business write.
-        if (wsId != null) {
-            funnelService.onFirstValueCandidate(wsId, userId, saved.getProjectId(),
-                    saved.getId(), saved.getType());
-            funnelService.onMeaningfulAction(wsId, userId);
-        }
-
-        // Fire ITEM_CREATED automations (non-fatal — a rule failure must not roll back the save).
-        if (wsId != null) {
-            try {
-                automations.evaluateForItem(wsId, AutomationCatalog.TR_ITEM_CREATED, saved, userId);
-            } catch (Exception ex) {
-                log.warn("Automation evaluation failed after create of {}: {}", saved.getId(), ex.getMessage());
-            }
-        }
-
-        // Notify assignee (in-app + email)
-        if (saved.getAssigneeId() != null && !saved.getAssigneeId().equals(userId)) {
-            createNotification(saved.getAssigneeId(), "ASSIGNED",
-                    "You were assigned to: " + saved.getTitle(), "/items/" + saved.getId());
-            String actorName = userRepository.findById(userId != null ? userId : "").map(User::getFullName).orElse("Someone");
-            emailService.sendAssignmentEmail(saved.getAssigneeId(), actorName, saved.getId(), saved.getTitle());
-        }
-
-        attachTags(saved);
-        return saved;
+        return commandService.createWorkItem(newItem);
     }
 
     @Operation(summary = "Update work item", description = "Updates a work item. Enforces optimistic locking via version field. Moving to a done status requires all required DoD items checked.")
     @PutMapping("/{id}")
     public WorkItem updateWorkItem(@PathVariable String id, @Valid @RequestBody WorkItem updatedItem) {
-        String userId = authenticatedUser.id();
-        WorkItem existing0 = repository.findById(id).orElseThrow(() -> ApiException.notFound("Work item", id));
-        String wsId = rbac.workspaceForProject(existing0.getProjectId());
-        if (wsId != null) {
-            if (!rbac.canEdit(userId, wsId, existing0.getCreatedBy(), existing0.getAssigneeId())) {
-                throw ApiException.forbidden("You do not have permission to edit this work item.");
-            }
-        }
-        return repository.findById(id).map(existing -> {
-            // Optimistic concurrency — reject a stale write (no-op if the client sent no version).
-            ConcurrencyGuard.requireCurrentVersion(existing.getVersion(), updatedItem.getVersion());
-            String oldStatus = existing.getStatus();
-            // Definition-of-Done gate (Cap U, iteration 14): moving an item into a done-category
-            // status requires every required DoD item to be checked first (409 otherwise).
-            if (!java.util.Objects.equals(oldStatus, updatedItem.getStatus())
-                    && DodChecklistService.isDoneStatus(updatedItem.getStatus())
-                    && !DodChecklistService.isDoneStatus(oldStatus)) {
-                dodChecklists.assertResolvable(id, userId);
-            }
-            // Workflow rule engine (Cap C, Iteration 3): evaluate transition conditions and
-            // validators before persisting the new status. Post-functions run after save.
-            if (!java.util.Objects.equals(oldStatus, updatedItem.getStatus())) {
-                workflowRules.enforceTransitionRules(id, oldStatus, updatedItem.getStatus(), userId, wsId);
-                wipLimits.enforceEntry(wsId, oldStatus, updatedItem.getStatus());
-            }
-            String oldAssignee = existing.getAssigneeId();
-            String oldPriority = existing.getPriority();
-            String oldTitle = existing.getTitle();
-            java.time.LocalDate oldDueDate = existing.getDueDate();
-            String oldType = existing.getType();
-            Integer oldStoryPoints = existing.getStoryPoints();
-            String oldDescription = existing.getDescription();
-            List<String> oldTags = jdbc.queryForList("SELECT tag FROM tags WHERE work_item_id = ? ORDER BY tag", String.class, id);
-
-            // Validate parent type if parentId changed
-            if (updatedItem.getParentId() != null
-                    && !updatedItem.getParentId().equals(existing.getParentId())) {
-                validateParentType(updatedItem.getParentId(), updatedItem.getType());
-            }
-
-            existing.setTitle(updatedItem.getTitle());
-            existing.setStatus(updatedItem.getStatus());
-            if (!java.util.Objects.equals(oldStatus, updatedItem.getStatus())) {
-                existing.setStatusChangedAt(OffsetDateTime.now());
-            }
-            // Type is immutable after creation — its fields vary by type. Reject any change; never
-            // overwrite the stored type from the request.
-            if (updatedItem.getType() != null && !updatedItem.getType().equals(existing.getType())) {
-                throw ApiException.badRequest("TYPE_IMMUTABLE", "Work item type cannot be changed after creation.");
-            }
-            existing.setDescription(updatedItem.getDescription());
-            existing.setAcceptanceCriteria(updatedItem.getAcceptanceCriteria());
-            existing.setAssigneeId(updatedItem.getAssigneeId());
-            existing.setDueDate(updatedItem.getDueDate());
-            existing.setStartDate(updatedItem.getStartDate());
-            existing.setSprintId(updatedItem.getSprintId());
-            existing.setStoryPoints(updatedItem.getStoryPoints());
-            existing.setPriority(updatedItem.getPriority());
-            existing.setParentId(updatedItem.getParentId());
-            // Type-specific fields
-            existing.setReporterId(updatedItem.getReporterId());
-            existing.setSeverity(updatedItem.getSeverity());
-            existing.setEnvironmentDetail(updatedItem.getEnvironmentDetail());
-            existing.setBusinessImpact(updatedItem.getBusinessImpact());
-            existing.setResponseSpeed(updatedItem.getResponseSpeed());
-            existing.setRespondingTeam(updatedItem.getRespondingTeam());
-            existing.setResolutionType(updatedItem.getResolutionType());
-            existing.setRootCause(updatedItem.getRootCause());
-            existing.setProbability(updatedItem.getProbability());
-            existing.setImpactLevel(updatedItem.getImpactLevel());
-            existing.setRiskScore(updatedItem.getRiskScore());
-            existing.setDependencyType(updatedItem.getDependencyType());
-            existing.setSourceItemId(updatedItem.getSourceItemId());
-            existing.setTargetItemId(updatedItem.getTargetItemId());
-            existing.setApproverId(updatedItem.getApproverId());
-            existing.setRequestedForId(updatedItem.getRequestedForId());
-            existing.setNeededByDate(updatedItem.getNeededByDate());
-            existing.setItemCategory(updatedItem.getItemCategory());
-            existing.setSubArea(updatedItem.getSubArea());
-            existing.setDepartment(updatedItem.getDepartment());
-            existing.setRegressionRisk(updatedItem.getRegressionRisk());
-            existing.setStepsToReproduce(updatedItem.getStepsToReproduce());
-            existing.setExpectedBehavior(updatedItem.getExpectedBehavior());
-            existing.setActualBehavior(updatedItem.getActualBehavior());
-            existing.setAffectedVersion(updatedItem.getAffectedVersion());
-            existing.setFixedInVersion(updatedItem.getFixedInVersion());
-            existing.setFixDescription(updatedItem.getFixDescription());
-            existing.setMitigationPlan(updatedItem.getMitigationPlan());
-            existing.setContingencyPlan(updatedItem.getContingencyPlan());
-            existing.setBasisRationale(updatedItem.getBasisRationale());
-            existing.setValidationDate(updatedItem.getValidationDate());
-            existing.setRiskIfWrong(updatedItem.getRiskIfWrong());
-            existing.setImpactIfDelayed(updatedItem.getImpactIfDelayed());
-            existing.setExpectedResolutionDate(updatedItem.getExpectedResolutionDate());
-            existing.setBusinessJustification(updatedItem.getBusinessJustification());
-            existing.setProductId(updatedItem.getProductId());
-            existing.setAffectedSystem(updatedItem.getAffectedSystem());
-            existing.setBusinessService(updatedItem.getBusinessService());
-            existing.setResolutionSummary(updatedItem.getResolutionSummary());
-            existing.setClosureNotes(updatedItem.getClosureNotes());
-            existing.setStakeholderUpdate(updatedItem.getStakeholderUpdate());
-            existing.setSlaTarget(updatedItem.getSlaTarget());
-            existing.setSlaBreachFlag(updatedItem.getSlaBreachFlag());
-            existing.setVersion(ConcurrencyGuard.nextVersion(existing.getVersion()));
-
-            WorkItem saved = repository.save(existing);
-            syncParentLink(id, saved.getParentId());
-            if (updatedItem.getCustomFields() != null) {
-                persistCustomFields(id, updatedItem.getCustomFields());
-            }
-
-            if (updatedItem.getTags() != null) {
-                jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);
-                saveTags(id, updatedItem.getTags());
-            }
-
-            // Workflow post-functions execute after the item is saved (best-effort; Cap C).
-            if (!java.util.Objects.equals(oldStatus, saved.getStatus())) {
-                workflowRules.executePostFunctions(id, oldStatus, saved.getStatus(), userId, wsId);
-            }
-
-            // Record field-level diffs
-            if (!java.util.Objects.equals(oldStatus, saved.getStatus())) {
-                eventService.recordDiff(id, "STATUS_CHANGED", userId, "status", oldStatus, saved.getStatus());
-                // Extension hook: work_item.after_status_change — may emit events or notify (B26).
-                String wId = rbac.workspaceForProject(saved.getProjectId());
-                extensions.afterStatusChange(wId, saved, oldStatus, userId);
-            }
-            if (!java.util.Objects.equals(oldAssignee, saved.getAssigneeId())) {
-                String oldName = oldAssignee != null
-                        ? userRepository.findById(oldAssignee).map(u -> u.getFullName()).orElse(oldAssignee)
-                        : "unassigned";
-                String newName = saved.getAssigneeId() != null
-                        ? userRepository.findById(saved.getAssigneeId()).map(u -> u.getFullName()).orElse(saved.getAssigneeId())
-                        : "unassigned";
-                eventService.recordDiff(id, "ASSIGNED", userId, "assignee", oldName, newName);
-            }
-            if (!java.util.Objects.equals(oldPriority, saved.getPriority())) {
-                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "priority", oldPriority, saved.getPriority());
-            }
-            if (!java.util.Objects.equals(oldTitle, saved.getTitle())) {
-                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "title", oldTitle, saved.getTitle());
-            }
-            if (!java.util.Objects.equals(oldDueDate, saved.getDueDate())) {
-                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "dueDate",
-                    oldDueDate != null ? oldDueDate.toString() : "none",
-                    saved.getDueDate() != null ? saved.getDueDate().toString() : "none");
-            }
-            if (!java.util.Objects.equals(oldType, saved.getType())) {
-                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "type", oldType, saved.getType());
-            }
-            if (!java.util.Objects.equals(oldStoryPoints, saved.getStoryPoints())) {
-                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "storyPoints",
-                    String.valueOf(oldStoryPoints != null ? oldStoryPoints : 0),
-                    String.valueOf(saved.getStoryPoints() != null ? saved.getStoryPoints() : 0));
-            }
-            // Description changed (track as boolean — text too large for event store)
-            if (!java.util.Objects.equals(oldDescription, saved.getDescription())) {
-                eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "description", "edited", "edited");
-            }
-            // Tags diff
-            if (updatedItem.getTags() != null) {
-                List<String> newTags = updatedItem.getTags();
-                if (!oldTags.equals(newTags.stream().sorted().toList())) {
-                    eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "tags",
-                        String.join(", ", oldTags), String.join(", ", newTags));
-                }
-            }
-
-            // Notify new assignee (in-app + email)
-            String newAssignee = saved.getAssigneeId();
-            if (newAssignee != null && !newAssignee.equals(oldAssignee) && !newAssignee.equals(userId)) {
-                createNotification(newAssignee, "ASSIGNED",
-                        "You were assigned to: " + saved.getTitle(), "/items/" + saved.getId());
-                String actorName = userRepository.findById(userId != null ? userId : "").map(User::getFullName).orElse("Someone");
-                emailService.sendAssignmentEmail(newAssignee, actorName, saved.getId(), saved.getTitle());
-            }
-
-            // Watchers: the new assignee auto-watches; notify every watcher (except the actor and the
-            // just-notified assignee) on any field change. "Any field change" per the product decision.
-            java.util.Set<String> notified = new java.util.HashSet<>();
-            if (userId != null) notified.add(userId);
-            if (newAssignee != null && !newAssignee.equals(oldAssignee)) {
-                watcherService.watch(id, newAssignee);
-                notified.add(newAssignee); // already received the ASSIGNED notification above
-            }
-            boolean changed = !java.util.Objects.equals(oldStatus, saved.getStatus())
-                    || !java.util.Objects.equals(oldAssignee, saved.getAssigneeId())
-                    || !java.util.Objects.equals(oldPriority, saved.getPriority())
-                    || !java.util.Objects.equals(oldTitle, saved.getTitle())
-                    || !java.util.Objects.equals(oldDueDate, saved.getDueDate())
-                    || !java.util.Objects.equals(oldStoryPoints, saved.getStoryPoints())
-                    || !java.util.Objects.equals(oldDescription, saved.getDescription())
-                    || (updatedItem.getTags() != null && !oldTags.equals(updatedItem.getTags().stream().sorted().toList()));
-            if (changed) {
-                String actorName = userRepository.findById(userId != null ? userId : "").map(User::getFullName).orElse("Someone");
-                String ref = saved.getAutoId() != null ? saved.getAutoId() : saved.getId();
-                watcherService.notifyWatchers(id, actorName + " updated " + ref + " — " + saved.getTitle(), notified);
-            }
-            // Fire event-driven automations after save (non-fatal — failures must not roll back).
-            if (wsId != null) {
-                try {
-                    if (!java.util.Objects.equals(oldStatus, saved.getStatus())) {
-                        automations.evaluateForItem(wsId, AutomationCatalog.TR_STATUS_CHANGED, saved, userId);
-                    }
-                    if (!java.util.Objects.equals(oldAssignee, saved.getAssigneeId())) {
-                        automations.evaluateForItem(wsId, AutomationCatalog.TR_ITEM_ASSIGNED, saved, userId);
-                    }
-                    // ITEM_UPDATED fires for any other field change (title, priority, description, etc.)
-                    if (java.util.Objects.equals(oldStatus, saved.getStatus())
-                            && java.util.Objects.equals(oldAssignee, saved.getAssigneeId())) {
-                        automations.evaluateForItem(wsId, AutomationCatalog.TR_ITEM_UPDATED, saved, userId);
-                    }
-                } catch (Exception ex) {
-                    log.warn("Automation evaluation failed after update of {}: {}", saved.getId(), ex.getMessage());
-                }
-            }
-
-            attachTags(saved);
-            return saved;
-        }).orElseThrow(() -> ApiException.notFound("Work item", id));
+        return commandService.updateWorkItem(id, updatedItem);
     }
 
     @Operation(summary = "Soft-delete work item", description = "Moves the work item to trash (30-day retention). Requires delete_items permission.")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteWorkItem(@PathVariable String id) {
-        String userId = authenticatedUser.id();
-        var opt = repository.findById(id);
-        if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build();
-        var item = opt.get();
-        String wsId = rbac.workspaceForProject(item.getProjectId());
-        if (wsId != null) rbac.require(userId, wsId, "delete_items");
-        // Soft delete — keep for 30 days in trash
-        jdbc.update("UPDATE work_items SET deleted_at = NOW(), deleted_by = ? WHERE id = ?", userId, id);
-        eventService.record(id, "WORK_ITEM_DELETED", userId,
-                "{\"title\":\"" + item.getTitle().replace("\"", "'") + "\"}");
-        return ResponseEntity.<Void>noContent().build();
+        return commandService.deleteWorkItem(id);
     }
 
     @DeleteMapping("/{id}/permanent")
     public ResponseEntity<Void> permanentDelete(@PathVariable String id) {
-        String userId = authenticatedUser.id();
-        var opt = repository.findById(id);
-        if (opt.isEmpty()) return ResponseEntity.<Void>notFound().build();
-        var item = opt.get();
-        // RBAC + tenant scoping (RB-40 §1): a permanent purge is the most destructive op on a work
-        // item and must be gated exactly like the soft delete above. Without this, any authenticated
-        // user could purge any item (and its comments/links/attachments) from any workspace by ID.
-        String wsId = rbac.workspaceForProject(item.getProjectId());
-        if (wsId != null) rbac.require(userId, wsId, "delete_items");
-        jdbc.update("DELETE FROM tags WHERE work_item_id = ?", id);
-        jdbc.update("DELETE FROM comments WHERE work_item_id = ?", id);
-        jdbc.update("DELETE FROM work_item_links WHERE source_id = ? OR target_id = ?", id, id);
-        jdbc.update("DELETE FROM attachments WHERE work_item_id = ?", id);
-        jdbc.update("DELETE FROM starred_items WHERE work_item_id = ?", id);
-        repository.delete(item);
-        return ResponseEntity.<Void>noContent().build();
+        return commandService.permanentDelete(id);
     }
 
     @Operation(summary = "Move work item to a new parent",
@@ -768,31 +226,7 @@ public class WorkItemController {
                    + "Validates that the target parent type is allowed by the hierarchy rules.")
     @PatchMapping("/{id}/parent")
     public WorkItem moveParent(@PathVariable String id, @RequestBody Map<String, String> body) {
-        String userId = authenticatedUser.id();
-        String newParentId = body.get("newParentId");
-        WorkItem item = repository.findById(id)
-            .orElseThrow(() -> ApiException.notFound("Work item", id));
-        String wsId = rbac.workspaceForProject(item.getProjectId());
-        if (wsId != null && !rbac.canEdit(userId, wsId, item.getCreatedBy(), item.getAssigneeId())) {
-            throw ApiException.forbidden("You do not have permission to move this work item.");
-        }
-        if (!DefaultWorkItemTypes.MOVABLE_TYPES.contains(item.getType())) {
-            throw ApiException.badRequest("NOT_MOVABLE",
-                item.getType() + " items cannot be moved to a new parent.");
-        }
-        if (newParentId != null) {
-            validateParentType(newParentId, item.getType());
-        }
-        String oldParentId = item.getParentId();
-        item.setParentId(newParentId);
-        item.setVersion(ConcurrencyGuard.nextVersion(item.getVersion()));
-        WorkItem saved = repository.save(item);
-        syncParentLink(id, newParentId);
-        eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "parentId",
-            oldParentId != null ? oldParentId : "none",
-            newParentId != null ? newParentId : "none");
-        attachTags(saved);
-        return saved;
+        return commandService.moveParent(id, body);
     }
 
     @Operation(summary = "Set or clear the parent (Links hierarchy)",
@@ -800,144 +234,6 @@ public class WorkItemController {
                    + "rules; unlike move, applies to any type. parentId null/blank clears the parent.")
     @PutMapping("/{id}/parent")
     public WorkItem setParent(@PathVariable String id, @RequestBody Map<String, String> body) {
-        String userId = authenticatedUser.id();
-        WorkItem item = repository.findById(id)
-            .orElseThrow(() -> ApiException.notFound("Work item", id));
-        String wsId = rbac.workspaceForProject(item.getProjectId());
-        if (wsId != null && !rbac.canEdit(userId, wsId, item.getCreatedBy(), item.getAssigneeId())) {
-            throw ApiException.forbidden("You do not have permission to edit this work item.");
-        }
-        String newParentId = body.get("parentId");
-        if (newParentId != null && newParentId.isBlank()) newParentId = null;
-        if (id.equals(newParentId)) {
-            throw ApiException.badRequest("INVALID_PARENT", "An item cannot be its own parent.");
-        }
-        if (newParentId != null) validateParentType(newParentId, item.getType());
-        String oldParentId = item.getParentId();
-        item.setParentId(newParentId);
-        item.setVersion(ConcurrencyGuard.nextVersion(item.getVersion()));
-        WorkItem saved = repository.save(item);
-        syncParentLink(id, newParentId);
-        eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "parentId",
-            oldParentId != null ? oldParentId : "none", newParentId != null ? newParentId : "none");
-        attachTags(saved);
-        return saved;
-    }
-
-    /**
-     * Projects hierarchy into the links table: keeps exactly one PARENT link per child
-     * ({@code child → parent}) in sync with {@code work_items.parent_id}. parent_id is the single
-     * write path (board/backlog read it); this mirror lets the Links surface show parent/child
-     * alongside typed links without a second write path (V76).
-     */
-    private void syncParentLink(String childId, String parentId) {
-        jdbc.update("DELETE FROM work_item_links WHERE source_id = ? AND link_type = 'PARENT'", childId);
-        if (parentId != null && !parentId.isBlank()) {
-            jdbc.update("INSERT INTO work_item_links (source_id, target_id, link_type, created_at) "
-                + "VALUES (?, ?, 'PARENT', NOW()) ON CONFLICT (source_id, target_id, link_type) DO NOTHING",
-                childId, parentId);
-        }
-    }
-
-    /** Enforces the parent→child type hierarchy. Throws 422 if the parent type does not allow childType. */
-    private void validateParentType(String parentId, String childType) {
-        List<WorkItem> parents = jdbc.query(
-            "SELECT * FROM work_items WHERE id = ? AND deleted_at IS NULL AND " + MEMBER_PROJECTS,
-            this::mapRow, parentId, authenticatedUser.id());
-        if (parents.isEmpty()) throw ApiException.notFound("Parent work item", parentId);
-        String parentType = parents.get(0).getType();
-        Set<String> allowed = DefaultWorkItemTypes.VALID_CHILDREN.getOrDefault(parentType, Set.of());
-        if (!allowed.contains(childType)) {
-            throw ApiException.badRequest("INVALID_PARENT_TYPE",
-                "A " + childType + " cannot be a child of " + parentType + ". "
-                + "Allowed children: " + allowed);
-        }
-    }
-
-    /** Returns the appropriate default status for a work-item type. */
-    private String defaultStatusFor(String typeKey) {
-        if (typeKey == null) return "Todo";
-        return switch (typeKey.toUpperCase()) {
-            case "RISK"                           -> "Open";
-            case "ISSUE"                          -> "Open";
-            case "ASSUMPTION"                     -> "Active";
-            case "DEPENDENCY"                     -> "Pending";
-            case "INCIDENT"                       -> "New";
-            case "HR_SERVICE_REQUEST",
-                 "IT_SERVICE_REQUEST"             -> "Draft";
-            default                               -> "Todo";
-        };
-    }
-
-    private void attachStarred(List<WorkItem> items, String userId) {
-        if (items.isEmpty()) return;
-        List<String> starredIds = jdbc.queryForList(
-            "SELECT work_item_id FROM starred_items WHERE user_id = ?", String.class, userId);
-        java.util.Set<String> starredSet = new java.util.HashSet<>(starredIds);
-        items.forEach(i -> i.setStarred(starredSet.contains(i.getId())));
-    }
-
-    private void attachTags(WorkItem item) {
-        List<String> tags = jdbc.queryForList(
-                "SELECT tag FROM tags WHERE work_item_id = ? ORDER BY id", String.class, item.getId());
-        item.setTags(tags);
-    }
-
-    /**
-     * Batch-load tags for a list of work items in ONE query, avoiding the N+1
-     * pattern of calling attachTags() per item (e.g. 351 items -> 351 queries).
-     */
-    private void attachTagsBatch(List<WorkItem> items) {
-        if (items.isEmpty()) return;
-        List<String> ids = items.stream().map(WorkItem::getId).toList();
-        String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
-        java.util.Map<String, List<String>> tagsByItem = new java.util.HashMap<>();
-        jdbc.query(
-            "SELECT work_item_id, tag FROM tags WHERE work_item_id IN (" + placeholders + ") ORDER BY id",
-            (org.springframework.jdbc.core.RowCallbackHandler) rs ->
-                tagsByItem.computeIfAbsent(rs.getString("work_item_id"), k -> new java.util.ArrayList<>())
-                          .add(rs.getString("tag")),
-            ids.toArray());
-        items.forEach(i -> i.setTags(tagsByItem.getOrDefault(i.getId(), new java.util.ArrayList<>())));
-    }
-
-    /**
-     * Attach unified custom-field values (field_def → value) to a list of items in one query, so
-     * cards can show custom fields without an N+1. Mirrors {@link #attachTagsBatch}. The value is the
-     * first non-null of text / number / json, as a display string.
-     */
-    private void attachFieldValuesBatch(List<WorkItem> items) {
-        if (items.isEmpty()) return;
-        List<String> ids = items.stream().map(WorkItem::getId).toList();
-        String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
-        java.util.Map<String, java.util.Map<String, Object>> byItem = new java.util.HashMap<>();
-        jdbc.query(
-            "SELECT work_item_id, field_def_id, value_text, value_number, value_json #>> '{}' AS value_json_text "
-            + "FROM work_item_field_value WHERE work_item_id IN (" + placeholders + ")",
-            (org.springframework.jdbc.core.RowCallbackHandler) rs -> {
-                Object v = rs.getString("value_text");
-                if (v == null) {
-                    Object n = rs.getObject("value_number");
-                    v = n != null ? n.toString() : null;
-                }
-                if (v == null) v = rs.getString("value_json_text");
-                byItem.computeIfAbsent(rs.getString("work_item_id"), k -> new java.util.HashMap<>())
-                      .put(rs.getString("field_def_id"), v);
-            },
-            ids.toArray());
-        items.forEach(i -> i.setFieldValues(byItem.getOrDefault(i.getId(), new java.util.HashMap<>())));
-    }
-
-    private void saveTags(String workItemId, List<String> tags) {
-        for (String tag : tags) {
-            if (tag != null && !tag.isBlank()) {
-                jdbc.update("INSERT INTO tags (work_item_id, tag) VALUES (?, ?)", workItemId, tag.trim());
-            }
-        }
-    }
-
-    private void createNotification(String userId, String type, String message, String link) {
-        // Use batch service — suppresses duplicate notifications within 5-minute window
-        batchService.createIfNotBatched(userId, type, message, link);
+        return commandService.setParent(id, body);
     }
 }

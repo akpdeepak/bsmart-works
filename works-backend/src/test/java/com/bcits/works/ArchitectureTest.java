@@ -7,6 +7,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
@@ -27,6 +32,23 @@ import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.sli
 @Tag("unit")
 class ArchitectureTest {
 
+    private static final Path MODULE_ROOT = Path.of("src/main/java/com/bcits/works");
+    private static final List<String> MODULE_PACKAGES = List.of(
+            "auth",
+            "workspace",
+            "workitem",
+            "project",
+            "messaging",
+            "devsync",
+            "ai",
+            "knowledge",
+            "service",
+            "sla",
+            "reporting",
+            "automation",
+            "security",
+            "shared");
+
     private static JavaClasses appClasses;
 
     @BeforeAll
@@ -34,6 +56,16 @@ class ArchitectureTest {
         appClasses = new ClassFileImporter()
                 .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
                 .importPackages("com.bcits.works");
+    }
+
+    @Test
+    void canonicalModulePackageMarkersExist() {
+        List<String> missing = MODULE_PACKAGES.stream()
+                .filter(module -> !Files.exists(MODULE_ROOT.resolve(module).resolve("package-info.java")))
+                .toList();
+        assertThat(missing)
+                .as("every roadmap module must have a package marker before code moves into it")
+                .isEmpty();
     }
 
     @Test

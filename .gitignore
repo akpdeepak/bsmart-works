@@ -9,6 +9,8 @@ works-backend/target/
 .vscode/
 .husky/_/
 *.log
+*.zip
+.runtime-logs/
 
 # Environment variable files — never commit real secrets
 # .env.example files ARE committed — they document variable shape without real values

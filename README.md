@@ -10,7 +10,7 @@ bSmart Works is a full-stack, multi-tenant project management platform covering 
 
 | Layer | Choice |
 |-------|--------|
-| Backend | Java 21 · Spring Boot 4.0.x · Maven |
+| Backend | Java 21 · Spring Boot 4.1.0 · Maven |
 | Database | PostgreSQL · Flyway migrations · event-sourced (`events` table) |
 | Auth | Spring Security · JWT (stateless) · MFA TOTP · WebAuthn/passkeys |
 | Frontend | React 19.2 · Vite 8 · JavaScript/JSX · Tailwind CSS |
@@ -50,6 +50,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development workflow.
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, daily loop, branching, pre-commit, PR checklist |
 | [DEPLOY-LOCAL.md](DEPLOY-LOCAL.md) | Docker Compose full-stack deployment |
 | [TECH-DEBT.md](TECH-DEBT.md) | Known deliberate shortcuts + payoff triggers |
+| [CURRENT-STATE.md](CURRENT-STATE.md) | Current implementation inventory and roadmap baseline |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [SECURITY.md](SECURITY.md) | Vulnerability disclosure + security posture |
 | [ACCESSIBILITY.md](ACCESSIBILITY.md) | WCAG 2.2 AA conformance |
@@ -75,6 +76,6 @@ node scripts/generate-ai-rules.mjs
 ## Project status
 
 - **Iterations complete:** 1–20 (all 20 iterations shipped)
-- **Flyway high-water:** V65 (next: V66)
-- **Active work:** spec refactor pass + App.jsx decomposition ([TECH-DEBT.md TD-003](TECH-DEBT.md))
+- **Flyway high-water:** V109 (next: V110)
+- **Active work:** bSmart Transformation Roadmap V.20 / V1.6 overlay, beginning with EPIC 0 safety and truth baseline
 - **Owner:** Deepak Pandey / BCITS

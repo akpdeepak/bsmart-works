@@ -161,12 +161,12 @@ public class SecurityConfig {
                 String userId = null;
 
                 // The browser EventSource API (real-time SSE, iteration 18) cannot set an
-                // Authorization header, so for those streaming requests we also accept the JWT as an
-                // access_token query param. The token is still validated exactly the same way.
+                // Authorization header, so for the realtime stream only we also accept the JWT as an
+                // access_token query param. Do not accept query-param JWTs on normal API paths.
                 String token = null;
                 if (authHeader != null && authHeader.startsWith("Bearer ")) {
                     token = authHeader.substring(7);
-                } else {
+                } else if (isRealtimeStreamRequest(request)) {
                     String paramToken = request.getParameter("access_token");
                     if (paramToken != null && !paramToken.isBlank()) {
                         token = paramToken;
@@ -193,5 +193,9 @@ public class SecurityConfig {
                 filterChain.doFilter(request, response);
             }
         };
+    }
+
+    static boolean isRealtimeStreamRequest(HttpServletRequest request) {
+        return "/api/v1/realtime/stream".equals(request.getRequestURI());
     }
 }

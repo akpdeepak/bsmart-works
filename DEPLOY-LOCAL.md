@@ -60,7 +60,7 @@ compose file points the app at the sibling containers:
 
 ## Notes
 
-- **Database schema** is built by Flyway on first boot (V1…V65). `ddl-auto=validate`
+- **Database schema** is built by Flyway on first boot (currently V1…V109). `ddl-auto=validate`
   means the JPA entities are checked against the migrated schema at startup — a
   mismatch fails the boot loudly, which is what you want.
 - **ClamAV virus scanning** is disabled here because the app's default points at a

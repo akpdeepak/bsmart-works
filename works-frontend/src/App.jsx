@@ -1924,17 +1924,17 @@ export default function App() {
   // ── Iteration 3 completions ──────────────────────────────────────────────────
 
   function fetchFieldValues(workItemId) {
-    api.raw(`/work-items/${workItemId}/field-values`)
+    api.raw(`/field-defs/values/${workItemId}`)
       .then(r => r.json()).then(d => {
         const map = {};
-        (Array.isArray(d) ? d : []).forEach(fv => { map[fv.fieldDefId] = fv.value; });
+        (Array.isArray(d) ? d : []).forEach(fv => { map[fv.fieldDefId] = fv.valueText ?? fv.valueNumber ?? fv.valueJson ?? ''; });
         setFieldValues(map);
       }).catch(reportError);
   }
 
   function saveFieldValue(workItemId, fieldDefId, value) {
-    api.send(`/work-items/${workItemId}/field-values`, {
-      method: 'POST', body: JSON.stringify({ fieldDefId, value })
+    api.send(`/field-defs/values/${workItemId}/${fieldDefId}`, {
+      method: 'PUT', body: JSON.stringify({ valueText: value })
     }).catch(reportError);
   }
 
@@ -1943,12 +1943,20 @@ export default function App() {
   }
 
   function fetchFieldVisibility() {
-    api.raw(`/field-visibility`).then(r => r.json()).then(d => setFieldVisibility(Array.isArray(d) ? d : [])).catch(reportError);
+    Promise.all((fieldDefs || []).map(fd =>
+      api.raw(`/permission-schemes/field-visibility/${fd.id}`)
+        .then(r => r.json())
+        .then(rows => (Array.isArray(rows) ? rows : []).map(row => ({ ...row, roleId: row.roleId || row.roleDefId })))
+    ))
+      .then(groups => setFieldVisibility(groups.flat()))
+      .catch(reportError);
   }
 
   function saveFieldVisibility() {
     if (!newFieldVisForm.fieldDefId || !newFieldVisForm.roleId) { showToast('Select field and role', 'error'); return; }
-    api.send(`/field-visibility`, { method: 'POST', body: JSON.stringify(newFieldVisForm) })
+    api.send(`/permission-schemes/field-visibility/${newFieldVisForm.fieldDefId}/${newFieldVisForm.roleId}`, {
+      method: 'PUT', body: JSON.stringify({ visibility: newFieldVisForm.visibility })
+    })
       .then(() => { showToast('Visibility saved'); fetchFieldVisibility(); setNewFieldVisForm({ fieldDefId: '', roleId: '', visibility: 'EDITABLE' }); })
       .catch(() => showToast('Failed to save visibility', 'error'));
   }

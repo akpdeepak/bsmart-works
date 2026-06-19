@@ -195,4 +195,9 @@ public class PermissionSchemeController {
         fv.setVisibility(body.getOrDefault("visibility", "EDITABLE"));
         return fieldVisRepo.save(fv);
     }
+
+    @DeleteMapping("/field-visibility/rules/{id}")
+    public void deleteFieldVisibility(@PathVariable String id) {
+        fieldVisRepo.deleteById(id);
+    }
 }

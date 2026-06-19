@@ -55,6 +55,16 @@ jobs:
       - name: Run guardrails
         run: bash scripts/guardrails.sh
 
+  quality-gates:
+    name: Quality gates (API, a11y, AI fallback)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Run roadmap quality gates
+        run: node scripts/quality-gates.mjs
+
   deploy-compose-smoke:
     name: Deployment smoke (compose config)
     runs-on: ubuntu-latest

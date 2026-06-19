@@ -240,6 +240,7 @@ public class WorkItemController {
     @PostMapping("/{id}/star")
     public Map<String, Object> starItem(@PathVariable String id) {
         String userId = authenticatedUser.id();
+        requireItemViewAccess(userId, id);
         jdbc.update("INSERT INTO starred_items (user_id, work_item_id) VALUES (?,?) ON CONFLICT DO NOTHING", userId, id);
         return Map.of("starred", true, "itemId", id);
     }
@@ -247,6 +248,7 @@ public class WorkItemController {
     @DeleteMapping("/{id}/star")
     public Map<String, Object> unstarItem(@PathVariable String id) {
         String userId = authenticatedUser.id();
+        requireItemViewAccess(userId, id);
         jdbc.update("DELETE FROM starred_items WHERE user_id = ? AND work_item_id = ?", userId, id);
         return Map.of("starred", false, "itemId", id);
     }
@@ -259,8 +261,9 @@ public class WorkItemController {
         int offset = Math.max(page, 0) * limit;
         List<WorkItem> items = jdbc.query(
             "SELECT wi.* FROM work_items wi JOIN starred_items si ON si.work_item_id = wi.id "
-            + "WHERE si.user_id = ? AND wi.deleted_at IS NULL ORDER BY si.created_at DESC LIMIT ? OFFSET ?",
-            this::mapRow, userId, limit, offset);
+            + "WHERE si.user_id = ? AND wi.deleted_at IS NULL AND wi." + MEMBER_PROJECTS
+            + " ORDER BY si.created_at DESC LIMIT ? OFFSET ?",
+            this::mapRow, userId, userId, limit, offset);
         attachTagsBatch(items);
         attachFieldValuesBatch(items);
         items.forEach(i -> i.setStarred(true));

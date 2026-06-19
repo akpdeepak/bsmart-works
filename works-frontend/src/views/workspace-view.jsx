@@ -8,6 +8,7 @@ import { RoleBadge } from '@/components/works/role-badge';
 // Workspace Settings view — workspace-scoped admin surface (tier ADMIN+). Personal settings
 // (MFA, notifications, language) live in AccountView which all members can reach.
 export default function WorkspaceView({
+  activeWorkspaceId,
   workspaceMembers, currentUser, userRole, inviteEmail, inviteMsg, brandingColor, brandingDesc,
   projects, selectedProjectId, projectMembers, projectMemberEmail, projectMemberMsg,
   setInviteEmail, setBrandingColor, setBrandingDesc, setProjectMemberEmail,
@@ -85,7 +86,7 @@ export default function WorkspaceView({
                               onChange={e => {
                                 api.raw(`/rbac/members/${m.id}/role`, {
                                   method: 'PUT',
-                                  body: JSON.stringify({ roleId: e.target.value })
+                                  body: JSON.stringify({ roleId: e.target.value, workspaceId: activeWorkspaceId })
                                 }).then(r => r.json()).then(d => showToast(d.message || 'Role updated'))
                                   .catch(err => showToast(err.message, 'error'));
                               }}

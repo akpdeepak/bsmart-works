@@ -10,6 +10,7 @@ import java.security.MessageDigest;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -34,7 +35,8 @@ class ScimControllerAccessTest {
     private final UserRepository users = mock(UserRepository.class);
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
     private final EventService events = mock(EventService.class);
-    private final ScimController controller = new ScimController(scimTokens, users, jdbc, events);
+    private final RbacService rbac = mock(RbacService.class);
+    private final ScimController controller = new ScimController(scimTokens, users, jdbc, events, rbac);
 
     // ── auth gate ─────────────────────────────────────────────────────────────
 
@@ -94,6 +96,59 @@ class ScimControllerAccessTest {
         assertThatThrownBy(() -> controller.updateUser(req, "USR-B1", Map.of("displayName", "Hacker")))
             .isInstanceOf(ApiException.class);
         verify(users, never()).save(any());
+    }
+
+    // ── token issuance ───────────────────────────────────────────────────────
+
+    @Test
+    void issueToken_rejectsRequestWithoutAuthenticatedJwtUser() {
+        HttpServletRequest req = mock(HttpServletRequest.class);
+
+        var response = controller.issueToken(WS_A, Map.of("label", "Okta"), req);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(401);
+        verify(scimTokens, never()).save(any());
+    }
+
+    @Test
+    void issueToken_requiresSecurityOrIntegrationPermission() {
+        HttpServletRequest req = mock(HttpServletRequest.class);
+        when(req.getAttribute("authenticatedUserId")).thenReturn("USR-1");
+        when(rbac.canDo("USR-1", WS_A, "manage_security")).thenReturn(false);
+        when(rbac.canDo("USR-1", WS_A, "manage_integrations")).thenReturn(false);
+
+        assertThatThrownBy(() -> controller.issueToken(WS_A, Map.of("label", "Okta"), req))
+            .isInstanceOf(ApiException.class);
+
+        verify(scimTokens, never()).save(any());
+        verify(events, never()).recordInWorkspace(anyString(), anyString(), anyString(), anyString(), any());
+    }
+
+    @Test
+    void issueToken_allowsManageSecurity() {
+        HttpServletRequest req = mock(HttpServletRequest.class);
+        when(req.getAttribute("authenticatedUserId")).thenReturn("USR-1");
+        when(rbac.canDo("USR-1", WS_A, "manage_security")).thenReturn(true);
+
+        var response = controller.issueToken(WS_A, Map.of("label", "Okta"), req);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(201);
+        verify(scimTokens).save(any(ScimToken.class));
+        verify(events).recordInWorkspace(eq(WS_A), anyString(), eq("SCIM_TOKEN_ISSUED"),
+            eq("USR-1"), any());
+    }
+
+    @Test
+    void issueToken_allowsManageIntegrations() {
+        HttpServletRequest req = mock(HttpServletRequest.class);
+        when(req.getAttribute("authenticatedUserId")).thenReturn("USR-1");
+        when(rbac.canDo("USR-1", WS_A, "manage_security")).thenReturn(false);
+        when(rbac.canDo("USR-1", WS_A, "manage_integrations")).thenReturn(true);
+
+        var response = controller.issueToken(WS_A, Map.of("label", "Okta"), req);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(201);
+        verify(scimTokens).save(any(ScimToken.class));
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────

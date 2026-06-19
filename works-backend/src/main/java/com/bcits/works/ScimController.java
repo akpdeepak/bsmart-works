@@ -47,13 +47,15 @@ public class ScimController {
     private final UserRepository users;
     private final JdbcTemplate jdbc;
     private final EventService eventService;
+    private final RbacService rbac;
 
     public ScimController(ScimTokenRepository scimTokens, UserRepository users,
-                          JdbcTemplate jdbc, EventService eventService) {
+                          JdbcTemplate jdbc, EventService eventService, RbacService rbac) {
         this.scimTokens = scimTokens;
         this.users = users;
         this.jdbc = jdbc;
         this.eventService = eventService;
+        this.rbac = rbac;
     }
 
     // ── Users ──────────────────────────────────────────────────────────────────────
@@ -177,6 +179,10 @@ public class ScimController {
         String callerId = (String) req.getAttribute("authenticatedUserId");
         if (callerId == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Authentication required"));
+        }
+        if (!rbac.canDo(callerId, workspaceId, "manage_security")
+                && !rbac.canDo(callerId, workspaceId, "manage_integrations")) {
+            throw ApiException.forbidden("You do not have permission to issue SCIM tokens.");
         }
         String rawToken = UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
         String hash = sha256(rawToken);

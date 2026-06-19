@@ -779,7 +779,7 @@ export default function App() {
   };
 
   function fetchUserRole() {
-    api.raw(`/rbac/me`)
+    api.raw(`/rbac/me?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
       .then(r => r.json()).then(d => setUserRole({
         role: d.role || 'MEMBER',
         tier: d.tier || 2,
@@ -2176,9 +2176,8 @@ export default function App() {
     fetchTodayLayout(role); // load the role's effective Today layout alongside its data
     if (!widgetMetrics.length) fetchWidgetMetrics(); // metric catalogue (once)
     const wsId = activeWorkspaceId;
-    const uid = currentUser?.id;
     let url;
-    if (role === 'developer') url = `/dashboards/developer?userId=${uid}`;
+    if (role === 'developer') url = `/dashboards/developer`;
     else if (role === 'scrum-master') url = `/dashboards/scrum-master?workspaceId=${wsId}`;
     else if (role === 'product-owner') url = `/dashboards/product-owner?workspaceId=${wsId}`;
     else if (role === 'executive') url = `/dashboards/executive?workspaceId=${wsId}`;
@@ -3669,6 +3668,7 @@ export default function App() {
           {/* WORKSPACE SETTINGS — tier ADMIN+ */}
           {view === 'workspace' && (
             <WorkspaceView
+              activeWorkspaceId={activeWorkspaceId}
               workspaceMembers={workspaceMembers}
               currentUser={currentUser}
               userRole={userRole}

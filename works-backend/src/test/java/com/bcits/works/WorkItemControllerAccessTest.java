@@ -196,6 +196,42 @@ class WorkItemControllerAccessTest {
         verify(repository).delete(own);
     }
 
+    // ── stars ────────────────────────────────────────────────────────────────
+
+    @Test
+    void starItem_deniedForCallerOutsideTheResourceWorkspace() {
+        when(rbac.workspaceForWorkItem("WRK-1")).thenReturn(FOREIGN_WS);
+        when(rbac.getUserTier(CALLER, FOREIGN_WS)).thenReturn(0);
+
+        assertThatThrownBy(() -> controller.starItem("WRK-1"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+
+        verify(jdbc, never()).update(anyString(), any(), any());
+    }
+
+    @Test
+    void unstarItem_deniedForCallerOutsideTheResourceWorkspace() {
+        when(rbac.workspaceForWorkItem("WRK-1")).thenReturn(FOREIGN_WS);
+        when(rbac.getUserTier(CALLER, FOREIGN_WS)).thenReturn(0);
+
+        assertThatThrownBy(() -> controller.unstarItem("WRK-1"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+
+        verify(jdbc, never()).update(anyString(), any(), any());
+    }
+
+    @Test
+    void starItem_allowedForCallerInsideTheResourceWorkspace() {
+        when(rbac.workspaceForWorkItem("WRK-2")).thenReturn("ws-A");
+        when(rbac.getUserTier(CALLER, "ws-A")).thenReturn(1);
+
+        assertThat(controller.starItem("WRK-2")).containsEntry("starred", true);
+
+        verify(jdbc).update(anyString(), eq(CALLER), eq("WRK-2"));
+    }
+
     // RbacService.require() throws 403 when the caller lacks the permission in that workspace.
     private void doThrowForbiddenOnRequire(String workspaceId, String permission) {
         org.mockito.Mockito.doThrow(ApiException.forbidden("denied"))

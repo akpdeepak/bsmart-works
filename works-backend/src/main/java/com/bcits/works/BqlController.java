@@ -196,14 +196,17 @@ public class BqlController {
 
     /** Resolve + authorize the workspace: an explicit one must be a workspace the user belongs to. */
     private String resolveWorkspace(String userId, String requested) {
-        String own = getWorkspaceForUser(userId);
-        if (requested == null || requested.isBlank()) {
-            return own;
+        if (requested != null && !requested.isBlank()) {
+            if (!rbac.canView(userId, requested)) {
+                throw ApiException.forbidden("You are not a member of this workspace.");
+            }
+            return requested;
         }
-        if (!rbac.canView(userId, requested)) {
+        String defaultWorkspace = getDefaultWorkspaceForUser(userId);
+        if (defaultWorkspace == null) {
             throw ApiException.forbidden("You are not a member of this workspace.");
         }
-        return requested;
+        return defaultWorkspace;
     }
 
     private BqlContext contextFor(String userId, String workspaceId) {
@@ -313,12 +316,13 @@ public class BqlController {
         }
     }
 
-    private String getWorkspaceForUser(String userId) {
+    private String getDefaultWorkspaceForUser(String userId) {
         try {
             return jdbc.queryForObject(
-                "SELECT workspace_id FROM users WHERE id = ?", String.class, userId);
+                "SELECT workspace_id FROM workspace_members WHERE user_id = ? ORDER BY workspace_id LIMIT 1",
+                String.class, userId);
         } catch (Exception e) {
-            return "WS-001";
+            return null;
         }
     }
 }

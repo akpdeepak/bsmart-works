@@ -7,11 +7,11 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 
 ## Current status
 
-- Roadmap mode: V.20 EPIC 8 Smart Inbox in progress
-- Active EPIC: EPIC 8 - Smart Inbox
-- Active branch: `epic/08-smart-inbox`
-- Last completed EPIC: EPIC 7 - bSmart Today
-- Next recommended EPIC: Finish EPIC 8 - Smart Inbox
+- Roadmap mode: V.20 EPIC 9 bSmart Connect Messaging ready to start
+- Active EPIC: EPIC 9 - bSmart Connect Messaging
+- Active branch: `main`
+- Last completed EPIC: EPIC 8 - Smart Inbox
+- Next recommended EPIC: EPIC 9 - bSmart Connect Messaging
 - Last state update: 2026-06-20
 
 ## Trigger contract
@@ -85,7 +85,7 @@ resume point.
 | EPIC 5 - Premium Design System Refresh | Completed | `main` | [#399](https://github.com/akpdeepak/bsmart-works/pull/399) | `cd works-frontend && npm test -- page-layout design-system-tokens`; `cd works-frontend && npm run lint`; `cd works-frontend && npm run build`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-05-premium-design-system-refresh-completion.md` | Adaptive `max-w-workspace` token, page-width guardrail, workspace surface width normalization |
 | EPIC 6 - Simplified Information Architecture and Navigation | Completed | `main` | [#400](https://github.com/akpdeepak/bsmart-works/pull/400) | `cd works-frontend && npm test -- nav-model`; `cd works-frontend && npm run build`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-06-simplified-navigation-completion.md` | Six-mode rail contract, setup/admin More destinations, command-palette reachability |
 | EPIC 7 - bSmart Today | Completed | `main` | [#401](https://github.com/akpdeepak/bsmart-works/pull/401) | `cd works-frontend && npm test -- today-brief dashboard-view`; `npm run verify`; `cd works-frontend && npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-07-bsmart-today-completion.md` | Role-aware daily clarity band, max-five attention model, saved widget layout preserved |
-| EPIC 8 - Smart Inbox | In progress | `epic/08-smart-inbox` | | `cd works-frontend && npm test -- smart-inbox notifications-view` | `docs/implementation/epics/EPIC-08-smart-inbox.md` | Action-first inbox grouping and actionable badge count in progress |
+| EPIC 8 - Smart Inbox | Completed | `main` | [#402](https://github.com/akpdeepak/bsmart-works/pull/402) | `cd works-frontend && npm test -- smart-inbox notifications-view`; `npm run verify`; `cd works-frontend && npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-08-smart-inbox-completion.md` | Action-first inbox grouping, actionable badge count, activity history preserved |
 | EPIC 9 - bSmart Connect Messaging | Not started | | | | | |
 | EPIC 10 - Work Item Experience Redesign | Not started | | | | | |
 | EPIC 11 - Project Command Center | Not started | | | | | |
@@ -222,9 +222,10 @@ gates, gitleaks, bundle budget, deployment smoke, JetBrains plugin build, conven
 AI rules, and DoD version checks. Local `main` and `origin/main` are synced at the merge commit.
 Resume with EPIC 8.
 
-2026-06-20: EPIC 8 is in progress on `epic/08-smart-inbox`. First slice adds a pure Smart Inbox
-classifier, uses actionable notification count for the shell badge, separates Action inbox from
-Activity history, groups actions by approve/reply/review/assign/escalate, and adds direct
-open/snooze/done actions. Focused validation passed: `cd works-frontend && npm test -- smart-inbox
-notifications-view`. Next: run broader frontend/repo validation, open PR, wait for GitHub CI, merge
-to `main`, then mark EPIC 8 completed.
+2026-06-20: EPIC 8 merged to `main` via
+[#402](https://github.com/akpdeepak/bsmart-works/pull/402), squash commit
+`d47fc3c1f1cac1cd1d474d615a4dc3bc9d94a19e`. GitHub CI passed all jobs, including frontend
+lint/build/test, Storybook, Chromatic, backend compile/unit/integration/smoke, guardrails, quality
+gates, gitleaks, bundle budget, deployment smoke, JetBrains plugin build, conventional commits,
+AI rules, and DoD version checks. Local `main` and `origin/main` are synced at the merge commit.
+Resume with EPIC 9.

@@ -23,7 +23,7 @@ const HOME = {
   blockers: [{ id: 'WRK-2', title: 'Board DnD', blockedBy: 'WRK-9', blockerTitle: 'API' }],
   focusBlocks: [{ id: 5, title: 'Deep work', startsAt: '2026-06-05T10:00:00Z', endsAt: '2026-06-05T12:00:00Z', status: 'SCHEDULED', allowP0: true }],
   focusStatus: { inFocus: true, title: 'Deep work', until: '2026-06-05T12:30:00Z', allowP0: true },
-  recentActivity: [{ aggregateId: 'WRK-1', eventType: 'STATUS_CHANGED' }],
+  recentActivity: [{ aggregateId: 'WRK-1', eventType: 'CI_FAILED', message: 'WRK-1 CI failed on backend tests' }],
 };
 const VELOCITY = { private: true, assigned: 8, completed: 6, completionRate: 75, avgCycleTimeDays: 2.4, throughputLast14Days: 6 };
 
@@ -44,9 +44,13 @@ describe('DeveloperWorkspace', () => {
 
     render(<DeveloperWorkspace workspaceId="WS-001" />);
 
-    expect(await screen.findByText('Auth refactor')).toBeInTheDocument();
-    expect(screen.getByText(/#101 JWT filter/)).toBeInTheDocument();
+    expect(await screen.findAllByText('Auth refactor')).toHaveLength(2);
+    expect(screen.getAllByText(/#101 JWT filter/)).toHaveLength(2);
     expect(screen.getByText(/blocked by WRK-9/)).toBeInTheDocument();
+    expect(screen.getByText('Engineering activity')).toBeInTheDocument();
+    expect(screen.getByText(/Engineering flow needs attention: 1 CI signal need attention./)).toBeInTheDocument();
+    expect(screen.getByText('Evidence, not ranking')).toBeInTheDocument();
+    expect(screen.getByText(/Sources: Developer Workspace home, 1 review request, 1 raw activity event, 1 active work item, 1 blocker/)).toBeInTheDocument();
     // Personal velocity is shown and flagged private.
     expect(screen.getByText('75%')).toBeInTheDocument();
     expect(screen.getByText('Private · only you')).toBeInTheDocument();

@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/works/button';
 import { devClient, focusUntilLabel } from '@/lib/developer';
 import { PageLayout } from '@/components/works/templates/page-layout';
+import { EngineeringActivityPanel } from './engineering-activity-panel';
 
 function Card({ title, icon, count, children, action }) {
   return (
@@ -167,6 +168,8 @@ export function DeveloperWorkspace({ workspaceId, onOpenItem, onToast }) {
           <Button variant="secondary" size="sm" leftIcon={<RefreshCw className="h-4 w-4" />} onClick={refresh}>Refresh</Button>
         </div>
       </div>
+
+      <EngineeringActivityPanel home={home} onOpenItem={onOpenItem} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Today's work */}

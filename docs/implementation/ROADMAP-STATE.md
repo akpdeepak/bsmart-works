@@ -7,9 +7,9 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 
 ## Current status
 
-- Roadmap mode: V.20 EPIC 6 simplified information architecture and navigation ready to start
+- Roadmap mode: V.20 EPIC 6 simplified information architecture and navigation in progress
 - Active EPIC: EPIC 6 - Simplified Information Architecture and Navigation
-- Active branch: `main`
+- Active branch: `epic/06-simplified-navigation`
 - Last completed EPIC: EPIC 5 - Premium Design System Refresh
 - Next recommended EPIC: EPIC 6 - Simplified Information Architecture and Navigation
 - Last state update: 2026-06-20
@@ -83,7 +83,7 @@ resume point.
 | EPIC 3 - Backend Modularization and Service Boundaries | Completed | `main` | [#397](https://github.com/akpdeepak/bsmart-works/pull/397) | Focused backend tests; `cd works-backend && .\mvnw.cmd -Dgroups=unit verify`; `npm run quality-gates`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-03-backend-modularization-completion.md` | WorkItem controller/service split, dashboard facade/query service, AI command/summarization split, module marker gate |
 | EPIC 4 - Frontend Architecture Refactor | Completed | `main` | [#398](https://github.com/akpdeepak/bsmart-works/pull/398) | `cd works-frontend && npm test -- app-architecture`; `cd works-frontend && npm run build`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-04-frontend-architecture-refactor-completion.md` | Thin `App.jsx` entrypoint, `src/app/AppShell.jsx` boundary, architecture guard |
 | EPIC 5 - Premium Design System Refresh | Completed | `main` | [#399](https://github.com/akpdeepak/bsmart-works/pull/399) | `cd works-frontend && npm test -- page-layout design-system-tokens`; `cd works-frontend && npm run lint`; `cd works-frontend && npm run build`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-05-premium-design-system-refresh-completion.md` | Adaptive `max-w-workspace` token, page-width guardrail, workspace surface width normalization |
-| EPIC 6 - Simplified Information Architecture and Navigation | Not started | | | | | |
+| EPIC 6 - Simplified Information Architecture and Navigation | In progress | `epic/06-simplified-navigation` | | `cd works-frontend && npm test -- nav-model`; `cd works-frontend && npm run build`; `npm run verify` | `docs/implementation/epics/EPIC-06-simplified-navigation-completion.md` | Six-mode rail contract, setup/admin More destinations, command-palette reachability |
 | EPIC 7 - bSmart Today | Not started | | | | | |
 | EPIC 8 - Smart Inbox | Not started | | | | | |
 | EPIC 9 - bSmart Connect Messaging | Not started | | | | | |
@@ -200,3 +200,9 @@ design-system-tokens`; `cd works-frontend && npm run lint`; `cd works-frontend &
 lint/build/test, Storybook, Chromatic, backend compile/unit/integration/smoke, guardrails, quality
 gates, gitleaks, bundle budget, deployment smoke, and JetBrains plugin build. Local `main` and
 `origin/main` are synced at the merge commit. Resume with EPIC 6.
+
+2026-06-20: EPIC 6 is in progress on `epic/06-simplified-navigation`. First slice preserves the
+requested rail modes, Home, Deliver, Insight, Service, Know, Extend, moves setup/admin surfaces into
+More/command-palette reachability, and adds nav-model tests for the six-mode contract. Validation
+target: `cd works-frontend && npm test -- nav-model`; `cd works-frontend && npm run build`;
+`npm run verify`.

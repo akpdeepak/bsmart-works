@@ -70,8 +70,9 @@ export function allowed(view, vis) {
 }
 
 // ─── Modes & their surfaces ─────────────────────────────────────────────────────
-// Order matches the mockup rail top-to-bottom. The last mode ("Set up") is pinned to the
-// bottom of the rail by the ModeRail component.
+// Order matches the requested rail top-to-bottom: Home, Deliver, Insight, Service, Know, Extend.
+// Setup/admin destinations stay out of the rail and remain reachable through More / command
+// palette so the primary mode model does not grow a seventh top-level bucket.
 
 // Each mode + surface also carries an i18n `labelKey` (issue 275). `label` remains the English
 // fallback / canonical orientation string; user-facing renders prefer `t(labelKey)` (see
@@ -114,14 +115,15 @@ export const MODES = [
     { id: 'marketplace',     label: 'Marketplace',      labelKey: 'nav.marketplace',     Icon: Package },
     { id: 'developerportal', label: 'Developer Portal', labelKey: 'nav.developerPortal', Icon: Code2 },
   ] },
-  { id: 'setup', label: 'Setup', labelKey: 'nav.mode.setup', Icon: Settings, surfaces: [
-    { id: 'workspace',     label: 'Settings',           labelKey: 'nav.settings',        Icon: Settings },
-    { id: 'settings3',     label: 'Workflows & Fields', labelKey: 'nav.workflowsFields', Icon: SlidersHorizontal },
-    { id: 'aicontrol',     label: 'AI Control',         labelKey: 'nav.aiControl',       Icon: Sparkles },
-    { id: 'customization', label: 'Customization',      labelKey: 'nav.customization',   Icon: Puzzle },
-    { id: 'security',      label: 'Security',           labelKey: 'nav.security',        Icon: Shield },
-    { id: 'trash',         label: 'Trash',              labelKey: 'nav.trash',           Icon: Trash2 },
-  ] },
+];
+
+export const SETUP_DESTINATIONS = [
+  { id: 'workspace',     label: 'Settings',           labelKey: 'nav.settings',        Icon: Settings },
+  { id: 'settings3',     label: 'Workflows & Fields', labelKey: 'nav.workflowsFields', Icon: SlidersHorizontal },
+  { id: 'aicontrol',     label: 'AI Control',         labelKey: 'nav.aiControl',       Icon: Sparkles },
+  { id: 'customization', label: 'Customization',      labelKey: 'nav.customization',   Icon: Puzzle },
+  { id: 'security',      label: 'Security',           labelKey: 'nav.security',        Icon: Shield },
+  { id: 'trash',         label: 'Trash',              labelKey: 'nav.trash',           Icon: Trash2 },
 ];
 
 // Satellite destinations — reachable via a lens / the BQL chip / ⌘K, but not pinned to a sub-rail.
@@ -141,6 +143,7 @@ export const SATELLITES = [
 export function navDestinations() {
   const out = [];
   for (const m of MODES) for (const s of m.surfaces) out.push({ ...s, group: m.label, groupKey: m.labelKey });
+  for (const s of SETUP_DESTINATIONS) out.push({ ...s, group: 'More', groupKey: 'nav.more' });
   for (const s of SATELLITES) out.push({ ...s, group: 'More', groupKey: 'nav.more' });
   return out;
 }
@@ -211,8 +214,14 @@ const SATELLITE_MODE = {
   smcockpit: 'deliver',
   poworkspace: 'deliver',
   leadership: 'insight',
-  adminops: 'setup',
+  adminops: 'extend',
   bql: 'insight',
+  workspace: 'extend',
+  settings3: 'extend',
+  aicontrol: 'extend',
+  customization: 'extend',
+  security: 'extend',
+  trash: 'extend',
 };
 
 // view id -> owning mode id. Falls back to the first mode so the rail always has a highlight.
@@ -255,8 +264,8 @@ export function labelForView(view) {
     const s = m.surfaces.find((x) => x.id === view);
     if (s) return s.label;
   }
-  const sat = SATELLITES.find((x) => x.id === view);
-  if (sat) return sat.label;
+  const more = [...SETUP_DESTINATIONS, ...SATELLITES].find((x) => x.id === view);
+  if (more) return more.label;
   const l = LENSES.find((x) => x.view === view);
   return l ? l.label : view;
 }

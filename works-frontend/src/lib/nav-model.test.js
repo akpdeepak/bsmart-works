@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  TIER, MODES, LENSES,
+  TIER, MODES, LENSES, SETUP_DESTINATIONS,
   tierForSurface, canSeeSurface, allowed, navDestinations, visibleModes, visibleSurfaces,
   firstSurfaceOf, modeForView, labelForView, isPrimaryForRole, primarySurfacesFor,
 } from './nav-model';
@@ -20,7 +20,12 @@ describe('nav-model — tier-based visibility', () => {
     expect(canSeeSurface('security', TIER.OWNER)).toBe(true);
   });
 
-  it('hides admin/governance modes from a plain Member', () => {
+  it('keeps the rail to the six approved product modes', () => {
+    expect(MODES.map((m) => m.label)).toEqual(['Home', 'Deliver', 'Insight', 'Service', 'Know', 'Extend']);
+    expect(MODES.map((m) => m.id)).toEqual(['today', 'deliver', 'insight', 'service', 'know', 'extend']);
+  });
+
+  it('does not expose setup as a rail mode for a plain Member', () => {
     const modeIds = visibleModes(TIER.MEMBER).map((m) => m.id);
     expect(modeIds).toContain('today');
     expect(modeIds).toContain('deliver');
@@ -35,10 +40,9 @@ describe('nav-model — tier-based visibility', () => {
     expect(canSeeSurface('workspace', TIER.VIEWER)).toBe(false); // ADMIN+
   });
 
-  it('firstSurfaceOf returns the first surface the tier may actually see', () => {
-    // Set up's first surface is Settings (ADMIN); a LEAD only sees Trash within it.
-    expect(firstSurfaceOf('setup', TIER.ADMIN)).toBe('workspace');
-    expect(firstSurfaceOf('setup', TIER.LEAD)).toBe('trash');
+  it('firstSurfaceOf returns the first visible surface within a rail mode', () => {
+    expect(firstSurfaceOf('extend', TIER.ADMIN)).toBe('automations');
+    expect(firstSurfaceOf('deliver', TIER.VIEWER)).toBe('board');
   });
 
   it('higher tiers are a superset of lower tiers', () => {
@@ -73,9 +77,18 @@ describe('nav-model — visibility resolver + palette', () => {
     const dests = navDestinations();
     const ids = dests.map((d) => d.id);
     for (const m of MODES) for (const s of m.surfaces) expect(ids).toContain(s.id);
+    for (const s of SETUP_DESTINATIONS) expect(ids).toContain(s.id);
     expect(ids).toContain('adminops'); // a satellite
     expect(ids).toContain('bql');
     expect(dests.every((d) => typeof d.Icon === 'function' || typeof d.Icon === 'object')).toBe(true);
+  });
+
+  it('groups setup destinations under More instead of the rail', () => {
+    const setupIds = SETUP_DESTINATIONS.map((s) => s.id);
+    const dests = navDestinations().filter((d) => setupIds.includes(d.id));
+
+    expect(dests).toHaveLength(SETUP_DESTINATIONS.length);
+    expect(dests.every((d) => d.group === 'More' && d.groupKey === 'nav.more')).toBe(true);
   });
 });
 
@@ -84,11 +97,14 @@ describe('nav-model — orientation + role mapping', () => {
     expect(modeForView('leadership')).toBe('insight');
     expect(modeForView('developer')).toBe('today');
     expect(modeForView('bql')).toBe('insight');
+    expect(modeForView('settings3')).toBe('extend');
+    expect(modeForView('adminops')).toBe('extend');
   });
 
   it('labels satellite views for the orientation row', () => {
     expect(labelForView('bql')).toBe('BQL Query');
     expect(labelForView('leadership')).toBe('Leadership');
+    expect(labelForView('settings3')).toBe('Workflows & Fields');
     expect(labelForView('board')).toBe('Board');
   });
 

@@ -7,11 +7,11 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 
 ## Current status
 
-- Roadmap mode: V.20 EPIC 5 premium design system refresh in progress
-- Active EPIC: EPIC 5 - Premium Design System Refresh
-- Active branch: `epic/05-premium-design-system-refresh`
-- Last completed EPIC: EPIC 4 - Frontend Architecture Refactor
-- Next recommended EPIC: EPIC 5 - Premium Design System Refresh
+- Roadmap mode: V.20 EPIC 6 simplified information architecture and navigation ready to start
+- Active EPIC: EPIC 6 - Simplified Information Architecture and Navigation
+- Active branch: `main`
+- Last completed EPIC: EPIC 5 - Premium Design System Refresh
+- Next recommended EPIC: EPIC 6 - Simplified Information Architecture and Navigation
 - Last state update: 2026-06-20
 
 ## Trigger contract
@@ -82,7 +82,7 @@ resume point.
 | EPIC 25 partial - Reliability, Testing, Accessibility, Performance, and Quality Gates | Completed | `main` | [#396](https://github.com/akpdeepak/bsmart-works/pull/396) | `npm run quality-gates`; `cd works-frontend && npm test -- field-settings presence`; `cd works-backend && .\mvnw.cmd -DskipTests "-Djacoco.skip=true" verify`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-25-quality-gates-completion.md` | API contract drift gate, a11y coverage gate, AI fallback telemetry gate, stale route repairs |
 | EPIC 3 - Backend Modularization and Service Boundaries | Completed | `main` | [#397](https://github.com/akpdeepak/bsmart-works/pull/397) | Focused backend tests; `cd works-backend && .\mvnw.cmd -Dgroups=unit verify`; `npm run quality-gates`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-03-backend-modularization-completion.md` | WorkItem controller/service split, dashboard facade/query service, AI command/summarization split, module marker gate |
 | EPIC 4 - Frontend Architecture Refactor | Completed | `main` | [#398](https://github.com/akpdeepak/bsmart-works/pull/398) | `cd works-frontend && npm test -- app-architecture`; `cd works-frontend && npm run build`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-04-frontend-architecture-refactor-completion.md` | Thin `App.jsx` entrypoint, `src/app/AppShell.jsx` boundary, architecture guard |
-| EPIC 5 - Premium Design System Refresh | In progress | `epic/05-premium-design-system-refresh` | | `cd works-frontend && npm test -- page-layout design-system-tokens`; `cd works-frontend && npm run lint`; `cd works-frontend && npm run build`; `npm run verify` | `docs/implementation/epics/EPIC-05-premium-design-system-refresh-completion.md` | Adaptive `max-w-workspace` token, page-width guardrail, workspace surface width normalization |
+| EPIC 5 - Premium Design System Refresh | Completed | `main` | [#399](https://github.com/akpdeepak/bsmart-works/pull/399) | `cd works-frontend && npm test -- page-layout design-system-tokens`; `cd works-frontend && npm run lint`; `cd works-frontend && npm run build`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-05-premium-design-system-refresh-completion.md` | Adaptive `max-w-workspace` token, page-width guardrail, workspace surface width normalization |
 | EPIC 6 - Simplified Information Architecture and Navigation | Not started | | | | | |
 | EPIC 7 - bSmart Today | Not started | | | | | |
 | EPIC 8 - Smart Inbox | Not started | | | | | |
@@ -193,3 +193,10 @@ prose/document surfaces, updates the page-width ESLint guardrail, and applies th
 dashboard-like work surfaces. Validation target: `cd works-frontend && npm test -- page-layout
 design-system-tokens`; `cd works-frontend && npm run lint`; `cd works-frontend && npm run build`;
 `npm run verify`.
+
+2026-06-20: EPIC 5 merged to `main` via
+[#399](https://github.com/akpdeepak/bsmart-works/pull/399), squash commit
+`e2fd708d9e4ab0a0450ef048bc4715a0bf47da8b`. GitHub CI passed all jobs, including frontend
+lint/build/test, Storybook, Chromatic, backend compile/unit/integration/smoke, guardrails, quality
+gates, gitleaks, bundle budget, deployment smoke, and JetBrains plugin build. Local `main` and
+`origin/main` are synced at the merge commit. Resume with EPIC 6.

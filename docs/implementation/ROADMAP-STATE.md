@@ -7,11 +7,11 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 
 ## Current status
 
-- Roadmap mode: V.20 EPIC 11 Project Command Center in progress
-- Active EPIC: EPIC 11 - Project Command Center
-- Active branch: `epic/11-project-command-center`
-- Last completed EPIC: EPIC 10 - Work Item Experience Redesign
-- Next recommended EPIC: Finish EPIC 11 - Project Command Center
+- Roadmap mode: V.20 EPIC 12 DevSync / Engineering Intelligence ready to start
+- Active EPIC: EPIC 12 - DevSync / Engineering Intelligence
+- Active branch: `main`
+- Last completed EPIC: EPIC 11 - Project Command Center
+- Next recommended EPIC: Start EPIC 12 - DevSync / Engineering Intelligence
 - Last state update: 2026-06-20
 
 ## Trigger contract
@@ -88,7 +88,7 @@ resume point.
 | EPIC 8 - Smart Inbox | Completed | `main` | [#402](https://github.com/akpdeepak/bsmart-works/pull/402) | `cd works-frontend && npm test -- smart-inbox notifications-view`; `npm run verify`; `cd works-frontend && npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-08-smart-inbox-completion.md` | Action-first inbox grouping, actionable badge count, activity history preserved |
 | EPIC 9 - bSmart Connect Messaging | Completed | `main` | [#403](https://github.com/akpdeepak/bsmart-works/pull/403) | `cd works-frontend && npm test -- message-actions support-inbox-view`; `cd works-frontend && npm test -- bql-view.a11y`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-09-connect-messaging-completion.md` | Source-cited reviewed message action drafts, support chat workspace/RBAC preserved, BQL loading a11y fix |
 | EPIC 10 - Work Item Experience Redesign | Completed | `main` | [#404](https://github.com/akpdeepak/bsmart-works/pull/404) | `cd works-frontend && npm test -- work-item-execution-brief work-item-detail-panel`; `npm run verify`; `cd works-frontend && npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-10-work-item-experience-completion.md` | Cited execution brief, visible due/visibility/DevSync snapshot, display-key preference |
-| EPIC 11 - Project Command Center | In progress | `epic/11-project-command-center` | | `cd works-frontend && npm test -- project-command-center projects-view` | `docs/implementation/epics/EPIC-11-project-command-center.md` | Explainable project command-center summary in progress |
+| EPIC 11 - Project Command Center | Completed | `main` | [#405](https://github.com/akpdeepak/bsmart-works/pull/405) | `cd works-frontend && npm test -- project-command-center projects-view`; `cd works-frontend && npm test -- bql-view.a11y`; `npm run verify`; `cd works-frontend && npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-11-project-command-center-completion.md` | Explainable project command-center summary, source-cited health, SLA/customer risk, DevSync, project room/customer update affordance, saved views loading a11y fix |
 | EPIC 12 - DevSync / Engineering Intelligence | Not started | | | | | |
 | EPIC 13 - Universal AI Command Layer | Not started | | | | | |
 | EPIC 14 - bSmart Answer Engine | Not started | | | | | |
@@ -266,3 +266,12 @@ SLA/customer risk, decisions, DevSync, project room, customer update draft affor
 actions on team/project cards. Focused validation passed: `cd works-frontend && npm test --
 project-command-center projects-view`. Next: run broader validation, open PR, wait for GitHub CI,
 merge to `main`, then mark EPIC 11 completed.
+
+2026-06-20: EPIC 11 merged to `main` via
+[#405](https://github.com/akpdeepak/bsmart-works/pull/405), squash commit
+`c933036b4c14a0e3f6f32c5eec64e3ab747a4a26`. GitHub CI passed all jobs, including frontend
+lint/build/test, Storybook, Chromatic, backend compile/unit/integration/smoke, guardrails, quality
+gates, gitleaks, bundle budget, deployment smoke, JetBrains plugin build, conventional commits,
+AI rules, and DoD version checks. Local `main` and `origin/main` are synced at the merge commit.
+Closeout validation also covered `cd works-frontend && npm test -- bql-view.a11y`, `npm run verify`,
+and `cd works-frontend && npm run verify`. Resume with EPIC 12.

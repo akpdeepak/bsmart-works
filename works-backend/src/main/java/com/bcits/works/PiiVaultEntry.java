@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * An encrypted PII record (RB-40 §3). Raw personal data (email, phone, name, address) is never
@@ -15,6 +16,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "pii_vault_entries")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class PiiVaultEntry {
 
     @Id

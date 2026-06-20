@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * A KPI metric definition (iteration 12, Cap L). Built-in catalog metrics are seeded from
@@ -15,6 +16,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "metric_definitions")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class MetricDefinition {
 
     @Id

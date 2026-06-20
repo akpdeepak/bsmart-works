@@ -7,10 +7,12 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import org.hibernate.annotations.Filter;
 
 /** KR-034 — article tag/label owned by a workspace. */
 @Entity
 @Table(name = "article_tags")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class ArticleTag {
 
     @Id

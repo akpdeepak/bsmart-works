@@ -6,11 +6,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /** A one-click compliance evidence bundle (SOC 2 Type 2 / ISO 27001) for a reporting period
  *  (iteration 19 Cap T). Status moves BUILDING → READY → DOWNLOADED. Workspace-scoped (RB-40 §1). */
 @Entity
 @Table(name = "compliance_evidence_bundles")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class ComplianceEvidenceBundle {
 
     @Id

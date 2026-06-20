@@ -9,9 +9,10 @@ import org.springframework.stereotype.Component;
 /**
  * Turns the central Hibernate {@code workspaceFilter} on or off on the current Hibernate
  * {@link Session} to match {@link TenantContext} (RB-40 §1: "scoping applied centrally, not re-typed
- * per query"). The filter itself is declared once via {@code @FilterDef}/{@code @Filter} on the
- * workspace-owned entities (see {@link Project}); this component is the single place that decides
- * <i>when</i> it is enabled, so scoping cannot be forgotten on an individual query.
+ * per query"). The canonical {@code @FilterDef} is declared once at package scope (see
+ * {@code package-info.java}); workspace-owned entities then apply it with {@code @Filter} (see
+ * {@link Project}). This component is the single place that decides <i>when</i> it is enabled, so
+ * scoping cannot be forgotten on an individual query.
  *
  * <h2>Semantics (additive, never widening)</h2>
  * When {@link TenantContext#isFilterActive()} is true (a workspace is bound and we are not in the
@@ -47,6 +48,22 @@ public class WorkspaceFilterActivator {
             return;
         }
         apply(session);
+    }
+
+    /**
+     * Force the central filter <b>off</b> on the current Hibernate session, regardless of
+     * {@link TenantContext}. Used by the {@link TenantScope} system escape hatch (which must read
+     * across tenants) and defensively by {@link TenantFilterInterceptor} at request completion.
+     * No-op if there is no active session.
+     */
+    public void disableForCurrentSession() {
+        Session session = currentSessionOrNull();
+        if (session == null) {
+            return;
+        }
+        if (session.getEnabledFilter(FILTER_NAME) != null) {
+            session.disableFilter(FILTER_NAME);
+        }
     }
 
     /** Apply the {@link TenantContext} decision to a specific session. Visible for testing. */

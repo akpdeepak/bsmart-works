@@ -46,22 +46,27 @@ public class ComplianceEscalationScheduler {
 
     @Scheduled(cron = "0 */15 * * * *")
     public void escalateOverdue() {
-        List<ComplianceViolation> open = violations.findByStatusAndEscalatedFalse("OPEN");
-        if (open.isEmpty()) return;
-        OffsetDateTime now = OffsetDateTime.now();
-        int escalated = 0;
-        for (ComplianceViolation v : open) {
-            ComplianceRule rule = rules.findById(v.getRuleId()).orElse(null);
-            if (rule == null) continue;
-            try {
-                if (processEscalation(v, rule, now)) escalated++;
-            } catch (RuntimeException ex) {
-                log.warn("[COMPLIANCE] Escalation processing failed for {}: {}", v.getId(), ex.getMessage());
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): cross-tenant background job on a
+        // scheduler thread. It reads OPEN violations across ALL workspaces and their rules; the central
+        // tenant filter must be off so the all-workspace read is the explicit, audited unscoped path.
+        TenantScope.runAsSystem(() -> {
+            List<ComplianceViolation> open = violations.findByStatusAndEscalatedFalse("OPEN");
+            if (open.isEmpty()) return;
+            OffsetDateTime now = OffsetDateTime.now();
+            int escalated = 0;
+            for (ComplianceViolation v : open) {
+                ComplianceRule rule = rules.findById(v.getRuleId()).orElse(null);
+                if (rule == null) continue;
+                try {
+                    if (processEscalation(v, rule, now)) escalated++;
+                } catch (RuntimeException ex) {
+                    log.warn("[COMPLIANCE] Escalation processing failed for {}: {}", v.getId(), ex.getMessage());
+                }
             }
-        }
-        if (escalated > 0) {
-            log.info("[COMPLIANCE] Escalated {} violation(s)", escalated);
-        }
+            if (escalated > 0) {
+                log.info("[COMPLIANCE] Escalated {} violation(s)", escalated);
+            }
+        });
     }
 
     private boolean processEscalation(ComplianceViolation v, ComplianceRule rule, OffsetDateTime now) {

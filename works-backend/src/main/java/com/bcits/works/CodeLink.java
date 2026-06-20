@@ -7,11 +7,13 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /** A commit / branch / PR reference attached to a work item (Cap U — code context, IDE/CLI
  *  inline commit linking). Workspace-scoped (RB-40 §1). */
 @Entity
 @Table(name = "code_links")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class CodeLink {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

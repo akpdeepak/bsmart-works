@@ -5,11 +5,13 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /** An access anomaly flagged for review (iteration 19 Cap T) — new geo, mass export, privilege
  *  escalation, off-hours or impossible travel. Workspace-scoped (RB-40 §1). */
 @Entity
 @Table(name = "access_anomalies")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class AccessAnomaly {
 
     @Id

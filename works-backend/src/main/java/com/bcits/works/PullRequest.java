@@ -5,11 +5,13 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /** A code-review pull request, optionally linked to a work item (Cap U — code review queue +
  *  code context). Workspace-scoped (RB-40 §1). */
 @Entity
 @Table(name = "pull_requests")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class PullRequest {
     @Id
     private String id;

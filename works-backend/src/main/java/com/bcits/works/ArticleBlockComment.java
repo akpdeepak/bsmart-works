@@ -6,10 +6,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import org.hibernate.annotations.ColumnTransformer;
+import org.hibernate.annotations.Filter;
 
 /** Block-level comment thread entry (KR-025, KR-026, KR-027). */
 @Entity
 @Table(name = "article_block_comments")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class ArticleBlockComment {
     @Id private String id;
     @Column(name = "article_id")  private String articleId;

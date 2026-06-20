@@ -35,29 +35,44 @@ public class SupportChatPortalController {
     /** Start a new chat with a first message; the tier-1 auto-response runs synchronously. */
     @PostMapping("/conversations")
     public Map<String, Object> start(@RequestBody Map<String, Object> body) {
-        CustomerContext.CustomerPrincipal me = customerContext.current();
-        String firstMessage = str(body.get("message"));
-        String subject = str(body.get("subject"));
-        String customerName = body.get("customerName") != null ? str(body.get("customerName")) : me.email();
-        SupportChatService.ChatResult result = chat.startConversation(
-            me.workspaceId(), me.accountId(), me.customerUserId(), customerName, subject, firstMessage);
-        // Re-read so the customer always gets the full transcript, not just this round's new turns.
-        return view(chat.getConversation(me.workspaceId(), result.conversation().getId()));
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): the portal derives its tenant
+        // scope from the signed CUSTOMER claim (me.workspaceId()), not from an internal workspace
+        // binding — the internal central filter never binds for a portal token. Run unscoped so the
+        // explicit claim-workspace argument to SupportChatService is the entire scope for
+        // ChatConversation / ChatMessage.
+        return TenantScope.callAsSystem(() -> {
+            CustomerContext.CustomerPrincipal me = customerContext.current();
+            String firstMessage = str(body.get("message"));
+            String subject = str(body.get("subject"));
+            String customerName = body.get("customerName") != null ? str(body.get("customerName")) : me.email();
+            SupportChatService.ChatResult result = chat.startConversation(
+                me.workspaceId(), me.accountId(), me.customerUserId(), customerName, subject, firstMessage);
+            // Re-read so the customer always gets the full transcript, not just this round's new turns.
+            return view(chat.getConversation(me.workspaceId(), result.conversation().getId()));
+        });
     }
 
     /** Append a follow-up message to an existing conversation; the auto-response runs again. */
     @PostMapping("/conversations/{id}/messages")
     public Map<String, Object> message(@PathVariable String id, @RequestBody Map<String, Object> body) {
-        CustomerContext.CustomerPrincipal me = customerContext.current();
-        chat.postCustomerMessage(me.workspaceId(), id, me.customerUserId(), str(body.get("message")));
-        return view(chat.getConversation(me.workspaceId(), id));
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): claim-scoped portal write; the
+        // explicit me.workspaceId() is the entire scope.
+        return TenantScope.callAsSystem(() -> {
+            CustomerContext.CustomerPrincipal me = customerContext.current();
+            chat.postCustomerMessage(me.workspaceId(), id, me.customerUserId(), str(body.get("message")));
+            return view(chat.getConversation(me.workspaceId(), id));
+        });
     }
 
     /** The customer views their own conversation thread (workspace-scoped). */
     @GetMapping("/conversations/{id}")
     public Map<String, Object> get(@PathVariable String id) {
-        CustomerContext.CustomerPrincipal me = customerContext.current();
-        return view(chat.getConversation(me.workspaceId(), id));
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): claim-scoped portal read; the
+        // explicit me.workspaceId() is the entire scope.
+        return TenantScope.callAsSystem(() -> {
+            CustomerContext.CustomerPrincipal me = customerContext.current();
+            return view(chat.getConversation(me.workspaceId(), id));
+        });
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────────────

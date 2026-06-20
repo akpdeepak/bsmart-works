@@ -6,12 +6,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * Cap Y · A single step of an onboarding/offboarding run (iteration 16). Workspace-scoped (RB-40 §1).
  */
 @Entity
 @Table(name = "onboarding_run_steps")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class OnboardingRunStep {
     @Id private String id;
     @NotBlank private String runId;

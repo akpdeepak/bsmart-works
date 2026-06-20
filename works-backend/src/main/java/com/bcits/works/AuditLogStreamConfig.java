@@ -5,11 +5,13 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /** Configuration for streaming a workspace's audit log to an external SIEM — Splunk, Datadog, ELK
  *  or a generic signed webhook (iteration 19 Cap T). Workspace-scoped (RB-40 §1). */
 @Entity
 @Table(name = "audit_log_stream_configs")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class AuditLogStreamConfig {
 
     @Id

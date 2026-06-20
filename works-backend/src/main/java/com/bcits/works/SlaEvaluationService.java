@@ -106,11 +106,19 @@ public class SlaEvaluationService {
 
     /** Advance every live clock across all active policies — the scheduler's sweep. */
     public int sweep() {
-        int advanced = 0;
-        for (SlaPolicy policy : policies.findByActiveTrue()) {
-            advanced += evaluatePolicy(policy).advanced();
-        }
-        return advanced;
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): the SLA clock sweep is a
+        // cross-tenant background job (SlaClockScheduler thread, plus tests) that reads active SLA
+        // policies across ALL workspaces and accrues clocks for in-scope items in every tenant. The
+        // central tenant filter must be off so this all-workspace read is the explicit, audited
+        // unscoped path; each policy's scope is enforced by its own workspace-scoped, parameterized BQL
+        // in findScopedItems.
+        return TenantScope.callAsSystem(() -> {
+            int advanced = 0;
+            for (SlaPolicy policy : policies.findByActiveTrue()) {
+                advanced += evaluatePolicy(policy).advanced();
+            }
+            return advanced;
+        });
     }
 
     /** Bulk apply: start clocks for every in-scope item now (preview is {@link #preview}). */

@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * Encrypted OAuth tokens for a live integration connector (B23, iteration 13).
@@ -15,6 +16,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "integration_credentials")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class IntegrationCredential {
 
     @Id

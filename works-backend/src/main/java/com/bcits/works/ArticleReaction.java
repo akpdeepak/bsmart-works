@@ -6,10 +6,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /** KR-029 — Emoji reaction on an article; one row per (article, user, emoji) triple. */
 @Entity
 @Table(name = "article_reactions")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class ArticleReaction {
 
     @Id

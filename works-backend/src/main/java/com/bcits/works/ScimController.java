@@ -65,52 +65,64 @@ public class ScimController {
     public ResponseEntity<Map<String, Object>> listUsers(HttpServletRequest req,
                                                           @RequestParam(defaultValue = "1") int startIndex,
                                                           @RequestParam(defaultValue = "100") int count) {
-        String workspaceId = resolveWorkspace(req);
-        List<Map<String, Object>> resources = jdbc.query(
-            "SELECT u.id, u.email, u.full_name, wm.system_role "
-            + "FROM users u JOIN workspace_members wm ON wm.user_id = u.id "
-            + "WHERE wm.workspace_id = ? ORDER BY u.full_name ASC LIMIT ? OFFSET ?",
-            (rs, row) -> scimUser(rs.getString("id"), rs.getString("email"),
-                rs.getString("full_name"), true),
-            workspaceId, Math.min(count, 200), Math.max(0, startIndex - 1));
-        return ok(listResponse(resources, resources.size(), startIndex));
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): SCIM derives the workspace from
+        // the SCIM TOKEN HASH (not an internal member binding) and provisions across the GLOBAL users
+        // table. Run unscoped so the token-resolved workspace predicate is the explicit, audited scope
+        // and no stale binding narrows the lookups. (issueToken below is JWT-authed/admin-gated and is
+        // intentionally NOT wrapped.)
+        return TenantScope.callAsSystem(() -> {
+            String workspaceId = resolveWorkspace(req);
+            List<Map<String, Object>> resources = jdbc.query(
+                "SELECT u.id, u.email, u.full_name, wm.system_role "
+                + "FROM users u JOIN workspace_members wm ON wm.user_id = u.id "
+                + "WHERE wm.workspace_id = ? ORDER BY u.full_name ASC LIMIT ? OFFSET ?",
+                (rs, row) -> scimUser(rs.getString("id"), rs.getString("email"),
+                    rs.getString("full_name"), true),
+                workspaceId, Math.min(count, 200), Math.max(0, startIndex - 1));
+            return ok(listResponse(resources, resources.size(), startIndex));
+        });
     }
 
     /** POST /scim/v2/Users — provision a new user and add to the workspace. */
     @PostMapping(value = "/Users", consumes = SCIM_CONTENT_TYPE, produces = SCIM_CONTENT_TYPE)
     public ResponseEntity<Map<String, Object>> createUser(HttpServletRequest req,
                                                            @RequestBody Map<String, Object> body) {
-        String workspaceId = resolveWorkspace(req);
-        String userName = str(body.get("userName"));
-        if (userName == null || userName.isBlank()) {
-            return scimError(400, "userName is required");
-        }
-        String displayName = extractDisplayName(body);
-        // Find-or-create the user by email
-        String email = userName; // SCIM userName is conventionally email
-        Optional<User> existing = users.findByEmail(email);
-        User user;
-        if (existing.isPresent()) {
-            user = existing.get();
-        } else {
-            user = new User();
-            user.setId("USR-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-            user.setEmail(email);
-            user.setFullName(displayName);
-            user.setPasswordHash(""); // provisioned user — password set via invite flow
-            user.setEmailVerified(true); // IdP-provisioned users are pre-verified
-            users.save(user);
-            log.info("[SCIM] Provisioned new user {} in workspace {}", user.getId(), workspaceId);
-        }
-        // Add to workspace if not already a member
-        jdbc.update("INSERT INTO workspace_members (workspace_id, user_id, system_role) "
-            + "VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
-            workspaceId, user.getId(), "MEMBER");
-        eventService.recordInWorkspace(workspaceId, user.getId(), "SCIM_USER_PROVISIONED",
-            "system:scim", Map.of("email", email, "workspaceId", workspaceId));
-        return ResponseEntity.status(201)
-            .contentType(org.springframework.http.MediaType.parseMediaType(SCIM_CONTENT_TYPE))
-            .body(scimUser(user.getId(), user.getEmail(), user.getFullName(), true));
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): SCIM provisioning find-or-creates
+        // a user in the GLOBAL users table (JPA) keyed by the SCIM-token workspace. Run unscoped so the
+        // JPA user lookup/save is never narrowed by a stale binding.
+        return TenantScope.callAsSystem(() -> {
+            String workspaceId = resolveWorkspace(req);
+            String userName = str(body.get("userName"));
+            if (userName == null || userName.isBlank()) {
+                return scimError(400, "userName is required");
+            }
+            String displayName = extractDisplayName(body);
+            // Find-or-create the user by email
+            String email = userName; // SCIM userName is conventionally email
+            Optional<User> existing = users.findByEmail(email);
+            User user;
+            if (existing.isPresent()) {
+                user = existing.get();
+            } else {
+                user = new User();
+                user.setId("USR-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+                user.setEmail(email);
+                user.setFullName(displayName);
+                user.setPasswordHash(""); // provisioned user — password set via invite flow
+                user.setEmailVerified(true); // IdP-provisioned users are pre-verified
+                users.save(user);
+                log.info("[SCIM] Provisioned new user {} in workspace {}", user.getId(), workspaceId);
+            }
+            // Add to workspace if not already a member
+            jdbc.update("INSERT INTO workspace_members (workspace_id, user_id, system_role) "
+                + "VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
+                workspaceId, user.getId(), "MEMBER");
+            eventService.recordInWorkspace(workspaceId, user.getId(), "SCIM_USER_PROVISIONED",
+                "system:scim", Map.of("email", email, "workspaceId", workspaceId));
+            return ResponseEntity.status(201)
+                .contentType(org.springframework.http.MediaType.parseMediaType(SCIM_CONTENT_TYPE))
+                .body(scimUser(user.getId(), user.getEmail(), user.getFullName(), true));
+        });
     }
 
     /** PUT /scim/v2/Users/{id} — update an existing user's display name / active state. */
@@ -118,38 +130,48 @@ public class ScimController {
     public ResponseEntity<Map<String, Object>> updateUser(HttpServletRequest req,
                                                            @PathVariable String id,
                                                            @RequestBody Map<String, Object> body) {
-        String workspaceId = resolveWorkspace(req);
-        // Verify the user belongs to this workspace
-        requireInWorkspace(workspaceId, id);
-        User user = users.findById(id).orElseThrow(() -> ApiException.notFound("User", id));
-        String displayName = extractDisplayName(body);
-        if (displayName != null && !displayName.isBlank()) {
-            user.setFullName(displayName);
-        }
-        users.save(user);
-        Object active = body.get("active");
-        if (Boolean.FALSE.equals(active)) {
-            // Deactivate = remove from workspace (soft — user record stays)
-            jdbc.update("DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?",
-                workspaceId, id);
-            eventService.recordInWorkspace(workspaceId, id, "SCIM_USER_DEACTIVATED",
-                "system:scim", Map.of("workspaceId", workspaceId));
-        }
-        boolean isActive = isWorkspaceMember(workspaceId, id);
-        return ok(scimUser(user.getId(), user.getEmail(), user.getFullName(), isActive));
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): SCIM update reads/writes the
+        // GLOBAL users table (JPA) for the SCIM-token workspace. Run unscoped so the JPA findById/save
+        // is never narrowed by a stale binding; workspace membership is still verified explicitly.
+        return TenantScope.callAsSystem(() -> {
+            String workspaceId = resolveWorkspace(req);
+            // Verify the user belongs to this workspace
+            requireInWorkspace(workspaceId, id);
+            User user = users.findById(id).orElseThrow(() -> ApiException.notFound("User", id));
+            String displayName = extractDisplayName(body);
+            if (displayName != null && !displayName.isBlank()) {
+                user.setFullName(displayName);
+            }
+            users.save(user);
+            Object active = body.get("active");
+            if (Boolean.FALSE.equals(active)) {
+                // Deactivate = remove from workspace (soft — user record stays)
+                jdbc.update("DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?",
+                    workspaceId, id);
+                eventService.recordInWorkspace(workspaceId, id, "SCIM_USER_DEACTIVATED",
+                    "system:scim", Map.of("workspaceId", workspaceId));
+            }
+            boolean isActive = isWorkspaceMember(workspaceId, id);
+            return ok(scimUser(user.getId(), user.getEmail(), user.getFullName(), isActive));
+        });
     }
 
     /** DELETE /scim/v2/Users/{id} — soft-delete: remove from workspace, preserve user record. */
     @DeleteMapping(value = "/Users/{id}", produces = SCIM_CONTENT_TYPE)
     public ResponseEntity<Void> deleteUser(HttpServletRequest req, @PathVariable String id) {
-        String workspaceId = resolveWorkspace(req);
-        requireInWorkspace(workspaceId, id);
-        jdbc.update("DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?",
-            workspaceId, id);
-        eventService.recordInWorkspace(workspaceId, id, "SCIM_USER_DEPROVISIONED",
-            "system:scim", Map.of("workspaceId", workspaceId));
-        log.info("[SCIM] Deprovisioned user {} from workspace {}", id, workspaceId);
-        return ResponseEntity.noContent().build();
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): SCIM deprovision runs on the
+        // SCIM-token workspace (separate from any internal binding). Run unscoped for a consistent,
+        // audited SCIM-token boundary even though the current statements are raw SQL.
+        return TenantScope.callAsSystem(() -> {
+            String workspaceId = resolveWorkspace(req);
+            requireInWorkspace(workspaceId, id);
+            jdbc.update("DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?",
+                workspaceId, id);
+            eventService.recordInWorkspace(workspaceId, id, "SCIM_USER_DEPROVISIONED",
+                "system:scim", Map.of("workspaceId", workspaceId));
+            log.info("[SCIM] Deprovisioned user {} from workspace {}", id, workspaceId);
+            return ResponseEntity.noContent().build();
+        });
     }
 
     // ── Groups ─────────────────────────────────────────────────────────────────────

@@ -73,94 +73,119 @@ public class CustomerPortalController {
     // ── Request types + forms ─────────────────────────────────────────────────────────
     @GetMapping("/request-types")
     public List<RequestType> requestTypes() {
-        CustomerContext.CustomerPrincipal me = customerContext.current();
-        return requestTypes.findByWorkspaceIdAndActiveTrueOrderBySortOrderAscNameAsc(me.workspaceId());
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): portal endpoints derive their
+        // tenant scope from the signed CUSTOMER claim (me.workspaceId()), not from an internal
+        // workspace binding — the internal central filter never binds for a portal token. Run unscoped
+        // so the explicit claim-workspace predicate is the entire, deliberate scope.
+        return TenantScope.callAsSystem(() -> {
+            CustomerContext.CustomerPrincipal me = customerContext.current();
+            return requestTypes.findByWorkspaceIdAndActiveTrueOrderBySortOrderAscNameAsc(me.workspaceId());
+        });
     }
 
     // ── Submit + view requests ──────────────────────────────────────────────────────
     @Operation(summary = "Submit service request", description = "Submits a new service request on behalf of the authenticated customer. Auto-creates a linked internal work item.")
     @PostMapping("/requests")
     public Map<String, Object> submit(@RequestBody Map<String, Object> body) {
-        CustomerContext.CustomerPrincipal me = customerContext.current();
-        String typeId = str(body.get("requestTypeId"));
-        String subject = str(body.get("subject"));
-        if (typeId == null || typeId.isBlank()) {
-            throw ApiException.badRequest("TYPE_REQUIRED", "Choose a request type.", "requestTypeId");
-        }
-        if (subject == null || subject.isBlank()) {
-            throw ApiException.badRequest("SUBJECT_REQUIRED", "A short summary is required.", "subject");
-        }
-        RequestType type = requestTypes.findById(typeId)
-                .filter(t -> me.workspaceId().equals(t.getWorkspaceId()) && Boolean.TRUE.equals(t.getActive()))
-                .orElseThrow(() -> ApiException.notFound("Request type", typeId));
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): claim-derived tenant scope (the
+        // internal central filter never binds for a portal token). Run unscoped so the explicit
+        // me.workspaceId() predicates are the entire scope across ServiceRequest, RequestType, the
+        // auto-created WorkItem, and the automations that follow.
+        return TenantScope.callAsSystem(() -> {
+            CustomerContext.CustomerPrincipal me = customerContext.current();
+            String typeId = str(body.get("requestTypeId"));
+            String subject = str(body.get("subject"));
+            if (typeId == null || typeId.isBlank()) {
+                throw ApiException.badRequest("TYPE_REQUIRED", "Choose a request type.", "requestTypeId");
+            }
+            if (subject == null || subject.isBlank()) {
+                throw ApiException.badRequest("SUBJECT_REQUIRED", "A short summary is required.", "subject");
+            }
+            RequestType type = requestTypes.findById(typeId)
+                    .filter(t -> me.workspaceId().equals(t.getWorkspaceId()) && Boolean.TRUE.equals(t.getActive()))
+                    .orElseThrow(() -> ApiException.notFound("Request type", typeId));
 
-        CustomerAccount account = accounts.findById(me.accountId())
-                .orElseThrow(() -> ApiException.notFound("Customer account", me.accountId()));
-        CustomerSlaTier tier = slaTiers.findByWorkspaceIdAndTier(me.workspaceId(), account.getTier()).orElse(null);
+            CustomerAccount account = accounts.findById(me.accountId())
+                    .orElseThrow(() -> ApiException.notFound("Customer account", me.accountId()));
+            CustomerSlaTier tier = slaTiers.findByWorkspaceIdAndTier(me.workspaceId(), account.getTier()).orElse(null);
 
-        ServiceRequest req = new ServiceRequest();
-        req.setWorkspaceId(me.workspaceId());
-        req.setCustomerAccountId(me.accountId());
-        req.setSubmittedBy(me.customerUserId());
-        req.setSubject(subject.trim());
-        req.setDescription(str(body.get("description")));
-        Object formData = body.get("formData");
-        req.setFormData(formData == null ? "{}" : toJson(formData));
-        req.setPriority(str(body.get("priority")));
-        ServiceRequest saved = requests.save(requestService.prepareNew(req, type, tier));
-        eventService.record(saved.getId(), "SERVICE_REQUEST_SUBMITTED", me.customerUserId(),
-                Map.of("accountId", me.accountId(), "typeKey", safe(saved.getTypeKey())));
+            ServiceRequest req = new ServiceRequest();
+            req.setWorkspaceId(me.workspaceId());
+            req.setCustomerAccountId(me.accountId());
+            req.setSubmittedBy(me.customerUserId());
+            req.setSubject(subject.trim());
+            req.setDescription(str(body.get("description")));
+            Object formData = body.get("formData");
+            req.setFormData(formData == null ? "{}" : toJson(formData));
+            req.setPriority(str(body.get("priority")));
+            ServiceRequest saved = requests.save(requestService.prepareNew(req, type, tier));
+            eventService.record(saved.getId(), "SERVICE_REQUEST_SUBMITTED", me.customerUserId(),
+                    Map.of("accountId", me.accountId(), "typeKey", safe(saved.getTypeKey())));
 
-        // B16: auto-create a linked internal WorkItem in the workspace's default project (RB-40 §1)
-        autoCreateLinkedWorkItem(saved, me.workspaceId());
+            // B16: auto-create a linked internal WorkItem in the workspace's default project (RB-40 §1)
+            autoCreateLinkedWorkItem(saved, me.workspaceId());
 
-        return customerView(saved, OffsetDateTime.now());
+            return customerView(saved, OffsetDateTime.now());
+        });
     }
 
     @Operation(summary = "List customer requests", description = "Returns all service requests for the authenticated customer's account. Filter by status=open for active requests.")
     @GetMapping("/requests")
     public List<Map<String, Object>> myRequests(@RequestParam(required = false) String status) {
-        CustomerContext.CustomerPrincipal me = customerContext.current();
-        List<ServiceRequest> list = "open".equalsIgnoreCase(status)
-                ? requests.findByCustomerAccountIdAndStatusInOrderByCreatedAtDesc(
-                        me.accountId(), ServiceRequestService.OPEN_STATUSES)
-                : requests.findByCustomerAccountIdOrderByCreatedAtDesc(me.accountId());
-        OffsetDateTime now = OffsetDateTime.now();
-        return list.stream().map(r -> customerView(r, now)).toList();
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): claim-scoped portal read; the
+        // account/workspace predicate from the customer claim is the entire scope.
+        return TenantScope.callAsSystem(() -> {
+            CustomerContext.CustomerPrincipal me = customerContext.current();
+            List<ServiceRequest> list = "open".equalsIgnoreCase(status)
+                    ? requests.findByCustomerAccountIdAndStatusInOrderByCreatedAtDesc(
+                            me.accountId(), ServiceRequestService.OPEN_STATUSES)
+                    : requests.findByCustomerAccountIdOrderByCreatedAtDesc(me.accountId());
+            OffsetDateTime now = OffsetDateTime.now();
+            return list.stream().map(r -> customerView(r, now)).toList();
+        });
     }
 
     @GetMapping("/requests/{id}")
     public Map<String, Object> requestDetail(@PathVariable String id) {
-        CustomerContext.CustomerPrincipal me = customerContext.current();
-        ServiceRequest req = loadOwned(id, me.accountId());
-        return customerView(req, OffsetDateTime.now());
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): claim-scoped portal read;
+        // loadOwned enforces the customer's accountId so cross-account access is still rejected.
+        return TenantScope.callAsSystem(() -> {
+            CustomerContext.CustomerPrincipal me = customerContext.current();
+            ServiceRequest req = loadOwned(id, me.accountId());
+            return customerView(req, OffsetDateTime.now());
+        });
     }
 
     // ── CSAT ──────────────────────────────────────────────────────────────────────────
     @PostMapping("/requests/{id}/csat")
     public CsatResponse rate(@PathVariable String id, @RequestBody Map<String, Object> body) {
-        CustomerContext.CustomerPrincipal me = customerContext.current();
-        ServiceRequest req = loadOwned(id, me.accountId());
-        if (!"RESOLVED".equals(req.getStatus()) && !"CLOSED".equals(req.getStatus())) {
-            throw ApiException.badRequest("NOT_RESOLVED", "You can rate a request once it is resolved.");
-        }
-        Integer rating = body.get("rating") instanceof Number n ? n.intValue() : null;
-        if (!csatService.isValidRating(rating)) {
-            throw ApiException.badRequest("INVALID_RATING", "Rating must be between 1 and 5.", "rating");
-        }
-        if (csat.existsByServiceRequestId(id)) {
-            throw ApiException.conflict("This request has already been rated.");
-        }
-        CsatResponse response = new CsatResponse();
-        response.setServiceRequestId(id);
-        response.setWorkspaceId(req.getWorkspaceId());
-        response.setCustomerAccountId(req.getCustomerAccountId());
-        response.setRating(rating);
-        response.setComment(str(body.get("comment")));
-        response.setSubmittedBy(me.customerUserId());
-        CsatResponse saved = csat.save(csatService.prepareNew(response));
-        eventService.record(id, "CSAT_SUBMITTED", me.customerUserId(), Map.of("rating", rating));
-        return saved;
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): claim-scoped portal write;
+        // loadOwned enforces account ownership and the CsatResponse is stamped with the request's own
+        // workspace/account so the claim remains the scope.
+        return TenantScope.callAsSystem(() -> {
+            CustomerContext.CustomerPrincipal me = customerContext.current();
+            ServiceRequest req = loadOwned(id, me.accountId());
+            if (!"RESOLVED".equals(req.getStatus()) && !"CLOSED".equals(req.getStatus())) {
+                throw ApiException.badRequest("NOT_RESOLVED", "You can rate a request once it is resolved.");
+            }
+            Integer rating = body.get("rating") instanceof Number n ? n.intValue() : null;
+            if (!csatService.isValidRating(rating)) {
+                throw ApiException.badRequest("INVALID_RATING", "Rating must be between 1 and 5.", "rating");
+            }
+            if (csat.existsByServiceRequestId(id)) {
+                throw ApiException.conflict("This request has already been rated.");
+            }
+            CsatResponse response = new CsatResponse();
+            response.setServiceRequestId(id);
+            response.setWorkspaceId(req.getWorkspaceId());
+            response.setCustomerAccountId(req.getCustomerAccountId());
+            response.setRating(rating);
+            response.setComment(str(body.get("comment")));
+            response.setSubmittedBy(me.customerUserId());
+            CsatResponse saved = csat.save(csatService.prepareNew(response));
+            eventService.record(id, "CSAT_SUBMITTED", me.customerUserId(), Map.of("rating", rating));
+            return saved;
+        });
     }
 
     // ── Customer-facing knowledge base ─────────────────────────────────────────────────
@@ -215,35 +240,39 @@ public class CustomerPortalController {
     // ── Customer dashboard ──────────────────────────────────────────────────────────────
     @GetMapping("/dashboard")
     public Map<String, Object> dashboard() {
-        CustomerContext.CustomerPrincipal me = customerContext.current();
-        List<ServiceRequest> all = requests.findByCustomerAccountIdOrderByCreatedAtDesc(me.accountId());
-        OffsetDateTime now = OffsetDateTime.now();
-        int open = 0;
-        int resolved = 0;
-        int breached = 0;
-        List<Map<String, Object>> recent = new java.util.ArrayList<>();
-        for (ServiceRequest r : all) {
-            if (requestService.isOpen(r.getStatus())) {
-                open++;
-                if (requestService.computeSla(r, now).breached()) {
-                    breached++;
-                }
-            } else {
-                resolved++;
-                if (recent.size() < 5) {
-                    recent.add(customerView(r, now));
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): claim-scoped portal read over the
+        // tenant-scoped ServiceRequest entity; the customer-account predicate is the entire scope.
+        return TenantScope.callAsSystem(() -> {
+            CustomerContext.CustomerPrincipal me = customerContext.current();
+            List<ServiceRequest> all = requests.findByCustomerAccountIdOrderByCreatedAtDesc(me.accountId());
+            OffsetDateTime now = OffsetDateTime.now();
+            int open = 0;
+            int resolved = 0;
+            int breached = 0;
+            List<Map<String, Object>> recent = new java.util.ArrayList<>();
+            for (ServiceRequest r : all) {
+                if (requestService.isOpen(r.getStatus())) {
+                    open++;
+                    if (requestService.computeSla(r, now).breached()) {
+                        breached++;
+                    }
+                } else {
+                    resolved++;
+                    if (recent.size() < 5) {
+                        recent.add(customerView(r, now));
+                    }
                 }
             }
-        }
-        Map<String, Object> totals = new LinkedHashMap<>();
-        totals.put("open", open);
-        totals.put("resolved", resolved);
-        totals.put("total", all.size());
-        totals.put("slaBreached", breached);
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("totals", totals);
-        out.put("recentResolutions", recent);
-        return out;
+            Map<String, Object> totals = new LinkedHashMap<>();
+            totals.put("open", open);
+            totals.put("resolved", resolved);
+            totals.put("total", all.size());
+            totals.put("slaBreached", breached);
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("totals", totals);
+            out.put("recentResolutions", recent);
+            return out;
+        });
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────────────────

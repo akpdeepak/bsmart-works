@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * A workspace's board WIP (work-in-progress) limits for the three fixed board columns
@@ -15,6 +16,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "board_wip_limits")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class BoardWipLimit {
 
     @Id

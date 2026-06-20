@@ -74,6 +74,26 @@ describe('SupportInboxView', () => {
     await waitFor(() => expect(reply).toHaveBeenCalledWith('ws-1', 'CHAT-1', 'Looking into it now.'));
   });
 
+  it('drafts a work artifact from a customer message with source citation', async () => {
+    listConversations.mockResolvedValue([
+      { id: 'CHAT-1', subject: 'Billing question', status: 'ESCALATED', customerName: 'Asha' },
+    ]);
+    getConversation.mockResolvedValue({
+      conversation: { id: 'CHAT-1', subject: 'Billing question', status: 'ESCALATED', customerName: 'Asha' },
+      messages: [{ id: 'm1', senderType: 'CUSTOMER', body: 'Please commit to correcting the bill by Monday.' }],
+    });
+    render(<SupportInboxView workspaceId="ws-1" />);
+
+    fireEvent.click(await screen.findByText('Billing question'));
+    expect(await screen.findByText('Please commit to correcting the bill by Monday.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /commitment/i }));
+
+    expect(screen.getByText('Customer commitment draft')).toBeInTheDocument();
+    expect(screen.getByText(/Customer commitment: Please commit/)).toBeInTheDocument();
+    expect(screen.getByText('Source: Asha in Billing question, message m1')).toBeInTheDocument();
+    expect(screen.getByText('Review this draft before creating an official record.')).toBeInTheDocument();
+  });
+
   it('resolves the active conversation', async () => {
     listConversations.mockResolvedValue([
       { id: 'CHAT-1', subject: 'Billing question', status: 'ESCALATED', customerName: 'Asha' },

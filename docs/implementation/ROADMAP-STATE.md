@@ -7,11 +7,11 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 
 ## Current status
 
-- Roadmap mode: V.20 EPIC 12 DevSync / Engineering Intelligence in progress
-- Active EPIC: EPIC 12 - DevSync / Engineering Intelligence
-- Active branch: `epic/12-devsync-engineering-intelligence`
-- Last completed EPIC: EPIC 11 - Project Command Center
-- Next recommended EPIC: Finish EPIC 12 - DevSync / Engineering Intelligence
+- Roadmap mode: V.20 EPIC 13 Universal AI Command Layer ready to start
+- Active EPIC: EPIC 13 - Universal AI Command Layer
+- Active branch: `main`
+- Last completed EPIC: EPIC 12 - DevSync / Engineering Intelligence
+- Next recommended EPIC: Start EPIC 13 - Universal AI Command Layer
 - Last state update: 2026-06-20
 
 ## Trigger contract
@@ -89,7 +89,7 @@ resume point.
 | EPIC 9 - bSmart Connect Messaging | Completed | `main` | [#403](https://github.com/akpdeepak/bsmart-works/pull/403) | `cd works-frontend && npm test -- message-actions support-inbox-view`; `cd works-frontend && npm test -- bql-view.a11y`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-09-connect-messaging-completion.md` | Source-cited reviewed message action drafts, support chat workspace/RBAC preserved, BQL loading a11y fix |
 | EPIC 10 - Work Item Experience Redesign | Completed | `main` | [#404](https://github.com/akpdeepak/bsmart-works/pull/404) | `cd works-frontend && npm test -- work-item-execution-brief work-item-detail-panel`; `npm run verify`; `cd works-frontend && npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-10-work-item-experience-completion.md` | Cited execution brief, visible due/visibility/DevSync snapshot, display-key preference |
 | EPIC 11 - Project Command Center | Completed | `main` | [#405](https://github.com/akpdeepak/bsmart-works/pull/405) | `cd works-frontend && npm test -- project-command-center projects-view`; `cd works-frontend && npm test -- bql-view.a11y`; `npm run verify`; `cd works-frontend && npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-11-project-command-center-completion.md` | Explainable project command-center summary, source-cited health, SLA/customer risk, DevSync, project room/customer update affordance, saved views loading a11y fix |
-| EPIC 12 - DevSync / Engineering Intelligence | In progress | `epic/12-devsync-engineering-intelligence` | | `cd works-frontend && npm test -- engineering-activity developer-workspace` | `docs/implementation/epics/EPIC-12-devsync-engineering-intelligence.md` | Engineering activity summary in Developer Workspace, source citations, linked/unlinked raw events, release readiness signals, no ranking |
+| EPIC 12 - DevSync / Engineering Intelligence | Completed | `main` | [#406](https://github.com/akpdeepak/bsmart-works/pull/406) | `cd works-frontend && npm test -- engineering-activity developer-workspace`; `npm run verify`; `cd works-frontend && npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-12-devsync-engineering-intelligence-completion.md` | Engineering activity summary in Developer Workspace, source citations, linked/unlinked raw events, release readiness signals, no ranking |
 | EPIC 13 - Universal AI Command Layer | Not started | | | | | |
 | EPIC 14 - bSmart Answer Engine | Not started | | | | | |
 | EPIC 15 - bSmart Canvas and AI-Generated Work Artifacts | Not started | | | | | |
@@ -284,3 +284,12 @@ leaderboards, productivity scores, commit-count ranking, and lines-of-code ranki
 validation passed: `cd works-frontend && npm test -- engineering-activity developer-workspace`.
 Next: run broader validation, open PR, wait for GitHub CI, merge to `main`, then mark EPIC 12
 completed.
+
+2026-06-20: EPIC 12 merged to `main` via
+[#406](https://github.com/akpdeepak/bsmart-works/pull/406), squash commit
+`519c39bd7001cd41f42121b7af663e9e488ab64b`. GitHub CI passed all jobs, including frontend
+lint/build/test, Storybook, Chromatic, backend compile/unit/integration/smoke, guardrails, quality
+gates, gitleaks, bundle budget, deployment smoke, JetBrains plugin build, conventional commits,
+AI rules, and DoD version checks. Local `main` and `origin/main` are synced at the merge commit.
+Local validation covered `cd works-frontend && npm test -- engineering-activity developer-workspace`,
+`npm run verify`, and `cd works-frontend && npm run verify`. Resume with EPIC 13.

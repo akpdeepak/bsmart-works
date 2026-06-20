@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,11 +33,10 @@ class FieldDefControllerAccessTest {
     private final WorkItemFieldValueRepository valueRepo = mock(WorkItemFieldValueRepository.class);
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
-    private final org.springframework.jdbc.core.JdbcTemplate jdbc =
-            mock(org.springframework.jdbc.core.JdbcTemplate.class);
+    private final FieldVisibilityService fieldVisibility = mock(FieldVisibilityService.class);
 
     private final FieldDefController controller =
-            new FieldDefController(fieldDefRepo, valueRepo, authenticatedUser, rbac, jdbc);
+            new FieldDefController(fieldDefRepo, valueRepo, authenticatedUser, rbac, fieldVisibility);
 
     FieldDefControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);
@@ -125,5 +125,95 @@ class FieldDefControllerAccessTest {
         assertThat(saved.getId()).startsWith("FD-");
         assertThat(saved.getWorkspaceId()).isEqualTo("ws-A");
         verify(fieldDefRepo).save(any());
+    }
+
+    // ── Write-path field-level security (RB-40 §1, EPIC P1 §5) ────────────────────
+    // setValue / deleteValue are the create/update/delete points for the unified
+    // work_item_field_value store. A tier with a READ_ONLY or HIDDEN rule for the field must be
+    // rejected with FORBIDDEN before any persistence; an EDITABLE field (the default) must NOT be
+    // blocked — legitimate edits keep working.
+
+    private static final String OWN_WS = "ws-A";
+    private static final String ITEM = "WI-1";
+    private static final String FIELD = "FD-7";
+    private static final int TIER = 2; // MEMBER
+
+    private void stubWritableContext(String visibility) {
+        when(rbac.workspaceForWorkItem(ITEM)).thenReturn(OWN_WS);
+        when(rbac.getUserTier(CALLER, OWN_WS)).thenReturn(TIER);
+        when(fieldVisibility.resolveFieldVisibility(FIELD, OWN_WS, TIER)).thenReturn(visibility);
+    }
+
+    @Test
+    void setValue_readOnlyFieldRejectedWithForbiddenAndPersistsNothing() {
+        stubWritableContext("READ_ONLY");
+
+        assertThatThrownBy(() -> controller.setValue(ITEM, FIELD, Map.of("valueText", "x")))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> {
+                    assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+                    assertThat(ex.getMessage()).isEqualTo("This field is read-only for your role.");
+                });
+
+        verify(valueRepo, never()).save(any());
+    }
+
+    @Test
+    void setValue_hiddenFieldRejectedWithForbiddenAndPersistsNothing() {
+        stubWritableContext("HIDDEN");
+
+        assertThatThrownBy(() -> controller.setValue(ITEM, FIELD, Map.of("valueText", "x")))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+
+        verify(valueRepo, never()).save(any());
+    }
+
+    @Test
+    void setValue_editableFieldNotBlocked() {
+        stubWritableContext("EDITABLE");
+        when(valueRepo.findByWorkItemIdAndFieldDefId(ITEM, FIELD)).thenReturn(Optional.empty());
+        when(fieldDefRepo.findById(FIELD)).thenReturn(Optional.empty());
+        when(valueRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        WorkItemFieldValue saved = controller.setValue(ITEM, FIELD, Map.of("valueText", "x"));
+
+        assertThat(saved.getValueText()).isEqualTo("x");
+        verify(valueRepo).save(any());
+    }
+
+    @Test
+    void deleteValue_readOnlyFieldRejectedWithForbiddenAndDeletesNothing() {
+        stubWritableContext("READ_ONLY");
+
+        assertThatThrownBy(() -> controller.deleteValue(ITEM, FIELD))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> {
+                    assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+                    assertThat(ex.getMessage()).isEqualTo("This field is read-only for your role.");
+                });
+
+        verify(valueRepo, never()).delete(any());
+    }
+
+    @Test
+    void deleteValue_hiddenFieldRejectedWithForbiddenAndDeletesNothing() {
+        stubWritableContext("HIDDEN");
+
+        assertThatThrownBy(() -> controller.deleteValue(ITEM, FIELD))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+
+        verify(valueRepo, never()).delete(any());
+    }
+
+    @Test
+    void deleteValue_editableFieldNotBlocked() {
+        stubWritableContext("EDITABLE");
+        when(valueRepo.findByWorkItemIdAndFieldDefId(ITEM, FIELD)).thenReturn(Optional.empty());
+
+        controller.deleteValue(ITEM, FIELD);
+
+        verify(valueRepo, never()).delete(any()); // nothing to delete, but no FORBIDDEN thrown
     }
 }

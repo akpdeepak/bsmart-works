@@ -47,14 +47,15 @@ public class WorkItemController {
                               WorkItemBulkService bulkService,
                               WatcherService watcherService,
                               AutomationService automations,
-                              FunnelService funnelService) {
+                              FunnelService funnelService,
+                              FieldVisibilityService fieldVisibility) {
         this.repository = repository;
         this.jdbc = jdbc;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
         this.bulkService = bulkService;
         this.watcherService = watcherService;
-        this.readService = new WorkItemReadService(jdbc, authenticatedUser, objectMapper);
+        this.readService = new WorkItemReadService(jdbc, authenticatedUser, objectMapper, fieldVisibility);
         this.commandService = new WorkItemCommandService(repository, eventService, jdbc, userRepository, emailService,
             batchService, authenticatedUser, rbac, dodChecklists, extensions, workflowRules, statusConfig,
             wipLimits, watcherService, automations, funnelService, readService, objectMapper);

@@ -61,7 +61,7 @@ class WorkItemControllerPaginationTest {
             repository, eventService, jdbc, notifRepo, userRepository,
             emailService, batch, auth, rbac, dod, ext, wfRules, statusCfg, wip,
             mock(WorkItemBulkService.class), watchers, mock(AutomationService.class),
-            mock(FunnelService.class));
+            mock(FunnelService.class), mock(FieldVisibilityService.class));
 
     WorkItemControllerPaginationTest() {
         when(auth.id()).thenReturn(CALLER);

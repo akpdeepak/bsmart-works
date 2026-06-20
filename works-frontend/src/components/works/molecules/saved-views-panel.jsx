@@ -68,7 +68,7 @@ export function SavedViewsPanel({ workspaceId, projectId, activeViewId, onLoad }
 
   if (isLoading) {
     return (
-      <div className="space-y-1.5 px-1 py-2" aria-busy="true" aria-label="Loading saved views">
+      <div className="space-y-1.5 px-1 py-2" role="status" aria-busy="true" aria-label="Loading saved views">
         {[1, 2, 3].map((n) => (
           <div key={n} className="h-7 animate-pulse rounded-md bg-neutral-100 dark:bg-neutral-700" />
         ))}

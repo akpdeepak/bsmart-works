@@ -64,6 +64,7 @@ import { api } from '@/lib/apiClient';
 import { useDialog } from '@/lib/dialog';
 import { reportError, setToastEmitter } from '@/lib/report-error';
 import { layoutToWidgets } from '@/lib/today-layouts';
+import { countActionableNotifications } from '@/lib/smart-inbox';
 import { useCardPrefs } from '@/hooks/useCardPrefs';
 import { useDensity } from '@/hooks/use-density';
 import { buildStatusResolver } from '@/lib/status-config';
@@ -911,13 +912,21 @@ export default function AppShell() {
 
   function fetchUnreadCount() {
     if (!currentUser) return;
-    api.raw(`/notifications/unread-count?userId=${currentUser.id}`)
-      .then(r => r.json()).then(d => setUnreadCount(d.count || 0)).catch(reportError);
+    api.raw(`/notifications?userId=${currentUser.id}&page=0&size=50`)
+      .then(r => r.json()).then(d => {
+        const rows = Array.isArray(d) ? d : [];
+        setNotifications(rows);
+        setUnreadCount(countActionableNotifications(rows));
+      }).catch(reportError);
   }
 
   function fetchNotifications() {
     api.raw(`/notifications?userId=${currentUser.id}&page=0&size=50`)
-      .then(r => r.json()).then(d => setNotifications(Array.isArray(d) ? d : [])).catch(reportError);
+      .then(r => r.json()).then(d => {
+        const rows = Array.isArray(d) ? d : [];
+        setNotifications(rows);
+        setUnreadCount(countActionableNotifications(rows));
+      }).catch(reportError);
   }
 
   // AUTH
@@ -3338,7 +3347,7 @@ export default function AppShell() {
               </Button>
             )}
             <button onClick={() => { navigate('notifications'); }}
-              aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+              aria-label={unreadCount > 0 ? `Inbox, ${unreadCount} actionable` : 'Inbox'}
               className="relative w-9 h-9 rounded-md flex items-center justify-center text-white/80 hover:bg-white/10 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
               <Bell aria-hidden="true" className="h-5 w-5" />
               {unreadCount > 0 && (

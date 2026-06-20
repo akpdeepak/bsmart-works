@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -35,9 +36,9 @@ class ArchitectureTest {
     private static final Path MODULE_ROOT = Path.of("src/main/java/com/bcits/works");
     private static final List<String> MODULE_PACKAGES = List.of(
             "auth",
-            "workspace",
-            "workitem",
-            "project",
+            "workspaces",
+            "workitems",
+            "projects",
             "messaging",
             "devsync",
             "ai",
@@ -65,6 +66,36 @@ class ArchitectureTest {
                 .toList();
         assertThat(missing)
                 .as("every roadmap module must have a package marker before code moves into it")
+                .isEmpty();
+    }
+
+    @Test
+    void modulePackagesDoNotCaseCollideWithTopLevelClasses() throws IOException {
+        // Regression guard (#243 boot failure): a sub-package whose name matches a top-level class
+        // name case-insensitively (e.g. package `project` vs class `Project.java`) makes the JVM
+        // resolve the package to that class on a case-insensitive filesystem (Windows/macOS) ->
+        // "wrong name" ClassNotFoundException -> entityManagerFactory init aborts -> the whole app
+        // fails to start, while staying green on case-sensitive Linux CI. Never reintroduce one.
+        final List<String> subPackages;
+        final List<String> topLevelClasses;
+        try (var dirs = Files.list(MODULE_ROOT)) {
+            subPackages = dirs.filter(Files::isDirectory)
+                    .filter(d -> Files.exists(d.resolve("package-info.java")))
+                    .map(d -> d.getFileName().toString())
+                    .toList();
+        }
+        try (var files = Files.list(MODULE_ROOT)) {
+            topLevelClasses = files
+                    .map(p -> p.getFileName().toString())
+                    .filter(n -> n.endsWith(".java") && !n.equals("package-info.java"))
+                    .map(n -> n.substring(0, n.length() - ".java".length()))
+                    .toList();
+        }
+        List<String> collisions = subPackages.stream()
+                .filter(pkg -> topLevelClasses.stream().anyMatch(cls -> cls.equalsIgnoreCase(pkg)))
+                .toList();
+        assertThat(collisions)
+                .as("no sub-package may case-collide with a top-level class (case-insensitive-FS boot failure, #243)")
                 .isEmpty();
     }
 

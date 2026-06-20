@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Headset, Send, CheckCircle2, UserPlus, Bot, User, MessageSquare } from 'lucide-react';
+import { Headset, Send, CheckCircle2, UserPlus, Bot, User, MessageSquare, FilePlus2, X } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { Badge } from '@/components/works/atoms/badge';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { PageLayout } from '@/components/works/templates/page-layout';
 import { smartDate } from '@/lib/format';
 import { agentChatClient, chatStatusTone, chatStatusLabel } from '@/lib/supportChat';
+import { buildMessageActionDraft, messageActionOptions } from '@/lib/message-actions';
 import { connectRealtime } from '@/lib/realtime';
 
 // Support inbox — the AGENT-side view for customer chat support (iteration 20, Cap N). Agents work
@@ -30,6 +31,7 @@ export default function SupportInboxView({ workspaceId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [actionDraft, setActionDraft] = useState(null);
   const replyRef = useRef(null);
 
   const loadList = useCallback(() => {
@@ -64,6 +66,7 @@ export default function SupportInboxView({ workspaceId }) {
   const openThread = useCallback((id) => {
     setActiveId(id);
     setError('');
+    setActionDraft(null);
     agentChatClient.getConversation(workspaceId, id)
       .then((res) => { setThread(res.conversation); setMessages(res.messages || []); })
       .catch((err) => setError(err.message || 'Could not open the conversation.'));
@@ -203,11 +206,39 @@ export default function SupportInboxView({ workspaceId }) {
                 {messages.length === 0 ? (
                   <p className="text-sm text-neutral-500">No messages yet.</p>
                 ) : (
-                  messages.map((m) => <AgentBubble key={m.id} message={m} />)
+                  messages.map((m) => (
+                    <AgentBubble
+                      key={m.id}
+                      message={m}
+                      conversation={thread}
+                      onDraftAction={(draft) => setActionDraft(draft)}
+                    />
+                  ))
                 )}
               </div>
 
               <div className="border-t border-neutral-200 p-3 dark:border-neutral-700">
+                {actionDraft && (
+                  <div className="mb-3 rounded-lg border border-brand-navy/20 bg-brand-navy/5 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="flex items-center gap-2 text-sm font-semibold text-brand-navy dark:text-brand-navy-tint">
+                          <FilePlus2 className="h-4 w-4" aria-hidden="true" />
+                          {actionDraft.title}
+                        </p>
+                        <p className="mt-1 text-sm text-neutral-800 dark:text-neutral-100">{actionDraft.summary}</p>
+                        <p className="mt-1 text-xs text-neutral-500">Source: {actionDraft.citation}</p>
+                      </div>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => setActionDraft(null)}
+                        aria-label="Dismiss message draft">
+                        <X className="h-4 w-4" aria-hidden="true" />
+                      </Button>
+                    </div>
+                    <p className="mt-2 text-xs text-neutral-600 dark:text-neutral-400">
+                      Review this draft before creating an official record.
+                    </p>
+                  </div>
+                )}
                 <div className="flex items-end gap-2">
                   <label htmlFor="agent-reply" className="sr-only">Reply to customer</label>
                   <textarea
@@ -231,11 +262,12 @@ export default function SupportInboxView({ workspaceId }) {
 }
 
 // Agent-side bubble — customer left (incoming), AI/agent right (outgoing from the desk's side).
-function AgentBubble({ message }) {
+function AgentBubble({ message, conversation, onDraftAction }) {
   const isCustomer = message.senderType === 'CUSTOMER';
   const isAi = message.senderType === 'AI';
   const Icon = isAi ? Bot : isCustomer ? User : Headset;
   const author = isAi ? 'AI assistant' : isCustomer ? 'Customer' : 'Agent';
+  const actions = messageActionOptions(message);
   return (
     <div className={`flex ${isCustomer ? 'justify-start' : 'justify-end'}`}>
       <div className="max-w-[80%]">
@@ -252,6 +284,16 @@ function AgentBubble({ message }) {
         }`}>
           {message.body}
         </div>
+        {actions.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {actions.map((action) => (
+              <Button key={action.id} type="button" size="sm" variant="ghost"
+                onClick={() => onDraftAction?.(buildMessageActionDraft(message, action.id, conversation))}>
+                {action.label}
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -46,7 +46,7 @@ beforeEach(() => {
 describe('SearchView', () => {
   it('uses the sanctioned dashboard page shell', () => {
     const { container } = renderWith(<SearchView {...BASE} />);
-    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+    expect(container.firstChild).toHaveClass('max-w-workspace', 'px-6', 'py-6');
   });
 
   it('renders the search input', () => {

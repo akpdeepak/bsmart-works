@@ -192,7 +192,7 @@ export default function BacklogView({
           </div>
         </aside>
 
-        <div className="min-w-0 flex-1 max-w-5xl">
+        <div className="min-w-0 flex-1">
           <div className="flex justify-between items-center mb-5">
             <div>
               <h1 className="text-xl font-bold text-brand-navy">{t('deliver.backlog.title')}</h1>

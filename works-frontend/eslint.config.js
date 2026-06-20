@@ -88,7 +88,7 @@ const worksArbitraryValueRule = {
 //   no-raw-table     — use <DataTable> from atoms/ (WI-04) instead of raw <table>
 //   no-raw-button    — use <Button> from components/works/ instead of raw <button>
 //   no-inline-card-chrome — use <Card> from atoms/ instead of hand-rolled shadow+rounded divs
-//   sanctioned-page-widths — only max-w-7xl (dashboard) or max-w-reading (content) in page shells
+//   sanctioned-page-widths — only max-w-workspace (dashboard) or max-w-reading (content) in page shells
 const worksViewStructurePlugin = {
   rules: {
     'no-raw-table': {
@@ -143,10 +143,10 @@ const worksViewStructurePlugin = {
     },
 
     'sanctioned-page-widths': {
-      meta: { type: 'suggestion', docs: { description: 'Only max-w-7xl and max-w-reading are sanctioned page widths.' } },
+      meta: { type: 'suggestion', docs: { description: 'Only max-w-workspace and max-w-reading are sanctioned page widths.' } },
       create(context) {
         const SANCTIONED = new Set([
-          'max-w-7xl', 'max-w-reading',
+          'max-w-workspace', 'max-w-reading',
           // Utility values that are never used as page-shell widths:
           'max-w-full', 'max-w-none', 'max-w-fit', 'max-w-min', 'max-w-max', 'max-w-prose', 'max-w-screen',
         ]);
@@ -161,7 +161,7 @@ const worksViewStructurePlugin = {
             if (bad.length > 0) {
               context.report({
                 node,
-                message: `Non-sanctioned page width "${bad[0]}" in views/: use max-w-7xl (dashboard) or max-w-reading (content). RB-30 §4.`,
+                message: `Non-sanctioned page width "${bad[0]}" in views/: use max-w-workspace (dashboard) or max-w-reading (content). RB-30 §4.`,
               });
             }
           },

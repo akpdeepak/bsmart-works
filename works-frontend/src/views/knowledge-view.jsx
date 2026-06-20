@@ -1328,7 +1328,7 @@ export default function KnowledgeView({
               <div className="flex-1 overflow-y-auto p-6">
                 {editingArticle ? (
                   /* ── Edit mode ── */
-                  <div className="max-w-3xl space-y-4">
+                  <div className="w-full max-w-workspace space-y-4">
                     {/* KR-009: cover banner */}
                     <ArticleCover image={selectedArticle.coverImage} />
 
@@ -1458,7 +1458,7 @@ export default function KnowledgeView({
                   </div>
                 ) : (
                   /* ── Read mode ── */
-                  <div className="max-w-3xl">
+                  <div className="w-full max-w-workspace">
                     {/* KR-009: cover banner in read mode */}
                     <ArticleCover image={selectedArticle.coverImage} />
                     {(() => {

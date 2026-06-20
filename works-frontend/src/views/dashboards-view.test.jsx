@@ -55,7 +55,7 @@ const baseProps = {
 describe('DashboardsView', () => {
   it('uses the sanctioned dashboard page shell', () => {
     const { container } = render(<DashboardsView {...baseProps} />);
-    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+    expect(container.firstChild).toHaveClass('max-w-workspace', 'px-6', 'py-6');
   });
 
   it('renders the heading and empty state with no dashboards', () => {

@@ -166,7 +166,7 @@ function Stat({ n, label }) {
 // ── Shared states ────────────────────────────────────────────────────────────────
 export function Loading() {
   return (
-    <div className="mx-auto max-w-7xl p-6">
+    <div className="mx-auto max-w-workspace p-6">
       <div className="mb-4 h-8 w-48 animate-pulse rounded bg-neutral-100 dark:bg-neutral-800" />
       <div className="space-y-3">
         {[0, 1, 2].map((i) => <div key={i} className="h-24 animate-pulse rounded-lg bg-neutral-100 dark:bg-neutral-800" />)}

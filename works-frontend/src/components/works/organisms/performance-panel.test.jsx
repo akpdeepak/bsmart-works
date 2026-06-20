@@ -89,7 +89,7 @@ beforeEach(() => {
 describe('PerformancePanel', () => {
   it('uses the sanctioned dashboard page shell', () => {
     const { container } = renderWith(<PerformancePanel workspaceId="ws-1" />);
-    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+    expect(container.firstChild).toHaveClass('max-w-workspace', 'px-6', 'py-6');
   });
 
   it('shows the personal layer with a privacy message by default', async () => {

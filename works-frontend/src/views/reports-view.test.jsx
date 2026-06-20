@@ -16,7 +16,7 @@ const baseProps = {
 describe('ReportsView', () => {
   it('uses the dashboard page width for report analytics', () => {
     const { container } = render(<ReportsView {...baseProps} />);
-    expect(container.firstChild).toHaveClass('max-w-7xl');
+    expect(container.firstChild).toHaveClass('max-w-workspace');
     expect(container.firstChild).not.toHaveClass('max-w-reading');
   });
 

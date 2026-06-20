@@ -26,7 +26,7 @@ export function StandupTab({
                 </button>))}</div>}
         </div>
       ) : (
-        <div className="max-w-reading">
+        <div className="w-full">
           <button onClick={() => setActiveStandup(null)} className="text-xs text-brand-navy hover:underline mb-3"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />All standups</button>
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Standup — {activeStandup.session.status}</h3>

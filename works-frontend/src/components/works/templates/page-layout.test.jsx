@@ -52,9 +52,9 @@ describe('PageLayout', () => {
     expect(screen.queryByRole('heading')).not.toBeInTheDocument();
   });
 
-  it('applies max-w-7xl for dashboard width (default)', () => {
+  it('applies max-w-workspace for dashboard width (default)', () => {
     const { container } = render(<PageLayout title="Page" />);
-    expect(container.firstChild).toHaveClass('max-w-7xl');
+    expect(container.firstChild).toHaveClass('max-w-workspace');
   });
 
   it('applies max-w-reading for reading width', () => {
@@ -62,9 +62,9 @@ describe('PageLayout', () => {
     expect(container.firstChild).toHaveClass('max-w-reading');
   });
 
-  it('falls back to max-w-7xl for an unknown width', () => {
+  it('falls back to max-w-workspace for an unknown width', () => {
     const { container } = render(<PageLayout title="Page" width="unknown" />);
-    expect(container.firstChild).toHaveClass('max-w-7xl');
+    expect(container.firstChild).toHaveClass('max-w-workspace');
   });
 
   it('applies canonical padding by default', () => {

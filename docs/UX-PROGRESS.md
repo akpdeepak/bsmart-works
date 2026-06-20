@@ -7,6 +7,18 @@ the resume protocol reads this log). `UX-CODEBASE-ANALYSIS.md` is the original 2
 audit. Tracks what has shipped to `main` so the state is always legible. Newest first; tag entries
 `[consistency]` / `[premium]` / `[benchmark]`.
 
+## Adaptive workspace width normalized across surfaces (2026-06-20) `[premium] [benchmark] [consistency]`
+
+Replaced the fixed dashboard page cap with the adaptive `max-w-workspace` token, widened dashboard-like
+work surfaces, and kept `max-w-reading` as the deliberate prose/document exception.
+
+**Scope shipped:** `PageLayout width="dashboard"` now uses `max-w-workspace`; Backlog, Knowledge
+article editor/reader, AI Studio Ask, customization wrappers, public dashboard embeds, and active
+Scrum ceremony/standup panels no longer squeeze the main work area into narrow page caps.
+
+**Validation:** frontend lint, frontend build, full frontend unit suite, and root `npm run verify`
+passed. Lint still reports existing warning-only baseline debt unrelated to this width change.
+
 ## UIUX closure revalidated against all gates (2026-06-19) `[premium] [benchmark] [consistency]`
 
 Revalidated the bSmart UI/UX Program closure after the final roadmap sweep. The execution ledger now

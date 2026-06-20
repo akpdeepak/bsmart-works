@@ -12,6 +12,7 @@
   --width-rail:                72px;
   --width-subrail:             208px;
   --width-reading:             880px;
+  --width-workspace:           clamp(80rem, 94vw, 104rem);
 }
 
 /* Tailwind v4: @theme defines vars but does NOT auto-generate w-* utilities for --width-*
@@ -23,6 +24,7 @@
 @utility w-rail                { width: var(--width-rail); }
 @utility w-subrail             { width: var(--width-subrail); }
 @utility max-w-reading         { max-width: var(--width-reading); }
+@utility max-w-workspace       { max-width: var(--width-workspace); }
 @utility text-display          { font-size: 2.5rem; line-height: 3rem; font-weight: 700; letter-spacing: 0; }
 @utility text-title            { font-size: 2rem; line-height: 2.5rem; font-weight: 700; letter-spacing: 0; }
 @utility text-heading          { font-size: 1.5rem; line-height: 2rem; font-weight: 700; letter-spacing: 0; }

@@ -35,7 +35,7 @@ describe('SupportInboxView', () => {
   it('uses the sanctioned dashboard page shell', async () => {
     listConversations.mockResolvedValue([]);
     const { container } = render(<SupportInboxView workspaceId="ws-1" />);
-    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+    expect(container.firstChild).toHaveClass('max-w-workspace', 'px-6', 'py-6');
     expect(await screen.findByText('No conversations')).toBeInTheDocument();
   });
 

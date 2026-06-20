@@ -25,7 +25,7 @@ const sampleThemes = [
 describe('PoWorkspaceView', () => {
   it('uses the sanctioned dashboard page shell', () => {
     const { container } = render(<PoWorkspaceView {...baseProps} />);
-    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+    expect(container.firstChild).toHaveClass('max-w-workspace', 'px-6', 'py-6');
   });
 
   it('renders the roadmap tab empty state by default', () => {

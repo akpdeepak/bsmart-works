@@ -37,7 +37,7 @@ export function PublicDashboardEmbed({ token, embedded = false }) {
           <Skeleton className="h-5 w-20 rounded-full" />
         </header>
         <main className="p-6">
-          <div className="grid grid-cols-12 gap-4 max-w-7xl mx-auto">
+          <div className="grid grid-cols-12 gap-4 max-w-workspace mx-auto">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="col-span-12 sm:col-span-6 lg:col-span-4">
                 <Skeleton className="h-40 w-full rounded-xl" />
@@ -81,7 +81,7 @@ export function PublicDashboardEmbed({ token, embedded = false }) {
         {widgets.length === 0 ? (
           <p className="text-sm text-neutral-600 dark:text-neutral-400">This dashboard has no widgets.</p>
         ) : (
-          <div className="grid grid-cols-12 gap-4 max-w-7xl mx-auto">
+          <div className="grid grid-cols-12 gap-4 max-w-workspace mx-auto">
             {widgets.map(w => (
               <DashboardWidgetCard key={w.id} widget={w} workItems={[]} aggregate={data.aggregate} editMode={false}
                 resolvedPivot={pivots[w.id]} />

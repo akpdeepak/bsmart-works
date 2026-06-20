@@ -56,7 +56,7 @@ const baseProps = {
 describe('PmView', () => {
   it('uses the sanctioned dashboard page shell', () => {
     const { container } = render(<PmView {...baseProps} />);
-    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+    expect(container.firstChild).toHaveClass('max-w-workspace', 'px-6', 'py-6');
   });
 
   it('renders the Project Management heading', () => {

@@ -34,7 +34,7 @@ const baseProps = {
 describe('WorkspaceView', () => {
   it('uses the sanctioned dashboard page shell', () => {
     const { container } = render(<WorkspaceView {...baseProps} />);
-    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+    expect(container.firstChild).toHaveClass('max-w-workspace', 'px-6', 'py-6');
   });
 
   it('lists workspace members', () => {

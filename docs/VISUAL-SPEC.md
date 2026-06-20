@@ -48,6 +48,10 @@ Use restrained feedback only when it confirms value:
 
 Touch targets should be at least 32 px in dense controls and 40 px for primary actions. Boards and dense tables must scroll predictably instead of wrapping into unreadable cards unless a dedicated mobile layout exists.
 
+## Layout Width
+
+Product work surfaces use `PageLayout width="dashboard"` by default, which resolves to the adaptive `max-w-workspace` token. That token is intentionally wider than the old fixed dashboard cap and scales with the viewport. Use `max-w-reading` only for deliberate prose/document reading contexts where long line length would hurt comprehension.
+
 ## Premium Bar
 
 Every changed UI surface must meet `docs/PREMIUM-BAR-COVERAGE.md`: tokens, shared primitives, all data states, keyboard access, dark mode, no raw page chrome, and visual-regression coverage or explicit ledger entry.

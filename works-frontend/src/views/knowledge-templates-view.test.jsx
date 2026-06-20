@@ -25,7 +25,7 @@ describe('KnowledgeTemplatesView', () => {
   it('uses the sanctioned dashboard page shell', () => {
     templatesClient.list.mockResolvedValue([]);
     const { container } = render(<KnowledgeTemplatesView workspaceId="WS-001" />);
-    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+    expect(container.firstChild).toHaveClass('max-w-workspace', 'px-6', 'py-6');
   });
 
   it('renders the templates returned from the API', async () => {

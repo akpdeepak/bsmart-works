@@ -1,11 +1,6 @@
----
-description: bSmart Works core rules (orchestrator) — always applied
-alwaysApply: true
----
-
 <!-- GENERATED FROM ai-rules/ — do not edit by hand.
      Edit the source in ai-rules/ and run: node scripts/generate-ai-rules.mjs
-     This file is the Cursor view of the same rules. -->
+     This file is the GitHub Copilot (repo-wide core) view of the same rules. -->
 
 <!-- CANONICAL SOURCE — human- and machine-facing. Per-tool files
      (CLAUDE.md, AGENTS.md, .github/copilot-instructions.md, .cursor/rules/*,

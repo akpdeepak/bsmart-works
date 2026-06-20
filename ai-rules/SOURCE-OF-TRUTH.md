@@ -72,6 +72,22 @@ these is ever intentionally reverted (e.g. the package rename), **update this le
 | Real-time co-presence protocol | WebSocket (spec `06 §4.8`, iter 18) | **SSE (Server-Sent Events)** with heartbeat + `PresenceService` | SSE is unidirectional (server→client); sufficient for all current use cases; works through HTTP/2 proxies + CDN without sticky sessions. Decision 2026-06-08 — see TD-023. |
 | Mobile apps | Native iOS (Swift) + Android (Kotlin) (spec `06 §4.9`, iter 18) | **PWA only** (service worker, offline drafts, Web Push, WebAuthn biometric) | Native apps are separate platform repos (`bsmart-works-ios`, `bsmart-works-android`) — not built in this codebase. Decision 2026-06-08 — see TD-020. |
 
+> **DECISION REVERSAL (2026-06-20 — Deepak): maximal-scope completion.** The completion program
+> (`docs/implementation/MASTER-COMPLETION-ROADMAP.md`) brings the following previously-superseded items
+> **back into scope**; they will be built, each under its own EPIC plan with an explicit checkpoint:
+>
+> - **Message broker** (Kafka / RabbitMQ / SQS) for the event backbone — *in addition to* in-process events + outbox.
+> - **Real-time:** add **WebSocket** for bidirectional needs *alongside* the existing SSE presence channel.
+> - **Native iOS (Swift) + Android (Kotlin)** apps — *in addition to* the PWA.
+> - **jOOQ** typed-query layer — *alongside* JPA/Hibernate.
+> - **SAML / OAuth2 login SSO** — *in addition to* JWT + MFA + WebAuthn + SCIM.
+> - **Target cloud infra:** AWS (ECS/EKS, RDS, ElastiCache, S3, CloudFront, Secrets Manager, ECR),
+>   Terraform IaC, OpenTelemetry → CloudWatch/Grafana/Prometheus.
+>
+> The **Canonical** column above remains the *current-state* truth until each item ships; update the
+> relevant row from "current" to the new reality as each EPIC merges. This reversal supersedes the
+> per-row "Decision 2026-06-08" notes for these items only.
+
 ---
 
 ## 5. Software-Spec authority map — specs win; honor when building forward

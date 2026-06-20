@@ -41,6 +41,8 @@ describe('DashboardView (My Works home)', () => {
   it('greets the user and renders the KPI cards', () => {
     render(<DashboardView {...baseProps} />, { wrapper: Wrapper });
     expect(screen.getByRole('heading', { name: /Deepak/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Daily clarity' })).toBeInTheDocument();
+    expect(screen.getByText('High-priority work in your queue.')).toBeInTheDocument();
     expect(screen.getByText('Open work items')).toBeInTheDocument();
     expect(screen.getByText('Items blocked on me')).toBeInTheDocument();
   });
@@ -48,10 +50,17 @@ describe('DashboardView (My Works home)', () => {
   it('lists assigned items in the needs-attention table and opens one on click', () => {
     const setSelectedItem = vi.fn();
     render(<DashboardView {...baseProps} setSelectedItem={setSelectedItem} />, { wrapper: Wrapper });
-    const row = screen.getByText('Fix login');
+    const row = screen.getAllByText('Fix login').at(-1);
     expect(row).toBeInTheDocument();
     fireEvent.click(row);
     expect(setSelectedItem).toHaveBeenCalled();
+  });
+
+  it('routes the daily clarity primary action into My Works', () => {
+    const setView = vi.fn();
+    render(<DashboardView {...baseProps} setView={setView} />, { wrapper: Wrapper });
+    fireEvent.click(screen.getAllByRole('button', { name: /Plan my day/i })[0]);
+    expect(setView).toHaveBeenCalledWith('myworks');
   });
 
   it('renders the active-sprint ring with the completion percent', () => {

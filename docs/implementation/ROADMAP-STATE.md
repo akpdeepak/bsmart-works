@@ -7,11 +7,11 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 
 ## Current status
 
-- Roadmap mode: V.20 EPIC 7 bSmart Today ready to start
+- Roadmap mode: V.20 EPIC 7 bSmart Today in progress
 - Active EPIC: EPIC 7 - bSmart Today
-- Active branch: `main`
+- Active branch: `epic/07-bsmart-today`
 - Last completed EPIC: EPIC 6 - Simplified Information Architecture and Navigation
-- Next recommended EPIC: EPIC 7 - bSmart Today
+- Next recommended EPIC: Finish EPIC 7 - bSmart Today
 - Last state update: 2026-06-20
 
 ## Trigger contract
@@ -84,7 +84,7 @@ resume point.
 | EPIC 4 - Frontend Architecture Refactor | Completed | `main` | [#398](https://github.com/akpdeepak/bsmart-works/pull/398) | `cd works-frontend && npm test -- app-architecture`; `cd works-frontend && npm run build`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-04-frontend-architecture-refactor-completion.md` | Thin `App.jsx` entrypoint, `src/app/AppShell.jsx` boundary, architecture guard |
 | EPIC 5 - Premium Design System Refresh | Completed | `main` | [#399](https://github.com/akpdeepak/bsmart-works/pull/399) | `cd works-frontend && npm test -- page-layout design-system-tokens`; `cd works-frontend && npm run lint`; `cd works-frontend && npm run build`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-05-premium-design-system-refresh-completion.md` | Adaptive `max-w-workspace` token, page-width guardrail, workspace surface width normalization |
 | EPIC 6 - Simplified Information Architecture and Navigation | Completed | `main` | [#400](https://github.com/akpdeepak/bsmart-works/pull/400) | `cd works-frontend && npm test -- nav-model`; `cd works-frontend && npm run build`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-06-simplified-navigation-completion.md` | Six-mode rail contract, setup/admin More destinations, command-palette reachability |
-| EPIC 7 - bSmart Today | Not started | | | | | |
+| EPIC 7 - bSmart Today | In progress | `epic/07-bsmart-today` | | `cd works-frontend && npm test -- today-brief dashboard-view` | `docs/implementation/epics/EPIC-07-bsmart-today.md` | Role-aware daily clarity band and max-five attention model in progress |
 | EPIC 8 - Smart Inbox | Not started | | | | | |
 | EPIC 9 - bSmart Connect Messaging | Not started | | | | | |
 | EPIC 10 - Work Item Experience Redesign | Not started | | | | | |
@@ -213,3 +213,10 @@ target: `cd works-frontend && npm test -- nav-model`; `cd works-frontend && npm 
 lint/build/test, Storybook, Chromatic, backend compile/unit/integration/smoke, guardrails, quality
 gates, gitleaks, bundle budget, deployment smoke, and JetBrains plugin build. Local `main` and
 `origin/main` are synced at the merge commit. Resume with EPIC 7.
+
+2026-06-20: EPIC 7 is in progress on `epic/07-bsmart-today`. First slice adds a role-aware daily
+clarity model derived from existing workspace-scoped dashboard data, caps needs-attention at five,
+and renders a calm clarity band above each Today role canvas while preserving saved widget layouts.
+Focused validation passed: `cd works-frontend && npm test -- today-brief dashboard-view`. Next:
+run broader frontend/repo validation, open PR, wait for GitHub CI, merge to `main`, then mark EPIC 7
+completed.

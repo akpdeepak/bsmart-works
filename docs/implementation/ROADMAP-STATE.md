@@ -10,13 +10,16 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 - Program mode: **maximal-scope end-to-end completion** (Deepak, 2026-06-20). The authoritative tracker
   is now `docs/implementation/MASTER-COMPLETION-ROADMAP.md`; this file remains the cross-session resume
   ledger.
-- Active phase: **Phase 0 — truth reconciliation + coverage ledger** (branch `chore/phase0-truth-and-coverage`).
-- Verified-status correction: EPICs 3–12 below were previously marked "Completed" but independent code
-  verification (2026-06-20) shows each is a **first slice (partial)**, not full-scope complete. Statuses
-  re-labeled accordingly; full completion is governed by the master roadmap.
-- Last completed (full-scope) EPIC: EPIC 2 / EPIC 25-partial (Phase 1 hardening). EPICs 3–12 are slices.
-- Next after Phase 0: Phase 1 — governance & security closure (central tenant filter #243, field-level
-  security enforcement, PII vault).
+- Active phase: **Phase 1 — governance & security closure**.
+  - ✅ Phase 0 (truth reconciliation + master ledger + restored deleted CI pipeline) merged — PR #407.
+  - ✅ #243 central Hibernate tenant filter (Slice 1) + EPIC-3 package-collision fix merged — PR #415 (`fc31ceb9`).
+  - 🟡 Field-level security enforcement (Slice 1) — verified on Windows (FieldLevelSecurityIT 11/11); PR open
+    (branch `feat/p1-field-level-security`). Closes the work_item_field_value AND legacy custom_fields read leaks.
+- Verified-status correction: EPICs 3–12 are first slices (partial), not full-scope complete; full
+  completion is governed by the master roadmap.
+- Next in Phase 1: PII vault + crypto-shredding → BYOK/KMS → WebAuthn attestation → distributed rate-limit/JWT.
+- Open follow-ups: field-visibility tier-source reconciliation (`roles` V7 vs `role_def` V21 — decision pending);
+  BQL field-level filter-inference (RB-10 §6).
 - Last state update: 2026-06-20
 
 ## Trigger contract

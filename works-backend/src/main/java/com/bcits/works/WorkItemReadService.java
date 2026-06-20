@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class WorkItemReadService {
@@ -22,11 +23,14 @@ public class WorkItemReadService {
     private final JdbcTemplate jdbc;
     private final AuthenticatedUser authenticatedUser;
     private final ObjectMapper objectMapper;
+    private final FieldVisibilityService fieldVisibility;
 
-    public WorkItemReadService(JdbcTemplate jdbc, AuthenticatedUser authenticatedUser, ObjectMapper objectMapper) {
+    public WorkItemReadService(JdbcTemplate jdbc, AuthenticatedUser authenticatedUser, ObjectMapper objectMapper,
+                               FieldVisibilityService fieldVisibility) {
         this.jdbc = jdbc;
         this.authenticatedUser = authenticatedUser;
         this.objectMapper = objectMapper;
+        this.fieldVisibility = fieldVisibility;
     }
 
     public ResponseEntity<List<WorkItem>> getAllWorkItems(String parentId, int page, int size) {
@@ -286,6 +290,63 @@ public class WorkItemReadService {
                             .put(rs.getString("field_def_id"), v);
                 },
                 ids.toArray());
+        redactHiddenFieldValues(items, byItem);
         items.forEach(i -> i.setFieldValues(byItem.getOrDefault(i.getId(), new java.util.HashMap<>())));
+    }
+
+    /**
+     * Field-level security read redaction (RB-40 §1; EPIC P1 §3.2) — the single choke point.
+     *
+     * <p>Strips field_def values the caller's role-tier must NOT see (an explicit {@code HIDDEN} rule
+     * in that field's workspace) from BOTH the {@code work_item_field_value} map and the legacy
+     * {@code custom_fields} JSONB (post-V80 its keys are field_def ids too, so it leaks the same way).
+     * Because a batch can span multiple workspaces (search / my / starred), the
+     * verdict is resolved <b>per item's workspace</b> and memoized for the request, so the cost is
+     * O(distinct-workspaces-in-batch), not O(items) — no N+1.
+     *
+     * <p>Conservative posture (EPIC P1 §4): only an explicit HIDDEN rule redacts; everything else
+     * (no rule → EDITABLE, or READ_ONLY) is returned unchanged. READ_ONLY values still render — they
+     * are simply not writable (enforced on the write path).
+     */
+    private void redactHiddenFieldValues(List<WorkItem> items,
+                                         java.util.Map<String, java.util.Map<String, Object>> byItem) {
+        // Run if EITHER store has data: the work_item_field_value map (byItem) OR the legacy
+        // custom_fields JSONB already mapped onto an item — legacy-only items have an empty byItem.
+        boolean anyCustom = items.stream()
+                .anyMatch(i -> i.getCustomFields() != null && !i.getCustomFields().isEmpty());
+        if (byItem.isEmpty() && !anyCustom) return; // nothing on any item to redact
+        String userId = authenticatedUser.id();
+        java.util.Map<String, String> wsByItem = workspaceByItem(items);
+        // Memoize the HIDDEN set per distinct workspace for this request (no cross-request caching:
+        // rules can change, a stale cache would be a security risk).
+        java.util.Map<String, Set<String>> hiddenByWorkspace = new java.util.HashMap<>();
+        for (WorkItem item : items) {
+            java.util.Map<String, Object> values = byItem.get(item.getId());
+            java.util.Map<String, Object> custom = item.getCustomFields();
+            boolean hasValues = values != null && !values.isEmpty();
+            boolean hasCustom = custom != null && !custom.isEmpty();
+            if (!hasValues && !hasCustom) continue;
+            String wsId = wsByItem.get(item.getId());
+            if (wsId == null) continue; // unknown workspace → already bounded by upstream tenant scope
+            Set<String> hidden = hiddenByWorkspace.computeIfAbsent(wsId,
+                    ws -> fieldVisibility.resolveForUser(userId, ws).hiddenFieldDefIds());
+            if (hidden.isEmpty()) continue;
+            if (hasValues) values.keySet().removeAll(hidden);
+            if (hasCustom) custom.keySet().removeAll(hidden); // close the legacy JSONB leak too
+        }
+    }
+
+    /** Batch-resolve each item's workspace via its project (one indexed query for the whole batch). */
+    private java.util.Map<String, String> workspaceByItem(List<WorkItem> items) {
+        List<String> ids = items.stream().map(WorkItem::getId).toList();
+        String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
+        java.util.Map<String, String> wsByItem = new java.util.HashMap<>();
+        jdbc.query(
+                "SELECT wi.id, p.workspace_id FROM work_items wi "
+                        + "JOIN projects p ON p.id = wi.project_id WHERE wi.id IN (" + placeholders + ")",
+                (org.springframework.jdbc.core.RowCallbackHandler) rs ->
+                        wsByItem.put(rs.getString("id"), rs.getString("workspace_id")),
+                ids.toArray());
+        return wsByItem;
     }
 }

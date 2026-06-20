@@ -1,7 +1,6 @@
 package com.bcits.works;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,7 +14,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,52 +28,18 @@ public class FieldDefController {
     private final WorkItemFieldValueRepository valueRepo;
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
-    private final JdbcTemplate jdbc;
+    private final FieldVisibilityService fieldVisibility;
 
     public FieldDefController(FieldDefRepository fieldDefRepo,
                                WorkItemFieldValueRepository valueRepo,
                                AuthenticatedUser authenticatedUser,
                                RbacService rbac,
-                               JdbcTemplate jdbc) {
+                               FieldVisibilityService fieldVisibility) {
         this.fieldDefRepo = fieldDefRepo;
         this.valueRepo = valueRepo;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
-        this.jdbc = jdbc;
-    }
-
-    /**
-     * Returns the most-restrictive field visibility for a (fieldDefId, workspace, tier) tuple.
-     * Looks up role_def entries in the workspace whose tier matches the user's tier, then finds
-     * the most restrictive visibility rule across those roles (HIDDEN > READ_ONLY > EDITABLE).
-     * Returns "EDITABLE" when no rule is configured — the safe default.
-     */
-    private String resolveFieldVisibility(String fieldDefId, String wsId, int tier) {
-        try {
-            String vis = jdbc.queryForObject(
-                "SELECT fv.visibility FROM field_visibility fv " +
-                "JOIN role_def rd ON rd.id = fv.role_def_id " +
-                "WHERE fv.field_def_id = ? AND rd.workspace_id = ? AND rd.tier = ? " +
-                "ORDER BY CASE fv.visibility WHEN 'HIDDEN' THEN 1 WHEN 'READ_ONLY' THEN 2 ELSE 3 END " +
-                "LIMIT 1",
-                String.class, fieldDefId, wsId, tier);
-            return vis != null ? vis : "EDITABLE";
-        } catch (Exception e) {
-            return "EDITABLE";
-        }
-    }
-
-    /** Returns the set of fieldDefIds that are HIDDEN for the user's tier in the workspace. */
-    private Set<String> hiddenFieldIds(String wsId, int tier) {
-        try {
-            return new HashSet<>(jdbc.queryForList(
-                "SELECT fv.field_def_id FROM field_visibility fv " +
-                "JOIN role_def rd ON rd.id = fv.role_def_id " +
-                "WHERE rd.workspace_id = ? AND rd.tier = ? AND fv.visibility = 'HIDDEN'",
-                String.class, wsId, tier));
-        } catch (Exception e) {
-            return Set.of();
-        }
+        this.fieldVisibility = fieldVisibility;
     }
 
     @GetMapping
@@ -141,14 +105,9 @@ public class FieldDefController {
         List<WorkItemFieldValue> values = valueRepo.findByWorkItemId(workItemId);
         // Field-level security (RB-40 §1, Cap C): filter out HIDDEN fields for the user's role.
         String wsId = rbac.workspaceForWorkItem(workItemId);
-        if (wsId != null) {
-            int tier = rbac.getUserTier(userId, wsId);
-            if (tier > 0) {
-                Set<String> hidden = hiddenFieldIds(wsId, tier);
-                if (!hidden.isEmpty()) {
-                    return values.stream().filter(v -> !hidden.contains(v.getFieldDefId())).toList();
-                }
-            }
+        Set<String> hidden = fieldVisibility.resolveForUser(userId, wsId).hiddenFieldDefIds();
+        if (!hidden.isEmpty()) {
+            return values.stream().filter(v -> !hidden.contains(v.getFieldDefId())).toList();
         }
         return values;
     }
@@ -157,21 +116,10 @@ public class FieldDefController {
     public WorkItemFieldValue setValue(@PathVariable String workItemId,
                                        @PathVariable String fieldDefId,
                                        @Valid @RequestBody Map<String, Object> body) {
-        String userId = authenticatedUser.id();
-        // Field-level security (RB-40 §1, Cap C): reject writes to HIDDEN or READ_ONLY fields.
-        String wsId = rbac.workspaceForWorkItem(workItemId);
-        if (wsId != null) {
-            int tier = rbac.getUserTier(userId, wsId);
-            if (tier > 0) {
-                String vis = resolveFieldVisibility(fieldDefId, wsId, tier);
-                if ("HIDDEN".equals(vis)) {
-                    throw ApiException.forbidden("You do not have permission to access this field.");
-                }
-                if ("READ_ONLY".equals(vis)) {
-                    throw ApiException.forbidden("This field is read-only for your role.");
-                }
-            }
-        }
+        // Field-level security (RB-40 §1, Cap C): reject create/update of a HIDDEN or READ_ONLY field
+        // value by a tier not permitted to edit it. This is the canonical custom-field-value
+        // create/update point for the unified work_item_field_value store.
+        requireFieldWritable(authenticatedUser.id(), workItemId, fieldDefId);
         WorkItemFieldValue fv = valueRepo.findByWorkItemIdAndFieldDefId(workItemId, fieldDefId)
                 .orElseGet(() -> {
                     WorkItemFieldValue newFv = new WorkItemFieldValue();
@@ -199,8 +147,44 @@ public class FieldDefController {
 
     @DeleteMapping("/values/{workItemId}/{fieldDefId}")
     public ResponseEntity<Void> deleteValue(@PathVariable String workItemId, @PathVariable String fieldDefId) {
+        // Field-level security (RB-40 §1, Cap C): deleting a value mutates the field, so the same
+        // HIDDEN/READ_ONLY write-guard as setValue applies — closing the previously-unguarded gap
+        // (EPIC P1 §2/§5). A tier that may not edit the field may not clear it either.
+        requireFieldWritable(authenticatedUser.id(), workItemId, fieldDefId);
         valueRepo.findByWorkItemIdAndFieldDefId(workItemId, fieldDefId).ifPresent(valueRepo::delete);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Field-level-security write guard for the unified {@code work_item_field_value} store
+     * (RB-40 §1, EPIC P1 §5). Rejects a create/update/delete of a field value when the caller's
+     * role-tier has a {@code HIDDEN} or {@code READ_ONLY} rule for that field in the item's workspace.
+     *
+     * <p>Resolves {@code (workspace, tier)} via {@link RbacService} and the single
+     * {@link FieldVisibilityService} resolver, then maps the verdict to the standard {@code FORBIDDEN}
+     * (403) error shape via {@link ApiException#forbidden} (RB-10 §4, one error shape). The write path
+     * fails <b>closed</b>: a resolution error propagates and denies the write (EPIC P1 §3.4).
+     *
+     * <p>{@code wsId == null} (item/project not found) and {@code tier == 0} (non-member) skip the
+     * field check — those callers are bounded by the upstream tenant/RBAC scope, not by FLS; this
+     * preserves the existing endpoint semantics rather than newly blocking legitimate edits.
+     */
+    private void requireFieldWritable(String userId, String workItemId, String fieldDefId) {
+        String wsId = rbac.workspaceForWorkItem(workItemId);
+        if (wsId == null) {
+            return;
+        }
+        int tier = rbac.getUserTier(userId, wsId);
+        if (tier <= 0) {
+            return;
+        }
+        String vis = fieldVisibility.resolveFieldVisibility(fieldDefId, wsId, tier);
+        if ("HIDDEN".equals(vis)) {
+            throw ApiException.forbidden("You do not have permission to access this field.");
+        }
+        if ("READ_ONLY".equals(vis)) {
+            throw ApiException.forbidden("This field is read-only for your role.");
+        }
     }
 
     /** Parse an ISO date (optionally a longer timestamp) from its first 10 chars; null if not ISO. */

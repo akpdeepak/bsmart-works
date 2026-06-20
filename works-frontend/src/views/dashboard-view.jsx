@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { AlertTriangle, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 import { TIER } from '@/lib/nav-model';
+import { buildTodayBrief } from '@/lib/today-brief';
 import { builtinTodayLayout, widgetsToLayout, nextSpan } from '@/lib/today-layouts';
 import { DeveloperToday } from './dashboards/developer-dashboard';
 import { ScrumMasterToday } from './dashboards/scrum-master-dashboard';
@@ -65,6 +67,95 @@ function TodaySkeleton() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // ROOT — branches on dashboardRole, manages auto-fetch
 // ═══════════════════════════════════════════════════════════════════════════════
+
+const ATTENTION_TONE = {
+  danger: { dot: 'bg-semantic-danger', text: 'text-semantic-danger', icon: AlertTriangle },
+  warning: { dot: 'bg-semantic-warning', text: 'text-semantic-warning', icon: AlertTriangle },
+  neutral: { dot: 'bg-brand-navy-tint', text: 'text-brand-navy dark:text-brand-navy-tint', icon: Sparkles },
+};
+
+function DailyClarityBand({ brief, onNavigate }) {
+  if (!brief) return null;
+  const attentionCount = brief.attention.length;
+
+  return (
+    <section aria-labelledby="daily-clarity-heading"
+      className="mb-6 rounded-lg border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-800">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="max-w-2xl">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+            {brief.dateLabel} - {brief.roleLabel}
+          </p>
+          <h2 id="daily-clarity-heading" className="mt-1 text-2xl font-bold text-neutral-950 dark:text-neutral-50">
+            Daily clarity
+          </h2>
+          <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-300">{brief.confidence}</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => onNavigate?.(brief.primaryAction.view)}
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-navy px-3.5 py-2 text-sm font-semibold text-white transition-colors duration-fast hover:bg-brand-navy/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
+            {brief.primaryAction.label}
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </button>
+          {brief.secondaryAction && (
+            <button type="button" onClick={() => onNavigate?.(brief.secondaryAction.view)}
+              className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 px-3.5 py-2 text-sm font-semibold text-neutral-700 transition-colors duration-fast hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-700">
+              {brief.secondaryAction.label}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Needs attention</h3>
+            <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+              {attentionCount} of {brief.attentionLimit}
+            </span>
+          </div>
+          {attentionCount > 0 ? (
+            <ul className="grid gap-2 md:grid-cols-2">
+              {brief.attention.map((item) => {
+                const tone = ATTENTION_TONE[item.tone] || ATTENTION_TONE.neutral;
+                const Icon = tone.icon;
+                return (
+                  <li key={item.id} className="rounded-lg border border-neutral-100 bg-neutral-50 p-3 dark:border-neutral-700 dark:bg-neutral-900">
+                    <div className="flex items-start gap-3">
+                      <span className={`mt-1 h-2.5 w-2.5 rounded-full ${tone.dot}`} aria-hidden="true" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{item.title}</p>
+                        <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">{item.reason}</p>
+                      </div>
+                      <Icon className={`h-4 w-4 flex-shrink-0 ${tone.text}`} aria-hidden="true" />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="rounded-lg border border-semantic-success/20 bg-semantic-success/10 p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-semantic-success">
+                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                Quiet win
+              </div>
+              <p className="mt-1 text-sm text-neutral-700 dark:text-neutral-300">{brief.quietWin}</p>
+            </div>
+          )}
+        </div>
+
+        <aside className="rounded-lg border border-neutral-100 bg-neutral-50 p-4 dark:border-neutral-700 dark:bg-neutral-900">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Suggested next action</p>
+          <p className="mt-2 text-sm font-semibold text-neutral-900 dark:text-neutral-100">{brief.primaryAction.label}</p>
+          <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">
+            Start from the most constrained signal, then let the detailed Today canvas handle the rest of the day.
+          </p>
+        </aside>
+      </div>
+    </section>
+  );
+}
 
 export default function DashboardView({
   currentUser,
@@ -164,6 +255,12 @@ export default function DashboardView({
     currentUser, activeWorkspaceId, setView, setIsCreateOpen, setSelectedItem, setIsWorklogOpen, selectedItem,
     showToast, workItems, layout: resolved, builtinLayout: builtin, edit,
   };
+  const todayBrief = activeData ? buildTodayBrief(dashboardRole, activeData) : null;
+  const roleDashboard = dashboardRole === 'scrum-master'  ? <ScrumMasterToday  data={smDash}       {...sharedProps} />
+    : dashboardRole === 'product-owner' ? <ProductOwnerToday data={poDash}       {...sharedProps} />
+    : dashboardRole === 'executive'     ? <ExecutiveToday    data={execDash}     {...sharedProps} />
+    : dashboardRole === 'admin'         ? <AdminToday        data={adminDash}    {...sharedProps} />
+    :                                     <DeveloperToday    data={developerDash} {...sharedProps} />;
 
   return (
     <PageLayout header={null}>
@@ -171,11 +268,12 @@ export default function DashboardView({
 
       {dashLoading || !activeData
         ? <TodaySkeleton />
-        : dashboardRole === 'scrum-master'  ? <ScrumMasterToday  data={smDash}       {...sharedProps} />
-        : dashboardRole === 'product-owner' ? <ProductOwnerToday data={poDash}       {...sharedProps} />
-        : dashboardRole === 'executive'     ? <ExecutiveToday    data={execDash}     {...sharedProps} />
-        : dashboardRole === 'admin'         ? <AdminToday        data={adminDash}    {...sharedProps} />
-        :                                     <DeveloperToday    data={developerDash} {...sharedProps} />
+        : (
+          <>
+            <DailyClarityBand brief={todayBrief} onNavigate={setView} />
+            {roleDashboard}
+          </>
+        )
       }
     </PageLayout>
   );

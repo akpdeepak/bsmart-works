@@ -34,7 +34,17 @@ unless anonymity is requested.
 bSmart Works ships from `main` as tagged releases (RB-10 §9). Security fixes land on `main` and are
 released as a PATCH; only the latest release is supported.
 
-## Security posture (what is enforced)
+## Security posture
+
+> This section distinguishes **what is enforced today** from **what is in progress**. Items marked
+> *in progress* are target commitments (RB-40) that are partially built — see
+> `docs/implementation/MASTER-COMPLETION-ROADMAP.md` §4 for verified status. Do **not** represent an
+> in-progress control as enforced in customer, sales, or audit materials until its note is removed.
+
+> **⚠️ In progress (CF-1):** the `.github/` directory — including `ci.yml` — is currently **absent on
+> `main`**, so the CI gate described below is **not running**. Restoring CI is the first Phase-1 item
+> (see `docs/implementation/MASTER-COMPLETION-ROADMAP.md` §0.1). The controls below describe the
+> intended gate.
 
 **In CI on every push & PR (the gate that blocks merge — `.github/workflows/ci.yml`):**
 
@@ -56,18 +66,25 @@ released as a PATCH; only the latest release is supported.
   too short, still uses the dev value, or if development verification-token exposure is enabled.
 - **Authorization:** `RbacService` enforced in the service layer; tier hierarchy
   VIEWER < MEMBER < LEAD < ADMIN < OWNER, permission-gated.
-- **Multi-tenant isolation (RB-40 §1):** every row is workspace-owned; every repository query is
-  workspace-scoped; no endpoint returns rows across tenants. This is the single catastrophic risk
-  for a multi-DISCOM product and is tested per feature.
+- **Multi-tenant isolation (RB-40 §1):** every row is workspace-owned; tenant scoping is applied
+  **per query** today (workspace-scoped repository methods) and covered by cross-tenant denial tests
+  per feature. *In progress (#243):* a **central Hibernate tenant filter** that enforces isolation by
+  construction — so a single forgotten predicate cannot leak — currently covers one entity (`Project`)
+  and is being extended to all entities. Until then, isolation depends on per-query discipline, not a
+  structural guarantee. This is the single catastrophic risk for a multi-DISCOM product.
 - **AI data boundary (RB-40 §2):** AI calls originate server-side only; prompts are PII-redacted at
   the boundary; every invocation is audited (who, when, capability, tier, tokens, cost, policy
   state); a per-workspace budget degrades then disables AI rather than overspending.
-- **Transport & storage targets (RB-40 §4):** TLS 1.3 minimum in transit, AES-256 at rest, BYOK via
-  KMS for tenants that require it; HTTP security headers and a strict CORS allow-list; rate limiting
-  on auth and write endpoints.
-- **Auditability:** state changes are event-sourced to an append-only `events` store; personal data
-  is tokenized into a PII vault and crypto-shredded on erasure, so the audit trail stays immutable
-  while DPDP/GDPR erasure is honoured (RB-40 §3).
+- **Transport & storage:** TLS 1.3 minimum in transit (terminated upstream); **AES-256-GCM at rest for
+  fields encrypted via `EncryptionService`**; HTTP security headers and a strict CORS allow-list; rate
+  limiting on auth and write endpoints (per-instance today — distributed limiting *in progress*).
+  *In progress:* **BYOK via external KMS** — a local key provider is active; the AWS KMS provider is not
+  yet implemented.
+- **Auditability:** state changes are event-sourced to an append-only `events` store, with a
+  tamper-evident audit hash chain. *In progress (RB-40 §3):* **PII-vault tokenization + crypto-shredding**
+  for DPDP/GDPR erasure is the target design and is partially scaffolded — it is **not yet** the
+  enforced path for all personal data (some personal fields are still stored directly), so erasure and
+  the "no raw PII outside the vault" guarantee are not yet complete.
 
 ## Operational readiness
 
@@ -89,5 +106,11 @@ target runtime secret manager. Never commit filled values.
 
 ## Certification roadmap
 
-SOC 2 Type 2 and ISO 27001 are targeted at **iteration 19** (RB-40 §4). An annual third-party
-penetration test plus the standing bug bounty form the external assurance layer.
+SOC 2 Type 2 and ISO 27001 are targeted (control mapping in `docs/compliance/`). *In progress:*
+reconciling that control mapping to actual code/test evidence — do not represent certification as
+achieved. An annual third-party penetration test plus the standing bug bounty form the external
+assurance layer.
+
+> **In progress — field-level security (RB-40 §1):** per-field, per-role visibility is defined and
+> computed, but server-side **response redaction is not yet applied**, so a hidden field can still be
+> returned to a reader who knows its name. Tracked in `MASTER-COMPLETION-ROADMAP.md` §4.

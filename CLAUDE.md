@@ -223,7 +223,10 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   Cap X + Admin Operations Center Cap Y), **17** (Universal Customization Engine Cap R), **18**
   (Mobile + Real-time + Performance Cap S), **19** (Enterprise Security + Compliance Certifications
   Cap T), and the Compliance/Service iterations (7–9).
-- **Flyway high-water mark:** **V90** (`V90__sprint_member_capacities.sql`; note: V16 was
+- **Flyway high-water mark:** **V109**. (V91–V109 add the Know Studio knowledge-base + transformation
+  migrations — e.g. article reactions/tags/favorites (V100–V102), space home article (V103), public
+  share token (V104), article watchers (V105), space followers (V106). The per-version history below is
+  documented through V90; V90 = `V90__sprint_member_capacities.sql`; note: V16 was
   skipped, V23 does not exist; V50–V53 are iterations 16/17/19/18's migrations; V54–V57 are
   iteration 20's advanced-AI / marketplace / knowledge / customer-chat migrations; V58 = user locale
   + perf indexes; V59 = block-editor + SCIM; V60 = custom domains; V61–V65 = compliance escalation,
@@ -267,7 +270,7 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   focus factor) for the role-adaptive Sprint Cockpit Capacity tab; the story-points budget is
   derived at read time from sprint working days × team velocity (not stored), so it always reflects
   current velocity/headcount; tenant-scoped via workspace_id + a sprint FK that cascades on delete.
-- **Next migration:** **`V91__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+- **Next migration:** **`V110__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 
@@ -360,6 +363,22 @@ these is ever intentionally reverted (e.g. the package rename), **update this le
 | Message broker | RabbitMQ / SQS early, Kafka at scale | **in-process events + outbox now; broker on service extraction** | per [ADR-0001](../docs/architecture/ADR-0001-service-decomposition.md) + RB-10 §2 |
 | Real-time co-presence protocol | WebSocket (spec `06 §4.8`, iter 18) | **SSE (Server-Sent Events)** with heartbeat + `PresenceService` | SSE is unidirectional (server→client); sufficient for all current use cases; works through HTTP/2 proxies + CDN without sticky sessions. Decision 2026-06-08 — see TD-023. |
 | Mobile apps | Native iOS (Swift) + Android (Kotlin) (spec `06 §4.9`, iter 18) | **PWA only** (service worker, offline drafts, Web Push, WebAuthn biometric) | Native apps are separate platform repos (`bsmart-works-ios`, `bsmart-works-android`) — not built in this codebase. Decision 2026-06-08 — see TD-020. |
+
+> **DECISION REVERSAL (2026-06-20 — Deepak): maximal-scope completion.** The completion program
+> (`docs/implementation/MASTER-COMPLETION-ROADMAP.md`) brings the following previously-superseded items
+> **back into scope**; they will be built, each under its own EPIC plan with an explicit checkpoint:
+>
+> - **Message broker** (Kafka / RabbitMQ / SQS) for the event backbone — *in addition to* in-process events + outbox.
+> - **Real-time:** add **WebSocket** for bidirectional needs *alongside* the existing SSE presence channel.
+> - **Native iOS (Swift) + Android (Kotlin)** apps — *in addition to* the PWA.
+> - **jOOQ** typed-query layer — *alongside* JPA/Hibernate.
+> - **SAML / OAuth2 login SSO** — *in addition to* JWT + MFA + WebAuthn + SCIM.
+> - **Target cloud infra:** AWS (ECS/EKS, RDS, ElastiCache, S3, CloudFront, Secrets Manager, ECR),
+>   Terraform IaC, OpenTelemetry → CloudWatch/Grafana/Prometheus.
+>
+> The **Canonical** column above remains the *current-state* truth until each item ships; update the
+> relevant row from "current" to the new reality as each EPIC merges. This reversal supersedes the
+> per-row "Decision 2026-06-08" notes for these items only.
 
 ---
 

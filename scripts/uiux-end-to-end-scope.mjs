@@ -2,6 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
+const appShellPath = exists('works-frontend/src/app/AppShell.jsx')
+  ? 'works-frontend/src/app/AppShell.jsx'
+  : 'works-frontend/src/App.jsx';
 
 function read(file) {
   return fs.readFileSync(path.join(root, file), 'utf8');
@@ -53,7 +56,7 @@ const checks = [
   },
   {
     name: 'Action layer and persisted surface state',
-    pass: read('works-frontend/src/App.jsx').includes('paletteCommands') &&
+    pass: read(appShellPath).includes('paletteCommands') &&
       exists('works-frontend/src/lib/view-state.js') &&
       read('works-frontend/src/views/search-view.jsx').includes('Save search') &&
       read('works-frontend/src/lib/routes.js').includes('mergeRouteQueryState'),
@@ -70,7 +73,7 @@ const checks = [
   },
   {
     name: 'Router, mobile baseline, and board virtualization',
-    pass: read('works-frontend/src/App.jsx').includes('React.lazy') &&
+    pass: read(appShellPath).includes('React.lazy') &&
       read('works-frontend/src/lib/routes.js').includes('VIEW_PATHS') &&
       read('works-frontend/src/views/board-view.jsx').includes('overflow-x-auto') &&
       read('works-frontend/src/components/works/organisms/virtual-card-stack.jsx').includes('useVirtualList'),

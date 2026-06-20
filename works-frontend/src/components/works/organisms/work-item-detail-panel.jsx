@@ -1,7 +1,8 @@
-import { Star, X, CornerDownRight, Link2 } from 'lucide-react';
+import { Star, X, CornerDownRight, Link2, Bot, CalendarClock, Code2, ShieldCheck } from 'lucide-react';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { WatchButton } from '@/components/works/organisms/watch-button';
 import { SaveToKnowButton } from '@/components/knowledge/SaveToKnowButton';
+import { buildWorkItemExecutionBrief } from '@/lib/work-item-execution-brief';
 import { DetailsTab } from './work-item-detail/details-tab';
 import { CommentsTab } from './work-item-detail/comments-tab';
 import { LinksTab } from './work-item-detail/links-tab';
@@ -44,6 +45,16 @@ export function WorkItemDetailPanel({
   // per-type field visibility
   fieldPrefs, onToggleFieldPref,
 }) {
+  const executionBrief = buildWorkItemExecutionBrief({
+    item: selectedItem,
+    users,
+    comments,
+    links,
+    attachments,
+    activity,
+    children: itemChildren,
+  });
+
   return (
     <>
       <button
@@ -106,6 +117,47 @@ export function WorkItemDetailPanel({
               className="text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 p-1 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors" aria-label="Close detail panel"><X className="h-4 w-4" aria-hidden="true" /></button>
           </div>
         </div>
+
+        <section className="border-b border-neutral-200 bg-neutral-50/80 px-5 py-3 dark:border-neutral-700 dark:bg-neutral-900"
+          aria-label="Work item execution brief">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+            <div className="min-w-0">
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+                <Bot className="h-3.5 w-3.5 text-brand-navy dark:text-brand-navy-tint" aria-hidden="true" />
+                Execution brief
+              </p>
+              <p className="mt-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                {executionBrief.summary}
+              </p>
+              <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                Sources: {executionBrief.citations.join(', ')}
+              </p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <div className="rounded-md border border-neutral-200 bg-white px-3 py-2 dark:border-neutral-700 dark:bg-neutral-800">
+                <p className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                  <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
+                  Due
+                </p>
+                <p className="mt-0.5 truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{executionBrief.dueDate}</p>
+              </div>
+              <div className="rounded-md border border-neutral-200 bg-white px-3 py-2 dark:border-neutral-700 dark:bg-neutral-800">
+                <p className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                  <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                  Visibility
+                </p>
+                <p className="mt-0.5 truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{executionBrief.visibility}</p>
+              </div>
+              <div className="rounded-md border border-neutral-200 bg-white px-3 py-2 dark:border-neutral-700 dark:bg-neutral-800">
+                <p className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                  <Code2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  DevSync
+                </p>
+                <p className="mt-0.5 truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{executionBrief.devSync}</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <div className="flex border-b border-neutral-200 dark:border-neutral-700 px-5">
           {[

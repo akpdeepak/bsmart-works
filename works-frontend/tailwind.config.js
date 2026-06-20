@@ -89,6 +89,7 @@ export default {
       // Reading-column max-width (RB-30 §4). Use max-w-reading for detail/document content.
       maxWidth: {
         reading: '880px',
+        workspace: 'clamp(80rem, 94vw, 104rem)',
       },
       // Named min-height values — avoids banned arbitrary [px] values in settings/content panels.
       minHeight: {

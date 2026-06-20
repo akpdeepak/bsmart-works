@@ -25,7 +25,7 @@ describe('IntegrationsPanel', () => {
   it('uses the sanctioned dashboard page shell', () => {
     integrationsClient.providers.mockResolvedValue([]);
     const { container } = render(<IntegrationsPanel workspaceId="ws-1" />);
-    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+    expect(container.firstChild).toHaveClass('max-w-workspace', 'px-6', 'py-6');
   });
 
   it('renders the connector grid', async () => {

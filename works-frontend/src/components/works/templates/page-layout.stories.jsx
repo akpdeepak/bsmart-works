@@ -29,7 +29,7 @@ const PlaceholderContent = () => (
 );
 
 export const Dashboard = {
-  name: 'Dashboard width (max-w-7xl) — default',
+  name: 'Dashboard width (max-w-workspace) — default',
   render: () => (
     <div className="bg-neutral-50 min-h-screen">
       <PageLayout

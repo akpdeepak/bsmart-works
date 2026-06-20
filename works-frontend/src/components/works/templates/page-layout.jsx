@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 // Template — the mandatory content wrapper for every view surface (RB-30 §4, A-WS2).
 // Composes PageHeader + content zone with:
-//   • two sanctioned widths: "dashboard" max-w-7xl · "reading" max-w-[880px]  (RB-30 §4)
+//   • two sanctioned widths: "dashboard" max-w-workspace · "reading" max-w-reading
 //   • one canonical padding rhythm: px-6 py-6 md:px-8
 //
 // Usage:
@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 //   className — merged onto the outer wrapper (the width-constrained div)
 
 const WIDTHS = {
-  dashboard: 'max-w-7xl',
+  dashboard: 'max-w-workspace',
   reading: 'max-w-reading',
 };
 

@@ -303,7 +303,7 @@ function AskPanel({ workspaceId, notify }) {
   };
 
   return (
-    <div className="max-w-3xl space-y-4">
+    <div className="w-full max-w-workspace space-y-4">
       <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-700">
         <Field label="Describe the dashboard you want">
           <input value={prompt} onChange={(e) => setPrompt(e.target.value)}

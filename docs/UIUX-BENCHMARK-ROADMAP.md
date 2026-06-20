@@ -479,7 +479,7 @@ lens). Same codebase, finer-grained on system adoption:
 | **Shared `Tabs`** | ❌ Missing | tab bars rebuilt per view |
 | **Shared `DataTable`** | ❌ Missing | hand-rolled `<table>` per view |
 | **Shared `PageHeader`** | ❌ Missing | headers hand-coded; `h1` scale varies |
-| Content width | ⚠️ Drifted | ~10 distinct `max-w-*`; RB-30 sanctions only `max-w-7xl` + `max-w-[880px]` |
+| Content width | ⚠️ Drifted | ~10 distinct `max-w-*`; RB-30 sanctions only adaptive `max-w-workspace` + `max-w-reading` |
 | Page padding | ⚠️ Drifted | `p-4 / p-6 / p-8` mixed at page level |
 | `Modal` adoption | ⚠️ Low | ~5 / 95 views; others build inline dialogs |
 | `Button` adoption | ⚠️ Mixed | ~55 inline `<button>` vs ~114 `<Button>` |
@@ -574,7 +574,7 @@ Build once, in `cva`+`cn()`, dark-complete, a11y, RTL, with a Storybook story.
   (Card, PageHeader, Tabs, DataTable base, IconButton, Drawer, Confirm, form set, Badge). Each deletes
   dozens of hand-rolled copies.
 - **A-WS2 · Standardise the page skeleton** — one `PageLayout` composes shell → `PageHeader` → content
-  wrapper exposing only two widths (`width="dashboard"` → `max-w-7xl`, `width="reading"` →
+  wrapper exposing only two widths (`width="dashboard"` → `max-w-workspace`, `width="reading"` →
   `max-w-[880px]`) and one padding rhythm. This is what makes pages *feel* the same.
 - **A-WS3 · Adopt across all ~95 views** *(mechanical convergence)* — view-by-view via the proven
   **extract-loop** (byte-identical extract → ESLint `no-undef` proves the prop set → RTL test → live

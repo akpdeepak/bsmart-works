@@ -29,7 +29,7 @@ const baseProps = {
 describe('NotificationsView', () => {
   it('uses the sanctioned dashboard page shell', () => {
     const { container } = render(<NotificationsView {...baseProps} />);
-    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+    expect(container.firstChild).toHaveClass('max-w-workspace', 'px-6', 'py-6');
   });
 
   it('shows the empty state when there are no notifications', () => {

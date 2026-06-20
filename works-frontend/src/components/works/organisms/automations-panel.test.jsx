@@ -28,7 +28,7 @@ describe('AutomationsPanel', () => {
   it('uses the sanctioned dashboard page shell', () => {
     automationClient.list.mockResolvedValue([]);
     const { container } = render(<AutomationsPanel workspaceId="ws-1" />);
-    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+    expect(container.firstChild).toHaveClass('max-w-workspace', 'px-6', 'py-6');
   });
 
   it('lists existing rules', async () => {

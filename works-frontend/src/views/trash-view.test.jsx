@@ -13,7 +13,7 @@ const baseProps = {
 describe('TrashView', () => {
   it('uses the sanctioned dashboard page shell', () => {
     const { container } = render(<TrashView {...baseProps} />);
-    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+    expect(container.firstChild).toHaveClass('max-w-workspace', 'px-6', 'py-6');
   });
 
   it('shows the empty state when the trash is empty', () => {

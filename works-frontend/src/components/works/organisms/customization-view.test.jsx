@@ -58,7 +58,7 @@ describe('CustomizationView', () => {
 
   it('uses the sanctioned adaptive dashboard page shell', () => {
     const { container } = render(<CustomizationView workspaceId="WS-1" canManage onToast={() => {}} />);
-    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6', 'overflow-x-hidden');
+    expect(container.firstChild).toHaveClass('max-w-workspace', 'px-6', 'py-6', 'overflow-x-hidden');
   });
 
   it('renders the Settings tab with the live version and branding field', async () => {

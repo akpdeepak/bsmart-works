@@ -35,7 +35,7 @@ function renderView(overrides = {}) {
 describe('AccountView', () => {
   it('uses the sanctioned dashboard page shell', () => {
     const { container } = renderView();
-    expect(container.firstChild).toHaveClass('max-w-7xl', 'px-6', 'py-6');
+    expect(container.firstChild).toHaveClass('max-w-workspace', 'px-6', 'py-6');
   });
 
   it('shows the profile identity and the notification preferences', () => {

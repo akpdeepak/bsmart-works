@@ -5,10 +5,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /** A Definition-of-Done checklist scoped to a work item type or an epic (Cap U). Workspace-scoped. */
 @Entity
 @Table(name = "dod_checklists")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class DodChecklist {
     @Id
     private String id;

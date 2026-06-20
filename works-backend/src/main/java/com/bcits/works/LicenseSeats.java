@@ -5,6 +5,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * Cap Y · License / seat management (iteration 16). One config row per workspace: plan, total seats,
@@ -13,6 +14,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "license_seats")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class LicenseSeats {
     @Id private String workspaceId;
     private String planName = "Standard";

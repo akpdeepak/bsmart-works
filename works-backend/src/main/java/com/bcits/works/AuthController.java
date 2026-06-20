@@ -66,102 +66,119 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest req) {
-        String email = req.email().toLowerCase().trim();
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): registration runs before any
+        // workspace exists and looks up / writes the GLOBAL users table by email. The central tenant
+        // filter must be off so a stale binding on this pooled request thread can never narrow these
+        // pre-workspace reads. Audited via TenantScope's log line.
+        return TenantScope.callAsSystem(() -> {
+            String email = req.email().toLowerCase().trim();
 
-        if (userRepository.findByEmail(email).isPresent()) {
-            throw ApiException.conflict("Email already in use.");
-        }
+            if (userRepository.findByEmail(email).isPresent()) {
+                throw ApiException.conflict("Email already in use.");
+            }
 
-        String verificationToken = UUID.randomUUID().toString().replace("-", "");
+            String verificationToken = UUID.randomUUID().toString().replace("-", "");
 
-        User newUser = new User();
-        newUser.setId("USR-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-        newUser.setEmail(email);
-        newUser.setFullName(req.fullName().trim());
-        newUser.setPasswordHash(passwordEncoder.encode(req.password()));
-        newUser.setEmailVerified(false);
-        newUser.setVerificationToken(verificationToken);
-        userRepository.save(newUser);
+            User newUser = new User();
+            newUser.setId("USR-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+            newUser.setEmail(email);
+            newUser.setFullName(req.fullName().trim());
+            newUser.setPasswordHash(passwordEncoder.encode(req.password()));
+            newUser.setEmailVerified(false);
+            newUser.setVerificationToken(verificationToken);
+            userRepository.save(newUser);
 
-        eventService.record(newUser.getId(), "USER_SIGNED_UP", newUser.getId(),
-                "{\"email\":\"" + newUser.getEmail() + "\"}");
+            eventService.record(newUser.getId(), "USER_SIGNED_UP", newUser.getId(),
+                    "{\"email\":\"" + newUser.getEmail() + "\"}");
 
-        String verifyUrl = frontendBaseUrl + "/verify?token=" + verificationToken;
-        emailService.sendVerificationEmail(newUser.getEmail(), newUser.getFullName(), verifyUrl);
+            String verifyUrl = frontendBaseUrl + "/verify?token=" + verificationToken;
+            emailService.sendVerificationEmail(newUser.getEmail(), newUser.getFullName(), verifyUrl);
 
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("requiresVerification", true);
-        response.put("message", "Account created! Please check your email to verify your account.");
-        if (exposeDevVerificationToken) {
-            response.put("devToken", verificationToken);
-        }
-        return ResponseEntity.ok(response);
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("requiresVerification", true);
+            response.put("message", "Account created! Please check your email to verify your account.");
+            if (exposeDevVerificationToken) {
+                response.put("devToken", verificationToken);
+            }
+            return ResponseEntity.ok(response);
+        });
     }
 
     @GetMapping("/verify")
     public ResponseEntity<?> verifyEmail(@RequestParam String token) {
-        Optional<User> userOpt = userRepository.findByVerificationToken(token);
-        if (userOpt.isEmpty()) {
-            throw ApiException.badRequest("INVALID_TOKEN", "Invalid or expired verification token.");
-        }
-        User user = userOpt.get();
-        user.setEmailVerified(true);
-        user.setVerificationToken(null);
-        userRepository.save(user);
-        eventService.record(user.getId(), "EMAIL_VERIFIED", user.getId(),
-                "{\"email\":\"" + user.getEmail() + "\"}");
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): email verification resolves a
+        // GLOBAL user by verification token before any workspace is bound — the central tenant filter
+        // must be off so the pre-workspace lookup is never narrowed by a stale binding.
+        return TenantScope.callAsSystem(() -> {
+            Optional<User> userOpt = userRepository.findByVerificationToken(token);
+            if (userOpt.isEmpty()) {
+                throw ApiException.badRequest("INVALID_TOKEN", "Invalid or expired verification token.");
+            }
+            User user = userOpt.get();
+            user.setEmailVerified(true);
+            user.setVerificationToken(null);
+            userRepository.save(user);
+            eventService.record(user.getId(), "EMAIL_VERIFIED", user.getId(),
+                    "{\"email\":\"" + user.getEmail() + "\"}");
 
-        String jwt = jwtUtil.generate(user.getId(), user.getEmail());
-        return ResponseEntity.ok(Map.of(
-            "message", "Email verified! You are now signed in.",
-            "token", jwt,
-            "user", userToMap(user)
-        ));
+            String jwt = jwtUtil.generate(user.getId(), user.getEmail());
+            return ResponseEntity.ok(Map.of(
+                "message", "Email verified! You are now signed in.",
+                "token", jwt,
+                "user", userToMap(user)
+            ));
+        });
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req, HttpServletRequest http) {
-        String email = req.email().toLowerCase().trim();
-        rateLimit(String.format("login:%s:%s", email, clientIp(http)), LOGIN_MAX, LOGIN_WINDOW_S);
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): login authenticates against the
+        // GLOBAL users table by email before any workspace is selected (a user may belong to several).
+        // The central tenant filter must be off so this pre-workspace identity step is never narrowed
+        // by a stale binding on the pooled request thread.
+        return TenantScope.callAsSystem(() -> {
+            String email = req.email().toLowerCase().trim();
+            rateLimit(String.format("login:%s:%s", email, clientIp(http)), LOGIN_MAX, LOGIN_WINDOW_S);
 
-        Optional<User> userOpt = userRepository.findByEmail(email);
-        if (userOpt.isEmpty()) {
-            throw ApiException.unauthorized("Invalid email or password.");
-        }
-        User user = userOpt.get();
-
-        // Support both BCrypt and legacy SHA-256 hashes during migration.
-        boolean valid;
-        if (user.getPasswordHash().startsWith("$2a$") || user.getPasswordHash().startsWith("$2b$")) {
-            valid = passwordEncoder.matches(req.password(), user.getPasswordHash());
-        } else {
-            valid = legacySha256(req.password()).equals(user.getPasswordHash());
-            if (valid) {
-                user.setPasswordHash(passwordEncoder.encode(req.password()));
-                userRepository.save(user);
+            Optional<User> userOpt = userRepository.findByEmail(email);
+            if (userOpt.isEmpty()) {
+                throw ApiException.unauthorized("Invalid email or password.");
             }
-        }
-        if (!valid) {
-            throw ApiException.unauthorized("Invalid email or password.");
-        }
+            User user = userOpt.get();
 
-        if (!user.isEmailVerified()) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "EMAIL_NOT_VERIFIED",
-                    "Please verify your email before signing in.");
-        }
+            // Support both BCrypt and legacy SHA-256 hashes during migration.
+            boolean valid;
+            if (user.getPasswordHash().startsWith("$2a$") || user.getPasswordHash().startsWith("$2b$")) {
+                valid = passwordEncoder.matches(req.password(), user.getPasswordHash());
+            } else {
+                valid = legacySha256(req.password()).equals(user.getPasswordHash());
+                if (valid) {
+                    user.setPasswordHash(passwordEncoder.encode(req.password()));
+                    userRepository.save(user);
+                }
+            }
+            if (!valid) {
+                throw ApiException.unauthorized("Invalid email or password.");
+            }
 
-        // MFA challenge — frontend completes via /auth/mfa/verify.
-        if (user.isMfaEnabled()) {
-            return ResponseEntity.ok(Map.of(
-                "requiresMfa", true,
-                "userId", user.getId(),
-                "message", "Enter your authenticator app code to complete sign in."
-            ));
-        }
+            if (!user.isEmailVerified()) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "EMAIL_NOT_VERIFIED",
+                        "Please verify your email before signing in.");
+            }
 
-        eventService.record(user.getId(), "USER_LOGGED_IN", user.getId(), "{}");
-        String jwt = jwtUtil.generate(user.getId(), user.getEmail());
-        return ResponseEntity.ok(Map.of("token", jwt, "user", userToMap(user)));
+            // MFA challenge — frontend completes via /auth/mfa/verify.
+            if (user.isMfaEnabled()) {
+                return ResponseEntity.ok(Map.of(
+                    "requiresMfa", true,
+                    "userId", user.getId(),
+                    "message", "Enter your authenticator app code to complete sign in."
+                ));
+            }
+
+            eventService.record(user.getId(), "USER_LOGGED_IN", user.getId(), "{}");
+            String jwt = jwtUtil.generate(user.getId(), user.getEmail());
+            return ResponseEntity.ok(Map.of("token", jwt, "user", userToMap(user)));
+        });
     }
 
     @PostMapping("/forgot-password")
@@ -169,14 +186,19 @@ public class AuthController {
         rateLimit("forgot:" + clientIp(http), FORGOT_MAX, FORGOT_WINDOW_S);
         // Issues a token + emails the link only if the account exists; the response is identical
         // either way so it never reveals whether an email is registered.
-        passwordResetService.requestReset(req.email());
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): the forgot-password flow looks up
+        // the GLOBAL users table by email with no workspace bound. Wrapped once here at the controller
+        // boundary (not again in PasswordResetService) so the pre-workspace lookup is never narrowed.
+        TenantScope.runAsSystem(() -> passwordResetService.requestReset(req.email()));
         return ResponseEntity.ok(Map.of("message", "If that email exists, a reset link has been sent."));
     }
 
     /** Public, token-based reset (forgot-password flow) — no current password required. */
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
-        passwordResetService.performReset(req.token(), req.newPassword());
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): reset resolves the user from a
+        // reset token (and the GLOBAL users table) before any workspace is bound — filter must be off.
+        TenantScope.runAsSystem(() -> passwordResetService.performReset(req.token(), req.newPassword()));
         return ResponseEntity.ok(Map.of("message", "Password updated. You can now sign in with your new password."));
     }
 

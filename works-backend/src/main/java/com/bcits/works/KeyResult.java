@@ -5,6 +5,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * Cap W · OKR linkage (I15-S12). A measurable key result under an {@link Objective}. Hard-deleted
@@ -12,6 +13,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "key_results")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class KeyResult {
     @Id private String id;
     private String objectiveId;

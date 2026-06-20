@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * Cap W · Product roadmap (I15-S08). A strategic theme on the roadmap timeline — status, scope and
@@ -14,6 +15,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "roadmap_themes")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class RoadmapTheme {
     @Id private String id;
     @NotBlank private String workspaceId;

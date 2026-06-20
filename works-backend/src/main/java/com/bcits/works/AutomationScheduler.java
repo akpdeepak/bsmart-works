@@ -41,20 +41,27 @@ public class AutomationScheduler {
      */
     @Scheduled(cron = "0 * * * * *")
     public void fireScheduledRules() {
-        List<AutomationRule> scheduledRules = rules.findByEnabledTrueAndTriggerType(
-            AutomationCatalog.TR_SCHEDULED);
-        if (scheduledRules.isEmpty()) return;
-        log.debug("[AUTOMATION-SCHEDULER] Checking {} SCHEDULED rule(s)", scheduledRules.size());
-        for (AutomationRule rule : scheduledRules) {
-            try {
-                if (isDue(rule)) {
-                    log.info("[AUTOMATION-SCHEDULER] Firing rule id={} name={}", rule.getId(), rule.getName());
-                    automationService.runNow(rule.getWorkspaceId(), rule.getId(), SYSTEM_ACTOR);
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): cross-tenant background job on a
+        // scheduler thread. It polls enabled SCHEDULED automation rules across ALL workspaces; the
+        // central tenant filter must be off so this all-workspace read is the explicit, audited
+        // unscoped path. Each rule's execution self-scopes via the explicit per-rule workspaceId passed
+        // to AutomationService.runNow (which then drives the actions for that one tenant).
+        TenantScope.runAsSystem(() -> {
+            List<AutomationRule> scheduledRules = rules.findByEnabledTrueAndTriggerType(
+                AutomationCatalog.TR_SCHEDULED);
+            if (scheduledRules.isEmpty()) return;
+            log.debug("[AUTOMATION-SCHEDULER] Checking {} SCHEDULED rule(s)", scheduledRules.size());
+            for (AutomationRule rule : scheduledRules) {
+                try {
+                    if (isDue(rule)) {
+                        log.info("[AUTOMATION-SCHEDULER] Firing rule id={} name={}", rule.getId(), rule.getName());
+                        automationService.runNow(rule.getWorkspaceId(), rule.getId(), SYSTEM_ACTOR);
+                    }
+                } catch (Exception ex) {
+                    log.warn("[AUTOMATION-SCHEDULER] Rule id={} failed: {}", rule.getId(), ex.getMessage());
                 }
-            } catch (Exception ex) {
-                log.warn("[AUTOMATION-SCHEDULER] Rule id={} failed: {}", rule.getId(), ex.getMessage());
             }
-        }
+        });
     }
 
     /**

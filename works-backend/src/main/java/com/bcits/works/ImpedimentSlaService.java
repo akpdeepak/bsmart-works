@@ -93,40 +93,47 @@ public class ImpedimentSlaService {
     /** (Re)escalate every breached impediment that is due this run; returns how many. */
     @Transactional
     public int sweep() {
-        LocalDate today = LocalDate.now();
-        OffsetDateTime now = OffsetDateTime.now();
-        int notified = 0;
-        for (Impediment i : impediments.findBySeverityAndStatusNotAndDeletedAtIsNull("CRITICAL", "RESOLVED")) {
-            if (!ImpedimentService.slaBreached(i, today)) {
-                continue;
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): cross-tenant background job
+        // (ImpedimentSlaScheduler thread, plus tests). It scans CRITICAL impediments across ALL
+        // workspaces and reads the events log / project team members per item. The central tenant
+        // filter must be off so the all-workspace read is the explicit, audited unscoped path; the
+        // notifications it raises stay confined to each impediment's own project/workspace members.
+        return TenantScope.callAsSystem(() -> {
+            LocalDate today = LocalDate.now();
+            OffsetDateTime now = OffsetDateTime.now();
+            int notified = 0;
+            for (Impediment i : impediments.findBySeverityAndStatusNotAndDeletedAtIsNull("CRITICAL", "RESOLVED")) {
+                if (!ImpedimentService.slaBreached(i, today)) {
+                    continue;
+                }
+                Optional<AppEvent> last =
+                    events.findFirstByAggregateIdAndEventTypeOrderByOccurredAtDesc(i.getId(), NOTIFIED_EVENT);
+                boolean firstEscalation = last.isEmpty();
+                if (!reminderDue(last.map(AppEvent::getOccurredAt).orElse(null), now, reminderHours)) {
+                    continue; // escalated recently — wait for the next reminder window
+                }
+                Set<String> recipients = resolveRecipients(i.getProjectId(), i.getWorkspaceId());
+                String message = breachMessage(i, today);
+                String link = "/impediments/" + i.getId();
+                long age = ImpedimentService.ageDays(i, today);
+                for (String userId : recipients) {
+                    inApp(userId, message, link);
+                    // Email is best-effort and preference-gated (notify_sla_breach); @Async + its own
+                    // try/catch mean a mail outage never blocks the in-app escalation or the sweep.
+                    emailService.sendSlaBreachEmail(userId, i.getTitle(), age, link);
+                }
+                eventService.recordInWorkspace(i.getWorkspaceId(), i.getId(), NOTIFIED_EVENT, "system",
+                    Map.of("severity", i.getSeverity(),
+                           "ageDays", age,
+                           "recipients", recipients.size(),
+                           "reminder", !firstEscalation));
+                notified++;
             }
-            Optional<AppEvent> last =
-                events.findFirstByAggregateIdAndEventTypeOrderByOccurredAtDesc(i.getId(), NOTIFIED_EVENT);
-            boolean firstEscalation = last.isEmpty();
-            if (!reminderDue(last.map(AppEvent::getOccurredAt).orElse(null), now, reminderHours)) {
-                continue; // escalated recently — wait for the next reminder window
+            if (notified > 0) {
+                log.info("[IMPEDIMENT-SLA] Escalated {} breached impediment(s)", notified);
             }
-            Set<String> recipients = resolveRecipients(i.getProjectId(), i.getWorkspaceId());
-            String message = breachMessage(i, today);
-            String link = "/impediments/" + i.getId();
-            long age = ImpedimentService.ageDays(i, today);
-            for (String userId : recipients) {
-                inApp(userId, message, link);
-                // Email is best-effort and preference-gated (notify_sla_breach); @Async + its own
-                // try/catch mean a mail outage never blocks the in-app escalation or the sweep.
-                emailService.sendSlaBreachEmail(userId, i.getTitle(), age, link);
-            }
-            eventService.recordInWorkspace(i.getWorkspaceId(), i.getId(), NOTIFIED_EVENT, "system",
-                Map.of("severity", i.getSeverity(),
-                       "ageDays", age,
-                       "recipients", recipients.size(),
-                       "reminder", !firstEscalation));
-            notified++;
-        }
-        if (notified > 0) {
-            log.info("[IMPEDIMENT-SLA] Escalated {} breached impediment(s)", notified);
-        }
-        return notified;
+            return notified;
+        });
     }
 
     /** Project PO/scrum-master, falling back to workspace admins (tier >= 4) when none are set. */

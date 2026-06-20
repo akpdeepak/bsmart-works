@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
 import org.hibernate.annotations.ColumnTransformer;
+import org.hibernate.annotations.Filter;
 
 /**
  * Cap W · Stakeholder communication (I15-S14). Targeted release/status messages on the existing
@@ -14,6 +15,7 @@ import org.hibernate.annotations.ColumnTransformer;
  */
 @Entity
 @Table(name = "stakeholder_communications")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class StakeholderCommunication {
     @Id private String id;
     private String workspaceId;

@@ -6,10 +6,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /** KR-035 — starred/favorite article for a user, workspace-scoped. */
 @Entity
 @Table(name = "article_favorites")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class ArticleFavorite {
 
     @EmbeddedId

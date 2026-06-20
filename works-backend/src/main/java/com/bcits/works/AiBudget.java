@@ -4,6 +4,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * A workspace's AI spend cap and running total for one month (RB-40 §2). The control plane
@@ -11,6 +12,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "ai_budgets")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class AiBudget {
 
     @Id

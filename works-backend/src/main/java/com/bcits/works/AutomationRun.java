@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import org.hibernate.annotations.ColumnTransformer;
+import org.hibernate.annotations.Filter;
 
 /**
  * An append-only automation run record (iteration 13, Cap C) — every execution and every dry-run
@@ -13,6 +14,7 @@ import org.hibernate.annotations.ColumnTransformer;
  */
 @Entity
 @Table(name = "automation_runs")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class AutomationRun {
 
     @Id

@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * Cap X · AI executive briefing (iteration 16). A schedulable, editable narrative card tailored to a
@@ -14,6 +15,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "executive_briefings")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class ExecutiveBriefing {
     @Id private String id;
     @NotBlank private String workspaceId;

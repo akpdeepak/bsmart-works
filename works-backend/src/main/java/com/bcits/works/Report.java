@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
 import org.hibernate.annotations.ColumnTransformer;
+import org.hibernate.annotations.Filter;
 
 /**
  * A custom report (iteration 6) — a named, ordered list of sections rendered as a
@@ -16,6 +17,7 @@ import org.hibernate.annotations.ColumnTransformer;
  */
 @Entity
 @Table(name = "reports")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class Report {
     @Id private String id;
     private String workspaceId;

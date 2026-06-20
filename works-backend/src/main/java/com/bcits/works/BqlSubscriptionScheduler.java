@@ -27,17 +27,24 @@ public class BqlSubscriptionScheduler {
 
     @Scheduled(cron = "0 0 * * * *") // top of every hour
     public void deliverDue() {
-        OffsetDateTime now = OffsetDateTime.now();
-        int delivered = 0;
-        for (BqlSubscription sub : subs.findByActiveTrue()) {
-            if (isDue(sub, now)) {
-                service.deliver(sub);
-                delivered++;
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): cross-tenant background job on a
+        // scheduler thread. The OUTER iteration reads active subscriptions across ALL workspaces, so
+        // the central tenant filter must be off for the all-workspace read (audited). Each individual
+        // delivery is then run scoped to the subscription's OWNING workspace via runScoped, so the
+        // saved BQL executes bound to the correct tenant (not unfiltered).
+        TenantScope.runAsSystem(() -> {
+            OffsetDateTime now = OffsetDateTime.now();
+            int delivered = 0;
+            for (BqlSubscription sub : subs.findByActiveTrue()) {
+                if (isDue(sub, now)) {
+                    TenantScope.runScoped(sub.getWorkspaceId(), () -> service.deliver(sub));
+                    delivered++;
+                }
             }
-        }
-        if (delivered > 0) {
-            log.info("[BQL-SUB] delivered {} subscription(s)", delivered);
-        }
+            if (delivered > 0) {
+                log.info("[BQL-SUB] delivered {} subscription(s)", delivered);
+            }
+        });
     }
 
     /** A subscription is due if never run, or its cadence window has elapsed since the last run. */

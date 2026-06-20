@@ -5,6 +5,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * Cap V · Role-adaptive Sprint Cockpit. WHO a user is on a project (scrum-master, developer,
@@ -14,6 +15,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "project_team_members")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class ProjectTeamMember {
     @Id private String id;
     private String workspaceId;

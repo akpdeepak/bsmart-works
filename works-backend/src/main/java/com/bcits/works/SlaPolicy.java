@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * An SLA policy (iteration 8, Cap M). Scopes work items via {@code scopeBql} and carries one or
@@ -17,6 +18,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "sla_policies")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class SlaPolicy {
 
     @Id

@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * A customer-portal chat conversation (iteration 20, Cap N) — real-time chat with an AI tier-1
@@ -16,6 +17,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "chat_conversations")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class ChatConversation {
 
     @Id

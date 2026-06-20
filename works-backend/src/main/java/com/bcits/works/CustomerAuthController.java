@@ -46,42 +46,56 @@ public class CustomerAuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> body, HttpServletRequest http) {
-        String email = body.getOrDefault("email", "").toLowerCase().trim();
-        String password = body.getOrDefault("password", "");
-        if (!rateLimiter.allow(String.format("portal-login:%s:%s", email, clientIp(http)), LOGIN_MAX, LOGIN_WINDOW_S)) {
-            throw ApiException.tooManyRequests("Too many attempts. Please wait a moment and try again.");
-        }
-        CustomerUser user = customerUsers.findByEmailIgnoreCase(email)
-                .filter(u -> Boolean.TRUE.equals(u.getActive()))
-                .filter(u -> passwordEncoder.matches(password, u.getPasswordHash()))
-                .orElseThrow(() -> ApiException.unauthorized("Invalid email or password."));
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): customer-portal login is a
+        // SEPARATE identity system (public, no internal workspace bound). It authenticates a
+        // CustomerUser by email and derives the workspace from the customer's account claim, not from
+        // an internal member binding. The internal central tenant filter must be off so these
+        // customer-scoped reads (customer_users / customer_accounts, both tenant-scoped) are never
+        // narrowed by a stale internal binding.
+        return TenantScope.callAsSystem(() -> {
+            String email = body.getOrDefault("email", "").toLowerCase().trim();
+            String password = body.getOrDefault("password", "");
+            if (!rateLimiter.allow(String.format("portal-login:%s:%s", email, clientIp(http)), LOGIN_MAX, LOGIN_WINDOW_S)) {
+                throw ApiException.tooManyRequests("Too many attempts. Please wait a moment and try again.");
+            }
+            CustomerUser user = customerUsers.findByEmailIgnoreCase(email)
+                    .filter(u -> Boolean.TRUE.equals(u.getActive()))
+                    .filter(u -> passwordEncoder.matches(password, u.getPasswordHash()))
+                    .orElseThrow(() -> ApiException.unauthorized("Invalid email or password."));
 
-        CustomerAccount account = accounts.findById(user.getCustomerAccountId())
-                .filter(a -> Boolean.TRUE.equals(a.getActive()))
-                .orElseThrow(() -> ApiException.forbidden("Your account is not active. Contact support."));
+            CustomerAccount account = accounts.findById(user.getCustomerAccountId())
+                    .filter(a -> Boolean.TRUE.equals(a.getActive()))
+                    .orElseThrow(() -> ApiException.forbidden("Your account is not active. Contact support."));
 
-        String token = jwtUtil.generateCustomer(user.getId(), user.getEmail(),
-                account.getId(), account.getWorkspaceId());
-        eventService.record(user.getId(), "CUSTOMER_LOGGED_IN", user.getId(),
-                Map.of("accountId", account.getId()));
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("token", token);
-        out.put("customer", customerToMap(user));
-        out.put("account", brandingToMap(account));
-        return ResponseEntity.ok(out);
+            String token = jwtUtil.generateCustomer(user.getId(), user.getEmail(),
+                    account.getId(), account.getWorkspaceId());
+            eventService.record(user.getId(), "CUSTOMER_LOGGED_IN", user.getId(),
+                    Map.of("accountId", account.getId()));
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("token", token);
+            out.put("customer", customerToMap(user));
+            out.put("account", brandingToMap(account));
+            return ResponseEntity.ok(out);
+        });
     }
 
     @GetMapping("/me")
     public Map<String, Object> me() {
-        CustomerContext.CustomerPrincipal principal = customerContext.current();
-        CustomerUser user = customerUsers.findById(principal.customerUserId())
-                .orElseThrow(() -> ApiException.unauthorized("Invalid or expired customer session."));
-        CustomerAccount account = accounts.findById(user.getCustomerAccountId())
-                .orElseThrow(() -> ApiException.notFound("Customer account", user.getCustomerAccountId()));
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("customer", customerToMap(user));
-        out.put("account", brandingToMap(account));
-        return out;
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): the portal /me reads the
+        // CustomerUser + CustomerAccount resolved from the signed CUSTOMER claim, not from an internal
+        // workspace binding. The internal central filter never binds for a portal token; run unscoped
+        // so these customer-scoped reads aren't mis-narrowed by a stale internal binding.
+        return TenantScope.callAsSystem(() -> {
+            CustomerContext.CustomerPrincipal principal = customerContext.current();
+            CustomerUser user = customerUsers.findById(principal.customerUserId())
+                    .orElseThrow(() -> ApiException.unauthorized("Invalid or expired customer session."));
+            CustomerAccount account = accounts.findById(user.getCustomerAccountId())
+                    .orElseThrow(() -> ApiException.notFound("Customer account", user.getCustomerAccountId()));
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("customer", customerToMap(user));
+            out.put("account", brandingToMap(account));
+            return out;
+        });
     }
 
     private Map<String, Object> customerToMap(CustomerUser u) {

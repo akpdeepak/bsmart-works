@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * Cap V · Impediment tracker (I15-S03). A first-class blocker artifact — owner, severity, age and
@@ -14,6 +15,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "impediments")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class Impediment {
     @Id private String id;
     private String workspaceId;

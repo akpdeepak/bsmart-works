@@ -5,6 +5,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * Cap V · Sprint ceremonies as first-class sessions. One shared shell for all five ceremony
@@ -14,6 +15,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "ceremony_sessions")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class CeremonySession {
     @Id private String id;
     private String workspaceId;

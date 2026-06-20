@@ -42,18 +42,25 @@ public class ComplianceEvaluationScheduler {
     }
 
     private void sweep(String mode) {
-        List<ComplianceRule> active = rules.findByActiveTrueAndEvaluationMode(mode);
-        if (active.isEmpty()) return;
-        int opened = 0;
-        int resolved = 0;
-        for (ComplianceRule rule : active) {
-            ComplianceEvaluationService.EvaluationResult r = evaluation.evaluateRule(rule);
-            opened += r.opened();
-            resolved += r.resolved();
-        }
-        if (opened > 0 || resolved > 0) {
-            log.info("[COMPLIANCE] {} sweep over {} rule(s): {} opened, {} resolved",
-                mode, active.size(), opened, resolved);
-        }
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): this is a cross-tenant background
+        // job on a scheduler thread (no request, no binding). It legitimately reads active compliance
+        // rules across ALL workspaces and evaluates each (reaching per-rule work_items). The central
+        // tenant filter must be off so the all-workspace read is the explicit, audited unscoped path;
+        // each rule self-scopes via its own workspaceId inside ComplianceEvaluationService.
+        TenantScope.runAsSystem(() -> {
+            List<ComplianceRule> active = rules.findByActiveTrueAndEvaluationMode(mode);
+            if (active.isEmpty()) return;
+            int opened = 0;
+            int resolved = 0;
+            for (ComplianceRule rule : active) {
+                ComplianceEvaluationService.EvaluationResult r = evaluation.evaluateRule(rule);
+                opened += r.opened();
+                resolved += r.resolved();
+            }
+            if (opened > 0 || resolved > 0) {
+                log.info("[COMPLIANCE] {} sweep over {} rule(s): {} opened, {} resolved",
+                    mode, active.size(), opened, resolved);
+            }
+        });
     }
 }

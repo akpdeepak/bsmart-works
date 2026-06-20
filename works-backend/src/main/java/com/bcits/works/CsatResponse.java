@@ -4,6 +4,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * A post-resolution customer satisfaction rating (iteration 9, Cap N) — one per
@@ -12,6 +13,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "csat_responses")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class CsatResponse {
 
     @Id

@@ -4,6 +4,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * One per-type field preference: whether {@code fieldKey} is shown on the detail surface for
@@ -12,6 +13,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "type_field_prefs")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class TypeFieldPref {
 
     @Id private String id;

@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * A workspace's AI defaults — the model tier and data-boundary flags shown on the AI Control page
@@ -13,6 +14,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "ai_workspace_settings")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class AiWorkspaceSettings {
 
     @Id

@@ -7,12 +7,14 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /** One entry in the tamper-evident, hash-chained security audit log (iteration 19 Cap T,
  *  RB-40 §4). Append-only — never updated or deleted (enforced by a DB trigger in V52). seq is a
  *  per-workspace monotonic counter; entry_hash chains prev_hash (see {@link AuditHashChain}). */
 @Entity
 @Table(name = "audit_log_entries")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class AuditLogEntry {
 
     @Id

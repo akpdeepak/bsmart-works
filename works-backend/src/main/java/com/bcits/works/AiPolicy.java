@@ -4,6 +4,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * One node in the AI scope hierarchy (RB-40 §2). Policies resolve most-restrictive-wins across
@@ -13,6 +14,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "ai_policies")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class AiPolicy {
 
     @Id

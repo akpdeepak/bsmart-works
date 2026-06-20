@@ -5,10 +5,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /** A named work-item view: BQL filter + column selection, optionally shared within the workspace (iteration 17, Cap R). */
 @Entity
 @Table(name = "saved_views")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class SavedView {
 
     @Id private String id;

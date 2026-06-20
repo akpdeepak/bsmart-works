@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * One turn in a customer-portal chat conversation (iteration 20, Cap N). The message history is
@@ -15,6 +16,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "chat_messages")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class ChatMessage {
 
     @Id

@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * A saved conversational dashboard (Cap O, iteration 20) — a natural-language ask compiled into a
@@ -13,6 +14,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "conversational_dashboards")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class ConversationalDashboard {
 
     @Id

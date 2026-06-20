@@ -4,6 +4,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * A customer SLA tier (iteration 9, Cap M): per-workspace response and resolution targets keyed
@@ -12,6 +13,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "customer_sla_tiers")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class CustomerSlaTier {
 
     @Id

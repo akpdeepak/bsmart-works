@@ -5,11 +5,13 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /** A GDPR / DPDP data-subject request — EXPORT (data portability) or ERASURE (right to be
  *  forgotten, via crypto-shred semantics, RB-40 §3). Workspace-scoped (RB-40 §1). Iteration 19. */
 @Entity
 @Table(name = "data_subject_requests")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class DataSubjectRequest {
 
     @Id

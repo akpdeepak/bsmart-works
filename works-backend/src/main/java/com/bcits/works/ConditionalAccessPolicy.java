@@ -5,11 +5,13 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /** A workspace conditional-access policy: IP/geo allow-lists, device-trust, time-of-day window,
  *  optionally scoped to one role (iteration 19 Cap T, RB-40 §4). Workspace-scoped (RB-40 §1). */
 @Entity
 @Table(name = "conditional_access_policies")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class ConditionalAccessPolicy {
 
     @Id

@@ -5,6 +5,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * Cap Y · Audit log explorer — a saved query (iteration 16). Stores the filter criteria so an admin
@@ -12,6 +13,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "audit_saved_queries")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class AuditSavedQuery {
     @Id private String id;
     @NotBlank private String workspaceId;

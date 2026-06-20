@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
 import org.hibernate.annotations.ColumnTransformer;
+import org.hibernate.annotations.Filter;
 
 /**
  * A business-hours calendar (iteration 8, Cap M). Defines the working windows against which SLA
@@ -17,6 +18,7 @@ import org.hibernate.annotations.ColumnTransformer;
  */
 @Entity
 @Table(name = "sla_calendars")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class SlaCalendar {
 
     @Id

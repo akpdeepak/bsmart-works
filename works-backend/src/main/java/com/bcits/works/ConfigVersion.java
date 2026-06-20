@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import org.hibernate.annotations.ColumnTransformer;
+import org.hibernate.annotations.Filter;
 
 /**
  * One immutable, append-only snapshot of a workspace's configuration (iteration 17, Cap R). Every
@@ -15,6 +16,7 @@ import org.hibernate.annotations.ColumnTransformer;
  */
 @Entity
 @Table(name = "config_versions")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class ConfigVersion {
 
     @Id

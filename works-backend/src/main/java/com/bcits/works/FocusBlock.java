@@ -7,11 +7,13 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /** A scheduled focus / deep-work block (Cap U — focus mode + time blocking). Private to its owner:
  *  only the owning user may read or mutate their own blocks (enforced in {@link FocusModeService}). */
 @Entity
 @Table(name = "focus_blocks")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class FocusBlock {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

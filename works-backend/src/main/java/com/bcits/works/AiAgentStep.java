@@ -5,10 +5,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /** One ordered step of a multi-step agent run (Cap O, iteration 20). Workspace-scoped (RB-40 §1). */
 @Entity
 @Table(name = "ai_agent_steps")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class AiAgentStep {
 
     @Id

@@ -42,21 +42,27 @@ public class ReportDeliveryScheduler {
 
     @Scheduled(cron = "0 */15 * * * *")
     public void deliverDueReports() {
-        OffsetDateTime now = OffsetDateTime.now();
-        List<ReportSchedule> due = schedules.findByActiveTrueAndNextRunAtLessThanEqual(now);
-        if (due.isEmpty()) return; {
-        log.info("[REPORT-DELIVERY] Delivering {} due report schedule(s)", due.size());
-        }
-        for (ReportSchedule s : due) {
-            try {
-                deliver(s);
-            } catch (RuntimeException ex) {
-                log.warn("[REPORT-DELIVERY] Failed to deliver schedule id={}", s.getId(), ex);
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): cross-tenant background job on a
+        // scheduler thread. It reads due ReportSchedule rows (a tenant-scoped JPA entity) across ALL
+        // workspaces, so the central tenant filter must be off for this all-workspace read (audited).
+        // Per-recipient links still carry viewAs so each report stays scoped to the recipient's data.
+        TenantScope.runAsSystem(() -> {
+            OffsetDateTime now = OffsetDateTime.now();
+            List<ReportSchedule> due = schedules.findByActiveTrueAndNextRunAtLessThanEqual(now);
+            if (due.isEmpty()) return; {
+            log.info("[REPORT-DELIVERY] Delivering {} due report schedule(s)", due.size());
             }
-            s.setLastRunAt(now);
-            s.setNextRunAt(scheduleService.computeNextRun(s.getCadence(), now));
-            schedules.save(s);
-        }
+            for (ReportSchedule s : due) {
+                try {
+                    deliver(s);
+                } catch (RuntimeException ex) {
+                    log.warn("[REPORT-DELIVERY] Failed to deliver schedule id={}", s.getId(), ex);
+                }
+                s.setLastRunAt(now);
+                s.setNextRunAt(scheduleService.computeNextRun(s.getCadence(), now));
+                schedules.save(s);
+            }
+        });
     }
 
     private void deliver(ReportSchedule s) {

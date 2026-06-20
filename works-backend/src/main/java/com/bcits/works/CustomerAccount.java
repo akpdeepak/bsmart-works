@@ -5,6 +5,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * An external customer organization (iteration 9, Cap N), scoped to the BCITS workspace that
@@ -13,6 +14,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "customer_accounts")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class CustomerAccount {
 
     @Id

@@ -82,19 +82,26 @@ public class MfaController {
 
     @PostMapping("/verify")
     public ResponseEntity<?> verifyMfa(@Valid @RequestBody MfaVerifyRequest body) {
-        User user = userRepository.findById(body.userId())
-                .orElseThrow(() -> ApiException.notFound("User", body.userId()));
-        if (!user.isMfaEnabled()) {
-            throw ApiException.badRequest("MFA_NOT_ENABLED", "MFA not enabled for this user.");
-        }
-        if (!mfaService.validateTotp(user.getMfaSecret(), body.totp(), Instant.now())) {
-            throw ApiException.unauthorized("Invalid TOTP code.");
-        }
-        String token = jwtUtil.generate(user.getId(), user.getEmail());
-        return ResponseEntity.ok(Map.of(
-            "token", token,
-            "user", Map.of("id", user.getId(), "email", user.getEmail(), "fullName", user.getFullName())
-        ));
+        // System / unscoped escape hatch (RB-40 §1, EPIC #243 §3.4): the login-time MFA verify is a
+        // pre-session step (permitAll) that completes the handshake by GLOBAL user id before any
+        // workspace is selected — the central tenant filter must be off so a stale binding on this
+        // pooled thread can never narrow the lookup. Enroll/confirm/disable above are authenticated,
+        // post-workspace operations and are intentionally NOT wrapped.
+        return TenantScope.callAsSystem(() -> {
+            User user = userRepository.findById(body.userId())
+                    .orElseThrow(() -> ApiException.notFound("User", body.userId()));
+            if (!user.isMfaEnabled()) {
+                throw ApiException.badRequest("MFA_NOT_ENABLED", "MFA not enabled for this user.");
+            }
+            if (!mfaService.validateTotp(user.getMfaSecret(), body.totp(), Instant.now())) {
+                throw ApiException.unauthorized("Invalid TOTP code.");
+            }
+            String token = jwtUtil.generate(user.getId(), user.getEmail());
+            return ResponseEntity.ok(Map.of(
+                "token", token,
+                "user", Map.of("id", user.getId(), "email", user.getEmail(), "fullName", user.getFullName())
+            ));
+        });
     }
 
     private User currentUser() {

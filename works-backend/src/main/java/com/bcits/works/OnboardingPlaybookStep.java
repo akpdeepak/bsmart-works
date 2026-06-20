@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
+import org.hibernate.annotations.Filter;
 
 /**
  * Cap Y · A single ordered step of an onboarding/offboarding playbook (iteration 16). Workspace-scoped
@@ -12,6 +13,7 @@ import jakarta.validation.constraints.NotBlank;
  */
 @Entity
 @Table(name = "onboarding_playbook_steps")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class OnboardingPlaybookStep {
     @Id private String id;
     @NotBlank private String playbookId;

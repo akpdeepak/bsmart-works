@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.Filter;
 
 /**
  * A workspace-owned custom domain (B14). DNS / SSL verification is stubbed here and completed
@@ -18,6 +19,7 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "custom_domains")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class CustomDomain {
 
     @Id

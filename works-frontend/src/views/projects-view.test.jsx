@@ -32,6 +32,31 @@ describe('ProjectsView', () => {
     expect(screen.getByText('Apollo')).toBeInTheDocument();
     expect(screen.getByText('2 items')).toBeInTheDocument();
     expect(screen.getByText('50% complete')).toBeInTheDocument();
+    expect(screen.getByLabelText('Project command center for Apollo')).toBeInTheDocument();
+    expect(screen.getByText(/On track: 50% complete/)).toBeInTheDocument();
+    expect(screen.getByText('Project room ready')).toBeInTheDocument();
+    expect(screen.getByText('Customer update draft can cite these signals')).toBeInTheDocument();
+  });
+
+  it('explains at-risk project health from blockers and SLA signals', () => {
+    render(
+      <ProjectsView
+        {...baseProps}
+        projects={[{ id: 'PRJ-1', name: 'Apollo', keyPrefix: 'AP' }]}
+        projectMetrics={{ 'PRJ-1': { completionPct: 33 } }}
+        workItems={[
+          { id: 'W1', projectId: 'PRJ-1', type: 'STORY', status: 'Blocked' },
+          { id: 'W2', projectId: 'PRJ-1', type: 'BUG', status: 'In Progress', slaBreachFlag: true },
+          { id: 'W3', projectId: 'PRJ-1', type: 'DECISION', status: 'Todo', pullRequestUrl: 'https://github.com/acme/repo/pull/8' },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText(/At risk: 1 blocker and 1 SLA risk need attention/)).toBeInTheDocument();
+    expect(screen.getByText('1 at risk')).toBeInTheDocument();
+    expect(screen.getByText('1 pending')).toBeInTheDocument();
+    expect(screen.getByText('1 linked items')).toBeInTheDocument();
+    expect(screen.getByText(/Sources: project fields, 3 work items, project metrics, 1 DevSync-linked item/)).toBeInTheDocument();
   });
 
   it('counts custom done-category statuses via the status resolver', () => {

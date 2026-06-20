@@ -7,11 +7,11 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 
 ## Current status
 
-- Roadmap mode: V.20 EPIC 9 bSmart Connect Messaging in progress
-- Active EPIC: EPIC 9 - bSmart Connect Messaging
-- Active branch: `epic/09-connect-messaging`
-- Last completed EPIC: EPIC 8 - Smart Inbox
-- Next recommended EPIC: Finish EPIC 9 - bSmart Connect Messaging
+- Roadmap mode: V.20 EPIC 10 Work Item Experience Redesign ready to start
+- Active EPIC: EPIC 10 - Work Item Experience Redesign
+- Active branch: `main`
+- Last completed EPIC: EPIC 9 - bSmart Connect Messaging
+- Next recommended EPIC: EPIC 10 - Work Item Experience Redesign
 - Last state update: 2026-06-20
 
 ## Trigger contract
@@ -86,7 +86,7 @@ resume point.
 | EPIC 6 - Simplified Information Architecture and Navigation | Completed | `main` | [#400](https://github.com/akpdeepak/bsmart-works/pull/400) | `cd works-frontend && npm test -- nav-model`; `cd works-frontend && npm run build`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-06-simplified-navigation-completion.md` | Six-mode rail contract, setup/admin More destinations, command-palette reachability |
 | EPIC 7 - bSmart Today | Completed | `main` | [#401](https://github.com/akpdeepak/bsmart-works/pull/401) | `cd works-frontend && npm test -- today-brief dashboard-view`; `npm run verify`; `cd works-frontend && npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-07-bsmart-today-completion.md` | Role-aware daily clarity band, max-five attention model, saved widget layout preserved |
 | EPIC 8 - Smart Inbox | Completed | `main` | [#402](https://github.com/akpdeepak/bsmart-works/pull/402) | `cd works-frontend && npm test -- smart-inbox notifications-view`; `npm run verify`; `cd works-frontend && npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-08-smart-inbox-completion.md` | Action-first inbox grouping, actionable badge count, activity history preserved |
-| EPIC 9 - bSmart Connect Messaging | In progress | `epic/09-connect-messaging` | | `cd works-frontend && npm test -- message-actions support-inbox-view` | `docs/implementation/epics/EPIC-09-connect-messaging.md` | Message-to-work-artifact reviewed draft actions in progress |
+| EPIC 9 - bSmart Connect Messaging | Completed | `main` | [#403](https://github.com/akpdeepak/bsmart-works/pull/403) | `cd works-frontend && npm test -- message-actions support-inbox-view`; `cd works-frontend && npm test -- bql-view.a11y`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-09-connect-messaging-completion.md` | Source-cited reviewed message action drafts, support chat workspace/RBAC preserved, BQL loading a11y fix |
 | EPIC 10 - Work Item Experience Redesign | Not started | | | | | |
 | EPIC 11 - Project Command Center | Not started | | | | | |
 | EPIC 12 - DevSync / Engineering Intelligence | Not started | | | | | |
@@ -236,3 +236,11 @@ customer commitment. It preserves existing support chat backend RBAC/workspace s
 create official records automatically. Focused validation passed: `cd works-frontend && npm test --
 message-actions support-inbox-view`. Next: run broader frontend/repo validation, open PR, wait for
 GitHub CI, merge to `main`, then mark EPIC 9 completed.
+
+2026-06-20: EPIC 9 merged to `main` via
+[#403](https://github.com/akpdeepak/bsmart-works/pull/403), squash commit
+`a3a897098dc133dd4428307ee814404359886d57`. GitHub CI passed all jobs, including frontend
+lint/build/test, Storybook, Chromatic, backend compile/unit/integration/smoke, guardrails, quality
+gates, gitleaks, bundle budget, deployment smoke, JetBrains plugin build, conventional commits,
+AI rules, and DoD version checks. Local `main` and `origin/main` are synced at the merge commit.
+Resume with EPIC 10.

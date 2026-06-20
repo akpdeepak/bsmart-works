@@ -7,9 +7,9 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 
 ## Current status
 
-- Roadmap mode: V.20 EPIC 4 frontend architecture refactor ready to start
+- Roadmap mode: V.20 EPIC 4 frontend architecture refactor in progress
 - Active EPIC: EPIC 4 - Frontend Architecture Refactor
-- Active branch: `main`
+- Active branch: `epic/04-frontend-architecture-refactor`
 - Last completed EPIC: EPIC 3 - Backend Modularization and Service Boundaries
 - Next recommended EPIC: EPIC 4 - Frontend Architecture Refactor
 - Last state update: 2026-06-19
@@ -81,7 +81,7 @@ resume point.
 | EPIC 2 - Production Configuration, Deployment, and Secrets Safety | Completed | `main` | [#395](https://github.com/akpdeepak/bsmart-works/pull/395) | `cd works-backend && .\mvnw.cmd -Dgroups=unit verify`; Compose env config validation; `npm run guardrails`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-02-production-config-secrets-completion.md` | Prod/staging secret guard, health probes, env templates, Compose smoke, backup/restore runbook |
 | EPIC 25 partial - Reliability, Testing, Accessibility, Performance, and Quality Gates | Completed | `main` | [#396](https://github.com/akpdeepak/bsmart-works/pull/396) | `npm run quality-gates`; `cd works-frontend && npm test -- field-settings presence`; `cd works-backend && .\mvnw.cmd -DskipTests "-Djacoco.skip=true" verify`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-25-quality-gates-completion.md` | API contract drift gate, a11y coverage gate, AI fallback telemetry gate, stale route repairs |
 | EPIC 3 - Backend Modularization and Service Boundaries | Completed | `main` | [#397](https://github.com/akpdeepak/bsmart-works/pull/397) | Focused backend tests; `cd works-backend && .\mvnw.cmd -Dgroups=unit verify`; `npm run quality-gates`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-03-backend-modularization-completion.md` | WorkItem controller/service split, dashboard facade/query service, AI command/summarization split, module marker gate |
-| EPIC 4 - Frontend Architecture Refactor | Not started | | | | | |
+| EPIC 4 - Frontend Architecture Refactor | In progress | `epic/04-frontend-architecture-refactor` | | `cd works-frontend && npm test -- app-architecture`; `cd works-frontend && npm run build`; `npm run verify` | `docs/implementation/epics/EPIC-04-frontend-architecture-refactor-completion.md` | Thin `App.jsx` entrypoint, `src/app/AppShell.jsx` boundary, architecture guard |
 | EPIC 5 - Premium Design System Refresh | Not started | | | | | |
 | EPIC 6 - Simplified Information Architecture and Navigation | Not started | | | | | |
 | EPIC 7 - bSmart Today | Not started | | | | | |
@@ -172,3 +172,10 @@ for GitHub CI, merge to `main`, then mark EPIC 3 completed.
 unit, integration, smoke, quality gates, guardrails, gitleaks, frontend lint/build/test, Storybook,
 Chromatic, bundle budget, deployment smoke, and JetBrains plugin build. Local `main` and
 `origin/main` are synced at the merge commit. Resume with EPIC 4.
+
+2026-06-20: EPIC 4 is in progress on `epic/04-frontend-architecture-refactor`. First slice moved
+the legacy shell to `works-frontend/src/app/AppShell.jsx`, reduced root `works-frontend/src/App.jsx`
+to a thin entry wrapper, added `works-frontend/src/app/app-architecture.test.js` to prevent the
+root app file from regrowing state/API logic, and updated the UI/UX scope gate to read the new
+app shell boundary. Validation passed: `cd works-frontend && npm test -- app-architecture`;
+`cd works-frontend && npm run build`; `npm run verify`.

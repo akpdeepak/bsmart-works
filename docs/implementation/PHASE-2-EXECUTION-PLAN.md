@@ -18,9 +18,14 @@
    `com.bcits.works` package) *relocates the exact files Phase 1 is actively editing* (tenant filter,
    field-level security, PII vault). Running them concurrently makes every in-flight Phase 1 diff
    un-mergeable, and vice-versa.
-2. **Phase 1 cannot complete without a Deepak decision.** PII vault (in Phase 1's exit criteria) is
-   design-only and blocked on five sign-offs in `EPIC-P1-pii-vault.md` §7 — including an auth-path
-   change ("must not be guessed"). #243 and field-level security are each only **Slice 1**.
+2. **Phase 1 is mid-flight and far from its exit gate.** PII vault (in Phase 1's exit criteria) is
+   being **actively built** on `feat/p1-pii-vault` at full scope — including **email-identity
+   tokenization** (a blind-index for the login email + a JWT-subject change), per Deepak's
+   2026-06-20 direction — and is **not complete**. #243 central tenant filter and field-level
+   security are each only **Slice 1**; BYOK/KMS, WebAuthn attestation, distributed rate-limit / JWT
+   revocation, and SOC2/ISO evidence all still follow. (The committed `EPIC-P1-pii-vault.md` still
+   frames §7 as "for sign-off" — it is stale relative to the build decision; some §7 items, e.g.
+   key-model / retention / legal-DPO, may still be open, but the scope + auth path are decided.)
 3. **So Phase 2 cannot merge until Phase 1 closes.** What *can* be done ahead of time is exactly
    this package: execution-ready plans so Phase 2 runs fast the moment Phase 1 lands.
 4. **Not all of Phase 2 waits, though.** A subset is genuinely independent of Phase 1's backend
@@ -175,7 +180,7 @@ collision with the **~20 live feature branches** (Today, knowledge/block-editor,
 | AppShell teardown collides with live Today/knowledge branches | High | Leaf-first; defer contested feature hooks (G-5) until those branches merge |
 | `locales.js` sync→async `translate()` change breaks first-paint i18n | Low | Keep `en` statically bundled as guaranteed fallback; existing fallback contract tolerates a missing table |
 | `switchWorkspace` full-`reload()` behavior lost during `WorkspaceContext` extraction | Med | EPIC-04 plan: preserve the `window.location.reload()` guarantee verbatim |
-| Phase 1 never reaches exit (PII-vault sign-off stalls) → Phase 2 backend can't start | — | Independent I-block (§4) proceeds; backend split waits — do not force it |
+| Phase 1 slips (PII-vault build is large; #243/FLS still Slice 1; BYOK/WebAuthn/etc. follow) → Phase 2 backend can't start | — | Independent I-block (§4) proceeds; backend split waits — do not force it |
 
 ---
 

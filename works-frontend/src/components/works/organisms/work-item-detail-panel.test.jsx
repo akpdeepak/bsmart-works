@@ -21,7 +21,19 @@ import { WorkItemDetailPanel } from './work-item-detail-panel';
 
 // Minimal props required for the panel header to render without crashing.
 const minProps = {
-  selectedItem: { id: 'WI-42', type: 'TASK', autoId: 'WI-42', starred: false },
+  selectedItem: {
+    id: 'WI-42',
+    type: 'TASK',
+    autoId: 'WI-42',
+    displayKey: 'PLAT-42',
+    title: 'Fix invoice sync',
+    status: 'In Progress',
+    priority: 'HIGH',
+    assigneeId: 'USR-1',
+    dueDate: '2026-06-25',
+    customerVisible: true,
+    starred: false,
+  },
   setSelectedItem: vi.fn(),
   toggleStar: vi.fn(),
   handleDelete: vi.fn(),
@@ -34,7 +46,7 @@ const minProps = {
   setTagInput: vi.fn(),
   workItems: [],
   itemChildren: [],
-  users: [],
+  users: [{ id: 'USR-1', fullName: 'Asha Rao' }],
   aiCapabilities: {},
   aiLoading: false,
   aiAction: vi.fn(),
@@ -43,7 +55,7 @@ const minProps = {
   fieldValues: {},
   setFieldValues: vi.fn(),
   saveFieldValue: vi.fn(),
-  comments: [],
+  comments: [{ id: 'C-1' }, { id: 'C-2' }],
   currentUser: { id: 'USR-1' },
   newComment: '',
   handleCommentInput: vi.fn(),
@@ -58,7 +70,7 @@ const minProps = {
   mentionOpen: false,
   mentionQuery: '',
   insertMention: vi.fn(),
-  links: [],
+  links: [{ id: 'L-1', url: 'https://github.com/acme/repo/pull/12' }],
   newLink: {},
   setNewLink: vi.fn(),
   handleDeleteLink: vi.fn(),
@@ -66,13 +78,13 @@ const minProps = {
   handleSetParent: vi.fn(),
   handleAddChild: vi.fn(),
   handleRemoveChild: vi.fn(),
-  attachments: [],
+  attachments: [{ id: 'F-1' }],
   fileInputRef: { current: null },
   handleUploadFile: vi.fn(),
   handleAttachLink: vi.fn(),
   handleDeleteAttachment: vi.fn(),
   maxUploadMb: 10,
-  activity: [],
+  activity: [{ id: 'E-1' }],
   statusMetrics: null,
   activityEventFilter: '',
   setActivityEventFilter: vi.fn(),
@@ -101,5 +113,15 @@ describe('WorkItemDetailPanel — Copy link button (audit #28)', () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
       `${window.location.origin}/items/WI-42`,
     );
+  });
+
+  it('renders a cited execution brief for the selected work item', () => {
+    render(<WorkItemDetailPanel {...minProps} />);
+
+    expect(screen.getByLabelText('Work item execution brief')).toBeInTheDocument();
+    expect(screen.getByText(/PLAT-42 is In Progress with HIGH priority/)).toBeInTheDocument();
+    expect(screen.getByText(/Sources: work item fields, 2 comments, 1 activity event, 1 link, 1 file/)).toBeInTheDocument();
+    expect(screen.getByText('Customer-visible')).toBeInTheDocument();
+    expect(screen.getByText('Linked code available')).toBeInTheDocument();
   });
 });

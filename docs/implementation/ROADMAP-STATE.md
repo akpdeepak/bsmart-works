@@ -7,11 +7,11 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 
 ## Current status
 
-- Roadmap mode: V.20 EPIC 10 Work Item Experience Redesign ready to start
+- Roadmap mode: V.20 EPIC 10 Work Item Experience Redesign in progress
 - Active EPIC: EPIC 10 - Work Item Experience Redesign
-- Active branch: `main`
+- Active branch: `epic/10-work-item-experience`
 - Last completed EPIC: EPIC 9 - bSmart Connect Messaging
-- Next recommended EPIC: EPIC 10 - Work Item Experience Redesign
+- Next recommended EPIC: Finish EPIC 10 - Work Item Experience Redesign
 - Last state update: 2026-06-20
 
 ## Trigger contract
@@ -87,7 +87,7 @@ resume point.
 | EPIC 7 - bSmart Today | Completed | `main` | [#401](https://github.com/akpdeepak/bsmart-works/pull/401) | `cd works-frontend && npm test -- today-brief dashboard-view`; `npm run verify`; `cd works-frontend && npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-07-bsmart-today-completion.md` | Role-aware daily clarity band, max-five attention model, saved widget layout preserved |
 | EPIC 8 - Smart Inbox | Completed | `main` | [#402](https://github.com/akpdeepak/bsmart-works/pull/402) | `cd works-frontend && npm test -- smart-inbox notifications-view`; `npm run verify`; `cd works-frontend && npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-08-smart-inbox-completion.md` | Action-first inbox grouping, actionable badge count, activity history preserved |
 | EPIC 9 - bSmart Connect Messaging | Completed | `main` | [#403](https://github.com/akpdeepak/bsmart-works/pull/403) | `cd works-frontend && npm test -- message-actions support-inbox-view`; `cd works-frontend && npm test -- bql-view.a11y`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-09-connect-messaging-completion.md` | Source-cited reviewed message action drafts, support chat workspace/RBAC preserved, BQL loading a11y fix |
-| EPIC 10 - Work Item Experience Redesign | Not started | | | | | |
+| EPIC 10 - Work Item Experience Redesign | In progress | `epic/10-work-item-experience` | | `cd works-frontend && npm test -- work-item-execution-brief work-item-detail-panel` | `docs/implementation/epics/EPIC-10-work-item-experience.md` | Cited execution brief slice in progress |
 | EPIC 11 - Project Command Center | Not started | | | | | |
 | EPIC 12 - DevSync / Engineering Intelligence | Not started | | | | | |
 | EPIC 13 - Universal AI Command Layer | Not started | | | | | |
@@ -244,3 +244,10 @@ lint/build/test, Storybook, Chromatic, backend compile/unit/integration/smoke, g
 gates, gitleaks, bundle budget, deployment smoke, JetBrains plugin build, conventional commits,
 AI rules, and DoD version checks. Local `main` and `origin/main` are synced at the merge commit.
 Resume with EPIC 10.
+
+2026-06-20: EPIC 10 is in progress on `epic/10-work-item-experience`. First slice adds a deterministic,
+source-cited work item execution brief to the detail panel, covering status, owner, priority, due
+date, visibility, DevSync signal, and source counts without changing backend persistence contracts.
+Focused validation passed: `cd works-frontend && npm test -- work-item-execution-brief
+work-item-detail-panel`. Next: run broader validation, open PR, wait for GitHub CI, merge to `main`,
+then mark EPIC 10 completed.

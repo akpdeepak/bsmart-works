@@ -45,13 +45,14 @@ public class AuthController {
     private final EmailService emailService;
     private final PasswordResetService passwordResetService;
     private final RateLimiter rateLimiter;
+    private final UserPiiService userPii;
     private final boolean exposeDevVerificationToken;
     private final String frontendBaseUrl;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public AuthController(UserRepository userRepository, JwtUtil jwtUtil, EventService eventService,
                           EmailService emailService, PasswordResetService passwordResetService,
-                          RateLimiter rateLimiter,
+                          RateLimiter rateLimiter, UserPiiService userPii,
                           @Value("${app.auth.expose-dev-verification-token:false}") boolean exposeDevVerificationToken,
                           @Value("${app.frontend.base-url:http://localhost:5173}") String frontendBaseUrl) {
         this.userRepository = userRepository;
@@ -60,6 +61,7 @@ public class AuthController {
         this.emailService = emailService;
         this.passwordResetService = passwordResetService;
         this.rateLimiter = rateLimiter;
+        this.userPii = userPii;
         this.exposeDevVerificationToken = exposeDevVerificationToken;
         this.frontendBaseUrl = frontendBaseUrl;
     }
@@ -73,7 +75,7 @@ public class AuthController {
         return TenantScope.callAsSystem(() -> {
             String email = req.email().toLowerCase().trim();
 
-            if (userRepository.findByEmail(email).isPresent()) {
+            if (userPii.resolveByEmail(email).isPresent()) {
                 throw ApiException.conflict("Email already in use.");
             }
 
@@ -82,14 +84,18 @@ public class AuthController {
             User newUser = new User();
             newUser.setId("USR-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
             newUser.setEmail(email);
+            newUser.setEmailHmac(userPii.emailHmac(email)); // blind index for tokenized login lookups (RB-40 §3)
             newUser.setFullName(req.fullName().trim());
             newUser.setPasswordHash(passwordEncoder.encode(req.password()));
             newUser.setEmailVerified(false);
             newUser.setVerificationToken(verificationToken);
             userRepository.save(newUser);
+            // Dual-write name + email into the PII vault (RB-40 §3). Token is minted by @PrePersist on
+            // save; the legacy columns stay authoritative until the read flag flips + CONTRACT drops them.
+            userPii.syncIdentity(newUser);
 
-            eventService.record(newUser.getId(), "USER_SIGNED_UP", newUser.getId(),
-                    "{\"email\":\"" + newUser.getEmail() + "\"}");
+            // No raw PII in events (RB-40 §3 rule 1): the aggregate/actor id identifies the subject.
+            eventService.record(newUser.getId(), "USER_SIGNED_UP", newUser.getId(), "{}");
 
             String verifyUrl = frontendBaseUrl + "/verify?token=" + verificationToken;
             emailService.sendVerificationEmail(newUser.getEmail(), newUser.getFullName(), verifyUrl);
@@ -118,8 +124,8 @@ public class AuthController {
             user.setEmailVerified(true);
             user.setVerificationToken(null);
             userRepository.save(user);
-            eventService.record(user.getId(), "EMAIL_VERIFIED", user.getId(),
-                    "{\"email\":\"" + user.getEmail() + "\"}");
+            // No raw PII in events (RB-40 §3 rule 1) — reference the subject by id, not email.
+            eventService.record(user.getId(), "EMAIL_VERIFIED", user.getId(), "{}");
 
             String jwt = jwtUtil.generate(user.getId(), user.getEmail());
             return ResponseEntity.ok(Map.of(
@@ -140,7 +146,7 @@ public class AuthController {
             String email = req.email().toLowerCase().trim();
             rateLimit(String.format("login:%s:%s", email, clientIp(http)), LOGIN_MAX, LOGIN_WINDOW_S);
 
-            Optional<User> userOpt = userRepository.findByEmail(email);
+            Optional<User> userOpt = userPii.resolveByEmail(email);
             if (userOpt.isEmpty()) {
                 throw ApiException.unauthorized("Invalid email or password.");
             }
@@ -254,8 +260,8 @@ public class AuthController {
     private Map<String, Object> userToMap(User u) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", u.getId());
-        m.put("email", u.getEmail());
-        m.put("fullName", u.getFullName());
+        m.put("email", userPii.displayEmail(u));
+        m.put("fullName", userPii.displayName(u));
         m.put("emailVerified", u.isEmailVerified());
         return m;
     }

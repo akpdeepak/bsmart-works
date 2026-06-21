@@ -48,14 +48,38 @@ public class EncryptionService {
         }
     }
 
-    /** Encrypts {@code plaintext} and returns a base64-encoded {@code nonce||ciphertext} blob. */
+    /** Encrypts {@code plaintext} under the server master key. Base64-encoded {@code nonce||ciphertext}. */
     public String encrypt(String plaintext) {
+        return encrypt(this.key, plaintext);
+    }
+
+    /** Decrypts a blob produced by {@link #encrypt(String)} under the server master key. */
+    public String decrypt(String blob) {
+        return decrypt(this.key, blob);
+    }
+
+    /**
+     * Encrypts {@code plaintext} under an explicit AES key — e.g. a per-subject data key (DEK) for the
+     * PII vault (RB-40 §3), or a key-encryption key when wrapping a DEK. Same
+     * {@code base64(nonce||ciphertext||tag)} format as {@link #encrypt(String)} so any key path is
+     * interoperable. Never logs key material (RB-10 §9).
+     */
+    public String encryptWith(byte[] keyBytes, String plaintext) {
+        return encrypt(new SecretKeySpec(keyBytes, "AES"), plaintext);
+    }
+
+    /** Decrypts a blob produced by {@link #encryptWith(byte[], String)} under the given AES key. */
+    public String decryptWith(byte[] keyBytes, String blob) {
+        return decrypt(new SecretKeySpec(keyBytes, "AES"), blob);
+    }
+
+    private String encrypt(SecretKey k, String plaintext) {
         if (plaintext == null) return null;
         try {
             byte[] nonce = new byte[NONCE_LENGTH_BYTES];
             rng.nextBytes(nonce);
             Cipher cipher = Cipher.getInstance(ALGORITHM);
-            cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_LENGTH_BITS, nonce));
+            cipher.init(Cipher.ENCRYPT_MODE, k, new GCMParameterSpec(GCM_TAG_LENGTH_BITS, nonce));
             byte[] ciphertext = cipher.doFinal(plaintext.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             byte[] combined = ByteBuffer.allocate(NONCE_LENGTH_BYTES + ciphertext.length)
                 .put(nonce).put(ciphertext).array();
@@ -65,8 +89,7 @@ public class EncryptionService {
         }
     }
 
-    /** Decrypts a blob produced by {@link #encrypt}. Returns {@code null} if input is null. */
-    public String decrypt(String blob) {
+    private String decrypt(SecretKey k, String blob) {
         if (blob == null) return null;
         try {
             byte[] combined = Base64.getDecoder().decode(blob);
@@ -76,7 +99,7 @@ public class EncryptionService {
             byte[] ciphertext = new byte[buf.remaining()];
             buf.get(ciphertext);
             Cipher cipher = Cipher.getInstance(ALGORITHM);
-            cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_LENGTH_BITS, nonce));
+            cipher.init(Cipher.DECRYPT_MODE, k, new GCMParameterSpec(GCM_TAG_LENGTH_BITS, nonce));
             return new String(cipher.doFinal(ciphertext), java.nio.charset.StandardCharsets.UTF_8);
         } catch (Exception e) {
             throw new IllegalStateException("Decryption failed", e);

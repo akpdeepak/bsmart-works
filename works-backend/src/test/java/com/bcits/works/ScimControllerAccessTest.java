@@ -36,7 +36,8 @@ class ScimControllerAccessTest {
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
     private final EventService events = mock(EventService.class);
     private final RbacService rbac = mock(RbacService.class);
-    private final ScimController controller = new ScimController(scimTokens, users, jdbc, events, rbac);
+    private final UserPiiService userPii = mock(UserPiiService.class);
+    private final ScimController controller = new ScimController(scimTokens, users, jdbc, events, rbac, userPii);
 
     // ── auth gate ─────────────────────────────────────────────────────────────
 

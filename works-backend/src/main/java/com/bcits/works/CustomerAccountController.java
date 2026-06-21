@@ -134,8 +134,9 @@ public class CustomerAccountController {
         cu.setCreatedAt(now);
         cu.setUpdatedAt(now);
         CustomerUser saved = customerUsers.save(cu);
+        // No raw PII in events (RB-40 §3 rule 1): reference the account, not the customer's email.
         eventService.record(saved.getId(), "CUSTOMER_USER_CREATED", userId,
-                Map.of("accountId", accountId, "email", saved.getEmail()));
+                Map.of("accountId", accountId));
         return scrub(saved);
     }
 

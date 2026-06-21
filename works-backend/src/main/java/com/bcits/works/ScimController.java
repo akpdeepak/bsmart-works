@@ -48,14 +48,17 @@ public class ScimController {
     private final JdbcTemplate jdbc;
     private final EventService eventService;
     private final RbacService rbac;
+    private final UserPiiService userPii;
 
     public ScimController(ScimTokenRepository scimTokens, UserRepository users,
-                          JdbcTemplate jdbc, EventService eventService, RbacService rbac) {
+                          JdbcTemplate jdbc, EventService eventService, RbacService rbac,
+                          UserPiiService userPii) {
         this.scimTokens = scimTokens;
         this.users = users;
         this.jdbc = jdbc;
         this.eventService = eventService;
         this.rbac = rbac;
+        this.userPii = userPii;
     }
 
     // ── Users ──────────────────────────────────────────────────────────────────────
@@ -99,7 +102,7 @@ public class ScimController {
             String displayName = extractDisplayName(body);
             // Find-or-create the user by email
             String email = userName; // SCIM userName is conventionally email
-            Optional<User> existing = users.findByEmail(email);
+            Optional<User> existing = userPii.resolveByEmail(email);
             User user;
             if (existing.isPresent()) {
                 user = existing.get();
@@ -107,10 +110,12 @@ public class ScimController {
                 user = new User();
                 user.setId("USR-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
                 user.setEmail(email);
+                user.setEmailHmac(userPii.emailHmac(email)); // blind index for tokenized lookups (RB-40 §3)
                 user.setFullName(displayName);
                 user.setPasswordHash(""); // provisioned user — password set via invite flow
                 user.setEmailVerified(true); // IdP-provisioned users are pre-verified
                 users.save(user);
+                userPii.syncIdentity(user); // dual-write name + email into the PII vault (RB-40 §3)
                 log.info("[SCIM] Provisioned new user {} in workspace {}", user.getId(), workspaceId);
             }
             // Add to workspace if not already a member
@@ -143,6 +148,7 @@ public class ScimController {
                 user.setFullName(displayName);
             }
             users.save(user);
+            userPii.syncIdentity(user); // dual-write the updated name + email into the PII vault (RB-40 §3)
             Object active = body.get("active");
             if (Boolean.FALSE.equals(active)) {
                 // Deactivate = remove from workspace (soft — user record stays)

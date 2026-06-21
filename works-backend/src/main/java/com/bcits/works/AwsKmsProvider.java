@@ -43,4 +43,28 @@ public class AwsKmsProvider implements KmsProvider {
         throw new UnsupportedOperationException(
             "AWS KMS re-encryption requires the AWS SDK. See TD-022.");
     }
+
+    @Override
+    public WrappedKey wrapDataKey(String workspaceId, byte[] dek) {
+        log.warn("[AWS-KMS] wrapDataKey stub called for workspace={}", workspaceId);
+        // TODO: KmsClient.encrypt(...) under the workspace KMS key ARN (byok_key_ref) to wrap the DEK.
+        throw new UnsupportedOperationException(
+            "AWS KMS DEK wrapping requires the AWS SDK and KMS key ARN. "
+                + "See TD-022 and RB-40 §3 — obtain legal/DPO sign-off before enabling.");
+    }
+
+    @Override
+    public byte[] unwrapDataKey(String workspaceId, String kekRef, String wrappedDek) {
+        log.warn("[AWS-KMS] unwrapDataKey stub called for workspace={}", workspaceId);
+        // TODO: KmsClient.decrypt(...) to unwrap the DEK under the workspace KMS key ARN.
+        throw new UnsupportedOperationException(
+            "AWS KMS DEK unwrapping requires the AWS SDK. See TD-022.");
+    }
+
+    @Override
+    public String rotateKek(String workspaceId) {
+        log.warn("[AWS-KMS] rotateKek stub called for workspace={}", workspaceId);
+        throw new UnsupportedOperationException(
+            "AWS KMS key rotation requires the AWS SDK. See TD-022.");
+    }
 }

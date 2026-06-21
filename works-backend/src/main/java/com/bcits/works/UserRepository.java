@@ -11,6 +11,12 @@ public interface UserRepository extends JpaRepository<User, String> {
     Optional<User> findByEmail(String email);
     Optional<User> findByVerificationToken(String verificationToken);
 
+    /** Resolve a user by the email blind index (RB-40 §3) — the tokenized login lookup path. */
+    Optional<User> findByEmailHmac(String emailHmac);
+
+    /** Users not yet assigned a PII-vault subject token — driven by the V110/V111 backfill (idempotent). */
+    List<User> findBySubjectTokenIsNull();
+
     /** Returns only users who are members of the given workspace (RB-40 §1). */
     @Query(value = "SELECT u.* FROM users u " +
                    "JOIN workspace_members wm ON wm.user_id = u.id " +

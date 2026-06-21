@@ -85,6 +85,67 @@ counter-regression clone detection; tamper/replay/origin/rpIdHash ITs (webauthn4
 `navigator.credentials`; passkey login wired; full gate green. rpId/origins from `app.webauthn.*`.
 
 ## 6. Status
-**Not started in code** (this doc is the execution-ready plan). Branch placeholder
-`feat/w1-webauthn-fido2-backend`. Everything before this (PII-vault, #243 A-D/F, FLS 1-3, rate-limit
-PR1-4, SOC2 matrix) is merged on `main`; WebAuthn is the sole remaining Phase-1 build.
+WA1 **built** (this session); WA2–WA4 pending. Everything before this (PII-vault, #243 A-D/F, FLS 1-3,
+rate-limit PR1-4, SOC2 matrix) is merged on `main`; WebAuthn is the sole remaining Phase-1 build.
+
+---
+
+## 7. Slice WA1 — backend verifier + schema + config — plan & as-built
+
+> Lane: Large/risky (new dependency · auth · schema). Branch `feat/w1-webauthn-wa1-verifier` off
+> `origin/main`. **Purely additive — nothing in the live signed-nonce path changes, so `main` stays
+> shippable.** The real verifier ships built + unit-tested but is not yet wired into the ceremonies
+> (that is WA2), gated conceptually by `app.webauthn.fido2-enabled` (default off).
+
+**Scope.** Add the webauthn4j dependency, the relying-party config, the V119 COSE schema, and a
+production-grade FIDO2 verifier (`WebAuthnFido2Verifier`) wrapping `WebAuthnManager`, covered by an
+authenticator-emulator round-trip + rejection tests. No controller/service/DTO/frontend change.
+
+**Analysis (related scopes covered).**
+- *Engineering (RB-10):* new managed dependency `com.webauthn4j:webauthn4j-core 0.31.7.RELEASE`
+  (+`webauthn4j-test`, test scope). webauthn4j 0.31.7 uses **Jackson 3** (`tools.jackson.*`), already
+  managed by the Spring Boot 4.1 parent — no version pin needed, no Jackson 2 conflict. Flyway-only
+  schema change (V119), forward-only/additive. Pure verifier (`@Component`, no DB) → unit-testable.
+- *Governance (RB-40 §4):* this is the spec-committed real WebAuthn. Attestation policy **none/self**
+  (`createNonStrictWebAuthnManager`); origin + rpId from static `app.webauthn.*` config (mirrors the
+  CORS allow-list). `webauthn_credentials` is already `@Filter`'d (workspace-scoped) — unchanged.
+- *Data model:* V119 adds nullable `cose_credential BYTEA`, `aaguid`, `fmt`, `user_handle`,
+  `uv_initialized` and relaxes `public_key_pem` to nullable. Existing legacy rows untouched (no
+  backfill); new FIDO2 rows use `cose_credential`. The entity maps the new columns so the Flyway boot
+  + `ddl-auto=validate` ITs validate schema↔entity alignment.
+- *Counter crux (EPIC §2), verified against the 0.31.7 JAR via `javap`:* persist the serialized
+  `AttestedCredentialData` (`AttestedCredentialDataConverter.convert`) + a server-tracked `sign_count`;
+  at assertion rebuild `CredentialRecordImpl(null, uvInitialized, null, null, storedSignCount, acd,
+  null, null, null, null)` so `verify` reads the **persisted** counter and the caller stores the new
+  one. (Discovered while testing: webauthn4j counters are unsigned-32-bit — `CredentialRecordImpl`
+  rejects a counter > 4294967295; production counters are always uint32, so this only constrains test
+  fixtures.)
+
+**Files.**
+- `works-backend/pom.xml` — `${webauthn4j.version}` property + `webauthn4j-core` (compile) +
+  `webauthn4j-test` (test).
+- `WebAuthnSettings.java` (new) — `@ConfigurationProperties("app.webauthn")`: rpId, rpName,
+  allowedOrigins, userVerificationRequired, fido2Enabled.
+- `WebAuthnFido2Verifier.java` (new) — `verifyRegistration(...)` → persistable `RegistrationResult`
+  (credentialId, coseCredential, aaguid, fmt, signCount, uvInitialized, algorithm);
+  `verifyAssertion(...)` → `AssertionResult` (new signCount). webauthn4j exceptions translated to
+  `ApiException` (badRequest on registration, unauthorized on assertion).
+- `V119__webauthn_fido2_cose_columns.sql` (new) — additive COSE columns + relax `public_key_pem`.
+- `WebAuthnCredential.java` — map the five new columns (getters/setters).
+- `application.properties` — §18 `app.webauthn.*`.
+- `WebAuthnFido2VerifierTest.java` (new, `@Tag("unit")`) — webauthn4j-test `ClientPlatform`
+  (`NONE_ATTESTATION_AUTHENTICATOR`) round-trip.
+- `ai-rules/00-ORCHESTRATOR.md` §6 — high-water V118→**V119**, next migration →V120; regenerated
+  CLAUDE.md/AGENTS.md/etc. via `scripts/generate-ai-rules.mjs`.
+
+**Acceptance criteria.** Real attestation + assertion verified (origin/rpId/signature/counter);
+credentials yield a serialized COSE credential; wrong-origin, wrong-challenge, tampered-signature and
+counter-regression (clone) all rejected as `ApiException`; full local gate green; ai-rules `--check`
+in sync.
+
+**Validation (this session, all green).** `./mvnw -Dgroups=unit clean verify` → **1455** unit tests,
+0 failures + Checkstyle + JaCoCo gates pass. `WebAuthnFido2VerifierTest` 5/5 (valid round-trip;
+wrong-origin; wrong-challenge; tampered-signature; counter-regression). `npm run guardrails` blocking
+rules pass (only pre-existing baseline hex debt warned, unrelated). `generate-ai-rules.mjs --check`
+OK. Full `failsafe:integration-test failsafe:verify` (Docker up) — V1→V119 boot + `ddl-auto=validate`
+green (see as-built note appended on merge).

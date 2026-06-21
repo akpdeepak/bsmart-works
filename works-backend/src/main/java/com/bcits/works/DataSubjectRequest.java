@@ -1,10 +1,13 @@
 package com.bcits.works;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import java.time.OffsetDateTime;
+import java.util.Map;
 import org.hibernate.annotations.Filter;
 
 /** A GDPR / DPDP data-subject request — EXPORT (data portability) or ERASURE (right to be
@@ -45,6 +48,12 @@ public class DataSubjectRequest {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    /** The portable export payload — delivered in the response for an EXPORT request but NEVER
+     *  persisted (raw PII must not survive a crypto-shred in any stored column, RB-40 §3). */
+    @Transient
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private Map<String, Object> exportData;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getWorkspaceId() { return workspaceId; }
@@ -67,4 +76,6 @@ public class DataSubjectRequest {
     public void setResultSummary(String resultSummary) { this.resultSummary = resultSummary; }
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+    public Map<String, Object> getExportData() { return exportData; }
+    public void setExportData(Map<String, Object> exportData) { this.exportData = exportData; }
 }

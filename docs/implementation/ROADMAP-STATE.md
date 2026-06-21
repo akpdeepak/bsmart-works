@@ -15,12 +15,36 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
   - ✅ #243 central Hibernate tenant filter (Slice 1) + EPIC-3 package-collision fix merged — PR #415 (`fc31ceb9`).
   - 🟡 Field-level security enforcement (Slice 1) — verified on Windows (FieldLevelSecurityIT 11/11); PR open
     (branch `feat/p1-field-level-security`). Closes the work_item_field_value AND legacy custom_fields read leaks.
+  - 🟢 PII vault + crypto-shredding (RB-40 §3, EPIC-P1-pii-vault) — core delivered on branch
+    `feat/p1-pii-vault`. **Slice 1** (per-subject crypto-shred vault on the User identity: V110
+    subject_token + subject_data_keys envelope-wrapped DEK, PiiVaultService mint/put/resolve/forget,
+    per-subject KEK re-wrap rotation, dual-write of name, erase()=crypto-shred, raw email removed from
+    the immutable audit chain) and **Slice 2** (email tokenization: V111 email_hmac blind index,
+    BlindIndexService, flag-gated login-via-blind-index, email dual-write into the vault) are built +
+    validated (unit + integration + fresh-DB boot). Partial **Slice 4** (no-PII-in-events): the
+    confirmed event-payload email leaks (USER_SIGNED_UP / EMAIL_VERIFIED / CUSTOMER_USER_CREATED) are
+    fixed. ALL behaviour is behind default-off flags (pii.vault.read-from-vault,
+    pii.vault.login-via-blind-index) so merging does not change runtime behaviour until an operator
+    backfills + flips. **Migration high-water is now V111** (CLAUDE.md §6 still says V109 — generated
+    file, update via ai-rules + regenerate in a doc pass).
+  - **PII-vault remaining (deliberately deferred — see the EPIC completion note):** Slice 3
+    (CustomerUser + Stakeholder subjects + drop the persisted denorm copies chat_conversations.
+    customer_name / customer_feedback_items.customer); rest of Slice 4 (field_def.pii custom-field
+    routing; free-text PII scanning for customer-authored content; the WorkItemCommandService
+    assignee-fullName event leak, which needs a coordinated activity-feed render change; the
+    guardrails.sh no-PII-in-events/audit + ArchUnit checks, which become BLOCK once those leaks are
+    swept); and Slice 5 (real AWS KMS / BYOK — the explicit next Phase-1 item).
 - Verified-status correction: EPICs 3–12 are first slices (partial), not full-scope complete; full
   completion is governed by the master roadmap.
-- Next in Phase 1: PII vault + crypto-shredding → BYOK/KMS → WebAuthn attestation → distributed rate-limit/JWT.
+- FLS V110 collision note: the field-level-security branch numbered a migration V110
+  (`V110__field_visibility_by_system_role_tier.sql`) too; whichever merges second must renumber.
+  bSmart-works shared worktree also leaves STALE compiled migrations in works-backend/target — always
+  `mvn clean` before trusting integration-test / boot results (a stale V110 caused phantom
+  field_visibility.role_def_id failures this session).
+- Next in Phase 1: finish PII-vault Slices 3–4 → BYOK/KMS (AWS) → WebAuthn attestation → distributed rate-limit/JWT.
 - Open follow-ups: field-visibility tier-source reconciliation (`roles` V7 vs `role_def` V21 — decision pending);
   BQL field-level filter-inference (RB-10 §6).
-- Last state update: 2026-06-20
+- Last state update: 2026-06-21
 
 ## Trigger contract
 

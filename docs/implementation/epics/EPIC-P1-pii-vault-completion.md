@@ -78,22 +78,32 @@ behaviour change on merge). Migration high-water → **V112**.
   isolation + blind-index DB round-trip) + `PiiVaultCryptoShredIT` + `FlywayMigrationIntegrationTest`
   (V112 applies clean) + `CrossTenantFilterIsolationIT`; fresh-DB boot via `ddl-auto=validate`.
 
-## Deliberately deferred (the remaining Phase-1 PII-vault scope)
-Each is a clean follow-up PR:
-- **Slice 4 (rest)** — `field_def.pii` flag + route PII-flagged `work_item_field_value` to the vault;
-  free-text PII scan/redact for customer-authored content (service_requests, chat_messages, feedback);
-  the **`WorkItemCommandService` assignee-fullName** event leak (needs the activity feed to resolve
-  assignee names at render, a coordinated backend+frontend change); then add the `guardrails.sh`
-  no-PII-in-events / no-PII-in-audit checks + the ArchUnit rule as **BLOCK** once the sweep is clean.
-- **Slice 5** — real **AWS KMS / BYOK** (the explicit next Phase-1 item): land the AWS SDK,
-  region-pinned KEKs, key-retention ≤ backup-retention, scheduled-deletion windows (legal/DPO sign-off).
+## Slices 4 & 5 — SHIPPED (2026-06-21)
+The full per-slice plans + validation are in `EPIC-P1-pii-vault-slice-plans.md`; in brief:
+- **Slice 4a** (#420) — assignee full-name leak in the immutable `events` log → store the assignee
+  **id**, resolve names at render via the vault (`ActivityController` + `UserPiiService.displayNameById`).
+- **Slice 4b** (#421, V113) — `field_def.pii` flag → PII-flagged `work_item_field_value` text routed
+  to the vault (per-value token), resolved at render.
+- **Slice 4c** (#423, V114) — watcher/@mention `notifications.message` stored **name-free** + an
+  `actor_id`; actor name resolved at render. Free-text AI-boundary redaction already central
+  (`AiControlPlaneService.redact`).
+- **Slice 4d** (#422) — **machine-enforced** no-raw-PII-in-events/audit: `guardrails.sh` BLOCK +
+  ArchUnit (event/audit layer ⊥ PII entities).
+- **Slice 5** — real **AWS KMS / BYOK**: `AwsKmsProvider` on AWS SDK v2 (wrap/unwrap/generateDataKey/
+  reEncrypt/rotate), region-pinned (per-workspace key ARN), BYOK-per-workspace + platform default key,
+  validated **non-prod against LocalStack** (`PiiVaultKmsLocalStackIT`). All prod/non-prod config is
+  centralized (`KmsProperties` + `application.properties` §14) and documented in
+  `docs/compliance/PII-VAULT-KMS-CONFIG.md`. Real AWS account provisioning (keys/IAM/retention) is the
+  operator step at prod launch (Deepak); `LocalKmsProvider` stays the dev/test default.
+
+## Still deferred
 - **CONTRACT** — the irreversible drop of the plaintext `users.email`/`full_name`/`mfa_secret`/
-  `verification_token` columns, gated on the vault being the proven prod source of truth + a full
-  backup cycle (EPIC §3/§12).
+  `verification_token` (and the other slices' legacy columns), gated on the vault being the proven prod
+  source of truth + a full backup cycle (EPIC §3/§12).
 
 ## Notes
-- Migration high-water is now **V112** (Slice 3). ai-rules §6 + the generated tool files were updated
-  to V112 / next V113 in this PR (the earlier V109 staleness is resolved).
+- Migration high-water is now **V114** (Slice 4c). ai-rules §6 + the generated tool files are kept in
+  sync each slice (the earlier V109 staleness is resolved). Slice 5 added no migration.
 - The field-level-security branch also numbered a migration **V110**; whichever merges second renumbers.
 - Always `mvn clean` before trusting integration/boot results on the shared worktree — a stale compiled
   `V110__field_visibility_by_system_role_tier.sql` (from the FLS branch, not in src) caused phantom

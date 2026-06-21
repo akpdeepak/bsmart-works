@@ -54,12 +54,32 @@ V111 schema matches the entities. New tests: `PiiVaultServiceTest` (the three bi
 subject_token + email_hmac + vault for existing users) → unset → flip `read-from-vault` then
 `login-via-blind-index` per-environment once verified.
 
+## Slice 3 — customer/stakeholder subjects + denorm tokenization (SHIPPED, 2026-06-21)
+Extends the vault from the internal `User` identity to the two remaining subject populations and
+tokenizes the two persisted denorm PII copies, all behind the same default-off flags (no runtime
+behaviour change on merge). Migration high-water → **V112**.
+- **CustomerUser** — `customer_users.subject_token` + `email_hmac` (V112); `@PrePersist` mint;
+  `CustomerUserPiiService` (dual-write email + display name, blind-index portal login, flag-gated
+  display, crypto-shred); wired into `CustomerAccountController` (create/update dual-write +
+  duplicate-email via blind index + render) and `CustomerAuthController` (login via blind index +
+  render). The `pii.vault.login-via-blind-index` switch now governs **both** internal and portal
+  login — backfill `users` *and* `customer_users` before flipping it.
+- **Stakeholder** — `stakeholder.subject_token` (V112); `@PrePersist` mint; `StakeholderPiiService`
+  (dual-write name/email/org/notes, flag-gated display, crypto-shred); wired into
+  `StakeholderController`.
+- **Denorm copies** — `chat_conversations.customer_subject_token` +
+  `customer_feedback_items.customer_subject_token` (V112); `CustomerAttributionPiiService` tokenizes
+  the free-text value under a per-record token, resolved at the controller boundary (agent inbox /
+  feedback list), `[erased]` after a shred. Legacy columns stay until CONTRACT.
+- **Backfill** extended to all new subjects + denorm tokens (`PiiVaultBackfillService.backfillAll()`,
+  idempotent; the runner now backfills every subject population).
+- **Validation:** full unit gate green (1391 tests, 0 Checkstyle, coverage met); integration on real
+  Postgres — new `PiiVaultSlice3IT` (4/4: customer/stakeholder/denorm round-trip + shred + workspace
+  isolation + blind-index DB round-trip) + `PiiVaultCryptoShredIT` + `FlywayMigrationIntegrationTest`
+  (V112 applies clean) + `CrossTenantFilterIsolationIT`; fresh-DB boot via `ddl-auto=validate`.
+
 ## Deliberately deferred (the remaining Phase-1 PII-vault scope)
-Scoped out tonight to avoid rushing security-critical / display-coupled / speculative work; each is a
-clean follow-up PR:
-- **Slice 3** — extend the vault to **CustomerUser** + **Stakeholder** subjects; drop the *persisted*
-  denorm PII copies `chat_conversations.customer_name` and `customer_feedback_items.customer` (→ token
-  + render-time resolution). (Comment `author_name` is already `@Transient` — safe.)
+Each is a clean follow-up PR:
 - **Slice 4 (rest)** — `field_def.pii` flag + route PII-flagged `work_item_field_value` to the vault;
   free-text PII scan/redact for customer-authored content (service_requests, chat_messages, feedback);
   the **`WorkItemCommandService` assignee-fullName** event leak (needs the activity feed to resolve
@@ -72,7 +92,8 @@ clean follow-up PR:
   backup cycle (EPIC §3/§12).
 
 ## Notes
-- Migration high-water is now **V111** (CLAUDE.md §6 / ai-rules still say V109 — regenerate in a doc pass).
+- Migration high-water is now **V112** (Slice 3). ai-rules §6 + the generated tool files were updated
+  to V112 / next V113 in this PR (the earlier V109 staleness is resolved).
 - The field-level-security branch also numbered a migration **V110**; whichever merges second renumbers.
 - Always `mvn clean` before trusting integration/boot results on the shared worktree — a stale compiled
   `V110__field_visibility_by_system_role_tier.sql` (from the FLS branch, not in src) caused phantom

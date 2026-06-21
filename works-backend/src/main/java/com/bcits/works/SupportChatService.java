@@ -59,16 +59,19 @@ public class SupportChatService {
     private final EventService events;
     private final RbacService rbac;
     private final NotificationBatchService notificationBatch;
+    private final CustomerAttributionPiiService attributionPii;
 
     public SupportChatService(ChatConversationRepository conversations, ChatMessageRepository messages,
                               AiControlPlaneService controlPlane, EventService events,
-                              RbacService rbac, NotificationBatchService notificationBatch) {
+                              RbacService rbac, NotificationBatchService notificationBatch,
+                              CustomerAttributionPiiService attributionPii) {
         this.conversations = conversations;
         this.messages = messages;
         this.controlPlane = controlPlane;
         this.events = events;
         this.rbac = rbac;
         this.notificationBatch = notificationBatch;
+        this.attributionPii = attributionPii;
     }
 
     // ── Result envelope ──────────────────────────────────────────────────────────
@@ -92,6 +95,10 @@ public class SupportChatService {
         convo.setWorkspaceId(workspaceId);
         convo.setAccountId(accountId);
         convo.setCustomerName(customerName);
+        // Tokenize the denormalised customer name into the vault + store the token; the agent inbox
+        // resolves it at render and a crypto-shred renders "[erased]" (RB-40 §3 rule 3). The legacy
+        // customer_name column stays authoritative until the deferred CONTRACT migration drops it.
+        convo.setCustomerSubjectToken(attributionPii.ensureVaulted(workspaceId, null, customerName));
         convo.setSubject(subject == null || subject.isBlank() ? snippet(firstMessage) : subject.trim());
         convo.setStatus(OPEN);
         convo.setCreatedAt(now);

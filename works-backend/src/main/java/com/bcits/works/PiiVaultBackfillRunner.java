@@ -32,8 +32,8 @@ public class PiiVaultBackfillRunner implements ApplicationRunner {
         if (!runOnStart) {
             return;
         }
-        log.info("[PII-BACKFILL] pii.vault.backfill-on-start=true — running one-shot user PII backfill");
-        int n = backfill.backfillUserNames();
-        log.info("[PII-BACKFILL] Completed: {} user(s) backfilled into the PII vault", n);
+        log.info("[PII-BACKFILL] pii.vault.backfill-on-start=true — running one-shot PII backfill (all subjects)");
+        int n = backfill.backfillAll();
+        log.info("[PII-BACKFILL] Completed: {} row(s) backfilled into the PII vault across all subjects", n);
     }
 }

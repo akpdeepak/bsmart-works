@@ -36,6 +36,8 @@ public class PiiVaultService {
     // pii_type taxonomy (mirrors V67: EMAIL | PHONE | NAME | ADDRESS | ...).
     public static final String TYPE_EMAIL = "EMAIL";
     public static final String TYPE_NAME = "NAME";
+    public static final String TYPE_ORG = "ORG";        // stakeholder organization (Slice 3)
+    public static final String TYPE_NOTES = "NOTES";     // stakeholder free-text notes (Slice 3)
 
     /** What {@link #resolve} returns for a subject whose key has been crypto-shredded. */
     public static final String ERASED = "[erased]";

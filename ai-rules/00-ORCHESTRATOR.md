@@ -219,7 +219,12 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   Cap X + Admin Operations Center Cap Y), **17** (Universal Customization Engine Cap R), **18**
   (Mobile + Real-time + Performance Cap S), **19** (Enterprise Security + Compliance Certifications
   Cap T), and the Compliance/Service iterations (7–9).
-- **Flyway high-water mark:** **V109**. (V91–V109 add the Know Studio knowledge-base + transformation
+- **Flyway high-water mark:** **V112**. (V110–V112 are the Phase-1 PII-vault / crypto-shredding
+  migrations — V110 = users.subject_token + subject_data_keys (per-subject envelope-wrapped DEK);
+  V111 = users.email_hmac blind index (email tokenization, Slice 2); V112 = customer_users
+  subject_token + email_hmac, stakeholder subject_token, and customer_subject_token on
+  chat_conversations + customer_feedback_items (Slice 3 — customer/stakeholder subjects + denorm
+  tokenization). V91–V109 add the Know Studio knowledge-base + transformation
   migrations — e.g. article reactions/tags/favorites (V100–V102), space home article (V103), public
   share token (V104), article watchers (V105), space followers (V106). The per-version history below is
   documented through V90; V90 = `V90__sprint_member_capacities.sql`; note: V16 was
@@ -266,7 +271,7 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   focus factor) for the role-adaptive Sprint Cockpit Capacity tab; the story-points budget is
   derived at read time from sprint working days × team velocity (not stored), so it always reflects
   current velocity/headcount; tenant-scoped via workspace_id + a sprint FK that cascades on delete.
-- **Next migration:** **`V110__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+- **Next migration:** **`V113__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

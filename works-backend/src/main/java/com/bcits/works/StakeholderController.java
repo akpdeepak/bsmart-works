@@ -22,21 +22,26 @@ public class StakeholderController {
     private final StakeholderRepository repo;
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
+    private final StakeholderPiiService stakeholderPii;
 
     public StakeholderController(StakeholderRepository repo, AuthenticatedUser authenticatedUser,
-                                 RbacService rbac) {
+                                 RbacService rbac, StakeholderPiiService stakeholderPii) {
         this.repo = repo;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
+        this.stakeholderPii = stakeholderPii;
     }
 
     @GetMapping
     public List<Stakeholder> list(@RequestParam(required = false) String projectId) {
         String userId = authenticatedUser.id();
         // Workspace-scoped (RB-40 §1): caller sees only stakeholders from their workspaces.
-        if (projectId != null) return repo.findByProjectIdScopedToUser(projectId, userId); {
-        return repo.findAllScopedToUser(userId);
-        }
+        List<Stakeholder> found = projectId != null
+                ? repo.findByProjectIdScopedToUser(projectId, userId)
+                : repo.findAllScopedToUser(userId);
+        // Resolve PII from the vault when reads are switched on (RB-40 §3); legacy column otherwise.
+        found.forEach(stakeholderPii::applyDisplay);
+        return found;
     }
 
     @GetMapping("/{id}")
@@ -46,7 +51,7 @@ public class StakeholderController {
         if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
             throw ApiException.notFound("Stakeholder", id);
         }
-        return s;
+        return stakeholderPii.applyDisplay(s);
     }
 
     @PostMapping
@@ -55,7 +60,9 @@ public class StakeholderController {
         s.setCreatedBy(authenticatedUser.id());
         s.setCreatedAt(OffsetDateTime.now());
         s.setUpdatedAt(OffsetDateTime.now());
-        return repo.save(s);
+        Stakeholder saved = repo.save(s);
+        stakeholderPii.sync(saved); // dual-write name/email/org/notes into the PII vault (RB-40 §3)
+        return stakeholderPii.applyDisplay(saved);
     }
 
     @PutMapping("/{id}")
@@ -77,7 +84,9 @@ public class StakeholderController {
             s.setLastContactedAt(updated.getLastContactedAt());
             s.setNotes(updated.getNotes());
             s.setUpdatedAt(OffsetDateTime.now());
-            return repo.save(s);
+            Stakeholder saved = repo.save(s);
+            stakeholderPii.sync(saved); // dual-write the updated PII into the vault (RB-40 §3)
+            return stakeholderPii.applyDisplay(saved);
         }).orElseThrow();
     }
 

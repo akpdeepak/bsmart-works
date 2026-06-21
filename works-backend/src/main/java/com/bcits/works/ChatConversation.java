@@ -32,6 +32,13 @@ public class ChatConversation {
     @Column(name = "customer_name")
     private String customerName;
 
+    // Opaque vault token for the conversation's customer (the CustomerUser's subject_token), so the
+    // agent inbox resolves the customer's display name at render and a crypto-shred renders "[erased]"
+    // (RB-40 §3 rule 3). Replaces reliance on the denormalised customer_name copy. Nullable until the
+    // legacy column is dropped in the deferred CONTRACT migration. See PiiVaultService.
+    @Column(name = "customer_subject_token")
+    private String customerSubjectToken;
+
     private String subject;
 
     private String status = "OPEN";
@@ -56,6 +63,8 @@ public class ChatConversation {
     public void setAccountId(String accountId) { this.accountId = accountId; }
     public String getCustomerName() { return customerName; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }
+    public String getCustomerSubjectToken() { return customerSubjectToken; }
+    public void setCustomerSubjectToken(String customerSubjectToken) { this.customerSubjectToken = customerSubjectToken; }
     public String getSubject() { return subject; }
     public void setSubject(String subject) { this.subject = subject; }
     public String getStatus() { return status; }

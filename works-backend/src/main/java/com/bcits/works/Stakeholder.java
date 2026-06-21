@@ -3,15 +3,31 @@ package com.bcits.works;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import org.hibernate.annotations.Filter;
 
+/**
+ * A project/workspace stakeholder (often a non-user — regulator, executive, partner). PII (name,
+ * email, organization, free-text notes) is tokenized into the per-subject crypto-shred vault
+ * (RB-40 §3, EPIC-P1-pii-vault Slice 3) addressed by {@link #subjectToken}; the glue lives in
+ * {@link StakeholderPiiService}. No login → no blind index.
+ */
 @Entity
 @Table(name = "stakeholder")
 @Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
 public class Stakeholder {
+
+    /** Mint the opaque PII-vault subject token on first persist if absent (RB-40 §3). */
+    @PrePersist
+    void assignSubjectToken() {
+        if (subjectToken == null || subjectToken.isBlank()) {
+            subjectToken = "subj-" + java.util.UUID.randomUUID();
+        }
+    }
+
     @Id private String id;
     private String workspaceId;
     private String projectId;
@@ -19,6 +35,10 @@ public class Stakeholder {
     private String role;
     private String organization;
     private String email;
+
+    // Opaque per-subject token for the PII vault (RB-40 §3). Minted once via @PrePersist.
+    @Column(name = "subject_token")
+    private String subjectToken;
     private String influence = "MEDIUM";          // LOW | MEDIUM | HIGH
     private String interest = "MEDIUM";            // LOW | MEDIUM | HIGH
     private String engagementStrategy = "INFORM";  // INFORM | CONSULT | INVOLVE | COLLABORATE | EMPOWER
@@ -32,6 +52,8 @@ public class Stakeholder {
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+    public String getSubjectToken() { return subjectToken; }
+    public void setSubjectToken(String subjectToken) { this.subjectToken = subjectToken; }
     public String getWorkspaceId() { return workspaceId; }
     public void setWorkspaceId(String workspaceId) { this.workspaceId = workspaceId; }
     public String getProjectId() { return projectId; }

@@ -16,4 +16,8 @@ public interface ChatConversationRepository extends JpaRepository<ChatConversati
     List<ChatConversation> findByWorkspaceIdAndStatusOrderByLastMessageAtDesc(String workspaceId, String status);
 
     Optional<ChatConversation> findByWorkspaceIdAndId(String workspaceId, String id);
+
+    /** Backfill guard (RB-40 §3, Slice 3): conversations whose denormalised customer_name has not yet
+     *  been tokenized into the vault. Runs in system scope so the workspace @Filter does not narrow it. */
+    List<ChatConversation> findByCustomerSubjectTokenIsNullAndCustomerNameIsNotNull();
 }

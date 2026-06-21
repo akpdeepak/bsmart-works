@@ -29,13 +29,16 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
+    private final TokenRevocationService tokenRevocation;
     private final String allowedOrigins;
     private final String embedFrameAncestors;
 
     public SecurityConfig(JwtUtil jwtUtil,
+                          TokenRevocationService tokenRevocation,
                           @Value("${app.cors.allowed-origins}") String allowedOrigins,
                           @Value("${app.embed.frame-ancestors:'self'}") String embedFrameAncestors) {
         this.jwtUtil = jwtUtil;
+        this.tokenRevocation = tokenRevocation;
         this.allowedOrigins = allowedOrigins;
         this.embedFrameAncestors = embedFrameAncestors;
     }
@@ -176,7 +179,21 @@ public class SecurityConfig {
 
                 if (token != null) {
                     try {
-                        userId = jwtUtil.extractUserId(token);
+                        io.jsonwebtoken.Claims claims = jwtUtil.validate(token);
+                        userId = claims.getSubject();
+                        // Token-version revocation (W1 rate-limit/JWT PR1): reject a token issued before
+                        // the subject's cutoff (bumped on erase / password change / reset). Customer-
+                        // scoped tokens are checked at their portal choke point (CustomerContext); here
+                        // we enforce internal-scoped tokens against the users table.
+                        if (userId != null && !"customer".equals(claims.get("scope", String.class))) {
+                            java.util.Date iat = claims.getIssuedAt();
+                            if (tokenRevocation.isUserTokenRevoked(
+                                    userId, iat == null ? null : iat.toInstant())) {
+                                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                                response.getWriter().write("{\"error\":\"Token revoked\"}");
+                                return;
+                            }
+                        }
                     } catch (Exception e) {
                         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                         response.getWriter().write("{\"error\":\"Invalid or expired token\"}");

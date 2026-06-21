@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Date;
 
 @Component
@@ -62,6 +63,15 @@ public class JwtUtil {
 
     public String extractUserId(String token) {
         return validate(token).getSubject();
+    }
+
+    /**
+     * The token's issued-at ({@code iat}) as an {@link Instant}, or {@code null} if the claim is
+     * absent. Used for token-version revocation ({@link TokenRevocationService}).
+     */
+    public Instant extractIssuedAt(String token) {
+        Date iat = validate(token).getIssuedAt();
+        return iat == null ? null : iat.toInstant();
     }
 
     public String extractScope(String token) {

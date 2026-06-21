@@ -34,14 +34,17 @@ public class DataPrivacyService {
     private final UserRepository users;
     private final SecurityAuditLogService auditLog;
     private final UserPiiService userPii;
+    private final TokenRevocationService tokenRevocation;
     private final ObjectMapper json = new ObjectMapper();
 
     public DataPrivacyService(DataSubjectRequestRepository requests, UserRepository users,
-                              SecurityAuditLogService auditLog, UserPiiService userPii) {
+                              SecurityAuditLogService auditLog, UserPiiService userPii,
+                              TokenRevocationService tokenRevocation) {
         this.requests = requests;
         this.users = users;
         this.auditLog = auditLog;
         this.userPii = userPii;
+        this.tokenRevocation = tokenRevocation;
     }
 
     public List<DataSubjectRequest> list(String workspaceId) {
@@ -102,6 +105,9 @@ public class DataPrivacyService {
         user.setMfaSecret(null);
         user.setVerificationToken(null);
         users.save(user);
+        // Token-version revocation (W1 rate-limit/JWT PR1): an erased subject's existing JWTs must stop
+        // working immediately, not linger for up to the 7-day token lifetime.
+        tokenRevocation.revokeUserTokens(subjectUserId);
 
         r.setStatus("COMPLETED");
         r.setCompletedAt(OffsetDateTime.now());

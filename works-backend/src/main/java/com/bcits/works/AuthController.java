@@ -46,6 +46,7 @@ public class AuthController {
     private final PasswordResetService passwordResetService;
     private final RateLimiter rateLimiter;
     private final UserPiiService userPii;
+    private final TokenRevocationService tokenRevocation;
     private final boolean exposeDevVerificationToken;
     private final String frontendBaseUrl;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -53,6 +54,7 @@ public class AuthController {
     public AuthController(UserRepository userRepository, JwtUtil jwtUtil, EventService eventService,
                           EmailService emailService, PasswordResetService passwordResetService,
                           RateLimiter rateLimiter, UserPiiService userPii,
+                          TokenRevocationService tokenRevocation,
                           @Value("${app.auth.expose-dev-verification-token:false}") boolean exposeDevVerificationToken,
                           @Value("${app.frontend.base-url:http://localhost:5173}") String frontendBaseUrl) {
         this.userRepository = userRepository;
@@ -62,6 +64,7 @@ public class AuthController {
         this.passwordResetService = passwordResetService;
         this.rateLimiter = rateLimiter;
         this.userPii = userPii;
+        this.tokenRevocation = tokenRevocation;
         this.exposeDevVerificationToken = exposeDevVerificationToken;
         this.frontendBaseUrl = frontendBaseUrl;
     }
@@ -222,6 +225,9 @@ public class AuthController {
         }
         user.setPasswordHash(passwordEncoder.encode(req.newPassword()));
         userRepository.save(user);
+        // Token-version revocation (W1 rate-limit/JWT PR1): changing the password invalidates every
+        // token minted before the change, so a leaked/old session cannot survive a password rotation.
+        tokenRevocation.revokeUserTokens(user.getId());
         eventService.record(user.getId(), "PASSWORD_CHANGED", user.getId(), "{}");
         return ResponseEntity.ok(Map.of("message", "Password updated successfully."));
     }

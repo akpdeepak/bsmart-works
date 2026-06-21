@@ -15,10 +15,13 @@ public class CustomerContext {
 
     private final JwtUtil jwtUtil;
     private final HttpServletRequest request;
+    private final TokenRevocationService tokenRevocation;
 
-    public CustomerContext(JwtUtil jwtUtil, HttpServletRequest request) {
+    public CustomerContext(JwtUtil jwtUtil, HttpServletRequest request,
+                           TokenRevocationService tokenRevocation) {
         this.jwtUtil = jwtUtil;
         this.request = request;
+        this.tokenRevocation = tokenRevocation;
     }
 
     public record CustomerPrincipal(String customerUserId, String accountId, String workspaceId, String email) { }
@@ -34,8 +37,16 @@ public class CustomerContext {
             if (!jwtUtil.isCustomerToken(token)) {
                 throw ApiException.forbidden("This endpoint is for customer-portal users only.");
             }
+            String customerUserId = jwtUtil.extractUserId(token);
+            // Token-version revocation parity (W1 rate-limit/JWT PR1): a portal token issued before the
+            // customer user's cutoff (bumped on a portal password change) is rejected, so a changed
+            // credential cannot keep portal access for up to 7 days. SecurityConfig's filter only
+            // revokes internal-scoped tokens; this is the customer-scoped enforcement point.
+            if (tokenRevocation.isCustomerTokenRevoked(customerUserId, jwtUtil.extractIssuedAt(token))) {
+                throw ApiException.unauthorized("Your session has expired. Please sign in again.");
+            }
             return new CustomerPrincipal(
-                    jwtUtil.extractUserId(token),
+                    customerUserId,
                     jwtUtil.extractClaim(token, "accountId"),
                     jwtUtil.extractClaim(token, "workspaceId"),
                     jwtUtil.extractClaim(token, "email"));

@@ -85,8 +85,9 @@ counter-regression clone detection; tamper/replay/origin/rpIdHash ITs (webauthn4
 `navigator.credentials`; passkey login wired; full gate green. rpId/origins from `app.webauthn.*`.
 
 ## 6. Status
-WA1 **built** (this session); WA2–WA4 pending. Everything before this (PII-vault, #243 A-D/F, FLS 1-3,
-rate-limit PR1-4, SOC2 matrix) is merged on `main`; WebAuthn is the sole remaining Phase-1 build.
+WA1 + WA2 **built** (this session); WA3–WA4 pending. Everything before this (PII-vault, #243 A-D/F,
+FLS 1-3, rate-limit PR1-4, SOC2 matrix) is merged on `main`; WebAuthn is the sole remaining Phase-1
+build.
 
 ---
 
@@ -148,4 +149,48 @@ in sync.
 wrong-origin; wrong-challenge; tampered-signature; counter-regression). `npm run guardrails` blocking
 rules pass (only pre-existing baseline hex debt warned, unrelated). `generate-ai-rules.mjs --check`
 OK. Full `failsafe:integration-test failsafe:verify` (Docker up) — V1→V119 boot + `ddl-auto=validate`
-green (see as-built note appended on merge).
+green, 121 ITs. **Merged: PR #438 (`a293154a`).**
+
+---
+
+## 8. Slice WA2 — wire the ceremonies + DTOs — plan & as-built
+
+> Lane: Large/risky (auth path). Branch `feat/w1-webauthn-wa2-ceremonies` off `origin/main`. Both
+> crypto paths are flag-gated by `app.webauthn.fido2-enabled` (**default off**), so the live ceremonies
+> still run the legacy signed-nonce path and the existing frontend is unaffected — `main` stays
+> shippable. Flipping the flag on (after WA3 ships the real frontend) activates FIDO2.
+
+**Scope.** Route `WebAuthnService.finishRegistration`/`finishAuthentication` through
+`WebAuthnFido2Verifier` when the flag is on (legacy `WebAuthnCrypto` otherwise); extend the DTOs with
+the FIDO2 fields; enrich the `begin` responses with the full `navigator.credentials` option shape.
+
+**Analysis (related scopes covered).**
+- *Engineering (RB-10):* the finish methods now take the request DTO (the controller is the only
+  caller — verified by grep). Base64url decode/encode at the service boundary (the stored challenge is
+  base64url-without-padding; `Base64.getUrlDecoder` tolerates the missing padding). The `userHandle` is
+  deterministic — `base64url(userId)` — so registration needs no extra round-trip and assertion can
+  pass a possibly-null handle straight through.
+- *Governance (RB-40 §1/§4):* still self-scoped (identity from JWT on register, from begin-ceremony on
+  assert); no new tenant surface; `webauthn_credentials` stays `@Filter`'d. Fail-closed: a legacy
+  (no-COSE) credential is refused on the FIDO2 assertion path; missing FIDO2 fields → 401/400.
+- *Compatibility:* DTOs relax the legacy fields to optional and add nullable FIDO2 fields, so the
+  existing frontend payload still deserializes and (flag off) runs the unchanged legacy path. The
+  enriched `begin` response only **adds** keys — the legacy frontend reads `challenge` and ignores the
+  rest. No migration, no schema change (V119 columns from WA1 are now populated by the FIDO2 path).
+
+**Files.** `WebAuthnService.java` (dual-path routing + `userHandle` + base64url helpers),
+`WebAuthnController.java` (inject `WebAuthnSettings`; pass DTOs; enrich both `begin` responses with
+rp/user/pubKeyCredParams/authenticatorSelection/excludeCredentials/allowCredentials + legacy fields),
+`dto/PasskeyRegisterRequest.java` (+`attestationObject`/`clientDataJSON`; legacy fields optional),
+`dto/PasskeyAuthFinishRequest.java` (+`authenticatorData`/`clientDataJSON`/`userHandle`; `signature`
+optional), `WebAuthnFido2CeremonyIT.java` (new).
+
+**Acceptance criteria.** With the flag on, a real emulator attestation registers and persists a COSE
+credential (public_key_pem null), and a real assertion against it signs the user in and advances the
+counter; a legacy credential is rejected on the FIDO2 path; with the flag off the legacy path is
+unchanged. Full gate green.
+
+**Validation (this session, all green).** `./mvnw -Dgroups=unit clean verify` → 1455 unit + Checkstyle
+(0 violations) + JaCoCo (all checks met). `WebAuthnFido2CeremonyIT` 2/2 (register+assert via FIDO2;
+legacy-credential rejection) against Testcontainers Postgres. `npm run guardrails` blocking rules pass.
+Full `failsafe:integration-test failsafe:verify` green (note appended on merge).

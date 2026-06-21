@@ -224,3 +224,52 @@ across all instances — the distributed property PR1's revocation already has b
 ## P3.6 Follow-on
 PR4 (extend rate limiting to write endpoints + RB-10 §8 doc drift) remains. Redis/ElastiCache shared
 store + cached revocation lookup deferred to the AWS-infra EPIC.
+
+---
+
+# PR4 — as-built (2026-06-21) · per-user write-endpoint rate limiting
+
+> Per-item execution block (RB-05). Doubles as the PR description. **No migration.** Flag-gated,
+> default-off → no behaviour change on merge. Completes the rate-limit/JWT-revocation EPIC.
+
+## P4.0 Scope
+RB-10 §8 mandates "rate limiting on auth **and write** endpoints." Auth endpoints already carry a
+per-email/IP limit; the write half was unimplemented (doc-vs-code drift). PR4 closes it.
+
+## P4.1 Mechanism
+- **`WriteRateLimitInterceptor`** (HandlerInterceptor) caps mutating methods (POST/PUT/PATCH/DELETE)
+  per authenticated user, reusing the one `RateLimiter` (so it inherits PR3's in-process **or**
+  distributed backend automatically). Registered for `/api/**` in `TenantFilterConfig`.
+- Only fires for write methods **and** when a user is authenticated (the JWT filter set
+  `authenticatedUserId`). Reads, and unauthenticated writes (login/signup — own limiter, no user key),
+  are pass-through. Over budget → `429 {code:"TOO_MANY_REQUESTS"}` short-circuiting the handler.
+- **Default-off** (`app.rate-limit.writes-per-minute=0`, §17). An operator sets a per-minute budget
+  per environment (recommended ~600/user — well above interactive use, catching only abuse/runaway
+  clients; a tunable knob so a legitimate bulk/import surface can raise it). This closes the §8 drift
+  (the mechanism now exists + is wired) while keeping the canary-first, no-surprise rollout the other
+  W1 slices use.
+
+## P4.2 Files
+- `WriteRateLimitInterceptor.java` (new) + registration in `TenantFilterConfig.java`.
+- `application.properties` §17 — `app.rate-limit.writes-per-minute` (env, default 0).
+- `WriteRateLimitInterceptorTest.java` (new, unit, 5) — disabled / read / unauthenticated pass-through;
+  within-budget allowed; over-budget 429 + short-circuit.
+
+## P4.3 Acceptance criteria
+- Write methods by an authenticated user are limited when enabled; reads / unauthenticated / disabled
+  are pass-through; over-budget 429s before the handler. ✔ (unit)
+- No migration; default-off ⇒ no behaviour change on merge; context loads with the new interceptor. ✔
+  (full integration suite green)
+
+## P4.4 Validation (local, 2026-06-21)
+- Unit: `-Dgroups=unit clean verify` → **1450 tests, 0 failures**, checkstyle 0, coverage met
+  (`WriteRateLimitInterceptorTest` 5/5).
+- Guardrails: blocking rules pass.
+- Integration (Docker): full failsafe suite green (the new interceptor is registered + the Spring
+  context loads; default-off so no request behaviour changes).
+
+## P4.5 EPIC COMPLETE
+PR1 (token-version revocation) + PR2 (jti blocklist/logout) + PR3 (distributed DB store) + PR4
+(write-endpoint limiting) all merged. Deferred to the AWS-infra EPIC: Redis/ElastiCache as the shared
+rate-limit store + a cached revocation lookup (the per-request DB hits PR1/PR2 add). RB-10 §8 write-
+rate-limit drift is closed (mechanism implemented + wired).

@@ -3,6 +3,7 @@ package com.bcits.works;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -20,16 +21,36 @@ public class BqlContextFactory {
 
     private final JdbcTemplate jdbc;
     private final RbacService rbac;
+    private final FieldVisibilityService fieldVisibility;
 
-    public BqlContextFactory(JdbcTemplate jdbc, RbacService rbac) {
+    public BqlContextFactory(JdbcTemplate jdbc, RbacService rbac, FieldVisibilityService fieldVisibility) {
         this.jdbc = jdbc;
         this.rbac = rbac;
+        this.fieldVisibility = fieldVisibility;
     }
 
     /** Context for a human caller — sensitivity gated by their tier in this workspace. */
     public BqlContext forUser(String userId, String workspaceId) {
-        boolean canSeeSensitive = rbac.getUserTier(userId, workspaceId) >= SENSITIVE_FIELD_MIN_TIER;
-        return BqlContext.forUser(userId, canSeeSensitive, customFields(workspaceId));
+        int tier = rbac.getUserTier(userId, workspaceId);
+        boolean canSeeSensitive = tier >= SENSITIVE_FIELD_MIN_TIER;
+        Map<String, BqlContext.CustomField> fields = customFields(workspaceId);
+        // Field-level security at BQL compile time (RB-40 §1; spec 06 §5.5; FLS Slice 2). Drop custom
+        // fields that are HIDDEN for this caller's tier so they cannot be referenced in a BQL filter.
+        // Without this, a low-tier user could filter on a HIDDEN field (e.g. `salary > X`) and infer its
+        // value from which rows match — an inference oracle the read-path value-redaction
+        // (WorkItemReadService.redactHiddenFieldValues) does NOT close, because it strips the value from
+        // the *response*, not from the *filter*. Excluding the field here makes the compiler reject a
+        // reference to it as an unknown field (BqlFieldRegistry.resolve throws), so a HIDDEN field is
+        // indistinguishable from a non-existent one — consistent with the read path's "not yours".
+        // System/trusted BQL (compliance, KPI, the legacy compile) uses BqlContext.trusted/forUser with
+        // NO custom fields, so it is unaffected; only the three user-facing forUser callers are gated.
+        if (!fields.isEmpty()) {
+            Set<String> hidden = fieldVisibility.hiddenFieldIds(workspaceId, tier);
+            if (!hidden.isEmpty()) {
+                fields.values().removeIf(cf -> hidden.contains(cf.fieldDefId()));
+            }
+        }
+        return BqlContext.forUser(userId, canSeeSensitive, fields);
     }
 
     /** Workspace custom fields keyed by field_key — makes them queryable in BQL (RB-10 §6). */

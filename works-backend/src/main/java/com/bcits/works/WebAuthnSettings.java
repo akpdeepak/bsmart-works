@@ -35,11 +35,6 @@ public class WebAuthnSettings {
      *  Default false ("preferred") so security keys without a PIN still work; set true to mandate it. */
     private boolean userVerificationRequired = false;
 
-    /** Master switch for routing the live ceremonies through the real FIDO2 verifier. ON since WA3,
-     *  when the frontend cut over to {@code navigator.credentials} — backend + frontend ship together.
-     *  The legacy signed-nonce path remains as fallback until WA4 removes it. */
-    private boolean fido2Enabled = true;
-
     public String getRpId() { return rpId; }
     public void setRpId(String rpId) { this.rpId = rpId; }
     public String getRpName() { return rpName; }
@@ -50,6 +45,4 @@ public class WebAuthnSettings {
     public void setUserVerificationRequired(boolean userVerificationRequired) {
         this.userVerificationRequired = userVerificationRequired;
     }
-    public boolean isFido2Enabled() { return fido2Enabled; }
-    public void setFido2Enabled(boolean fido2Enabled) { this.fido2Enabled = fido2Enabled; }
 }

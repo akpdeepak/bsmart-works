@@ -31,17 +31,19 @@ public class CustomerAuthController {
     private final EventService eventService;
     private final RateLimiter rateLimiter;
     private final CustomerContext customerContext;
+    private final CustomerUserPiiService customerUserPii;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public CustomerAuthController(CustomerUserRepository customerUsers, CustomerAccountRepository accounts,
                                  JwtUtil jwtUtil, EventService eventService, RateLimiter rateLimiter,
-                                 CustomerContext customerContext) {
+                                 CustomerContext customerContext, CustomerUserPiiService customerUserPii) {
         this.customerUsers = customerUsers;
         this.accounts = accounts;
         this.jwtUtil = jwtUtil;
         this.eventService = eventService;
         this.rateLimiter = rateLimiter;
         this.customerContext = customerContext;
+        this.customerUserPii = customerUserPii;
     }
 
     @PostMapping("/login")
@@ -58,7 +60,9 @@ public class CustomerAuthController {
             if (!rateLimiter.allow(String.format("portal-login:%s:%s", email, clientIp(http)), LOGIN_MAX, LOGIN_WINDOW_S)) {
                 throw ApiException.tooManyRequests("Too many attempts. Please wait a moment and try again.");
             }
-            CustomerUser user = customerUsers.findByEmailIgnoreCase(email)
+            // Resolve the portal user by the blind index when login-via-blind-index is on, else by the
+            // legacy email column (default off until customer_users.email_hmac is backfilled) (RB-40 §3).
+            CustomerUser user = customerUserPii.resolveByEmail(email)
                     .filter(u -> Boolean.TRUE.equals(u.getActive()))
                     .filter(u -> passwordEncoder.matches(password, u.getPasswordHash()))
                     .orElseThrow(() -> ApiException.unauthorized("Invalid email or password."));
@@ -101,8 +105,9 @@ public class CustomerAuthController {
     private Map<String, Object> customerToMap(CustomerUser u) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", u.getId());
-        m.put("email", u.getEmail());
-        m.put("displayName", u.getDisplayName());
+        // Resolve identity PII from the vault when reads are switched on (RB-40 §3); legacy column otherwise.
+        m.put("email", customerUserPii.displayEmail(u));
+        m.put("displayName", customerUserPii.displayName(u));
         m.put("accountId", u.getCustomerAccountId());
         m.put("isAccountAdmin", u.getIsAccountAdmin());
         return m;

@@ -4,11 +4,15 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 @Tag("unit")
 class CustomerFeedbackServiceTest {
 
-    private final CustomerFeedbackService service = new CustomerFeedbackService(null, null, null);
+    // attributionPii is mocked (its default returns null, leaving the per-record token unset) so the
+    // pure prepareNew/sentiment logic can be unit-tested without a vault.
+    private final CustomerFeedbackService service =
+            new CustomerFeedbackService(null, null, null, mock(CustomerAttributionPiiService.class));
 
     @Test
     void lexiconSentiment_classifiesByKeywords() {

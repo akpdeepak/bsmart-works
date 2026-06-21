@@ -29,8 +29,10 @@ class StakeholderControllerAccessTest {
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
 
+    private final StakeholderPiiService stakeholderPii = mock(StakeholderPiiService.class);
+
     private final StakeholderController controller =
-            new StakeholderController(repo, authenticatedUser, rbac);
+            new StakeholderController(repo, authenticatedUser, rbac, stakeholderPii);
 
     StakeholderControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

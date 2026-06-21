@@ -21,11 +21,14 @@ public class CustomerFeedbackService {
     private final CustomerFeedbackRepository repo;
     private final RbacService rbac;
     private final EventService events;
+    private final CustomerAttributionPiiService attributionPii;
 
-    public CustomerFeedbackService(CustomerFeedbackRepository repo, RbacService rbac, EventService events) {
+    public CustomerFeedbackService(CustomerFeedbackRepository repo, RbacService rbac, EventService events,
+                                   CustomerAttributionPiiService attributionPii) {
         this.repo = repo;
         this.rbac = rbac;
         this.events = events;
+        this.attributionPii = attributionPii;
     }
 
     private void requireWs(String callerId, String wsId, String permission) {
@@ -71,6 +74,9 @@ public class CustomerFeedbackService {
         if (f.getSentiment() == null || f.getSentiment().isBlank()) {
             f.setSentiment(lexiconSentiment(f.getContent()));
         }
+        // Tokenize the free-text customer attribution into the vault + store the token (RB-40 §3 Slice 3);
+        // the legacy `customer` column stays authoritative until the deferred CONTRACT migration.
+        f.setCustomerSubjectToken(attributionPii.ensureVaulted(f.getWorkspaceId(), f.getCustomerSubjectToken(), f.getCustomer()));
         f.setCreatedAt(OffsetDateTime.now());
         f.setUpdatedAt(OffsetDateTime.now());
         return f;
@@ -79,6 +85,9 @@ public class CustomerFeedbackService {
     void applyUpdate(CustomerFeedback existing, CustomerFeedback updated) {
         existing.setSource(updated.getSource());
         existing.setCustomer(updated.getCustomer());
+        // Re-tokenize the (possibly changed) customer attribution under the same per-record token (RB-40 §3).
+        existing.setCustomerSubjectToken(
+                attributionPii.ensureVaulted(existing.getWorkspaceId(), existing.getCustomerSubjectToken(), updated.getCustomer()));
         existing.setContent(updated.getContent());
         existing.setSentiment(updated.getSentiment());
         existing.setTheme(updated.getTheme());

@@ -23,30 +23,48 @@ public class CustomerFeedbackController {
 
     private final CustomerFeedbackService service;
     private final AuthenticatedUser authenticatedUser;
+    private final CustomerAttributionPiiService attributionPii;
 
-    public CustomerFeedbackController(CustomerFeedbackService service, AuthenticatedUser authenticatedUser) {
+    public CustomerFeedbackController(CustomerFeedbackService service, AuthenticatedUser authenticatedUser,
+                                      CustomerAttributionPiiService attributionPii) {
         this.service = service;
         this.authenticatedUser = authenticatedUser;
+        this.attributionPii = attributionPii;
     }
 
     @GetMapping
     public List<CustomerFeedback> list(@RequestParam String workspaceId) {
-        return service.list(authenticatedUser.id(), workspaceId);
+        List<CustomerFeedback> items = service.list(authenticatedUser.id(), workspaceId);
+        items.forEach(this::resolveCustomer);
+        return items;
     }
 
     @PostMapping
     public CustomerFeedback create(@Valid @RequestBody CustomerFeedback feedback) {
-        return service.create(authenticatedUser.id(), feedback);
+        return resolveCustomer(service.create(authenticatedUser.id(), feedback));
     }
 
     @PutMapping("/{id}")
     public CustomerFeedback update(@PathVariable String id, @Valid @RequestBody CustomerFeedback updated) {
-        return service.update(authenticatedUser.id(), id, updated);
+        return resolveCustomer(service.update(authenticatedUser.id(), id, updated));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         service.delete(authenticatedUser.id(), id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Resolve the free-text customer attribution from the PII vault when reads are switched on
+     * (RB-40 §3 — no-op while read-from-vault is off, the default), mutating the rendered value in
+     * place at the controller boundary (outside the service transaction) so it is never flushed back to
+     * the legacy customer column.
+     */
+    private CustomerFeedback resolveCustomer(CustomerFeedback f) {
+        if (f != null) {
+            f.setCustomer(attributionPii.resolve(f.getWorkspaceId(), f.getCustomerSubjectToken(), f.getCustomer()));
+        }
+        return f;
     }
 }

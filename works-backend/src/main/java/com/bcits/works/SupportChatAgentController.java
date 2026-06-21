@@ -27,11 +27,14 @@ public class SupportChatAgentController {
     private final SupportChatService chat;
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
+    private final CustomerAttributionPiiService attributionPii;
 
-    public SupportChatAgentController(SupportChatService chat, AuthenticatedUser authenticatedUser, RbacService rbac) {
+    public SupportChatAgentController(SupportChatService chat, AuthenticatedUser authenticatedUser,
+                                      RbacService rbac, CustomerAttributionPiiService attributionPii) {
         this.chat = chat;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
+        this.attributionPii = attributionPii;
     }
 
     /** The agent inbox, optionally filtered by status (OPEN / AI_HANDLED / ESCALATED / RESOLVED). */
@@ -40,7 +43,9 @@ public class SupportChatAgentController {
                                        @RequestParam(required = false) String status) {
         requireWorkspace(workspaceId);
         rbac.require(authenticatedUser.id(), workspaceId, "work_service");
-        return chat.listConversations(workspaceId, status);
+        List<ChatConversation> convos = chat.listConversations(workspaceId, status);
+        convos.forEach(this::resolveCustomerName);
+        return convos;
     }
 
     /** Open a single conversation with its full transcript. */
@@ -57,7 +62,7 @@ public class SupportChatAgentController {
         requireWorkspace(workspaceId);
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "work_service");
-        return chat.assign(workspaceId, userId, id);
+        return resolveCustomerName(chat.assign(workspaceId, userId, id));
     }
 
     /** Post an agent reply to the conversation. */
@@ -76,16 +81,29 @@ public class SupportChatAgentController {
         requireWorkspace(workspaceId);
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "work_service");
-        return chat.resolve(workspaceId, userId, id);
+        return resolveCustomerName(chat.resolve(workspaceId, userId, id));
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────────────
 
     private Map<String, Object> envelope(SupportChatService.ChatResult result) {
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("conversation", result.conversation());
+        out.put("conversation", resolveCustomerName(result.conversation()));
         out.put("messages", result.newMessages());
         return out;
+    }
+
+    /**
+     * Resolve the conversation's customer name from the PII vault when reads are switched on (RB-40 §3
+     * — no-op while read-from-vault is off, the default), mutating the rendered value in place. Done at
+     * the controller boundary (outside the service transaction) so the resolved value is never flushed
+     * back to the legacy customer_name column — same precedent as {@code scrub()}.
+     */
+    private ChatConversation resolveCustomerName(ChatConversation c) {
+        if (c != null) {
+            c.setCustomerName(attributionPii.resolve(c.getWorkspaceId(), c.getCustomerSubjectToken(), c.getCustomerName()));
+        }
+        return c;
     }
 
     private static void requireWorkspace(String workspaceId) {

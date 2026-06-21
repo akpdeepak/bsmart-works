@@ -65,9 +65,10 @@ class SupportChatServiceTest {
     private final EventService events = mock(EventService.class);
     private final RbacService rbac = mock(RbacService.class);
     private final NotificationBatchService notificationBatch = mock(NotificationBatchService.class);
+    private final CustomerAttributionPiiService attributionPii = mock(CustomerAttributionPiiService.class);
 
     private final SupportChatService service =
-        new SupportChatService(conversations, messages, cp, events, rbac, notificationBatch);
+        new SupportChatService(conversations, messages, cp, events, rbac, notificationBatch, attributionPii);
 
     private void aiOn() {
         when(cp.invoke(any())).thenAnswer(i -> {

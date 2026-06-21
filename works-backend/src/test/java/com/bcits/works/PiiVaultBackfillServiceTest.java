@@ -29,7 +29,7 @@ class PiiVaultBackfillServiceTest {
         u2.setFullName("Bob");
         when(users.findBySubjectTokenIsNull()).thenReturn(List.of(u1, u2));
 
-        int n = new PiiVaultBackfillService(users, userPii, vault).backfillUserNames();
+        int n = service(users, userPii, vault).backfillUserNames();
 
         assertThat(n).isEqualTo(2);
         assertThat(u1.getSubjectToken()).isEqualTo("subj-x");
@@ -45,9 +45,19 @@ class PiiVaultBackfillServiceTest {
         UserRepository users = mock(UserRepository.class);
         when(users.findBySubjectTokenIsNull()).thenReturn(List.of());
 
-        int n = new PiiVaultBackfillService(users, mock(UserPiiService.class), mock(PiiVaultService.class))
+        int n = service(users, mock(UserPiiService.class), mock(PiiVaultService.class))
             .backfillUserNames();
 
         assertThat(n).isZero();
+    }
+
+    /** Build the service with the user-path deps under test and mocks for the other subject populations
+     *  (Slice 3 added customer-user / stakeholder / denorm backfills, exercised in their own tests). */
+    private static PiiVaultBackfillService service(UserRepository users, UserPiiService userPii, PiiVaultService vault) {
+        return new PiiVaultBackfillService(users, userPii, vault,
+            mock(CustomerUserRepository.class), mock(CustomerUserPiiService.class),
+            mock(StakeholderRepository.class), mock(StakeholderPiiService.class),
+            mock(ChatConversationRepository.class), mock(CustomerFeedbackRepository.class),
+            mock(CustomerAttributionPiiService.class));
     }
 }

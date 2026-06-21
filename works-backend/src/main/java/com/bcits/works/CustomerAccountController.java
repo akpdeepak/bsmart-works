@@ -35,17 +35,20 @@ public class CustomerAccountController {
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
+    private final CustomerUserPiiService customerUserPii;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public CustomerAccountController(CustomerAccountRepository accounts, CustomerUserRepository customerUsers,
                                      CustomerAccountService accountService, EventService eventService,
-                                     AuthenticatedUser authenticatedUser, RbacService rbac) {
+                                     AuthenticatedUser authenticatedUser, RbacService rbac,
+                                     CustomerUserPiiService customerUserPii) {
         this.accounts = accounts;
         this.customerUsers = customerUsers;
         this.accountService = accountService;
         this.eventService = eventService;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
+        this.customerUserPii = customerUserPii;
     }
 
     @GetMapping
@@ -118,14 +121,16 @@ public class CustomerAccountController {
         if (password == null || password.length() < 8) {
             throw ApiException.badRequest("WEAK_PASSWORD", "Password must be at least 8 characters.", "password");
         }
-        if (customerUsers.existsByEmailIgnoreCase(email.trim())) {
+        String normalizedEmail = email.trim().toLowerCase();
+        if (customerUserPii.existsByEmail(normalizedEmail)) {
             throw ApiException.conflict("A customer user with that email already exists.");
         }
         CustomerUser cu = new CustomerUser();
         cu.setId("CU-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         cu.setCustomerAccountId(accountId);
         cu.setWorkspaceId(account.getWorkspaceId());
-        cu.setEmail(email.trim().toLowerCase());
+        cu.setEmail(normalizedEmail);
+        cu.setEmailHmac(customerUserPii.emailHmac(normalizedEmail)); // blind index for tokenized portal login (RB-40 §3)
         cu.setPasswordHash(passwordEncoder.encode(password));
         cu.setDisplayName(str(body.get("displayName")));
         cu.setIsAccountAdmin(Boolean.TRUE.equals(body.get("isAccountAdmin")));
@@ -134,6 +139,7 @@ public class CustomerAccountController {
         cu.setCreatedAt(now);
         cu.setUpdatedAt(now);
         CustomerUser saved = customerUsers.save(cu);
+        customerUserPii.syncIdentity(saved); // dual-write email + display name into the PII vault (RB-40 §3)
         // No raw PII in events (RB-40 §3 rule 1): reference the account, not the customer's email.
         eventService.record(saved.getId(), "CUSTOMER_USER_CREATED", userId,
                 Map.of("accountId", accountId));
@@ -169,6 +175,7 @@ public class CustomerAccountController {
         }
         cu.setUpdatedAt(OffsetDateTime.now());
         CustomerUser saved = customerUsers.save(cu);
+        customerUserPii.syncIdentity(saved); // dual-write the updated display name into the PII vault (RB-40 §3)
         eventService.record(saved.getId(), "CUSTOMER_USER_UPDATED", actor, Map.of("accountId", accountId));
         return scrub(saved);
     }
@@ -179,8 +186,10 @@ public class CustomerAccountController {
         return accounts.findById(id).orElseThrow(() -> ApiException.notFound("Customer account", id));
     }
 
-    /** Never leak password hashes over the wire. */
+    /** Never leak password hashes over the wire; resolve display PII from the vault when reads are
+     *  switched on (RB-40 §3 — no-op while read-from-vault is off, the default). */
     private CustomerUser scrub(CustomerUser cu) {
+        customerUserPii.applyDisplay(cu);
         cu.setPasswordHash(null);
         return cu;
     }

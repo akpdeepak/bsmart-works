@@ -32,8 +32,10 @@ class SupportChatAgentControllerAccessTest {
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
 
+    private final CustomerAttributionPiiService attributionPii = mock(CustomerAttributionPiiService.class);
+
     private final SupportChatAgentController controller =
-        new SupportChatAgentController(chat, authenticatedUser, rbac);
+        new SupportChatAgentController(chat, authenticatedUser, rbac, attributionPii);
 
     SupportChatAgentControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

@@ -99,3 +99,70 @@ bump invalidates tokens across **all** instances immediately (the property the i
 - **Deferred:** Redis/ElastiCache as the shared store + a cached revocation lookup — AWS infra EPIC.
 - **Considered, out of scope for PR1:** revoking on customer-user **deactivation** (`active=false`) and
   on account disable — sensible future bump sites, kept out to hold PR1 to the erase/password set.
+
+---
+
+# PR2 — as-built (2026-06-21) · logout + jti blocklist (individual-token revocation)
+
+> Per-item execution block (RB-05). Doubles as the PR description. Migration **V117**.
+
+## P2.0 Scope
+PR1 added a coarse **per-subject** cutoff (revokes ALL of a subject's tokens on erase/password-change/
+reset). PR2 adds fine-grained **per-token** revocation so a single session/device can be logged out
+without invalidating the user's other sessions — i.e. `/auth/logout` that actually kills the token.
+
+## P2.1 Mechanism
+- **`jti` claim** added to every minted token (`JwtUtil.generate` + `generateCustomer` → `.id(UUID)`),
+  plus `extractJti` / `extractExpiration`. No other token-format change; pre-PR2 tokens simply have no
+  jti (still covered by the per-subject cutoff) and age out within 7 days.
+- **`revoked_tokens` blocklist** (V117): `jti` PK + `subject`/`scope`/`expires_at`/`revoked_at`.
+  `TokenRevocationService.blocklist(jti, subject, scope, exp)` inserts `ON CONFLICT DO NOTHING`
+  (idempotent double-logout) and **opportunistically prunes** rows past their `expires_at` on each
+  insert (indexed) — the table stays bounded by the 7-day token lifetime, no scheduler.
+  `isBlocklisted(jti)` is the check (fail-OPEN on DB error, consistent with PR1).
+- **Enforcement at both auth boundaries:** `SecurityConfig.jwtAuthFilter` checks `isBlocklisted(jti)`
+  for any token (scope-agnostic — a dead token is dead) right after the PR1 cutoff check;
+  `CustomerContext.current()` checks it too (portal parity / defence-in-depth).
+- **Logout endpoints:** `POST /api/v1/auth/logout` (internal) and `POST /api/v1/portal/auth/logout`
+  (customer) read the bearer token, extract jti+subject+exp, and blocklist it. Best-effort + idempotent
+  (always 200 — the client discards the token regardless; a malformed/expired token is already
+  unusable). Both require an authenticated request (only `/portal/auth/login` is public), so you must
+  hold a valid token to log it out.
+
+## P2.2 Design notes
+- **Two per-request DB lookups now** at the auth boundary (PR1 cutoff + PR2 blocklist). Accepted for
+  Phase 1 (correctness over micro-perf); the Redis-cached lookup is the deferred AWS-infra follow-up
+  (same deferral as PR1). The blocklist table is tiny (bounded by active-token count) and PK-indexed.
+- **Scope-agnostic filter check:** the internal filter validates customer tokens too (sets a principal),
+  so checking the blocklist there catches a logged-out customer token before it ever reaches the portal
+  choke point — `CustomerContext` re-checks as defence-in-depth.
+
+## P2.3 Files
+- `V117__revoked_token_blocklist.sql` (new). **High-water now V117.**
+- `JwtUtil.java` — jti on both mints; `extractJti`/`extractExpiration`.
+- `TokenRevocationService.java` — `blocklist` + `isBlocklisted` (+ opportunistic prune).
+- `SecurityConfig.java` — blocklist check in the JWT filter.
+- `CustomerContext.java` — blocklist check (portal parity).
+- `AuthController.java` — `POST /auth/logout`.
+- `CustomerAuthController.java` — `POST /portal/auth/logout` (+ `TokenRevocationService` dep).
+- `TokenRevocationServiceTest` (+6 unit), `TokenRevocationIT` (+2 IT, real-Postgres round-trip + prune),
+  `ai-rules/00-ORCHESTRATOR.md` §6 (V117) + regenerated files.
+
+## P2.4 Acceptance criteria
+- A logged-out token's jti is blocklisted and the auth boundary (internal filter + portal context)
+  rejects it; other sessions of the same user are unaffected. ✔ (unit + IT)
+- Idempotent double-logout; expired entries pruned; fail-open on lookup error. ✔
+- `ddl-auto=validate` green with V117; no auth regression. ✔ (full integration suite)
+
+## P2.5 Validation (local, 2026-06-21)
+- Unit: `-Dgroups=unit clean verify` → **1445 tests, 0 failures**, checkstyle 0, coverage met
+  (`TokenRevocationServiceTest` 16/16).
+- Guardrails: blocking rules pass.
+- Integration (Docker): **full** failsafe suite green — the auth-filter regression net (the jti check
+  runs on every authenticated request) — incl. `TokenRevocationIT` (blocklist round-trip + prune),
+  `FlywayMigrationIntegrationTest` (V1→V117 boot + validate), `SecurityAuditIntegrationTest`.
+
+## P2.6 Follow-on
+PR3 (DB `rate_limit_windows` distributed store) + PR4 (write-endpoint limiting) remain. Redis-cached
+revocation lookup deferred to the AWS-infra EPIC. Revoking on customer deactivation/account-disable
+still a sensible future bump site (out of scope).

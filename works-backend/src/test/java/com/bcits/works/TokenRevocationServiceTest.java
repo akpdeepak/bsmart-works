@@ -99,4 +99,45 @@ class TokenRevocationServiceTest {
         svc.revokeUserTokens(null);
         verify(jdbc, never()).update(any(String.class), any(), any());
     }
+
+    // ── jti blocklist (PR2) ──────────────────────────────────────────────────
+
+    @Test
+    void blocklist_prunesExpiredThenInsertsIdempotently() {
+        svc.blocklist("jti-1", "u1", "internal", T.plusSeconds(3600));
+        // typed matcher disambiguates update(String, Object...) from update(String, PreparedStatementSetter)
+        verify(jdbc).update(contains("DELETE FROM revoked_tokens WHERE expires_at <"),
+                any(java.sql.Timestamp.class));
+        verify(jdbc).update(contains("INSERT INTO revoked_tokens"), eq("jti-1"), eq("u1"),
+                eq("internal"), any());
+    }
+
+    @Test
+    void blocklist_ignoresNullJti() {
+        svc.blocklist(null, "u1", "internal", T);
+        verify(jdbc, never()).update(contains("revoked_tokens"), any(), any(), any(), any());
+        verify(jdbc, never()).update(contains("revoked_tokens"), any(java.sql.Timestamp.class));
+    }
+
+    @Test
+    void isBlocklisted_trueWhenPresent() {
+        when(jdbc.queryForObject(contains("FROM revoked_tokens"), eq(Boolean.class), eq("jti-1")))
+            .thenReturn(true);
+        assertThat(svc.isBlocklisted("jti-1")).isTrue();
+    }
+
+    @Test
+    void isBlocklisted_falseWhenAbsentOrNull() {
+        when(jdbc.queryForObject(contains("FROM revoked_tokens"), eq(Boolean.class), eq("jti-x")))
+            .thenReturn(false);
+        assertThat(svc.isBlocklisted("jti-x")).isFalse();
+        assertThat(svc.isBlocklisted(null)).isFalse(); // pre-PR2 token without a jti
+    }
+
+    @Test
+    void isBlocklisted_failsOpenOnLookupError() {
+        when(jdbc.queryForObject(contains("FROM revoked_tokens"), eq(Boolean.class), eq("jti-1")))
+            .thenThrow(new RuntimeException("db down"));
+        assertThat(svc.isBlocklisted("jti-1")).isFalse();
+    }
 }

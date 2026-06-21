@@ -228,7 +228,11 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   Cap X + Admin Operations Center Cap Y), **17** (Universal Customization Engine Cap R), **18**
   (Mobile + Real-time + Performance Cap S), **19** (Enterprise Security + Compliance Certifications
   Cap T), and the Compliance/Service iterations (7–9).
-- **Flyway high-water mark:** **V116**. (V116 = idx_field_visibility_role_def — indexes the
+- **Flyway high-water mark:** **V117**. (V117 = revoked_tokens — a per-token (jti) blocklist for logout
+  (W1 rate-limit/JWT PR2): /auth/logout and the portal equivalent record the presented token's jti, and
+  the auth boundary rejects any blocklisted jti — fine-grained, single-session revocation alongside PR1's
+  coarse per-subject cutoff; entries pruned past their token's exp. Additive, forward-only.)
+  (V116 = idx_field_visibility_role_def — indexes the
   field_visibility→role_def foreign key, the join used by the hot field-level-security read-redaction
   path and write resolver; the only prior index on field_visibility was UNIQUE(field_def_id, role_def_id)
   whose leading column does not serve a role_def_id lookup. W1 Field-Level-Security Slice 3; additive,
@@ -290,7 +294,7 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   focus factor) for the role-adaptive Sprint Cockpit Capacity tab; the story-points budget is
   derived at read time from sprint working days × team velocity (not stored), so it always reflects
   current velocity/headcount; tenant-scoped via workspace_id + a sprint FK that cascades on delete.
-- **Next migration:** **`V117__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+- **Next migration:** **`V118__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

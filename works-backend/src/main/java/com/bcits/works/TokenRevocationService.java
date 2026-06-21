@@ -67,6 +67,50 @@ public class TokenRevocationService {
         return isRevoked("customer_users", customerUserId, issuedAt);
     }
 
+    // ── Individual-token (jti) blocklist — logout (PR2) ──────────────────────────────────────────
+
+    /**
+     * Add a single token to the blocklist (logout). Idempotent ({@code ON CONFLICT DO NOTHING}, so a
+     * double logout is harmless). Opportunistically prunes entries whose token has already expired, so
+     * the table stays bounded by the 7-day token lifetime without a separate scheduler. No-op for a
+     * pre-PR2 token that carries no {@code jti}.
+     */
+    public void blocklist(String jti, String subject, String scope, Instant expiresAt) {
+        if (jti == null) {
+            return;
+        }
+        Instant exp = expiresAt != null ? expiresAt : Instant.now().plus(7, ChronoUnit.DAYS);
+        try {
+            jdbc.update("DELETE FROM revoked_tokens WHERE expires_at < ?", Timestamp.from(Instant.now()));
+            jdbc.update("INSERT INTO revoked_tokens (jti, subject, scope, expires_at) VALUES (?, ?, ?, ?) "
+                    + "ON CONFLICT (jti) DO NOTHING", jti, subject, scope, Timestamp.from(exp));
+        } catch (Exception e) {
+            // The caller's logout endpoint returns OK regardless (the client discards the token), but a
+            // failed blocklist must never be silent — it would leave a "logged out" token live.
+            log.warn("Failed to blocklist token jti={} subject={} scope={}", jti, subject, scope, e);
+        }
+    }
+
+    /**
+     * Whether a token's {@code jti} has been logged out. Fail-OPEN on a lookup error (consistent with
+     * the token-version check): a DB blip must not lock everyone out, and the token's 7-day exp still
+     * bounds exposure. A {@code null} jti (pre-PR2 token) is not blocklistable, so the per-subject
+     * cutoff remains its only revocation path.
+     */
+    public boolean isBlocklisted(String jti) {
+        if (jti == null) {
+            return false;
+        }
+        try {
+            Boolean present = jdbc.queryForObject(
+                "SELECT EXISTS(SELECT 1 FROM revoked_tokens WHERE jti = ?)", Boolean.class, jti);
+            return Boolean.TRUE.equals(present);
+        } catch (Exception e) {
+            log.warn("Token blocklist lookup failed for jti={}; treating as not-blocklisted", jti, e);
+            return false;
+        }
+    }
+
     private void bump(String table, String id) {
         if (id == null) {
             return;

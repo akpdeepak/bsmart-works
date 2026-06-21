@@ -232,6 +232,25 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Password updated successfully."));
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletRequest http) {
+        // Individual-token revocation (PR2): blocklist this session's token by jti so it cannot be
+        // reused after logout. Other sessions for the same user are unaffected (unlike the per-subject
+        // cutoff bumped on password change). Idempotent and best-effort: always returns OK — the client
+        // discards the token regardless, and a malformed/expired token is already unusable.
+        String header = http.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            String token = header.substring(7);
+            try {
+                tokenRevocation.blocklist(jwtUtil.extractJti(token), jwtUtil.extractUserId(token),
+                        "internal", jwtUtil.extractExpiration(token));
+            } catch (Exception ignored) {
+                // unusable token → nothing to revoke
+            }
+        }
+        return ResponseEntity.ok(Map.of("message", "Logged out."));
+    }
+
     // ---- helpers ----
 
     private void rateLimit(String key, int max, long windowSeconds) {

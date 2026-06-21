@@ -194,6 +194,14 @@ public class SecurityConfig {
                                 return;
                             }
                         }
+                        // Individual-token revocation (PR2): a logged-out token's jti is blocklisted.
+                        // Scope-agnostic — a dead token is dead whether internal or customer.
+                        String jti = claims.getId();
+                        if (jti != null && tokenRevocation.isBlocklisted(jti)) {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.getWriter().write("{\"error\":\"Token revoked\"}");
+                            return;
+                        }
                     } catch (Exception e) {
                         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                         response.getWriter().write("{\"error\":\"Invalid or expired token\"}");

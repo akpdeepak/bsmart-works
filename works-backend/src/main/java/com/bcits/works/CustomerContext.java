@@ -45,6 +45,10 @@ public class CustomerContext {
             if (tokenRevocation.isCustomerTokenRevoked(customerUserId, jwtUtil.extractIssuedAt(token))) {
                 throw ApiException.unauthorized("Your session has expired. Please sign in again.");
             }
+            // Individual-token revocation parity (PR2): a portal logout blocklists this token's jti.
+            if (tokenRevocation.isBlocklisted(jwtUtil.extractJti(token))) {
+                throw ApiException.unauthorized("Your session has expired. Please sign in again.");
+            }
             return new CustomerPrincipal(
                     customerUserId,
                     jwtUtil.extractClaim(token, "accountId"),

@@ -35,6 +35,26 @@ describe('eventToSentence', () => {
       .toBe('Assigned to someone');
   });
 
+  it('ASSIGNED renders the server-resolved assignee name (id resolved at render, RB-40 §3)', () => {
+    expect(eventToSentence({ eventType: 'ASSIGNED', new_value: 'Priya S' }))
+      .toBe('Assigned to Priya S');
+  });
+
+  it('ASSIGNED renders a reassignment from/to', () => {
+    expect(eventToSentence({ eventType: 'ASSIGNED', old_value: 'Amit K', new_value: 'Priya S' }))
+      .toBe('Reassigned from Amit K to Priya S');
+  });
+
+  it('ASSIGNED renders an unassignment when new value is empty', () => {
+    expect(eventToSentence({ eventType: 'ASSIGNED', old_value: 'Amit K', new_value: null }))
+      .toBe('Unassigned this item');
+  });
+
+  it('ASSIGNED tolerates camelCase keys', () => {
+    expect(eventToSentence({ eventType: 'ASSIGNED', newValue: 'Priya S' }))
+      .toBe('Assigned to Priya S');
+  });
+
   it('WORK_ITEM_UPDATED uses payload.field', () => {
     expect(eventToSentence({ eventType: 'WORK_ITEM_UPDATED', payload: { field: 'description' } }))
       .toBe('Updated description');

@@ -166,3 +166,61 @@ without invalidating the user's other sessions — i.e. `/auth/logout` that actu
 PR3 (DB `rate_limit_windows` distributed store) + PR4 (write-endpoint limiting) remain. Redis-cached
 revocation lookup deferred to the AWS-infra EPIC. Revoking on customer deactivation/account-disable
 still a sensible future bump site (out of scope).
+
+---
+
+# PR3 — as-built (2026-06-21) · distributed (DB-backed) rate-limit store
+
+> Per-item execution block (RB-05). Doubles as the PR description. Migration **V118**. Flag-gated,
+> default-off → no behaviour change on merge.
+
+## P3.0 Scope
+The in-memory `RateLimiter` counts attempts per JVM, so with N horizontally-scaled instances an
+attacker effectively gets N x the budget. PR3 adds a **shared DB store** so one budget is enforced
+across all instances — the distributed property PR1's revocation already has but the limiter lacked.
+**No new dependency** (Redis/ElastiCache is the deferred AWS-infra follow-up).
+
+## P3.1 Mechanism
+- **`DbRateLimitStore`** (new) backed by `rate_limit_windows` (V118). `allow()` is a single atomic
+  `INSERT … ON CONFLICT DO UPDATE … RETURNING count` that both rolls the fixed window over and
+  increments the count under the row lock — concurrent instances cannot race the read-modify-write.
+  The window math uses the **DB clock** (`now()`), so there is no cross-instance clock skew. Fails
+  **OPEN** on a store outage (a shared-store blip must not lock all auth out). `reset()` deletes the key.
+- **`RateLimiter`** keeps its unchanged `allow()/reset()` API (the 3 callers — `AuthController`,
+  `CustomerAuthController`, `AiControlPlaneService` — are untouched) and now dispatches to the DB store
+  when `app.rate-limit.distributed` is on, else the in-process map. The no-arg constructor + the
+  time-injectable in-memory core are preserved so `RateLimiterTest` is unchanged.
+- **Pruning:** an hourly `@Scheduled` sweep deletes windows untouched for >1 day, keeping the table
+  bounded by recently-active keys (a rolled-over window only reclaims space).
+
+## P3.2 Design notes
+- **Default off** ⇒ single-instance behaviour is identical on merge; an operator flips
+  `APP_RATE_LIMIT_DISTRIBUTED=true` for any multi-instance deploy (same flag-gated, canary-friendly
+  rollout pattern as the tenant-filter binding and the PII vault).
+- **Why not change the default to on:** it adds a DB round-trip per rate-limited attempt; correct for
+  multi-instance but unnecessary for the current single-instance deploy. Ops owns the flip.
+
+## P3.3 Files
+- `V118__rate_limit_windows.sql` (new). **High-water now V118.**
+- `DbRateLimitStore.java` (new) — atomic UPSERT store + scheduled prune.
+- `RateLimiter.java` — dispatch to the store behind the flag; no-arg ctor + injectable core kept.
+- `application.properties` §16 — `app.rate-limit.distributed` (env `APP_RATE_LIMIT_DISTRIBUTED`, default false).
+- `DistributedRateLimitIT.java` (new) — two store instances share one budget; rollover; reset.
+- `ai-rules/00-ORCHESTRATOR.md` §6 (V118) + regenerated files.
+
+## P3.4 Acceptance criteria
+- A single budget is enforced across two instances sharing the table (4th attempt rejected regardless
+  of which instance serves it). ✔ (IT)
+- Window rollover + reset behave correctly; callers untouched; `RateLimiterTest` unchanged. ✔
+- `ddl-auto=validate` green with V118; default-off ⇒ no behaviour change. ✔
+
+## P3.5 Validation (local, 2026-06-21)
+- Unit: `-Dgroups=unit clean verify` → **1445 tests, 0 failures**, checkstyle 0, coverage met
+  (`RateLimiterTest` 5/5 unchanged).
+- Guardrails: blocking rules pass.
+- Integration (Docker): full failsafe suite green incl. `DistributedRateLimitIT` (shared-budget +
+  rollover + reset) and `FlywayMigrationIntegrationTest` (V1→V118 boot + validate).
+
+## P3.6 Follow-on
+PR4 (extend rate limiting to write endpoints + RB-10 §8 doc drift) remains. Redis/ElastiCache shared
+store + cached revocation lookup deferred to the AWS-infra EPIC.

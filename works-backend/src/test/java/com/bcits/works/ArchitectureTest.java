@@ -124,6 +124,24 @@ class ArchitectureTest {
     }
 
     @Test
+    void eventAndAuditLayerDoNotDependOnPiiEntities() {
+        // RB-40 §3 rule 1 (EPIC-P1-pii-vault Slice 4d): the append-only event log and the immutable
+        // audit chain must carry only opaque ids/tokens — never raw personal data, which crypto-shred
+        // cannot reach once written. Structurally forbid the event/audit-writing layer from depending on
+        // the PII-carrying identity entities, so a future change cannot serialize a name/email into an
+        // immutable record without failing the build. The grep guardrail (scripts/guardrails.sh) backs
+        // this at the call-site level; this is the structural backstop.
+        noClasses().that().haveSimpleName("EventService")
+                .or().haveSimpleName("AppEvent")
+                .or().haveSimpleName("SecurityAuditLogService")
+                .should().dependOnClassesThat().haveSimpleName("User")
+                .orShould().dependOnClassesThat().haveSimpleName("CustomerUser")
+                .orShould().dependOnClassesThat().haveSimpleName("Stakeholder")
+                .because("the immutable event log + audit chain must carry only ids/tokens, never raw PII (RB-40 §3 rule 1)")
+                .check(appClasses);
+    }
+
+    @Test
     void modulePackagesAreFreeOfCycles() {
         // Forward-ready: as domains are carved into com.bcits.works.<module> packages (Identity
         // first — ADR-0001 §7), this fails the build on any cyclic dependency between modules.

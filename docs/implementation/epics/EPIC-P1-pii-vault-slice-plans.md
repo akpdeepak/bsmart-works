@@ -148,3 +148,35 @@ off; non-PII fields unchanged; backfill tokenizes existing PII values idempotent
 **Validation.** Unit gate (1394, 0 Checkstyle, coverage met) incl. `FieldDefControllerPiiTest`;
 `FlywayMigrationIntegrationTest` (V113 applies) + context boot (`ddl-auto=validate`) confirm schema↔entity;
 guardrails + ai-rules `--check` green. Push → PR → CI green → squash-merge → confirm on `origin/main`.
+
+### Slice 4d — machine-enforce "no raw PII in the immutable event log / audit chain" (BLOCK)
+
+**Scope.** Lock in the invariant that 4a + Slices 1/2 established: raw identity PII (`getFullName()` /
+`getEmail()`) must never be written into the append-only `events` log or the immutable audit chain
+(RB-40 §3 rule 1) — crypto-shred cannot reach those, so the only safe content is ids/tokens. Make it
+machine-enforced so it can't regress.
+
+**Analysis.** The events + audit sweep is already clean (verified: no `getFullName`/`getEmail` flows
+into any `EventService.record*`/`recordDiff`/`recordInWorkspace` or `SecurityAuditLogService.record`
+call after 4a). This slice adds the enforcement the EPIC defers "once the inventory exists": a
+`guardrails.sh` **BLOCK** tripwire (same-line grep for a `getFullName()/getEmail()` argument to a
+record call) + an **ArchUnit** structural rule (`EventService` / `AppEvent` / `SecurityAuditLogService`
+must not depend on the `User` / `CustomerUser` / `Stakeholder` entities). The notifications-message
+leak (#7) and free-text content (#12) are a **separate, mutable, erasure-reachable** surface — *not*
+the events/audit chain — so they are out of this guardrail's scope and tracked as Slice 4c.
+
+**Files.** `scripts/guardrails.sh` (+BLOCK check), `works-backend/.../ArchitectureTest.java` (+rule).
+No production code, no migration.
+
+**Acceptance.** The new BLOCK check is green on a clean tree and **fails** on an injected
+`record(... .getFullName())` line (verified with a negative test); the ArchUnit rule passes today and
+fails if the event/audit layer ever imports a PII entity; full unit gate green.
+
+**Validation.** `bash scripts/guardrails.sh` (new check ✓), negative-regex test confirms the tripwire
+catches a leak; unit gate (1395, 0 Checkstyle, coverage met) incl. the new ArchUnit rule. Push → PR →
+CI green → squash-merge → confirm on `origin/main`.
+
+> **Remaining after 4d:** Slice 4c (notifications.message actor-name → render-time resolution like 4a;
+> free-text customer-content redaction at the AI boundary — mutable/erasure-reachable, lower severity)
+> and Slice 5 (real AWS KMS / BYOK — non-prod-validatable, all prod/non-prod config centralised +
+> documented). CONTRACT (dropping the legacy plaintext columns) stays deferred per EPIC §3/§12.

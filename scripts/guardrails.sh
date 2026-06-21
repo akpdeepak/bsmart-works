@@ -109,6 +109,17 @@ if [ -d "$BE" ]; then
     "$(grep -RInE '@Transactional' "$BE"/*Controller.java 2>/dev/null || true)"
 fi
 
+# No raw identity PII into the append-only event log or immutable audit chain (RB-40 §3 rule 1,
+# EPIC-P1-pii-vault Slice 4d). A getFullName()/getEmail() must never be an argument to an
+# EventService.record*/recordDiff or an audit-log record() call: PII is tokenized into the per-subject
+# vault and resolved at render, so the immutable log carries only ids/tokens (crypto-shred cannot reach
+# it). Same-line tripwire — the structural backstop is ArchitectureTest (event/audit layer ⊥ PII
+# entities). Currently clean (Slices 1/2 + 4a); keep it clean.
+if [ -d "$BE" ]; then
+  check BLOCK "No raw PII (getFullName/getEmail) in event/audit writes (RB-40 §3 rule 1)" \
+    "$(grep -RInE '\.(record|recordDiff|recordInWorkspace)[[:space:]]*\(.*\.get(FullName|Email)\(\)' "$BE" 2>/dev/null || true)"
+fi
+
 # Every @Query that issues a SELECT in a Repository must reference workspace scope (RB-40 §1).
 # Safe tokens: workspace_id, workspace_members, workspaceId, callerId.
 # Scans up to 8 lines per @Query block so multi-line annotations are covered.

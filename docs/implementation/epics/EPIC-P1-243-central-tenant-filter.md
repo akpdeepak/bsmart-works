@@ -247,3 +247,74 @@ global decision — the guarantee is a test, not vigilance.
 ## BC.7 Follow-on
 Slice D (`findById`/PK-load gap + ArchUnit guard) next. Slice E (CONTRACT predicate removal) deferred by
 Deepak (2026-06-21) until the binding flag has soaked in a live env. Slice F doc reconciliation pending.
+
+---
+
+# Slice D — as-built (2026-06-21) · close the findById / PK-load cross-tenant gaps
+
+> Per-item execution block (RB-05). Doubles as the PR description. **No migration.** Unlike A/B/C this
+> slice is NOT inert — it actively enforces re-checks on merge (closing live cross-tenant holes), so it
+> was validated against the full integration suite to confirm no legitimate member flow is over-restricted.
+
+## D.0 The gap
+Hibernate's `@Filter` does **not** apply to a by-PK load (`findById` / `em.find` / `getReferenceById`) —
+proven in `CrossTenantFilterIsolationIT:259-271`. So even with the central filter on (and even after
+Slices B/C added `@Filter` to `work_items` etc.), a controller that loads a tenant-scoped entity by id
+and mutates it **without a workspace re-check crosses tenants**. A discovery audit found the dominant
+load-then-`rbac.require` convention (~100 sites, confirmed-good) but **7 controllers with real gaps**.
+
+## D.1 The 7 remediated controllers
+| Controller | Gap | Fix |
+|---|---|---|
+| `WorkItemLinkController` | **zero RBAC in the whole class** — link/enumerate/delete any tenant's work-item links by id | inject `RbacService`+`AuthenticatedUser`; `requireItemAccess(itemId)` (workspaceForWorkItem + member-tier, 404 on foreign) on get/create/delete; create also requires the **target** share the same workspace; delete requires the link belong to the item |
+| `CustomDashboardController` | widget endpoints (`addWidget`/`updateWidget`/`deleteWidget`/`saveLayout`) loaded the dashboard by id with no re-check | `rbac.require(view_items)` on the dashboard's workspace + widget-belongs-to-dashboard check |
+| `SavedFilterController` | `toggleShare`/`deleteFilter` no re-check (no RBAC injected) | inject `RbacService`; load + `rbac.require(view_items)` on the filter's workspace |
+| `WorkItemTypeConfigController` | `create`/`update`/`delete` no re-check (no RBAC injected) | inject `RbacService`; `rbac.require(view_items)` on the config's workspace (body ws for create) |
+| `ReportScheduleController` | `create`/`update`/`delete` no re-check (transitive via `reportId`, no RBAC injected) | inject `RbacService`+`ReportRepository`; `requireReportAccess(reportId)` → `rbac.require(view_reports)` on the report's workspace |
+| `PermissionSchemeController` | `create`/`delete` scheme + `createRole` unguarded | `rbac.require(manage_permissions)` on the scheme/role workspace (matches the FLS-Slice-3 field-visibility guards in the same controller) |
+| `WorkflowController` | `getStatuses` read no parent-workflow access check | load workflow + member-tier check, mirroring `get()` |
+
+## D.2 Authorization-level choice (conservative, cross-tenant-first)
+The closed risk is **cross-tenant** (the catastrophic one). Each fix gates on **membership of the
+resource's workspace** using the permission the domain already uses for its sibling endpoints
+(`view_items` / `view_reports` / `manage_permissions`). This is a strict improvement (was: nothing) and
+cannot over-restrict a legitimate same-workspace member. Finer per-operation permission tightening (e.g.
+`manage_fields` for type-config mutation) is a tracked follow-up, deliberately not bundled here to avoid
+changing intra-tenant authz semantics in a tenant-isolation slice.
+
+## D.3 The ArchUnit guard — deliberately NOT added (would be tech debt)
+The plan suggested an ArchUnit rule banning `deleteById`/`findById` in controllers. **26 controllers call
+`deleteById` directly** — almost all *correctly*, after a re-check (the load-then-recheck-then-delete
+convention). A broad ban would force a ~26-entry freeze-list (or 26 refactors) — noisy debt for a rule
+ArchUnit can't actually verify (it sees the call, not whether a re-check precedes it). So the enforcement
+is instead the **behavioural** `CrossTenantPkLoadAccessTest** (proves each fixed endpoint denies before
+mutating) — stronger and false-positive-free. Recorded so the absence is a decision, not an oversight.
+
+## D.4 Files
+- 7 controllers (above). `RbacService`/`AuthenticatedUser` newly injected into `WorkItemLinkController`,
+  `SavedFilterController`, `WorkItemTypeConfigController`; `RbacService`+`ReportRepository` into
+  `ReportScheduleController`.
+- `CrossTenantPkLoadAccessTest.java` (new, unit, 7) — every remediated endpoint throws 403/404 for a
+  foreign-workspace caller and performs no save/delete.
+- `WorkItemLinkControllerTest.java` — updated for the new constructor + member stub.
+
+## D.5 Flagged follow-ups (NOT in this slice — scope discipline)
+- **`WorkflowController` null-`workspaceId` branch** — `if (wsId != null) rbac.require(...)` skips the
+  check for global/template (null-ws) workflows. Whether null-ws workflows are legitimately global is a
+  **data-model decision** (Orchestrator §5), so left as-is and flagged rather than guessed.
+- **Create-side body-`workspaceId` trust** on `Team`/`Report`/`ActionItem`/`Risk`/`Decision` etc. (the
+  audit's companion observations) — same class of issue, separate RBAC-hardening pass.
+- **Per-operation permission tightening** (manage_* instead of view_items) for the remediated mutators.
+
+## D.6 Acceptance criteria
+- Each of the 7 controllers' gap endpoints re-checks workspace access and denies cross-tenant before any
+  mutation. ✔ (`CrossTenantPkLoadAccessTest` 7/7)
+- No legitimate same-workspace member flow is broken. ✔ (full integration suite green — see D.7)
+- No schema change.
+
+## D.7 Validation (local, 2026-06-21)
+- Unit: `-Dgroups=unit clean verify` → **1440 tests, 0 failures**, checkstyle 0, coverage met.
+- Guardrails: blocking rules pass.
+- Integration (Docker): **full** failsafe suite green (over-restriction safety net — confirms the new
+  re-checks don't break legitimate member CRUD on dashboards/filters/type-configs/report-schedules/
+  permission-schemes/work-item-links/workflows).

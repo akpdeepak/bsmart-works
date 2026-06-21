@@ -21,8 +21,10 @@ class WorkItemLinkControllerTest {
 
     private final WorkItemLinkRepository linkRepository = mock(WorkItemLinkRepository.class);
     private final WorkItemRepository workItemRepository = mock(WorkItemRepository.class);
+    private final RbacService rbac = mock(RbacService.class);
+    private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final WorkItemLinkController controller =
-            new WorkItemLinkController(linkRepository, workItemRepository);
+            new WorkItemLinkController(linkRepository, workItemRepository, rbac, authenticatedUser);
 
     private static WorkItemLink link(long id, String source, String target, String type) {
         WorkItemLink l = new WorkItemLink();
@@ -42,6 +44,10 @@ class WorkItemLinkControllerTest {
 
     @Test
     void getLinks_surfacesInboundLinksInvertedAndExcludesHierarchy() {
+        // Caller is a member of item A's workspace (requireItemAccess passes — #243 Slice D).
+        when(authenticatedUser.id()).thenReturn("U");
+        when(rbac.workspaceForWorkItem("A")).thenReturn("WS");
+        when(rbac.getUserTier("U", "WS")).thenReturn(2);
         // A blocks B (outbound). C blocks A and P is A's parent (both inbound).
         when(linkRepository.findBySourceId("A")).thenReturn(List.of(link(1, "A", "B", "BLOCKS")));
         when(linkRepository.findByTargetId("A")).thenReturn(List.of(

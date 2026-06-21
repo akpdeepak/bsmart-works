@@ -23,11 +23,31 @@ public class WorkItemLinkController {
 
     private final WorkItemLinkRepository linkRepository;
     private final WorkItemRepository workItemRepository;
+    private final RbacService rbac;
+    private final AuthenticatedUser authenticatedUser;
 
     public WorkItemLinkController(WorkItemLinkRepository linkRepository,
-                                  WorkItemRepository workItemRepository) {
+                                  WorkItemRepository workItemRepository,
+                                  RbacService rbac,
+                                  AuthenticatedUser authenticatedUser) {
         this.linkRepository = linkRepository;
         this.workItemRepository = workItemRepository;
+        this.rbac = rbac;
+        this.authenticatedUser = authenticatedUser;
+    }
+
+    /**
+     * The caller must be a member of the work item's workspace (RB-40 §1, #243 Slice D). Work items are
+     * loaded by PK here, which Hibernate's {@code @Filter} does not scope, so isolation must come from
+     * this explicit re-check. Returns the resolved workspace id so callers can compare the other end.
+     * 404 (not 403) on a foreign/unknown item so existence is not revealed.
+     */
+    private String requireItemAccess(String workItemId) {
+        String ws = rbac.workspaceForWorkItem(workItemId);
+        if (ws == null || rbac.getUserTier(authenticatedUser.id(), ws) < 1) {
+            throw ApiException.notFound("WorkItem", workItemId);
+        }
+        return ws;
     }
 
     /** Hierarchy link types are surfaced through the parent/children UI, not the relation list. */
@@ -55,6 +75,7 @@ public class WorkItemLinkController {
 
     @GetMapping
     public List<LinkView> getLinks(@PathVariable String itemId) {
+        requireItemAccess(itemId);
         List<WorkItemLink> outbound = linkRepository.findBySourceId(itemId);
         // Inbound links (this item is the target), excluding hierarchy which the parent/children
         // section already renders — surfacing them gives a complete "blocked by / relates to" view.
@@ -82,6 +103,7 @@ public class WorkItemLinkController {
 
     @PostMapping
     public WorkItemLink createLink(@PathVariable String itemId, @Valid @RequestBody Map<String, String> payload) {
+        String itemWs = requireItemAccess(itemId);
         String targetId = payload.get("targetId");
         String linkType = payload.get("linkType");
         if (targetId == null || targetId.isBlank()) {
@@ -90,7 +112,8 @@ public class WorkItemLinkController {
         if (targetId.equals(itemId)) {
             throw ApiException.badRequest("LINK_SELF", "A work item cannot be linked to itself");
         }
-        if (workItemRepository.findById(targetId).isEmpty()) {
+        // The target must exist AND live in the same workspace — no cross-tenant linking (#243 Slice D).
+        if (!itemWs.equals(rbac.workspaceForWorkItem(targetId))) {
             throw ApiException.notFound("WorkItem", targetId);
         }
         // Reject an exact duplicate of an existing link (same source, target and type).
@@ -111,6 +134,14 @@ public class WorkItemLinkController {
 
     @DeleteMapping("/{linkId}")
     public void deleteLink(@PathVariable String itemId, @PathVariable Long linkId) {
+        requireItemAccess(itemId);
+        // The link must actually belong to this (authorized) item — guessing a linkId from another
+        // tenant under your own itemId path must not delete it (#243 Slice D).
+        WorkItemLink link = linkRepository.findById(linkId)
+                .orElseThrow(() -> ApiException.notFound("WorkItemLink", String.valueOf(linkId)));
+        if (!itemId.equals(link.getSourceId()) && !itemId.equals(link.getTargetId())) {
+            throw ApiException.notFound("WorkItemLink", String.valueOf(linkId));
+        }
         linkRepository.deleteById(linkId);
     }
 }

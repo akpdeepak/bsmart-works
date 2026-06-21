@@ -23,14 +23,17 @@ public class WorkItemTypeConfigController {
 
     private final WorkItemTypeConfigRepository typeConfigRepo;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
     // The 7 MVP defaults live in one place (DefaultWorkItemTypes) so backend + frontend never drift.
     private static final List<Map<String, Object>> BUILT_IN_TYPES = DefaultWorkItemTypes.ALL;
 
     public WorkItemTypeConfigController(WorkItemTypeConfigRepository typeConfigRepo,
-                                         AuthenticatedUser authenticatedUser) {
+                                         AuthenticatedUser authenticatedUser,
+                                         RbacService rbac) {
         this.typeConfigRepo = typeConfigRepo;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -50,6 +53,8 @@ public class WorkItemTypeConfigController {
 
     @PostMapping
     public WorkItemTypeConfig create(@Valid @RequestBody WorkItemTypeConfig config) {
+        // Authorize against the target workspace from the body (RB-40 §1, #243 Slice D).
+        rbac.require(authenticatedUser.id(), config.getWorkspaceId(), "view_items");
         config.setId("WIT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         config.setIsCustom(true);
         config.setCreatedAt(OffsetDateTime.now());
@@ -58,17 +63,22 @@ public class WorkItemTypeConfigController {
 
     @PutMapping("/{id}")
     public WorkItemTypeConfig update(@PathVariable String id, @Valid @RequestBody WorkItemTypeConfig updated) {
-        return typeConfigRepo.findById(id).map(c -> {
-            c.setLabel(updated.getLabel());
-            c.setIcon(updated.getIcon());
-            c.setColor(updated.getColor());
-            c.setTypeKey(updated.getTypeKey());
-            return typeConfigRepo.save(c);
-        }).orElseThrow();
+        // findById bypasses @Filter (#243 Slice D) — re-check the config's workspace before mutating.
+        WorkItemTypeConfig c = typeConfigRepo.findById(id)
+                .orElseThrow(() -> ApiException.notFound("WorkItemTypeConfig", id));
+        rbac.require(authenticatedUser.id(), c.getWorkspaceId(), "view_items");
+        c.setLabel(updated.getLabel());
+        c.setIcon(updated.getIcon());
+        c.setColor(updated.getColor());
+        c.setTypeKey(updated.getTypeKey());
+        return typeConfigRepo.save(c);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
+        WorkItemTypeConfig c = typeConfigRepo.findById(id)
+                .orElseThrow(() -> ApiException.notFound("WorkItemTypeConfig", id));
+        rbac.require(authenticatedUser.id(), c.getWorkspaceId(), "view_items");
         typeConfigRepo.deleteById(id);
         return ResponseEntity.noContent().build();
     }

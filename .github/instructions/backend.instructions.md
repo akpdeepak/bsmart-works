@@ -56,8 +56,9 @@ language) across services.
 
 - **RBAC in the service layer, never the controller or UI** (`RbacService`). If the only thing
   stopping access is a hidden button, it isn't stopped.
-- **Every query is workspace-scoped** — no repository method returns rows across tenants. See
-  RB-40 §1; this is being added to `guardrails.sh`.
+- **Every query is workspace-scoped** — no repository method returns rows across tenants. Enforced by
+  the central Hibernate tenant filter (#243, on 136 entities) + `guardrails.sh` query-scope checks +
+  `TenantFilterCoverageTest`. See RB-40 §1.
 - **Stateless:** JWT carries its own state; no server-side sessions; services hold no request
   state between calls. This is what lets the app scale by adding instances.
 - **Validate at the boundary:** every incoming DTO is `@Valid`; the service assumes clean input.

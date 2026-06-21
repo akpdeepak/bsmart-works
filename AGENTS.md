@@ -173,7 +173,7 @@ to make the gate non-optional; the checks do the enforcing.
 | No inline `fetch`/`axios` (one `apiClient`) | ESLint `no-restricted-imports`/`-syntax` | save · pre-commit · CI |
 | WCAG 2.1 AA | `eslint-plugin-jsx-a11y` | save · pre-commit · CI |
 | RBAC in service (not controller); Flyway-only; package layout | `scripts/guardrails.sh` | pre-commit · CI |
-| **Every repository query workspace-scoped** | `guardrails.sh`: repo `@Query` SELECT scope (BLOCK) + raw-`JdbcTemplate` `work_items` scope-signal tripwire (WARN). Full guarantee = central Hibernate tenant filter, **still TO BE ADDED (#243, RB-40)** | pre-commit · CI |
+| **Every repository query workspace-scoped** | `guardrails.sh`: repo `@Query` SELECT scope (BLOCK) + raw-`JdbcTemplate` `work_items` scope-signal tripwire (WARN). Central Hibernate tenant filter **BUILT (#243, RB-40)** — `@Filter` on 136 entities (direct + transitive subquery), enforced by `TenantFilterCoverageTest` (every entity filtered-or-allow-listed); per-request binding is flag-gated `tenant.filter.binding.enabled` (default off, canary-first); findById/PK gaps closed by ownership re-checks (`CrossTenantPkLoadAccessTest`) | pre-commit · CI |
 | Java style | Checkstyle (`failOnViolation=true`; baseline clean as of 2026-06-08 — TD-005 closed) | `./mvnw verify` · CI |
 | Backend behavior + coverage | JUnit 5 + JaCoCo gate | CI |
 | Frontend behavior | Vitest + React Testing Library | pre-commit · CI |
@@ -652,8 +652,9 @@ language) across services.
 
 - **RBAC in the service layer, never the controller or UI** (`RbacService`). If the only thing
   stopping access is a hidden button, it isn't stopped.
-- **Every query is workspace-scoped** — no repository method returns rows across tenants. See
-  RB-40 §1; this is being added to `guardrails.sh`.
+- **Every query is workspace-scoped** — no repository method returns rows across tenants. Enforced by
+  the central Hibernate tenant filter (#243, on 136 entities) + `guardrails.sh` query-scope checks +
+  `TenantFilterCoverageTest`. See RB-40 §1.
 - **Stateless:** JWT carries its own state; no server-side sessions; services hold no request
   state between calls. This is what lets the app scale by adding instances.
 - **Validate at the boundary:** every incoming DTO is `@Valid`; the service assumes clean input.
@@ -952,15 +953,22 @@ guarantees they can never see *another* tenant's data.
 - **Field-level security** *(spec `06 §5.5`)*: sensitive fields are visible per-field, per-role,
   **enforced server-side** — not hidden in the UI. Manager drill-down into individuals is blocked
   at the API.
-- **Enforcement (partial):** `guardrails.sh` blocks any repository `@Query` SELECT lacking a
+- **Enforcement:** two layers. (1) `guardrails.sh` blocks any repository `@Query` SELECT lacking a
   workspace token, and **warns** on raw-`JdbcTemplate` `work_items` SQL in a Controller/Service that
   carries no tenant-scope signal anywhere in the file (workspace token, id-scope key, or `RbacService`
-  call) — a coarse tripwire for new unscoped raw-SQL surfaces, not the guarantee. The leak-proof
-  guarantee remains a **central Hibernate tenant filter / mandatory predicate applied once** (this §1:
-  "scoping applied centrally, not re-typed per query"), tracked as **#243** (needs sign-off). A
-  per-statement grep was deliberately rejected as too false-positive-prone (see
-  `docs/INSIGHTS-AI-ALIGNMENT-REVIEW.md` §1.2). Every feature ships an **unauthorized** and a
-  **cross-tenant** test.
+  call) — a coarse tripwire for new unscoped raw-SQL surfaces. (2) The leak-proof guarantee — a
+  **central Hibernate tenant filter applied once** (this §1: "scoping applied centrally, not re-typed
+  per query") — is now **BUILT (#243):** the single `@FilterDef(workspaceFilter)` is applied to **136
+  entities** (114 direct `workspace_id = :workspaceId` + 22 transitive subquery-condition incl.
+  `work_items`), with `TenantFilterCoverageTest` failing the build if any `@Entity` is neither filtered
+  nor on the `GLOBAL_BY_DESIGN` allow-list. Per-request binding (`CurrentWorkspace.bind()` at the
+  `RbacService` authorization choke point) is **flag-gated** `tenant.filter.binding.enabled` (default
+  off, canary-first); until it is flipped, isolation rests on the retained per-query predicates (kept as
+  defence-in-depth — the CONTRACT removal of redundant predicates is deferred until the binding soaks).
+  `@Filter` does not cover by-PK `findById`, so PK loads of tenant entities carry an ownership re-check
+  (`CrossTenantPkLoadAccessTest`). A per-statement grep was deliberately rejected as too
+  false-positive-prone (see `docs/INSIGHTS-AI-ALIGNMENT-REVIEW.md` §1.2). Every feature ships an
+  **unauthorized** and a **cross-tenant** test. Full control evidence: `docs/compliance/CONTROL-MATRIX.md`.
 
 ## 2. AI Control Plane *(spec `05 §1.2–1.6`)*
 

@@ -15,22 +15,55 @@ import java.util.List;
 public class RbacService {
 
     private final JdbcTemplate jdbc;
+    private final CurrentWorkspace currentWorkspace;
+    private final TenantFilterSettings tenantFilterSettings;
 
-    public RbacService(JdbcTemplate jdbc) {
+    public RbacService(JdbcTemplate jdbc, CurrentWorkspace currentWorkspace,
+                       TenantFilterSettings tenantFilterSettings) {
         this.jdbc = jdbc;
+        this.currentWorkspace = currentWorkspace;
+        this.tenantFilterSettings = tenantFilterSettings;
     }
 
     // ── Tier lookup ──────────────────────────────────────────────────────────
 
     public int getUserTier(String userId, String workspaceId) {
         try {
-            return jdbc.queryForObject(
+            int tier = jdbc.queryForObject(
                 "SELECT r.tier FROM workspace_members wm " +
                 "JOIN roles r ON r.id = wm.role_id " +
                 "WHERE wm.user_id = ? AND wm.workspace_id = ?",
                 Integer.class, userId, workspaceId);
+            // Central tenant-filter binding (RB-40 §1, #243 Slice A). A successful member-tier lookup
+            // is the one app-wide signal that the caller is authorized to act in this *single*
+            // workspace — every single-workspace-authorized path funnels through here (directly, or
+            // via canDo/require/canView/isAdmin). Binding the central Hibernate workspaceFilter to it
+            // makes the filter the central backstop behind the explicit per-query predicates, extended
+            // from ProjectService-only to every such path. Flag-gated (default off) so merging changes
+            // no runtime behaviour; additive — it can only ever narrow a read to workspaceId, never
+            // widen one. Multi-workspace reads (work-item lists, /my, findAllScopedToUser…) never reach
+            // a single-workspace tier check, so they stay unbound and keep their membership-join scope.
+            if (tier >= 1) {
+                bindCentralFilterIfEnabled(workspaceId);
+            }
+            return tier;
         } catch (Exception e) {
             return 0; // not a member
+        }
+    }
+
+    /**
+     * Bind {@code workspaceId} to the central tenant filter (#243 Slice A), when and only when:
+     * the binding rollout flag is on, a real workspace was resolved, and we are not inside the
+     * {@link TenantScope} system/unscoped escape hatch (a scheduler/admin sweep that probes a tier
+     * must not re-narrow its deliberately cross-workspace read). No-op otherwise — including the
+     * default-off path, which is what keeps this slice inert on merge.
+     */
+    private void bindCentralFilterIfEnabled(String workspaceId) {
+        if (tenantFilterSettings.isBindingEnabled()
+                && workspaceId != null && !workspaceId.isBlank()
+                && !TenantContext.isSystem()) {
+            currentWorkspace.bind(workspaceId);
         }
     }
 

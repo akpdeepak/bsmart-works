@@ -12,6 +12,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -25,7 +27,10 @@ import static org.mockito.Mockito.when;
 class RbacServiceTest {
 
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
-    private final RbacService rbac = new RbacService(jdbc);
+    private final CurrentWorkspace currentWorkspace = mock(CurrentWorkspace.class);
+    // Default instance: binding flag OFF, so the central-filter binding never fires (this is the
+    // merge-default behaviour) and the existing authorization tests below are unaffected by #243.
+    private final RbacService rbac = new RbacService(jdbc, currentWorkspace, new TenantFilterSettings(false));
 
     // ── Tier lookup ──────────────────────────────────────────────────────────
 
@@ -152,5 +157,60 @@ class RbacServiceTest {
     void workspaceForWorkItem_resolvesViaProject() {
         when(jdbc.queryForObject(contains("work_items"), eq(String.class), any())).thenReturn("ws-99");
         assertThat(rbac.workspaceForWorkItem("WRK-1")).isEqualTo("ws-99");
+    }
+
+    // ── #243 Slice A: central tenant-filter binding at the authorization choke point ──────────────
+    // A successful member-tier lookup binds the central workspaceFilter to that workspace, but only
+    // when the rollout flag is on and we are not inside the system/unscoped escape hatch. These prove
+    // the gate so the slice can never bind unexpectedly (its over-filtering failure mode).
+
+    private RbacService rbacWithBinding(boolean enabled) {
+        return new RbacService(jdbc, currentWorkspace, new TenantFilterSettings(enabled));
+    }
+
+    @Test
+    void getUserTier_bindsCentralFilter_whenFlagOnAndMember() {
+        when(jdbc.queryForObject(contains("r.tier"), eq(Integer.class), any(), any())).thenReturn(2);
+        rbacWithBinding(true).getUserTier("u1", "ws1");
+        verify(currentWorkspace).bind("ws1");
+    }
+
+    @Test
+    void getUserTier_doesNotBind_whenFlagOff() {
+        when(jdbc.queryForObject(contains("r.tier"), eq(Integer.class), any(), any())).thenReturn(5);
+        rbacWithBinding(false).getUserTier("u1", "ws1");
+        verify(currentWorkspace, never()).bind(any());
+    }
+
+    @Test
+    void getUserTier_doesNotBind_whenNotAMember() {
+        // tier lookup throws (no membership row) → returns 0 → must never bind.
+        when(jdbc.queryForObject(contains("r.tier"), eq(Integer.class), any(), any()))
+                .thenThrow(new RuntimeException("no rows"));
+        rbacWithBinding(true).getUserTier("ghost", "ws1");
+        verify(currentWorkspace, never()).bind(any());
+    }
+
+    @Test
+    void getUserTier_doesNotBind_insideSystemEscapeHatch() {
+        // A scheduler / admin sweep running unscoped may probe a tier — binding here would wrongly
+        // re-narrow its deliberately cross-workspace read, so the system context must suppress binding.
+        when(jdbc.queryForObject(contains("r.tier"), eq(Integer.class), any(), any())).thenReturn(4);
+        TenantContext.enterSystem();
+        try {
+            rbacWithBinding(true).getUserTier("u1", "ws1");
+            verify(currentWorkspace, never()).bind(any());
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @Test
+    void require_bindsCentralFilter_whenFlagOnAndAllowed() {
+        // require → canDo → getUserTier, so authorizing an action also activates the backstop.
+        when(jdbc.queryForObject(contains("min_tier"), eq(Integer.class), any())).thenReturn(2);
+        when(jdbc.queryForObject(contains("r.tier"), eq(Integer.class), any(), any())).thenReturn(3);
+        rbacWithBinding(true).require("u1", "ws1", "create_items");
+        verify(currentWorkspace).bind("ws1");
     }
 }

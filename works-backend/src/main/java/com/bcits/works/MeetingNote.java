@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import org.hibernate.annotations.Filter;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -8,6 +10,8 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "meeting_note")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME,
+        condition = "meeting_id IN (SELECT m.id FROM meeting m WHERE m.workspace_id = :workspaceId)")
 public class MeetingNote {
     @Id private String id;
     private String meetingId;

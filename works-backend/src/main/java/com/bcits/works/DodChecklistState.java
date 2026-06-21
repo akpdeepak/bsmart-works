@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import org.hibernate.annotations.Filter;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -11,6 +13,9 @@ import java.time.OffsetDateTime;
 /** Per-work-item completion state of a Definition-of-Done checklist item (Cap U). */
 @Entity
 @Table(name = "dod_checklist_states")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME,
+        condition = "work_item_id IN (SELECT wi.id FROM work_items wi JOIN projects p ON wi.project_id = p.id WHERE p.workspace_id = "
+                + ":workspaceId)")
 public class DodChecklistState {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

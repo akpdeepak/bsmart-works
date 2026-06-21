@@ -82,6 +82,10 @@ class CrossTenantFilterIsolationIT {
     @Autowired SlaPolicyRepository slaPolicyRepository;
     @Autowired ComplianceRuleRepository complianceRuleRepository;
     @Autowired MetricSnapshotRepository metricSnapshotRepository;
+    // Transitive (no workspace_id column) entities — Slices B+C subquery @Filter coverage.
+    @Autowired WorkItemRepository workItemRepository;                       // 1-hop via project_id
+    @Autowired CommentRepository commentRepository;                        // 2-hop via work_item -> project
+    @Autowired CrossProjectDependencyRepository crossProjectDependencyRepository; // OR/nullable from/to
 
     @PersistenceContext EntityManager em;
 
@@ -104,6 +108,11 @@ class CrossTenantFilterIsolationIT {
     private static final String RULE_B = "XT-RULE-B";
     private static final String SNAP_A = "XT-SNAP-A";
     private static final String SNAP_B = "XT-SNAP-B";
+    // Transitive children (Slices B+C)
+    private static final String WI_A = "XT-WI-A";
+    private static final String WI_B = "XT-WI-B";
+    private static final String CPD_A = "XT-CPD-A";
+    private static final String CPD_B = "XT-CPD-B";
 
     @BeforeEach
     void seed() {
@@ -111,6 +120,10 @@ class CrossTenantFilterIsolationIT {
 
         // Teardown previous run (FK-safe order). Each DELETE is id-scoped so it never touches
         // unrelated seed data the boot Flyway scripts may have inserted.
+        // Transitive children first (they FK into work_items / projects).
+        jdbc.update("DELETE FROM comments WHERE work_item_id IN (?, ?)", WI_A, WI_B);
+        jdbc.update("DELETE FROM cross_project_dependencies WHERE id IN (?, ?)", CPD_A, CPD_B);
+        jdbc.update("DELETE FROM work_items WHERE id IN (?, ?)", WI_A, WI_B);
         jdbc.update("DELETE FROM metric_snapshots WHERE id IN (?, ?)", SNAP_A, SNAP_B);
         jdbc.update("DELETE FROM compliance_rules WHERE id IN (?, ?)", RULE_A, RULE_B);
         jdbc.update("DELETE FROM sla_policies     WHERE id IN (?, ?)", SLA_A, SLA_B);
@@ -132,6 +145,14 @@ class CrossTenantFilterIsolationIT {
 
         seedDomainRows(WS_A, PROJ_A, SPACE_A, DASH_A, SLA_A, RULE_A, SNAP_A, USER_A, now);
         seedDomainRows(WS_B, PROJ_B, SPACE_B, DASH_B, SLA_B, RULE_B, SNAP_B, USER_B, now);
+
+        // Cross-project dependency: cross-PROJECT by design, scoped via EITHER nullable endpoint
+        // (the OR-condition @Filter). A's row is anchored via from_project_id, B's via to_project_id —
+        // so the two rows exercise BOTH branches of the OR across the two workspaces.
+        jdbc.update("INSERT INTO cross_project_dependencies(id, from_project_id, to_project_id, title, "
+                + "created_at, updated_at) VALUES (?,?,?,?,?,?)", CPD_A, PROJ_A, null, "CPD A", now, now);
+        jdbc.update("INSERT INTO cross_project_dependencies(id, from_project_id, to_project_id, title, "
+                + "created_at, updated_at) VALUES (?,?,?,?,?,?)", CPD_B, null, PROJ_B, "CPD B", now, now);
 
         // Reads must hit the DB through the filter, not the first-level cache.
         em.clear();
@@ -168,6 +189,15 @@ class CrossTenantFilterIsolationIT {
         jdbc.update("INSERT INTO metric_snapshots(id, workspace_id, metric_key, scope_level, period, "
                 + "value, sample_size, created_at) VALUES (?,?,?,?,?,?,?,?)",
             snap, ws, "velocity", "ORG", "2026-06", 42.0, 7, now);
+
+        // Transitive children (Slices B+C): a work item under the project (1-hop project_id subquery)
+        // and a comment under that work item (2-hop work_item -> project subquery).
+        String suffix = ws.substring(ws.length() - 1);
+        String wi = "XT-WI-" + suffix;
+        jdbc.update("INSERT INTO work_items(id, title, status, type, project_id, created_by, created_at) "
+                + "VALUES (?,?,?,?,?,?,?)", wi, "WI " + ws, "To Do", "TASK", proj, user, now);
+        jdbc.update("INSERT INTO comments(work_item_id, author_id, body, created_at) VALUES (?,?,?,?)",
+            wi, user, "XT-CMT-" + suffix, now);
     }
 
     @AfterEach
@@ -290,6 +320,42 @@ class CrossTenantFilterIsolationIT {
             assertThat(metricSnapshotRepository.findAll().stream().map(MetricSnapshot::getId).toList())
                 .as("B's filtered query reaches its own KPI snapshot, never A's")
                 .contains(SNAP_B).doesNotContain(SNAP_A);
+            return null;
+        });
+    }
+
+    /**
+     * Slices B+C: the <b>transitive</b> subquery filters isolate exactly like the direct-column ones,
+     * proven through predicate-free {@code findAll()}. Covers the three shapes every transitive entity
+     * uses: 1-hop ({@code WorkItem} via {@code project_id}), 2-hop ({@code Comment} via
+     * {@code work_item_id → project_id}), and the OR/nullable case ({@code CrossProjectDependency}).
+     * The two CPD rows anchor on opposite endpoints (A via {@code from_project_id}, B via
+     * {@code to_project_id}), so this exercises <b>both</b> branches of the OR across both directions.
+     */
+    @Test
+    void transitiveEntities_areIsolated_bySubqueryFilter() {
+        boundTo(WS_B, () -> {
+            assertThat(workItemRepository.findAll().stream().map(WorkItem::getId)
+                .filter(id -> id.startsWith("XT-WI-")).sorted().toList())
+                .as("work items (1-hop project_id subquery): B sees only its own").containsExactly(WI_B);
+            assertThat(commentRepository.findAll().stream().map(Comment::getBody)
+                .filter(b -> b != null && b.startsWith("XT-CMT-")).sorted().toList())
+                .as("comments (2-hop subquery): B sees only its own").containsExactly("XT-CMT-B");
+            assertThat(crossProjectDependencyRepository.findAll().stream().map(CrossProjectDependency::getId)
+                .filter(id -> id.startsWith("XT-CPD-")).sorted().toList())
+                .as("cross-project deps (OR/nullable subquery, B via to_project_id): B sees only its own")
+                .containsExactly(CPD_B);
+            return null;
+        });
+        boundTo(WS_A, () -> {
+            assertThat(workItemRepository.findAll().stream().map(WorkItem::getId)
+                .filter(id -> id.startsWith("XT-WI-")).toList()).containsExactly(WI_A);
+            assertThat(commentRepository.findAll().stream().map(Comment::getBody)
+                .filter(b -> b != null && b.startsWith("XT-CMT-")).toList()).containsExactly("XT-CMT-A");
+            assertThat(crossProjectDependencyRepository.findAll().stream().map(CrossProjectDependency::getId)
+                .filter(id -> id.startsWith("XT-CPD-")).toList())
+                .as("cross-project deps (OR/nullable subquery, A via from_project_id): A sees only its own")
+                .containsExactly(CPD_A);
             return null;
         });
     }

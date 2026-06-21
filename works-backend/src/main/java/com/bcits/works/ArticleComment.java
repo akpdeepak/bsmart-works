@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import org.hibernate.annotations.Filter;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -11,6 +13,9 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "article_comments")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME,
+        condition = "article_id IN (SELECT a.id FROM articles a JOIN knowledge_spaces ks ON a.space_id = ks.id WHERE ks.workspace_id = "
+                + ":workspaceId)")
 public class ArticleComment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

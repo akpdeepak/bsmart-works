@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import org.hibernate.annotations.Filter;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -13,6 +15,8 @@ import java.util.Map;
 
 @Entity
 @Table(name = "work_items")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME,
+        condition = "project_id IN (SELECT p.id FROM projects p WHERE p.workspace_id = :workspaceId)")
 public class WorkItem {
 
     // ── Core (all types) ──────────────────────────────────────────────────────

@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import org.hibernate.annotations.Filter;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -11,6 +13,9 @@ import org.hibernate.annotations.ColumnTransformer;
 
 @Entity
 @Table(name = "work_item_field_value")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME,
+        condition = "work_item_id IN (SELECT wi.id FROM work_items wi JOIN projects p ON wi.project_id = p.id WHERE p.workspace_id = "
+                + ":workspaceId)")
 public class WorkItemFieldValue {
     @Id private String id;
     private String workItemId;

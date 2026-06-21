@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import org.hibernate.annotations.Filter;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -11,6 +13,8 @@ import java.time.OffsetDateTime;
 /** A reviewer requested on a pull request, with their review state (Cap U — code review queue). */
 @Entity
 @Table(name = "pull_request_reviewers")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME,
+        condition = "pull_request_id IN (SELECT pr.id FROM pull_requests pr WHERE pr.workspace_id = :workspaceId)")
 public class PullRequestReviewer {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

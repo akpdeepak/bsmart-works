@@ -119,8 +119,9 @@ public class CommentController {
                     .forEach(u -> {
                         Notification n = new Notification();
                         n.setUserId(u.getId());
+                        n.setActorId(userId);   // actor ref, not a name (RB-40 §3 Slice 4c)
                         n.setType("MENTION");
-                        n.setMessage(actorName + " mentioned you in a comment");
+                        n.setMessage("mentioned you in a comment");  // name-free; resolved at render
                         n.setLink("/items/" + workItemId);
                         n.setRead(false);
                         n.setCreatedAt(OffsetDateTime.now());
@@ -134,7 +135,7 @@ public class CommentController {
         // Excluding only the commenter keeps this path small — a mentioned user who also watches may
         // get both a MENTION and a WATCH notification, which is acceptable.
         watcherService.watch(workItemId, userId);
-        watcherService.notifyWatchers(workItemId, actorName + " commented on " + workItemId,
+        watcherService.notifyWatchers(workItemId, userId, "commented on " + workItemId,
                 java.util.Set.of(userId));
 
         return saved;

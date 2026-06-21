@@ -4,12 +4,12 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -26,7 +26,8 @@ class NotificationControllerAccessTest {
 
     private final NotificationRepository repo = mock(NotificationRepository.class);
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
-    private final NotificationController controller = new NotificationController(repo, authenticatedUser);
+    private final UserPiiService userPii = mock(UserPiiService.class);
+    private final NotificationController controller = new NotificationController(repo, authenticatedUser, userPii);
 
     NotificationControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);
@@ -50,6 +51,38 @@ class NotificationControllerAccessTest {
         assertThatThrownBy(() -> controller.markRead(404L))
                 .isInstanceOf(ApiException.class)
                 .satisfies(e -> assertThat(((ApiException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void getNotifications_resolvesActorNameFromVaultAndPrependsToNameFreeMessage() {
+        Notification withActor = new Notification();
+        withActor.setUserId(CALLER);
+        withActor.setActorId("USR-9");
+        withActor.setMessage("updated WRK-1 - Fix login");   // name-free as stored (RB-40 §3 Slice 4c)
+        Notification systemNote = new Notification();
+        systemNote.setUserId(CALLER);
+        systemNote.setMessage("SLA breach on WRK-2");          // no actor — unchanged
+        when(repo.findByUserId(org.mockito.ArgumentMatchers.eq(CALLER), any()))
+                .thenReturn(List.of(withActor, systemNote));
+        when(userPii.displayNameById("USR-9")).thenReturn("Alice");
+
+        List<Notification> out = controller.getNotifications(null, 0, 50);
+
+        assertThat(out.get(0).getMessage()).isEqualTo("Alice updated WRK-1 - Fix login");
+        assertThat(out.get(1).getMessage()).isEqualTo("SLA breach on WRK-2");
+    }
+
+    @Test
+    void getNotifications_fallsBackToSomeoneWhenActorUnresolved() {
+        Notification n = new Notification();
+        n.setUserId(CALLER);
+        n.setActorId("USR-GONE");
+        n.setMessage("commented on WRK-3");
+        when(repo.findByUserId(org.mockito.ArgumentMatchers.eq(CALLER), any())).thenReturn(List.of(n));
+        when(userPii.displayNameById("USR-GONE")).thenReturn(null);
+
+        assertThat(controller.getNotifications(null, 0, 50).get(0).getMessage())
+                .isEqualTo("Someone commented on WRK-3");
     }
 
     @Test

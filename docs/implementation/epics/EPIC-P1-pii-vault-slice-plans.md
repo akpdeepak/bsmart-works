@@ -176,7 +176,37 @@ fails if the event/audit layer ever imports a PII entity; full unit gate green.
 catches a leak; unit gate (1395, 0 Checkstyle, coverage met) incl. the new ArchUnit rule. Push → PR →
 CI green → squash-merge → confirm on `origin/main`.
 
-> **Remaining after 4d:** Slice 4c (notifications.message actor-name → render-time resolution like 4a;
-> free-text customer-content redaction at the AI boundary — mutable/erasure-reachable, lower severity)
-> and Slice 5 (real AWS KMS / BYOK — non-prod-validatable, all prod/non-prod config centralised +
-> documented). CONTRACT (dropping the legacy plaintext columns) stays deferred per EPIC §3/§12.
+### Slice 4c — notification actor-name leak + free-text AI-boundary redaction
+
+**Scope.** The watcher ("updated"/"commented") and @mention notification messages stored the actor's
+full **name** in the mutable `notifications.message` (RB-40 §3 §5.2 #7). Store an opaque `actor_id`
+instead + a **name-free** message; resolve the actor's display name at render via the vault. Free-text
+customer content (chat/feedback/service-requests) crossing the **AI boundary** is already PII-redacted
+centrally (`AiControlPlaneService.redact` strips email + phone from every model prompt — verified), so
+no new redaction was needed there.
+
+**Analysis.** Verified the only stored-notification identity-PII sites are the two
+`WatcherService.notifyWatchers` callers (`WorkItemCommandService` "updated", `CommentController`
+"commented") + the `CommentController` @mention message — all name-at-start, so a render-time prepend
+reconstructs the display text **frontend-free**. Assignment + chat-escalation + SLA/compliance
+notifications were already name-free. `CommentService` is dead code (no caller) — left untouched
+(RB-10 §9, no drive-by). Not flag-gated: the actor name must always render, and `displayNameById` is
+itself vault-aware (legacy column → vault on flip → "[erased]" after a shred); pre-V114 rows
+(actor_id null, name already in message) render unchanged.
+
+**Files.** `V114__pii_vault_notification_actor_id.sql`; `Notification` (+`actorId`); `WatcherService`
+(+`actorId` param, name-free message); `WorkItemCommandService` + `CommentController` (pass actor id +
+name-free message; @mention too); `NotificationController` (resolve + prepend actor name at render).
+Tests: `NotificationControllerAccessTest` (render resolution + "Someone" fallback), `WatcherServiceTest`.
+
+**Acceptance.** New watcher/mention notifications store no actor name (name-free message + actor_id);
+the read endpoint renders "{name} updated …" / "{name} mentioned you …", "[erased]" after a shred,
+"Someone" if unresolved; system notifications unchanged; AI prompts remain email/phone-redacted.
+
+**Validation.** Unit gate (1397, 0 Checkstyle, coverage met); `FlywayMigrationIntegrationTest` (V114
+applies) + context boot (`ddl-auto=validate`); guardrails + ai-rules `--check` green. ai-rules §6 → V114.
+
+> **Remaining:** Slice 5 (real AWS KMS / BYOK — non-prod-validatable via LocalStack, all prod/non-prod
+> config centralised + documented). CONTRACT (dropping legacy plaintext columns) stays deferred per
+> EPIC §3/§12. Notification-message *full* templating beyond actor-name (none currently needed) and a
+> DSR sweep of mutable notification rows for an erased subject are noted residuals (mutable surface).

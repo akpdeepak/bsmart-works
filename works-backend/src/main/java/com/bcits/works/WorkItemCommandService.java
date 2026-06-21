@@ -423,7 +423,9 @@ public class WorkItemCommandService {
             || (updatedItem.getTags() != null && !oldTags.equals(updatedItem.getTags().stream().sorted().toList()));
         if (changed) {
             String ref = saved.getAutoId() != null ? saved.getAutoId() : saved.getId();
-            watcherService.notifyWatchers(id, actorName(userId) + " updated " + ref + " - " + saved.getTitle(),
+            // Name-free message + actor id (RB-40 §3 Slice 4c): the actor's display name is resolved at
+            // render via the vault, so the stored notification carries no raw PII.
+            watcherService.notifyWatchers(id, userId, "updated " + ref + " - " + saved.getTitle(),
                 notified);
         }
     }

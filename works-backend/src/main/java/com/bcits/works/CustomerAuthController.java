@@ -32,11 +32,13 @@ public class CustomerAuthController {
     private final RateLimiter rateLimiter;
     private final CustomerContext customerContext;
     private final CustomerUserPiiService customerUserPii;
+    private final TokenRevocationService tokenRevocation;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public CustomerAuthController(CustomerUserRepository customerUsers, CustomerAccountRepository accounts,
                                  JwtUtil jwtUtil, EventService eventService, RateLimiter rateLimiter,
-                                 CustomerContext customerContext, CustomerUserPiiService customerUserPii) {
+                                 CustomerContext customerContext, CustomerUserPiiService customerUserPii,
+                                 TokenRevocationService tokenRevocation) {
         this.customerUsers = customerUsers;
         this.accounts = accounts;
         this.jwtUtil = jwtUtil;
@@ -44,6 +46,7 @@ public class CustomerAuthController {
         this.rateLimiter = rateLimiter;
         this.customerContext = customerContext;
         this.customerUserPii = customerUserPii;
+        this.tokenRevocation = tokenRevocation;
     }
 
     @PostMapping("/login")
@@ -81,6 +84,23 @@ public class CustomerAuthController {
             out.put("account", brandingToMap(account));
             return ResponseEntity.ok(out);
         });
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletRequest http) {
+        // Individual-token revocation parity (PR2): blocklist this portal session's token by jti so it
+        // cannot be reused after logout. Best-effort + idempotent; always returns OK.
+        String header = http.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            String token = header.substring(7);
+            try {
+                tokenRevocation.blocklist(jwtUtil.extractJti(token), jwtUtil.extractUserId(token),
+                        "customer", jwtUtil.extractExpiration(token));
+            } catch (Exception ignored) {
+                // unusable token → nothing to revoke
+            }
+        }
+        return ResponseEntity.ok(Map.of("message", "Logged out."));
     }
 
     @GetMapping("/me")

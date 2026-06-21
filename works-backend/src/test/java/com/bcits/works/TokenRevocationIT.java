@@ -103,4 +103,28 @@ class TokenRevocationIT {
         assertThat(tokenRevocation.isUserTokenRevoked("TR-NO-SUCH-USER", Instant.now().minusSeconds(60)))
             .isFalse();
     }
+
+    // ── jti blocklist (PR2) — real Postgres round-trip (proves V117 + the SQL) ───────────────────
+
+    @Test
+    void blocklist_roundTrip_marksTokenRevokedByJti() {
+        String jti = "TR-JTI-1";
+        assertThat(tokenRevocation.isBlocklisted(jti)).as("unknown jti not blocklisted").isFalse();
+
+        tokenRevocation.blocklist(jti, USER, "internal", Instant.now().plusSeconds(3600));
+        assertThat(tokenRevocation.isBlocklisted(jti)).as("after logout the jti is blocklisted").isTrue();
+
+        // Idempotent (ON CONFLICT DO NOTHING): a double logout neither errors nor un-blocks.
+        tokenRevocation.blocklist(jti, USER, "internal", Instant.now().plusSeconds(3600));
+        assertThat(tokenRevocation.isBlocklisted(jti)).isTrue();
+    }
+
+    @Test
+    void blocklist_prunesExpiredEntriesOnInsert() {
+        tokenRevocation.blocklist("TR-JTI-OLD", USER, "internal", Instant.now().minusSeconds(60));
+        // The next insert first prunes expired rows, evicting TR-JTI-OLD.
+        tokenRevocation.blocklist("TR-JTI-NEW", USER, "internal", Instant.now().plusSeconds(3600));
+        assertThat(tokenRevocation.isBlocklisted("TR-JTI-OLD")).as("expired entry pruned").isFalse();
+        assertThat(tokenRevocation.isBlocklisted("TR-JTI-NEW")).isTrue();
+    }
 }

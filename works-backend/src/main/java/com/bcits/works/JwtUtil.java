@@ -30,6 +30,7 @@ public class JwtUtil {
 
     public String generate(String userId, String email) {
         return Jwts.builder()
+                .id(java.util.UUID.randomUUID().toString())   // jti — enables individual-token logout (PR2)
                 .subject(userId)
                 .claim("email", email)
                 .claim("scope", "internal")
@@ -46,6 +47,7 @@ public class JwtUtil {
      */
     public String generateCustomer(String customerUserId, String email, String accountId, String workspaceId) {
         return Jwts.builder()
+                .id(java.util.UUID.randomUUID().toString())   // jti — enables portal logout parity (PR2)
                 .subject(customerUserId)
                 .claim("email", email)
                 .claim("scope", "customer")
@@ -72,6 +74,17 @@ public class JwtUtil {
     public Instant extractIssuedAt(String token) {
         Date iat = validate(token).getIssuedAt();
         return iat == null ? null : iat.toInstant();
+    }
+
+    /** The token's unique id ({@code jti}), or {@code null} for a pre-PR2 token without one. */
+    public String extractJti(String token) {
+        return validate(token).getId();
+    }
+
+    /** The token's expiry ({@code exp}) as an {@link Instant} — the prune horizon for a blocklist entry. */
+    public Instant extractExpiration(String token) {
+        Date exp = validate(token).getExpiration();
+        return exp == null ? null : exp.toInstant();
     }
 
     public String extractScope(String token) {

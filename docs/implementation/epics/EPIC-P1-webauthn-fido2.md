@@ -85,9 +85,9 @@ counter-regression clone detection; tamper/replay/origin/rpIdHash ITs (webauthn4
 `navigator.credentials`; passkey login wired; full gate green. rpId/origins from `app.webauthn.*`.
 
 ## 6. Status
-WA1 + WA2 **built** (this session); WA3–WA4 pending. Everything before this (PII-vault, #243 A-D/F,
-FLS 1-3, rate-limit PR1-4, SOC2 matrix) is merged on `main`; WebAuthn is the sole remaining Phase-1
-build.
+WA1 + WA2 + WA3 **built** (this session); WA4 (cleanup) pending. Everything before this (PII-vault,
+#243 A-D/F, FLS 1-3, rate-limit PR1-4, SOC2 matrix) is merged on `main`; WebAuthn is the sole
+remaining Phase-1 build. **FIDO2 is the live path since WA3** (`app.webauthn.fido2-enabled` default on).
 
 ---
 
@@ -194,3 +194,51 @@ unchanged. Full gate green.
 (0 violations) + JaCoCo (all checks met). `WebAuthnFido2CeremonyIT` 2/2 (register+assert via FIDO2;
 legacy-credential rejection) against Testcontainers Postgres. `npm run guardrails` blocking rules pass.
 Full `failsafe:integration-test failsafe:verify` green (note appended on merge).
+
+---
+
+## 9. Slice WA3 — frontend cutover to navigator.credentials + login — plan & as-built
+
+> Lane: Large/risky (auth, coupled cutover). Branch `feat/w1-webauthn-wa3-frontend` off `origin/main`.
+> **Atomic cutover:** the frontend now uses `navigator.credentials`, so it posts FIDO2 fields that only
+> the real verifier accepts — therefore this slice also flips `app.webauthn.fido2-enabled` **on by
+> default** (backend + frontend ship together, as flagged in §0/§3). The legacy `WebAuthnCrypto` path
+> stays as fallback until WA4 removes it. (Safe to flip: the old passwordless login was dead code and
+> the old credentials were per-browser localStorage demos — no real users to migrate, MFA/password
+> remain.)
+
+**Scope.** Rewrite `passkey.js` to real WebAuthn; add the pre-auth authenticate client; build the
+login-view passkey sign-in; flip the FIDO2 flag default on.
+
+**Analysis (related scopes covered).**
+- *Design (RB-30):* the new login button uses design tokens (`brand-navy`, `brand-navy-tint/40`
+  focus ring) and the established five-state button pattern + a `Fingerprint` Lucide icon; it renders
+  only when `passkeysSupported()` (so unsupported browsers/jsdom never show it).
+- *Engineering (RB-10):* `passkey.js` drops the WebCrypto software-authenticator (localStorage keypair,
+  PEM, P1363→DER) for `navigator.credentials.create/get`; base64url is the single wire codec. The new
+  `securityClient.beginAuthenticatePasskey/finishAuthenticatePasskey` go through the one `apiClient`
+  (pre-auth, no token needed — the endpoints are permit-all). On success the login handler establishes
+  the session exactly like password/MFA login (`setCurrentUser`/`setToken`/`bSmartSession`).
+- *Governance (RB-40 §4):* `passkeysSupported()` now gates on `window.PublicKeyCredential` (was
+  `crypto.subtle`). rpId/origins come from server config; in prod set `BSMART_WEBAUTHN_RP_ID` +
+  `BSMART_WEBAUTHN_ALLOWED_ORIGINS` (localhost defaults are dev-only).
+- *Compatibility:* the export names (`registerPasskey`/`authenticatePasskey`/`passkeysSupported`) are
+  unchanged, so `security-center.jsx` registration and its test (which mocks `@/lib/passkey`) keep
+  working; the register ceremony now produces a real attestation that the (now-on) verifier accepts.
+
+**Files.** `works-frontend/src/lib/passkey.js` (rewrite), `works-frontend/src/lib/security.js`
+(+authenticate methods), `works-frontend/src/app/AppShell.jsx` (imports + `handlePasskeyLogin` +
+login-form passkey button), `works-backend/.../WebAuthnSettings.java` + `application.properties`
+(flip `fido2-enabled` default → true).
+
+**Acceptance criteria.** `passkeysSupported()` reflects `PublicKeyCredential`; registration via
+`navigator.credentials.create` and passwordless login via `.get` work against the live (flag-on)
+backend; the login view offers "Sign in with a passkey"; the legacy export contract is preserved;
+frontend lint/test/build + backend gate green.
+
+**Validation (this session, all green).** Frontend: `eslint` 0 errors (only pre-existing AppShell
+baseline-debt warnings); `vitest run` **1733** tests / 233 files pass (incl. `security-center.test.jsx`);
+`vite build` OK. Backend: `./mvnw -Dgroups=unit clean verify` → 1455 unit + Checkstyle 0 + JaCoCo met;
+`npm run guardrails` blocking rules pass; full `failsafe:integration-test` green (note appended on
+merge). Live login screenshot skipped — dev port 5173 was held by a peer process; the change is covered
+by lint + the full test suite + build (button is conditional on `PublicKeyCredential`).

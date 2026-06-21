@@ -74,4 +74,10 @@ export const securityClient = {
   finishRegisterPasskey: (body) =>
     api.send(`/auth/passkeys/register/finish`, { method: 'POST', body }),
   deletePasskey: (id) => api.raw(`/auth/passkeys/${id}`, { method: 'DELETE' }),
+
+  // ── Passwordless passkey sign-in (pre-auth) ─────────────────────────────────
+  beginAuthenticatePasskey: (email) =>
+    api.send(`/auth/passkey/authenticate/begin`, { method: 'POST', body: { email } }),
+  finishAuthenticatePasskey: (body) =>
+    api.send(`/auth/passkey/authenticate/finish`, { method: 'POST', body }),
 };

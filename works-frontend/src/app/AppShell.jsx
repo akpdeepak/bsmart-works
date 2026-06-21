@@ -16,7 +16,7 @@ import {
   X, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronDown, ChevronUp,
   Upload, IndentIncrease, IndentDecrease,
   CornerDownRight, Image as ImageIcon,
-  Activity, BellRing, Keyboard,
+  Activity, BellRing, Keyboard, Fingerprint,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
@@ -58,6 +58,8 @@ import { StatusBadge } from '@/components/works/status-badge';
 import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
 import { ResetPasswordScreen } from '@/components/works/reset-password-screen';
+import { securityClient } from '@/lib/security';
+import { authenticatePasskey, passkeysSupported } from '@/lib/passkey';
 // DonutChart / BarChart moved to dashboard-widget-card.jsx + report-section-card.jsx (TD-003).
 // exportElementToPng / exportElementToPdf / exportRowsToCsv moved to export-buttons.jsx (TD-003).
 import { api } from '@/lib/apiClient';
@@ -966,6 +968,21 @@ export default function AppShell() {
       setCurrentUser(data.user); setToken(data.token);
       localStorage.setItem('bSmartSession', JSON.stringify({ user: data.user, token: data.token }));
     }).catch(err => setAuthError(err.message));
+  };
+
+  // Passwordless sign-in with a passkey (WebAuthn/FIDO2). The email identifies the account; the
+  // platform authenticator proves possession of the private key and the server mints the session.
+  const handlePasskeyLogin = () => {
+    setAuthError('');
+    if (!authForm.email) { setAuthError('Enter your email to sign in with a passkey.'); return; }
+    authenticatePasskey({
+      email: authForm.email,
+      begin: (email) => securityClient.beginAuthenticatePasskey(email),
+      finish: (body) => securityClient.finishAuthenticatePasskey(body),
+    }).then(data => {
+      setCurrentUser(data.user); setToken(data.token);
+      localStorage.setItem('bSmartSession', JSON.stringify({ user: data.user, token: data.token }));
+    }).catch(err => setAuthError(err.message || 'Passkey sign-in failed.'));
   };
 
   const handleVerifyEmail = (token) => {
@@ -3008,6 +3025,13 @@ export default function AppShell() {
               {authMode === 'login' ? 'Sign in' : 'Create account'}
             </Button>
           </form>
+          {authMode === 'login' && passkeysSupported() && (
+            <button type="button" onClick={handlePasskeyLogin}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-brand-navy-tint/40 bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition-colors hover:bg-brand-navy/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 focus-visible:ring-offset-2 dark:bg-neutral-900 dark:text-neutral-100">
+              <Fingerprint aria-hidden="true" className="h-4 w-4" />
+              Sign in with a passkey
+            </button>
+          )}
           {authMode === 'login' && (
             <div className="mt-5">
               <div className="flex items-center gap-3">

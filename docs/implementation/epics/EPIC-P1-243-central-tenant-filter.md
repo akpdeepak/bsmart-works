@@ -80,3 +80,94 @@ listed as **not** filtered, with rationale. This inventory is the core review ar
 ## 9. Rollback
 Remove the `@Filter` annotations + bind aspect; per-query predicates (retained in EXPAND) keep the
 app isolated exactly as today. Zero data/schema risk.
+
+---
+
+# Slice A — as-built (2026-06-21) · central binding at the authorization choke point
+
+> Per-item execution block (RB-05 / task-execution loop). Doubles as the PR description.
+> Lane: **Large/risky** (tenant isolation). Default-off flag → **inert on merge**. No migration.
+
+## A.0 Scope
+Extend central tenant-filter **binding** from `ProjectService`-only to **every single-workspace-
+authorized read path**, behind a default-off flag `tenant.filter.binding.enabled`. This eliminates the
+"@Filter dormant app-wide, isolation rests on hand-written predicates with no central backstop" gap for
+the single-workspace surface, while leaving the legitimately multi-workspace surface untouched.
+**No schema change. No predicate removed** (that is Slice E/CONTRACT).
+
+## A.1 Analysis — the verified reframe (code is canonical)
+A 5-agent discovery + independent code verification (2026-06-21) found the originally-sketched mechanism
+(an interceptor that resolves+binds *the* request workspace, §3.2) is **unsafe as written**, because the
+app has **two coexisting isolation models**:
+
+1. **Single-workspace requests** — a specific workspace is resolved *and authorized* via
+   `RbacService.require(...)` / `getUserTier(userId, ws)` (dashboards `?workspaceId`, create-in-project,
+   resource-by-id). Binding the central single-`workspace_id` filter here is correct and additive.
+2. **Caller-workspace-SET requests** — work-item lists (`getAllWorkItems`, `/my`, `/starred`, search,
+   backlog → `WorkItemReadService` `MEMBER_PROJECTS` join), `findAllScopedToUser…` (sprints, articles,
+   knowledge spaces, workflows; ~40 files), notifications. These span **all** the caller's workspaces by
+   a membership-join SQL predicate. The workspace is **not** in the JWT (`SecurityConfig` principal =
+   userId only). Binding any *single* workspace here would **hide the user's other workspaces** —
+   `ProjectService.list`'s cross-workspace branch already comments on exactly this trap.
+
+The central single-`workspace_id` filter can only safely back up model (1). So the correct, app-wide,
+**single** activation point is **`RbacService.getUserTier(...)` on a member-tier (≥1) result** — the one
+choke point every single-workspace authorization funnels through (directly, or via
+`canDo`/`require`/`canView`/`isAdmin`). Model-(2) reads never reach a single-workspace tier check, so
+they stay unbound and keep their membership-join scope — which is their correct, non-removable isolation.
+
+Other verified facts: `work_items` is a **transitive** entity (no `workspace_id`, no `@Filter` yet →
+Slice C). The end-to-end "filter-alone isolation" IT the plan asked Slice A to add **already exists**
+(`CrossTenantFilterIsolationIT`, shipped Slice 1, PR #415) — proving isolation across 6 domains with
+predicates removed, plus the dormant-default, escape-hatch, and the documented `findById`/PK gap
+(Slice D). 115 entities already carry `@Filter`.
+
+## A.2 Mechanism
+- New `TenantFilterSettings` bean reads `tenant.filter.binding.enabled` (default `false`).
+- `RbacService.getUserTier()` injects `CurrentWorkspace` + `TenantFilterSettings`; on a member-tier
+  result it calls a private `bindCentralFilterIfEnabled(ws)` that binds **only** when the flag is on, a
+  real workspace was resolved, and the thread is **not** in the `TenantScope` system escape hatch (a
+  scheduler/admin sweep probing a tier must not re-narrow its deliberately cross-workspace read).
+- `ProjectService`'s existing explicit `currentWorkspace.bind(...)` is left exactly as-is (already live,
+  proven); when the flag is permanently on it becomes redundant with the central binding — a trivial
+  Slice E cleanup, **not** debt now.
+
+## A.3 Files
+- `TenantFilterSettings.java` (new) — flag holder.
+- `RbacService.java` — constructor deps + `getUserTier` binding + `bindCentralFilterIfEnabled` helper.
+- `application.properties` §15 — `tenant.filter.binding.enabled` (env `TENANT_FILTER_BINDING_ENABLED`, default false).
+- `RbacServiceTest.java` — constructor update + 5 binding unit tests (flag on/off, non-member, system-hatch, require→bind).
+- `RbacBindingTenantFilterIT.java` (new) — real-path proof: single-ws authorize binds+isolates, multi-ws not over-filtered, denied authorization binds nothing.
+- This doc.
+
+## A.4 Acceptance criteria
+- Default-off ⇒ **zero runtime behaviour change** on merge (binding stays `ProjectService`-only; all
+  existing tests green unchanged). ✔
+- Flag-on ⇒ a single-workspace authorization binds the central filter and a predicate-free read is
+  isolated **via the filter alone**; a multi-workspace read is **not** over-filtered; a denied
+  authorization binds nothing. ✔ (`RbacBindingTenantFilterIT` 3/3)
+- No schema/migration; no per-query predicate removed; Spring context wires with no circular dep. ✔
+
+## A.5 Validation (local, 2026-06-21)
+- Unit: `-Dgroups=unit clean verify` → **1406 tests, 0 failures**, checkstyle 0 errors, all coverage
+  checks met, `RbacServiceTest` 20/20.
+- Guardrails: `scripts/guardrails.sh` → all **blocking** rules pass (only pre-existing frontend hex
+  baseline-debt warns).
+- Integration (Docker/Testcontainers): `RbacBindingTenantFilterIT` 3/3, `CrossTenantFilterIsolationIT`
+  5/5, `WorkspaceFilterScopeIT` 4/4, `WorkspaceTenantIsolationIT` 5/5 → **17/17**.
+
+## A.6 Rollout + canary watch-items (when flipping the flag, per-env, canary-first)
+1. Smoke-test the audited escape-hatch inventory (§3.4) — auth/signup, public `/api/v1/public/**`,
+   customer-portal token, SCIM, schedulers, admin sweeps — confirm none over-filter (they run in
+   `TenantScope.systemUnscoped`, which the system-context guard also protects).
+2. Watch-item: a request that authorizes workspace X (binds X) then performs an *incidental* read that
+   should span workspaces in the same session would be narrowed to X. Endpoints are single-purpose, so
+   this is low-risk; the retained per-query predicates are the backstop during canary.
+3. Watch-item: multi-call last-wins within a request (binds the last single workspace checked) — benign
+   because each is a workspace the caller is a proven member of and reads are single-purpose.
+
+## A.7 Follow-on (unchanged by this slice)
+Slice B/C transitive `@Filter` (incl. `work_items`); Slice D `findById`/PK gap; **Slice E CONTRACT must
+NOT remove the membership-join predicates that isolate the multi-workspace paths** (only the redundant
+single-workspace predicates the filter fully covers). Slice F doc reconciliation (CLAUDE.md §4 / RB-40 §1
+still say "#243 TO BE ADDED").

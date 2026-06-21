@@ -24,6 +24,7 @@ public class PasswordResetService {
     private final PasswordResetTokenRepository tokenRepository;
     private final EmailService emailService;
     private final EventService eventService;
+    private final TokenRevocationService tokenRevocation;
     private final String frontendBaseUrl;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -31,11 +32,13 @@ public class PasswordResetService {
                                 PasswordResetTokenRepository tokenRepository,
                                 EmailService emailService,
                                 EventService eventService,
+                                TokenRevocationService tokenRevocation,
                                 @Value("${app.frontend.base-url:http://localhost:5173}") String frontendBaseUrl) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
         this.emailService = emailService;
         this.eventService = eventService;
+        this.tokenRevocation = tokenRevocation;
         this.frontendBaseUrl = frontendBaseUrl;
     }
 
@@ -92,6 +95,9 @@ public class PasswordResetService {
 
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+        // Token-version revocation (W1 rate-limit/JWT PR1): a forgotten-password reset must invalidate
+        // any token an attacker may hold — the whole point of resetting a compromised credential.
+        tokenRevocation.revokeUserTokens(user.getId());
 
         prt.setUsed(true);
         tokenRepository.save(prt);

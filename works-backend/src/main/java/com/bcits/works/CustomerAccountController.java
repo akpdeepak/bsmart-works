@@ -36,12 +36,14 @@ public class CustomerAccountController {
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
     private final CustomerUserPiiService customerUserPii;
+    private final TokenRevocationService tokenRevocation;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public CustomerAccountController(CustomerAccountRepository accounts, CustomerUserRepository customerUsers,
                                      CustomerAccountService accountService, EventService eventService,
                                      AuthenticatedUser authenticatedUser, RbacService rbac,
-                                     CustomerUserPiiService customerUserPii) {
+                                     CustomerUserPiiService customerUserPii,
+                                     TokenRevocationService tokenRevocation) {
         this.accounts = accounts;
         this.customerUsers = customerUsers;
         this.accountService = accountService;
@@ -49,6 +51,7 @@ public class CustomerAccountController {
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
         this.customerUserPii = customerUserPii;
+        this.tokenRevocation = tokenRevocation;
     }
 
     @GetMapping
@@ -167,7 +170,8 @@ public class CustomerAccountController {
             cu.setIsAccountAdmin(Boolean.TRUE.equals(body.get("isAccountAdmin")));
         }
         String newPassword = str(body.get("password"));
-        if (newPassword != null && !newPassword.isBlank()) {
+        boolean passwordChanged = newPassword != null && !newPassword.isBlank();
+        if (passwordChanged) {
             if (newPassword.length() < 8) {
                 throw ApiException.badRequest("WEAK_PASSWORD", "Password must be at least 8 characters.", "password");
             }
@@ -175,6 +179,11 @@ public class CustomerAccountController {
         }
         cu.setUpdatedAt(OffsetDateTime.now());
         CustomerUser saved = customerUsers.save(cu);
+        if (passwordChanged) {
+            // Token-version revocation parity (W1 rate-limit/JWT PR1): a portal password change
+            // invalidates the customer's existing portal tokens, matching internal change-password.
+            tokenRevocation.revokeCustomerTokens(saved.getId());
+        }
         customerUserPii.syncIdentity(saved); // dual-write the updated display name into the PII vault (RB-40 §3)
         eventService.record(saved.getId(), "CUSTOMER_USER_UPDATED", actor, Map.of("accountId", accountId));
         return scrub(saved);

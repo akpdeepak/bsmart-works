@@ -12,6 +12,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @Tag("unit")
 class SecurityConfigJwtFilterTest {
@@ -19,7 +23,11 @@ class SecurityConfigJwtFilterTest {
     private static final String SECRET = "unit-test-jwt-filter-secret-abcdef123456";
 
     private final JwtUtil jwtUtil = new JwtUtil(SECRET);
-    private final SecurityConfig securityConfig = new SecurityConfig(jwtUtil, "http://localhost:5173", "'self'");
+    // Default mock = not revoked, so the existing happy-path tests are unaffected by the W1 revocation
+    // check; the revocation test below stubs it true.
+    private final TokenRevocationService tokenRevocation = mock(TokenRevocationService.class);
+    private final SecurityConfig securityConfig =
+            new SecurityConfig(jwtUtil, tokenRevocation, "http://localhost:5173", "'self'");
 
     @AfterEach
     void tearDown() {
@@ -66,6 +74,27 @@ class SecurityConfigJwtFilterTest {
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(request.getAttribute("authenticatedUserId")).isEqualTo("USR-BEARER");
         assertThat(SecurityContextHolder.getContext().getAuthentication().getPrincipal()).isEqualTo("USR-BEARER");
+    }
+
+    @Test
+    void revokedInternalTokenIsRejectedWith401_andDoesNotAuthenticate() throws Exception {
+        String token = jwtUtil.generate("USR-REVOKED", "revoked@example.com");
+        // The subject revoked their tokens (e.g. password change) after this token was issued.
+        when(tokenRevocation.isUserTokenRevoked(eq("USR-REVOKED"), any())).thenReturn(true);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/work-items");
+        request.addHeader("Authorization", "Bearer " + token);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        SecurityContextHolder.clearContext();
+        AtomicBoolean continued = new AtomicBoolean(false);
+        FilterChain chain = (req, res) -> continued.set(true);
+        securityConfig.jwtAuthFilter().doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(continued).as("a revoked token must not continue the chain").isFalse();
+        assertThat(SecurityContextHolder.getContext().getAuthentication())
+            .as("a revoked token must not set an authenticated principal").isNull();
     }
 
     private void doFilter(MockHttpServletRequest request, MockHttpServletResponse response) throws Exception {

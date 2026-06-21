@@ -29,6 +29,7 @@ public class PermissionSchemeController {
     private final RoleDefRepository roleDefRepo;
     private final RolePermissionRepository rolePermRepo;
     private final FieldVisibilityRepository fieldVisRepo;
+    private final FieldDefRepository fieldDefRepo;
     private final AuthenticatedUser authenticatedUser;
     private final PermissionSchemeService permissionSchemeService;
     private final RbacService rbac;
@@ -37,6 +38,7 @@ public class PermissionSchemeController {
                                        RoleDefRepository roleDefRepo,
                                        RolePermissionRepository rolePermRepo,
                                        FieldVisibilityRepository fieldVisRepo,
+                                       FieldDefRepository fieldDefRepo,
                                        AuthenticatedUser authenticatedUser,
                                        PermissionSchemeService permissionSchemeService,
                                        RbacService rbac) {
@@ -44,6 +46,7 @@ public class PermissionSchemeController {
         this.roleDefRepo = roleDefRepo;
         this.rolePermRepo = rolePermRepo;
         this.fieldVisRepo = fieldVisRepo;
+        this.fieldDefRepo = fieldDefRepo;
         this.authenticatedUser = authenticatedUser;
         this.permissionSchemeService = permissionSchemeService;
         this.rbac = rbac;
@@ -174,9 +177,19 @@ public class PermissionSchemeController {
         return result;
     }
 
-    // Field visibility rules
+    // Field visibility rules.
+    //
+    // These rows ARE the field-level-security control (RB-40 §1): a HIDDEN/READ_ONLY rule decides who
+    // may see or edit a field. Authoring or reading them must be gated on `manage_permissions` for the
+    // owning workspace — otherwise any authenticated user could tamper with another tenant's FLS rules
+    // (privilege escalation / control bypass). The owning workspace is derived from the field_def
+    // (reads) or the role_def (writes), both of which carry workspace_id and are themselves
+    // workspace-filtered (RB-40 §1). FLS Slice 3.
+
     @GetMapping("/field-visibility/{fieldDefId}")
     public List<FieldVisibility> getFieldVisibility(@PathVariable String fieldDefId) {
+        FieldDef fieldDef = fieldDefRepo.findById(fieldDefId).orElseThrow();
+        rbac.require(authenticatedUser.id(), fieldDef.getWorkspaceId(), "manage_permissions");
         return fieldVisRepo.findByFieldDefId(fieldDefId);
     }
 
@@ -184,6 +197,15 @@ public class PermissionSchemeController {
     public FieldVisibility setFieldVisibility(@PathVariable String fieldDefId,
                                                @PathVariable String roleDefId,
                                                @Valid @RequestBody Map<String, String> body) {
+        RoleDef roleDef = roleDefRepo.findById(roleDefId).orElseThrow();
+        FieldDef fieldDef = fieldDefRepo.findById(fieldDefId).orElseThrow();
+        rbac.require(authenticatedUser.id(), roleDef.getWorkspaceId(), "manage_permissions");
+        // The rule binds a field to a role; both must belong to the same workspace so a rule cannot be
+        // injected across tenants by pairing one tenant's field with another's role.
+        if (!roleDef.getWorkspaceId().equals(fieldDef.getWorkspaceId())) {
+            throw ApiException.badRequest("CROSS_WORKSPACE",
+                    "Field and role must belong to the same workspace.");
+        }
         FieldVisibility fv = fieldVisRepo.findByFieldDefIdAndRoleDefId(fieldDefId, roleDefId)
                 .orElseGet(() -> {
                     FieldVisibility newFv = new FieldVisibility();
@@ -198,6 +220,9 @@ public class PermissionSchemeController {
 
     @DeleteMapping("/field-visibility/rules/{id}")
     public void deleteFieldVisibility(@PathVariable String id) {
+        FieldVisibility fv = fieldVisRepo.findById(id).orElseThrow();
+        RoleDef roleDef = roleDefRepo.findById(fv.getRoleDefId()).orElseThrow();
+        rbac.require(authenticatedUser.id(), roleDef.getWorkspaceId(), "manage_permissions");
         fieldVisRepo.deleteById(id);
     }
 }

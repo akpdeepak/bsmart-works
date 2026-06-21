@@ -47,7 +47,6 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @Testcontainers
 @SpringBootTest
 @TestPropertySource(properties = {
-        "app.webauthn.fido2-enabled=true",
         "app.webauthn.rp-id=localhost",
         "app.webauthn.allowed-origins=http://localhost:5173"
 })
@@ -95,9 +94,9 @@ class WebAuthnFido2CeremonyIT {
         var created = client.create(creationOptions);
 
         PasskeyRegisterRequest registerReq = new PasskeyRegisterRequest(
-                null, null, null, "My Laptop", "internal", null, null,
                 B64URL_ENC.encodeToString(created.getResponse().getAttestationObject()),
-                B64URL_ENC.encodeToString(created.getResponse().getClientDataJSON()));
+                B64URL_ENC.encodeToString(created.getResponse().getClientDataJSON()),
+                "My Laptop", "internal", null);
         WebAuthnCredential saved = webAuthn.finishRegistration(USER_ID, registerReq);
 
         assertThat(saved.getCoseCredential()).isNotEmpty();

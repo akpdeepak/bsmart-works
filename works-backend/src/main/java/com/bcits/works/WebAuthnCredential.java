@@ -26,12 +26,13 @@ public class WebAuthnCredential {
     @Column(name = "credential_id")
     private String credentialId;
 
-    /** Legacy signed-nonce credential (V52). Null for real FIDO2 rows, which use {@link #coseCredential}. */
+    /** Pre-cutover signed-nonce public key (V52). Always null for FIDO2 rows; retained only so any
+     *  orphaned legacy row is recognisable (and rejected) until a CONTRACT migration drops the column. */
     @Column(name = "public_key_pem")
     private String publicKeyPem;
 
-    /** Real FIDO2 (WA1+): the serialized {@code AttestedCredentialData} (aaguid + credentialId + COSE
-     *  public key) produced by webauthn4j's {@code AttestedCredentialDataConverter}. Null for legacy rows. */
+    /** The serialized {@code AttestedCredentialData} (aaguid + credentialId + COSE public key) produced
+     *  by webauthn4j's {@code AttestedCredentialDataConverter} — the FIDO2 credential material. */
     @Column(name = "cose_credential")
     private byte[] coseCredential;
 

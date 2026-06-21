@@ -28,9 +28,8 @@ import org.springframework.web.bind.annotation.RestController;
  * </ul>
  *
  * <p>The {@code begin} responses carry the full {@code navigator.credentials} option shape (rp, user,
- * pubKeyCredParams, allowCredentials …) from {@link WebAuthnSettings} for the real FIDO2 frontend
- * (slice WA3), plus the legacy fields the software-authenticator frontend reads — so the response is
- * backward-compatible while {@code app.webauthn.fido2-enabled} is off.
+ * pubKeyCredParams, allowCredentials …) from {@link WebAuthnSettings}, which the frontend feeds
+ * straight to {@code navigator.credentials.create()/get()}.
  *
  * RBAC is not needed here — every operation is intrinsically scoped to the acting user.
  */

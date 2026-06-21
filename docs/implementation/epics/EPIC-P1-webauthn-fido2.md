@@ -85,9 +85,11 @@ counter-regression clone detection; tamper/replay/origin/rpIdHash ITs (webauthn4
 `navigator.credentials`; passkey login wired; full gate green. rpId/origins from `app.webauthn.*`.
 
 ## 6. Status
-WA1 + WA2 + WA3 **built** (this session); WA4 (cleanup) pending. Everything before this (PII-vault,
-#243 A-D/F, FLS 1-3, rate-limit PR1-4, SOC2 matrix) is merged on `main`; WebAuthn is the sole
-remaining Phase-1 build. **FIDO2 is the live path since WA3** (`app.webauthn.fido2-enabled` default on).
+**COMPLETE — WA1 + WA2 + WA3 + WA4 all built, validated and merged this session.** Real FIDO2
+(webauthn4j) is the only passkey path; the legacy signed-nonce backend is removed. This was the sole
+remaining Phase-1 (W1) build, so **Phase 1 / workstream W1 is now complete.** One deferred,
+non-blocking follow-up: a CONTRACT migration to drop the now-unused `webauthn_credentials.public_key_pem`
+column (kept nullable; same EXPAND/CONTRACT discipline as the PII-vault column drop).
 
 ---
 
@@ -242,3 +244,42 @@ baseline-debt warnings); `vitest run` **1733** tests / 233 files pass (incl. `se
 `npm run guardrails` blocking rules pass; full `failsafe:integration-test` green (note appended on
 merge). Live login screenshot skipped — dev port 5173 was held by a peer process; the change is covered
 by lint + the full test suite + build (button is conditional on `PublicKeyCredential`).
+
+---
+
+## 10. Slice WA4 — remove the legacy path + flag — plan & as-built
+
+> Lane: Large/risky (auth). Branch `feat/w1-webauthn-wa4-cleanup` off `origin/main`. Makes FIDO2 the
+> unconditional, only passkey path. Safe to remove the legacy backend now: it was a dependency-free
+> signed-nonce demo, the old passwordless login was dead code, and post-WA3 the live frontend posts
+> FIDO2 fields the legacy path would reject anyway. The real fallback (MFA/password, RB-40 §2) is
+> untouched.
+
+**Scope.** Delete `WebAuthnCrypto` + `WebAuthnCryptoTest`; drop the dual-path routing and the
+`app.webauthn.fido2-enabled` flag; trim the legacy DTO fields; FIDO2 becomes unconditional.
+
+**Analysis (related scopes covered).** Full `git grep` blast-radius first (per the verify-before-act
+discipline): the only non-legacy `WebAuthnCrypto` use was `newChallenge()` in `begin()` — inlined into
+`WebAuthnService` (SecureRandom + base64url). The flag was read only in `WebAuthnService` (two
+branches, now gone) and set only in `WebAuthnSettings`/properties/the ceremony IT. The legacy register
+DTO fields (`credentialId`/`publicKeyPem`/`algorithm`/`signature`) were consumed only by `registerLegacy`.
+The entity's `publicKeyPem` field + column are **kept** (now always null) so an orphaned pre-cutover
+row is recognised and rejected at assertion (`cred.getCoseCredential() == null` guard); dropping the
+column is a deferred CONTRACT migration. No migration in this slice; no frontend change (WA3 already
+posts only FIDO2 fields).
+
+**Files.** Deleted: `WebAuthnCrypto.java`, `WebAuthnCryptoTest.java`. Modified: `WebAuthnService.java`
+(FIDO2-only; inlined `newChallenge`; dropped `WebAuthnSettings` dep), `WebAuthnSettings.java` (drop
+`fido2Enabled`), `application.properties` (drop the flag), `dto/PasskeyRegisterRequest.java`
+(attestation-only, `@NotBlank`), `dto/PasskeyAuthFinishRequest.java` (FIDO2 fields `@NotBlank`),
+`WebAuthnController.java` + `WebAuthnCredential.java` (javadoc), `WebAuthnFido2CeremonyIT.java` (drop
+the flag property + adapt to the trimmed register DTO).
+
+**Acceptance criteria.** No `WebAuthnCrypto` / `fido2-enabled` references remain; registration and
+passwordless login still work via FIDO2; an orphaned legacy credential is rejected; full gate green;
+JaCoCo bundle gate still met after removing the (covered) legacy class.
+
+**Validation (this session, all green).** `./mvnw -Dgroups=unit clean verify` → **1449** unit
+(−6 = the removed legacy test) + Checkstyle 0 + JaCoCo all checks met. `npm run guardrails` blocking
+rules pass. Full `failsafe:integration-test failsafe:verify` (Docker) — `WebAuthnFido2CeremonyIT` 2/2
+and the suite green (note appended on merge).

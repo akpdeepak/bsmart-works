@@ -228,7 +228,11 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   Cap X + Admin Operations Center Cap Y), **17** (Universal Customization Engine Cap R), **18**
   (Mobile + Real-time + Performance Cap S), **19** (Enterprise Security + Compliance Certifications
   Cap T), and the Compliance/Service iterations (7–9).
-- **Flyway high-water mark:** **V117**. (V117 = revoked_tokens — a per-token (jti) blocklist for logout
+- **Flyway high-water mark:** **V118**. (V118 = rate_limit_windows — the shared fixed-window store for
+  distributed rate limiting (W1 rate-limit PR3): an atomic UPSERT counts attempts using the DB clock so
+  the limit holds across horizontally-scaled instances, replacing the per-JVM in-memory counter when
+  app.rate-limit.distributed is on; default off → no behaviour change on merge. Additive, forward-only.)
+  (V117 = revoked_tokens — a per-token (jti) blocklist for logout
   (W1 rate-limit/JWT PR2): /auth/logout and the portal equivalent record the presented token's jti, and
   the auth boundary rejects any blocklisted jti — fine-grained, single-session revocation alongside PR1's
   coarse per-subject cutoff; entries pruned past their token's exp. Additive, forward-only.)
@@ -294,7 +298,7 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   focus factor) for the role-adaptive Sprint Cockpit Capacity tab; the story-points budget is
   derived at read time from sprint working days × team velocity (not stored), so it always reflects
   current velocity/headcount; tenant-scoped via workspace_id + a sprint FK that cascades on delete.
-- **Next migration:** **`V118__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+- **Next migration:** **`V119__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

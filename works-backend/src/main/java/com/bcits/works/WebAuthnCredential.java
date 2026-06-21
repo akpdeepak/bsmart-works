@@ -26,8 +26,28 @@ public class WebAuthnCredential {
     @Column(name = "credential_id")
     private String credentialId;
 
+    /** Legacy signed-nonce credential (V52). Null for real FIDO2 rows, which use {@link #coseCredential}. */
     @Column(name = "public_key_pem")
     private String publicKeyPem;
+
+    /** Real FIDO2 (WA1+): the serialized {@code AttestedCredentialData} (aaguid + credentialId + COSE
+     *  public key) produced by webauthn4j's {@code AttestedCredentialDataConverter}. Null for legacy rows. */
+    @Column(name = "cose_credential")
+    private byte[] coseCredential;
+
+    /** FIDO2 authenticator model id (aaguid, UUID string). Null for legacy rows. */
+    private String aaguid;
+
+    /** FIDO2 attestation statement format (e.g. {@code none}). Null for legacy rows. */
+    private String fmt;
+
+    /** WebAuthn {@code user.id} handle (base64url) bound to this credential. Null for legacy rows. */
+    @Column(name = "user_handle")
+    private String userHandle;
+
+    /** Whether user verification (biometric/PIN) was performed when the credential was registered. */
+    @Column(name = "uv_initialized")
+    private boolean uvInitialized = false;
 
     private String algorithm = "ES256";
 
@@ -54,6 +74,16 @@ public class WebAuthnCredential {
     public void setCredentialId(String credentialId) { this.credentialId = credentialId; }
     public String getPublicKeyPem() { return publicKeyPem; }
     public void setPublicKeyPem(String publicKeyPem) { this.publicKeyPem = publicKeyPem; }
+    public byte[] getCoseCredential() { return coseCredential; }
+    public void setCoseCredential(byte[] coseCredential) { this.coseCredential = coseCredential; }
+    public String getAaguid() { return aaguid; }
+    public void setAaguid(String aaguid) { this.aaguid = aaguid; }
+    public String getFmt() { return fmt; }
+    public void setFmt(String fmt) { this.fmt = fmt; }
+    public String getUserHandle() { return userHandle; }
+    public void setUserHandle(String userHandle) { this.userHandle = userHandle; }
+    public boolean isUvInitialized() { return uvInitialized; }
+    public void setUvInitialized(boolean uvInitialized) { this.uvInitialized = uvInitialized; }
     public String getAlgorithm() { return algorithm; }
     public void setAlgorithm(String algorithm) { this.algorithm = algorithm; }
     public long getSignCount() { return signCount; }

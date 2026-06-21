@@ -228,7 +228,12 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   Cap X + Admin Operations Center Cap Y), **17** (Universal Customization Engine Cap R), **18**
   (Mobile + Real-time + Performance Cap S), **19** (Enterprise Security + Compliance Certifications
   Cap T), and the Compliance/Service iterations (7–9).
-- **Flyway high-water mark:** **V118**. (V118 = rate_limit_windows — the shared fixed-window store for
+- **Flyway high-water mark:** **V119**. (V119 = webauthn_fido2_cose_columns — real WebAuthn/FIDO2
+  (W1, EPIC-P1-webauthn-fido2 Slice WA1): adds nullable cose_credential/aaguid/fmt/user_handle/uv_initialized
+  to webauthn_credentials and relaxes public_key_pem to nullable, so new FIDO2 registrations persist the
+  authenticator's serialized AttestedCredentialData (COSE key) while legacy signed-nonce rows are untouched.
+  Additive, forward-only — no backfill.)
+  (V118 = rate_limit_windows — the shared fixed-window store for
   distributed rate limiting (W1 rate-limit PR3): an atomic UPSERT counts attempts using the DB clock so
   the limit holds across horizontally-scaled instances, replacing the per-JVM in-memory counter when
   app.rate-limit.distributed is on; default off → no behaviour change on merge. Additive, forward-only.)
@@ -298,7 +303,7 @@ these is the one unrecoverable mistake. One sharp question beats one wrong migra
   focus factor) for the role-adaptive Sprint Cockpit Capacity tab; the story-points budget is
   derived at read time from sprint working days × team velocity (not stored), so it always reflects
   current velocity/headcount; tenant-scoped via workspace_id + a sprint FK that cascades on delete.
-- **Next migration:** **`V119__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
+- **Next migration:** **`V120__<description>.sql`**. *(Supersedes every stale lower-numbered reference.)*
 
 ---
 

@@ -341,3 +341,67 @@ Pure application logic over existing tables; no migration. Remove the redaction 
 helpers — behavior returns to exactly today's. Zero data/schema risk. Because production
 `field_visibility`/`role_def` are empty, the enforcement is a no-op on current data, so the change is
 inert (and therefore safe) until rules are authored.
+
+---
+
+# Slice 2 — as-built (2026-06-21) · close the BQL HIDDEN-field inference leak
+
+> Per-item execution block (RB-05 / task-execution loop). Doubles as the PR description. Closes the
+> "BQL field-level filtering" item that Slice 1 deferred (§6, "Explicitly OUT of scope"). No migration.
+
+## S2.0 Scope
+Slice 1 stripped a HIDDEN field's **value** from read responses, but BQL was a side channel: the
+**compile path never consulted field visibility**. A low-tier user could (a) **filter** on a HIDDEN
+custom field and binary-search its value from which rows match (`salary > X` → `id IN (SELECT
+work_item_id FROM work_item_field_value WHERE field_def_id=? AND value > X)` — an inference oracle the
+value-redaction does not close), and (b) **enumerate** HIDDEN fields' names/types via the
+`GET /bql/schema` autocomplete. Slice 2 closes both.
+
+## S2.1 Analysis — verified (independent read + a 4-agent adversarial discovery workflow)
+- The custom-field BQL surface for a **user** is built in exactly one place: `BqlContextFactory.forUser`
+  (`SELECT id, field_key, field_type FROM field_def WHERE workspace_id=?`, no visibility check). Its
+  three callers are the **only** user-facing custom-field BQL entry points: `BqlController` (ad-hoc
+  `/bql` execute + `/bql/schema`), `SavedViewService.runView`, `BqlSubscriptionService`.
+- System/trusted BQL (`BqlContext.trusted` — compliance, the legacy `compile(q,userId)`,
+  `BqlQueryExecutor`) and the 2-arg `BqlContext.forUser` (KPI, Pivot) carry **no custom fields**
+  (`Map.of()`), so they cannot reference a custom field at all — not a leak vector, and correctly
+  unaffected.
+- `BqlCompiler.resolve(alias)` checks `ctx.customField(alias)` first; an alias not in the context falls
+  to `BqlFieldRegistry.resolve`, which **throws `BqlException("Unknown field: …")`**. So removing a
+  HIDDEN field from the context makes it indistinguishable from a non-existent field — fail-closed.
+- `FieldVisibilityService.hiddenFieldIds(workspaceId, tier)` already exists (Slice 1) and is the right
+  resolver. `field_visibility`/`role_def` are empty in prod → **inert until an admin authors rules**
+  (same safe-rollout property as Slice 1; no flag needed — it can only ever hide a field that an
+  explicit HIDDEN rule already covers).
+
+## S2.2 Mechanism (one central guard, whole surface)
+`BqlContextFactory.forUser(userId, workspaceId)`: compute tier once; build the custom-field map; then
+**exclude** any field_def in `fieldVisibility.hiddenFieldIds(workspaceId, tier)`. Because `/bql`,
+`/bql/schema`, saved-views and subscriptions all obtain their context here, the single guard closes
+**both** the filter-inference oracle **and** the schema-enumeration leak across all four entry points.
+
+## S2.3 Files
+- `BqlContextFactory.java` — inject `FieldVisibilityService`; exclude HIDDEN field_defs in `forUser`.
+- `FieldLevelSecurityIT.java` — +2 ITs reusing the existing fixture: `lowTier_cannotFilterOnHidden
+  Field_inBql_inferenceOracleClosed` (context + end-to-end compile) and
+  `bqlSchema_omitsHiddenCustomField_forLowTier_butListsItForHighTier`.
+- This doc.
+
+## S2.4 Acceptance criteria
+- A field with an explicit HIDDEN rule for the caller's tier is **not queryable in BQL** (compiler
+  rejects it as unknown) and **not listed** by `/bql/schema`; a higher tier with no rule keeps both;
+  an un-ruled field is unaffected (no over-restriction). ✔ (IT)
+- System/trusted + KPI/Pivot BQL unaffected (no custom fields). ✔ (BQL regression ITs green)
+- No migration; inert in prod until rules are authored. ✔
+
+## S2.5 Validation (local, 2026-06-21)
+- Unit: `-Dgroups=unit clean verify` → **1406/0**, checkstyle clean, coverage met.
+- Guardrails: blocking rules pass.
+- Integration: `FieldLevelSecurityIT` **13/13** (11 prior + 2 new); regression `BqlWorkspaceScopeIT`
+  6/6, `BqlSubscriptionIT` 4/4, `BqlRunAuditIT` 3/3.
+
+## S2.6 Follow-on
+FLS Slice 3 (resolver unit test, `rbac.require(manage_permissions)` on `setFieldVisibility`,
+`field_visibility(field_def_id)` index) and Slice 4 (seed demo rules / admin UI) remain. The built-in
+"sensitive" tier gate (`BqlContextFactory` `canSeeSensitive`, businessValue at tier≥3) is a separate,
+coarser mechanism, unchanged here.

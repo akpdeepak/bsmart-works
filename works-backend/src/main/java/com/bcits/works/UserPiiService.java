@@ -75,6 +75,19 @@ public class UserPiiService {
         return display(user, PiiVaultService.TYPE_EMAIL, user == null ? null : user.getEmail());
     }
 
+    /**
+     * Resolve a user's display name by id for render-time use (e.g. the activity feed resolving an
+     * assignee/actor id recorded in the immutable events log). Vault value when reads are switched on
+     * (or {@code "[erased]"} after a shred), else the legacy column. Returns {@code null} for a blank id
+     * or an unknown user, so callers can fall back to "System" / the raw id.
+     */
+    public String displayNameById(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return null;
+        }
+        return users.findById(userId).map(this::displayName).orElse(null);
+    }
+
     private String display(User user, String piiType, String legacy) {
         if (user == null) {
             return null;

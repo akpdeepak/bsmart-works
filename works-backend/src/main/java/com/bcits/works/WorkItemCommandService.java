@@ -345,13 +345,11 @@ public class WorkItemCommandService {
                                   java.time.LocalDate oldDueDate, String oldType, Integer oldStoryPoints,
                                   String oldDescription, List<String> oldTags) {
         if (!java.util.Objects.equals(oldAssignee, saved.getAssigneeId())) {
-            String oldName = oldAssignee != null
-                ? userRepository.findById(oldAssignee).map(User::getFullName).orElse(oldAssignee)
-                : "unassigned";
-            String newName = saved.getAssigneeId() != null
-                ? userRepository.findById(saved.getAssigneeId()).map(User::getFullName).orElse(saved.getAssigneeId())
-                : "unassigned";
-            eventService.recordDiff(id, "ASSIGNED", userId, "assignee", oldName, newName);
+            // Record the assignee USER IDs (surrogate, non-PII) — never the full name (RB-40 §3 rule 1:
+            // no raw PII in the append-only events log, which crypto-shred cannot reach). The activity
+            // feed resolves ids -> display names at render via UserPiiService (ActivityController).
+            // Consistent with the AI / automation / bulk assign paths, which already record ids.
+            eventService.recordDiff(id, "ASSIGNED", userId, "assignee", oldAssignee, saved.getAssigneeId());
         }
         if (!java.util.Objects.equals(oldPriority, saved.getPriority())) {
             eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "priority", oldPriority, saved.getPriority());

@@ -83,3 +83,40 @@ all behind the **existing default-off flags** so the merge changes no runtime be
 - Integration suite incl. the new `PiiVaultSlice3IT` against Testcontainers Postgres.
 - Fresh-DB boot with `ddl-auto=validate`.
 - Push → PR → CI green → squash-merge → confirm on `origin/main` (auto-merge authorised).
+
+---
+
+## Slice 4 — split into focused sub-PRs (rest of Slice 4)
+
+Slice 4 spans four distinct concerns; each ships as its own auto-merging PR in dependency order, with
+the guardrail/ArchUnit **BLOCK** last (only after the leak sweep is clean): **4a** assignee event leak →
+**4b** `field_def.pii` routing → **4c** free-text / notifications PII → **4d** guardrails + ArchUnit BLOCK.
+
+### Slice 4a — assignee full-name leak in the immutable events log (no schema)
+
+**Scope.** The highest-severity *stored* PII leak: `WorkItemCommandService.recordFieldDiffs` wrote the
+assignee's **full name** (`User::getFullName`) into the append-only `events.old_value/new_value` on every
+reassignment — PII that **crypto-shred cannot reach** (RB-40 §3 rule 1). Record the assignee **user id**
+instead (a surrogate, non-PII — consistent with the AI / automation / bulk assign paths, which already
+record ids), and resolve ids → display names **at render** via the PII vault.
+
+**Analysis.** Engineering (RB-10): event producer + activity read path. Governance (RB-40 §3): no raw PII
+in the immutable log; render-time resolution through the vault. Holistic: `assignee` is a history-tracked
+BQL alias (`BqlCompiler.HISTORY_FIELDS`) matching `old/new_value` — recording ids makes assignee-history
+**consistent** across all four producers (it was mixed id/name before, a latent bug). The activity feed
+ignored `ASSIGNED` (fell back to "Updated (assigned)"), so there is **no display regression**; adding the
+sentence is a strict improvement. `ActivityController` previously rendered the actor via a raw
+`users.full_name` join — replaced with vault resolution so the feed follows the vault on flip and renders
+`[erased]` after a shred.
+
+**Files.** `WorkItemCommandService` (record id), `UserPiiService` (+`displayNameById`), `ActivityController`
+(resolve actor + assignee ids → names at render, drop the raw join), `works-frontend/src/lib/activity-feed.js`
+(+`ASSIGNED` sentence). Tests: `ActivityControllerAccessTest` (SQL + resolution), `activity-feed.test.js`.
+
+**Acceptance.** No assignee full name is written to `events`; the activity feed shows "Assigned to / Reassigned
+from … to … / Unassigned"; actor + assignee names resolve via the vault (`[erased]` after a shred); BQL
+assignee-history unaffected (now id-consistent). Full unit gate + frontend tests + context boot green.
+
+**Validation.** Backend unit gate (1391 + new resolution test, 0 Checkstyle, coverage met); frontend
+`activity-feed.test.js` (28); context-booting IT confirms DI. No migration. Push → PR → CI green →
+squash-merge → confirm on `origin/main`.

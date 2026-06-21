@@ -34,9 +34,10 @@ class FieldDefControllerAccessTest {
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
     private final FieldVisibilityService fieldVisibility = mock(FieldVisibilityService.class);
+    private final CustomerAttributionPiiService fieldValuePii = mock(CustomerAttributionPiiService.class);
 
     private final FieldDefController controller =
-            new FieldDefController(fieldDefRepo, valueRepo, authenticatedUser, rbac, fieldVisibility);
+            new FieldDefController(fieldDefRepo, valueRepo, authenticatedUser, rbac, fieldVisibility, fieldValuePii);
 
     FieldDefControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

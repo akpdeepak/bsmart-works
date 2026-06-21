@@ -20,6 +20,10 @@ public class WorkItemFieldValue {
     private LocalDate valueDate;
     @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb") private String valueJson;
+    // Opaque vault token for a PII-flagged custom field's text value (RB-40 §3, Slice 4b): the value is
+    // tokenized into the per-subject crypto-shred vault under this per-value token, resolved at render
+    // and "[erased]" after a shred. Null for non-PII fields. Legacy value_text stays till CONTRACT.
+    @Column(name = "subject_token") private String subjectToken;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
@@ -37,6 +41,8 @@ public class WorkItemFieldValue {
     public void setValueDate(LocalDate valueDate) { this.valueDate = valueDate; }
     public String getValueJson() { return valueJson; }
     public void setValueJson(String valueJson) { this.valueJson = valueJson; }
+    public String getSubjectToken() { return subjectToken; }
+    public void setSubjectToken(String subjectToken) { this.subjectToken = subjectToken; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }

@@ -38,12 +38,15 @@ public class PiiVaultBackfillService {
     private final ChatConversationRepository conversations;
     private final CustomerFeedbackRepository feedback;
     private final CustomerAttributionPiiService attributionPii;
+    private final FieldDefRepository fieldDefs;
+    private final WorkItemFieldValueRepository fieldValues;
 
     public PiiVaultBackfillService(UserRepository users, UserPiiService userPii, PiiVaultService vault,
                                    CustomerUserRepository customerUsers, CustomerUserPiiService customerUserPii,
                                    StakeholderRepository stakeholders, StakeholderPiiService stakeholderPii,
                                    ChatConversationRepository conversations, CustomerFeedbackRepository feedback,
-                                   CustomerAttributionPiiService attributionPii) {
+                                   CustomerAttributionPiiService attributionPii,
+                                   FieldDefRepository fieldDefs, WorkItemFieldValueRepository fieldValues) {
         this.users = users;
         this.userPii = userPii;
         this.vault = vault;
@@ -54,6 +57,8 @@ public class PiiVaultBackfillService {
         this.conversations = conversations;
         this.feedback = feedback;
         this.attributionPii = attributionPii;
+        this.fieldDefs = fieldDefs;
+        this.fieldValues = fieldValues;
     }
 
     /** Backfill all internal users lacking a subject token. Returns how many were backfilled. Idempotent. */
@@ -153,13 +158,35 @@ public class PiiVaultBackfillService {
         });
     }
 
+    /** Backfill the text values of PII-flagged custom fields into the vault (RB-40 §3, Slice 4b). */
+    @Transactional
+    public int backfillFieldValues() {
+        return TenantScope.callAsSystem(() -> {
+            int n = 0;
+            for (FieldDef fd : fieldDefs.findByPiiTrue()) {
+                for (WorkItemFieldValue v : fieldValues.findByFieldDefIdAndSubjectTokenIsNull(fd.getId())) {
+                    if (v.getValueText() != null && !v.getValueText().isBlank()) {
+                        v.setSubjectToken(attributionPii.ensureVaulted(fd.getWorkspaceId(), null, v.getValueText()));
+                        fieldValues.save(v);
+                        n++;
+                    }
+                }
+            }
+            if (n > 0) {
+                log.info("[PII-BACKFILL] Tokenized {} PII-flagged custom field value(s)", n);
+            }
+            return n;
+        });
+    }
+
     /** Run every subject population's backfill. Returns the total rows touched. Idempotent. */
     public int backfillAll() {
         int total = backfillUserNames()
                 + backfillCustomerUsers()
                 + backfillStakeholders()
                 + backfillChatCustomerNames()
-                + backfillFeedbackCustomers();
+                + backfillFeedbackCustomers()
+                + backfillFieldValues();
         log.info("[PII-BACKFILL] Backfill complete — {} row(s) tokenized across all subject populations", total);
         return total;
     }

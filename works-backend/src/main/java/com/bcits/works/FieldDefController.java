@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import jakarta.validation.Valid;
 
 @RestController
@@ -29,17 +30,22 @@ public class FieldDefController {
     private final AuthenticatedUser authenticatedUser;
     private final RbacService rbac;
     private final FieldVisibilityService fieldVisibility;
+    // Generic per-record free-text vault tokenizer (shared with chat/feedback denorm copies, RB-40 §3):
+    // tokenizes a PII-flagged custom field's text value under a per-value token and resolves it at render.
+    private final CustomerAttributionPiiService fieldValuePii;
 
     public FieldDefController(FieldDefRepository fieldDefRepo,
                                WorkItemFieldValueRepository valueRepo,
                                AuthenticatedUser authenticatedUser,
                                RbacService rbac,
-                               FieldVisibilityService fieldVisibility) {
+                               FieldVisibilityService fieldVisibility,
+                               CustomerAttributionPiiService fieldValuePii) {
         this.fieldDefRepo = fieldDefRepo;
         this.valueRepo = valueRepo;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
         this.fieldVisibility = fieldVisibility;
+        this.fieldValuePii = fieldValuePii;
     }
 
     @GetMapping
@@ -85,6 +91,7 @@ public class FieldDefController {
             if (updated.getConfig() != null) fd.setConfig(updated.getConfig()); {
             fd.setRequired(updated.getRequired());
             }
+            fd.setPii(updated.getPii());     // PII flag is editable (RB-40 §3, Slice 4b)
             fd.setPosition(updated.getPosition());
             return fieldDefRepo.save(fd);
         }).orElseThrow();
@@ -106,10 +113,33 @@ public class FieldDefController {
         // Field-level security (RB-40 §1, Cap C): filter out HIDDEN fields for the user's role.
         String wsId = rbac.workspaceForWorkItem(workItemId);
         Set<String> hidden = fieldVisibility.resolveForUser(userId, wsId).hiddenFieldDefIds();
-        if (!hidden.isEmpty()) {
-            return values.stream().filter(v -> !hidden.contains(v.getFieldDefId())).toList();
+        List<WorkItemFieldValue> visible = hidden.isEmpty()
+            ? values
+            : values.stream().filter(v -> !hidden.contains(v.getFieldDefId())).toList();
+        resolvePiiValues(visible);
+        return visible;
+    }
+
+    /**
+     * Resolve PII-flagged custom field text values from the vault at render (RB-40 §3, Slice 4b) —
+     * no-op while {@code read-from-vault} is off (the default), {@code "[erased]"} after a crypto-shred.
+     * Mutates the rendered value in place at the controller boundary (outside any transaction), the same
+     * precedent as the entity {@code scrub()} elsewhere, so the resolved value is never flushed back to
+     * the legacy {@code value_text} column.
+     */
+    private void resolvePiiValues(List<WorkItemFieldValue> values) {
+        if (values.isEmpty()) {
+            return;
         }
-        return values;
+        Set<String> defIds = values.stream().map(WorkItemFieldValue::getFieldDefId).collect(Collectors.toSet());
+        Map<String, FieldDef> defs = fieldDefRepo.findAllById(defIds).stream()
+            .collect(Collectors.toMap(FieldDef::getId, fd -> fd));
+        for (WorkItemFieldValue v : values) {
+            FieldDef fd = defs.get(v.getFieldDefId());
+            if (fd != null && Boolean.TRUE.equals(fd.getPii()) && v.getSubjectToken() != null) {
+                v.setValueText(fieldValuePii.resolve(fd.getWorkspaceId(), v.getSubjectToken(), v.getValueText()));
+            }
+        }
     }
 
     @PutMapping("/values/{workItemId}/{fieldDefId}")
@@ -136,10 +166,16 @@ public class FieldDefController {
         if (body.containsKey("valueJson")) fv.setValueJson(body.get("valueJson") != null ? body.get("valueJson").toString() : null); {
         fv.setUpdatedAt(OffsetDateTime.now());
         }
-        // Keep the typed date projection in sync so BQL can range-query DATE custom fields (V82).
+        // Keep the typed date projection in sync so BQL can range-query DATE custom fields (V82),
+        // and tokenize PII-flagged field text values into the vault (RB-40 §3, Slice 4b).
         fieldDefRepo.findById(fieldDefId).ifPresent(fd -> {
             if ("DATE".equalsIgnoreCase(fd.getFieldType())) {
                 fv.setValueDate(parseIsoDate(fv.getValueText()));
+            }
+            if (Boolean.TRUE.equals(fd.getPii())) {
+                // Tokenize the text value under a per-value token; legacy value_text stays authoritative
+                // (dual-write) until the deferred CONTRACT migration drops it.
+                fv.setSubjectToken(fieldValuePii.ensureVaulted(fd.getWorkspaceId(), fv.getSubjectToken(), fv.getValueText()));
             }
         });
         return valueRepo.save(fv);

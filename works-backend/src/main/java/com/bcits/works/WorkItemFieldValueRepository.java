@@ -7,4 +7,7 @@ import java.util.Optional;
 public interface WorkItemFieldValueRepository extends JpaRepository<WorkItemFieldValue, String> {
     List<WorkItemFieldValue> findByWorkItemId(String workItemId);
     Optional<WorkItemFieldValue> findByWorkItemIdAndFieldDefId(String workItemId, String fieldDefId);
+
+    /** Backfill guard (RB-40 §3, Slice 4b): values of a PII-flagged field not yet tokenized. */
+    List<WorkItemFieldValue> findByFieldDefIdAndSubjectTokenIsNull(String fieldDefId);
 }

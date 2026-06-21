@@ -89,9 +89,11 @@ class TenantFilterCoverageTest {
      * introduced and cannot be annotated immediately — and remove it the moment it gains the filter.
      *
      * <p>Transitively-scoped entities (no {@code workspace_id} column of their own — e.g.
-     * {@code WorkItem} via {@code project_id}) are intentionally not covered here: they are not
-     * detected by {@link #hasWorkspaceColumn(Class)} and are scoped via a subquery-condition filter in
-     * a separate slice.
+     * {@code WorkItem} via {@code project_id}) are <b>now</b> covered (Slices B+C): each carries a
+     * subquery-condition {@code @Filter} and is enforced by
+     * {@link #everyEntityIsFilteredOrGloballyAllowListed()} +
+     * {@link #transitiveEntitiesScopeViaSubqueryNotDirectColumn()}, even though
+     * {@link #hasWorkspaceColumn(Class)} cannot see their parent-FK scoping.
      */
     static final Set<String> PENDING_FILTER = Set.of();
 
@@ -170,6 +172,60 @@ class TenantFilterCoverageTest {
         assertThat(PENDING_FILTER).doesNotContain("Project");
     }
 
+    /**
+     * The complete closure (Slices B+C): <b>every</b> {@code @Entity} — whether it scopes directly via a
+     * {@code workspace_id} column or transitively via a subquery condition — must carry the central
+     * {@code @Filter} or be explicitly {@link #GLOBAL_BY_DESIGN}. This subsumes
+     * {@link #everyWorkspaceScopedEntityIsFilteredOrExplicitlyAllowListed()} and additionally catches
+     * the transitive entities (no {@code workspace_id} column of their own) that the column detector
+     * cannot see — so a new tenant-scoped child table cannot be added without either a filter or a
+     * reviewed global-by-design decision.
+     */
+    @Test
+    void everyEntityIsFilteredOrGloballyAllowListed() {
+        Set<String> unaccounted = new TreeSet<>();
+        for (Class<?> entity : entityClasses) {
+            String name = entity.getSimpleName();
+            if (isFiltered(entity) || GLOBAL_BY_DESIGN.contains(name) || PENDING_FILTER.contains(name)) {
+                continue;
+            }
+            unaccounted.add(name);
+        }
+        assertThat(unaccounted)
+                .as("Every @Entity must apply @Filter(name=\"%s\") — directly (workspace_id = :workspaceId) "
+                        + "or transitively (a SELECT ... :workspaceId subquery on a parent FK) — or be on "
+                        + "GLOBAL_BY_DESIGN with rationale. These are unaccounted and cross-tenant-leak-"
+                        + "capable once the binding flag is enabled.", WorkspaceFilterActivator.FILTER_NAME)
+                .isEmpty();
+    }
+
+    /**
+     * A transitive entity (no {@code workspace_id} column) must scope through a {@code SELECT ... :workspaceId}
+     * subquery — a bare {@code workspace_id = :workspaceId} condition would reference a non-existent column
+     * and fail at query time the moment the filter is enabled. This pins the subquery shape established in
+     * Slices B+C.
+     */
+    @Test
+    void transitiveEntitiesScopeViaSubqueryNotDirectColumn() {
+        Set<String> wrong = new TreeSet<>();
+        for (Class<?> entity : entityClasses) {
+            if (!isFiltered(entity) || hasWorkspaceColumn(entity)) {
+                continue; // only filtered entities WITHOUT their own workspace_id column
+            }
+            String cond = filterCondition(entity);
+            boolean ok = cond != null
+                    && cond.toLowerCase().contains("select")
+                    && cond.contains(":workspaceId");
+            if (!ok) {
+                wrong.add(entity.getSimpleName() + " -> " + cond);
+            }
+        }
+        assertThat(wrong)
+                .as("transitive (no workspace_id column) entities must scope via a SELECT ... :workspaceId "
+                        + "subquery in @Filter.condition; a bare workspace_id predicate would fail at runtime")
+                .isEmpty();
+    }
+
     /** True iff the entity (or a superclass) maps a field to the column named exactly {@code workspace_id}. */
     private static boolean hasWorkspaceColumn(Class<?> entity) {
         for (Class<?> c = entity; c != null && c != Object.class; c = c.getSuperclass()) {
@@ -190,12 +246,17 @@ class TenantFilterCoverageTest {
 
     /** True iff the entity applies the central {@code workspaceFilter} via {@code @Filter}. */
     private static boolean isFiltered(Class<?> entity) {
+        return filterCondition(entity) != null;
+    }
+
+    /** The central {@code workspaceFilter} condition string for the entity (or a superclass), else null. */
+    private static String filterCondition(Class<?> entity) {
         for (Class<?> c = entity; c != null && c != Object.class; c = c.getSuperclass()) {
             Filter filter = c.getAnnotation(Filter.class);
             if (filter != null && WorkspaceFilterActivator.FILTER_NAME.equals(filter.name())) {
-                return true;
+                return filter.condition();
             }
         }
-        return false;
+        return null;
     }
 }

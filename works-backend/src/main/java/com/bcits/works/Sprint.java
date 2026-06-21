@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import org.hibernate.annotations.Filter;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -10,6 +12,8 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "sprints")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME,
+        condition = "project_id IN (SELECT p.id FROM projects p WHERE p.workspace_id = :workspaceId)")
 public class Sprint {
     @Id private String id;
     private String projectId;

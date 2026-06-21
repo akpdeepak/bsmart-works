@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import org.hibernate.annotations.Filter;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -12,6 +14,8 @@ import org.hibernate.annotations.ColumnTransformer;
 
 @Entity
 @Table(name = "dashboard_widgets")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME,
+        condition = "dashboard_id IN (SELECT d.id FROM dashboards d WHERE d.workspace_id = :workspaceId)")
 public class DashboardWidget {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

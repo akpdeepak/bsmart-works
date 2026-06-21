@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import org.hibernate.annotations.Filter;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -10,6 +12,9 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "work_item_links")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME,
+        condition = "source_id IN (SELECT wi.id FROM work_items wi JOIN projects p ON wi.project_id = p.id WHERE p.workspace_id = "
+                + ":workspaceId)")
 public class WorkItemLink {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

@@ -171,3 +171,79 @@ Slice B/C transitive `@Filter` (incl. `work_items`); Slice D `findById`/PK gap; 
 NOT remove the membership-join predicates that isolate the multi-workspace paths** (only the redundant
 single-workspace predicates the filter fully covers). Slice F doc reconciliation (CLAUDE.md §4 / RB-40 §1
 still say "#243 TO BE ADDED").
+
+---
+
+# Slices B + C — as-built (2026-06-21) · transitive `@Filter` coverage (combined)
+
+> Per-item execution block (RB-05). Doubles as the PR description. **No migration** (app-level `@Filter`
+> over existing FK columns). **Inert on merge** — like Slice A, the filter only activates when a
+> workspace is bound, which today is only the always-on `ProjectService.bind()` plus the default-off
+> Slice A flag; so these annotations change no behaviour until the binding flag is flipped.
+
+## BC.0 Scope & why combined
+Apply the central `workspaceFilter` as a **subquery-condition** `@Filter` to the **22 transitive**
+tenant-scoped entities that have **no `workspace_id` column of their own** (scoped via a parent FK).
+This closes the under-filtering gap Slice A flagged: 114/146 entities were already filtered directly;
+the 22 transitive ones (incl. the hottest, `work_items`) were unfiltered, so flipping the binding flag
+would have left them isolated only by per-query predicates. B (knowledge/collab, 7) and C (delivery, 15)
+were combined into **one PR** because the coverage test enforces transitive scoping **all-or-nothing**
+(splitting would force churny `PENDING_FILTER` bookkeeping for the not-yet-done group).
+
+## BC.1 Entities (22) and the condition shapes
+- **1-hop** (`child.parent_id → parent.workspace_id`): `WorkItem`, `Sprint`, `Release` (via `projects`);
+  `Article` (via `knowledge_spaces`); `MeetingNote` (via `meeting`); `DashboardWidget` (via `dashboards`);
+  `ReportSchedule` (via `reports`); `WorkflowStatus`, `WorkflowTransition` (via `workflow`);
+  `StandupEntry` (via `standup_sessions`); `RetroNote` (via `retro_sessions`); `DodChecklistItem`
+  (via `dod_checklists`); `PullRequestReviewer` (via `pull_requests`); `FieldVisibility` (via `field_def`).
+- **2-hop** (`child → work_item/article → project/space → workspace`): `Comment`, `WorkItemFieldValue`,
+  `WorkLog`, `DodChecklistState` (via `work_items` JOIN `projects`); `ArticleVersion`, `ArticleComment`
+  (via `articles` JOIN `knowledge_spaces`); `WorkItemLink` (via `source_id` → `work_items` JOIN `projects`).
+- **OR / nullable** (cross-project by design): `CrossProjectDependency` — scoped on **either** nullable
+  endpoint: `(from_project_id IN (…ws…) OR to_project_id IN (…ws…))`, so a same-tenant row matches via
+  whichever endpoint is set and a foreign-tenant row matches neither (hidden).
+
+All 35 referenced table/column names were verified against the actual Flyway DDL before writing.
+
+## BC.2 Decisions flagged (proceed-and-flag per W1 plan §3; reversible, inert on merge)
+- **`WorkItemLink`** scopes on `source_id` only — a link is intra-tenant by design (both ends share a
+  workspace), so the source endpoint isolates; adding `AND target_id IN (…)` is redundant defence-in-depth
+  not taken (keeps the link-read subquery single).
+- **`CrossProjectDependency`** OR-condition handles the deliberate cross-project + nullable shape; both
+  OR branches are proven in the IT (A anchored via `from_`, B via `to_`).
+- **2-hop hot tables** (`Comment`/`WorkItemFieldValue`/`WorkLog`) run a JOIN subquery per read **only when
+  the filter is active**; `work_items.project_id` is indexed (V8 + V58 composite) so the subquery is
+  cheap. A future optimisation — denormalising `workspace_id` onto these hot children (the
+  `OnboardingPlaybookStep` pattern) to move them to the direct-filter slice — is noted, not done.
+
+## BC.3 Structural guarantee (the durable part)
+`TenantFilterCoverageTest` extended from "every entity **with a workspace_id column** is filtered/allow-
+listed" to the **complete closure**: `everyEntityIsFilteredOrGloballyAllowListed()` asserts **every**
+`@Entity` is filtered or on the 10-entry `GLOBAL_BY_DESIGN` list, and
+`transitiveEntitiesScopeViaSubqueryNotDirectColumn()` asserts each transitive entity uses a
+`SELECT … :workspaceId` subquery (a bare `workspace_id = :workspaceId` would reference a missing column
+and fail at runtime). So a future tenant-scoped child table cannot be added without a filter or a reviewed
+global decision — the guarantee is a test, not vigilance.
+
+## BC.4 Files
+- 22 entities — `import org.hibernate.annotations.Filter;` + the subquery `@Filter`.
+- `TenantFilterCoverageTest.java` — comprehensive-closure + transitive-subquery tests + `filterCondition()` helper.
+- `CrossTenantFilterIsolationIT.java` — `transitiveEntities_areIsolated_bySubqueryFilter` (1-hop `WorkItem`,
+  2-hop `Comment`, OR/nullable `CrossProjectDependency` both branches) + seed/teardown for the children.
+
+## BC.5 Acceptance criteria
+- Every `@Entity` is filtered or `GLOBAL_BY_DESIGN`; transitive ones use subquery conditions. ✔ (coverage test 6/6)
+- The transitive subquery filters isolate cross-tenant via the filter alone (predicate-free `findAll`). ✔ (IT)
+- No schema change; inert on merge (filter dormant until a workspace is bound; flag still default-off). ✔
+- Full unit + checkstyle + (full) integration green; no over-filtering regression. ✔ (see BC.6)
+
+## BC.6 Validation (local, 2026-06-21)
+- Unit: `-Dgroups=unit clean verify` → **1420 tests, 0 failures**, checkstyle 0, coverage met (incl.
+  `TenantFilterCoverageTest` 6/6).
+- Integration (Docker): **full** failsafe suite green — the comprehensive over-filtering check — incl.
+  `CrossTenantFilterIsolationIT` (transitive isolation), `RbacBindingTenantFilterIT` (flag-on binding),
+  `WorkspaceFilterScopeIT`, `WorkspaceTenantIsolationIT`.
+
+## BC.7 Follow-on
+Slice D (`findById`/PK-load gap + ArchUnit guard) next. Slice E (CONTRACT predicate removal) deferred by
+Deepak (2026-06-21) until the binding flag has soaked in a live env. Slice F doc reconciliation pending.

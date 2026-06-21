@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import org.hibernate.annotations.Filter;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -7,6 +9,8 @@ import java.math.BigDecimal;
 
 @Entity
 @Table(name = "workflow_status")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME,
+        condition = "workflow_id IN (SELECT w.id FROM workflow w WHERE w.workspace_id = :workspaceId)")
 public class WorkflowStatus {
     @Id private String id;
     private String workflowId;

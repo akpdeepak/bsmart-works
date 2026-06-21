@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import org.hibernate.annotations.Filter;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -13,6 +15,8 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "retro_notes")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME,
+        condition = "session_id IN (SELECT s.id FROM retro_sessions s WHERE s.workspace_id = :workspaceId)")
 public class RetroNote {
     @Id private String id;
     @NotBlank private String sessionId;

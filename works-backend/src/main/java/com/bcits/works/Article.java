@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import org.hibernate.annotations.Filter;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -12,6 +14,8 @@ import org.hibernate.annotations.ColumnTransformer;
 
 @Entity
 @Table(name = "articles")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME,
+        condition = "space_id IN (SELECT ks.id FROM knowledge_spaces ks WHERE ks.workspace_id = :workspaceId)")
 public class Article {
     @Id private String id;
     private String spaceId;

@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import org.hibernate.annotations.Filter;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -10,6 +12,8 @@ import jakarta.persistence.Table;
 /** One line in a Definition-of-Done checklist (Cap U). Required items gate resolution. */
 @Entity
 @Table(name = "dod_checklist_items")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME,
+        condition = "checklist_id IN (SELECT c.id FROM dod_checklists c WHERE c.workspace_id = :workspaceId)")
 public class DodChecklistItem {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

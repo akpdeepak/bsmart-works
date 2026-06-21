@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import org.hibernate.annotations.Filter;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -8,6 +10,8 @@ import org.hibernate.annotations.ColumnTransformer;
 
 @Entity
 @Table(name = "workflow_transition")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME,
+        condition = "workflow_id IN (SELECT w.id FROM workflow w WHERE w.workspace_id = :workspaceId)")
 public class WorkflowTransition {
     @Id private String id;
     private String workflowId;

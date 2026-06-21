@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import org.hibernate.annotations.Filter;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -13,6 +15,8 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "standup_entries")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME,
+        condition = "session_id IN (SELECT s.id FROM standup_sessions s WHERE s.workspace_id = :workspaceId)")
 public class StandupEntry {
     @Id private String id;
     private String sessionId;

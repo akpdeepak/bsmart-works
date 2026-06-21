@@ -1,11 +1,15 @@
 package com.bcits.works;
 
+import org.hibernate.annotations.Filter;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "field_visibility")
+@Filter(name = WorkspaceFilterActivator.FILTER_NAME,
+        condition = "field_def_id IN (SELECT fd.id FROM field_def fd WHERE fd.workspace_id = :workspaceId)")
 public class FieldVisibility {
     @Id private String id;
     private String fieldDefId;

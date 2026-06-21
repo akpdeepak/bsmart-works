@@ -136,6 +136,13 @@ public class WorkflowController {
 
     @GetMapping("/{id}/statuses")
     public List<WorkflowStatus> getStatuses(@PathVariable String id) {
+        // findById bypasses @Filter (#243 Slice D) — re-check access to the parent workflow,
+        // mirroring get(). (null workspaceId = global/template workflow; see A.7 / Slice D notes.)
+        Workflow wf = workflowRepo.findById(id).orElseThrow(() -> ApiException.notFound("Workflow", id));
+        String wsId = wf.getWorkspaceId();
+        if (wsId != null && rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
+            throw ApiException.notFound("Workflow", id);
+        }
         return statusRepo.findByWorkflowIdOrderByPosition(id);
     }
 

@@ -147,6 +147,8 @@ public class CustomDashboardController {
     @PostMapping("/{id}/widgets")
     public DashboardWidget addWidget(@PathVariable String id, @Valid @RequestBody DashboardWidget widget) {
         Dashboard d = dashboardRepository.findById(id).orElseThrow();
+        // @Filter does not apply to findById (#243 Slice D) — re-check the dashboard's workspace.
+        rbac.require(authenticatedUser.id(), d.getWorkspaceId(), "view_items");
         widget.setId(null);
         widget.setDashboardId(id);
         widget.setCreatedAt(OffsetDateTime.now());
@@ -161,7 +163,12 @@ public class CustomDashboardController {
     public DashboardWidget updateWidget(@PathVariable String id, @PathVariable Long widgetId,
                                         @Valid @RequestBody DashboardWidget updated) {
         Dashboard d = dashboardRepository.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), d.getWorkspaceId(), "view_items");
         DashboardWidget w = widgetRepository.findById(widgetId).orElseThrow();
+        // The widget must belong to this dashboard (findById bypasses @Filter — #243 Slice D).
+        if (!id.equals(w.getDashboardId())) {
+            throw ApiException.notFound("DashboardWidget", String.valueOf(widgetId));
+        }
         if (updated.getTitle() != null) w.setTitle(updated.getTitle());
         if (updated.getConfig() != null) w.setConfig(updated.getConfig());
         if (updated.getWidgetType() != null) w.setWidgetType(updated.getWidgetType()); {
@@ -178,6 +185,14 @@ public class CustomDashboardController {
 
     @DeleteMapping("/{id}/widgets/{widgetId}")
     public ResponseEntity<Void> deleteWidget(@PathVariable String id, @PathVariable Long widgetId) {
+        Dashboard d = dashboardRepository.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), d.getWorkspaceId(), "view_items");
+        // The widget must belong to this dashboard before we delete it (findById bypasses @Filter).
+        DashboardWidget w = widgetRepository.findById(widgetId)
+                .orElseThrow(() -> ApiException.notFound("DashboardWidget", String.valueOf(widgetId)));
+        if (!id.equals(w.getDashboardId())) {
+            throw ApiException.notFound("DashboardWidget", String.valueOf(widgetId));
+        }
         widgetRepository.deleteById(widgetId);
         return ResponseEntity.noContent().build();
     }
@@ -187,9 +202,11 @@ public class CustomDashboardController {
     public List<DashboardWidget> saveLayout(@PathVariable String id,
                                             @RequestBody List<Map<String, Object>> items) {
         Dashboard d = dashboardRepository.findById(id).orElseThrow();
+        rbac.require(authenticatedUser.id(), d.getWorkspaceId(), "view_items");
         for (Map<String, Object> item : items) {
             Long widgetId = ((Number) item.get("id")).longValue();
-            widgetRepository.findById(widgetId).ifPresent(w -> {
+            // Only relayout widgets that belong to this (authorized) dashboard.
+            widgetRepository.findById(widgetId).filter(w -> id.equals(w.getDashboardId())).ifPresent(w -> {
                 w.setGridX(asInt(item.get("gridX")));
                 w.setGridY(asInt(item.get("gridY")));
                 w.setGridW(asInt(item.get("gridW")));

@@ -19,10 +19,13 @@ public class SavedFilterController {
 
     private final SavedFilterRepository repository;
     private final AuthenticatedUser authenticatedUser;
+    private final RbacService rbac;
 
-    public SavedFilterController(SavedFilterRepository repository, AuthenticatedUser authenticatedUser) {
+    public SavedFilterController(SavedFilterRepository repository, AuthenticatedUser authenticatedUser,
+                                 RbacService rbac) {
         this.repository = repository;
         this.authenticatedUser = authenticatedUser;
+        this.rbac = rbac;
     }
 
     @GetMapping
@@ -43,14 +46,19 @@ public class SavedFilterController {
 
     @PutMapping("/{id}/share")
     public SavedFilter toggleShare(@PathVariable Long id) {
-        return repository.findById(id).map(f -> {
-            f.setShared(!Boolean.TRUE.equals(f.isShared()));
-            return repository.save(f);
-        }).orElseThrow();
+        // findById bypasses @Filter (#243 Slice D) — re-check membership of the filter's workspace.
+        SavedFilter f = repository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("SavedFilter", String.valueOf(id)));
+        rbac.require(authenticatedUser.id(), f.getWorkspaceId(), "view_items");
+        f.setShared(!Boolean.TRUE.equals(f.isShared()));
+        return repository.save(f);
     }
 
     @DeleteMapping("/{id}")
     public void deleteFilter(@PathVariable Long id) {
+        SavedFilter f = repository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("SavedFilter", String.valueOf(id)));
+        rbac.require(authenticatedUser.id(), f.getWorkspaceId(), "view_items");
         repository.deleteById(id);
     }
 }

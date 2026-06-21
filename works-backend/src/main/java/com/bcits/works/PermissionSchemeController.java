@@ -82,6 +82,8 @@ public class PermissionSchemeController {
 
     @PostMapping
     public PermissionScheme create(@Valid @RequestBody PermissionScheme scheme) {
+        // Authorize against the target workspace from the body (RB-40 §1, #243 Slice D).
+        rbac.require(authenticatedUser.id(), scheme.getWorkspaceId(), "manage_permissions");
         scheme.setId("PS-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         scheme.setCreatedAt(OffsetDateTime.now());
         return schemeRepo.save(scheme);
@@ -100,6 +102,10 @@ public class PermissionSchemeController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
+        // findById bypasses @Filter (#243 Slice D) — re-check the scheme's workspace before deleting.
+        PermissionScheme existing = schemeRepo.findById(id)
+                .orElseThrow(() -> ApiException.notFound("PermissionScheme", id));
+        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "manage_permissions");
         schemeRepo.deleteById(id);
         return ResponseEntity.noContent().build();
     }
@@ -117,6 +123,7 @@ public class PermissionSchemeController {
 
     @PostMapping("/roles")
     public RoleDef createRole(@Valid @RequestBody RoleDef role) {
+        rbac.require(authenticatedUser.id(), role.getWorkspaceId(), "manage_permissions");
         role.setId("ROLE-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         role.setCreatedAt(OffsetDateTime.now());
         return roleDefRepo.save(role);

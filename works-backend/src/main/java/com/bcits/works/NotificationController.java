@@ -19,10 +19,13 @@ public class NotificationController {
 
     private final NotificationRepository notificationRepository;
     private final AuthenticatedUser authenticatedUser;
+    private final UserPiiService userPii;
 
-    public NotificationController(NotificationRepository notificationRepository, AuthenticatedUser authenticatedUser) {
+    public NotificationController(NotificationRepository notificationRepository, AuthenticatedUser authenticatedUser,
+                                 UserPiiService userPii) {
         this.notificationRepository = notificationRepository;
         this.authenticatedUser = authenticatedUser;
+        this.userPii = userPii;
     }
 
     @GetMapping
@@ -34,7 +37,24 @@ public class NotificationController {
         // Clamp size to avoid runaway queries (RB-10 §4: always paginate list endpoints).
         int safeSize = Math.min(size, 200);
         Pageable pageable = PageRequest.of(page, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return notificationRepository.findByUserId(uid, pageable);
+        List<Notification> result = notificationRepository.findByUserId(uid, pageable);
+        result.forEach(this::resolveActor);
+        return result;
+    }
+
+    /**
+     * Resolve the actor's display name from the PII vault and prepend it to a name-free message
+     * (RB-40 §3, Slice 4c). Mutates the rendered message in place at the controller boundary (outside
+     * any transaction, the scrub() precedent) so the resolved name is never flushed back to the stored
+     * name-free message. No-op for system notifications / pre-V114 rows (actor_id null), whose message
+     * already reads correctly.
+     */
+    private void resolveActor(Notification n) {
+        if (n == null || n.getActorId() == null || n.getActorId().isBlank()) {
+            return;
+        }
+        String name = userPii.displayNameById(n.getActorId());
+        n.setMessage((name != null ? name : "Someone") + " " + n.getMessage());
     }
 
     @GetMapping("/unread-count")

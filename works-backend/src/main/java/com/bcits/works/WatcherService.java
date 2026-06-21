@@ -55,13 +55,19 @@ public class WatcherService {
     /**
      * Fan out an in-app notification to every watcher of the item, except the ids in {@code exclude}
      * (typically the actor and anyone already notified for this change, to avoid duplicates).
+     *
+     * @param actorId the user who triggered the change (stored as an opaque reference, never a name —
+     *                RB-40 §3); {@code message} must be NAME-FREE (e.g. "updated WRK-1 - title"), and
+     *                the actor's display name is resolved at render. Pass {@code null} for a
+     *                system-originated notification (no actor name is prepended).
      */
-    public void notifyWatchers(String workItemId, String message, Collection<String> exclude) {
+    public void notifyWatchers(String workItemId, String actorId, String message, Collection<String> exclude) {
         Set<String> skip = exclude == null ? Set.of() : Set.copyOf(exclude);
         for (String uid : watchers(workItemId)) {
             if (skip.contains(uid)) continue;
             Notification n = new Notification();
             n.setUserId(uid);
+            n.setActorId(actorId);
             n.setType("WATCH");
             n.setMessage(message);
             n.setLink("/items/" + workItemId);

@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -20,8 +21,16 @@ public class Notification {
     private boolean isRead;
     private OffsetDateTime createdAt;
 
+    // Opaque actor reference (the user who triggered this notification) — a surrogate id, never a name
+    // (RB-40 §3, Slice 4c). When set, the message is stored name-free and the actor's display name is
+    // resolved at render via the PII vault. Null for system notifications and pre-V114 rows.
+    @Column(name = "actor_id")
+    private String actorId;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    public String getActorId() { return actorId; }
+    public void setActorId(String actorId) { this.actorId = actorId; }
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
     public String getType() { return type; }

@@ -1,0 +1,16 @@
+-- W1 Phase-1 / Field-Level Security Slice 3 — index the field_visibility -> role_def foreign key.
+--
+-- The hot read-redaction path (FieldVisibilityService.hiddenFieldIds / readOnlyFieldIds, run once per
+-- distinct workspace on every work-item list/detail/search response) resolves rules with:
+--     SELECT fv.field_def_id FROM field_visibility fv
+--     JOIN role_def rd ON rd.id = fv.role_def_id
+--     WHERE rd.workspace_id = ? AND rd.tier = ? AND fv.visibility = ?
+-- and the write resolver joins the same way. Both correlate field_visibility on role_def_id, but the
+-- only existing index on field_visibility is the UNIQUE(field_def_id, role_def_id) constraint — whose
+-- LEADING column is field_def_id, so it does NOT serve a role_def_id lookup. (field_def_id lookups,
+-- e.g. findByFieldDefId, are already covered by that same composite index, so a field_def_id index
+-- would be redundant.) This indexes the genuinely-uncovered foreign key (RB-10 §3: "index every
+-- foreign key"), accelerating the join and the ON DELETE CASCADE from role_def.
+--
+-- Forward-only, additive, reversible by DROP INDEX. No data change.
+CREATE INDEX IF NOT EXISTS idx_field_visibility_role_def ON field_visibility(role_def_id);

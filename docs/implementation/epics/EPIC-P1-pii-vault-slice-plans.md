@@ -120,3 +120,31 @@ assignee-history unaffected (now id-consistent). Full unit gate + frontend tests
 **Validation.** Backend unit gate (1391 + new resolution test, 0 Checkstyle, coverage met); frontend
 `activity-feed.test.js` (28); context-booting IT confirms DI. No migration. Push → PR → CI green →
 squash-merge → confirm on `origin/main`.
+
+### Slice 4b — tenant-declared PII custom fields (field_def.pii → vault)
+
+**Scope.** Static inventory can't cover tenant-*defined* field semantics, so a workspace can flag a
+custom field as PII (`field_def.pii`); the field's **text** values are tokenized into the per-subject
+crypto-shred vault instead of living in plaintext on `work_item_field_value` (RB-40 §3, EPIC §9 / §5.2 #11).
+
+**Analysis.** Engineering (RB-10): expand-only Flyway **V113** (`field_def.pii` default false +
+`work_item_field_value.subject_token`); reuse the generic per-record free-text tokenizer
+(`CustomerAttributionPiiService`, shared with the chat/feedback denorm copies — no duplication, no
+churn to merged code). Governance (RB-40 §3): value tokenized under a per-value token addressed by the
+field's `workspaceId`; resolved at the controller boundary; `[erased]` after a shred. Dual-write: legacy
+`value_text` stays authoritative until the deferred CONTRACT. Default-off read switch → no behaviour
+change on merge. The `pii` flag is per-field config, editable via the existing field-def update.
+
+**Files.** `V113__pii_vault_field_def_pii_flag.sql`; `FieldDef` (+`pii`), `WorkItemFieldValue`
+(+`subjectToken`); `FieldDefController` (vault on `setValue`, resolve on `getValues`, propagate `pii`
+on update); `FieldDefRepository` (+`findByPiiTrue`), `WorkItemFieldValueRepository`
+(+`findByFieldDefIdAndSubjectTokenIsNull`); `PiiVaultBackfillService` (+`backfillFieldValues`). Tests:
+`FieldDefControllerPiiTest`, updated `FieldDefControllerAccessTest` + `PiiVaultBackfillServiceTest`.
+
+**Acceptance.** Setting a PII-flagged field's value tokenizes it (subject_token set, ciphertext at rest);
+`getValues` resolves it from the vault when reads are on (`[erased]` after a shred), legacy column when
+off; non-PII fields unchanged; backfill tokenizes existing PII values idempotently. ai-rules §6 → V113.
+
+**Validation.** Unit gate (1394, 0 Checkstyle, coverage met) incl. `FieldDefControllerPiiTest`;
+`FlywayMigrationIntegrationTest` (V113 applies) + context boot (`ddl-auto=validate`) confirm schema↔entity;
+guardrails + ai-rules `--check` green. Push → PR → CI green → squash-merge → confirm on `origin/main`.

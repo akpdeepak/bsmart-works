@@ -24,6 +24,9 @@ public class FieldDef {
     @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb") private String config = "{}";
     private Boolean required = false;
+    // Tenant-declared PII flag (RB-40 §3, Slice 4b): when true, this field's text values are tokenized
+    // into the per-subject crypto-shred vault instead of stored in plaintext on work_item_field_value.
+    private Boolean pii = false;
     private Integer position = 0;
     private OffsetDateTime createdAt;
 
@@ -43,6 +46,8 @@ public class FieldDef {
     public void setConfig(String config) { this.config = config; }
     public Boolean getRequired() { return required; }
     public void setRequired(Boolean required) { this.required = required; }
+    public Boolean getPii() { return pii; }
+    public void setPii(Boolean pii) { this.pii = pii; }
     public Integer getPosition() { return position; }
     public void setPosition(Integer position) { this.position = position; }
     public String getDescription() { return description; }

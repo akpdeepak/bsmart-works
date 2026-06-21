@@ -58,6 +58,7 @@ class PiiVaultBackfillServiceTest {
             mock(CustomerUserRepository.class), mock(CustomerUserPiiService.class),
             mock(StakeholderRepository.class), mock(StakeholderPiiService.class),
             mock(ChatConversationRepository.class), mock(CustomerFeedbackRepository.class),
-            mock(CustomerAttributionPiiService.class));
+            mock(CustomerAttributionPiiService.class),
+            mock(FieldDefRepository.class), mock(WorkItemFieldValueRepository.class));
     }
 }

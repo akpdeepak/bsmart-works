@@ -30,16 +30,27 @@
 		<java.version>21</java.version>
 		<jjwt.version>0.13.0</jjwt.version>
 		<testcontainers.version>2.0.5</testcontainers.version>
+		<!-- AWS SDK v2 for the real KMS / BYOK key provider (RB-40 §3/§4, EPIC-P1-pii-vault Slice 5).
+		     The BOM aligns the kms client + its transitive AWS modules. -->
+		<awssdk.version>2.29.0</awssdk.version>
 	</properties>
 
-	<!-- The Spring Boot 4.0 parent does not manage the raw org.testcontainers:* artifact versions,
-	     so import the Testcontainers BOM to align postgresql + junit-jupiter (test-only). -->
+	<!-- The Spring Boot 4.0 parent does not manage the raw org.testcontainers:* / AWS SDK artifact
+	     versions, so import their BOMs to align postgresql + junit-jupiter + localstack (test-only)
+	     and the AWS KMS client (RB-40 §3/§4). -->
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
 				<groupId>org.testcontainers</groupId>
 				<artifactId>testcontainers-bom</artifactId>
 				<version>${testcontainers.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>software.amazon.awssdk</groupId>
+				<artifactId>bom</artifactId>
+				<version>${awssdk.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -89,6 +100,14 @@
 			<artifactId>jjwt-jackson</artifactId>
 			<version>${jjwt.version}</version>
 			<scope>runtime</scope>
+		</dependency>
+
+		<!-- AWS KMS (BYOK) — real key-management provider for the PII vault (RB-40 §3/§4, Slice 5).
+		     Activated only when AWS credentials are configured (AwsKmsProvider @ConditionalOnProperty);
+		     LocalKmsProvider remains the dev/test default. Version managed by the AWS SDK BOM. -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>kms</artifactId>
 		</dependency>
 
 		<!-- TOTP / MFA -->
@@ -156,6 +175,13 @@
 		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>testcontainers-junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- LocalStack: a local AWS KMS for non-prod validation of the real AwsKmsProvider code path
+		     (RB-40 §3/§4, Slice 5) — no real AWS account needed. Used only by PiiVaultKmsLocalStackIT. -->
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-localstack</artifactId>
 			<scope>test</scope>
 		</dependency>
 

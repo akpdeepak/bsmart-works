@@ -206,7 +206,40 @@ the read endpoint renders "{name} updated …" / "{name} mentioned you …", "[e
 **Validation.** Unit gate (1397, 0 Checkstyle, coverage met); `FlywayMigrationIntegrationTest` (V114
 applies) + context boot (`ddl-auto=validate`); guardrails + ai-rules `--check` green. ai-rules §6 → V114.
 
-> **Remaining:** Slice 5 (real AWS KMS / BYOK — non-prod-validatable via LocalStack, all prod/non-prod
-> config centralised + documented). CONTRACT (dropping legacy plaintext columns) stays deferred per
-> EPIC §3/§12. Notification-message *full* templating beyond actor-name (none currently needed) and a
-> DSR sweep of mutable notification rows for an erased subject are noted residuals (mutable surface).
+> Notification-message *full* templating beyond actor-name (none currently needed) and a DSR sweep of
+> mutable notification rows for an erased subject are noted residuals (mutable surface).
+
+### Slice 5 — real AWS KMS / BYOK (non-prod-validatable, config centralized + documented)
+
+**Scope.** Replace the throwing `AwsKmsProvider` stub (TD-022) with a real AWS SDK v2 KMS provider so
+production can custody per-workspace KEKs in KMS (BYOK), while keeping `LocalKmsProvider` the dev/test
+default. Validate the real code path **non-prod against LocalStack** (Deepak does the real AWS prod
+config at launch); put **all** prod/non-prod config in one place with accurate docs (Deepak's ask).
+
+**Analysis.** Engineering (RB-10 §12 new dependency — pre-approved by the maximal-scope reversal):
+add `software.amazon.awssdk:bom` + `:kms` (main) and `org.testcontainers:localstack` (test) via the
+existing BOM-import pattern. Governance (RB-40 §3/§4): wrap/unwrap the per-subject DEK under the
+workspace KMS KEK (`byok_key_ref`), platform default key for `PLATFORM`-scope identity + non-BYOK
+workspaces; region pinned from the key ARN; crypto-shred still = destroy the `subject_data_keys` row.
+Activation is `@ConditionalOnProperty("cloud.aws.credentials.access-key")` — default boots are
+unaffected (verified: context boots `LocalKmsProvider`). No migration.
+
+**Files.** `pom.xml` (AWS SDK + LocalStack); `KmsProperties` (centralized `pii.vault.kms.*`);
+`AwsKmsProvider` (real impl, injectable `KmsClientFactory` seam for tests); `application.properties`
+§14 (documented knobs); `docs/compliance/PII-VAULT-KMS-CONFIG.md` (the single config doc). Tests:
+`AwsKmsProviderTest` (mock KmsClient — key resolution, region pinning, encrypt/decrypt round-trip,
+rotation), `PiiVaultKmsLocalStackIT` (real LocalStack KMS — wrap/unwrap/rotate/generateDataKey).
+
+**Acceptance.** A per-subject DEK wraps under the workspace (or platform) KMS key and unwraps back;
+the wrapped blob is opaque ciphertext at rest; region pins from the ARN; rotation is enabled and old
+wrapped DEKs stay decryptable; no key → clear config error; default (non-AWS) boots unchanged; all
+config + the prod/non-prod recipe documented in one place.
+
+**Validation.** Unit gate (1401, 0 Checkstyle, coverage met) incl. `AwsKmsProviderTest`;
+`PiiVaultKmsLocalStackIT` (3/3 against LocalStack KMS); default context-boot IT (`LocalKmsProvider`
+still wired); guardrails green. Push → PR → CI green → squash-merge → confirm on `origin/main`.
+
+> **Remaining after Slice 5:** only **CONTRACT** — the irreversible drop of the legacy plaintext PII
+> columns — stays deferred per EPIC §3/§12 (gated on the vault being the proven prod source of truth +
+> a full backup cycle). Real AWS account provisioning (keys/IAM/retention windows) is the operator
+> step at prod launch.

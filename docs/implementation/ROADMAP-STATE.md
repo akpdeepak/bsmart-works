@@ -10,41 +10,35 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 - Program mode: **maximal-scope end-to-end completion** (Deepak, 2026-06-20). The authoritative tracker
   is now `docs/implementation/MASTER-COMPLETION-ROADMAP.md`; this file remains the cross-session resume
   ledger.
-- Active phase: **Phase 1 — governance & security closure**.
-  - ✅ Phase 0 (truth reconciliation + master ledger + restored deleted CI pipeline) merged — PR #407.
-  - ✅ #243 central Hibernate tenant filter (Slice 1) + EPIC-3 package-collision fix merged — PR #415 (`fc31ceb9`).
-  - 🟡 Field-level security enforcement (Slice 1) — verified on Windows (FieldLevelSecurityIT 11/11); PR open
-    (branch `feat/p1-field-level-security`). Closes the work_item_field_value AND legacy custom_fields read leaks.
-  - 🟢 PII vault + crypto-shredding (RB-40 §3, EPIC-P1-pii-vault) — core delivered on branch
-    `feat/p1-pii-vault`. **Slice 1** (per-subject crypto-shred vault on the User identity: V110
-    subject_token + subject_data_keys envelope-wrapped DEK, PiiVaultService mint/put/resolve/forget,
-    per-subject KEK re-wrap rotation, dual-write of name, erase()=crypto-shred, raw email removed from
-    the immutable audit chain) and **Slice 2** (email tokenization: V111 email_hmac blind index,
-    BlindIndexService, flag-gated login-via-blind-index, email dual-write into the vault) are built +
-    validated (unit + integration + fresh-DB boot). Partial **Slice 4** (no-PII-in-events): the
-    confirmed event-payload email leaks (USER_SIGNED_UP / EMAIL_VERIFIED / CUSTOMER_USER_CREATED) are
-    fixed. ALL behaviour is behind default-off flags (pii.vault.read-from-vault,
-    pii.vault.login-via-blind-index) so merging does not change runtime behaviour until an operator
-    backfills + flips. **Migration high-water is now V111** (CLAUDE.md §6 still says V109 — generated
-    file, update via ai-rules + regenerate in a doc pass).
-  - **PII-vault remaining (deliberately deferred — see the EPIC completion note):** Slice 3
-    (CustomerUser + Stakeholder subjects + drop the persisted denorm copies chat_conversations.
-    customer_name / customer_feedback_items.customer); rest of Slice 4 (field_def.pii custom-field
-    routing; free-text PII scanning for customer-authored content; the WorkItemCommandService
-    assignee-fullName event leak, which needs a coordinated activity-feed render change; the
-    guardrails.sh no-PII-in-events/audit + ArchUnit checks, which become BLOCK once those leaks are
-    swept); and Slice 5 (real AWS KMS / BYOK — the explicit next Phase-1 item).
-- Verified-status correction: EPICs 3–12 are first slices (partial), not full-scope complete; full
-  completion is governed by the master roadmap.
-- FLS V110 collision note: the field-level-security branch numbered a migration V110
-  (`V110__field_visibility_by_system_role_tier.sql`) too; whichever merges second must renumber.
-  bSmart-works shared worktree also leaves STALE compiled migrations in works-backend/target — always
-  `mvn clean` before trusting integration-test / boot results (a stale V110 caused phantom
-  field_visibility.role_def_id failures this session).
-- Next in Phase 1: finish PII-vault Slices 3–4 → BYOK/KMS (AWS) → WebAuthn attestation → distributed rate-limit/JWT.
-- Open follow-ups: field-visibility tier-source reconciliation (`roles` V7 vs `role_def` V21 — decision pending);
-  BQL field-level filter-inference (RB-10 §6).
-- Last state update: 2026-06-21
+- Active phase: **Phase 1 — governance & security closure** (near-complete; only real-WebAuthn remains).
+  - ✅ Phase 0 (truth reconciliation + master ledger + restored CI pipeline) — PR #407.
+  - ✅ **PII vault + crypto-shredding** EPIC complete — PRs #418–#424 (high-water through V114); only the
+    deferred CONTRACT plaintext-column drop remains. See `EPIC-P1-pii-vault-completion.md`.
+  - ✅ **#243 central tenant filter** — Slice A binding at the RBAC choke point (PR #426, flag-gated
+    `tenant.filter.binding.enabled` default-off); Slices B+C transitive `@Filter` on all 22 transitive
+    entities incl. `work_items` (PR #431, `@Filter` now on 136 entities, `TenantFilterCoverageTest`
+    enforces every-entity-filtered-or-global); Slice D findById/PK-load gaps closed in 7 controllers
+    (PR #432). **Slice E** (remove redundant predicates) + **Slice F final reconciliation** deferred —
+    Slice E until the binding flag soaks in a live env.
+  - ✅ **Field-level security** — Slice 1 (read redaction) + Slice 2 (BQL HIDDEN-field exfil closed,
+    PR #427) + Slice 3 (guard the rule surface + resolver test + FK index V116, PR #430). Slice 5
+    (core-column FLS) deferred by Deepak. Seed/admin-UI for rules (Slice 4) still open (enforcement
+    inert until rules authored — safe).
+  - ✅ **Distributed rate-limit + JWT revocation** EPIC complete — PR1 token-version revocation (V115),
+    PR2 jti blocklist + logout (V117, PR #433), PR3 distributed DB store (V118, PR #434, flag-gated),
+    PR4 write-endpoint limiting (PR #435, flag-gated). See `EPIC-P1-rate-limit-jwt-revocation.md`.
+  - ✅ **SOC2/ISO control matrix** — `docs/compliance/CONTROL-MATRIX.md` (control → code → test); stale
+    SECURITY.md / SOC2 / ISO27001 caveats reconciled.
+  - 🔜 **WebAuthn** — real FIDO2 attestation/assertion (webauthn4j, Deepak-approved) is the one remaining
+    Phase-1 build: current ceremony is a functional signed-nonce impl with MFA/password fallback (no open
+    leak), so it is a hardening upgrade. Build map in `W1-PHASE1-COMPLETION-PLAN.md` + the discovery notes.
+  - **Migration high-water: V118; next V119.** `mvn clean` before trusting boot/IT results.
+- Verified-status correction: EPICs 3–12 are first slices (partial); full completion governed by the master roadmap.
+- Open follow-ups (flagged, not Phase-1-blocking): field-visibility tier-source reconciliation
+  (`roles` V7 vs `role_def` V21); WorkflowController null-workspace branch + create-side body-workspaceId
+  trust on Team/Report/etc + per-operation perm tightening on the Slice-D controllers; FLS rule seeding;
+  the deferred #243 Slice E CONTRACT predicate removal.
+- Last state update: 2026-06-21 (Tranche-2 session)
 
 ## Trigger contract
 

@@ -30,15 +30,22 @@ guarantees they can never see *another* tenant's data.
 - **Field-level security** *(spec `06 §5.5`)*: sensitive fields are visible per-field, per-role,
   **enforced server-side** — not hidden in the UI. Manager drill-down into individuals is blocked
   at the API.
-- **Enforcement (partial):** `guardrails.sh` blocks any repository `@Query` SELECT lacking a
+- **Enforcement:** two layers. (1) `guardrails.sh` blocks any repository `@Query` SELECT lacking a
   workspace token, and **warns** on raw-`JdbcTemplate` `work_items` SQL in a Controller/Service that
   carries no tenant-scope signal anywhere in the file (workspace token, id-scope key, or `RbacService`
-  call) — a coarse tripwire for new unscoped raw-SQL surfaces, not the guarantee. The leak-proof
-  guarantee remains a **central Hibernate tenant filter / mandatory predicate applied once** (this §1:
-  "scoping applied centrally, not re-typed per query"), tracked as **#243** (needs sign-off). A
-  per-statement grep was deliberately rejected as too false-positive-prone (see
-  `docs/INSIGHTS-AI-ALIGNMENT-REVIEW.md` §1.2). Every feature ships an **unauthorized** and a
-  **cross-tenant** test.
+  call) — a coarse tripwire for new unscoped raw-SQL surfaces. (2) The leak-proof guarantee — a
+  **central Hibernate tenant filter applied once** (this §1: "scoping applied centrally, not re-typed
+  per query") — is now **BUILT (#243):** the single `@FilterDef(workspaceFilter)` is applied to **136
+  entities** (114 direct `workspace_id = :workspaceId` + 22 transitive subquery-condition incl.
+  `work_items`), with `TenantFilterCoverageTest` failing the build if any `@Entity` is neither filtered
+  nor on the `GLOBAL_BY_DESIGN` allow-list. Per-request binding (`CurrentWorkspace.bind()` at the
+  `RbacService` authorization choke point) is **flag-gated** `tenant.filter.binding.enabled` (default
+  off, canary-first); until it is flipped, isolation rests on the retained per-query predicates (kept as
+  defence-in-depth — the CONTRACT removal of redundant predicates is deferred until the binding soaks).
+  `@Filter` does not cover by-PK `findById`, so PK loads of tenant entities carry an ownership re-check
+  (`CrossTenantPkLoadAccessTest`). A per-statement grep was deliberately rejected as too
+  false-positive-prone (see `docs/INSIGHTS-AI-ALIGNMENT-REVIEW.md` §1.2). Every feature ships an
+  **unauthorized** and a **cross-tenant** test. Full control evidence: `docs/compliance/CONTROL-MATRIX.md`.
 
 ## 2. AI Control Plane *(spec `05 §1.2–1.6`)*
 

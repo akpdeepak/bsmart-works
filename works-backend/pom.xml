@@ -35,7 +35,7 @@
 		<testcontainers.version>2.0.5</testcontainers.version>
 		<!-- AWS SDK v2 for the real KMS / BYOK key provider (RB-40 §3/§4, EPIC-P1-pii-vault Slice 5).
 		     The BOM aligns the kms client + its transitive AWS modules. -->
-		<awssdk.version>2.29.0</awssdk.version>
+		<awssdk.version>2.46.17</awssdk.version>
 	</properties>
 
 	<!-- The Spring Boot 4.0 parent does not manage the raw org.testcontainers:* / AWS SDK artifact

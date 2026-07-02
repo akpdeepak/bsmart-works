@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,15 +20,13 @@ import java.util.stream.Collectors;
  * has voluntarily shared them. Privacy is enforced here, in the service, not in the UI.
  *
  * <p>Computations are deterministic over workspace-scoped work items (RB-40 §1). The pure aggregation
- * helpers live in {@link MetricFormula}; the per-scope helpers here are static so they are
- * unit-testable without a database (RB-10 §7). The AI team-health narrative routes through the one
- * control plane and falls back to a deterministic summary (RB-40 §2).
+ * helpers live in {@link MetricFormula}; the deterministic KPI computation kernel (velocity, cycle
+ * time, bands, …) lives in {@link KpiMetricCalculator} so it is unit-testable without a database
+ * (RB-10 §7). The AI team-health narrative routes through the one control plane and falls back to a
+ * deterministic summary (RB-40 §2).
  */
 @Service
 public class KpiService {
-
-    private static final String DONE = "done";
-    private static final List<String> WIP_STATUSES = List.of("in progress", "in review", "doing", "qa", "testing");
 
     /**
      * Tier at/above which leadership-sensitive fields (e.g. {@code businessValue}) are visible —
@@ -168,10 +165,10 @@ public class KpiService {
 
     static List<MetricValue> personalMetrics(List<WorkItem> items) {
         List<MetricValue> out = new ArrayList<>();
-        out.add(metric(MetricCatalog.THROUGHPUT, doneCount(items), items.size()));
-        out.add(metric(MetricCatalog.COMPLETION_RATE, completionRate(items), items.size()));
-        out.add(metric(MetricCatalog.CYCLE_TIME, cycleTimeP85(items), doneCountInt(items)));
-        out.add(metric(MetricCatalog.WIP, wipCount(items), items.size()));
+        out.add(metric(MetricCatalog.THROUGHPUT, KpiMetricCalculator.doneCount(items), items.size()));
+        out.add(metric(MetricCatalog.COMPLETION_RATE, KpiMetricCalculator.completionRate(items), items.size()));
+        out.add(metric(MetricCatalog.CYCLE_TIME, KpiMetricCalculator.cycleTimeP85(items), KpiMetricCalculator.doneCountInt(items)));
+        out.add(metric(MetricCatalog.WIP, KpiMetricCalculator.wipCount(items), items.size()));
         return out;
     }
 
@@ -252,11 +249,11 @@ public class KpiService {
 
     static List<MetricValue> aggregateMetrics(List<WorkItem> items) {
         List<MetricValue> out = new ArrayList<>();
-        out.add(metric(MetricCatalog.VELOCITY, velocity(items), items.size()));
-        out.add(metric(MetricCatalog.COMMITMENT_ACCURACY, completionRate(items), items.size()));
-        out.add(metric(MetricCatalog.CYCLE_TIME, cycleTimeP85(items), doneCountInt(items)));
-        out.add(metric(MetricCatalog.WIP, wipCount(items), items.size()));
-        out.add(metric(MetricCatalog.BUG_ESCAPE, bugEscapeRate(items), items.size()));
+        out.add(metric(MetricCatalog.VELOCITY, KpiMetricCalculator.velocity(items), items.size()));
+        out.add(metric(MetricCatalog.COMMITMENT_ACCURACY, KpiMetricCalculator.completionRate(items), items.size()));
+        out.add(metric(MetricCatalog.CYCLE_TIME, KpiMetricCalculator.cycleTimeP85(items), KpiMetricCalculator.doneCountInt(items)));
+        out.add(metric(MetricCatalog.WIP, KpiMetricCalculator.wipCount(items), items.size()));
+        out.add(metric(MetricCatalog.BUG_ESCAPE, KpiMetricCalculator.bugEscapeRate(items), items.size()));
         return out;
     }
 
@@ -270,14 +267,14 @@ public class KpiService {
             .filter(x -> x.getId().equals(teamId)).findFirst()
             .orElseThrow(() -> ApiException.notFound("Team", teamId));
         List<WorkItem> items = teamItems(workspaceId, t);
-        double predictability = completionRate(items);
-        double scopeStability = scopeStability(items);
-        double flowEfficiency = flowEfficiency(items);
+        double predictability = KpiMetricCalculator.completionRate(items);
+        double scopeStability = KpiMetricCalculator.scopeStability(items);
+        double flowEfficiency = KpiMetricCalculator.flowEfficiency(items);
         double overall = MetricFormula.round1((predictability + scopeStability + flowEfficiency) / 3.0);
         List<String> bands = List.of(
-            "predictability:" + band(predictability),
-            "scopeStability:" + band(scopeStability),
-            "flowEfficiency:" + band(flowEfficiency));
+            "predictability:" + KpiMetricCalculator.band(predictability),
+            "scopeStability:" + KpiMetricCalculator.band(scopeStability),
+            "flowEfficiency:" + KpiMetricCalculator.band(flowEfficiency));
         return new HealthComposite(teamId, predictability, scopeStability, flowEfficiency, overall, bands);
     }
 
@@ -285,14 +282,14 @@ public class KpiService {
 
     public Distribution distribution(String workspaceId, String scopeLevel, String scopeId) {
         List<WorkItem> items = scopeItems(workspaceId, scopeLevel, scopeId);
-        List<WorkItem> done = items.stream().filter(KpiService::isDone).collect(Collectors.toList());
-        List<Double> hours = done.stream().map(KpiService::cycleHours).collect(Collectors.toList());
+        List<WorkItem> done = items.stream().filter(KpiMetricCalculator::isDone).collect(Collectors.toList());
+        List<Double> hours = done.stream().map(KpiMetricCalculator::cycleHours).collect(Collectors.toList());
         double median = MetricFormula.median(hours);
         double p85 = MetricFormula.percentile(hours, 85);
         int[] edges = {24, 72, 168, 336};   // 1d, 3d, 1w, 2w
-        List<Integer> buckets = bucketize(hours, edges);
+        List<Integer> buckets = KpiMetricCalculator.bucketize(hours, edges);
         List<String> outliers = done.stream()
-            .filter(w -> cycleHours(w) > p85 && p85 > 0)
+            .filter(w -> KpiMetricCalculator.cycleHours(w) > p85 && p85 > 0)
             .map(WorkItem::getId).limit(20).collect(Collectors.toList());
         return new Distribution(median, p85, buckets, outliers);
     }
@@ -306,8 +303,9 @@ public class KpiService {
         String deterministic = String.format(Locale.ROOT,
             "Team health %.0f/100. Predictability %.0f%% (%s), scope stability %.0f%% (%s), "
             + "flow efficiency %.0f%% (%s).",
-            h.overall(), h.predictability(), band(h.predictability()),
-            h.scopeStability(), band(h.scopeStability()), h.flowEfficiency(), band(h.flowEfficiency()));
+            h.overall(), h.predictability(), KpiMetricCalculator.band(h.predictability()),
+            h.scopeStability(), KpiMetricCalculator.band(h.scopeStability()),
+            h.flowEfficiency(), KpiMetricCalculator.band(h.flowEfficiency()));
         AiControlPlaneService.AiOutcome out = controlPlane.invoke(new AiControlPlaneService.AiCall(
             workspaceId, userId, AiCapabilities.KPI_NARRATIVE,
             "Summarise team health for " + teamId, deterministic, null, inContext));
@@ -426,133 +424,13 @@ public class KpiService {
     }
 
     // ══════════════════════════════════════════════════════════════════════════════
-    //  Pure deterministic computation helpers — unit-testable in isolation
+    //  Metric assembly (binds the computation kernel to catalog metric value types)
     // ══════════════════════════════════════════════════════════════════════════════
-
-    static boolean isDone(WorkItem w) {
-        return w.getStatus() != null && w.getStatus().trim().toLowerCase(Locale.ROOT).equals(DONE);
-    }
-
-    static boolean isWip(WorkItem w) {
-        String s = w.getStatus() == null ? "" : w.getStatus().trim().toLowerCase(Locale.ROOT);
-        return WIP_STATUSES.contains(s);
-    }
-
-    static double velocity(List<WorkItem> items) {
-        return MetricFormula.round1(items.stream()
-            .filter(KpiService::isDone)
-            .mapToInt(w -> w.getStoryPoints() == null ? 0 : w.getStoryPoints())
-            .sum());
-    }
-
-    static double doneCount(List<WorkItem> items) {
-        return doneCountInt(items);
-    }
-
-    static int doneCountInt(List<WorkItem> items) {
-        return (int) items.stream().filter(KpiService::isDone).count();
-    }
-
-    static double completionRate(List<WorkItem> items) {
-        return MetricFormula.ratio(doneCountInt(items), items.size());
-    }
-
-    static double wipCount(List<WorkItem> items) {
-        return items.stream().filter(KpiService::isWip).count();
-    }
-
-    static double bugEscapeRate(List<WorkItem> items) {
-        long bugs = items.stream().filter(w -> "Bug".equalsIgnoreCase(nv(w.getType()))).count();
-        return MetricFormula.ratio(bugs, items.size());
-    }
-
-    static double cycleTimeP85(List<WorkItem> items) {
-        List<Double> hours = items.stream().filter(KpiService::isDone)
-            .map(KpiService::cycleHours).collect(Collectors.toList());
-        return MetricFormula.percentile(hours, 85);
-    }
-
-    /** Scope stability: share of items NOT added late (no sprint reassignment proxy) — higher is better. */
-    static double scopeStability(List<WorkItem> items) {
-        if (items.isEmpty()) {
-            return 0;
-        }
-        long stable = items.stream().filter(w -> w.getSprintId() != null).count();
-        // Proxy: items planned into a sprint vs total. Empty backlog churn → treat as fully stable.
-        return stable == 0 ? 100.0 : MetricFormula.ratio(stable, items.size());
-    }
-
-    /** Flow efficiency: share of work that is moving (done or WIP) rather than stuck in backlog. */
-    static double flowEfficiency(List<WorkItem> items) {
-        if (items.isEmpty()) {
-            return 0;
-        }
-        long flowing = items.stream().filter(w -> isDone(w) || isWip(w)).count();
-        return MetricFormula.ratio(flowing, items.size());
-    }
-
-    static String band(double percent) {
-        if (percent >= 80) {
-            return "healthy";
-        }
-        return percent >= 60 ? "watch" : "risk";
-    }
-
-    static List<Integer> bucketize(List<Double> hours, int[] edges) {
-        int[] counts = new int[edges.length + 1];
-        for (Double h : hours) {
-            if (h == null) {
-                continue;
-            }
-            int b = edges.length;
-            for (int i = 0; i < edges.length; i++) {
-                if (h <= edges[i]) {
-                    b = i;
-                    break;
-                }
-            }
-            counts[b]++;
-        }
-        List<Integer> out = new ArrayList<>();
-        for (int c : counts) {
-            out.add(c);
-        }
-        return out;
-    }
-
-    /**
-     * Cycle time in hours: how long the item took, not how old it is. For a <b>done</b> item we
-     * measure from creation to the moment it last changed status ({@code statusChangedAt}, V74) — the
-     * completion timestamp proxy — so a finished item's cycle time is stable and never grows with
-     * wall-clock time. For an item that is still open (or that predates the status-timestamp backfill
-     * and so has no {@code statusChangedAt}) we measure to now, giving its current age-in-flight.
-     * This is the fix for the "cycle time keeps climbing forever" defect (RB-20 §4 honest metrics).
-     */
-    static double cycleHours(WorkItem w) {
-        if (w.getCreatedAt() == null) {
-            return 0;
-        }
-        OffsetDateTime end = (isDone(w) && w.getStatusChangedAt() != null)
-            ? w.getStatusChangedAt()
-            : OffsetDateTime.now();
-        return Math.max(0, Duration.between(w.getCreatedAt(), end).toHours());
-    }
 
     private static MetricValue metric(String key, double value, int sampleSize) {
         MetricCatalog.Metric m = MetricCatalog.get(key);
         return new MetricValue(key, m == null ? key : m.label(), MetricFormula.round1(value),
             m == null ? "" : m.unit(), m != null && m.higherIsBetter(), sampleSize, null);
-    }
-
-    /** Evaluates ON_TRACK / AT_RISK / OFF_TRACK against a numeric target (RB-10 §6 KPI evaluation). */
-    static String evaluateStatus(double actual, Double target, boolean higherIsBetter) {
-        if (target == null || target <= 0) return null;
-        double denom = higherIsBetter ? target : Math.max(actual, 0.001);
-        double numer = higherIsBetter ? actual : target;
-        double ratio = numer / denom;
-        if (ratio >= 1.0) return "ON_TRACK";
-        if (ratio >= 0.75) return "AT_RISK";
-        return "OFF_TRACK";
     }
 
     /**
@@ -622,8 +500,10 @@ public class KpiService {
         // Re-evaluate status for catalog metrics that have a target set.
         List<MetricValue> updated = layer.metrics().stream().map(mv -> {
             MetricDefinition def = defsByKey.get(mv.key());
-            if (def == null || def.getTarget() == null) return mv;
-            String status = evaluateStatus(mv.value(), def.getTarget(), mv.higherIsBetter());
+            if (def == null || def.getTarget() == null) {
+                return mv;
+            }
+            String status = KpiMetricCalculator.evaluateStatus(mv.value(), def.getTarget(), mv.higherIsBetter());
             return new MetricValue(mv.key(), mv.label(), mv.value(), mv.unit(),
                 mv.higherIsBetter(), mv.sampleSize(), status, mv.trend());
         }).collect(Collectors.toList());
@@ -631,15 +511,19 @@ public class KpiService {
         // Append custom metrics with bqlFormula (unification layer: BQL in KPI definitions, RB-10 §6).
         List<MetricValue> custom = new ArrayList<>();
         for (MetricDefinition def : defs) {
-            if (def.getBqlFormula() == null || def.getBqlFormula().isBlank()) continue;
-            if (defsByKey.containsKey(def.getMetricKey()) && updated.stream().anyMatch(m -> m.key().equals(def.getMetricKey()))) continue;
+            if (def.getBqlFormula() == null || def.getBqlFormula().isBlank()) {
+                continue;
+            }
+            if (defsByKey.containsKey(def.getMetricKey()) && updated.stream().anyMatch(m -> m.key().equals(def.getMetricKey()))) {
+                continue;
+            }
             try {
                 // Compile + execute the workspace-scoped count centrally (RB-40 §1, advances #243);
                 // compiling under the caller's field-security context means a sensitive-field formula
                 // throws here for an under-tier caller (defs already filtered above).
                 long count = bqlExecutor.countScoped(workspaceId, def.getBqlFormula(), ctx);
                 boolean hib = Boolean.TRUE.equals(def.getHigherIsBetter());
-                String status = evaluateStatus(count, def.getTarget(), hib);
+                String status = KpiMetricCalculator.evaluateStatus(count, def.getTarget(), hib);
                 custom.add(new MetricValue(def.getMetricKey(), def.getName(), count,
                     def.getUnit() == null ? "count" : def.getUnit(), hib, (int) count, status));
             } catch (Exception ignored) {
@@ -708,9 +592,5 @@ public class KpiService {
 
     private static String shortId() {
         return UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-    }
-
-    private static String nv(Object o) {
-        return o == null ? "" : o.toString();
     }
 }

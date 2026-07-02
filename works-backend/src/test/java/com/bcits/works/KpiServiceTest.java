@@ -173,7 +173,7 @@ class KpiServiceTest {
             item("A", ME, "Done", 3, "Story"),
             item("B", ME, "Done", 5, "Story"),
             item("C", ME, "In Progress", 8, "Story"));
-        assertThat(KpiService.velocity(items)).isEqualTo(8.0);
+        assertThat(KpiMetricCalculator.velocity(items)).isEqualTo(8.0);
     }
 
     @Test
@@ -183,7 +183,7 @@ class KpiServiceTest {
             item("B", ME, "Todo", 1, "Story"),
             item("C", ME, "Done", 1, "Story"),
             item("D", ME, "Todo", 1, "Story"));
-        assertThat(KpiService.completionRate(items)).isEqualTo(50.0);
+        assertThat(KpiMetricCalculator.completionRate(items)).isEqualTo(50.0);
     }
 
     @Test
@@ -193,21 +193,21 @@ class KpiServiceTest {
             item("B", ME, "In Review", 1, "Bug"),
             item("C", ME, "Done", 1, "Bug"),
             item("D", ME, "Todo", 1, "Story"));
-        assertThat(KpiService.wipCount(items)).isEqualTo(2.0);
-        assertThat(KpiService.bugEscapeRate(items)).isEqualTo(50.0);
+        assertThat(KpiMetricCalculator.wipCount(items)).isEqualTo(2.0);
+        assertThat(KpiMetricCalculator.bugEscapeRate(items)).isEqualTo(50.0);
     }
 
     @Test
     void band_classifiesHealth() {
-        assertThat(KpiService.band(85)).isEqualTo("healthy");
-        assertThat(KpiService.band(70)).isEqualTo("watch");
-        assertThat(KpiService.band(40)).isEqualTo("risk");
+        assertThat(KpiMetricCalculator.band(85)).isEqualTo("healthy");
+        assertThat(KpiMetricCalculator.band(70)).isEqualTo("watch");
+        assertThat(KpiMetricCalculator.band(40)).isEqualTo("risk");
     }
 
     @Test
     void bucketize_distributesByEdges() {
         List<Double> hours = List.of(10.0, 50.0, 100.0, 400.0);
-        List<Integer> buckets = KpiService.bucketize(hours, new int[]{24, 72, 168, 336});
+        List<Integer> buckets = KpiMetricCalculator.bucketize(hours, new int[]{24, 72, 168, 336});
         assertThat(buckets).containsExactly(1, 1, 1, 0, 1);
     }
 
@@ -217,22 +217,22 @@ class KpiServiceTest {
 
     @Test
     void evaluateStatus_higherIsBetter_computesBands() {
-        assertThat(KpiService.evaluateStatus(100.0, 100.0, true)).isEqualTo("ON_TRACK");
-        assertThat(KpiService.evaluateStatus(80.0, 100.0, true)).isEqualTo("AT_RISK");
-        assertThat(KpiService.evaluateStatus(50.0, 100.0, true)).isEqualTo("OFF_TRACK");
+        assertThat(KpiMetricCalculator.evaluateStatus(100.0, 100.0, true)).isEqualTo("ON_TRACK");
+        assertThat(KpiMetricCalculator.evaluateStatus(80.0, 100.0, true)).isEqualTo("AT_RISK");
+        assertThat(KpiMetricCalculator.evaluateStatus(50.0, 100.0, true)).isEqualTo("OFF_TRACK");
     }
 
     @Test
     void evaluateStatus_lowerIsBetter_computesBands() {
-        assertThat(KpiService.evaluateStatus(2.0, 2.0, false)).isEqualTo("ON_TRACK");
-        assertThat(KpiService.evaluateStatus(2.5, 2.0, false)).isEqualTo("AT_RISK");  // 20% over
-        assertThat(KpiService.evaluateStatus(5.0, 2.0, false)).isEqualTo("OFF_TRACK"); // 150% over
+        assertThat(KpiMetricCalculator.evaluateStatus(2.0, 2.0, false)).isEqualTo("ON_TRACK");
+        assertThat(KpiMetricCalculator.evaluateStatus(2.5, 2.0, false)).isEqualTo("AT_RISK");  // 20% over
+        assertThat(KpiMetricCalculator.evaluateStatus(5.0, 2.0, false)).isEqualTo("OFF_TRACK"); // 150% over
     }
 
     @Test
     void evaluateStatus_nullTarget_returnsNull() {
-        assertThat(KpiService.evaluateStatus(50.0, null, true)).isNull();
-        assertThat(KpiService.evaluateStatus(50.0, 0.0, true)).isNull();
+        assertThat(KpiMetricCalculator.evaluateStatus(50.0, null, true)).isNull();
+        assertThat(KpiMetricCalculator.evaluateStatus(50.0, 0.0, true)).isNull();
     }
 
     @Test
@@ -269,7 +269,7 @@ class KpiServiceTest {
         w.setStatus("Done");
         w.setCreatedAt(OffsetDateTime.now().minusDays(10));
         w.setStatusChangedAt(OffsetDateTime.now().minusDays(8)); // completed 2 days after creation
-        double hours = KpiService.cycleHours(w);
+        double hours = KpiMetricCalculator.cycleHours(w);
         assertThat(hours).isBetween(46.0, 50.0);
     }
 
@@ -279,7 +279,7 @@ class KpiServiceTest {
         WorkItem w = new WorkItem();
         w.setStatus("In Progress");
         w.setCreatedAt(OffsetDateTime.now().minusHours(30));
-        assertThat(KpiService.cycleHours(w)).isBetween(28.0, 32.0);
+        assertThat(KpiMetricCalculator.cycleHours(w)).isBetween(28.0, 32.0);
     }
 
     @Test
@@ -289,7 +289,7 @@ class KpiServiceTest {
         w.setStatus("Done");
         w.setCreatedAt(OffsetDateTime.now().minusHours(50));
         w.setStatusChangedAt(null);
-        assertThat(KpiService.cycleHours(w)).isBetween(48.0, 52.0);
+        assertThat(KpiMetricCalculator.cycleHours(w)).isBetween(48.0, 52.0);
     }
 
     // ── vs-last-period trend from snapshot history (Cap L trends) ────────────────────

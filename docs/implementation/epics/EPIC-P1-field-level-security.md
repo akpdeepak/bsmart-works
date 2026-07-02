@@ -472,3 +472,15 @@ and the `ON DELETE CASCADE` from `role_def`. **V116** therefore indexes `field_v
   smuggled in here.
 - FLS Slice 4 (seed demo `role_def` + `field_visibility` rows so enforcement is exercisable in a
   running app) remains. Slice 5 (core-column FLS) deferred by Deepak (2026-06-21).
+
+## Status
+
+**EPIC COMPLETE for Phase-1 scope (2026-06-21)** — the three enforcement slices are built,
+validated, and merged on remote `main`: Slice 1 server-side read redaction + write guard (PR #416),
+Slice 2 HIDDEN-field exclusion from the user BQL context — closes the BQL exfiltration path
+(PR #427), Slice 3 rule-surface RBAC guard + resolver contract test + `field_visibility→role_def`
+FK index V116 (PR #430).
+
+**Remaining, outside Phase-1 scope:** Slice 4 (seed demo rules / admin UI so enforcement is
+exercisable out of the box — enforcement is inert-but-safe until rules are authored) and Slice 5
+(core-column FLS), both explicitly deferred by Deepak on 2026-06-21.

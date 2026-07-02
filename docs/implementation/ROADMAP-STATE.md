@@ -10,7 +10,9 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 - Program mode: **maximal-scope end-to-end completion** (Deepak, 2026-06-20). The authoritative tracker
   is now `docs/implementation/MASTER-COMPLETION-ROADMAP.md`; this file remains the cross-session resume
   ledger.
-- Active phase: **Phase 1 — governance & security closure** (near-complete; only real-WebAuthn remains).
+- Active phase: **Phase 1 ✅ COMPLETE (2026-06-21) → next is Phase 2 — structural refactors** (plan
+  staged in draft PR #417; execution not started). Phase-1/W1 shipped as PRs #415–#441; the master
+  ledger was reconciled to completion in PR #444 (2026-07-02).
   - ✅ Phase 0 (truth reconciliation + master ledger + restored CI pipeline) — PR #407.
   - ✅ **PII vault + crypto-shredding** EPIC complete — PRs #418–#424 (high-water through V114); only the
     deferred CONTRACT plaintext-column drop remains. See `EPIC-P1-pii-vault-completion.md`.
@@ -18,8 +20,8 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
     `tenant.filter.binding.enabled` default-off); Slices B+C transitive `@Filter` on all 22 transitive
     entities incl. `work_items` (PR #431, `@Filter` now on 136 entities, `TenantFilterCoverageTest`
     enforces every-entity-filtered-or-global); Slice D findById/PK-load gaps closed in 7 controllers
-    (PR #432). **Slice E** (remove redundant predicates) + **Slice F final reconciliation** deferred —
-    Slice E until the binding flag soaks in a live env.
+    (PR #432); Slice F doc/control-matrix reconciliation done (PR #436). **Slice E** (CONTRACT removal
+    of redundant predicates) deferred until the binding flag soaks in a live env.
   - ✅ **Field-level security** — Slice 1 (read redaction) + Slice 2 (BQL HIDDEN-field exfil closed,
     PR #427) + Slice 3 (guard the rule surface + resolver test + FK index V116, PR #430). Slice 5
     (core-column FLS) deferred by Deepak. Seed/admin-UI for rules (Slice 4) still open (enforcement
@@ -29,16 +31,25 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
     PR4 write-endpoint limiting (PR #435, flag-gated). See `EPIC-P1-rate-limit-jwt-revocation.md`.
   - ✅ **SOC2/ISO control matrix** — `docs/compliance/CONTROL-MATRIX.md` (control → code → test); stale
     SECURITY.md / SOC2 / ISO27001 caveats reconciled.
-  - 🔜 **WebAuthn** — real FIDO2 attestation/assertion (webauthn4j, Deepak-approved) is the one remaining
-    Phase-1 build: current ceremony is a functional signed-nonce impl with MFA/password fallback (no open
-    leak), so it is a hardening upgrade. Build map in `W1-PHASE1-COMPLETION-PLAN.md` + the discovery notes.
-  - **Migration high-water: V118; next V119.** `mvn clean` before trusting boot/IT results.
+  - ✅ **WebAuthn** — real FIDO2 attestation/assertion via webauthn4j 0.31.7 complete: WA1 verifier +
+    COSE schema (V119, PR #438), WA2 ceremonies behind a flag (PR #439), WA3 frontend
+    `navigator.credentials` + passkey login (PR #440), WA4 legacy signed-nonce path removed (PR #441).
+    Only the `public_key_pem` CONTRACT column-drop is deferred. See `EPIC-P1-webauthn-fido2.md` §6.
+  - **Migration high-water: V119; next V120.** `mvn clean` before trusting boot/IT results.
+  - **Flags shipped default-off (operational follow-up, not unexecuted scope):**
+    `tenant.filter.binding.enabled` (central tenant-filter binding, canary-first) and
+    `app.rate-limit.distributed` (DB-backed rate-limit store). Until flipped, isolation rests on the
+    retained per-query predicates and rate limiting is per-instance.
+  - **Deferred-by-design carryover into later phases:** #243 Slice E (CONTRACT predicate removal),
+    FLS Slice 4 (seed demo rules) + Slice 5 (core-column FLS, Deepak 2026-06-21), PII-vault CONTRACT
+    plaintext-column drop, WebAuthn `public_key_pem` column drop, Redis-backed rate limiting (AWS
+    infra EPIC).
 - Verified-status correction: EPICs 3–12 are first slices (partial); full completion governed by the master roadmap.
 - Open follow-ups (flagged, not Phase-1-blocking): field-visibility tier-source reconciliation
   (`roles` V7 vs `role_def` V21); WorkflowController null-workspace branch + create-side body-workspaceId
   trust on Team/Report/etc + per-operation perm tightening on the Slice-D controllers; FLS rule seeding;
   the deferred #243 Slice E CONTRACT predicate removal.
-- Last state update: 2026-06-21 (Tranche-2 session)
+- Last state update: 2026-07-02 (Phase-1 closure audit — state reconciled to remote `main`)
 
 ## Trigger contract
 

@@ -318,3 +318,17 @@ mutating) — stronger and false-positive-free. Recorded so the absence is a dec
 - Integration (Docker): **full** failsafe suite green (over-restriction safety net — confirms the new
   re-checks don't break legitimate member CRUD on dashboards/filters/type-configs/report-schedules/
   permission-schemes/work-item-links/workflows).
+
+## Status
+
+**EPIC COMPLETE (2026-06-21)** — all in-scope slices built, validated, and merged on remote `main`:
+Slice 1 foundation (PR #415), Slice A binding at the RBAC choke point behind
+`tenant.filter.binding.enabled` default-off (PR #426), Slices B+C transitive `@Filter` coverage —
+136 entities, `TenantFilterCoverageTest` enforces every-entity-filtered-or-allow-listed (PR #431),
+Slice D findById/PK-load cross-tenant gaps closed in 7 controllers (PR #432), Slice F SOC2/ISO
+control-matrix + doc reconciliation (PR #436).
+
+**Deferred by design:** Slice E — CONTRACT removal of the redundant per-query predicates — waits
+until the binding flag has soaked in a live environment (predicates retained as defence-in-depth).
+**Operational follow-up:** flip `tenant.filter.binding.enabled` canary-first after the escape-hatch
+inventory smoke test.

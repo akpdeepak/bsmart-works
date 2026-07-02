@@ -60,7 +60,7 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 | WS | Workstream | Scope summary | Today | Phase |
 |----|-----------|----------------|------:|-------|
 | **W0** | Truth & control plane | Reconcile overclaiming docs; this ledger; SOURCE-OF-TRUTH reversal | 🟡 in progress | 0 |
-| **W1** | Governance & security closure | #243 central tenant filter, field-level security enforcement, PII vault + crypto-shred, BYOK/KMS, WebAuthn attestation, distributed rate-limit, JWT revocation, SOC2/ISO evidence | 🟠 ~15% | 1 |
+| **W1** | Governance & security closure | #243 central tenant filter, field-level security enforcement, PII vault + crypto-shred, BYOK/KMS, WebAuthn attestation, distributed rate-limit, JWT revocation, SOC2/ISO evidence | ✅ Verified 2026-06-21 (PRs #415–#441; deferred sub-items in §4) | 1 |
 | **W2** | Architecture refactors | EPIC-3 real modularization, EPIC-4 real AppShell decomposition, god-class splits, FE code-split, AsyncBoundary adoption, token debt | 🟠 ~5% | 2 |
 | **W3** | Finish EPICs 3–12 to full scope | Slice → full plan for each shipped EPIC | 🟠 ~5–50% | 3 |
 | **W4** | EPICs 13–27 — elevation | Premium/AI-native reframe over existing capabilities | ⚪ 0% | 5 |
@@ -115,13 +115,31 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 
 | Item | Status | DoD |
 |------|-------:|-----|
-| #243 central Hibernate tenant filter on all ~150 entities | 🟠 ~10% (Project only) | filter auto-applied, per-query predicates removed, cross-tenant IT on every entity |
-| Field-level security **enforcement** (response filtering per-field/role) | 🟠 ~20% (defined, not applied) | hidden fields never serialized; tests prove redaction |
-| PII vault + crypto-shredding (tokenize User PII, key-per-subject) | 🟠 ~5% (scaffold) | no raw PII outside vault; erase = destroy key; projections re-derivable |
-| BYOK / KMS (`AwsKmsProvider`) | 🔴 stub (throws) | real KMS envelope encryption + rotation |
-| WebAuthn attestation + origin binding | 🟠 partial | attestation verified; origin/RP-ID bound |
-| Distributed rate limiting + JWT revocation | 🟠 per-instance | survives horizontal scale |
-| SOC2 / ISO 27001 control evidence reconciled to code | 🟠 docs-only | evidence package maps controls → code/tests |
+| #243 central Hibernate tenant filter on all ~150 entities | ✅ Verified (2026-06-21 — PRs #415, #426, #431, #432, #436) | `@Filter` on 136 entities (114 direct + 22 transitive subquery); central binding at the RBAC choke point behind `tenant.filter.binding.enabled` (default off, canary-first); findById/PK ownership re-checks; `TenantFilterCoverageTest` + `CrossTenantPkLoadAccessTest` + cross-tenant ITs. *Deferred:* Slice E CONTRACT removal of the redundant per-query predicates — kept as defence-in-depth until the binding soaks. |
+| Field-level security **enforcement** (response filtering per-field/role) | ✅ Verified (2026-06-21 — PRs #416, #427, #430) | read redaction at `WorkItemReadService` + write guard + BQL HIDDEN-field exclusion (inference leak closed) + resolver tests + `manage_permissions` guard + FK index (V116). *Deferred by Deepak 2026-06-21:* Slice 4 (seed demo visibility rules / admin rule UI) + Slice 5 (core-column FLS — new data-model mechanism, design-first). |
+| PII vault + crypto-shredding (tokenize User PII, key-per-subject) | ✅ Verified (2026-06-21 — PRs #418–#423; V110–V114) | user/customer/stakeholder identity vault, email blind index, denorm tokenization, tenant-declared PII custom fields, name-free notifications, machine-enforced no-raw-PII-in-events; erase = crypto-shred. *Deferred:* the CONTRACT column-drop of superseded raw columns. |
+| BYOK / KMS (`AwsKmsProvider`) | ✅ Verified (2026-06-21 — PR #424) | real AWS KMS envelope encryption (per-subject DEK wrapping), LocalStack-validated; BYOK-ready provider replaces the throwing stub. |
+| WebAuthn attestation + origin binding | ✅ Verified (2026-06-21 — PRs #438–#441, WA1–WA4) | real FIDO2 via webauthn4j 0.31.7: attestation + clientData(type/origin/challenge) + rpIdHash verified, counter-regression clone detection, `navigator.credentials` frontend, legacy signed-nonce path removed (V119). *Deferred:* the `public_key_pem` CONTRACT column-drop. |
+| Distributed rate limiting + JWT revocation | ✅ Verified (2026-06-21 — PRs #429, #433, #434, #435) | token-version revocation incl. customer-portal parity (V115) + logout/jti blocklist (V117) + DB-backed cross-instance window store behind `app.rate-limit.distributed` (default off; V118) + write-endpoint limits. *Deferred:* Redis/ElastiCache-backed store → the AWS infra EPIC (W8). |
+| SOC2 / ISO 27001 control evidence reconciled to code | ✅ Verified (2026-06-21 — PR #436) | `docs/compliance/CONTROL-MATRIX.md` maps each SOC2 CC / ISO Annex A control → implementing code → the test/guardrail that proves it. |
+
+> **W1 status (2026-06-21): Phase 1 COMPLETE.** All seven rows verified and merged to remote `main`
+> across PRs **#415–#441** (see `epics/W1-PHASE1-COMPLETION-PLAN.md` and the `EPIC-P1-*` docs for the
+> per-slice verification detail). Flyway high-water: **V119**.
+>
+> **Explicitly deferred sub-items (by design, tracked — not open gaps):**
+> - **#243 Slice E** — CONTRACT removal of the redundant per-query tenant predicates (defence-in-depth
+>   until `tenant.filter.binding.enabled` soaks in canary).
+> - **FLS Slice 4** (seed visibility rules / admin rule UI) + **FLS Slice 5** (core-column FLS) —
+>   deferred by Deepak, 2026-06-21.
+> - **PII vault** — CONTRACT drop of superseded raw columns.
+> - **WebAuthn** — `webauthn_credentials.public_key_pem` CONTRACT column-drop.
+> - **Redis-backed distributed rate limit** — deferred to the AWS infra EPIC (W8); the DB-backed store
+>   covers horizontal scale until then.
+>
+> **Default-off flags awaiting canary enablement:** `tenant.filter.binding.enabled` (central tenant-filter
+> binding; per-query predicates remain the enforcing layer until flipped) and `app.rate-limit.distributed`
+> (DB-backed shared rate-limit store).
 
 ## 5. W2 — Architecture refactor checklist (Phase 2)
 
@@ -214,3 +232,7 @@ EPIC's DoD. Phase 6 is the dedicated closure sweep for anything systemic.
 - 2026-06-20 — Phase 0: ledger created; scope set to maximal (incl. superseded items); EPIC 3–12
   verified status recorded; doc reconciliation (SECURITY.md, ROADMAP-STATE.md, ORCHESTRATOR §6,
   SOURCE-OF-TRUTH) in progress.
+- 2026-07-02 — W1 reconciliation: Phase 1 / W1 completed and merged 2026-06-21 (PRs #415–#441;
+  Flyway high-water V119) but this ledger still showed pre-execution statuses. §4 rows flipped to
+  ✅ Verified with per-row merged-PR notes; explicitly deferred sub-items and the two default-off
+  flags (`tenant.filter.binding.enabled`, `app.rate-limit.distributed`) recorded; §2 W1 row updated.

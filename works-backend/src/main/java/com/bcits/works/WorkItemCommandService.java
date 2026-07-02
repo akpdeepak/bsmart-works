@@ -272,54 +272,8 @@ public class WorkItemCommandService {
         existing.setStoryPoints(updatedItem.getStoryPoints());
         existing.setPriority(updatedItem.getPriority());
         existing.setParentId(updatedItem.getParentId());
-        applyTypeSpecificUpdates(existing, updatedItem);
+        WorkItemFieldCopier.applyTypeSpecificUpdates(existing, updatedItem);
         existing.setVersion(ConcurrencyGuard.nextVersion(existing.getVersion()));
-    }
-
-    private void applyTypeSpecificUpdates(WorkItem existing, WorkItem updatedItem) {
-        existing.setReporterId(updatedItem.getReporterId());
-        existing.setSeverity(updatedItem.getSeverity());
-        existing.setEnvironmentDetail(updatedItem.getEnvironmentDetail());
-        existing.setBusinessImpact(updatedItem.getBusinessImpact());
-        existing.setResponseSpeed(updatedItem.getResponseSpeed());
-        existing.setRespondingTeam(updatedItem.getRespondingTeam());
-        existing.setResolutionType(updatedItem.getResolutionType());
-        existing.setRootCause(updatedItem.getRootCause());
-        existing.setProbability(updatedItem.getProbability());
-        existing.setImpactLevel(updatedItem.getImpactLevel());
-        existing.setRiskScore(updatedItem.getRiskScore());
-        existing.setDependencyType(updatedItem.getDependencyType());
-        existing.setSourceItemId(updatedItem.getSourceItemId());
-        existing.setTargetItemId(updatedItem.getTargetItemId());
-        existing.setApproverId(updatedItem.getApproverId());
-        existing.setRequestedForId(updatedItem.getRequestedForId());
-        existing.setNeededByDate(updatedItem.getNeededByDate());
-        existing.setItemCategory(updatedItem.getItemCategory());
-        existing.setSubArea(updatedItem.getSubArea());
-        existing.setDepartment(updatedItem.getDepartment());
-        existing.setRegressionRisk(updatedItem.getRegressionRisk());
-        existing.setStepsToReproduce(updatedItem.getStepsToReproduce());
-        existing.setExpectedBehavior(updatedItem.getExpectedBehavior());
-        existing.setActualBehavior(updatedItem.getActualBehavior());
-        existing.setAffectedVersion(updatedItem.getAffectedVersion());
-        existing.setFixedInVersion(updatedItem.getFixedInVersion());
-        existing.setFixDescription(updatedItem.getFixDescription());
-        existing.setMitigationPlan(updatedItem.getMitigationPlan());
-        existing.setContingencyPlan(updatedItem.getContingencyPlan());
-        existing.setBasisRationale(updatedItem.getBasisRationale());
-        existing.setValidationDate(updatedItem.getValidationDate());
-        existing.setRiskIfWrong(updatedItem.getRiskIfWrong());
-        existing.setImpactIfDelayed(updatedItem.getImpactIfDelayed());
-        existing.setExpectedResolutionDate(updatedItem.getExpectedResolutionDate());
-        existing.setBusinessJustification(updatedItem.getBusinessJustification());
-        existing.setProductId(updatedItem.getProductId());
-        existing.setAffectedSystem(updatedItem.getAffectedSystem());
-        existing.setBusinessService(updatedItem.getBusinessService());
-        existing.setResolutionSummary(updatedItem.getResolutionSummary());
-        existing.setClosureNotes(updatedItem.getClosureNotes());
-        existing.setStakeholderUpdate(updatedItem.getStakeholderUpdate());
-        existing.setSlaTarget(updatedItem.getSlaTarget());
-        existing.setSlaBreachFlag(updatedItem.getSlaBreachFlag());
     }
 
     private void afterUpdate(String id, WorkItem saved, WorkItem updatedItem, String userId, String wsId,

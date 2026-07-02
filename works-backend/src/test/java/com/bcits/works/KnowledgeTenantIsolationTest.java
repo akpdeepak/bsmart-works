@@ -47,15 +47,18 @@ class KnowledgeTenantIsolationTest {
     private final ArticleDao articleDao = mock(ArticleDao.class);
     private final KnowledgeSpaceRepository spaceRepository = mock(KnowledgeSpaceRepository.class);
     private final RbacService rbac = mock(RbacService.class);
-    private final ArticleService articleService = mock(ArticleService.class);
-    private final ArticleWatcherService articleWatcherService = mock(ArticleWatcherService.class);
+    private final ArticleApprovalRepository approvalRepository = mock(ArticleApprovalRepository.class);
     private final SpaceFollowerService spaceFollowerService = mock(SpaceFollowerService.class);
     private final WebhookService webhookService = mock(WebhookService.class);
 
-    private final ArticleController articles = new ArticleController(
-        articleRepository, articleVersionRepository, articleCommentRepository, workflowService,
-        analyticsService, diffService, eventService, authenticatedUser, articleDao, spaceRepository, rbac,
-        articleService, articleWatcherService, spaceFollowerService, webhookService);
+    // A real ArticleService (built from the mocks) so the controller's delegation actually runs the
+    // tenant/RBAC isolation logic that now lives in the service (RB-10 §2, RB-40 §1).
+    private final ArticleService articleService = new ArticleService(
+        articleRepository, articleVersionRepository, articleCommentRepository,
+        spaceRepository, approvalRepository, workflowService,
+        analyticsService, diffService, articleDao, eventService, rbac,
+        webhookService, spaceFollowerService);
+    private final ArticleController articles = new ArticleController(articleService, authenticatedUser);
     private final KnowledgeSpaceController spaces = new KnowledgeSpaceController(
         spaceRepository, articleRepository, eventService, authenticatedUser, rbac);
 

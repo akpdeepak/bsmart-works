@@ -36,15 +36,23 @@ class ArticleServiceTest {
 
     private final ArticleRepository articleRepository = mock(ArticleRepository.class);
     private final ArticleVersionRepository articleVersionRepository = mock(ArticleVersionRepository.class);
+    private final ArticleCommentRepository articleCommentRepository = mock(ArticleCommentRepository.class);
     private final KnowledgeSpaceRepository knowledgeSpaceRepository = mock(KnowledgeSpaceRepository.class);
     private final ArticleApprovalRepository approvalRepository = mock(ArticleApprovalRepository.class);
+    private final ArticleWorkflowService workflowService = mock(ArticleWorkflowService.class);
+    private final ArticleAnalyticsService analyticsService = mock(ArticleAnalyticsService.class);
+    private final ArticleDiffService diffService = mock(ArticleDiffService.class);
+    private final ArticleDao articleDao = mock(ArticleDao.class);
     private final EventService eventService = mock(EventService.class);
     private final RbacService rbac = mock(RbacService.class);
     private final WebhookService webhookService = mock(WebhookService.class);
+    private final SpaceFollowerService spaceFollowerService = mock(SpaceFollowerService.class);
 
     private final ArticleService service = new ArticleService(
-            articleRepository, articleVersionRepository, knowledgeSpaceRepository,
-            approvalRepository, eventService, rbac, webhookService);
+            articleRepository, articleVersionRepository, articleCommentRepository,
+            knowledgeSpaceRepository, approvalRepository, workflowService,
+            analyticsService, diffService, articleDao, eventService, rbac,
+            webhookService, spaceFollowerService);
 
     @BeforeEach
     void setUp() {

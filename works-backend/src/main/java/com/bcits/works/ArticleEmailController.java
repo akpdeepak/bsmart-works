@@ -1,5 +1,9 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.EventService;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;

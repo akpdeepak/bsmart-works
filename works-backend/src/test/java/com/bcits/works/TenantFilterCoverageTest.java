@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.WorkspaceFilterActivator;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import org.hibernate.annotations.Filter;

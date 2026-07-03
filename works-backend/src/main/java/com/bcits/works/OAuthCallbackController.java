@@ -1,5 +1,10 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.EncryptionService;
+import com.bcits.works.shared.EventService;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

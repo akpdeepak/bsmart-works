@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+
 /**
  * Optimistic-concurrency helper for work-item updates (iteration 1 follow-up — the spec
  * promised "optimistic concurrency" but the version field was never checked). A client sends

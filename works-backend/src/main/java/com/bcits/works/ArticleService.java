@@ -1,5 +1,10 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.AppEvent;
+import com.bcits.works.shared.EventService;
+
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 

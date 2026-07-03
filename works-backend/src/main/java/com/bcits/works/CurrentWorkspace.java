@@ -1,5 +1,9 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.TenantContext;
+
+import com.bcits.works.shared.WorkspaceFilterActivator;
+
 import org.springframework.stereotype.Component;
 
 /**

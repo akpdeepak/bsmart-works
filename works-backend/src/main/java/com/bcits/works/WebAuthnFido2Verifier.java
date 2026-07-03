@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+
 import com.webauthn4j.WebAuthnManager;
 import com.webauthn4j.converter.AttestedCredentialDataConverter;
 import com.webauthn4j.converter.util.ObjectConverter;

@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;
 

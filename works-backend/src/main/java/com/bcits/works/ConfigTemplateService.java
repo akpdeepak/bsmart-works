@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;

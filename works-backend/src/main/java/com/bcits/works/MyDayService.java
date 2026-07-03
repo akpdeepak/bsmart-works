@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;

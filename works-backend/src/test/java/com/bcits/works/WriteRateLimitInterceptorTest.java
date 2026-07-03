@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.RateLimiter;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.Tag;

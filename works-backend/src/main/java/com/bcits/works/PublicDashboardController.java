@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.TenantScope;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.ResponseEntity;

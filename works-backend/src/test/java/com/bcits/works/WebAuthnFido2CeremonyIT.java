@@ -1,10 +1,12 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.bcits.works.dto.PasskeyAuthFinishRequest;
-import com.bcits.works.dto.PasskeyRegisterRequest;
+import com.bcits.works.shared.dto.PasskeyAuthFinishRequest;
+import com.bcits.works.shared.dto.PasskeyRegisterRequest;
 import com.webauthn4j.data.AttestationConveyancePreference;
 import com.webauthn4j.data.AuthenticatorAttachment;
 import com.webauthn4j.data.AuthenticatorSelectionCriteria;

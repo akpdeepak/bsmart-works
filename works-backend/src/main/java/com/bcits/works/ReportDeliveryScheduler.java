@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.TenantScope;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;

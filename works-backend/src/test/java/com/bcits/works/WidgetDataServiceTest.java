@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.BqlCompiler;
+
 import java.util.List;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

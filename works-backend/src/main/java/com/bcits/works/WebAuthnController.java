@@ -1,8 +1,12 @@
 package com.bcits.works;
 
-import com.bcits.works.dto.PasskeyAuthBeginRequest;
-import com.bcits.works.dto.PasskeyAuthFinishRequest;
-import com.bcits.works.dto.PasskeyRegisterRequest;
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.EventService;
+
+import com.bcits.works.shared.dto.PasskeyAuthBeginRequest;
+import com.bcits.works.shared.dto.PasskeyAuthFinishRequest;
+import com.bcits.works.shared.dto.PasskeyRegisterRequest;
 import jakarta.validation.Valid;
 import java.util.LinkedHashMap;
 import java.util.List;

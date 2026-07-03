@@ -1,5 +1,8 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.EncryptionService;
+import com.bcits.works.shared.LocalKmsProvider;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

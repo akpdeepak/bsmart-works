@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.TenantScope;
+
 /**
  * Vault glue for the two persisted, denormalised free-text customer-attribution copies (RB-40 §3,
  * EPIC-P1-pii-vault Slice 3): {@code chat_conversations.customer_name} and

@@ -1,5 +1,8 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.EmailService;
+import com.bcits.works.shared.EventService;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;

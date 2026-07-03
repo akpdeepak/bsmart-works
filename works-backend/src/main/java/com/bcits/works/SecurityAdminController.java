@@ -1,6 +1,8 @@
 package com.bcits.works;
 
-import com.bcits.works.dto.AnomalySignalRequest;
+import com.bcits.works.shared.KeyRotationService;
+
+import com.bcits.works.shared.dto.AnomalySignalRequest;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

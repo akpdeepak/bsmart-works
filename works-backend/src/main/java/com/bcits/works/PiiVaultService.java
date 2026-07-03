@@ -1,5 +1,10 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.TenantScope;
+
+import com.bcits.works.shared.EncryptionService;
+import com.bcits.works.shared.KmsProvider;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

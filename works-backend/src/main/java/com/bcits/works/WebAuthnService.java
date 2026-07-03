@@ -1,7 +1,9 @@
 package com.bcits.works;
 
-import com.bcits.works.dto.PasskeyAuthFinishRequest;
-import com.bcits.works.dto.PasskeyRegisterRequest;
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.dto.PasskeyAuthFinishRequest;
+import com.bcits.works.shared.dto.PasskeyRegisterRequest;
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.Base64;

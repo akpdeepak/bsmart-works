@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Tag;

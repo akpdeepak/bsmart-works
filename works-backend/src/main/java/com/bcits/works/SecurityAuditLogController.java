@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.PageResponse;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;

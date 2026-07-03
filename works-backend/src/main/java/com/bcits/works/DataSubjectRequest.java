@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.WorkspaceFilterActivator;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -1,5 +1,9 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.EventService;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

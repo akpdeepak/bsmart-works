@@ -1,5 +1,10 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.BqlCompiler;
+import com.bcits.works.shared.EventService;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;

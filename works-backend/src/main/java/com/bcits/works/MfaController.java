@@ -1,7 +1,11 @@
 package com.bcits.works;
 
-import com.bcits.works.dto.MfaCodeRequest;
-import com.bcits.works.dto.MfaVerifyRequest;
+import com.bcits.works.shared.TenantScope;
+
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.dto.MfaCodeRequest;
+import com.bcits.works.shared.dto.MfaVerifyRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

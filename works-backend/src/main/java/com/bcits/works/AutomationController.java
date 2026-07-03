@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.PageResponse;
+
 import jakarta.validation.Valid;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.DeleteMapping;

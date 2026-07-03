@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.RateLimiter;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

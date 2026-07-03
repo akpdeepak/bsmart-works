@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.EventService;
+
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 

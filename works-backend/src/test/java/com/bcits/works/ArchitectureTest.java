@@ -150,4 +150,19 @@ class ArchitectureTest {
                 .because("modules must stay acyclic so they remain independently extractable (ADR-0001)")
                 .check(appClasses);
     }
+
+    @Test
+    void sharedKernelDoesNotDependOnDomainModules() {
+        // The kernel may be depended on by every module but must never point back into one.
+        // References to the flat root package are tolerated only until the domain carve empties it
+        // (EPIC-03 Phase 2 §3) — this rule locks the direction against the carved modules.
+        List<String> domainModules = MODULE_PACKAGES.stream()
+                .filter(p -> !p.equals("shared"))
+                .map(p -> "com.bcits.works." + p + "..")
+                .toList();
+        noClasses().that().resideInAPackage("com.bcits.works.shared..")
+                .should().dependOnClassesThat().resideInAnyPackage(domainModules.toArray(String[]::new))
+                .because("shared is the kernel: everything may depend on it; it depends on no domain module (EPIC-03 Phase 2 §2)")
+                .check(appClasses);
+    }
 }

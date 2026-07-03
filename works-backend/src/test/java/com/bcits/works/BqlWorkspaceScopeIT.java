@@ -1,5 +1,9 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.BqlContext;
+
+import com.bcits.works.shared.BqlCompiler;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

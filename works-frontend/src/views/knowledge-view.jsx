@@ -1,17 +1,13 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import {
   Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen,
   AlertTriangle, Pencil, Eye, ChevronRight, LayoutTemplate,
   Copy, SlidersHorizontal, Share2, CheckSquare, Square, Filter, X, Home,
   ListTree, Download, Printer,
 } from 'lucide-react';
-import { MeetingNotesAssistant } from '@/components/knowledge/MeetingNotesAssistant';
-import { CreateWorkItemsFromChecklist } from '@/components/knowledge/CreateWorkItemsFromChecklist';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
-import { BlockEditor } from '@/components/BlockEditor';
 import { BlockRenderer } from '@/components/BlockRenderer';
-import { KnowAiPanel } from '@/components/knowledge/KnowAiPanel';
 import { ArticleSummarizeButton } from '@/components/knowledge/ArticleSummarizeButton';
 import { AiTextAssist } from '@/components/knowledge/AiTextAssist';
 import { ArticleCover, COVER_GRADIENTS } from '@/components/knowledge/ArticleCover';
@@ -19,8 +15,6 @@ import { ArticleIconPicker } from '@/components/knowledge/ArticleIconPicker';
 import { StatusBadge } from '@/components/knowledge/StatusBadge';
 import { StatusTransitionPopover } from '@/components/knowledge/StatusTransitionPopover';
 import { PageTreeSidebar } from '@/components/knowledge/PageTreeSidebar';
-import { BlockCommentsPanel } from '@/components/knowledge/BlockCommentsPanel';
-import { TemplatePickerModal } from '@/components/knowledge/TemplatePickerModal';
 import { PresenceBar } from '@/components/works/molecules/presence-bar';
 import { SearchModeToggle } from '@/components/knowledge/SearchModeToggle';
 import { useSearchMode } from '@/hooks/use-search-mode';
@@ -35,7 +29,6 @@ import { FollowSpaceButton } from '@/components/knowledge/FollowSpaceButton';
 import { BulkActionBar } from '@/components/knowledge/BulkActionBar';
 import { RelatedArticles } from '@/components/knowledge/RelatedArticles';
 import { ArticleSharePopover } from '@/components/knowledge/ArticleSharePopover';
-import { KnowledgeRoadmapPanel } from '@/components/knowledge/KnowledgeRoadmapPanel';
 import { useRecentArticles } from '@/hooks/use-recent-articles';
 import { onPressKey, renderMd } from '@/lib/utils';
 import { blocksText, countWords } from '@/lib/doc-stats';
@@ -45,6 +38,17 @@ import { capabilityEnabled } from '@/lib/ai';
 import { api } from '@/lib/apiClient';
 import { useArticlePresence } from '@/hooks/use-article-presence';
 import { useEditLock } from '@/hooks/use-edit-lock';
+
+// Code-split the editor and the conditionally-rendered overlays (Phase 2 / W2-d): browsing Know
+// must not download the 2k-line BlockEditor or the modals/panels a reader never opens. These are
+// named exports, hence the { default } shim.
+const BlockEditor = lazy(() => import('@/components/BlockEditor').then(m => ({ default: m.BlockEditor })));
+const MeetingNotesAssistant = lazy(() => import('@/components/knowledge/MeetingNotesAssistant').then(m => ({ default: m.MeetingNotesAssistant })));
+const CreateWorkItemsFromChecklist = lazy(() => import('@/components/knowledge/CreateWorkItemsFromChecklist').then(m => ({ default: m.CreateWorkItemsFromChecklist })));
+const KnowAiPanel = lazy(() => import('@/components/knowledge/KnowAiPanel').then(m => ({ default: m.KnowAiPanel })));
+const BlockCommentsPanel = lazy(() => import('@/components/knowledge/BlockCommentsPanel').then(m => ({ default: m.BlockCommentsPanel })));
+const TemplatePickerModal = lazy(() => import('@/components/knowledge/TemplatePickerModal').then(m => ({ default: m.TemplatePickerModal })));
+const KnowledgeRoadmapPanel = lazy(() => import('@/components/knowledge/KnowledgeRoadmapPanel').then(m => ({ default: m.KnowledgeRoadmapPanel })));
 
 // Plain text of an article for AI summary — block content when present, else the markdown body.
 function articleText(article) {
@@ -773,7 +777,9 @@ export default function KnowledgeView({
           <div className="flex-1 overflow-y-auto p-6">
             {aiAssist && knowledgeTab !== 'search' && (
               <div className="mb-5">
-                <KnowAiPanel workspaceId={workspaceId} onOpenArticle={openArticleById} />
+                <Suspense fallback={<div className="h-24 animate-pulse rounded-md bg-neutral-100" aria-hidden="true" />}>
+                  <KnowAiPanel workspaceId={workspaceId} onOpenArticle={openArticleById} />
+                </Suspense>
               </div>
             )}
 
@@ -1233,16 +1239,18 @@ export default function KnowledgeView({
                 {selectedArticle.templateType === 'MEETING_NOTES' && (() => {
                   const blocks = parseArticleBlocks(selectedArticle);
                   return Array.isArray(blocks) && blocks.some(b => b.type === 'checklist' && (b.metadata?.items || []).some(i => !i.done)) ? (
-                    <CreateWorkItemsFromChecklist
-                      blocks={blocks}
-                      articleTitle={selectedArticle.title}
-                      workspaceId={workspaceId}
-                      onBlocksChange={(updated) => {
-                        const json = JSON.stringify(updated);
-                        setSelectedArticle(a => ({ ...a, contentBlocks: json }));
-                        scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
-                      }}
-                    />
+                    <Suspense fallback={null}>
+                      <CreateWorkItemsFromChecklist
+                        blocks={blocks}
+                        articleTitle={selectedArticle.title}
+                        workspaceId={workspaceId}
+                        onBlocksChange={(updated) => {
+                          const json = JSON.stringify(updated);
+                          setSelectedArticle(a => ({ ...a, contentBlocks: json }));
+                          scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
+                        }}
+                      />
+                    </Suspense>
                   ) : null;
                 })()}
 
@@ -1400,14 +1408,16 @@ export default function KnowledgeView({
 
                     {/* KR-077: meeting notes assistant — shown when templateType is MEETING_NOTES */}
                     {selectedArticle.templateType === 'MEETING_NOTES' && (
-                      <MeetingNotesAssistant
-                        workspaceId={workspaceId}
-                        onInsert={(blocks) => {
-                          const json = JSON.stringify(blocks);
-                          setSelectedArticle(a => ({ ...a, contentBlocks: json, contentFormat: 'blocks' }));
-                          scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
-                        }}
-                      />
+                      <Suspense fallback={<div className="h-24 animate-pulse rounded-md bg-neutral-100" aria-hidden="true" />}>
+                        <MeetingNotesAssistant
+                          workspaceId={workspaceId}
+                          onInsert={(blocks) => {
+                            const json = JSON.stringify(blocks);
+                            setSelectedArticle(a => ({ ...a, contentBlocks: json, contentFormat: 'blocks' }));
+                            scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
+                          }}
+                        />
+                      </Suspense>
                     )}
 
                     {/* Block editor — always used; markdown articles are migrated to a paragraph block on first edit */}
@@ -1423,25 +1433,27 @@ export default function KnowledgeView({
                           <span className="text-2xs text-semantic-success" aria-live="polite">Saved</span>
                         )}
                       </div>
-                      <BlockEditor
-                        key={selectedArticle.id}
-                        aiAssist={aiAssist}
-                        workspaceId={workspaceId}
-                        readOnly={!lockGranted}
-                        blocks={(() => {
-                          const parsed = parseArticleBlocks(selectedArticle);
-                          if (parsed.length > 0) return parsed;
-                          if (selectedArticle.content) {
-                            return [{ id: `blk-migrate-${selectedArticle.id}`, type: 'paragraph', content: selectedArticle.content, metadata: {} }];
-                          }
-                          return [];
-                        })()}
-                        onChange={blocks => {
-                          const json = JSON.stringify(blocks);
-                          setSelectedArticle(a => ({ ...a, contentBlocks: json, contentFormat: 'blocks' }));
-                          scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
-                        }}
-                      />
+                      <Suspense fallback={<div className="h-48 animate-pulse rounded-md bg-neutral-100" aria-hidden="true" />}>
+                        <BlockEditor
+                          key={selectedArticle.id}
+                          aiAssist={aiAssist}
+                          workspaceId={workspaceId}
+                          readOnly={!lockGranted}
+                          blocks={(() => {
+                            const parsed = parseArticleBlocks(selectedArticle);
+                            if (parsed.length > 0) return parsed;
+                            if (selectedArticle.content) {
+                              return [{ id: `blk-migrate-${selectedArticle.id}`, type: 'paragraph', content: selectedArticle.content, metadata: {} }];
+                            }
+                            return [];
+                          })()}
+                          onChange={blocks => {
+                            const json = JSON.stringify(blocks);
+                            setSelectedArticle(a => ({ ...a, contentBlocks: json, contentFormat: 'blocks' }));
+                            scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
+                          }}
+                        />
+                      </Suspense>
                     </div>
 
                     <Button
@@ -1554,14 +1566,16 @@ export default function KnowledgeView({
               )}
 
               {/* ── KR-025: Block comments panel ── */}
-              <BlockCommentsPanel
-                articleId={selectedArticle?.id}
-                blockId={blockCommentPanel.blockId}
-                workspaceId={workspaceId}
-                currentUserId={currentUser?.id}
-                open={blockCommentPanel.open}
-                onClose={() => setBlockCommentPanel({ open: false, blockId: null })}
-              />
+              <Suspense fallback={null}>
+                <BlockCommentsPanel
+                  articleId={selectedArticle?.id}
+                  blockId={blockCommentPanel.blockId}
+                  workspaceId={workspaceId}
+                  currentUserId={currentUser?.id}
+                  open={blockCommentPanel.open}
+                  onClose={() => setBlockCommentPanel({ open: false, blockId: null })}
+                />
+              </Suspense>
 
               {/* KR-011: Article properties panel */}
               {propertiesOpen && (
@@ -1581,14 +1595,16 @@ export default function KnowledgeView({
 
               {/* ── Contextual side panels ── */}
               {!focusMode && !propertiesOpen && !articlePanel && (
-                <KnowledgeRoadmapPanel
-                  article={selectedArticle}
-                  articles={[...(knowledgeArticles || []), ...(knowledgeSearchResults || [])]}
-                  related={articleChildren}
-                  comments={articleComments}
-                  searchQuery={knowledgeSearch}
-                  onOpenArticle={openArticleById}
-                />
+                <Suspense fallback={<div className="w-80 flex-shrink-0 animate-pulse border-l border-neutral-200 bg-neutral-100" aria-hidden="true" />}>
+                  <KnowledgeRoadmapPanel
+                    article={selectedArticle}
+                    articles={[...(knowledgeArticles || []), ...(knowledgeSearchResults || [])]}
+                    related={articleChildren}
+                    comments={articleComments}
+                    searchQuery={knowledgeSearch}
+                    onOpenArticle={openArticleById}
+                  />
+                </Suspense>
               )}
 
               {articlePanel === 'history' && (
@@ -1807,21 +1823,23 @@ export default function KnowledgeView({
 
       {/* WI-29: template picker modal */}
       {templatePickerOpen && (
-        <TemplatePickerModal
-          workspaceId={workspaceId}
-          onClose={() => setTemplatePickerOpen(false)}
-          onApplyTemplate={(template) => {
-            // Pre-fill a new article with the template's body as the initial content.
-            setArticleForm({
-              title: '',
-              content: template.body || '',
-              templateType: template.category || 'KB',
-              status: 'DRAFT',
-            });
-            setIsArticleFormOpen(true);
-            setTemplatePickerOpen(false);
-          }}
-        />
+        <Suspense fallback={null}>
+          <TemplatePickerModal
+            workspaceId={workspaceId}
+            onClose={() => setTemplatePickerOpen(false)}
+            onApplyTemplate={(template) => {
+              // Pre-fill a new article with the template's body as the initial content.
+              setArticleForm({
+                title: '',
+                content: template.body || '',
+                templateType: template.category || 'KB',
+                status: 'DRAFT',
+              });
+              setIsArticleFormOpen(true);
+              setTemplatePickerOpen(false);
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );

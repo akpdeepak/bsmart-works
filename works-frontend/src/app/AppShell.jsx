@@ -106,7 +106,6 @@ const MarketplaceView = React.lazy(() => import('@/views/marketplace-view'));
 const DeveloperPortalView = React.lazy(() => import('@/views/developer-portal-view'));
 const KnowledgeTemplatesView = React.lazy(() => import('@/views/knowledge-templates-view'));
 const SupportInboxView = React.lazy(() => import('@/views/support-inbox-view'));
-import { BlockEditor } from '@/components/BlockEditor';
 // PortalFormDesigner moved to service-view.jsx (TD-003).
 const BacklogView = React.lazy(() => import('@/views/backlog-view'));
 const SprintView = React.lazy(() => import('@/views/sprint-view'));

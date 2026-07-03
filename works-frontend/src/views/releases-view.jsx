@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Rocket } from 'lucide-react';
 import { Button } from '@/components/works/button';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { TypeBadge } from '@/components/works/work-item-type';
@@ -39,7 +40,7 @@ export default function ReleasesView({
   if (loading && releases.length === 0) {
     return (
       <div className="p-6">
-        <ListSkeleton rows={4} />
+        <AsyncBoundary loading skeleton={<ListSkeleton rows={4} />} />
       </div>
     );
   }

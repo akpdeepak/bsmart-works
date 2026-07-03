@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { BarChart2, AlertTriangle, ChevronDown, Search, Target, CalendarDays, ShieldAlert } from 'lucide-react';
-import { EmptyState } from '@/components/works/atoms/empty-state';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { StatusBadge } from '@/components/works/status-badge';
@@ -258,7 +258,7 @@ export default function ReportsView({
   if (loading && sprints.length === 0) {
     return (
       <PageLayout title={t('insights.reports.title')}>
-        <ListSkeleton rows={4} />
+        <AsyncBoundary loading skeleton={<ListSkeleton rows={4} />} />
       </PageLayout>
     );
   }
@@ -268,9 +268,13 @@ export default function ReportsView({
       description={t('insights.reports.subtitle')}
     >
 
-      {sprints.length === 0
-        ? <EmptyState icon={BarChart2} title={t('insights.reports.emptyTitle')} subtitle={t('insights.reports.emptySubtitle')} />
-        : <>
+      <AsyncBoundary
+        empty={sprints.length === 0}
+        emptyIcon={BarChart2}
+        emptyTitle={t('insights.reports.emptyTitle')}
+        emptySubtitle={t('insights.reports.emptySubtitle')}
+      >
+          <>
             <SprintPicker sprints={sprints} selectedSprintId={selectedSprintId}
               onSelect={(id) => { setSelectedSprintId(id); fetchSprintReport(id); }} />
 
@@ -474,7 +478,7 @@ export default function ReportsView({
               <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center py-10">{t('insights.reports.selectSprint')}</p>
             )}
           </>
-      }
+      </AsyncBoundary>
 
       {/* Workspace context — across all sprints, shown below the selected-sprint report. */}
       <div className="mt-8 pt-6 border-t border-neutral-200 dark:border-neutral-700">

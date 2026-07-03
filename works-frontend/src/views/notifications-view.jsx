@@ -5,7 +5,7 @@ import { Button } from '@/components/works/button';
 import { api } from '@/lib/apiClient';
 import { pathToView } from '@/lib/routes';
 import { getActionableInboxItems, groupInboxItems, toInboxItem } from '@/lib/smart-inbox';
-import { EmptyState } from '@/components/works/atoms/empty-state';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { Skeleton, ListSkeleton } from '@/components/works/atoms/skeleton';
 import { Tabs, TabList, Tab, TabPanel } from '@/components/works/atoms/tabs';
 import { Toggle } from '@/components/works/atoms/toggle';
@@ -219,8 +219,7 @@ export default function NotificationsView({
   if (loading && notifications.length === 0) {
     return (
       <PageLayout>
-        <Skeleton className="mb-6 h-7 w-36" />
-        <ListSkeleton rows={5} />
+        <AsyncBoundary loading skeleton={<><Skeleton className="mb-6 h-7 w-36" /><ListSkeleton rows={5} /></>} />
       </PageLayout>
     );
   }
@@ -260,10 +259,12 @@ export default function NotificationsView({
             </div>
           </div>
 
-          {actionGroups.length === 0
-            ? <EmptyState icon={Check} title="Action inbox is clear"
-                subtitle="Approvals, replies, reviews, assignments, and escalations will appear here when they need action." />
-            : (
+          <AsyncBoundary
+            empty={actionGroups.length === 0}
+            emptyIcon={Check}
+            emptyTitle="Action inbox is clear"
+            emptySubtitle="Approvals, replies, reviews, assignments, and escalations will appear here when they need action."
+          >
               <div className="space-y-4">
                 {actionGroups.map(group => {
                   const Icon = ACTION_ICON[group.id] || Bell;
@@ -314,15 +315,18 @@ export default function NotificationsView({
                   );
                 })}
               </div>
-            )}
+          </AsyncBoundary>
         </TabPanel>
 
         <TabPanel value="activity">
-          {activityItems.length === 0
-            ? <EmptyState icon={Bell} title="No activity yet"
-                subtitle="Notifications about assignments, comments, mentions, and system updates will appear here." />
-            : <div className="space-y-2">{activityItems.map(renderActivityCard)}</div>
-          }
+          <AsyncBoundary
+            empty={activityItems.length === 0}
+            emptyIcon={Bell}
+            emptyTitle="No activity yet"
+            emptySubtitle="Notifications about assignments, comments, mentions, and system updates will appear here."
+          >
+            <div className="space-y-2">{activityItems.map(renderActivityCard)}</div>
+          </AsyncBoundary>
         </TabPanel>
 
         <TabPanel value="preferences">

@@ -4,7 +4,7 @@ import {
 import { PageLayout } from '@/components/works/templates/page-layout';
 import { Folder } from 'lucide-react';
 import { Button } from '@/components/works/button';
-import { EmptyState } from '@/components/works/atoms/empty-state';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { statusToCategory } from '@/components/works/status';
 import { buildProjectCommandCenter } from '@/lib/project-command-center';
@@ -28,7 +28,7 @@ export default function ProjectsView({
   if (loading && projects.length === 0) {
     return (
       <PageLayout header={null}>
-        <ListSkeleton rows={4} />
+        <AsyncBoundary loading skeleton={<ListSkeleton rows={4} />} />
       </PageLayout>
     );
   }
@@ -45,16 +45,13 @@ export default function ProjectsView({
       width="dashboard"
     >
 
-      {projects.length === 0
-        ? (
-          <EmptyState
-            icon={Folder}
-            title={t('deliver.teams.emptyTitle')}
-            subtitle={t('deliver.teams.emptySubtitle')}
-            action={<Button variant="action" onClick={() => setIsProjectOpen(true)}>{t('deliver.teams.createFirst')}</Button>}
-          />
-        )
-        : (
+      <AsyncBoundary
+        empty={projects.length === 0}
+        emptyIcon={Folder}
+        emptyTitle={t('deliver.teams.emptyTitle')}
+        emptySubtitle={t('deliver.teams.emptySubtitle')}
+        emptyAction={<Button variant="action" onClick={() => setIsProjectOpen(true)}>{t('deliver.teams.createFirst')}</Button>}
+      >
           <div className="space-y-3">
             {projects.map(p => {
               const projectItems = workItems.filter(i => i.projectId === p.id);
@@ -202,8 +199,7 @@ export default function ProjectsView({
               );
             })}
           </div>
-        )
-      }
+      </AsyncBoundary>
     </PageLayout>
   );
 }

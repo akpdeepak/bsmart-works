@@ -3,7 +3,7 @@ import { PageLayout } from '@/components/works/templates/page-layout';
 import { Star, User, AtSign, ClipboardList, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/works/button';
-import { EmptyState } from '@/components/works/atoms/empty-state';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { Skeleton, ListSkeleton } from '@/components/works/atoms/skeleton';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { StatusBadge } from '@/components/works/status-badge';
@@ -146,8 +146,7 @@ export default function MyWorksView({
   if (loading && workItems.length === 0) {
     return (
       <div className="p-6">
-        <Skeleton className="h-7 w-44 mb-6" />
-        <ListSkeleton rows={6} />
+        <AsyncBoundary loading skeleton={<><Skeleton className="h-7 w-44 mb-6" /><ListSkeleton rows={6} /></>} />
       </div>
     );
   }
@@ -205,11 +204,14 @@ export default function MyWorksView({
 
       {/* Assigned */}
       {myWorksTab === 'assigned' && (
-        myItems.length === 0
-          ? <EmptyState icon={User} title={t('deliver.myWorks.assignedEmptyTitle')}
-              subtitle={t('deliver.myWorks.assignedEmptySubtitle')}
-              action={<Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(true)}>{t('deliver.myWorks.createWorkItem')}</Button>} />
-          : <>
+        <AsyncBoundary
+          empty={myItems.length === 0}
+          emptyIcon={User}
+          emptyTitle={t('deliver.myWorks.assignedEmptyTitle')}
+          emptySubtitle={t('deliver.myWorks.assignedEmptySubtitle')}
+          emptyAction={<Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(true)}>{t('deliver.myWorks.createWorkItem')}</Button>}
+        >
+          <>
               {/* Sort pills */}
               <div className="flex items-center gap-1.5 mb-3">
                 <span className="text-xs text-neutral-600 dark:text-neutral-400">{t('deliver.myWorks.sort')}</span>
@@ -233,27 +235,35 @@ export default function MyWorksView({
                   <WorkRow key={item.id} item={item} onSelect={setSelectedItem} onPressKey={onPressKey} iv={iv} statusResolver={statusResolver} />
                 ))}
               </div>
-            </>
+          </>
+        </AsyncBoundary>
       )}
 
       {/* Starred */}
       {myWorksTab === 'starred' && (
-        starredItems.length === 0
-          ? <EmptyState icon={Star} title={t('deliver.myWorks.starredEmptyTitle')}
-              subtitle={t('deliver.myWorks.starredEmptySubtitle')} />
-          : <div className="space-y-2">
-              {starredItems.map(item => (
-                <WorkRow key={item.id} item={item} onSelect={setSelectedItem} onPressKey={onPressKey} starred iv={iv} statusResolver={statusResolver} />
-              ))}
-            </div>
+        <AsyncBoundary
+          empty={starredItems.length === 0}
+          emptyIcon={Star}
+          emptyTitle={t('deliver.myWorks.starredEmptyTitle')}
+          emptySubtitle={t('deliver.myWorks.starredEmptySubtitle')}
+        >
+          <div className="space-y-2">
+            {starredItems.map(item => (
+              <WorkRow key={item.id} item={item} onSelect={setSelectedItem} onPressKey={onPressKey} starred iv={iv} statusResolver={statusResolver} />
+            ))}
+          </div>
+        </AsyncBoundary>
       )}
 
       {/* Mentions */}
       {myWorksTab === 'mentions' && (
-        mentions.length === 0
-          ? <EmptyState icon={AtSign} title={t('deliver.myWorks.mentionsEmptyTitle')}
-              subtitle={t('deliver.myWorks.mentionsEmptySubtitle')} />
-          : <div className="space-y-2">
+        <AsyncBoundary
+          empty={mentions.length === 0}
+          emptyIcon={AtSign}
+          emptyTitle={t('deliver.myWorks.mentionsEmptyTitle')}
+          emptySubtitle={t('deliver.myWorks.mentionsEmptySubtitle')}
+        >
+          <div className="space-y-2">
               {mentions.map(n => {
                 const linkedItem = n.itemId ? workItems.find(i => i.id === n.itemId) : null;
                 const linkView = (!linkedItem && n.link) ? pathToView(n.link) : null;
@@ -287,16 +297,20 @@ export default function MyWorksView({
                   </div>
                 );
               })}
-            </div>
+          </div>
+        </AsyncBoundary>
       )}
 
       {/* Activity */}
       {myWorksTab === 'activity' && (
-        activityItems.length === 0
-          ? <EmptyState icon={ClipboardList} title={t('deliver.myWorks.activityEmptyTitle')}
-              subtitle={t('deliver.myWorks.activityEmptySubtitle')}
-              action={<Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(true)}>{t('deliver.myWorks.createWorkItem')}</Button>} />
-          : <div className="space-y-2">
+        <AsyncBoundary
+          empty={activityItems.length === 0}
+          emptyIcon={ClipboardList}
+          emptyTitle={t('deliver.myWorks.activityEmptyTitle')}
+          emptySubtitle={t('deliver.myWorks.activityEmptySubtitle')}
+          emptyAction={<Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(true)}>{t('deliver.myWorks.createWorkItem')}</Button>}
+        >
+          <div className="space-y-2">
               {activityItems.map(i => (
                 <WorkRow key={i.id} item={i} onSelect={setSelectedItem} onPressKey={onPressKey} compact iv={iv} statusResolver={statusResolver} />
               ))}
@@ -305,7 +319,8 @@ export default function MyWorksView({
                   {t('deliver.myWorks.showingPrefix')}{CONFIG.activityLimit}{t('deliver.myWorks.mostRecent')}{activityOverflow}{t('deliver.myWorks.more')}
                 </p>
               )}
-            </div>
+          </div>
+        </AsyncBoundary>
       )}
     </PageLayout>
   );

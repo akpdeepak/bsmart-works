@@ -6,8 +6,15 @@ import { render, screen, fireEvent } from '@testing-library/react';
 vi.mock('@/lib/apiClient', () => ({ api: { send: vi.fn(() => Promise.resolve({})) } }));
 
 import { I18nProvider, useI18n } from './i18n';
-import { translate, MESSAGES } from './locales';
+import { translate, loadLocale } from './locales';
+// Non-en catalogs are lazy-loaded chunks now (no monolithic MESSAGES export); import the specific
+// per-language tables this suite reads directly, so assertions on exact translated values are unchanged.
+import hi from './locales/hi.js';
+import ar from './locales/ar.js';
+import ja from './locales/ja.js';
 import ReportsView from '@/views/reports-view';
+
+const MESSAGES = { hi, ar, ja };
 
 const reportsProps = {
   velocityData: [],
@@ -39,9 +46,10 @@ describe('i18n foundation', () => {
     document.documentElement.lang = '';
   });
 
-  it('switching locale changes a rendered Insights string (translated locale)', () => {
+  it('switching locale changes a rendered Insights string (translated locale)', async () => {
     // The Insights catalog (insights.*) is fully translated for every non-en locale (issue 275);
     // English and Hindi differ, so the rendered heading must change when the locale switches.
+    await loadLocale('hi'); // register the lazily-loaded Hindi chunk before asserting its values
     expect(translate('en', 'insights.reports.title')).toBe('Sprint Reports');
     expect(MESSAGES.hi['insights.reports.title']).toBeDefined();
 
@@ -56,15 +64,18 @@ describe('i18n foundation', () => {
     // Starts in English.
     expect(screen.getByRole('heading', { name: 'Sprint Reports' })).toBeInTheDocument();
 
-    // Switch to Hindi → the heading re-renders with the Hindi translation.
+    // Switch to Hindi → the heading re-renders with the Hindi translation (async: the provider
+    // lazy-loads the chunk then bumps a version to re-render).
     fireEvent.change(screen.getByLabelText('locale'), { target: { value: 'hi' } });
-    expect(screen.getByRole('heading', { name: MESSAGES.hi['insights.reports.title'] })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: MESSAGES.hi['insights.reports.title'] })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Sprint Reports' })).not.toBeInTheDocument();
   });
 
-  it('Insights catalog is fully translated (non-en, never the en string) for RTL + LTR locales', () => {
+  it('Insights catalog is fully translated (non-en, never the en string) for RTL + LTR locales', async () => {
     // A representative slice of the insights.* set — issue 275 translated the whole catalog for all
     // 9 non-en locales. Each must be present and differ from the English source string.
+    await loadLocale('ar'); // register the lazily-loaded chunks before translate() resolves them
+    await loadLocale('ja');
     const sampleKeys = [
       'insights.reports.subtitle',
       'insights.dashboards.new',

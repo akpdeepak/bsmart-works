@@ -10,9 +10,30 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 - Program mode: **maximal-scope end-to-end completion** (Deepak, 2026-06-20). The authoritative tracker
   is now `docs/implementation/MASTER-COMPLETION-ROADMAP.md`; this file remains the cross-session resume
   ledger.
-- Active phase: **Phase 1 ✅ COMPLETE (2026-06-21) → next is Phase 2 — structural refactors** (plan
-  staged in draft PR #417; execution not started). Phase-1/W1 shipped as PRs #415–#441; the master
-  ledger was reconciled to completion in PR #444 (2026-07-02).
+- Active phase: **Phase 2 — structural refactors (W2), IN PROGRESS** (plan in draft PR #417; Phase 1
+  ✅ complete 2026-06-21, PRs #415–#441, ledger reconciled in PR #444).
+  - ✅ **W2-b god classes — all four split & merged:** `ArticleController`→`ArticleService` (PR #446),
+    `KpiService`→`KpiMetricCalculator` (PR #447), `BqlCompiler`→`BqlParser`+`BqlSqlEmitter` (PR #448),
+    `WorkItemCommandService`→`WorkItemFieldCopier` (PR #449).
+  - ✅ **W2-d (partial):** `locales.js` code-split by language, English-only main bundle (PR #451);
+    `BlockEditor` + the six knowledge-view overlays lazy-loaded via React.lazy/Suspense — initial JS
+    162.9→140.7 kB gz (PR #452). `knowledge-view.jsx`/`BlockEditor.jsx` line-count reduction itself
+    remains open.
+  - ✅ **W2-e (tranche 1):** `AsyncBoundary` adopted in the six list/table views (my-works, projects,
+    releases, reports, notifications, trash) — 0→6 production consumers, all 70 view tests unmodified
+    (PR #453). Dashboard/console + detail-panel tranches remain.
+  - ✅ **W2-f (partial):** the 3 `#94A3B8` hex in status-management-tab tokenized (PR #450); the
+    43-file `worksViewStructureLegacy` ESLint warn block still to migrate.
+  - ✅ **W2-a (G-1 kernel):** 35 kernel classes + `dto/` moved to `com.bcits.works.shared` (errors/
+    envelope, event store, crypto, the whole tenancy cluster, BQL kernel, utils) — pure move (5
+    substantive lines), new ArchUnit rule `sharedKernelDoesNotDependOnDomainModules`, validated by
+    1,449 unit tests + real `ddl-auto=validate` boot (PR #454). **Next: G-2 domain carve,
+    Identity-first (`auth` → `workspaces` → `security` → rest), one module per PR** with the
+    `RbacService` port in shared landing with the auth carve.
+  - Bundle-budget gate (I-2) verified already in CI (`perf-budget`, 500 KB gz initial-JS ceiling).
+  - **Still open in Phase 2:** G-2 domain carve (663→ files still flat), W2-c AppShell decomposition
+    (4,629 lines), AsyncBoundary tranches 2–3, the 43-file legacy lint block, FE monolith line-count
+    reductions.
   - ✅ Phase 0 (truth reconciliation + master ledger + restored CI pipeline) — PR #407.
   - ✅ **PII vault + crypto-shredding** EPIC complete — PRs #418–#424 (high-water through V114); only the
     deferred CONTRACT plaintext-column drop remains. See `EPIC-P1-pii-vault-completion.md`.
@@ -49,7 +70,7 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
   (`roles` V7 vs `role_def` V21); WorkflowController null-workspace branch + create-side body-workspaceId
   trust on Team/Report/etc + per-operation perm tightening on the Slice-D controllers; FLS rule seeding;
   the deferred #243 Slice E CONTRACT predicate removal.
-- Last state update: 2026-07-02 (Phase-1 closure audit — state reconciled to remote `main`)
+- Last state update: 2026-07-03 (Phase-2 progress reconcile — PRs #446–#454 verified on remote `main`)
 
 ## Trigger contract
 
@@ -330,3 +351,13 @@ gates, gitleaks, bundle budget, deployment smoke, JetBrains plugin build, conven
 AI rules, and DoD version checks. Local `main` and `origin/main` are synced at the merge commit.
 Local validation covered `cd works-frontend && npm test -- engineering-activity developer-workspace`,
 `npm run verify`, and `cd works-frontend && npm run verify`. Resume with EPIC 13.
+
+2026-07-03: Phase 2 (W2) execution is underway and reconciled to remote `main`. Merged: the four
+god-class splits (PRs #446–#449), status-management hex tokenization (PR #450), locales.js
+per-language code-split (PR #451), BlockEditor + knowledge-overlay lazy-loading (PR #452, initial
+JS 162.9→140.7 kB gz), AsyncBoundary tranche 1 across the six list/table views (PR #453), and the
+G-1 shared-kernel package move to `com.bcits.works.shared` (PR #454 — 556 files, pure move, new
+kernel-direction ArchUnit rule, validated by 1,449 unit tests + a real ddl-auto=validate boot).
+Resume point: **G-2 domain carve, Identity-first (`auth` first, with the RbacService port in
+shared), one module per PR**; then W2-c AppShell decomposition, AsyncBoundary tranches 2–3, and the
+43-file legacy lint-block migration. No schema changes in any Phase-2 PR so far (high-water V119).

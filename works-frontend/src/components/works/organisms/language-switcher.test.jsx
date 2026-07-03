@@ -5,7 +5,7 @@ vi.mock('@/lib/apiClient', () => ({ api: { send: vi.fn(() => Promise.resolve({})
 
 import { LanguageSwitcher } from './language-switcher';
 import { I18nProvider } from '@/lib/i18n';
-import { translate } from '@/lib/locales';
+import { translate, loadLocale } from '@/lib/locales';
 
 describe('LanguageSwitcher', () => {
   it('lists all 10 shipped locales and switches language', () => {
@@ -25,7 +25,10 @@ describe('LanguageSwitcher', () => {
 });
 
 describe('translate', () => {
-  it('returns the locale string and falls back to English for missing keys', () => {
+  it('returns the locale string and falls back to English for missing keys', async () => {
+    // Non-en locales are lazy-loaded now — register them before asserting their values.
+    await loadLocale('es');
+    await loadLocale('hi');
     expect(translate('es', 'nav.home')).toBe('Inicio');
     expect(translate('hi', 'nav.board')).toBe('बोर्ड');
     // unknown key → returns the key itself, never blank

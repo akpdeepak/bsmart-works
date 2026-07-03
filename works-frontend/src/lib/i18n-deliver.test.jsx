@@ -6,9 +6,23 @@ import { render, screen, fireEvent } from '@testing-library/react';
 vi.mock('@/lib/apiClient', () => ({ api: { send: vi.fn(() => Promise.resolve({})) } }));
 
 import { I18nProvider, useI18n } from './i18n';
-import { translate, MESSAGES } from './locales';
+import { translate, loadLocale } from './locales';
+// Non-en catalogs are lazy-loaded chunks now (no monolithic MESSAGES export); import the specific
+// per-language tables this suite reads directly, so assertions on exact translated values are unchanged.
+import hi from './locales/hi.js';
+import es from './locales/es.js';
+import fr from './locales/fr.js';
+import de from './locales/de.js';
+import pt from './locales/pt.js';
+import ja from './locales/ja.js';
+import zh from './locales/zh.js';
+import ar from './locales/ar.js';
+import ko from './locales/ko.js';
 import BoardView from '@/views/board-view';
 import ProjectsView from '@/views/projects-view';
+
+const MESSAGES = { hi, es, fr, de, pt, ja, zh, ar, ko };
+const ALL_NON_EN = ['hi', 'es', 'fr', 'de', 'pt', 'ja', 'zh', 'ar', 'ko'];
 
 const noop = () => {};
 
@@ -60,8 +74,9 @@ describe('i18n — Deliver surfaces + navigation shell (issue #275)', () => {
     document.documentElement.lang = '';
   });
 
-  it('renders the Board heading in the active non-en locale (Arabic, RTL) and back', () => {
+  it('renders the Board heading in the active non-en locale (Arabic, RTL) and back', async () => {
     // en and ar differ for the Board title, so the heading must change when the locale switches.
+    await loadLocale('ar'); // register the lazily-loaded Arabic chunk before asserting its values
     expect(translate('en', 'deliver.board.title')).toBe('Board');
     expect(MESSAGES.ar['deliver.board.title']).toBeDefined();
     expect(MESSAGES.ar['deliver.board.title']).not.toBe('Board');
@@ -78,15 +93,17 @@ describe('i18n — Deliver surfaces + navigation shell (issue #275)', () => {
     expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
     expect(screen.getByText('TO DO')).toBeInTheDocument();
 
-    // Switch to Arabic → heading + column header re-render localized; RTL is applied.
+    // Switch to Arabic → heading + column header re-render localized; RTL is applied (async: the
+    // provider lazy-loads the chunk then bumps a version to re-render).
     fireEvent.change(screen.getByLabelText('locale'), { target: { value: 'ar' } });
-    expect(screen.getByRole('heading', { name: MESSAGES.ar['deliver.board.title'] })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: MESSAGES.ar['deliver.board.title'] })).toBeInTheDocument();
     expect(screen.getByText(MESSAGES.ar['deliver.board.colTodo'])).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Board' })).not.toBeInTheDocument();
     expect(document.documentElement.dir).toBe('rtl');
   });
 
-  it('renders the Teams empty state in Japanese', () => {
+  it('renders the Teams empty state in Japanese', async () => {
+    await loadLocale('ja'); // register the lazily-loaded Japanese chunk before asserting its values
     expect(MESSAGES.ja['deliver.teams.emptyTitle']).toBeDefined();
     expect(MESSAGES.ja['deliver.teams.emptyTitle']).not.toBe(translate('en', 'deliver.teams.emptyTitle'));
 
@@ -99,12 +116,15 @@ describe('i18n — Deliver surfaces + navigation shell (issue #275)', () => {
     );
 
     expect(screen.getByText('No teams yet')).toBeInTheDocument(); // en default
+    // Switch to Japanese (async: the provider lazy-loads the chunk then bumps a version to re-render).
     fireEvent.change(screen.getByLabelText('locale'), { target: { value: 'ja' } });
-    expect(screen.getByText(MESSAGES.ja['deliver.teams.emptyTitle'])).toBeInTheDocument();
+    expect(await screen.findByText(MESSAGES.ja['deliver.teams.emptyTitle'])).toBeInTheDocument();
     expect(screen.queryByText('No teams yet')).not.toBeInTheDocument();
   });
 
-  it('deliver.* + nav.* are fully translated (non-en, never the en string) for RTL + LTR locales', () => {
+  it('deliver.* + nav.* are fully translated (non-en, never the en string) for RTL + LTR locales', async () => {
+    await loadLocale('ar'); // register the lazily-loaded chunks before translate() resolves them
+    await loadLocale('ja');
     const sampleKeys = [
       'deliver.board.title',
       'deliver.backlog.emptyTitle',
@@ -127,7 +147,9 @@ describe('i18n — Deliver surfaces + navigation shell (issue #275)', () => {
     }
   });
 
-  it('deliver.filter / bulk / watch controls are translated across all 9 non-en locales', () => {
+  it('deliver.filter / bulk / watch controls are translated across all 9 non-en locales', async () => {
+    // Register every lazily-loaded non-en chunk before translate() resolves them.
+    await Promise.all(ALL_NON_EN.map(loadLocale));
     const sampleKeys = [
       'deliver.filter.assignee',
       'deliver.filter.sortBy',
@@ -147,7 +169,9 @@ describe('i18n — Deliver surfaces + navigation shell (issue #275)', () => {
     }
   });
 
-  it('Sprint Cockpit shell + retro labels are translated across all 9 non-en locales', () => {
+  it('Sprint Cockpit shell + retro labels are translated across all 9 non-en locales', async () => {
+    // Register every lazily-loaded non-en chunk before translate() resolves them.
+    await Promise.all(ALL_NON_EN.map(loadLocale));
     // Keys whose translations genuinely differ from English in every locale (proper nouns like
     // "Scrum master"/"Retro" are intentionally kept verbatim in some locales, so they're excluded).
     const sampleKeys = [

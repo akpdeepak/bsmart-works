@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.AuthenticatedUser;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

@@ -7,11 +7,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   LayoutDashboard, Sparkles, Map as MapIcon, Users, ShieldAlert, HeartPulse,
-  GitBranch, Presentation, RefreshCw, Wand2,
+  GitBranch, Presentation, Wand2,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { PageLayout } from '@/components/works/templates/page-layout';
 import { AiMetaBadge } from '@/components/works/ai-meta-badge';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { Skeleton } from '@/components/works/atoms/skeleton';
 import { leadershipClient } from '@/lib/leadership';
@@ -167,18 +168,13 @@ export default function LeadershipConsoleView({ workspaceId, onToast }) {
         ))}
       </div>
 
-      {error ? (
-        <EmptyState
-          icon={ShieldAlert}
-          title="Couldn't load this view"
-          subtitle={error}
-          action={<Button variant="secondary" size="sm" leftIcon={<RefreshCw className="h-4 w-4" />} onClick={retry}>Try again</Button>}
-        />
-      ) : loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4" aria-busy="true" aria-label="Loading">
-          <Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" />
-        </div>
-      ) : (
+      <AsyncBoundary
+        loading={loading}
+        error={error}
+        onRetry={retry}
+        className="grid grid-cols-1 md:grid-cols-3 gap-4"
+        skeleton={<><Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" /></>}
+      >
         <div role="tabpanel">
           {tab === 'overview' && <OverviewTab data={data.overview} />}
           {tab === 'briefing' && (
@@ -194,7 +190,7 @@ export default function LeadershipConsoleView({ workspaceId, onToast }) {
           {tab === 'strategy' && <StrategyTab data={data.strategy} />}
           {tab === 'deck' && <DeckTab data={data.deck} busy={deckBusy} onGenerate={generateDeck} />}
         </div>
-      )}
+      </AsyncBoundary>
     </PageLayout>
   );
 }

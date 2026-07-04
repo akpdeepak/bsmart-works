@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -35,10 +36,10 @@ public class FunnelMetricsService {
         "BQL_RUN", "WORKSPACE_TEAMMATE_INVITED",
     };
 
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final JdbcTemplate jdbc;
 
-    public FunnelMetricsService(RbacService rbac, JdbcTemplate jdbc) {
+    public FunnelMetricsService(RbacGate rbac, JdbcTemplate jdbc) {
         this.rbac = rbac;
         this.jdbc = jdbc;
     }

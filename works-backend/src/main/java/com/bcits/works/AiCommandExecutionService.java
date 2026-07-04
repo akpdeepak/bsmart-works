@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -30,12 +31,12 @@ public class AiCommandExecutionService {
     private final UserRepository users;
     private final CommentRepository comments;
     private final EventService events;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final AutomationService automations;
 
     public AiCommandExecutionService(WorkItemRepository workItems, ProjectRepository projects,
                                      UserRepository users, CommentRepository comments, EventService events,
-                                     RbacService rbac, AutomationService automations) {
+                                     RbacGate rbac, AutomationService automations) {
         this.workItems = workItems;
         this.projects = projects;
         this.users = users;

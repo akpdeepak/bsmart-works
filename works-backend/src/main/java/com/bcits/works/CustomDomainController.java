@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -38,11 +39,11 @@ public class CustomDomainController {
 
     private final CustomDomainService domainService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public CustomDomainController(CustomDomainService domainService,
                                    AuthenticatedUser authenticatedUser,
-                                   RbacService rbac) {
+                                   RbacGate rbac) {
         this.domainService = domainService;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

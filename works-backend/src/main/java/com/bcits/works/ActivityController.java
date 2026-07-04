@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -20,10 +21,10 @@ public class ActivityController {
 
     private final JdbcTemplate jdbc;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final UserPiiService userPii;
 
-    public ActivityController(JdbcTemplate jdbc, AuthenticatedUser authenticatedUser, RbacService rbac,
+    public ActivityController(JdbcTemplate jdbc, AuthenticatedUser authenticatedUser, RbacGate rbac,
                               UserPiiService userPii) {
         this.jdbc = jdbc;
         this.authenticatedUser = authenticatedUser;

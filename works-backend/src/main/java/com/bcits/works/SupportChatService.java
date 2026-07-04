@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -61,13 +62,13 @@ public class SupportChatService {
     private final ChatMessageRepository messages;
     private final AiControlPlaneService controlPlane;
     private final EventService events;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final NotificationBatchService notificationBatch;
     private final CustomerAttributionPiiService attributionPii;
 
     public SupportChatService(ChatConversationRepository conversations, ChatMessageRepository messages,
                               AiControlPlaneService controlPlane, EventService events,
-                              RbacService rbac, NotificationBatchService notificationBatch,
+                              RbacGate rbac, NotificationBatchService notificationBatch,
                               CustomerAttributionPiiService attributionPii) {
         this.conversations = conversations;
         this.messages = messages;

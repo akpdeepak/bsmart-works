@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -30,11 +31,11 @@ public class ExportController {
     private final DashboardRepository dashboardRepository;
     private final ExportService exportService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public ExportController(ReportRepository reportRepository, DashboardRepository dashboardRepository,
                             ExportService exportService, AuthenticatedUser authenticatedUser,
-                            RbacService rbac) {
+                            RbacGate rbac) {
         this.reportRepository = reportRepository;
         this.dashboardRepository = dashboardRepository;
         this.exportService = exportService;

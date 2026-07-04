@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -30,11 +31,11 @@ public class CustomFieldDefinitionController {
 
     private final CustomFieldDefinitionRepository repo;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public CustomFieldDefinitionController(CustomFieldDefinitionRepository repo,
                                             AuthenticatedUser authenticatedUser,
-                                            RbacService rbac) {
+                                            RbacGate rbac) {
         this.repo = repo;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

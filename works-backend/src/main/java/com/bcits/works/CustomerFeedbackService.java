@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -23,11 +24,11 @@ import java.util.UUID;
 public class CustomerFeedbackService {
 
     private final CustomerFeedbackRepository repo;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService events;
     private final CustomerAttributionPiiService attributionPii;
 
-    public CustomerFeedbackService(CustomerFeedbackRepository repo, RbacService rbac, EventService events,
+    public CustomerFeedbackService(CustomerFeedbackRepository repo, RbacGate rbac, EventService events,
                                    CustomerAttributionPiiService attributionPii) {
         this.repo = repo;
         this.rbac = rbac;

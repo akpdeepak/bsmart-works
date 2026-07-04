@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Universal Customization Engine API (iteration 17, Cap R). One configuration surface per workspace —
  * the centralized settings document plus its version history, diff, rollback, JSON/YAML import-export,
- * and pre-apply impact analysis. RBAC is applied here via {@link RbacService} (the decision logic
+ * and pre-apply impact analysis. RBAC is applied here via {@link RbacGate} (the decision logic
  * lives in the service layer, RB-10 §2): reading config needs workspace membership
  * ({@code view_items}); writing needs {@code manage_workspace}; lockable settings add a second,
  * owner-only gate enforced inside {@link ConfigService}. Every call is workspace-scoped (RB-40 §1).
@@ -26,12 +27,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class ConfigController {
 
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final ConfigService config;
     private final ConfigImpactService impact;
     private final ConfigSerializationService serialization;
 
-    public ConfigController(AuthenticatedUser authenticatedUser, RbacService rbac, ConfigService config,
+    public ConfigController(AuthenticatedUser authenticatedUser, RbacGate rbac, ConfigService config,
                             ConfigImpactService impact, ConfigSerializationService serialization) {
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

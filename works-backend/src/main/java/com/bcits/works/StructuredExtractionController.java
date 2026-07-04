@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -24,10 +25,10 @@ public class StructuredExtractionController {
 
     private final StructuredExtractionService service;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public StructuredExtractionController(StructuredExtractionService service,
-                                          AuthenticatedUser authenticatedUser, RbacService rbac) {
+                                          AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.service = service;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

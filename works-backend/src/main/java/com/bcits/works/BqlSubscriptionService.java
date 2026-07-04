@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.BqlContext;
@@ -35,7 +36,7 @@ public class BqlSubscriptionService {
 
     private final BqlSubscriptionRepository subs;
     private final SavedViewRepository views;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final BqlExecutionService execution;
     private final BqlContextFactory contextFactory;
     private final BqlRunAuditService runAudit;
@@ -43,7 +44,7 @@ public class BqlSubscriptionService {
     private final EmailService email;
 
     public BqlSubscriptionService(BqlSubscriptionRepository subs, SavedViewRepository views,
-                                  RbacService rbac, BqlExecutionService execution,
+                                  RbacGate rbac, BqlExecutionService execution,
                                   BqlContextFactory contextFactory, BqlRunAuditService runAudit,
                                   NotificationRepository notifications, EmailService email) {
         this.subs = subs;

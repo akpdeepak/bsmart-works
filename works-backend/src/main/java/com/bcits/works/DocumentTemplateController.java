@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -30,10 +31,10 @@ public class DocumentTemplateController {
 
     private final DocumentTemplateService service;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public DocumentTemplateController(DocumentTemplateService service, AuthenticatedUser authenticatedUser,
-                                      RbacService rbac) {
+                                      RbacGate rbac) {
         this.service = service;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

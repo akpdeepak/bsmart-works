@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -32,10 +33,10 @@ public class MarketplaceController {
 
     private final MarketplaceService marketplace;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public MarketplaceController(MarketplaceService marketplace, AuthenticatedUser authenticatedUser,
-                                 RbacService rbac) {
+                                 RbacGate rbac) {
         this.marketplace = marketplace;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

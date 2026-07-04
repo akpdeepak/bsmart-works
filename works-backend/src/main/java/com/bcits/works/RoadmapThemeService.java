@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -20,10 +21,10 @@ import java.util.UUID;
 public class RoadmapThemeService {
 
     private final RoadmapThemeRepository repo;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService events;
 
-    public RoadmapThemeService(RoadmapThemeRepository repo, RbacService rbac, EventService events) {
+    public RoadmapThemeService(RoadmapThemeRepository repo, RbacGate rbac, EventService events) {
         this.repo = repo;
         this.rbac = rbac;
         this.events = events;

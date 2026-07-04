@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -31,7 +32,7 @@ public class ArticleEmailController {
     private final ArticleRepository articleRepository;
     private final KnowledgeSpaceRepository knowledgeSpaceRepository;
     private final ArticleEmailService emailService;
-    private final RbacService rbacService;
+    private final RbacGate rbacService;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
 
@@ -39,7 +40,7 @@ public class ArticleEmailController {
             ArticleRepository articleRepository,
             KnowledgeSpaceRepository knowledgeSpaceRepository,
             ArticleEmailService emailService,
-            RbacService rbacService,
+            RbacGate rbacService,
             EventService eventService,
             AuthenticatedUser authenticatedUser) {
         this.articleRepository = articleRepository;

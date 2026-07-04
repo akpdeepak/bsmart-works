@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -33,13 +34,13 @@ public class CommentController {
     private final EventService eventService;
     private final EmailService emailService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final WatcherService watcherService;
 
     public CommentController(CommentRepository commentRepository, UserRepository userRepository,
                              NotificationRepository notificationRepository, EventService eventService,
                              EmailService emailService, AuthenticatedUser authenticatedUser,
-                             RbacService rbac, WatcherService watcherService) {
+                             RbacGate rbac, WatcherService watcherService) {
         this.commentRepository = commentRepository;
         this.userRepository = userRepository;
         this.notificationRepository = notificationRepository;

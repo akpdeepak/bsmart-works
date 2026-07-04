@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import org.springframework.stereotype.Service;
 
@@ -23,9 +24,9 @@ import java.util.Map;
 public class DashboardSummaryService {
 
     private final AiControlPlaneService controlPlane;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public DashboardSummaryService(AiControlPlaneService controlPlane, RbacService rbac) {
+    public DashboardSummaryService(AiControlPlaneService controlPlane, RbacGate rbac) {
         this.controlPlane = controlPlane;
         this.rbac = rbac;
     }

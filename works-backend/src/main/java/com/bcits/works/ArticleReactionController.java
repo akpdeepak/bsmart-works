@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -34,13 +35,13 @@ public class ArticleReactionController {
     private final ArticleRepository articleRepository;
     private final KnowledgeSpaceRepository knowledgeSpaceRepository;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public ArticleReactionController(ArticleReactionRepository reactionRepo,
                                      ArticleRepository articleRepository,
                                      KnowledgeSpaceRepository knowledgeSpaceRepository,
                                      AuthenticatedUser authenticatedUser,
-                                     RbacService rbac) {
+                                     RbacGate rbac) {
         this.reactionRepo = reactionRepo;
         this.articleRepository = articleRepository;
         this.knowledgeSpaceRepository = knowledgeSpaceRepository;

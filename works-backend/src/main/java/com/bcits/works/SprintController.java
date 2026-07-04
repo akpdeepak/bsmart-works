@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -38,12 +39,12 @@ public class SprintController {
     private final EventService eventService;
     private final SprintDao sprintDao;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final StatusConfigService statusConfig;
 
     public SprintController(SprintRepository sprintRepository, WorkItemRepository workItemRepository,
                             EventService eventService, SprintDao sprintDao,
-                            AuthenticatedUser authenticatedUser, RbacService rbac,
+                            AuthenticatedUser authenticatedUser, RbacGate rbac,
                             StatusConfigService statusConfig) {
         this.sprintRepository = sprintRepository;
         this.workItemRepository = workItemRepository;

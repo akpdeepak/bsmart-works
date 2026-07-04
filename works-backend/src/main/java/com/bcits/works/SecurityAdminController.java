@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -34,14 +35,14 @@ public class SecurityAdminController {
     private final AuditStreamService streams;
     private final KeyRotationService keyRotation;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public SecurityAdminController(WorkspaceSecuritySettingsService settings,
                                    ConditionalAccessService conditionalAccess,
                                    AnomalyDetectionService anomalies,
                                    AuditStreamService streams,
                                    KeyRotationService keyRotation,
-                                   AuthenticatedUser authenticatedUser, RbacService rbac) {
+                                   AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.settings = settings;
         this.keyRotation = keyRotation;
         this.conditionalAccess = conditionalAccess;

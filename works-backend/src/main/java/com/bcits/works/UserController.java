@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -28,9 +29,9 @@ public class UserController {
 
     private final UserRepository userRepository;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public UserController(UserRepository userRepository, AuthenticatedUser authenticatedUser, RbacService rbac) {
+    public UserController(UserRepository userRepository, AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.userRepository = userRepository;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

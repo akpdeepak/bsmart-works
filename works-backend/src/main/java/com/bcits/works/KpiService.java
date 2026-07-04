@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.BqlException;
@@ -56,13 +57,13 @@ public class KpiService {
     private final AiControlPlaneService controlPlane;
     private final BqlCompiler bqlCompiler;
     private final BqlQueryExecutor bqlExecutor;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final ObjectMapper json = new ObjectMapper();
 
     public KpiService(WorkItemRepository workItems, ProjectRepository projects, TeamRepository teams,
                       MetricDefinitionRepository definitions, MetricSnapshotRepository snapshots,
                       MetricShareRepository shares, AiControlPlaneService controlPlane,
-                      BqlCompiler bqlCompiler, BqlQueryExecutor bqlExecutor, RbacService rbac) {
+                      BqlCompiler bqlCompiler, BqlQueryExecutor bqlExecutor, RbacGate rbac) {
         this.workItems = workItems;
         this.projects = projects;
         this.teams = teams;

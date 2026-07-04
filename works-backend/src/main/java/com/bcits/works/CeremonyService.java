@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -32,11 +33,11 @@ public class CeremonyService {
 
     private final CeremonySessionRepository sessions;
     private final CeremonyAttendeeRepository attendance;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService events;
 
     public CeremonyService(CeremonySessionRepository sessions, CeremonyAttendeeRepository attendance,
-                           RbacService rbac, EventService events) {
+                           RbacGate rbac, EventService events) {
         this.sessions = sessions;
         this.attendance = attendance;
         this.rbac = rbac;

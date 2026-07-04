@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -15,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Configuration templates API (iteration 17, Cap R) — save the current config as a reusable template
- * and apply templates to onboard new workspaces. RBAC via {@link RbacService} (RB-10 §2): listing
+ * and apply templates to onboard new workspaces. RBAC via {@link RbacGate} (RB-10 §2): listing
  * needs membership ({@code view_items}); saving, applying and deleting need {@code manage_workspace}.
  * Applying runs through {@link ConfigService} so it is versioned, audited and lock-checked. Every
  * call is workspace-scoped (RB-40 §1) — private templates never cross tenants.
@@ -25,10 +26,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class ConfigTemplateController {
 
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final ConfigTemplateService templates;
 
-    public ConfigTemplateController(AuthenticatedUser authenticatedUser, RbacService rbac,
+    public ConfigTemplateController(AuthenticatedUser authenticatedUser, RbacGate rbac,
                                     ConfigTemplateService templates) {
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

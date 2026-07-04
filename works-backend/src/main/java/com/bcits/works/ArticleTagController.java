@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -32,14 +33,14 @@ public class ArticleTagController {
     private final KnowledgeSpaceRepository spaceRepository;
     private final JdbcTemplate jdbc;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public ArticleTagController(ArticleTagRepository tagRepository,
                                  ArticleRepository articleRepository,
                                  KnowledgeSpaceRepository spaceRepository,
                                  JdbcTemplate jdbc,
                                  AuthenticatedUser authenticatedUser,
-                                 RbacService rbac) {
+                                 RbacGate rbac) {
         this.tagRepository = tagRepository;
         this.articleRepository = articleRepository;
         this.spaceRepository = spaceRepository;

@@ -1,6 +1,7 @@
 package com.bcits.works;
 
 import com.bcits.works.shared.ApiException;
+import com.bcits.works.shared.RbacGate;
 import com.bcits.works.shared.TenantContext;
 
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -10,12 +11,12 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Role-based access control service.
+ * Role-based access control service — the single implementation of {@link RbacGate}.
  * Tier hierarchy: VIEWER(1) < MEMBER(2) < LEAD(3) < ADMIN(4) < OWNER(5)
  * All permission checks go through here — never in controllers.
  */
 @Service
-public class RbacService {
+public class RbacService implements RbacGate {
 
     private final JdbcTemplate jdbc;
     private final CurrentWorkspace currentWorkspace;

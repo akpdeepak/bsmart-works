@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -27,7 +28,7 @@ public class WorkflowRuleEngine {
     private final WorkflowTransitionRepository transitionRepo;
     private final WorkflowStatusRepository statusRepo;
     private final FieldDefRepository fieldDefRepo;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -35,7 +36,7 @@ public class WorkflowRuleEngine {
                                WorkflowTransitionRepository transitionRepo,
                                WorkflowStatusRepository statusRepo,
                                FieldDefRepository fieldDefRepo,
-                               RbacService rbac,
+                               RbacGate rbac,
                                JdbcTemplate jdbc) {
         this.workflowRepo = workflowRepo;
         this.transitionRepo = transitionRepo;

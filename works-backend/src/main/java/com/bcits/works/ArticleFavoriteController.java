@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -30,13 +31,13 @@ public class ArticleFavoriteController {
     private final ArticleRepository articleRepository;
     private final KnowledgeSpaceRepository spaceRepository;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public ArticleFavoriteController(ArticleFavoriteRepository favoriteRepository,
                                       ArticleRepository articleRepository,
                                       KnowledgeSpaceRepository spaceRepository,
                                       AuthenticatedUser authenticatedUser,
-                                      RbacService rbac) {
+                                      RbacGate rbac) {
         this.favoriteRepository = favoriteRepository;
         this.articleRepository = articleRepository;
         this.spaceRepository = spaceRepository;

@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -17,9 +18,9 @@ public class BqlRunAuditService {
     private static final int MAX_PAGE = 200;
 
     private final BqlRunAuditRepository repo;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public BqlRunAuditService(BqlRunAuditRepository repo, RbacService rbac) {
+    public BqlRunAuditService(BqlRunAuditRepository repo, RbacGate rbac) {
         this.repo = repo;
         this.rbac = rbac;
     }

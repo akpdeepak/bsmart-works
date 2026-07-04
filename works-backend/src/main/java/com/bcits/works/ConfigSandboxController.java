@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -15,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Sandbox mode API (iteration 17, Cap R) — preview config changes in an isolated draft before
- * promoting them to live. RBAC via {@link RbacService} (RB-10 §2): listing/reading needs membership
+ * promoting them to live. RBAC via {@link RbacGate} (RB-10 §2): listing/reading needs membership
  * ({@code view_items}); creating, editing, promoting and discarding need {@code manage_workspace}.
  * Promotion runs through {@link ConfigService} (versioned, audited, lock-checked). Every call is
  * workspace-scoped and id lookups are workspace-bound (RB-40 §1).
@@ -25,10 +26,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class ConfigSandboxController {
 
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final ConfigSandboxService sandboxes;
 
-    public ConfigSandboxController(AuthenticatedUser authenticatedUser, RbacService rbac,
+    public ConfigSandboxController(AuthenticatedUser authenticatedUser, RbacGate rbac,
                                    ConfigSandboxService sandboxes) {
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

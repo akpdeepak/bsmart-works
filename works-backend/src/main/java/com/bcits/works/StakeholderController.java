@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -25,11 +26,11 @@ public class StakeholderController {
 
     private final StakeholderRepository repo;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final StakeholderPiiService stakeholderPii;
 
     public StakeholderController(StakeholderRepository repo, AuthenticatedUser authenticatedUser,
-                                 RbacService rbac, StakeholderPiiService stakeholderPii) {
+                                 RbacGate rbac, StakeholderPiiService stakeholderPii) {
         this.repo = repo;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

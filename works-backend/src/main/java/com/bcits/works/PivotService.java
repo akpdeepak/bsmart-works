@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.BqlException;
@@ -54,9 +55,9 @@ public class PivotService {
 
     private final JdbcTemplate jdbc;
     private final BqlCompiler compiler;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public PivotService(DataSource dataSource, BqlCompiler compiler, RbacService rbac) {
+    public PivotService(DataSource dataSource, BqlCompiler compiler, RbacGate rbac) {
         // A dedicated template so the per-query timeout never mutates the shared bean (as WidgetData).
         this.jdbc = new JdbcTemplate(dataSource);
         this.jdbc.setQueryTimeout(QUERY_TIMEOUT_SECONDS);

@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -30,9 +31,9 @@ public class TypeFieldPrefController {
 
     private final TypeFieldPrefRepository repo;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public TypeFieldPrefController(TypeFieldPrefRepository repo, AuthenticatedUser authenticatedUser, RbacService rbac) {
+    public TypeFieldPrefController(TypeFieldPrefRepository repo, AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.repo = repo;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

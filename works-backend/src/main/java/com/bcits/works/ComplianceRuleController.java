@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -44,12 +45,12 @@ public class ComplianceRuleController {
     private final BqlCompiler compiler;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public ComplianceRuleController(ComplianceRuleRepository rules, ComplianceRuleService ruleService,
                                     ComplianceEvaluationService evaluation, BqlCompiler compiler,
                                     EventService eventService, AuthenticatedUser authenticatedUser,
-                                    RbacService rbac) {
+                                    RbacGate rbac) {
         this.rules = rules;
         this.ruleService = ruleService;
         this.evaluation = evaluation;

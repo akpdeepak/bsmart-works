@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -34,11 +35,11 @@ public class ImpedimentService {
         "executive", Set.of("DECISION_NEEDED"));
 
     private final ImpedimentRepository repo;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService events;
     private final TeamRoleService teamRoles;
 
-    public ImpedimentService(ImpedimentRepository repo, RbacService rbac, EventService events,
+    public ImpedimentService(ImpedimentRepository repo, RbacGate rbac, EventService events,
                              TeamRoleService teamRoles) {
         this.repo = repo;
         this.rbac = rbac;

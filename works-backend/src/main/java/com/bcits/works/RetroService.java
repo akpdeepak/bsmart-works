@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -25,11 +26,11 @@ public class RetroService {
     private final RetroSessionRepository sessions;
     private final RetroNoteRepository notes;
     private final ActionItemRepository actionItems;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService events;
 
     public RetroService(RetroSessionRepository sessions, RetroNoteRepository notes,
-                        ActionItemRepository actionItems, RbacService rbac, EventService events) {
+                        ActionItemRepository actionItems, RbacGate rbac, EventService events) {
         this.sessions = sessions;
         this.notes = notes;
         this.actionItems = actionItems;

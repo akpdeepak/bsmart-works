@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -36,7 +37,7 @@ public class PermissionSchemeController {
     private final FieldDefRepository fieldDefRepo;
     private final AuthenticatedUser authenticatedUser;
     private final PermissionSchemeService permissionSchemeService;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public PermissionSchemeController(PermissionSchemeRepository schemeRepo,
                                        RoleDefRepository roleDefRepo,
@@ -45,7 +46,7 @@ public class PermissionSchemeController {
                                        FieldDefRepository fieldDefRepo,
                                        AuthenticatedUser authenticatedUser,
                                        PermissionSchemeService permissionSchemeService,
-                                       RbacService rbac) {
+                                       RbacGate rbac) {
         this.schemeRepo = schemeRepo;
         this.roleDefRepo = roleDefRepo;
         this.rolePermRepo = rolePermRepo;

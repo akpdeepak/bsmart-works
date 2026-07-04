@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -37,14 +38,14 @@ public class ArticleExportController {
     private final ArticlePdfExporter pdfExporter;
     private final ArticleDocxSerializer docxSerializer;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public ArticleExportController(ArticleRepository articleRepository,
                                     KnowledgeSpaceRepository spaceRepository,
                                     ArticlePdfExporter pdfExporter,
                                     ArticleDocxSerializer docxSerializer,
                                     AuthenticatedUser authenticatedUser,
-                                    RbacService rbac) {
+                                    RbacGate rbac) {
         this.articleRepository = articleRepository;
         this.spaceRepository = spaceRepository;
         this.pdfExporter = pdfExporter;

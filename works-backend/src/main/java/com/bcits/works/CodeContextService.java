@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -28,12 +29,12 @@ public class CodeContextService {
     private final PullRequestReviewerRepository reviewers;
     private final WorkItemRepository workItems;
     private final UserRepository users;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService events;
 
     public CodeContextService(CodeLinkRepository codeLinks, PullRequestRepository pullRequests,
                               PullRequestReviewerRepository reviewers, WorkItemRepository workItems,
-                              UserRepository users, RbacService rbac, EventService events) {
+                              UserRepository users, RbacGate rbac, EventService events) {
         this.codeLinks = codeLinks;
         this.pullRequests = pullRequests;
         this.reviewers = reviewers;

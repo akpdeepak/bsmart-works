@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -29,11 +30,11 @@ public class TeamRoleService {
     private final ProjectTeamMemberRepository teamMembers;
     private final SprintRepository sprints;
     private final CeremonySessionRepository ceremonies;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService events;
 
     public TeamRoleService(ProjectTeamMemberRepository teamMembers, SprintRepository sprints,
-                           CeremonySessionRepository ceremonies, RbacService rbac, EventService events) {
+                           CeremonySessionRepository ceremonies, RbacGate rbac, EventService events) {
         this.teamMembers = teamMembers;
         this.sprints = sprints;
         this.ceremonies = ceremonies;

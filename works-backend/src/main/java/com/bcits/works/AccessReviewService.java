@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -24,11 +25,11 @@ import java.util.UUID;
 public class AccessReviewService {
 
     private final JdbcTemplate jdbc;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final AccessReviewRepository reviews;
     private final EventService events;
 
-    public AccessReviewService(JdbcTemplate jdbc, RbacService rbac, AccessReviewRepository reviews,
+    public AccessReviewService(JdbcTemplate jdbc, RbacGate rbac, AccessReviewRepository reviews,
                                EventService events) {
         this.jdbc = jdbc;
         this.rbac = rbac;

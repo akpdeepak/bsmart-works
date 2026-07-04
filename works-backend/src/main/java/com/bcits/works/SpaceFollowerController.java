@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -28,12 +29,12 @@ public class SpaceFollowerController {
     private final KnowledgeSpaceRepository knowledgeSpaceRepository;
     private final SpaceFollowerService followerService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public SpaceFollowerController(KnowledgeSpaceRepository knowledgeSpaceRepository,
                                     SpaceFollowerService followerService,
                                     AuthenticatedUser authenticatedUser,
-                                    RbacService rbac) {
+                                    RbacGate rbac) {
         this.knowledgeSpaceRepository = knowledgeSpaceRepository;
         this.followerService = followerService;
         this.authenticatedUser = authenticatedUser;

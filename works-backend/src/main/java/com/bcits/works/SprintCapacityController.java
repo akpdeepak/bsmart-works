@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -25,10 +26,10 @@ public class SprintCapacityController {
 
     private final SprintCapacityService service;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public SprintCapacityController(SprintCapacityService service, AuthenticatedUser authenticatedUser,
-                                    RbacService rbac) {
+                                    RbacGate rbac) {
         this.service = service;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

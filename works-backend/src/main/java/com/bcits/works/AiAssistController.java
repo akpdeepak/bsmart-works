@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -33,9 +34,9 @@ public class AiAssistController {
 
     private final AiAssistService assist;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public AiAssistController(AiAssistService assist, AuthenticatedUser authenticatedUser, RbacService rbac) {
+    public AiAssistController(AiAssistService assist, AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.assist = assist;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

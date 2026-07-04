@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -33,13 +34,13 @@ public class AiController {
     private final AiControlPlaneService controlPlane;
     private final AiInvocationRepository invocations;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final AiWorkspaceSettingsService settingsService;
     private final DashboardSummaryService dashboardSummary;
     private final DashboardSuggestionService dashboardSuggestion;
 
     public AiController(AiControlPlaneService controlPlane, AiInvocationRepository invocations,
-                        AuthenticatedUser authenticatedUser, RbacService rbac,
+                        AuthenticatedUser authenticatedUser, RbacGate rbac,
                         AiWorkspaceSettingsService settingsService,
                         DashboardSummaryService dashboardSummary,
                         DashboardSuggestionService dashboardSuggestion) {

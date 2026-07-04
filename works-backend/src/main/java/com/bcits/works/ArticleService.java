@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -43,7 +44,7 @@ public class ArticleService {
     private final ArticleDiffService diffService;
     private final ArticleDao articleDao;
     private final EventService eventService;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final WebhookService webhookService;
     private final SpaceFollowerService spaceFollowerService;
 
@@ -57,7 +58,7 @@ public class ArticleService {
                           ArticleDiffService diffService,
                           ArticleDao articleDao,
                           EventService eventService,
-                          RbacService rbac,
+                          RbacGate rbac,
                           WebhookService webhookService,
                           SpaceFollowerService spaceFollowerService) {
         this.articleRepository = articleRepository;

@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -29,13 +30,13 @@ public class ArticleWatcherController {
     private final KnowledgeSpaceRepository knowledgeSpaceRepository;
     private final ArticleWatcherService watcherService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public ArticleWatcherController(ArticleRepository articleRepository,
                                      KnowledgeSpaceRepository knowledgeSpaceRepository,
                                      ArticleWatcherService watcherService,
                                      AuthenticatedUser authenticatedUser,
-                                     RbacService rbac) {
+                                     RbacGate rbac) {
         this.articleRepository = articleRepository;
         this.knowledgeSpaceRepository = knowledgeSpaceRepository;
         this.watcherService = watcherService;

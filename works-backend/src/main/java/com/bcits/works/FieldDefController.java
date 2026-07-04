@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -32,7 +33,7 @@ public class FieldDefController {
     private final FieldDefRepository fieldDefRepo;
     private final WorkItemFieldValueRepository valueRepo;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final FieldVisibilityService fieldVisibility;
     // Generic per-record free-text vault tokenizer (shared with chat/feedback denorm copies, RB-40 §3):
     // tokenizes a PII-flagged custom field's text value under a per-value token and resolves it at render.
@@ -41,7 +42,7 @@ public class FieldDefController {
     public FieldDefController(FieldDefRepository fieldDefRepo,
                                WorkItemFieldValueRepository valueRepo,
                                AuthenticatedUser authenticatedUser,
-                               RbacService rbac,
+                               RbacGate rbac,
                                FieldVisibilityService fieldVisibility,
                                CustomerAttributionPiiService fieldValuePii) {
         this.fieldDefRepo = fieldDefRepo;
@@ -200,7 +201,7 @@ public class FieldDefController {
      * (RB-40 §1, EPIC P1 §5). Rejects a create/update/delete of a field value when the caller's
      * role-tier has a {@code HIDDEN} or {@code READ_ONLY} rule for that field in the item's workspace.
      *
-     * <p>Resolves {@code (workspace, tier)} via {@link RbacService} and the single
+     * <p>Resolves {@code (workspace, tier)} via {@link RbacGate} and the single
      * {@link FieldVisibilityService} resolver, then maps the verdict to the standard {@code FORBIDDEN}
      * (403) error shape via {@link ApiException#forbidden} (RB-10 §4, one error shape). The write path
      * fails <b>closed</b>: a resolution error propagates and denies the write (EPIC P1 §3.4).

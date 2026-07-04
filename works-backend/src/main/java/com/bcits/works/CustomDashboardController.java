@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -39,13 +40,13 @@ public class CustomDashboardController {
     private final DashboardLayoutService layoutService;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public CustomDashboardController(DashboardRepository dashboardRepository,
                                      DashboardWidgetRepository widgetRepository,
                                      DashboardLayoutService layoutService,
                                      EventService eventService, AuthenticatedUser authenticatedUser,
-                                     RbacService rbac) {
+                                     RbacGate rbac) {
         this.dashboardRepository = dashboardRepository;
         this.widgetRepository = widgetRepository;
         this.layoutService = layoutService;

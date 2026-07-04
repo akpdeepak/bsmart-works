@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -28,10 +29,10 @@ public class StatusConfigController {
 
     private final StatusConfigService statusConfig;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public StatusConfigController(StatusConfigService statusConfig,
-                                  AuthenticatedUser authenticatedUser, RbacService rbac) {
+                                  AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.statusConfig = statusConfig;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

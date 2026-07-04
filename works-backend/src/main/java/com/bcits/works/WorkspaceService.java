@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -21,7 +22,7 @@ import java.util.Map;
  *
  * <p><b>Tenant isolation (RB-40 §1):</b> every read first asserts the caller is a member of the
  * target workspace; a non-member gets a 404 so a foreign workspace's existence is never revealed.
- * Mutations go through {@link RbacService#require} which is fail-closed for non-members (tier 0).
+ * Mutations go through {@link RbacGate#require} which is fail-closed for non-members (tier 0).
  */
 @Service
 public class WorkspaceService {
@@ -30,13 +31,13 @@ public class WorkspaceService {
 
     private final WorkspaceRepository workspaceRepository;
     private final UserRepository userRepository;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService eventService;
     private final JdbcTemplate jdbc;
     private final FunnelService funnelService;
 
     public WorkspaceService(WorkspaceRepository workspaceRepository, UserRepository userRepository,
-                            RbacService rbac, EventService eventService, JdbcTemplate jdbc,
+                            RbacGate rbac, EventService eventService, JdbcTemplate jdbc,
                             FunnelService funnelService) {
         this.workspaceRepository = workspaceRepository;
         this.userRepository = userRepository;

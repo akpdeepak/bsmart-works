@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -64,14 +65,14 @@ public class BqlController {
     private final BqlExecutionService execution;
     private final BqlContextFactory contextFactory;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public BqlController(JdbcTemplate jdbc,
                          BqlCompiler compiler,
                          BqlExecutionService execution,
                          BqlContextFactory contextFactory,
                          AuthenticatedUser authenticatedUser,
-                         RbacService rbac) {
+                         RbacGate rbac) {
         this.jdbc = jdbc;
         this.compiler = compiler;
         this.execution = execution;

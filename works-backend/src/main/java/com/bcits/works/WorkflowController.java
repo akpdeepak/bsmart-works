@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -31,14 +32,14 @@ public class WorkflowController {
     private final WorkflowStatusRepository statusRepo;
     private final WorkflowTransitionRepository transitionRepo;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService eventService;
 
     public WorkflowController(WorkflowRepository workflowRepo,
                                WorkflowStatusRepository statusRepo,
                                WorkflowTransitionRepository transitionRepo,
                                AuthenticatedUser authenticatedUser,
-                               RbacService rbac,
+                               RbacGate rbac,
                                EventService eventService) {
         this.workflowRepo = workflowRepo;
         this.statusRepo = statusRepo;

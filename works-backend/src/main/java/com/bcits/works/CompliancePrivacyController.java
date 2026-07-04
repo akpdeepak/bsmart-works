@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -29,11 +30,11 @@ public class CompliancePrivacyController {
     private final ComplianceEvidenceService evidence;
     private final PentestService pentests;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public CompliancePrivacyController(DataPrivacyService privacy, ComplianceEvidenceService evidence,
                                        PentestService pentests, AuthenticatedUser authenticatedUser,
-                                       RbacService rbac) {
+                                       RbacGate rbac) {
         this.privacy = privacy;
         this.evidence = evidence;
         this.pentests = pentests;

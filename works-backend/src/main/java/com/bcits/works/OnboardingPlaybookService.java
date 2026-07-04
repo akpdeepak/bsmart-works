@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -25,14 +26,14 @@ public class OnboardingPlaybookService {
     private final OnboardingPlaybookStepRepository steps;
     private final OnboardingRunRepository runs;
     private final OnboardingRunStepRepository runSteps;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService events;
 
     public OnboardingPlaybookService(OnboardingPlaybookRepository playbooks,
                                      OnboardingPlaybookStepRepository steps,
                                      OnboardingRunRepository runs,
                                      OnboardingRunStepRepository runSteps,
-                                     RbacService rbac, EventService events) {
+                                     RbacGate rbac, EventService events) {
         this.playbooks = playbooks;
         this.steps = steps;
         this.runs = runs;

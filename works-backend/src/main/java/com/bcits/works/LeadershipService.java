@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -25,9 +26,9 @@ import java.util.Map;
 public class LeadershipService {
 
     private final JdbcTemplate jdbc;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public LeadershipService(JdbcTemplate jdbc, RbacService rbac) {
+    public LeadershipService(JdbcTemplate jdbc, RbacGate rbac) {
         this.jdbc = jdbc;
         this.rbac = rbac;
     }

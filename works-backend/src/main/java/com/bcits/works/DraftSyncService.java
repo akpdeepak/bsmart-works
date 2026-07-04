@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -32,10 +33,10 @@ import java.util.Map;
 public class DraftSyncService {
 
     private final JdbcTemplate jdbc;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService events;
 
-    public DraftSyncService(JdbcTemplate jdbc, RbacService rbac, EventService events) {
+    public DraftSyncService(JdbcTemplate jdbc, RbacGate rbac, EventService events) {
         this.jdbc = jdbc;
         this.rbac = rbac;
         this.events = events;

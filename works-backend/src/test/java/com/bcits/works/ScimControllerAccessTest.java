@@ -1,5 +1,12 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.RbacService;
+import com.bcits.works.auth.ScimController;
+import com.bcits.works.auth.ScimToken;
+
+import com.bcits.works.auth.ScimTokenRepository;
+import com.bcits.works.auth.UserRepository;
+
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;

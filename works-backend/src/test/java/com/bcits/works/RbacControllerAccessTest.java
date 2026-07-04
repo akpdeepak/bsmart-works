@@ -1,5 +1,8 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.RbacController;
+import com.bcits.works.auth.RbacService;
+
 import com.bcits.works.shared.AuthenticatedUser;
 
 import org.junit.jupiter.api.Tag;

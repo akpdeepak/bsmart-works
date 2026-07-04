@@ -1,5 +1,11 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.WebAuthnChallenge;
+import com.bcits.works.auth.WebAuthnCredential;
+
+import com.bcits.works.auth.WebAuthnCredentialRepository;
+import com.bcits.works.auth.WebAuthnService;
+
 import com.bcits.works.shared.ApiException;
 
 import static org.assertj.core.api.Assertions.assertThat;

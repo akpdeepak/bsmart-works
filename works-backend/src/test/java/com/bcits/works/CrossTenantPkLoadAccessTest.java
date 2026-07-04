@@ -1,5 +1,15 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.PermissionScheme;
+import com.bcits.works.auth.PermissionSchemeController;
+import com.bcits.works.auth.PermissionSchemeRepository;
+import com.bcits.works.auth.PermissionSchemeService;
+import com.bcits.works.auth.RoleDef;
+import com.bcits.works.auth.RoleDefRepository;
+import com.bcits.works.auth.RolePermissionRepository;
+
+import com.bcits.works.auth.RbacService;
+
 import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.ApiException;

@@ -1,5 +1,8 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.User;
+import com.bcits.works.auth.UserRepository;
+
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;

@@ -6,7 +6,6 @@ import com.bcits.works.shared.BqlContext;
 
 import com.bcits.works.shared.BqlContextFactory;
 import com.bcits.works.shared.BqlExecutionService;
-import com.bcits.works.shared.EmailService;
 
 import java.time.OffsetDateTime;
 import java.util.List;

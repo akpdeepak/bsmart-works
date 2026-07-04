@@ -5,7 +5,6 @@ import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.ApiException;
 
-import com.bcits.works.shared.EmailService;
 import com.bcits.works.shared.EventService;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

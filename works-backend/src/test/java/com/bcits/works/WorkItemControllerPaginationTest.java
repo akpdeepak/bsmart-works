@@ -2,7 +2,6 @@ package com.bcits.works;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
-import com.bcits.works.shared.EmailService;
 import com.bcits.works.shared.EventService;
 
 import org.junit.jupiter.api.Tag;

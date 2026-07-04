@@ -4,7 +4,6 @@ import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.TenantScope;
 
-import com.bcits.works.shared.EmailService;
 import com.bcits.works.shared.EventService;
 import com.bcits.works.shared.RateLimiter;
 

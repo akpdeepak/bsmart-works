@@ -3,7 +3,6 @@ import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
-import com.bcits.works.shared.EmailService;
 import com.bcits.works.shared.EventService;
 
 import org.springframework.data.domain.PageRequest;

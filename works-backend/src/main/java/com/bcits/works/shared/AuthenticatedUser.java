@@ -1,4 +1,4 @@
-package com.bcits.works;
+package com.bcits.works.shared;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;

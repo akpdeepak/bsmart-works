@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.AuthenticatedUser;
+
 import com.bcits.works.shared.ApiException;
 
 import io.swagger.v3.oas.annotations.Operation;

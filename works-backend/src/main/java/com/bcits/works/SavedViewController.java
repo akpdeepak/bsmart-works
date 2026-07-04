@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.AuthenticatedUser;
+
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;

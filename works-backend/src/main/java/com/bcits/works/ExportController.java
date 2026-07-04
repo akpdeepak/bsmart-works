@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.AuthenticatedUser;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;

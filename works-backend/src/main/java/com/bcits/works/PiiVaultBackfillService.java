@@ -1,5 +1,8 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.User;
+import com.bcits.works.auth.UserRepository;
+
 import com.bcits.works.shared.TenantScope;
 
 import org.slf4j.Logger;

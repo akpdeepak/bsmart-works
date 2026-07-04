@@ -1,12 +1,15 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.WebAuthnFido2Verifier;
+import com.bcits.works.auth.WebAuthnSettings;
+
 import com.bcits.works.shared.ApiException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.bcits.works.WebAuthnFido2Verifier.AssertionResult;
-import com.bcits.works.WebAuthnFido2Verifier.RegistrationResult;
+import com.bcits.works.auth.WebAuthnFido2Verifier.AssertionResult;
+import com.bcits.works.auth.WebAuthnFido2Verifier.RegistrationResult;
 import com.webauthn4j.data.AttestationConveyancePreference;
 import com.webauthn4j.data.AuthenticatorAssertionResponse;
 import com.webauthn4j.data.AuthenticatorAttachment;

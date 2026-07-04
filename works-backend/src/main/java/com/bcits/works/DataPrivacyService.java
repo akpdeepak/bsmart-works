@@ -1,5 +1,9 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.TokenRevocationService;
+import com.bcits.works.auth.User;
+import com.bcits.works.auth.UserRepository;
+
 import com.bcits.works.shared.ApiException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

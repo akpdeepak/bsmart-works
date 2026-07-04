@@ -1,5 +1,11 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.RolePermission;
+
+import com.bcits.works.auth.PermissionSchemeService;
+import com.bcits.works.auth.RoleDefRepository;
+import com.bcits.works.auth.RolePermissionRepository;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;

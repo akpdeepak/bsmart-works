@@ -1,5 +1,9 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.User;
+
+import com.bcits.works.auth.UserRepository;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 

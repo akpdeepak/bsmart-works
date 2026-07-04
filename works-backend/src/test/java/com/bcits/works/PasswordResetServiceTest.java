@@ -1,5 +1,8 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.PasswordResetService;
+import com.bcits.works.auth.PasswordResetToken;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 

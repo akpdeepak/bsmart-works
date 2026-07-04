@@ -1,8 +1,6 @@
-package com.bcits.works.shared;
+package com.bcits.works;
 
-import com.bcits.works.User;
 
-import com.bcits.works.UserRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

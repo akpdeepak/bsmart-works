@@ -1,7 +1,6 @@
 package com.bcits.works;
 
 import com.bcits.works.shared.AppEvent;
-import com.bcits.works.shared.EmailService;
 import com.bcits.works.shared.EventRepository;
 import com.bcits.works.shared.EventService;
 

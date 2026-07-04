@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { PageLayout } from '@/components/works/templates/page-layout';
 import { Package, Plug, Check, Trash2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/works/button';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { marketplaceClient, parseScopes } from '@/lib/marketplace';
 
@@ -111,13 +112,14 @@ export default function MarketplaceView({ workspaceId }) {
         </div>
       )}
 
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" aria-busy="true" aria-label="Loading marketplace">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-36 rounded-xl bg-neutral-100 dark:bg-neutral-800 animate-pulse" />
-          ))}
-        </div>
-      ) : (
+      <AsyncBoundary
+        loading={loading}
+        label="Loading marketplace"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+        skeleton={[0, 1, 2].map((i) => (
+          <div key={i} className="h-36 rounded-xl bg-neutral-100 dark:bg-neutral-800 animate-pulse" />
+        ))}
+      >
         <>
           {/* Installed section */}
           <section aria-labelledby="installed-heading" className="mb-8">
@@ -195,7 +197,7 @@ export default function MarketplaceView({ workspaceId }) {
             )}
           </section>
         </>
-      )}
+      </AsyncBoundary>
 
       {/* Scope-approval dialog */}
       {pending && (

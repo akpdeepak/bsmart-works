@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Headset, Send, CheckCircle2, UserPlus, Bot, User, MessageSquare, FilePlus2, X } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { Badge } from '@/components/works/atoms/badge';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { PageLayout } from '@/components/works/templates/page-layout';
 import { smartDate } from '@/lib/format';
@@ -141,14 +142,15 @@ export default function SupportInboxView({ workspaceId }) {
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Conversation list */}
         <div className="min-h-0 overflow-y-auto rounded-xl border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800 lg:col-span-1">
-          {loading ? (
-            <div className="space-y-2 p-3">
-              {[0, 1, 2].map((i) => <div key={i} className="h-14 animate-pulse rounded-lg bg-neutral-100 dark:bg-neutral-700" />)}
-            </div>
-          ) : conversations.length === 0 ? (
-            <EmptyState icon={MessageSquare} title="No conversations"
-              subtitle="Customer chats matching this filter will appear here." />
-          ) : (
+          <AsyncBoundary
+            loading={loading}
+            empty={conversations.length === 0}
+            emptyIcon={MessageSquare}
+            emptyTitle="No conversations"
+            emptySubtitle="Customer chats matching this filter will appear here."
+            className="space-y-2 p-3"
+            skeleton={[0, 1, 2].map((i) => <div key={i} className="h-14 animate-pulse rounded-lg bg-neutral-100 dark:bg-neutral-700" />)}
+          >
             <ul className="divide-y divide-neutral-100 dark:divide-neutral-700">
               {conversations.map((c) => (
                 <li key={c.id}>
@@ -170,7 +172,7 @@ export default function SupportInboxView({ workspaceId }) {
                 </li>
               ))}
             </ul>
-          )}
+          </AsyncBoundary>
         </div>
 
         {/* Active thread */}

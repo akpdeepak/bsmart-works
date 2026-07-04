@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.BqlException;
@@ -22,7 +23,7 @@ import org.springframework.stereotype.Service;
  *
  * <p>Every query is scoped to the caller's workspace via the project→workspace membership predicate;
  * the caller's {@code view_items} permission is checked by the controller's authenticated context
- * before any resolve runs (RBAC stays in the service boundary — here and {@link RbacService}).
+ * before any resolve runs (RBAC stays in the service boundary — here and {@link RbacGate}).
  *
  * <p>NFR guards (RB-40 §5, dashboard P95 1.5s): a dedicated 5-second-timeout JdbcTemplate, list rows
  * clamped to {@value #MAX_LIST}, group buckets to {@value #MAX_GROUP}, and a batch cap of
@@ -50,10 +51,10 @@ public class WidgetDataService {
 
     private final JdbcTemplate jdbc;
     private final BqlCompiler compiler;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final MetricCatalog catalog = new MetricCatalog();
 
-    public WidgetDataService(DataSource dataSource, BqlCompiler compiler, RbacService rbac) {
+    public WidgetDataService(DataSource dataSource, BqlCompiler compiler, RbacGate rbac) {
         // A dedicated template so the per-query timeout never mutates the shared bean.
         this.jdbc = new JdbcTemplate(dataSource);
         this.jdbc.setQueryTimeout(QUERY_TIMEOUT_SECONDS);

@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -13,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Board configuration that is workspace-scoped rather than per-project — currently the WIP
  * (work-in-progress) limits for the board's three fixed status columns. RBAC is applied here through
- * RbacService (the authorization logic lives in the service, RB-10 §2): any member may read the
+ * RbacGate (the authorization logic lives in the service, RB-10 §2): any member may read the
  * limits, {@code manage_projects} is required to change them. Every call is workspace-scoped
  * (RB-40 §1).
  */
@@ -22,10 +23,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class BoardController {
 
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final BoardWipLimitService wipLimits;
 
-    public BoardController(AuthenticatedUser authenticatedUser, RbacService rbac,
+    public BoardController(AuthenticatedUser authenticatedUser, RbacGate rbac,
                            BoardWipLimitService wipLimits) {
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -22,10 +23,10 @@ import java.util.UUID;
 public class IdeaService {
 
     private final IdeaRepository repo;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService events;
 
-    public IdeaService(IdeaRepository repo, RbacService rbac, EventService events) {
+    public IdeaService(IdeaRepository repo, RbacGate rbac, EventService events) {
         this.repo = repo;
         this.rbac = rbac;
         this.events = events;

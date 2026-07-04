@@ -12,7 +12,7 @@ import java.util.Map;
  * language, including over custom fields). The legacy {@code compile(query, userId)} path builds a
  * <b>trusted</b> context (full field visibility, no custom fields) for internal/server-side
  * consumers (KPIs, SLA, compliance); the user-facing controller builds a context gated by
- * {@link RbacService} and seeded with the workspace's custom fields.
+ * {@link RbacGate} and seeded with the workspace's custom fields.
  */
 public record BqlContext(String currentUserId, boolean canSeeSensitive,
                          Map<String, CustomField> customFields) {

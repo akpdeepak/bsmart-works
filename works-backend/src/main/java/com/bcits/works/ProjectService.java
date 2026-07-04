@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -20,7 +21,7 @@ import java.util.UUID;
  *
  * <p>Tenant isolation (RB-40 §1): listing is confined to workspaces the caller belongs to, and every
  * single-project read asserts membership of the project's workspace (404 for non-members — a foreign
- * project's existence is never revealed). Writes gate through {@link RbacService#require}.
+ * project's existence is never revealed). Writes gate through {@link RbacGate#require}.
  */
 @Service
 public class ProjectService {
@@ -28,12 +29,12 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
     private final EventService eventService;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final JdbcTemplate jdbc;
     private final CurrentWorkspace currentWorkspace;
 
     public ProjectService(ProjectRepository projectRepository, UserRepository userRepository,
-                          EventService eventService, RbacService rbac, JdbcTemplate jdbc,
+                          EventService eventService, RbacGate rbac, JdbcTemplate jdbc,
                           CurrentWorkspace currentWorkspace) {
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;

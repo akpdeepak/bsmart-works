@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -21,7 +22,7 @@ import java.util.Map;
  * Agent-side customer chat (iteration 20, Cap N): the support inbox agents work escalated
  * conversations from — list, open, claim, reply and resolve. RBAC at the boundary (RB-10 §2):
  * every action requires {@code work_service} (the same permission that gates the service-request
- * queues — chat is the same agent workflow), enforced in {@link RbacService} not here. Every read is
+ * queues — chat is the same agent workflow), enforced in {@link RbacGate} not here. Every read is
  * workspace-scoped (RB-40 §1) and every action is audited as an event by {@link SupportChatService}.
  */
 @RestController
@@ -30,11 +31,11 @@ public class SupportChatAgentController {
 
     private final SupportChatService chat;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final CustomerAttributionPiiService attributionPii;
 
     public SupportChatAgentController(SupportChatService chat, AuthenticatedUser authenticatedUser,
-                                      RbacService rbac, CustomerAttributionPiiService attributionPii) {
+                                      RbacGate rbac, CustomerAttributionPiiService attributionPii) {
         this.chat = chat;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

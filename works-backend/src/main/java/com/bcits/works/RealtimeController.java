@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -18,7 +19,7 @@ import java.util.List;
  * Real-time streaming + co-presence (iteration 18, Cap S). The SSE stream pushes workspace events to
  * every open client within a second; presence endpoints drive the live-cursor / who's-here roster.
  *
- * <p>RBAC (RB-10 §2) is applied here through {@link RbacService}: a subscriber must hold
+ * <p>RBAC (RB-10 §2) is applied here through {@link RbacGate}: a subscriber must hold
  * {@code view_items} on the workspace, and every call is workspace-scoped (RB-40 §1) so a client can
  * only ever stream or post presence for a workspace it belongs to. The SSE endpoint accepts its JWT
  * via the {@code access_token} query param because the browser {@code EventSource} API cannot set an
@@ -29,11 +30,11 @@ import java.util.List;
 public class RealtimeController {
 
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final RealtimeService realtime;
     private final PresenceService presence;
 
-    public RealtimeController(AuthenticatedUser authenticatedUser, RbacService rbac,
+    public RealtimeController(AuthenticatedUser authenticatedUser, RbacGate rbac,
                              RealtimeService realtime, PresenceService presence) {
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

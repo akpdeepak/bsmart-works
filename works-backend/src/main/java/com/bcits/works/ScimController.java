@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.TenantScope;
@@ -52,11 +53,11 @@ public class ScimController {
     private final UserRepository users;
     private final JdbcTemplate jdbc;
     private final EventService eventService;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final UserPiiService userPii;
 
     public ScimController(ScimTokenRepository scimTokens, UserRepository users,
-                          JdbcTemplate jdbc, EventService eventService, RbacService rbac,
+                          JdbcTemplate jdbc, EventService eventService, RbacGate rbac,
                           UserPiiService userPii) {
         this.scimTokens = scimTokens;
         this.users = users;

@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -36,10 +37,10 @@ public class ServiceRequestController {
     private final ServiceRequestService requestService;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public ServiceRequestController(ServiceRequestRepository requests, ServiceRequestService requestService,
-                                    EventService eventService, AuthenticatedUser authenticatedUser, RbacService rbac) {
+                                    EventService eventService, AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.requests = requests;
         this.requestService = requestService;
         this.eventService = eventService;

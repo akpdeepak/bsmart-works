@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -27,12 +28,12 @@ public class WorkItemLinkController {
 
     private final WorkItemLinkRepository linkRepository;
     private final WorkItemRepository workItemRepository;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final AuthenticatedUser authenticatedUser;
 
     public WorkItemLinkController(WorkItemLinkRepository linkRepository,
                                   WorkItemRepository workItemRepository,
-                                  RbacService rbac,
+                                  RbacGate rbac,
                                   AuthenticatedUser authenticatedUser) {
         this.linkRepository = linkRepository;
         this.workItemRepository = workItemRepository;

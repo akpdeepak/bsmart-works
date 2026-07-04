@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -34,9 +35,9 @@ public class KpiController {
 
     private final KpiService kpi;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public KpiController(KpiService kpi, AuthenticatedUser authenticatedUser, RbacService rbac) {
+    public KpiController(KpiService kpi, AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.kpi = kpi;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

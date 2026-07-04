@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -27,11 +28,11 @@ public class MyDayService {
     private final ActionItemRepository actionItems;
     private final StandupSessionRepository standups;
     private final StandupEntryRepository entries;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public MyDayService(WorkItemRepository workItems, ImpedimentRepository impediments,
                         ActionItemRepository actionItems, StandupSessionRepository standups,
-                        StandupEntryRepository entries, RbacService rbac) {
+                        StandupEntryRepository entries, RbacGate rbac) {
         this.workItems = workItems;
         this.impediments = impediments;
         this.actionItems = actionItems;

@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -25,10 +26,10 @@ import java.util.Map;
 @Service
 public class FeatureFlagService {
 
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final JdbcTemplate jdbc;
 
-    public FeatureFlagService(RbacService rbac, JdbcTemplate jdbc) {
+    public FeatureFlagService(RbacGate rbac, JdbcTemplate jdbc) {
         this.rbac = rbac;
         this.jdbc = jdbc;
     }

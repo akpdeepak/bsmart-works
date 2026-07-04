@@ -1,7 +1,6 @@
 package com.bcits.works.shared;
 
 import com.bcits.works.FieldVisibilityService;
-import com.bcits.works.RbacService;
 
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -23,10 +22,10 @@ public class BqlContextFactory {
     private static final int SENSITIVE_FIELD_MIN_TIER = 3; // LEAD+
 
     private final JdbcTemplate jdbc;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final FieldVisibilityService fieldVisibility;
 
-    public BqlContextFactory(JdbcTemplate jdbc, RbacService rbac, FieldVisibilityService fieldVisibility) {
+    public BqlContextFactory(JdbcTemplate jdbc, RbacGate rbac, FieldVisibilityService fieldVisibility) {
         this.jdbc = jdbc;
         this.rbac = rbac;
         this.fieldVisibility = fieldVisibility;

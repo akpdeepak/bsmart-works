@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -23,7 +24,7 @@ public class KnowledgePresenceController {
     private final KnowledgeSpaceRepository knowledgeSpaceRepository;
     private final UserRepository userRepository;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final Map<String, LockRecord> locks = new ConcurrentHashMap<>();
 
     public KnowledgePresenceController(ArticlePresenceStore presenceStore,
@@ -31,7 +32,7 @@ public class KnowledgePresenceController {
                                        KnowledgeSpaceRepository knowledgeSpaceRepository,
                                        UserRepository userRepository,
                                        AuthenticatedUser authenticatedUser,
-                                       RbacService rbac) {
+                                       RbacGate rbac) {
         this.presenceStore = presenceStore;
         this.articleRepository = articleRepository;
         this.knowledgeSpaceRepository = knowledgeSpaceRepository;

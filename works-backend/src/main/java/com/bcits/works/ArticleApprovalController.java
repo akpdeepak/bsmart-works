@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -35,14 +36,14 @@ public class ArticleApprovalController {
     private final KnowledgeSpaceRepository knowledgeSpaceRepository;
     private final ArticleApprovalRepository approvalRepository;
     private final ArticleService articleService;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final AuthenticatedUser authenticatedUser;
 
     public ArticleApprovalController(ArticleRepository articleRepository,
                                      KnowledgeSpaceRepository knowledgeSpaceRepository,
                                      ArticleApprovalRepository approvalRepository,
                                      ArticleService articleService,
-                                     RbacService rbac,
+                                     RbacGate rbac,
                                      AuthenticatedUser authenticatedUser) {
         this.articleRepository = articleRepository;
         this.knowledgeSpaceRepository = knowledgeSpaceRepository;

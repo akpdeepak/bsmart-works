@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -35,10 +36,10 @@ public class CustomerSlaTierController {
     private final CustomerSlaTierService tierService;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public CustomerSlaTierController(CustomerSlaTierRepository tiers, CustomerSlaTierService tierService,
-                                     EventService eventService, AuthenticatedUser authenticatedUser, RbacService rbac) {
+                                     EventService eventService, AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.tiers = tiers;
         this.tierService = tierService;
         this.eventService = eventService;

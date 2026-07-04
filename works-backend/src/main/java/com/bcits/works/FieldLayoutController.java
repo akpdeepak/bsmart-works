@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -26,11 +27,11 @@ public class FieldLayoutController {
 
     private final FieldLayoutRepository layoutRepo;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public FieldLayoutController(FieldLayoutRepository layoutRepo,
                                   AuthenticatedUser authenticatedUser,
-                                  RbacService rbac) {
+                                  RbacGate rbac) {
         this.layoutRepo = layoutRepo;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

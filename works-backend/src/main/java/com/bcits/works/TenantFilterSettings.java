@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -11,7 +12,7 @@ import org.springframework.stereotype.Component;
  * until this slice the only code that <i>bound</i> a workspace to it was {@link ProjectService}, so the
  * filter was dormant on every other read path. Slice A extends binding to <b>every
  * single-workspace-authorized path</b> via the one app-wide authorization choke point
- * ({@link RbacService#getUserTier(String, String)} — see {@code EPIC-P1-243-central-tenant-filter.md}).
+ * ({@link RbacGate#getUserTier(String, String)} — see {@code EPIC-P1-243-central-tenant-filter.md}).
  *
  * <p>Because activating a backstop on every authorized read is a tenant-isolation change with a real
  * over-filtering failure mode (a request that authorizes one workspace but legitimately needs another),

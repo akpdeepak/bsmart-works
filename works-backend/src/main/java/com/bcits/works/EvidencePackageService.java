@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -25,11 +26,11 @@ import java.util.UUID;
 public class EvidencePackageService {
 
     private final JdbcTemplate jdbc;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EvidencePackageRepository repo;
     private final EventService events;
 
-    public EvidencePackageService(JdbcTemplate jdbc, RbacService rbac, EvidencePackageRepository repo,
+    public EvidencePackageService(JdbcTemplate jdbc, RbacGate rbac, EvidencePackageRepository repo,
                                   EventService events) {
         this.jdbc = jdbc;
         this.rbac = rbac;

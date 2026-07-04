@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -23,10 +24,10 @@ import java.util.UUID;
 public class AuditLogService {
 
     private final JdbcTemplate jdbc;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final AuditSavedQueryRepository savedQueries;
 
-    public AuditLogService(JdbcTemplate jdbc, RbacService rbac, AuditSavedQueryRepository savedQueries) {
+    public AuditLogService(JdbcTemplate jdbc, RbacGate rbac, AuditSavedQueryRepository savedQueries) {
         this.jdbc = jdbc;
         this.rbac = rbac;
         this.savedQueries = savedQueries;

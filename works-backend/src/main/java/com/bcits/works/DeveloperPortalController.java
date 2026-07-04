@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -30,9 +31,9 @@ public class DeveloperPortalController {
     static final String SANDBOX_BASE_URL = "https://sandbox.api.bsmartworks.dev/api/v1";
 
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public DeveloperPortalController(AuthenticatedUser authenticatedUser, RbacService rbac) {
+    public DeveloperPortalController(AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
     }

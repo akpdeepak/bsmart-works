@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -28,11 +29,11 @@ public class ObjectiveService {
     private final ObjectiveRepository repo;
     private final KeyResultRepository krRepo;
     private final OkrLinkRepository linkRepo;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService events;
 
     public ObjectiveService(ObjectiveRepository repo, KeyResultRepository krRepo,
-                            OkrLinkRepository linkRepo, RbacService rbac, EventService events) {
+                            OkrLinkRepository linkRepo, RbacGate rbac, EventService events) {
         this.repo = repo;
         this.krRepo = krRepo;
         this.linkRepo = linkRepo;

@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -29,10 +30,10 @@ public class ArticleCollaborationController {
 
     private final ArticleCollaborationService service;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public ArticleCollaborationController(ArticleCollaborationService service,
-                                          AuthenticatedUser authenticatedUser, RbacService rbac) {
+                                          AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.service = service;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

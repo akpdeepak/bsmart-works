@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.BqlContext;
@@ -29,12 +30,12 @@ public class SavedViewService {
     private static final Pattern ORDER_BY = Pattern.compile("(?i)\\s+ORDER\\s+BY\\s+.+$");
 
     private final SavedViewRepository views;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final BqlExecutionService execution;
     private final BqlContextFactory contextFactory;
     private final BqlRunAuditService runAudit;
 
-    public SavedViewService(SavedViewRepository views, RbacService rbac,
+    public SavedViewService(SavedViewRepository views, RbacGate rbac,
                             BqlExecutionService execution, BqlContextFactory contextFactory,
                             BqlRunAuditService runAudit) {
         this.views = views;

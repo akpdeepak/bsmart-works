@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -16,9 +17,9 @@ import java.util.Map;
  * RAID dashboard (risks/assumptions/issues/dependencies/actions) for a single project.
  *
  * <p><b>Tenant safety (RB-40 §1, RB-10 §2):</b> the caller passes only a {@code projectId}; the
- * workspace is <i>derived from that project</i> via {@link RbacService#workspaceForProject} (404 if
+ * workspace is <i>derived from that project</i> via {@link RbacGate#workspaceForProject} (404 if
  * the project does not exist), then the caller's membership + {@code view_items} permission is proven
- * via {@link RbacService#require} <i>before any RAID query runs</i>. A foreign project therefore
+ * via {@link RbacGate#require} <i>before any RAID query runs</i>. A foreign project therefore
  * yields 403 (member elsewhere) or 404 (unknown) and never leaks rows. Every RAID query is finally
  * bounded by both project and the resolved workspace, so an IDOR on {@code projectId} cannot escape
  * its tenant.
@@ -33,7 +34,7 @@ public class RaidDashboardController {
     private final DependencyRepository dependencyRepo;
     private final ActionItemRepository actionItemRepo;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public RaidDashboardController(RiskRepository riskRepo,
                                     AssumptionRepository assumptionRepo,
@@ -41,7 +42,7 @@ public class RaidDashboardController {
                                     DependencyRepository dependencyRepo,
                                     ActionItemRepository actionItemRepo,
                                     AuthenticatedUser authenticatedUser,
-                                    RbacService rbac) {
+                                    RbacGate rbac) {
         this.riskRepo = riskRepo;
         this.assumptionRepo = assumptionRepo;
         this.issueRepo = issueRepo;

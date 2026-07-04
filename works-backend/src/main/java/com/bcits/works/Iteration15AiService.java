@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -32,12 +33,12 @@ public class Iteration15AiService {
     private final SprintDao sprintDao;
     private final ImpedimentRepository impediments;
     private final CustomerFeedbackRepository feedback;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public Iteration15AiService(AiControlPlaneService controlPlane, JdbcTemplate jdbc,
                                 SprintRepository sprints, SprintDao sprintDao,
                                 ImpedimentRepository impediments,
-                                CustomerFeedbackRepository feedback, RbacService rbac) {
+                                CustomerFeedbackRepository feedback, RbacGate rbac) {
         this.controlPlane = controlPlane;
         this.jdbc = jdbc;
         this.impediments = impediments;

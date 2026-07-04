@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -30,9 +31,9 @@ public class AutomationController {
 
     private final AutomationService automation;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public AutomationController(AutomationService automation, AuthenticatedUser authenticatedUser, RbacService rbac) {
+    public AutomationController(AutomationService automation, AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.automation = automation;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

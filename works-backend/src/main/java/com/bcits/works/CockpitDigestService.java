@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -29,9 +30,9 @@ public class CockpitDigestService {
 
     private final JdbcTemplate jdbc;
     private final SprintRepository sprints;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public CockpitDigestService(JdbcTemplate jdbc, SprintRepository sprints, RbacService rbac) {
+    public CockpitDigestService(JdbcTemplate jdbc, SprintRepository sprints, RbacGate rbac) {
         this.jdbc = jdbc;
         this.sprints = sprints;
         this.rbac = rbac;

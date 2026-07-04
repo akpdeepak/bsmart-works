@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -30,11 +31,11 @@ public class ReleaseController {
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
     private final JdbcTemplate jdbc;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public ReleaseController(ReleaseRepository releaseRepository, EventService eventService,
                               AuthenticatedUser authenticatedUser, JdbcTemplate jdbc,
-                              RbacService rbac) {
+                              RbacGate rbac) {
         this.releaseRepository = releaseRepository;
         this.eventService = eventService;
         this.authenticatedUser = authenticatedUser;

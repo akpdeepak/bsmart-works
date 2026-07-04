@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -34,11 +35,11 @@ public class AdvancedAiController {
     private final AiMemoryService memory;
     private final ConversationalDashboardService dashboards;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public AdvancedAiController(AiAssistantService assistants, AiAgentService agents, AiMemoryService memory,
                                 ConversationalDashboardService dashboards, AuthenticatedUser authenticatedUser,
-                                RbacService rbac) {
+                                RbacGate rbac) {
         this.assistants = assistants;
         this.agents = agents;
         this.memory = memory;

@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -28,12 +29,12 @@ public class DodChecklistService {
     private final DodChecklistItemRepository items;
     private final DodChecklistStateRepository states;
     private final WorkItemRepository workItems;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService events;
 
     public DodChecklistService(DodChecklistRepository checklists, DodChecklistItemRepository items,
                                DodChecklistStateRepository states, WorkItemRepository workItems,
-                               RbacService rbac, EventService events) {
+                               RbacGate rbac, EventService events) {
         this.checklists = checklists;
         this.items = items;
         this.states = states;

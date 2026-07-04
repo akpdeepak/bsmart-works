@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -24,10 +25,10 @@ import java.util.UUID;
 public class StakeholderCommunicationService {
 
     private final StakeholderCommunicationRepository repo;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService events;
 
-    public StakeholderCommunicationService(StakeholderCommunicationRepository repo, RbacService rbac,
+    public StakeholderCommunicationService(StakeholderCommunicationRepository repo, RbacGate rbac,
                                            EventService events) {
         this.repo = repo;
         this.rbac = rbac;

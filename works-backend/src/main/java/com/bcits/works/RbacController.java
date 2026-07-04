@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -21,11 +22,11 @@ import java.util.Map;
 @RequestMapping("/api/v1/rbac")
 public class RbacController {
 
-    private final RbacService rbacService;
+    private final RbacGate rbacService;
     private final JdbcTemplate jdbc;
     private final AuthenticatedUser authenticatedUser;
 
-    public RbacController(RbacService rbacService, JdbcTemplate jdbc, AuthenticatedUser authenticatedUser) {
+    public RbacController(RbacGate rbacService, JdbcTemplate jdbc, AuthenticatedUser authenticatedUser) {
         this.rbacService = rbacService;
         this.jdbc = jdbc;
         this.authenticatedUser = authenticatedUser;

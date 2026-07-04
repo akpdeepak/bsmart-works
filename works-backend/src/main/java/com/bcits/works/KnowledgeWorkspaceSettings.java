@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -22,10 +23,10 @@ public class KnowledgeWorkspaceSettings {
     private static final List<String> VALID_FREQUENCIES = List.of("off", "daily", "weekly");
 
     private final JdbcTemplate jdbc;
-    private final RbacService rbacService;
+    private final RbacGate rbacService;
     private final EventService eventService;
 
-    public KnowledgeWorkspaceSettings(JdbcTemplate jdbc, RbacService rbacService,
+    public KnowledgeWorkspaceSettings(JdbcTemplate jdbc, RbacGate rbacService,
                                        EventService eventService) {
         this.jdbc = jdbc;
         this.rbacService = rbacService;

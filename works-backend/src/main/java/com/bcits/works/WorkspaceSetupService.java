@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -31,12 +32,12 @@ public class WorkspaceSetupService {
         "TPL-ONBOARD-SCRUM", "TPL-ONBOARD-KANBAN", "TPL-ONBOARD-BUG", "TPL-ONBOARD-RAID"
     };
 
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final FunnelService funnelService;
     private final EventRepository eventRepository;
     private final JdbcTemplate jdbc;
 
-    public WorkspaceSetupService(RbacService rbac, FunnelService funnelService,
+    public WorkspaceSetupService(RbacGate rbac, FunnelService funnelService,
                                  EventRepository eventRepository, JdbcTemplate jdbc) {
         this.rbac = rbac;
         this.funnelService = funnelService;

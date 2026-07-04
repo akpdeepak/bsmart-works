@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -28,11 +29,11 @@ public class StandupService {
 
     private final StandupSessionRepository sessions;
     private final StandupEntryRepository entries;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService events;
 
     public StandupService(StandupSessionRepository sessions, StandupEntryRepository entries,
-                          RbacService rbac, EventService events) {
+                          RbacGate rbac, EventService events) {
         this.sessions = sessions;
         this.entries = entries;
         this.rbac = rbac;

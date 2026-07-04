@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -24,9 +25,9 @@ public class ApiTokenController {
 
     private final ApiTokenService apiTokens;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public ApiTokenController(ApiTokenService apiTokens, AuthenticatedUser authenticatedUser, RbacService rbac) {
+    public ApiTokenController(ApiTokenService apiTokens, AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.apiTokens = apiTokens;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

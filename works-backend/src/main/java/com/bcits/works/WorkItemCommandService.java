@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -31,7 +32,7 @@ public class WorkItemCommandService {
     private final EmailService emailService;
     private final NotificationBatchService batchService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final DodChecklistService dodChecklists;
     private final ExtensionExecutionService extensions;
     private final WorkflowRuleEngine workflowRules;
@@ -46,7 +47,7 @@ public class WorkItemCommandService {
     public WorkItemCommandService(WorkItemRepository repository, EventService eventService,
                                   JdbcTemplate jdbc, UserRepository userRepository,
                                   EmailService emailService, NotificationBatchService batchService,
-                                  AuthenticatedUser authenticatedUser, RbacService rbac,
+                                  AuthenticatedUser authenticatedUser, RbacGate rbac,
                                   DodChecklistService dodChecklists, ExtensionExecutionService extensions,
                                   WorkflowRuleEngine workflowRules, StatusConfigService statusConfig,
                                   BoardWipLimitService wipLimits, WatcherService watcherService,

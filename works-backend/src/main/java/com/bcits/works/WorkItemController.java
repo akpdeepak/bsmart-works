@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -35,7 +36,7 @@ public class WorkItemController {
     private final WorkItemRepository repository;
     private final JdbcTemplate jdbc;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final WorkItemBulkService bulkService;
     private final WatcherService watcherService;
     private final WorkItemReadService readService;
@@ -46,7 +47,7 @@ public class WorkItemController {
                               JdbcTemplate jdbc, NotificationRepository notificationRepository,
                               UserRepository userRepository, EmailService emailService,
                               NotificationBatchService batchService, AuthenticatedUser authenticatedUser,
-                              RbacService rbac, DodChecklistService dodChecklists,
+                              RbacGate rbac, DodChecklistService dodChecklists,
                               ExtensionExecutionService extensions,
                               WorkflowRuleEngine workflowRules,
                               StatusConfigService statusConfig,

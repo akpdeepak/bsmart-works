@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -19,7 +20,7 @@ import org.springframework.stereotype.Service;
  * <p>Governance (decision: bulk edit is open to anyone with edit rights, re-checked per item and
  * audited):
  * <ul>
- *   <li><b>Per-item RBAC</b> — every item is re-checked with {@link RbacService#canEdit}; an item
+ *   <li><b>Per-item RBAC</b> — every item is re-checked with {@link RbacGate#canEdit}; an item
  *       the caller may not edit (including one in another workspace) is <b>skipped</b>, never
  *       mutated. This is also the tenant guard: {@code canEdit} resolves the item's own workspace,
  *       so a caller can only ever change items in workspaces they belong to (RB-40 §1).</li>
@@ -42,11 +43,11 @@ public class WorkItemBulkService {
         java.util.Set.of("assignee", "priority", "addlabel", "removelabel");
 
     private final WorkItemRepository repository;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService eventService;
     private final JdbcTemplate jdbc;
 
-    public WorkItemBulkService(WorkItemRepository repository, RbacService rbac,
+    public WorkItemBulkService(WorkItemRepository repository, RbacGate rbac,
                                EventService eventService, JdbcTemplate jdbc) {
         this.repository = repository;
         this.rbac = rbac;

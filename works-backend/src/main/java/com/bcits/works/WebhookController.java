@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -29,9 +30,9 @@ public class WebhookController {
 
     private final WebhookService webhooks;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public WebhookController(WebhookService webhooks, AuthenticatedUser authenticatedUser, RbacService rbac) {
+    public WebhookController(WebhookService webhooks, AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.webhooks = webhooks;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

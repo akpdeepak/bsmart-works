@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.EventService;
 
@@ -59,7 +60,7 @@ public class AiAssistService {
     public AiAssistService(AiControlPlaneService controlPlane, WorkItemRepository workItems,
                            ProjectRepository projects, UserRepository users, ArticleRepository articles,
                            KnowledgeSpaceRepository spaces, TeamRepository teams, CommentRepository comments,
-                           EventService events, RbacService rbac, AutomationService automations) {
+                           EventService events, RbacGate rbac, AutomationService automations) {
         this.controlPlane = controlPlane;
         this.workItems = workItems;
         this.projects = projects;

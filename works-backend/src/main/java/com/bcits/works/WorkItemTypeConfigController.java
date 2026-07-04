@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -27,14 +28,14 @@ public class WorkItemTypeConfigController {
 
     private final WorkItemTypeConfigRepository typeConfigRepo;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     // The 7 MVP defaults live in one place (DefaultWorkItemTypes) so backend + frontend never drift.
     private static final List<Map<String, Object>> BUILT_IN_TYPES = DefaultWorkItemTypes.ALL;
 
     public WorkItemTypeConfigController(WorkItemTypeConfigRepository typeConfigRepo,
                                          AuthenticatedUser authenticatedUser,
-                                         RbacService rbac) {
+                                         RbacGate rbac) {
         this.typeConfigRepo = typeConfigRepo;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

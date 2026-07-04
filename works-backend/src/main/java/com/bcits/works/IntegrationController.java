@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -26,9 +27,9 @@ public class IntegrationController {
 
     private final IntegrationService integrations;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public IntegrationController(IntegrationService integrations, AuthenticatedUser authenticatedUser, RbacService rbac) {
+    public IntegrationController(IntegrationService integrations, AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.integrations = integrations;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

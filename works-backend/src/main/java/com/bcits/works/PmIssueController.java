@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -25,9 +26,9 @@ public class PmIssueController {
 
     private final PmIssueRepository repo;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public PmIssueController(PmIssueRepository repo, AuthenticatedUser authenticatedUser, RbacService rbac) {
+    public PmIssueController(PmIssueRepository repo, AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.repo = repo;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

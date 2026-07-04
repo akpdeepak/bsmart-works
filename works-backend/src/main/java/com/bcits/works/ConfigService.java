@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -22,7 +23,7 @@ import org.springframework.stereotype.Service;
  * versioned (append-only history), audited (an event in the immutable log), and checked against
  * locked settings — uniformly, with no way to mutate config behind the engine's back.
  *
- * <p>Authorization is applied by the controller via {@link RbacService} (RB-10 §2): reading config
+ * <p>Authorization is applied by the controller via {@link RbacGate} (RB-10 §2): reading config
  * needs workspace membership, writing needs {@code manage_workspace}. Lockable settings add a second
  * gate enforced here, server-side (RB-40 §1 — privacy/locks enforced at the API, never the UI): a
  * path listed in the document's {@code locks} — or the lock set itself — can only be changed by a

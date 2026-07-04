@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -27,11 +28,11 @@ public class CrossProjectDependencyController {
     private final CrossProjectDependencyRepository dependencyRepository;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public CrossProjectDependencyController(CrossProjectDependencyRepository dependencyRepository,
                                             EventService eventService, AuthenticatedUser authenticatedUser,
-                                            RbacService rbac) {
+                                            RbacGate rbac) {
         this.dependencyRepository = dependencyRepository;
         this.eventService = eventService;
         this.authenticatedUser = authenticatedUser;

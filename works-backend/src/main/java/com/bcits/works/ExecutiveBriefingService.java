@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -23,11 +24,11 @@ public class ExecutiveBriefingService {
 
     private final ExecutiveBriefingRepository repo;
     private final Iteration16AiService ai;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService events;
 
     public ExecutiveBriefingService(ExecutiveBriefingRepository repo, Iteration16AiService ai,
-                                    RbacService rbac, EventService events) {
+                                    RbacGate rbac, EventService events) {
         this.repo = repo;
         this.ai = ai;
         this.rbac = rbac;

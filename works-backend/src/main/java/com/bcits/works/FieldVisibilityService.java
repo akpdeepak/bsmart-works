@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +23,7 @@ import java.util.Set;
  * delegates here instead of holding its own inline copies, so the dedicated value endpoints and the
  * work-item read/write response paths all share one implementation.
  *
- * <p><b>Tier source.</b> The caller's tier comes from {@link RbacService#getUserTier} ({@code roles.tier},
+ * <p><b>Tier source.</b> The caller's tier comes from {@link RbacGate#getUserTier} ({@code roles.tier},
  * V7) while the rules key on {@code role_def.tier} (V21). They align on the shared 1–5 scale
  * (VIEWER 1 &lt; MEMBER 2 &lt; LEAD 3 &lt; ADMIN 4 &lt; OWNER 5); the deeper membership-role → {@code role_def}
  * reconciliation is deferred (EPIC P1 §7).
@@ -33,9 +34,9 @@ public class FieldVisibilityService {
     private static final Logger log = LoggerFactory.getLogger(FieldVisibilityService.class);
 
     private final JdbcTemplate jdbc;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public FieldVisibilityService(JdbcTemplate jdbc, RbacService rbac) {
+    public FieldVisibilityService(JdbcTemplate jdbc, RbacGate rbac) {
         this.jdbc = jdbc;
         this.rbac = rbac;
     }

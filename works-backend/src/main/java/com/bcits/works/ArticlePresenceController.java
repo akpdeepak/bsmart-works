@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -32,7 +33,7 @@ import java.util.Map;
  * database (article → space → workspace). A caller cannot join presence for an article in a
  * different tenant even if they supply a valid workspaceId that happens to belong to them.
  *
- * <p><b>RBAC (RB-10 §2):</b> enforced in this controller via {@link RbacService}; {@code view_items}
+ * <p><b>RBAC (RB-10 §2):</b> enforced in this controller via {@link RbacGate}; {@code view_items}
  * on the article's workspace is the minimum gate.
  */
 @RestController
@@ -44,14 +45,14 @@ public class ArticlePresenceController {
     private final KnowledgeSpaceRepository knowledgeSpaceRepository;
     private final UserRepository userRepository;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public ArticlePresenceController(ArticlePresenceStore store,
                                      ArticleRepository articleRepository,
                                      KnowledgeSpaceRepository knowledgeSpaceRepository,
                                      UserRepository userRepository,
                                      AuthenticatedUser authenticatedUser,
-                                     RbacService rbac) {
+                                     RbacGate rbac) {
         this.store = store;
         this.articleRepository = articleRepository;
         this.knowledgeSpaceRepository = knowledgeSpaceRepository;

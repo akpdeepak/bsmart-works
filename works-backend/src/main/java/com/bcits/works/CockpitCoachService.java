@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -34,11 +35,11 @@ public class CockpitCoachService {
     private final RetroSessionRepository retroSessions;
     private final RetroNoteRepository retroNotes;
     private final TeamRoleService teamRoles;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public CockpitCoachService(AiControlPlaneService controlPlane, JdbcTemplate jdbc,
                                RetroSessionRepository retroSessions, RetroNoteRepository retroNotes,
-                               TeamRoleService teamRoles, RbacService rbac) {
+                               TeamRoleService teamRoles, RbacGate rbac) {
         this.controlPlane = controlPlane;
         this.jdbc = jdbc;
         this.retroSessions = retroSessions;

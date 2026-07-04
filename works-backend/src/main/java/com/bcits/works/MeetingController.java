@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -29,13 +30,13 @@ public class MeetingController {
     private final MeetingNoteRepository noteRepo;
     private final ActionItemRepository actionItemRepo;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public MeetingController(MeetingRepository meetingRepo,
                               MeetingNoteRepository noteRepo,
                               ActionItemRepository actionItemRepo,
                               AuthenticatedUser authenticatedUser,
-                              RbacService rbac) {
+                              RbacGate rbac) {
         this.meetingRepo = meetingRepo;
         this.noteRepo = noteRepo;
         this.actionItemRepo = actionItemRepo;

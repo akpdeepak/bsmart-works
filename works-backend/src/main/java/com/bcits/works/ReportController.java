@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -34,11 +35,11 @@ public class ReportController {
     private final ReportService reportService;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public ReportController(ReportRepository reportRepository, ReportService reportService,
                             EventService eventService, AuthenticatedUser authenticatedUser,
-                            RbacService rbac) {
+                            RbacGate rbac) {
         this.reportRepository = reportRepository;
         this.reportService = reportService;
         this.eventService = eventService;

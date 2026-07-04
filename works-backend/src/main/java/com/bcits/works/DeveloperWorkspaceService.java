@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -35,14 +36,14 @@ public class DeveloperWorkspaceService {
     private final FocusModeService focusMode;
     private final CodeContextService codeContext;
     private final CalendarSyncService calendarSync;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final AiControlPlaneService controlPlane;
 
     public DeveloperWorkspaceService(DeveloperWorkspaceDao dao, PullRequestRepository pullRequests,
                                      PullRequestReviewerRepository reviewers, CodeLinkRepository codeLinks,
                                      FocusModeService focusMode, CodeContextService codeContext,
                                      CalendarSyncService calendarSync,
-                                     RbacService rbac, AiControlPlaneService controlPlane) {
+                                     RbacGate rbac, AiControlPlaneService controlPlane) {
         this.dao = dao;
         this.pullRequests = pullRequests;
         this.reviewers = reviewers;

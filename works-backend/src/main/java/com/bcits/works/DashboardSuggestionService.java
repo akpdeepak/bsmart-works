@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import org.springframework.stereotype.Service;
 
@@ -35,9 +36,9 @@ public class DashboardSuggestionService {
         List.of("developer", "scrum-master", "product-owner", "executive", "admin");
 
     private final AiControlPlaneService controlPlane;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public DashboardSuggestionService(AiControlPlaneService controlPlane, RbacService rbac) {
+    public DashboardSuggestionService(AiControlPlaneService controlPlane, RbacGate rbac) {
         this.controlPlane = controlPlane;
         this.rbac = rbac;
     }

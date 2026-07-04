@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -26,7 +27,7 @@ import java.util.Map;
  *       user may see it (it carries no tenant data, only up/down + coarse counts).</li>
  *   <li>{@code GET /observability/performance} — the per-operation P50/P95/P99 vs the RB-40 §5
  *       budgets. Operational detail, so it requires an admin on a workspace (RBAC in the service
- *       layer via {@link RbacService}, RB-10 §2).</li>
+ *       layer via {@link RbacGate}, RB-10 §2).</li>
  * </ul>
  */
 @RestController
@@ -34,12 +35,12 @@ import java.util.Map;
 public class ObservabilityController {
 
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final PerformanceMonitor monitor;
     private final JdbcTemplate jdbc;
     private final String appVersion;
 
-    public ObservabilityController(AuthenticatedUser authenticatedUser, RbacService rbac,
+    public ObservabilityController(AuthenticatedUser authenticatedUser, RbacGate rbac,
                                    PerformanceMonitor monitor, JdbcTemplate jdbc,
                                    @Value("${app.version:dev}") String appVersion) {
         this.authenticatedUser = authenticatedUser;

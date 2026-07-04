@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -29,11 +30,11 @@ public class SlaInstanceController {
     private final SlaCalendarRepository calendars;
     private final SlaCalculationService calc;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public SlaInstanceController(SlaInstanceRepository instances, SlaPolicyRepository policies,
                                 SlaCalendarRepository calendars, SlaCalculationService calc,
-                                AuthenticatedUser authenticatedUser, RbacService rbac) {
+                                AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.instances = instances;
         this.policies = policies;
         this.calendars = calendars;

@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -40,14 +41,14 @@ public class CustomerAccountController {
     private final CustomerAccountService accountService;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final CustomerUserPiiService customerUserPii;
     private final TokenRevocationService tokenRevocation;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public CustomerAccountController(CustomerAccountRepository accounts, CustomerUserRepository customerUsers,
                                      CustomerAccountService accountService, EventService eventService,
-                                     AuthenticatedUser authenticatedUser, RbacService rbac,
+                                     AuthenticatedUser authenticatedUser, RbacGate rbac,
                                      CustomerUserPiiService customerUserPii,
                                      TokenRevocationService tokenRevocation) {
         this.accounts = accounts;

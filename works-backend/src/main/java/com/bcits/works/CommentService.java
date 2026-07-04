@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -24,14 +25,14 @@ public class CommentService {
     private final NotificationRepository notificationRepository;
     private final EventService eventService;
     private final EmailService emailService;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public CommentService(CommentRepository commentRepository,
                           UserRepository userRepository,
                           NotificationRepository notificationRepository,
                           EventService eventService,
                           EmailService emailService,
-                          RbacService rbac) {
+                          RbacGate rbac) {
         this.commentRepository = commentRepository;
         this.userRepository = userRepository;
         this.notificationRepository = notificationRepository;

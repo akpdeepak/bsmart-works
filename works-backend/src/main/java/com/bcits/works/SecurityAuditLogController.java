@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -23,10 +24,10 @@ public class SecurityAuditLogController {
 
     private final SecurityAuditLogService auditLog;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public SecurityAuditLogController(SecurityAuditLogService auditLog, AuthenticatedUser authenticatedUser,
-                             RbacService rbac) {
+                             RbacGate rbac) {
         this.auditLog = auditLog;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

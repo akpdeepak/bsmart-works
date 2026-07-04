@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -63,9 +64,9 @@ public class AttachmentController {
 
     private final JdbcTemplate jdbc;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
-    public AttachmentController(JdbcTemplate jdbc, AuthenticatedUser authenticatedUser, RbacService rbac) {
+    public AttachmentController(JdbcTemplate jdbc, AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.jdbc = jdbc;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;

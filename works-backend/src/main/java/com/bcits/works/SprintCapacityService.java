@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -45,13 +46,13 @@ public class SprintCapacityService {
     private final SprintMemberCapacityRepository capacities;
     private final ProjectTeamMemberRepository teamMembers;
     private final JdbcTemplate jdbc;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService events;
 
     public SprintCapacityService(SprintRepository sprints, SprintDao sprintDao,
                                  SprintMemberCapacityRepository capacities,
                                  ProjectTeamMemberRepository teamMembers, JdbcTemplate jdbc,
-                                 RbacService rbac, EventService events) {
+                                 RbacGate rbac, EventService events) {
         this.sprints = sprints;
         this.sprintDao = sprintDao;
         this.capacities = capacities;

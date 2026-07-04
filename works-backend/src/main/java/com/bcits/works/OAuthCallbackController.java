@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 
@@ -57,7 +58,7 @@ public class OAuthCallbackController {
     private final IntegrationCredentialRepository credentials;
     private final EncryptionService encryption;
     private final EventService events;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     @Value("${oauth.slack.client-id:}") private String slackClientId;
     @Value("${oauth.slack.client-secret:}") private String slackClientSecret;
@@ -74,7 +75,7 @@ public class OAuthCallbackController {
     public OAuthCallbackController(IntegrationCredentialRepository credentials,
                                    EncryptionService encryption,
                                    EventService events,
-                                   RbacService rbac) {
+                                   RbacGate rbac) {
         this.credentials = credentials;
         this.encryption = encryption;
         this.events = events;

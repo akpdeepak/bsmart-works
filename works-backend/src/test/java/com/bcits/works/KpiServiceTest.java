@@ -1,5 +1,8 @@
 package com.bcits.works;
 
+import com.bcits.works.workspaces.Team;
+import com.bcits.works.workspaces.TeamRepository;
+
 import com.bcits.works.auth.RbacService;
 
 import com.bcits.works.shared.ApiException;

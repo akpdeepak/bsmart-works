@@ -1,4 +1,6 @@
 package com.bcits.works;
+
+import com.bcits.works.workspaces.TeamRoleService;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;

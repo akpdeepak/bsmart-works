@@ -1,4 +1,6 @@
-package com.bcits.works;
+package com.bcits.works.workspaces;
+
+import com.bcits.works.FunnelService;
 
 import com.bcits.works.auth.User;
 import com.bcits.works.auth.UserRepository;

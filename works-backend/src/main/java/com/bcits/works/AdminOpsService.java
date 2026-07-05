@@ -1,4 +1,7 @@
 package com.bcits.works;
+
+import com.bcits.works.workspaces.LicenseSeats;
+import com.bcits.works.workspaces.LicenseSeatsRepository;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;

@@ -1,5 +1,8 @@
 package com.bcits.works;
 
+import com.bcits.works.workspaces.Workspace;
+import com.bcits.works.workspaces.WorkspaceRepository;
+
 import com.bcits.works.shared.TenantScope;
 
 import org.slf4j.Logger;

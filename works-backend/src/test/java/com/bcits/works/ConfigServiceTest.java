@@ -1,5 +1,8 @@
 package com.bcits.works;
 
+import com.bcits.works.workspaces.WorkspaceConfig;
+import com.bcits.works.workspaces.WorkspaceConfigRepository;
+
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;

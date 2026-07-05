@@ -1,4 +1,4 @@
-package com.bcits.works;
+package com.bcits.works.workspaces;
 
 import com.bcits.works.shared.AuthenticatedUser;
 

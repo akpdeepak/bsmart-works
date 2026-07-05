@@ -1,4 +1,6 @@
 package com.bcits.works;
+
+import com.bcits.works.workspaces.TeamRoleService;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
@@ -118,7 +120,7 @@ public class ImpedimentService {
     }
 
     /** Raise types the given team role may create; empty set for unknown roles. Pure. */
-    static Set<String> allowedRaiseTypes(String roleKey) {
+    public static Set<String> allowedRaiseTypes(String roleKey) {
         return RAISE_TYPES_BY_ROLE.getOrDefault(roleKey, Set.of());
     }
 

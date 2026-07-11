@@ -12,6 +12,11 @@ import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.KeyRotationService;
 
 import com.bcits.works.shared.dto.AnomalySignalRequest;
+import com.bcits.works.shared.WorkspaceSecuritySettings;
+import com.bcits.works.shared.WorkspaceSecuritySettingsService;
+import com.bcits.works.security.AuditLogStreamConfig;
+import com.bcits.works.security.AuditStreamService;
+import com.bcits.works.security.SecurityAdminController;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;

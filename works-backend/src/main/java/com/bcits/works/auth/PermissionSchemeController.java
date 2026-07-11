@@ -2,8 +2,8 @@ package com.bcits.works.auth;
 
 import com.bcits.works.FieldDef;
 import com.bcits.works.FieldDefRepository;
-import com.bcits.works.FieldVisibility;
-import com.bcits.works.FieldVisibilityRepository;
+import com.bcits.works.shared.FieldVisibility;
+import com.bcits.works.shared.FieldVisibilityRepository;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;

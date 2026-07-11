@@ -2,6 +2,7 @@ package com.bcits.works;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
+import com.bcits.works.auth.UserPiiService;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;

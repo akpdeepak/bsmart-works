@@ -3,6 +3,7 @@ package com.bcits.works;
 import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.ApiException;
+import com.bcits.works.auth.UserPiiService;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;

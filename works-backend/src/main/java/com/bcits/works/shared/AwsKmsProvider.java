@@ -1,8 +1,6 @@
 package com.bcits.works.shared;
 
-import com.bcits.works.WorkspaceSecuritySettings;
 
-import com.bcits.works.WorkspaceSecuritySettingsRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

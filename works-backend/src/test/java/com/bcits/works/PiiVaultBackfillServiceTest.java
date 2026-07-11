@@ -3,6 +3,12 @@ package com.bcits.works;
 import com.bcits.works.auth.User;
 
 import com.bcits.works.auth.UserRepository;
+import com.bcits.works.auth.UserPiiService;
+import com.bcits.works.security.CustomerAttributionPiiService;
+import com.bcits.works.security.CustomerUserPiiService;
+import com.bcits.works.security.PiiVaultBackfillService;
+import com.bcits.works.shared.PiiVaultService;
+import com.bcits.works.security.StakeholderPiiService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

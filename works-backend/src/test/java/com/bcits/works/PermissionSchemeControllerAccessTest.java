@@ -11,6 +11,8 @@ import com.bcits.works.auth.RolePermissionRepository;
 import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.ApiException;
+import com.bcits.works.shared.FieldVisibility;
+import com.bcits.works.shared.FieldVisibilityRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

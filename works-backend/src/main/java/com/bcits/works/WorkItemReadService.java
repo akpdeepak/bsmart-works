@@ -3,6 +3,7 @@ package com.bcits.works;
 import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.ApiException;
+import com.bcits.works.shared.FieldVisibilityService;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

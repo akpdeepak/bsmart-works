@@ -8,6 +8,7 @@ import com.bcits.works.shared.TenantScope;
 
 import com.bcits.works.shared.EventService;
 import com.bcits.works.shared.RateLimiter;
+import com.bcits.works.security.CustomerUserPiiService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;

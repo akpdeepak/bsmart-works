@@ -5,6 +5,7 @@ import com.bcits.works.auth.RbacService;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.BqlContextFactory;
 import com.bcits.works.shared.BqlExecutionService;
+import com.bcits.works.security.BqlRunAuditService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

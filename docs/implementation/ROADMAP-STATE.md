@@ -30,10 +30,31 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
     1,449 unit tests + real `ddl-auto=validate` boot (PR #454). **Next: G-2 domain carve,
     Identity-first (`auth` → `workspaces` → `security` → rest), one module per PR** with the
     `RbacService` port in shared landing with the auth carve.
+  - ✅ **W2 G-2 domain carve (in progress, Identity-first):** `auth` (PR #462, 43 classes) and
+    `workspaces` (PR #463, 25 classes) carved, preceded by the `RbacGate` port (PR #460) and
+    `EmailService` (PR #461) landing in shared. **`security` carved next (this PR):** 60 flat-root
+    classes relocated — 42 to `com.bcits.works.security` (compliance rules/violations/evaluation/
+    escalation, audit-log query surface `AuditLogService`/`AuditStreamService`/`AuditSavedQuery`/
+    `BqlRunAudit*`, data-privacy/DSAR, evidence packages, PII-vault domain adapters
+    `*PiiService`/`DataPrivacyService`/backfill, `SecurityConfig`, `SecurityAdminController`),
+    **17 to `shared`** and **1 (`UserPiiService`) to `auth`**. The 17→shared were forced by the
+    kernel rule (shared crypto/BQL depend on them, incl. same-package transitive deps invisible to
+    imports): the crypto-shred primitives (`WorkspaceSecuritySettings*`, `SubjectDataKey*`,
+    `SecurityAuditLogService` + its storage `AuditHashChain`/`AuditLogEntry(+Repo)`), the PII-vault
+    **core** (`PiiVaultService`/`Entry`/`Repository`/`Policy`, `BlindIndexService` — same family as
+    the already-shared `EncryptionService`/KMS), and the FLS resolver (`FieldVisibility(+Repo+Service)`,
+    pinned by `BqlContextFactory`). **Boundary decision (Deepak, Option A):** pin kernel-needed
+    classes to `shared` rather than port-extract or revert the #454 kernel; `UserPiiService`→`auth`
+    (identity-PII adapter). Result: `auth↔security` and `shared↔security` cycles removed, all edges
+    one-directional. **Pure move** (only the 1 forced widening `EvidencePackageService.renderBundle`
+    → public + `ComplianceEvaluationServiceTest` co-located for package-private access). Validated:
+    ArchUnit acyclic-slices + kernel-direction green, unit suite + 0 Checkstyle, guardrails, real
+    `ddl-auto=validate` boot (13.9s). High-water still V119 (no schema change).
   - Bundle-budget gate (I-2) verified already in CI (`perf-budget`, 500 KB gz initial-JS ceiling).
-  - **Still open in Phase 2:** G-2 domain carve (663→ files still flat), W2-c AppShell decomposition
-    (4,629 lines), AsyncBoundary tranches 2–3, the 43-file legacy lint block, FE monolith line-count
-    reductions.
+  - **Still open in Phase 2:** G-2 remaining domain carve (`workitems` → `projects` →
+    `reporting`/`sla` → `ai`/`automation`/`messaging`/`service`/`knowledge`/`devsync`; ~455 files
+    still flat), W2-c AppShell decomposition (4,629 lines), AsyncBoundary tranches 2–3, the 43-file
+    legacy lint block, FE monolith line-count reductions.
   - ✅ Phase 0 (truth reconciliation + master ledger + restored CI pipeline) — PR #407.
   - ✅ **PII vault + crypto-shredding** EPIC complete — PRs #418–#424 (high-water through V114); only the
     deferred CONTRACT plaintext-column drop remains. See `EPIC-P1-pii-vault-completion.md`.
@@ -70,7 +91,8 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
   (`roles` V7 vs `role_def` V21); WorkflowController null-workspace branch + create-side body-workspaceId
   trust on Team/Report/etc + per-operation perm tightening on the Slice-D controllers; FLS rule seeding;
   the deferred #243 Slice E CONTRACT predicate removal.
-- Last state update: 2026-07-03 (Phase-2 progress reconcile — PRs #446–#454 verified on remote `main`)
+- Last state update: 2026-07-11 (Phase-2 G-2 `security` domain module carved — 60 classes relocated,
+  Option-A boundary; ArchUnit/Checkstyle/guardrails/boot green; resume at `workitems` carve next)
 
 ## Trigger contract
 

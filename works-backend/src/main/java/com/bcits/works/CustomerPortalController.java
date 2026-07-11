@@ -8,6 +8,8 @@ import com.bcits.works.workitems.WorkItem;
 import com.bcits.works.workitems.WorkItemRepository;
 import com.bcits.works.projects.Project;
 import com.bcits.works.projects.ProjectRepository;
+import com.bcits.works.sla.CustomerSlaTier;
+import com.bcits.works.sla.CustomerSlaTierRepository;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

@@ -1,7 +1,7 @@
-package com.bcits.works;
-import com.bcits.works.shared.RbacGate;
+package com.bcits.works.sla;
 
 import com.bcits.works.shared.AuthenticatedUser;
+import com.bcits.works.shared.RbacGate;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

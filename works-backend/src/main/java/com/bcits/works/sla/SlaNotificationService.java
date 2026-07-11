@@ -1,4 +1,7 @@
-package com.bcits.works;
+package com.bcits.works.sla;
+
+import com.bcits.works.Notification;
+import com.bcits.works.NotificationRepository;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;

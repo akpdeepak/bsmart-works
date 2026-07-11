@@ -50,11 +50,25 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
     → public + `ComplianceEvaluationServiceTest` co-located for package-private access). Validated:
     ArchUnit acyclic-slices + kernel-direction green, unit suite + 0 Checkstyle, guardrails, real
     `ddl-auto=validate` boot (13.9s). High-water still V119 (no schema change).
+  - ✅ **W2 G-2 `workitems` carved (this PR, PR-5):** 42 of 46 work-item-domain classes moved to
+    `com.bcits.works.workitems` (`WorkItem*` read/command/bulk, `WorkItemLink*`, `FieldLayout*`,
+    `WorkItemTypeConfig*`, `Workflow*`/`WorkflowRuleEngine`/`WorkflowStatus*`/`WorkflowTransition*`,
+    `Status*` config/duration/resolver, `DodChecklist*`, `WorkLog*`, `FieldDefController`). **4 left
+    in root by design** — `FieldDef`, `FieldDefRepository`, `WorkItemFieldValue`,
+    `WorkItemFieldValueRepository` — because `auth.PermissionSchemeController` and
+    `security.PiiVaultBackfillService` reach into them; moving them now would create
+    `auth↔workitems` / `security↔workitems` cycles. They carve once those consumers move behind a
+    workitems read-port (plan §3). The shared BQL/FLS kernel references field *names*, not the
+    entity classes, so **no kernel pin** was needed. Pure move: sole non-import change is widening
+    the shared `StatusCategoryResolver` (class + `TODO`/`IN_PROGRESS`/`DONE`/`from`/`normalize`) to
+    public for its board/sprint consumers; `StatusDurationServiceTest` co-located. Validated:
+    ArchUnit acyclic-slices + kernel green, unit suite + 0 Checkstyle, guardrails, real
+    `ddl-auto=validate` boot (14.9s). No schema change (V119).
   - Bundle-budget gate (I-2) verified already in CI (`perf-budget`, 500 KB gz initial-JS ceiling).
-  - **Still open in Phase 2:** G-2 remaining domain carve (`workitems` → `projects` →
-    `reporting`/`sla` → `ai`/`automation`/`messaging`/`service`/`knowledge`/`devsync`; ~455 files
-    still flat), W2-c AppShell decomposition (4,629 lines), AsyncBoundary tranches 2–3, the 43-file
-    legacy lint block, FE monolith line-count reductions.
+  - **Still open in Phase 2:** G-2 remaining domain carve (`projects` → `reporting`/`sla` →
+    `ai`/`automation`/`messaging`/`service`/`knowledge`/`devsync`; + the 4 deferred field/value
+    classes; ~415 files still flat), W2-c AppShell decomposition (4,629 lines), AsyncBoundary
+    tranches 2–3, the 43-file legacy lint block, FE monolith line-count reductions.
   - ✅ Phase 0 (truth reconciliation + master ledger + restored CI pipeline) — PR #407.
   - ✅ **PII vault + crypto-shredding** EPIC complete — PRs #418–#424 (high-water through V114); only the
     deferred CONTRACT plaintext-column drop remains. See `EPIC-P1-pii-vault-completion.md`.
@@ -91,7 +105,7 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
   (`roles` V7 vs `role_def` V21); WorkflowController null-workspace branch + create-side body-workspaceId
   trust on Team/Report/etc + per-operation perm tightening on the Slice-D controllers; FLS rule seeding;
   the deferred #243 Slice E CONTRACT predicate removal.
-- Last state update: 2026-07-11 (Phase-2 G-2 `security` domain module carved — 60 classes relocated,
+- Last state update: 2026-07-11 (Phase-2 G-2 `workitems` domain module carved — 42 classes; 4 field/value classes deferred to break auth/security cycles; all gates green; resume at `projects` carve next)
   Option-A boundary; ArchUnit/Checkstyle/guardrails/boot green; resume at `workitems` carve next)
 
 ## Trigger contract

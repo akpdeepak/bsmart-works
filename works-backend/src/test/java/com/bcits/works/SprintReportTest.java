@@ -5,6 +5,9 @@ import com.bcits.works.auth.RbacService;
 import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.workitems.StatusConfigService;
+import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.workitems.WorkflowStatus;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;

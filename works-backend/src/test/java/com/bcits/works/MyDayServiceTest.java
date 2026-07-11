@@ -3,6 +3,8 @@ package com.bcits.works;
 import com.bcits.works.auth.RbacService;
 
 import com.bcits.works.shared.ApiException;
+import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.WorkItemRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

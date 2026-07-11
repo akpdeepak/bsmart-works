@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.workitems.WorkItem;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;

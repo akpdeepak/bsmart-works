@@ -8,6 +8,8 @@ import com.bcits.works.auth.UserRepository;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.WorkItemRepository;
 
 import org.springframework.stereotype.Service;
 

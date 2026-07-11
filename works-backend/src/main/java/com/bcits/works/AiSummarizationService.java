@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.WorkItemRepository;
 
 import org.springframework.stereotype.Service;
 

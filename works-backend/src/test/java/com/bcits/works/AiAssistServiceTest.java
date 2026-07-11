@@ -11,6 +11,8 @@ import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.BqlCompiler;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.WorkItemRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

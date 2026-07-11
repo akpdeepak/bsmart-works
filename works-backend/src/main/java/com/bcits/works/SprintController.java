@@ -6,6 +6,11 @@ import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.workitems.StatusCategoryResolver;
+import com.bcits.works.workitems.StatusConfigService;
+import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.workitems.WorkflowStatus;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

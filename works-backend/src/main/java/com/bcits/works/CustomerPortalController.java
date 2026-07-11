@@ -4,6 +4,8 @@ import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.TenantScope;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.WorkItemRepository;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

@@ -15,6 +15,17 @@ import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;
 import com.bcits.works.shared.FieldVisibilityRepository;
+import com.bcits.works.workitems.WorkItemLinkController;
+import com.bcits.works.workitems.WorkItemLinkRepository;
+import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.workitems.WorkItemTypeConfig;
+import com.bcits.works.workitems.WorkItemTypeConfigController;
+import com.bcits.works.workitems.WorkItemTypeConfigRepository;
+import com.bcits.works.workitems.Workflow;
+import com.bcits.works.workitems.WorkflowController;
+import com.bcits.works.workitems.WorkflowRepository;
+import com.bcits.works.workitems.WorkflowStatusRepository;
+import com.bcits.works.workitems.WorkflowTransitionRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

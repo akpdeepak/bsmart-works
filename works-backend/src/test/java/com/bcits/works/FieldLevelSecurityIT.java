@@ -6,6 +6,9 @@ import com.bcits.works.shared.BqlException;
 
 import com.bcits.works.shared.BqlCompiler;
 import com.bcits.works.shared.BqlContextFactory;
+import com.bcits.works.workitems.FieldDefController;
+import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.WorkItemReadService;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

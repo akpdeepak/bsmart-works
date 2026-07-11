@@ -7,6 +7,7 @@ import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.FieldVisibilityService;
 import com.bcits.works.security.CustomerAttributionPiiService;
+import com.bcits.works.workitems.FieldDefController;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

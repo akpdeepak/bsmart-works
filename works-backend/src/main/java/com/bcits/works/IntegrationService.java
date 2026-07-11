@@ -3,6 +3,8 @@ package com.bcits.works;
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.WorkItemRepository;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

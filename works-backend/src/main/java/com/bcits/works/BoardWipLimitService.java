@@ -1,6 +1,7 @@
 package com.bcits.works;
 
 import com.bcits.works.shared.ApiException;
+import com.bcits.works.workitems.StatusCategoryResolver;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;

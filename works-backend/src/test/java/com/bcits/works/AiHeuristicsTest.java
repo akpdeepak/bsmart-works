@@ -4,6 +4,7 @@ import com.bcits.works.workspaces.Team;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.BqlCompiler;
+import com.bcits.works.workitems.WorkItem;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

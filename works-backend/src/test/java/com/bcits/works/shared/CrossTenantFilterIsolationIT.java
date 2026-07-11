@@ -14,8 +14,8 @@ import com.bcits.works.MetricSnapshot;
 import com.bcits.works.MetricSnapshotRepository;
 import com.bcits.works.projects.Project;
 import com.bcits.works.projects.ProjectRepository;
-import com.bcits.works.SlaPolicy;
-import com.bcits.works.SlaPolicyRepository;
+import com.bcits.works.sla.SlaPolicy;
+import com.bcits.works.sla.SlaPolicyRepository;
 import com.bcits.works.workitems.WorkItem;
 import com.bcits.works.workitems.WorkItemRepository;
 

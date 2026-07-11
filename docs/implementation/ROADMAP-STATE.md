@@ -75,8 +75,14 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
     `CockpitDigestService.jdbcDay`, `ImpedimentService.ageDays/slaBreached`) for cross-package
     callers; 6 focused `*ServiceTest` co-located. Validated: ArchUnit + unit + 0 Checkstyle +
     guardrails + `ddl-auto=validate` boot (14.1s). No schema change (V119).
+  - ✅ **W2 G-2 `sla` carved (PR-7):** all 23 SLA-domain classes moved to `com.bcits.works.sla`
+    (`SlaPolicy*`, `SlaInstance*`, `SlaTarget*`, `SlaCalendar*`, `SlaEscalation*`, `SlaCalculationService`,
+    `SlaEvaluationService`, `SlaNotificationService`, `SlaClockScheduler`, `SlaReportController`,
+    `CustomerSlaTier*`) — fully decoupled: no kernel pin, no cross-module edges either direction,
+    **true pure move** (zero non-import changes). ArchUnit + unit + 0 Checkstyle + guardrails +
+    `ddl-auto=validate` boot green. V119.
   - Bundle-budget gate (I-2) verified already in CI (`perf-budget`, 500 KB gz initial-JS ceiling).
-  - **Still open in Phase 2:** G-2 remaining domain carve (`reporting`/`sla` →
+  - **Still open in Phase 2:** G-2 remaining domain carve (`reporting` →
     `ai`/`automation`/`messaging`/`service`/`knowledge`/`devsync`; + deferred field/value +
     board/impediment classes; ~360 files still flat), W2-c AppShell decomposition (4,629 lines),
     AsyncBoundary tranches 2–3, the 43-file legacy lint block, FE monolith line-count reductions.
@@ -116,7 +122,7 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
   (`roles` V7 vs `role_def` V21); WorkflowController null-workspace branch + create-side body-workspaceId
   trust on Team/Report/etc + per-operation perm tightening on the Slice-D controllers; FLS rule seeding;
   the deferred #243 Slice E CONTRACT predicate removal.
-- Last state update: 2026-07-11 (Phase-2 G-2 `projects` carved — 57 classes, 2 deferred for cycle-safety; all gates green; resume at `reporting`+`sla`)
+- Last state update: 2026-07-11 (Phase-2 G-2 `sla` carved — 23 classes, clean pure move; resume at `reporting`)
   Option-A boundary; ArchUnit/Checkstyle/guardrails/boot green; resume at `workitems` carve next)
 
 ## Trigger contract

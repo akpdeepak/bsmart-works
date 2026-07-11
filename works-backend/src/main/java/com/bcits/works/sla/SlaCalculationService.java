@@ -1,4 +1,4 @@
-package com.bcits.works;
+package com.bcits.works.sla;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -10,6 +10,7 @@ import com.bcits.works.auth.UserRepository;
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.auth.UserPiiService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

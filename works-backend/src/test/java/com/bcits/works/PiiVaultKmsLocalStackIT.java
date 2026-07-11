@@ -4,6 +4,7 @@ import com.bcits.works.shared.KmsProvider;
 import com.bcits.works.shared.KmsProperties;
 
 import com.bcits.works.shared.AwsKmsProvider;
+import com.bcits.works.shared.WorkspaceSecuritySettingsRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

@@ -1,6 +1,8 @@
 package com.bcits.works;
 
 import com.bcits.works.shared.ApiException;
+import com.bcits.works.shared.SecurityAuditLogService;
+import com.bcits.works.shared.WorkspaceSecuritySettingsService;
 
 import org.springframework.stereotype.Service;
 

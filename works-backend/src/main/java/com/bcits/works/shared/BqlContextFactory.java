@@ -1,6 +1,5 @@
 package com.bcits.works.shared;
 
-import com.bcits.works.FieldVisibilityService;
 
 import java.util.LinkedHashMap;
 import java.util.Locale;

@@ -1,6 +1,6 @@
 package com.bcits.works.auth;
 
-import com.bcits.works.SecurityAuditLogService;
+import com.bcits.works.shared.SecurityAuditLogService;
 
 import com.bcits.works.shared.ApiException;
 

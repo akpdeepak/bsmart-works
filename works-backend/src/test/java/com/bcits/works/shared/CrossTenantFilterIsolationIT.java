@@ -2,8 +2,8 @@ package com.bcits.works.shared;
 
 import com.bcits.works.Comment;
 import com.bcits.works.CommentRepository;
-import com.bcits.works.ComplianceRule;
-import com.bcits.works.ComplianceRuleRepository;
+import com.bcits.works.security.ComplianceRule;
+import com.bcits.works.security.ComplianceRuleRepository;
 import com.bcits.works.CrossProjectDependency;
 import com.bcits.works.CrossProjectDependencyRepository;
 import com.bcits.works.Dashboard;

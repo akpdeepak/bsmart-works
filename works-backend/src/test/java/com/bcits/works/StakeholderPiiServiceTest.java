@@ -1,4 +1,7 @@
 package com.bcits.works;
+import com.bcits.works.shared.PiiVaultPolicy;
+import com.bcits.works.shared.PiiVaultService;
+import com.bcits.works.security.StakeholderPiiService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

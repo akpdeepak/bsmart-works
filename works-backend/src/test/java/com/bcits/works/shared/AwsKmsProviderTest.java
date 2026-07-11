@@ -1,7 +1,5 @@
 package com.bcits.works.shared;
 
-import com.bcits.works.WorkspaceSecuritySettings;
-import com.bcits.works.WorkspaceSecuritySettingsRepository;
 
 
 import org.junit.jupiter.api.Tag;

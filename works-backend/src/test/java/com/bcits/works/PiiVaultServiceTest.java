@@ -2,6 +2,11 @@ package com.bcits.works;
 
 import com.bcits.works.shared.EncryptionService;
 import com.bcits.works.shared.LocalKmsProvider;
+import com.bcits.works.shared.SubjectDataKey;
+import com.bcits.works.shared.SubjectDataKeyRepository;
+import com.bcits.works.shared.PiiVaultEntry;
+import com.bcits.works.shared.PiiVaultRepository;
+import com.bcits.works.shared.PiiVaultService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;

@@ -2,6 +2,7 @@ package com.bcits.works;
 
 import com.bcits.works.auth.JwtUtil;
 import com.bcits.works.auth.TokenRevocationService;
+import com.bcits.works.security.SecurityConfig;
 
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;

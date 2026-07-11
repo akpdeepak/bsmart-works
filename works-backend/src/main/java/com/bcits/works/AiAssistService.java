@@ -10,6 +10,8 @@ import com.bcits.works.shared.RbacGate;
 import com.bcits.works.shared.EventService;
 import com.bcits.works.workitems.WorkItem;
 import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.projects.Project;
+import com.bcits.works.projects.ProjectRepository;
 
 import org.springframework.stereotype.Service;
 

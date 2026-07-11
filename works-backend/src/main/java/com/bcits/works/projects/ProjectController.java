@@ -1,0 +1,82 @@
+package com.bcits.works.projects;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * HTTP surface for projects — parse, delegate to {@link ProjectService}, return. No business logic,
+ * authorization, or data access here (RB-10 §2; CLAUDE.md §4).
+ */
+@RestController
+@RequestMapping("/api/v1/projects")
+public class ProjectController {
+
+    private final ProjectService projectService;
+    private final AuthenticatedUser authenticatedUser;
+
+    public ProjectController(ProjectService projectService, AuthenticatedUser authenticatedUser) {
+        this.projectService = projectService;
+        this.authenticatedUser = authenticatedUser;
+    }
+
+    @GetMapping
+    public List<Project> getAllProjects(@RequestParam(required = false) String workspaceId) {
+        return projectService.list(authenticatedUser.id(), workspaceId);
+    }
+
+    @GetMapping("/by-slug/{slug}")
+    public Project getBySlug(@PathVariable String slug) {
+        return projectService.getBySlug(authenticatedUser.id(), slug);
+    }
+
+    @PostMapping
+    public Project createProject(@Valid @RequestBody Project project) {
+        return projectService.create(authenticatedUser.id(), project);
+    }
+
+    @PutMapping("/{id}")
+    public Project updateProject(@PathVariable String id, @Valid @RequestBody Project updated) {
+        return projectService.update(authenticatedUser.id(), id, updated);
+    }
+
+    @PutMapping("/{id}/archive")
+    public Project archiveProject(@PathVariable String id) {
+        return projectService.toggleArchive(authenticatedUser.id(), id);
+    }
+
+    @GetMapping("/{id}/members")
+    public List<Map<String, Object>> getProjectMembers(@PathVariable String id) {
+        return projectService.getMembers(authenticatedUser.id(), id);
+    }
+
+    @PostMapping("/{id}/members")
+    public Map<String, String> addProjectMember(@PathVariable String id,
+                                                @Valid @RequestBody Map<String, String> payload) {
+        return projectService.addMember(authenticatedUser.id(), id, payload.get("email"), payload.get("role"));
+    }
+
+    @DeleteMapping("/{id}/members/{memberId}")
+    public Map<String, String> removeProjectMember(@PathVariable String id, @PathVariable String memberId) {
+        return projectService.removeMember(authenticatedUser.id(), id, memberId);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteProject(@PathVariable String id) {
+        projectService.delete(authenticatedUser.id(), id);
+        return ResponseEntity.noContent().build();
+    }
+}

@@ -5,6 +5,10 @@ import com.bcits.works.auth.RbacService;
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.projects.CeremonyAttendeeRepository;
+import com.bcits.works.projects.CeremonyService;
+import com.bcits.works.projects.CeremonySession;
+import com.bcits.works.projects.CeremonySessionRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

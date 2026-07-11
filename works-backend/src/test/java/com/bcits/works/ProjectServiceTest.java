@@ -6,6 +6,9 @@ import com.bcits.works.auth.UserRepository;
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.projects.Project;
+import com.bcits.works.projects.ProjectRepository;
+import com.bcits.works.projects.ProjectService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

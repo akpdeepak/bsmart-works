@@ -1,6 +1,7 @@
 package com.bcits.works;
 
 import com.bcits.works.shared.WorkspaceFilterActivator;
+import com.bcits.works.projects.Project;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

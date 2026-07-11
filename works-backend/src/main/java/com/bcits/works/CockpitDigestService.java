@@ -2,6 +2,9 @@ package com.bcits.works;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
+import com.bcits.works.projects.Sprint;
+import com.bcits.works.projects.SprintRepository;
+import com.bcits.works.projects.SprintVarianceService;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -168,7 +171,7 @@ public class CockpitDigestService {
         return out;
     }
 
-    static LocalDate jdbcDay(Object value) {
+    public static LocalDate jdbcDay(Object value) {
         if (value instanceof java.sql.Timestamp ts) return ts.toLocalDateTime().toLocalDate();
         if (value instanceof OffsetDateTime odt) return odt.toLocalDate();
         if (value instanceof LocalDateTime ldt) return ldt.toLocalDate();

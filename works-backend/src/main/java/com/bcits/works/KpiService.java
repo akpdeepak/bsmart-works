@@ -13,6 +13,8 @@ import com.bcits.works.shared.BqlContext;
 import com.bcits.works.shared.BqlCompiler;
 import com.bcits.works.workitems.WorkItem;
 import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.projects.Project;
+import com.bcits.works.projects.ProjectRepository;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;

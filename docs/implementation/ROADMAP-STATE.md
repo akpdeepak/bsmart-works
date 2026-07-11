@@ -64,11 +64,22 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
     public for its board/sprint consumers; `StatusDurationServiceTest` co-located. Validated:
     ArchUnit acyclic-slices + kernel green, unit suite + 0 Checkstyle, guardrails, real
     `ddl-auto=validate` boot (14.9s). No schema change (V119).
+  - ✅ **W2 G-2 `projects` carved (PR-6):** 57 of 59 project-domain classes moved to
+    `com.bcits.works.projects` (`Project*`, `Sprint*`, `Release*`, `Board*`, `Ceremony*`, `Retro*`,
+    `Standup*`, `Impediment*` (SLA), `CrossProjectDependency*`, `Dependency*`, `RoadmapTheme*`,
+    `OkrLink*`, `Raid*`). **2 left in root** — `BoardWipLimitService` (referenced by
+    `workitems.WorkItemCommandService`/`Controller` → would cycle) and `ImpedimentService` (mutual
+    with `workspaces.TeamRoleService` → would cycle); both carve once those consumers move behind
+    ports. `workspaces→projects` (TeamRoleService→Sprint/Ceremony/ProjectTeamMember) is one-way,
+    allowed. Pure move + 5 forced method widenings to public (`SprintVarianceService.rate/burndown`,
+    `CockpitDigestService.jdbcDay`, `ImpedimentService.ageDays/slaBreached`) for cross-package
+    callers; 6 focused `*ServiceTest` co-located. Validated: ArchUnit + unit + 0 Checkstyle +
+    guardrails + `ddl-auto=validate` boot (14.1s). No schema change (V119).
   - Bundle-budget gate (I-2) verified already in CI (`perf-budget`, 500 KB gz initial-JS ceiling).
-  - **Still open in Phase 2:** G-2 remaining domain carve (`projects` → `reporting`/`sla` →
-    `ai`/`automation`/`messaging`/`service`/`knowledge`/`devsync`; + the 4 deferred field/value
-    classes; ~415 files still flat), W2-c AppShell decomposition (4,629 lines), AsyncBoundary
-    tranches 2–3, the 43-file legacy lint block, FE monolith line-count reductions.
+  - **Still open in Phase 2:** G-2 remaining domain carve (`reporting`/`sla` →
+    `ai`/`automation`/`messaging`/`service`/`knowledge`/`devsync`; + deferred field/value +
+    board/impediment classes; ~360 files still flat), W2-c AppShell decomposition (4,629 lines),
+    AsyncBoundary tranches 2–3, the 43-file legacy lint block, FE monolith line-count reductions.
   - ✅ Phase 0 (truth reconciliation + master ledger + restored CI pipeline) — PR #407.
   - ✅ **PII vault + crypto-shredding** EPIC complete — PRs #418–#424 (high-water through V114); only the
     deferred CONTRACT plaintext-column drop remains. See `EPIC-P1-pii-vault-completion.md`.
@@ -105,7 +116,7 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
   (`roles` V7 vs `role_def` V21); WorkflowController null-workspace branch + create-side body-workspaceId
   trust on Team/Report/etc + per-operation perm tightening on the Slice-D controllers; FLS rule seeding;
   the deferred #243 Slice E CONTRACT predicate removal.
-- Last state update: 2026-07-11 (Phase-2 G-2 `workitems` domain module carved — 42 classes; 4 field/value classes deferred to break auth/security cycles; all gates green; resume at `projects` carve next)
+- Last state update: 2026-07-11 (Phase-2 G-2 `projects` carved — 57 classes, 2 deferred for cycle-safety; all gates green; resume at `reporting`+`sla`)
   Option-A boundary; ArchUnit/Checkstyle/guardrails/boot green; resume at `workitems` carve next)
 
 ## Trigger contract

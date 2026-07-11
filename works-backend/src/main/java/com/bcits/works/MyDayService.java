@@ -3,6 +3,10 @@ import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.projects.ImpedimentRepository;
+import com.bcits.works.projects.StandupEntryRepository;
+import com.bcits.works.projects.StandupSession;
+import com.bcits.works.projects.StandupSessionRepository;
 
 import org.springframework.stereotype.Service;
 

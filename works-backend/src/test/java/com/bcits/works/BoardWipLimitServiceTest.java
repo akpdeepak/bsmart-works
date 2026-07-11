@@ -1,6 +1,8 @@
 package com.bcits.works;
 
 import com.bcits.works.shared.ApiException;
+import com.bcits.works.projects.BoardWipLimit;
+import com.bcits.works.projects.BoardWipLimitRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

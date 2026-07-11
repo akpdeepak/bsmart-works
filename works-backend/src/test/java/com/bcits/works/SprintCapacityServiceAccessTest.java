@@ -5,6 +5,12 @@ import com.bcits.works.auth.RbacService;
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.projects.ProjectTeamMemberRepository;
+import com.bcits.works.projects.Sprint;
+import com.bcits.works.projects.SprintCapacityService;
+import com.bcits.works.projects.SprintDao;
+import com.bcits.works.projects.SprintMemberCapacityRepository;
+import com.bcits.works.projects.SprintRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

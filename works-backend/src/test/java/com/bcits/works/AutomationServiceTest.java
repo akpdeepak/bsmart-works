@@ -6,6 +6,8 @@ import com.bcits.works.shared.BqlException;
 import com.bcits.works.shared.EventService;
 import com.bcits.works.workitems.WorkItem;
 import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.projects.Project;
+import com.bcits.works.projects.ProjectRepository;
 
 // Audit finding #11: AutomationService lifecycle wiring + recursion guard (fix: c3218a3).
 import org.junit.jupiter.api.Tag;

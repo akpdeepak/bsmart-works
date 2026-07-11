@@ -4,6 +4,8 @@ import com.bcits.works.shared.RbacGate;
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.projects.OkrLink;
+import com.bcits.works.projects.OkrLinkRepository;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

@@ -6,6 +6,8 @@ import com.bcits.works.shared.RbacGate;
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.projects.Impediment;
+import com.bcits.works.projects.ImpedimentRepository;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -112,7 +114,7 @@ public class ImpedimentService {
     }
 
     /** Age of an open impediment in whole days from when it was raised; 0 if unknown. */
-    static long ageDays(Impediment i, LocalDate today) {
+    public static long ageDays(Impediment i, LocalDate today) {
         if (i.getRaisedAt() == null) return 0;
         LocalDate end = i.getResolvedAt() != null ? i.getResolvedAt() : today;
         long days = end.toEpochDay() - i.getRaisedAt().toEpochDay();
@@ -125,7 +127,7 @@ public class ImpedimentService {
     }
 
     /** SLA contract: a CRITICAL raise left unresolved for more than one day is breached. Pure. */
-    static boolean slaBreached(Impediment i, LocalDate today) {
+    public static boolean slaBreached(Impediment i, LocalDate today) {
         return "CRITICAL".equals(i.getSeverity()) && !"RESOLVED".equals(i.getStatus())
                 && ageDays(i, today) > 1;
     }

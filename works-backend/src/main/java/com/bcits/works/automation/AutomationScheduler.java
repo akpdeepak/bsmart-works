@@ -1,5 +1,7 @@
-package com.bcits.works;
+package com.bcits.works.automation;
 
+import com.bcits.works.AutomationCatalog;
+import com.bcits.works.AutomationService;
 import com.bcits.works.shared.TenantScope;
 
 import org.slf4j.Logger;

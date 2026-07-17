@@ -9,6 +9,10 @@ import com.bcits.works.workitems.WorkItem;
 import com.bcits.works.workitems.WorkItemRepository;
 import com.bcits.works.projects.ProjectRepository;
 import com.bcits.works.ai.AiControlPlaneService;
+import com.bcits.works.automation.AutomationRule;
+import com.bcits.works.automation.AutomationRuleRepository;
+import com.bcits.works.automation.AutomationRun;
+import com.bcits.works.automation.AutomationRunRepository;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

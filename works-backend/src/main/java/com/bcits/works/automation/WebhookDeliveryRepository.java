@@ -1,4 +1,4 @@
-package com.bcits.works;
+package com.bcits.works.automation;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

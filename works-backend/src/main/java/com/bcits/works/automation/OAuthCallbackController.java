@@ -1,10 +1,9 @@
-package com.bcits.works;
-import com.bcits.works.shared.RbacGate;
+package com.bcits.works.automation;
 
 import com.bcits.works.shared.ApiException;
-
 import com.bcits.works.shared.EncryptionService;
 import com.bcits.works.shared.EventService;
+import com.bcits.works.shared.RbacGate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

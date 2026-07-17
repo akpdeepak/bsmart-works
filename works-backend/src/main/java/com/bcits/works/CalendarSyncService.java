@@ -1,6 +1,9 @@
 package com.bcits.works;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.automation.IntegrationCatalog;
+import com.bcits.works.automation.IntegrationConnection;
+import com.bcits.works.automation.IntegrationConnectionRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

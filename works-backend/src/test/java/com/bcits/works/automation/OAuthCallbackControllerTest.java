@@ -1,4 +1,4 @@
-package com.bcits.works;
+package com.bcits.works.automation;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

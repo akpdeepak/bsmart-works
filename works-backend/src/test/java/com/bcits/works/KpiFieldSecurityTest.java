@@ -11,6 +11,11 @@ import com.bcits.works.workitems.WorkItem;
 import com.bcits.works.workitems.WorkItemRepository;
 import com.bcits.works.projects.Project;
 import com.bcits.works.projects.ProjectRepository;
+import com.bcits.works.reporting.KpiService;
+import com.bcits.works.reporting.MetricDefinition;
+import com.bcits.works.reporting.MetricDefinitionRepository;
+import com.bcits.works.reporting.MetricShareRepository;
+import com.bcits.works.reporting.MetricSnapshotRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

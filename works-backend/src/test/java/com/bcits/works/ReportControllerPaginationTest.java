@@ -9,6 +9,10 @@ import com.bcits.works.shared.ListPaging;
 import com.bcits.works.shared.PageResponse;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.reporting.Report;
+import com.bcits.works.reporting.ReportController;
+import com.bcits.works.reporting.ReportRepository;
+import com.bcits.works.reporting.ReportService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

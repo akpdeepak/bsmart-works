@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.reporting.ReportSchedule;
+import com.bcits.works.reporting.ReportScheduleService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

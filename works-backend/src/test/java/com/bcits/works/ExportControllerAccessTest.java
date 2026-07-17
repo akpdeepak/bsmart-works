@@ -5,6 +5,10 @@ import com.bcits.works.auth.RbacService;
 import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.ApiException;
+import com.bcits.works.reporting.Dashboard;
+import com.bcits.works.reporting.DashboardRepository;
+import com.bcits.works.reporting.Report;
+import com.bcits.works.reporting.ReportRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

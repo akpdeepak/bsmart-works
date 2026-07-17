@@ -8,6 +8,11 @@ import com.bcits.works.shared.ListPaging;
 
 import com.bcits.works.shared.EventService;
 import com.bcits.works.shared.PageResponse;
+import com.bcits.works.reporting.Dashboard;
+import com.bcits.works.reporting.DashboardLayoutService;
+import com.bcits.works.reporting.DashboardRepository;
+import com.bcits.works.reporting.DashboardWidget;
+import com.bcits.works.reporting.DashboardWidgetRepository;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;

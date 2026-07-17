@@ -1,6 +1,12 @@
 package com.bcits.works;
 
 import com.bcits.works.shared.ApiException;
+import com.bcits.works.reporting.Dashboard;
+import com.bcits.works.reporting.DashboardRepository;
+import com.bcits.works.reporting.DashboardWidget;
+import com.bcits.works.reporting.DashboardWidgetRepository;
+import com.bcits.works.reporting.PivotService;
+import com.bcits.works.reporting.PivotSpec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Tag;

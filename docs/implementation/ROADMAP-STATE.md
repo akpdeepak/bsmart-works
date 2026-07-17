@@ -81,9 +81,18 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
     `CustomerSlaTier*`) — fully decoupled: no kernel pin, no cross-module edges either direction,
     **true pure move** (zero non-import changes). ArchUnit + unit + 0 Checkstyle + guardrails +
     `ddl-auto=validate` boot green. V119.
+  - ✅ **W2 G-2 `reporting` carved (PR-8):** 49 of 51 reporting-domain classes moved to
+    `com.bcits.works.reporting` (`Dashboard*`, `Report*`, `Widget*`, `Kpi*`, `Metric*`, `Pivot*`,
+    `Funnel*` controllers, `Leadership*`, `Executive*`, `ConversationalDashboard*`, `TodayLayoutController`,
+    `ChartType`). **2 left in root** — `FunnelService` (reached by `workitems.WorkItemCommandService`/
+    `Controller` + `workspaces.WorkspaceService`/`WorkspaceSetupService`) and `TodayLayoutService`
+    (reached by `workspaces.TeamRoleService`); both would cycle. Remaining `reporting→projects/
+    workitems/workspaces` edges are one-way. Pure move + 6 forced widenings to public
+    (`DashboardNumbers` class + `toLong`, `DashboardSummaryService.toSeries`,
+    `LeadershipService.allocationState/riskScore/healthScore`); 6 focused tests co-located.
+    Validated: ArchUnit + unit + 0 Checkstyle + guardrails + `ddl-auto=validate` boot (17.6s). V119.
   - Bundle-budget gate (I-2) verified already in CI (`perf-budget`, 500 KB gz initial-JS ceiling).
-  - **Still open in Phase 2:** G-2 remaining domain carve (`reporting` →
-    `ai`/`automation`/`messaging`/`service`/`knowledge`/`devsync`; + deferred field/value +
+  - **Still open in Phase 2:** G-2 remaining domain carve (`ai`/`automation`/`messaging`/`service`/`knowledge`/`devsync`; + deferred field/value +
     board/impediment classes; ~360 files still flat), W2-c AppShell decomposition (4,629 lines),
     AsyncBoundary tranches 2–3, the 43-file legacy lint block, FE monolith line-count reductions.
   - ✅ Phase 0 (truth reconciliation + master ledger + restored CI pipeline) — PR #407.
@@ -122,7 +131,7 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
   (`roles` V7 vs `role_def` V21); WorkflowController null-workspace branch + create-side body-workspaceId
   trust on Team/Report/etc + per-operation perm tightening on the Slice-D controllers; FLS rule seeding;
   the deferred #243 Slice E CONTRACT predicate removal.
-- Last state update: 2026-07-11 (Phase-2 G-2 `sla` carved — 23 classes, clean pure move; resume at `reporting`)
+- Last state update: 2026-07-11 (Phase-2 G-2 `reporting` carved — 49 classes, 2 deferred for cycle-safety; resume at `ai`/`automation`/`messaging`/`service`/`knowledge`/`devsync`)
   Option-A boundary; ArchUnit/Checkstyle/guardrails/boot green; resume at `workitems` carve next)
 
 ## Trigger contract

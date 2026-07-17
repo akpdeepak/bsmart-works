@@ -8,6 +8,7 @@ import com.bcits.works.shared.EventService;
 import com.bcits.works.workitems.WorkItem;
 import com.bcits.works.workitems.WorkItemRepository;
 import com.bcits.works.projects.ProjectRepository;
+import com.bcits.works.ai.AiControlPlaneService;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

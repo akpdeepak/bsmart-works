@@ -9,6 +9,8 @@ import com.bcits.works.projects.RetroNoteRepository;
 import com.bcits.works.projects.RetroSession;
 import com.bcits.works.projects.RetroSessionRepository;
 import com.bcits.works.projects.SprintVarianceService;
+import com.bcits.works.ai.AiAssistService;
+import com.bcits.works.ai.AiControlPlaneService;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;

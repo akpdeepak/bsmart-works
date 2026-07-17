@@ -91,8 +91,19 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
     (`DashboardNumbers` class + `toLong`, `DashboardSummaryService.toSeries`,
     `LeadershipService.allocationState/riskScore/healthScore`); 6 focused tests co-located.
     Validated: ArchUnit + unit + 0 Checkstyle + guardrails + `ddl-auto=validate` boot (17.6s). V119.
+  - ✅ **W2 G-2 `ai` carved (PR-9):** 32 of 37 AI-domain classes moved to `com.bcits.works.ai` —
+    the whole AI Control Plane (`AiControlPlaneService`, `AiPolicy*`, `AiBudget*`, `AiCache*`,
+    `AiInvocation*`, `AiProvider`, `AiModelTier`), agents (`AiAgent*`), assistants (`AiAssistant*`),
+    memory (`AiMemory*`), `AiAssistService`/`AiCommandExecutionService`/`AiSummarizationService`,
+    `AiHeuristics`, `AiWorkspaceSettings*`, `StructuredExtraction*`. **5 left in root** —
+    `AiCapabilities`/`AiController`/`Iteration16AiService` (they reference `reporting`, would cycle)
+    and `AnomalyDetectionService`/`AnomalyDetector` (reached by `security.SecurityAdminController`,
+    closing `ai→workitems→security→ai`). Pure move + 1 widening (`AiAssistService.AiMeta.of` →
+    public); 5 focused tests co-located. **Analyzer upgraded** to full-module-graph cycle detection
+    (multi-node paths, not just direct pairs) — `scratchpad/analyze_graph.py` pattern. Validated:
+    ArchUnit + unit + 0 Checkstyle + guardrails + `ddl-auto=validate` boot (14.9s). V119.
   - Bundle-budget gate (I-2) verified already in CI (`perf-budget`, 500 KB gz initial-JS ceiling).
-  - **Still open in Phase 2:** G-2 remaining domain carve (`ai`/`automation`/`messaging`/`service`/`knowledge`/`devsync`; + deferred field/value +
+  - **Still open in Phase 2:** G-2 remaining domain carve (/`automation`/`messaging`/`service`/`knowledge`/`devsync`; + deferred field/value +
     board/impediment classes; ~360 files still flat), W2-c AppShell decomposition (4,629 lines),
     AsyncBoundary tranches 2–3, the 43-file legacy lint block, FE monolith line-count reductions.
   - ✅ Phase 0 (truth reconciliation + master ledger + restored CI pipeline) — PR #407.
@@ -131,7 +142,7 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
   (`roles` V7 vs `role_def` V21); WorkflowController null-workspace branch + create-side body-workspaceId
   trust on Team/Report/etc + per-operation perm tightening on the Slice-D controllers; FLS rule seeding;
   the deferred #243 Slice E CONTRACT predicate removal.
-- Last state update: 2026-07-11 (Phase-2 G-2 `reporting` carved — 49 classes, 2 deferred for cycle-safety; resume at `ai`/`automation`/`messaging`/`service`/`knowledge`/`devsync`)
+- Last state update: 2026-07-11 (Phase-2 G-2 `ai` carved — 32 classes, 5 deferred for cycle-safety; resume at `automation`/`messaging`/`service`/`knowledge`/`devsync`)
   Option-A boundary; ArchUnit/Checkstyle/guardrails/boot green; resume at `workitems` carve next)
 
 ## Trigger contract

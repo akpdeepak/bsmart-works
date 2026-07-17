@@ -1,7 +1,7 @@
 package com.bcits.works.reporting;
 
 import com.bcits.works.AiCapabilities;
-import com.bcits.works.AiControlPlaneService;
+import com.bcits.works.ai.AiControlPlaneService;
 import com.bcits.works.BqlQueryExecutor;
 import com.bcits.works.projects.Project;
 import com.bcits.works.projects.ProjectRepository;

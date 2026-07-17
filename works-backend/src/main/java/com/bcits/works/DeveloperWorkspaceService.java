@@ -2,6 +2,7 @@ package com.bcits.works;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
+import com.bcits.works.ai.AiControlPlaneService;
 
 import org.springframework.stereotype.Service;
 

@@ -16,6 +16,7 @@ import com.bcits.works.reporting.MetricDefinition;
 import com.bcits.works.reporting.MetricDefinitionRepository;
 import com.bcits.works.reporting.MetricShareRepository;
 import com.bcits.works.reporting.MetricSnapshotRepository;
+import com.bcits.works.ai.AiControlPlaneService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

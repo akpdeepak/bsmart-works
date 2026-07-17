@@ -1,4 +1,4 @@
-package com.bcits.works;
+package com.bcits.works.automation;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

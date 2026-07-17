@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.automation.IntegrationCatalog;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

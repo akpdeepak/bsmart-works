@@ -1,7 +1,7 @@
-package com.bcits.works;
-import com.bcits.works.shared.RbacGate;
+package com.bcits.works.automation;
 
 import com.bcits.works.shared.AuthenticatedUser;
+import com.bcits.works.shared.RbacGate;
 import com.bcits.works.workitems.WorkItem;
 
 import jakarta.validation.Valid;

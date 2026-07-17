@@ -102,6 +102,14 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
     public); 5 focused tests co-located. **Analyzer upgraded** to full-module-graph cycle detection
     (multi-node paths, not just direct pairs) — `scratchpad/analyze_graph.py` pattern. Validated:
     ArchUnit + unit + 0 Checkstyle + guardrails + `ddl-auto=validate` boot (14.9s). V119.
+  - ✅ **W2 G-2 `automation` carved (PR-10):** 23 of 27 classes moved to `com.bcits.works.automation`
+    (`AutomationRule*`/`Run*`/`Scheduler`/`Controller`, `Integration*` incl. credentials/connections,
+    `Marketplace*`, `Webhook*` subscription/delivery/controller, `OAuthCallbackController`).
+    **4 left in root** — `WebhookService` (**kernel pin**: `shared.EventService` fans out webhooks on
+    every event), `AutomationService` (only `automation→ai` edge, closed all 37 cycles),
+    `AutomationCatalog` + `ExtensionExecutionService` (reached by `workitems`). **True pure move**
+    (zero widenings); 2 tests co-located. ArchUnit + unit + 0 Checkstyle + guardrails +
+    `ddl-auto=validate` boot (13.7s). V119.
   - Bundle-budget gate (I-2) verified already in CI (`perf-budget`, 500 KB gz initial-JS ceiling).
   - **Still open in Phase 2:** G-2 remaining domain carve (/`automation`/`messaging`/`service`/`knowledge`/`devsync`; + deferred field/value +
     board/impediment classes; ~360 files still flat), W2-c AppShell decomposition (4,629 lines),
@@ -142,7 +150,7 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
   (`roles` V7 vs `role_def` V21); WorkflowController null-workspace branch + create-side body-workspaceId
   trust on Team/Report/etc + per-operation perm tightening on the Slice-D controllers; FLS rule seeding;
   the deferred #243 Slice E CONTRACT predicate removal.
-- Last state update: 2026-07-11 (Phase-2 G-2 `ai` carved — 32 classes, 5 deferred for cycle-safety; resume at `automation`/`messaging`/`service`/`knowledge`/`devsync`)
+- Last state update: 2026-07-11 (Phase-2 G-2 `automation` carved — 23 classes, 4 deferred incl. the EventService->WebhookService kernel pin; resume at `messaging`/`service`/`knowledge`/`devsync`)
   Option-A boundary; ArchUnit/Checkstyle/guardrails/boot green; resume at `workitems` carve next)
 
 ## Trigger contract

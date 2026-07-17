@@ -1,9 +1,10 @@
-package com.bcits.works;
-import com.bcits.works.shared.RbacGate;
+package com.bcits.works.automation;
 
+import com.bcits.works.AutomationCatalog;
+import com.bcits.works.AutomationService;
 import com.bcits.works.shared.AuthenticatedUser;
-
 import com.bcits.works.shared.PageResponse;
+import com.bcits.works.shared.RbacGate;
 
 import jakarta.validation.Valid;
 import org.springframework.data.domain.PageRequest;

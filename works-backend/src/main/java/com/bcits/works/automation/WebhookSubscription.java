@@ -1,37 +1,33 @@
-package com.bcits.works;
+package com.bcits.works.automation;
 
 import com.bcits.works.shared.WorkspaceFilterActivator;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
-import org.hibernate.annotations.ColumnTransformer;
 import org.hibernate.annotations.Filter;
 
 /**
- * A configured integration (iteration 13, Cap Q / Cap A): Slack, GitHub, GitLab, email, calendar, or
- * an SSO/SCIM identity provider. {@code config} holds the provider-specific settings validated
- * against {@link IntegrationCatalog}. Workspace-scoped (RB-40 §1).
+ * An outbound webhook subscription (iteration 13, Cap Q): deliver workspace events to an external
+ * URL, signed with {@code secret}. {@code eventType} may be a specific type or {@code *} for all.
+ * Workspace-scoped (RB-40 §1).
  */
 @Entity
-@Table(name = "integration_connections")
+@Table(name = "webhook_subscriptions")
 @Filter(name = WorkspaceFilterActivator.FILTER_NAME, condition = "workspace_id = :workspaceId")
-public class IntegrationConnection {
+public class WebhookSubscription {
 
     @Id
     private String id;
     private String workspaceId;
     @NotBlank
-    private String provider;        // SLACK | GITHUB | GITLAB | EMAIL | CALENDAR | SAML | OIDC | SCIM
+    private String eventType;
     @NotBlank
-    private String name;
-    @ColumnTransformer(write = "?::jsonb")
-    @Column(columnDefinition = "jsonb")
-    private String config = "{}";
-    private String status = "CONNECTED";
+    private String targetUrl;
+    private String secret;
+    private Boolean active = true;
     private String createdBy;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
@@ -40,14 +36,14 @@ public class IntegrationConnection {
     public void setId(String id) { this.id = id; }
     public String getWorkspaceId() { return workspaceId; }
     public void setWorkspaceId(String workspaceId) { this.workspaceId = workspaceId; }
-    public String getProvider() { return provider; }
-    public void setProvider(String provider) { this.provider = provider; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getConfig() { return config; }
-    public void setConfig(String config) { this.config = config; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public String getEventType() { return eventType; }
+    public void setEventType(String eventType) { this.eventType = eventType; }
+    public String getTargetUrl() { return targetUrl; }
+    public void setTargetUrl(String targetUrl) { this.targetUrl = targetUrl; }
+    public String getSecret() { return secret; }
+    public void setSecret(String secret) { this.secret = secret; }
+    public Boolean getActive() { return active; }
+    public void setActive(Boolean active) { this.active = active; }
     public String getCreatedBy() { return createdBy; }
     public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
     public OffsetDateTime getCreatedAt() { return createdAt; }

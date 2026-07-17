@@ -9,6 +9,10 @@ import com.bcits.works.workitems.WorkItemRepository;
 import com.bcits.works.projects.Project;
 import com.bcits.works.projects.ProjectRepository;
 import com.bcits.works.ai.AiControlPlaneService;
+import com.bcits.works.automation.AutomationRule;
+import com.bcits.works.automation.AutomationRuleRepository;
+import com.bcits.works.automation.AutomationRun;
+import com.bcits.works.automation.AutomationRunRepository;
 
 // Audit finding #11: AutomationService lifecycle wiring + recursion guard (fix: c3218a3).
 import org.junit.jupiter.api.Tag;

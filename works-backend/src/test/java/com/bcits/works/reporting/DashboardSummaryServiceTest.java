@@ -1,8 +1,8 @@
 package com.bcits.works.reporting;
 
 import com.bcits.works.AiCapabilities;
-import com.bcits.works.AiControlPlaneService;
-import com.bcits.works.AiModelTier;
+import com.bcits.works.ai.AiControlPlaneService;
+import com.bcits.works.ai.AiModelTier;
 import com.bcits.works.auth.RbacService;
 import com.bcits.works.shared.ApiException;
 

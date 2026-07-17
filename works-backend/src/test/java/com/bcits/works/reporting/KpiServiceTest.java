@@ -1,6 +1,6 @@
 package com.bcits.works.reporting;
 
-import com.bcits.works.AiControlPlaneService;
+import com.bcits.works.ai.AiControlPlaneService;
 import com.bcits.works.BqlQueryExecutor;
 import com.bcits.works.auth.RbacService;
 import com.bcits.works.projects.Project;

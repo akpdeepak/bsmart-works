@@ -5,6 +5,7 @@ import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
 import com.bcits.works.security.CustomerAttributionPiiService;
+import com.bcits.works.ai.AiControlPlaneService;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

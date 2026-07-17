@@ -1,6 +1,9 @@
 package com.bcits.works;
 
 import com.bcits.works.shared.ApiException;
+import com.bcits.works.ai.AiMemory;
+import com.bcits.works.ai.AiMemoryRepository;
+import com.bcits.works.ai.AiMemoryService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

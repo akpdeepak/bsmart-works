@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.ai.AiProvider;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.health.contributor.Health;

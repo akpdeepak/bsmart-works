@@ -7,6 +7,8 @@ import com.bcits.works.projects.ImpedimentRepository;
 import com.bcits.works.projects.Sprint;
 import com.bcits.works.projects.SprintDao;
 import com.bcits.works.projects.SprintRepository;
+import com.bcits.works.ai.AiAssistService;
+import com.bcits.works.ai.AiControlPlaneService;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;

@@ -6,6 +6,12 @@ import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.reporting.ConversationalDashboard;
 import com.bcits.works.reporting.ConversationalDashboardService;
+import com.bcits.works.ai.AiAgentRun;
+import com.bcits.works.ai.AiAgentService;
+import com.bcits.works.ai.AiAssistant;
+import com.bcits.works.ai.AiAssistantService;
+import com.bcits.works.ai.AiMemory;
+import com.bcits.works.ai.AiMemoryService;
 
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;

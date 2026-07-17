@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.ai.AiModelTier;
+import com.bcits.works.ai.AiProvider;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Tag;

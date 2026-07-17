@@ -4,6 +4,11 @@ import com.bcits.works.shared.RbacGate;
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.reporting.Dashboard;
+import com.bcits.works.reporting.DashboardLayoutService;
+import com.bcits.works.reporting.DashboardRepository;
+import com.bcits.works.reporting.DashboardWidget;
+import com.bcits.works.reporting.DashboardWidgetRepository;
 
 import java.time.OffsetDateTime;
 import java.util.List;

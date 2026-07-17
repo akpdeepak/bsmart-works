@@ -26,6 +26,17 @@ import com.bcits.works.workitems.WorkflowController;
 import com.bcits.works.workitems.WorkflowRepository;
 import com.bcits.works.workitems.WorkflowStatusRepository;
 import com.bcits.works.workitems.WorkflowTransitionRepository;
+import com.bcits.works.reporting.Dashboard;
+import com.bcits.works.reporting.DashboardLayoutService;
+import com.bcits.works.reporting.DashboardRepository;
+import com.bcits.works.reporting.DashboardWidget;
+import com.bcits.works.reporting.DashboardWidgetRepository;
+import com.bcits.works.reporting.Report;
+import com.bcits.works.reporting.ReportRepository;
+import com.bcits.works.reporting.ReportSchedule;
+import com.bcits.works.reporting.ReportScheduleController;
+import com.bcits.works.reporting.ReportScheduleRepository;
+import com.bcits.works.reporting.ReportScheduleService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

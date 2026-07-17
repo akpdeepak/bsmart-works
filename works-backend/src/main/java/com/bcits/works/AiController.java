@@ -6,6 +6,8 @@ import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.PageResponse;
+import com.bcits.works.reporting.DashboardSuggestionService;
+import com.bcits.works.reporting.DashboardSummaryService;
 
 import jakarta.validation.Valid;
 import org.springframework.data.domain.PageRequest;

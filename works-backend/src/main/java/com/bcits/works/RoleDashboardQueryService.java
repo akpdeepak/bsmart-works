@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.reporting.DashboardNumbers;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;

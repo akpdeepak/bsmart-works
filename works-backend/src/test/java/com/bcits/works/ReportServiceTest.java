@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.reporting.Report;
+import com.bcits.works.reporting.ReportService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

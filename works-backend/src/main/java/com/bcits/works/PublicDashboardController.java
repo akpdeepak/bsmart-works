@@ -1,6 +1,12 @@
 package com.bcits.works;
 
 import com.bcits.works.shared.TenantScope;
+import com.bcits.works.reporting.DashboardRepository;
+import com.bcits.works.reporting.DashboardWidget;
+import com.bcits.works.reporting.DashboardWidgetRepository;
+import com.bcits.works.reporting.PivotService;
+import com.bcits.works.reporting.PivotSpec;
+import com.bcits.works.reporting.WidgetSource;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

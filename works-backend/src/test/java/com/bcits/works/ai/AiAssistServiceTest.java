@@ -1,11 +1,11 @@
 package com.bcits.works.ai;
 
-import com.bcits.works.Article;
-import com.bcits.works.ArticleRepository;
+import com.bcits.works.knowledge.Article;
+import com.bcits.works.knowledge.ArticleRepository;
 import com.bcits.works.AutomationService;
 import com.bcits.works.messaging.CommentRepository;
-import com.bcits.works.KnowledgeSpace;
-import com.bcits.works.KnowledgeSpaceRepository;
+import com.bcits.works.knowledge.KnowledgeSpace;
+import com.bcits.works.knowledge.KnowledgeSpaceRepository;
 import com.bcits.works.auth.RbacService;
 import com.bcits.works.auth.User;
 import com.bcits.works.auth.UserRepository;

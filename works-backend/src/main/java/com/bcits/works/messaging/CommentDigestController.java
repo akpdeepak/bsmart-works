@@ -1,6 +1,6 @@
 package com.bcits.works.messaging;
 
-import com.bcits.works.KnowledgeWorkspaceSettings;
+import com.bcits.works.knowledge.KnowledgeWorkspaceSettings;
 import com.bcits.works.shared.AuthenticatedUser;
 
 import org.springframework.web.bind.annotation.GetMapping;

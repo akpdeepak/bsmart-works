@@ -5,6 +5,7 @@ import com.bcits.works.auth.RbacService;
 import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.ApiException;
+import com.bcits.works.knowledge.KnowledgeAiController;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

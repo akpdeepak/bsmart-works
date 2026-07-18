@@ -2,6 +2,7 @@ package com.bcits.works;
 
 import com.bcits.works.shared.EventService;
 import com.bcits.works.messaging.CommentDigestScheduler;
+import com.bcits.works.knowledge.KnowledgeWorkspaceSettings;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;

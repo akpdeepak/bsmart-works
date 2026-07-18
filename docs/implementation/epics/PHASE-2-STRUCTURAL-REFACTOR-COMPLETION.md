@@ -1,7 +1,7 @@
 # Phase 2 — Structural Refactor Completion
 
-Completed locally on 2026-07-18. This note reconciles the Phase-2 implementation against the W2
-checklist in `MASTER-COMPLETION-ROADMAP.md`.
+Completed and merged via PR #481 on 2026-07-18. This note reconciles the Phase-2 implementation
+against the W2 checklist in `MASTER-COMPLETION-ROADMAP.md`.
 
 ## Delivered
 

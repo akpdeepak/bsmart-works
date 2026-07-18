@@ -1,3 +1,5 @@
+import { Table } from '@/components/works/atoms/table';
+import { Button } from '@/components/works/button';
 import { StatCard } from '@/components/works/stat-card';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { StatusBadge } from '@/components/works/status-badge';
@@ -72,12 +74,12 @@ function DueBucketTiles({ buckets, onSelect }) {
   return (
     <div className="grid grid-cols-2 gap-3">
       {DUE_CFG.map(cfg => (
-        <button key={cfg.key} type="button" onClick={onSelect}
+        <Button unstyled key={cfg.key} type="button" onClick={onSelect}
           aria-label={`${cfg.label}: ${buckets[cfg.key]} item${buckets[cfg.key] === 1 ? '' : 's'} — open My Works`}
           className={`rounded-lg p-3 text-left transition-colors duration-fast hover:ring-1 hover:ring-brand-navy-tint/40 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${cfg.bg}`}>
           <p className={`text-2xl font-bold ${cfg.text}`}>{buckets[cfg.key]}</p>
           <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{cfg.label}</p>
-        </button>
+        </Button>
       ))}
     </div>
   );
@@ -123,7 +125,7 @@ const DEVELOPER_REGISTRY = {
       {ctx.prioritized.length === 0
         ? <Empty msg="All caught up — nothing needs your attention." />
         : (
-          <table className="w-full text-sm">
+          <Table className="w-full text-sm">
             <thead>
               <tr className="border-b border-neutral-100 bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
                 <th scope="col" className="px-5 py-2">Item</th>
@@ -161,7 +163,7 @@ const DEVELOPER_REGISTRY = {
                 );
               })}
             </tbody>
-          </table>
+          </Table>
         )}
     </TodayCard>
   ),
@@ -181,10 +183,10 @@ const DEVELOPER_REGISTRY = {
             <p className="mt-1.5 text-xs text-neutral-600 dark:text-neutral-400">
               {ctx.sprint.done_items}/{ctx.sprint.total_items} items · {ctx.sprint.done_points}/{ctx.sprint.total_points}pt
             </p>
-            <button type="button" onClick={() => ctx.setView('sprint')}
+            <Button unstyled type="button" onClick={() => ctx.setView('sprint')}
               className="mt-3 text-xs font-medium text-brand-navy hover:underline focus-visible:outline-none">
               View sprint board →
-            </button>
+            </Button>
           </div>
         </div>
       ) : <Empty msg="No active sprint." />}

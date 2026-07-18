@@ -1,3 +1,4 @@
+import { Table } from '@/components/works/atoms/table';
 import { Check, Lock } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -78,7 +79,7 @@ export default function PermissionsSettings({
             {permMatrix.matrix.length === 0
               ? <EmptyState icon={Lock} title="No custom roles" subtitle="Create roles to define fine-grained access control for your team." />
               : <div className="overflow-x-auto">
-                  <table className="w-full text-xs border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden dark:text-neutral-300">
+                  <Table className="w-full text-xs border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden dark:text-neutral-300">
                     <thead className="bg-neutral-50 dark:bg-neutral-900">
                       <tr>
                         <th className="text-left px-4 py-2.5 font-semibold text-neutral-700 dark:text-neutral-300 sticky left-0 bg-neutral-50 dark:bg-neutral-900">Permission</th>
@@ -96,17 +97,17 @@ export default function PermissionsSettings({
                           <td className="px-4 py-2 font-mono sticky left-0 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200">{perm}</td>
                           {permMatrix.matrix.map(row => (
                             <td key={row.role.id} className="px-3 py-2 text-center">
-                              <button onClick={() => togglePermission(row.role.id, perm, row.permissions[perm])}
+                              <Button unstyled onClick={() => togglePermission(row.role.id, perm, row.permissions[perm])}
                                 className={`w-7 h-7 rounded transition-colors text-sm font-bold ${row.permissions[perm] ? 'bg-semantic-success text-white hover:opacity-80' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-brand-navy/10'}`}
                                 title={row.permissions[perm] ? 'Click to revoke' : 'Click to grant'}>
                                 {row.permissions[perm] ? <Check className="inline-block h-4 w-4 text-semantic-success" aria-label="Permitted" /> : <span aria-label="Not permitted">—</span>}
-                              </button>
+                              </Button>
                             </td>
                           ))}
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </Table>
                 </div>
             }
           </>

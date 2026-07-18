@@ -1,8 +1,10 @@
+import { Table } from '@/components/works/atoms/table';
 import { useState } from 'react';
 import { ClipboardList, CheckCircle2, ScrollText, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { Modal } from '@/components/works/molecules/modal';
 import { PageHeader } from '@/components/works/atoms/page-header';
 import { Tabs, TabList, Tab, TabPanel } from '@/components/works/atoms/tabs';
@@ -74,7 +76,7 @@ export default function ComplianceView({
   if (loading && complianceRules.length === 0 && complianceViolations.length === 0) {
     return (
       <div className="p-6">
-        <ListSkeleton rows={4} />
+        <AsyncBoundary loading skeleton={<ListSkeleton rows={4} />} />
       </div>
     );
   }
@@ -211,7 +213,7 @@ export default function ComplianceView({
                 {(complianceDashboard.heatmap || []).length === 0
                   ? <p className="text-sm text-neutral-600 dark:text-neutral-400 py-4 text-center">No open violations to map.</p>
                   : (
-                    <table className="w-full text-sm">
+                    <Table className="w-full text-sm">
                       <thead><tr className="text-left text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">
                         <th className="py-1">Rule</th><th className="py-1">Project</th><th className="py-1 text-right">Open</th></tr></thead>
                       <tbody>
@@ -227,7 +229,7 @@ export default function ComplianceView({
                           </tr>
                         ))}
                       </tbody>
-                    </table>
+                    </Table>
                   )}
               </div>
             </div>
@@ -250,13 +252,13 @@ export default function ComplianceView({
                     </div>
                     <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${r.active ? 'bg-semantic-success text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500'}`}>{r.active ? 'ACTIVE' : 'INACTIVE'}</span>
                     {can('manage_compliance') && <>
-                      <button onClick={() => testRule(r.id)} className="text-xs text-brand-navy hover:underline">Test</button>
+                      <Button unstyled onClick={() => testRule(r.id)} className="text-xs text-brand-navy hover:underline">Test</Button>
                       {r.active
-                        ? <button onClick={() => evaluateRule(r.id)} className="text-xs text-brand-navy hover:underline">Run</button>
+                        ? <Button unstyled onClick={() => evaluateRule(r.id)} className="text-xs text-brand-navy hover:underline">Run</Button>
                         : null}
-                      <button onClick={() => setRuleActive(r.id, !r.active)} className="text-xs text-brand-navy hover:underline">{r.active ? 'Deactivate' : 'Activate'}</button>
-                      <button onClick={() => editRuleBuilder(r)} className="text-xs text-neutral-500 hover:underline">Edit</button>
-                      <button onClick={() => deleteRule(r.id)} className="text-xs text-semantic-danger hover:underline">Delete</button>
+                      <Button unstyled onClick={() => setRuleActive(r.id, !r.active)} className="text-xs text-brand-navy hover:underline">{r.active ? 'Deactivate' : 'Activate'}</Button>
+                      <Button unstyled onClick={() => editRuleBuilder(r)} className="text-xs text-neutral-500 hover:underline">Edit</Button>
+                      <Button unstyled onClick={() => deleteRule(r.id)} className="text-xs text-semantic-danger hover:underline">Delete</Button>
                     </>}
                   </div>
                 ))}
@@ -282,7 +284,7 @@ export default function ComplianceView({
                   <div key={t.id} className="flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
                     <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${severityClass[t.severity] || severityClass.MEDIUM}`}>{t.severity}</span>
                     <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-200 truncate" title={t.description}>{t.name}</span>
-                    {can('manage_compliance') && <button onClick={() => cloneTemplate(t.id)} className="text-xs text-brand-navy hover:underline">+ Add</button>}
+                    {can('manage_compliance') && <Button unstyled onClick={() => cloneTemplate(t.id)} className="text-xs text-brand-navy hover:underline">+ Add</Button>}
                   </div>
                 ))}
               </div>
@@ -331,10 +333,10 @@ export default function ComplianceView({
                   </div>
                   <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${vStatusClass[v.status] || ''}`}>{v.status}{v.escalated ? <ArrowUp className="inline-block h-3 w-3 align-text-bottom" aria-label="Escalated" /> : ''}</span>
                   {can('manage_compliance') && (v.status === 'OPEN' || v.status === 'ACKNOWLEDGED') && <>
-                    {v.status === 'OPEN' && <button onClick={() => actOnViolation(v.id, 'acknowledge')} className="text-xs text-brand-navy hover:underline">Ack</button>}
+                    {v.status === 'OPEN' && <Button unstyled onClick={() => actOnViolation(v.id, 'acknowledge')} className="text-xs text-brand-navy hover:underline">Ack</Button>}
                     {/* Gap 1 — resolution notes before acting */}
-                    <button onClick={() => setResolveForm({ id: v.id, action: 'resolve' })} className="text-xs text-semantic-success hover:underline">Resolve</button>
-                    <button onClick={() => setResolveForm({ id: v.id, action: 'wont-fix' })} className="text-xs text-neutral-500 hover:underline">Won&apos;t fix</button>
+                    <Button unstyled onClick={() => setResolveForm({ id: v.id, action: 'resolve' })} className="text-xs text-semantic-success hover:underline">Resolve</Button>
+                    <Button unstyled onClick={() => setResolveForm({ id: v.id, action: 'wont-fix' })} className="text-xs text-neutral-500 hover:underline">Won&apos;t fix</Button>
                   </>}
                 </div>
               ))}
@@ -351,7 +353,7 @@ export default function ComplianceView({
             {complianceAudit.length === 0
               ? <EmptyState icon={ScrollText} title="No audit entries yet" subtitle="Rule changes, violations, acknowledgements and resolutions are recorded here." />
               : (
-                <table className="w-full text-sm">
+                <Table className="w-full text-sm">
                   <thead><tr className="text-left text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">
                     <th className="py-1">When</th><th className="py-1">Event</th><th className="py-1">Subject</th><th className="py-1">Actor</th></tr></thead>
                   <tbody>
@@ -364,7 +366,7 @@ export default function ComplianceView({
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </Table>
               )}
           </div>
         </TabPanel>
@@ -492,12 +494,12 @@ function RuleBuilderModal({ ruleBuilder, setRuleBuilder, projects, saveRule }) {
         <div>
           <div className="flex items-center justify-between mb-1">
             <span className="block text-xs font-medium text-neutral-500">Escalation steps</span>
-            <button
+            <Button unstyled
               type="button"
               className="flex items-center gap-1 text-xs text-brand-navy hover:underline"
               onClick={() => setRuleBuilder({ ...ruleBuilder, escalationSteps: [...(ruleBuilder.escalationSteps || []), { hours: 24, targets: [{ type: 'ITEM_OWNER' }] }] })}>
               <Plus aria-hidden="true" className="h-3 w-3" /> Add step
-            </button>
+            </Button>
           </div>
           {(ruleBuilder.escalationSteps || []).length === 0
             ? <p className="text-xs text-neutral-600 py-1">No steps — add a step to enable multi-step escalation, or use the single-step field below.</p>
@@ -528,12 +530,12 @@ function RuleBuilderModal({ ruleBuilder, setRuleBuilder, projects, saveRule }) {
                   <option value="PROJECT_ADMIN">Project admin</option>
                   <option value="WORKSPACE_ADMIN">Workspace admin</option>
                 </select>
-                <button
+                <Button unstyled
                   type="button"
                   aria-label={`Remove step ${idx + 1}`}
                   onClick={() => setRuleBuilder({ ...ruleBuilder, escalationSteps: ruleBuilder.escalationSteps.filter((_, i) => i !== idx) })}>
                   <Trash2 aria-hidden="true" className="h-3.5 w-3.5 text-semantic-danger" />
-                </button>
+                </Button>
               </div>
             ))}
           <p className="text-xs text-neutral-600 mt-1">Steps fire in order. A violation is marked fully escalated only when all steps have fired.</p>

@@ -206,11 +206,11 @@ export default function NotificationsView({
           </div>
         </div>
         {!n.read && (
-          <button type="button" onClick={(e) => { e.stopPropagation(); handleMarkRead(n); }}
+          <Button unstyled type="button" onClick={(e) => { e.stopPropagation(); handleMarkRead(n); }}
             className="mt-0.5 rounded text-xs text-neutral-600 hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:text-neutral-400"
             aria-label="Mark as read">
             <Check className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
+          </Button>
         )}
       </div>
     );
@@ -228,10 +228,10 @@ export default function NotificationsView({
     <PageLayout
       title="Inbox"
       actions={unreadCount > 0 && (
-        <button type="button" onClick={handleMarkAllRead}
+        <Button unstyled type="button" onClick={handleMarkAllRead}
           className="rounded text-sm text-brand-navy-tint hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
           Mark all as read
-        </button>
+        </Button>
       )}
     >
       <Tabs defaultValue="actions">

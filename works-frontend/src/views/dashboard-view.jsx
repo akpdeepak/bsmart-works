@@ -1,3 +1,5 @@
+import { Button } from '@/components/works/button';
+import { Card } from '@/components/works/atoms/card';
 import { useEffect, useState } from 'react';
 import { AlertTriangle, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 import { TIER } from '@/lib/nav-model';
@@ -25,7 +27,7 @@ function RoleTabs({ dashboardRole, onSwitch, userTier }) {
   return (
     <div className="mb-6 flex flex-wrap border-b border-neutral-200 dark:border-neutral-700">
       {ROLE_TABS.map(t => (
-        <button key={t.role} type="button"
+        <Button unstyled key={t.role} type="button"
           aria-current={dashboardRole === t.role ? 'page' : undefined}
           onClick={() => onSwitch(t.role)}
           className={[
@@ -36,7 +38,7 @@ function RoleTabs({ dashboardRole, onSwitch, userTier }) {
               : 'border-transparent text-neutral-500 hover:text-brand-navy hover:border-neutral-300 dark:hover:text-neutral-200',
           ].join(' ')}>
           {t.label}
-        </button>
+        </Button>
       ))}
     </div>
   );
@@ -79,7 +81,7 @@ function DailyClarityBand({ brief, onNavigate }) {
   const attentionCount = brief.attention.length;
 
   return (
-    <section aria-labelledby="daily-clarity-heading"
+    <Card as="section" padding="none" aria-labelledby="daily-clarity-heading"
       className="mb-6 rounded-lg border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-800">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-2xl">
@@ -93,16 +95,16 @@ function DailyClarityBand({ brief, onNavigate }) {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => onNavigate?.(brief.primaryAction.view)}
+          <Button unstyled type="button" onClick={() => onNavigate?.(brief.primaryAction.view)}
             className="inline-flex items-center gap-2 rounded-lg bg-brand-navy px-3.5 py-2 text-sm font-semibold text-white transition-colors duration-fast hover:bg-brand-navy/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
             {brief.primaryAction.label}
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </button>
+          </Button>
           {brief.secondaryAction && (
-            <button type="button" onClick={() => onNavigate?.(brief.secondaryAction.view)}
+            <Button unstyled type="button" onClick={() => onNavigate?.(brief.secondaryAction.view)}
               className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 px-3.5 py-2 text-sm font-semibold text-neutral-700 transition-colors duration-fast hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-700">
               {brief.secondaryAction.label}
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -153,7 +155,7 @@ function DailyClarityBand({ brief, onNavigate }) {
           </p>
         </aside>
       </div>
-    </section>
+    </Card>
   );
 }
 

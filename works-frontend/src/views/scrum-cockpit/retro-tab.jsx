@@ -19,11 +19,11 @@ export function RetroTab({
             {retros.length === 0
               ? <EmptyState icon={RefreshCw} title="No retros yet" subtitle="Pick a template, gather the team, and turn outcomes into tracked action items." />
               : retros.map(r => (
-                <button key={r.id} onClick={() => openRetro(r.id)} className="w-full text-left bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 hover:border-brand-navy/40">
+                <Button unstyled key={r.id} onClick={() => openRetro(r.id)} className="w-full text-left bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 hover:border-brand-navy/40">
                   <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{r.title}</span>
                   <span className="ml-2 text-xs text-neutral-600 dark:text-neutral-400">{r.template}</span>
                   <span className={`ml-2 text-xs font-bold px-1.5 py-0.5 rounded ${r.status === 'COMPLETED' ? 'bg-semantic-success text-white' : 'bg-brand-navy text-white'}`}>{r.status}</span>
-                </button>))}
+                </Button>))}
           </div>
           <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 h-fit">
             <h3 className="font-semibold text-sm mb-3 text-neutral-900 dark:text-neutral-100">New retro</h3>
@@ -45,7 +45,7 @@ export function RetroTab({
         </div>
       ) : (
         <div>
-          <button onClick={() => setActiveRetro(null)} className="text-xs text-brand-navy hover:underline mb-3"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />All retros</button>
+          <Button unstyled onClick={() => setActiveRetro(null)} className="text-xs text-brand-navy hover:underline mb-3"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />All retros</Button>
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">{activeRetro.session.title}</h3>
             <div className="flex gap-2">
@@ -82,8 +82,8 @@ export function RetroTab({
                     <div key={n.id} className="bg-neutral-50 dark:bg-neutral-700 rounded-md p-2">
                       <p className="text-xs text-neutral-800 dark:text-neutral-100">{n.content}</p>
                       <div className="flex items-center gap-3 mt-1">
-                        <button onClick={() => voteRetroNote(n.id)} className="text-xs text-brand-navy hover:underline" aria-label="Upvote"><ChevronUp className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /> {n.votes}</button>
-                        {!n.convertedActionItemId && <button onClick={() => convertRetroNote(n.id)} className="text-xs text-semantic-success hover:underline" aria-label="Convert to action item"><ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" />Action</button>}
+                        <Button unstyled onClick={() => voteRetroNote(n.id)} className="text-xs text-brand-navy hover:underline" aria-label="Upvote"><ChevronUp className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /> {n.votes}</Button>
+                        {!n.convertedActionItemId && <Button unstyled onClick={() => convertRetroNote(n.id)} className="text-xs text-semantic-success hover:underline" aria-label="Convert to action item"><ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" />Action</Button>}
                         {n.convertedActionItemId && <span className="text-xs text-neutral-600 dark:text-neutral-400"><Check className="inline-block h-3 w-3 align-text-bottom" aria-hidden="true" /> action</span>}
                       </div>
                     </div>
@@ -92,7 +92,7 @@ export function RetroTab({
                 {activeRetro.session.status !== 'COMPLETED' && (
                   <div className="flex gap-1">
                     <input className="input flex-1 text-xs" placeholder="Add…" value={retroNoteDraft[col.key] || ''} onChange={e => setRetroNoteDraft({ ...retroNoteDraft, [col.key]: e.target.value })} onKeyDown={e => { if (e.key === 'Enter') addRetroNote(col.key); }} />
-                    <button onClick={() => addRetroNote(col.key)} className="px-2 rounded-md bg-brand-navy text-white text-sm">+</button>
+                    <Button unstyled onClick={() => addRetroNote(col.key)} className="px-2 rounded-md bg-brand-navy text-white text-sm">+</Button>
                   </div>
                 )}
               </div>

@@ -1,3 +1,4 @@
+import { Table } from '@/components/works/atoms/table';
 import { StatCard } from '@/components/works/stat-card';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { StatusBadge } from '@/components/works/status-badge';
@@ -32,7 +33,7 @@ const SCRUM_MASTER_REGISTRY = {
       {ctx.highRisk.length === 0
         ? <Empty msg="No high-risk items — sprint looks healthy." />
         : (
-          <table className="w-full text-sm">
+          <Table className="w-full text-sm">
             <thead>
               <tr className="border-b border-neutral-100 bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
                 <th scope="col" className="px-5 py-2">Item</th>
@@ -63,7 +64,7 @@ const SCRUM_MASTER_REGISTRY = {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
     </TodayCard>
   ),

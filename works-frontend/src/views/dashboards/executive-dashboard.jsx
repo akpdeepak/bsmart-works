@@ -1,3 +1,4 @@
+import { Table } from '@/components/works/atoms/table';
 import { StatCard } from '@/components/works/stat-card';
 import { BarChart } from '@/components/works/molecules';
 import { utilizationSeries } from '@/lib/today-metrics';
@@ -170,7 +171,7 @@ const EXECUTIVE_REGISTRY = {
   ),
   'overdue-actions': (ctx) => (
     <TodayCard title={`Overdue actions (${ctx.overdueActions.length})`} icon={Clock} iconColor="text-semantic-danger" className="overflow-hidden">
-      <table className="w-full text-sm">
+      <Table className="w-full text-sm">
         <thead>
           <tr className="border-b border-neutral-100 bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
             <th scope="col" className="px-5 py-2">Action</th>
@@ -187,7 +188,7 @@ const EXECUTIVE_REGISTRY = {
             </tr>
           ))}
         </tbody>
-      </table>
+      </Table>
     </TodayCard>
   ),
 };

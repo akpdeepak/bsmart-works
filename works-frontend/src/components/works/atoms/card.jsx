@@ -25,10 +25,10 @@ const cardVariants = cva(
 );
 
 export const Card = React.forwardRef(
-  ({ className, variant, padding, children, ...props }, ref) => (
-    <div ref={ref} className={cn(cardVariants({ variant, padding }), className)} {...props}>
+  ({ as: Component = 'div', className, variant, padding, children, ...props }, ref) => (
+    <Component ref={ref} className={cn(cardVariants({ variant, padding }), className)} {...props}>
       {children}
-    </div>
+    </Component>
   )
 );
 Card.displayName = 'Card';

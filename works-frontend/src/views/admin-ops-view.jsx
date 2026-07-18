@@ -262,9 +262,9 @@ function LifecycleTab({ workspaceId, data, onChanged, notify }) {
           <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {runs.map((r) => (
               <li key={r.id} className="flex items-center justify-between py-2 text-sm">
-                <button type="button" onClick={() => openRun(r.id)} className="text-brand-navy-tint hover:underline text-left">
+                <Button unstyled type="button" onClick={() => openRun(r.id)} className="text-brand-navy-tint hover:underline text-left">
                   {r.subjectName}
-                </button>
+                </Button>
                 <span className="text-neutral-600 dark:text-neutral-400">{r.kind} · {r.status} · {smartDate(r.startedAt)}</span>
               </li>
             ))}
@@ -381,13 +381,13 @@ function AuditTab({ workspaceId, data, onChanged, notify }) {
         {saved.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {saved.map((q) => (
-              <button
+              <Button unstyled
                 key={q.id} type="button"
                 onClick={() => { setFilters({ eventType: q.eventType || '', actorId: q.actorId || '', search: q.searchText || '' }); }}
                 className="rounded-md bg-neutral-100 dark:bg-neutral-800 px-2.5 py-1 text-xs text-neutral-700 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700"
               >
                 {q.name}
-              </button>
+              </Button>
             ))}
           </div>
         )}
@@ -629,9 +629,9 @@ function EvidenceTab({ workspaceId, data, onChanged, notify }) {
           <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {packages.map((p) => (
               <li key={p.id} className="flex items-center justify-between py-2 text-sm">
-                <button type="button" onClick={() => setSelected(p)} className="text-brand-navy-tint hover:underline text-left">
+                <Button unstyled type="button" onClick={() => setSelected(p)} className="text-brand-navy-tint hover:underline text-left">
                   {p.framework} · {p.period}
-                </button>
+                </Button>
                 <span className="text-neutral-600 dark:text-neutral-400">{smartDate(p.generatedAt)}</span>
               </li>
             ))}

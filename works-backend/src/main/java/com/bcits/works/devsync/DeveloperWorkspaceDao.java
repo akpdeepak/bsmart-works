@@ -1,4 +1,4 @@
-package com.bcits.works;
+package com.bcits.works.devsync;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;

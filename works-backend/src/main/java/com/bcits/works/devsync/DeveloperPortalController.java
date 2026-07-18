@@ -1,9 +1,8 @@
-package com.bcits.works;
-import com.bcits.works.shared.RbacGate;
-
-import com.bcits.works.shared.AuthenticatedUser;
+package com.bcits.works.devsync;
 
 import com.bcits.works.shared.ApiException;
+import com.bcits.works.shared.AuthenticatedUser;
+import com.bcits.works.shared.RbacGate;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;

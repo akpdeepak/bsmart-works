@@ -1,4 +1,4 @@
-package com.bcits.works;
+package com.bcits.works.devsync;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.bcits.works;
+package com.bcits.works.devsync;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

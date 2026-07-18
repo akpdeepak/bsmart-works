@@ -1,4 +1,6 @@
-package com.bcits.works;
+package com.bcits.works.service;
+
+import com.bcits.works.RequestType;
 import com.bcits.works.sla.CustomerSlaTier;
 
 import org.springframework.stereotype.Service;

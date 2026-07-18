@@ -1,14 +1,13 @@
-package com.bcits.works;
+package com.bcits.works.service;
 
+import com.bcits.works.CustomerUser;
+import com.bcits.works.CustomerUserRepository;
 import com.bcits.works.auth.TokenRevocationService;
-import com.bcits.works.shared.RbacGate;
-
-import com.bcits.works.shared.AuthenticatedUser;
-
-import com.bcits.works.shared.ApiException;
-
-import com.bcits.works.shared.EventService;
 import com.bcits.works.security.CustomerUserPiiService;
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.shared.AuthenticatedUser;
+import com.bcits.works.shared.EventService;
+import com.bcits.works.shared.RbacGate;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;

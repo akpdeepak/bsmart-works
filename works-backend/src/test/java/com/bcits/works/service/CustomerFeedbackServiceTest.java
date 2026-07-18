@@ -1,4 +1,6 @@
-package com.bcits.works;
+package com.bcits.works.service;
+
+import com.bcits.works.CustomerFeedback;
 import com.bcits.works.security.CustomerAttributionPiiService;
 
 import org.junit.jupiter.api.Tag;

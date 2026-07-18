@@ -176,6 +176,7 @@ export default function BacklogView({
                   const pct = kids.length ? Math.round((done / kids.length) * 100) : 0;
                   return (
                     <li key={epic.id}>
+                      {/* eslint-disable-next-line works-view/no-raw-button -- clickable card row: full-width card wrapping title + progress bar */}
                       <button type="button" onClick={() => setSelectedItem(epic)}
                         className="w-full rounded-md px-2 py-1.5 text-left transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
                         <span className="block truncate text-xs font-medium text-neutral-900 dark:text-neutral-100">{epic.title}</span>

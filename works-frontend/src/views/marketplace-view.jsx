@@ -203,6 +203,7 @@ export default function MarketplaceView({ workspaceId }) {
       {pending && (
         <div className="fixed inset-0 z-modal flex items-center justify-center bg-brand-navy/40 p-4"
           role="dialog" aria-modal="true" aria-labelledby="scope-dialog-title">
+          {/* eslint-disable-next-line works-view/sanctioned-page-widths -- modal dialog width (max-w-md), not a page-shell width; sanctioned tokens are for page containers only */}
           <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 w-full max-w-md">
             <h2 id="scope-dialog-title" className="text-xl font-semibold text-neutral-900 mb-1">
               Install {pending.name}

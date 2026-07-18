@@ -185,6 +185,7 @@ export default function MyWorksView({
       {/* Tab bar */}
       <div role="tablist" className="flex gap-1 mb-5 border-b border-neutral-200 dark:border-neutral-700">
         {tabs.map(tab => (
+          // eslint-disable-next-line works-view/no-raw-button -- role="tab" tab-strip button with border-b-2 active underline
           <button
             key={tab.key}
             role="tab"
@@ -216,18 +217,15 @@ export default function MyWorksView({
               <div className="flex items-center gap-1.5 mb-3">
                 <span className="text-xs text-neutral-600 dark:text-neutral-400">{t('deliver.myWorks.sort')}</span>
                 {CONFIG.sortOptions.map(s => (
-                  <button
+                  <Button
                     key={s.key}
+                    variant={sort === s.key ? 'primary' : 'secondary'}
+                    size="sm"
                     onClick={() => setSort(s.key)}
-                    className={cn(
-                      'text-xs px-2.5 py-1 rounded-full font-medium transition-colors',
-                      sort === s.key
-                        ? 'bg-brand-navy text-white'
-                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-                    )}
+                    className="rounded-full"
                   >
                     {t(s.labelKey)}
-                  </button>
+                  </Button>
                 ))}
               </div>
               <div className="space-y-2">

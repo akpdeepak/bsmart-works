@@ -57,6 +57,7 @@ export default function AiStudioView({ workspaceId, onToast }) {
         {TABS.map((t) => {
           const selected = tab === t.id;
           return (
+            // eslint-disable-next-line works-view/no-raw-button
             <button key={t.id} id={`aistudio-tab-${t.id}`} role="tab" aria-selected={selected}
               aria-controls={`aistudio-panel-${t.id}`} tabIndex={selected ? 0 : -1} type="button"
               onKeyDown={onTabKeyDown}
@@ -149,6 +150,7 @@ function AssistantsPanel({ workspaceId, notify }) {
       <ul className="space-y-1 overflow-y-auto" aria-label="Assistants">
         {assistants.map((a) => (
           <li key={a.id}>
+            {/* eslint-disable-next-line works-view/no-raw-button */}
             <button type="button" onClick={() => selectAssistant(a.id)}
               className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
                 a.id === activeId ? 'bg-brand-navy/10 text-brand-navy dark:text-white' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'
@@ -265,6 +267,7 @@ function AgentsPanel({ workspaceId, notify }) {
             <ul className="space-y-2">
               {runs.map((r) => (
                 <li key={r.id}>
+                  {/* eslint-disable-next-line works-view/no-raw-button */}
                   <button type="button" onClick={() => agentsClient.getRun(workspaceId, r.id).then(setActive)}
                     className="w-full rounded-md border border-neutral-200 p-2 text-left text-sm hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800">
                     <span className="block truncate font-medium">{r.goal}</span>

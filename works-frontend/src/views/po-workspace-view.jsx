@@ -1,5 +1,6 @@
 import { Map as MapIcon, Lightbulb, Send, Target, FileText, Megaphone, ChevronUp, Trash2 } from 'lucide-react';
 import { Button } from '@/components/works/button';
+import { IconButton } from '@/components/works/atoms/icon-button';
 import { Field } from '@/components/works/field';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
@@ -64,6 +65,8 @@ export default function PoWorkspaceView({
 
               <div className="flex flex-wrap gap-1 border-b border-neutral-200 dark:border-neutral-700 mb-5">
                 {[['roadmap', 'Roadmap'], ['ideas', 'Idea inbox'], ['feedback', 'Customer feedback'], ['okr', 'OKRs'], ['releasenotes', 'Release notes'], ['stakeholders', 'Stakeholders']].map(([k, label]) => (
+                  // Tab bar — separate migration (works-view tab primitive not yet available)
+                  // eslint-disable-next-line works-view/no-raw-button
                   <button key={k} onClick={() => setPoTab(k)}
                     className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${poTab === k ? 'border-brand-navy text-brand-navy dark:text-white' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'}`}>
                     {label}
@@ -119,13 +122,14 @@ export default function PoWorkspaceView({
                                       <option key={s} value={s}>{s}</option>
                                     ))}
                                   </select>
-                                  <button
+                                  <IconButton
+                                    variant="danger"
+                                    size="xs"
                                     onClick={() => deleteTheme(t.id)}
-                                    className="text-neutral-400 hover:text-semantic-danger transition-colors"
                                     aria-label={`Delete ${t.name}`}
                                   >
                                     <Trash2 className="h-4 w-4" aria-hidden="true" />
-                                  </button>
+                                  </IconButton>
                                 </div>
                               </div>
                             </div>
@@ -162,9 +166,9 @@ export default function PoWorkspaceView({
                               {i.description && <p className="text-xs text-neutral-500 mt-1">{i.description}</p>}
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
-                              <button onClick={() => voteIdea(i.id)} className="text-xs text-brand-navy hover:underline" aria-label="Upvote"><ChevronUp className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /> {i.votes}</button>
+                              <Button variant="link" size="sm" onClick={() => voteIdea(i.id)} aria-label="Upvote"><ChevronUp className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /> {i.votes}</Button>
                               {i.status === 'PROMOTED' ? <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-semantic-success text-white">PROMOTED</span>
-                                : <button onClick={() => promoteIdea(i.id)} className="text-xs text-semantic-success hover:underline">Promote</button>}
+                                : <Button variant="link" size="sm" onClick={() => promoteIdea(i.id)} className="text-semantic-success">Promote</Button>}
                             </div>
                           </div>
                         </div>
@@ -236,6 +240,8 @@ export default function PoWorkspaceView({
                   <div className="space-y-2">
                     <h3 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">Objectives</h3>
                     {objectives.map(o => (
+                      // bespoke: full-width selectable list-card with custom active border/bg — not a DS Button shape
+                      // eslint-disable-next-line works-view/no-raw-button
                       <button key={o.id} onClick={() => openObjective(o.id)} className={`w-full text-left rounded-xl p-3 border ${activeObjective?.objective?.id === o.id ? 'border-brand-navy bg-brand-navy/5' : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800'}`}>
                         <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{o.title}</span>
                         <span className="ml-1 text-xs text-neutral-600 dark:text-neutral-400">{o.level} {o.quarter}</span>
@@ -270,7 +276,7 @@ export default function PoWorkspaceView({
                           </div>
                           <div className="flex gap-1">
                             <input className="input flex-1 text-sm" placeholder="New key result…" value={newKr.title} onChange={e => setNewKr({ ...newKr, title: e.target.value })} />
-                            <button onClick={addKeyResult} className="px-3 rounded-md bg-brand-navy text-white text-sm">Add</button>
+                            <Button variant="primary" size="sm" onClick={addKeyResult}>Add</Button>
                           </div>
                         </div>
                       )}
@@ -298,7 +304,10 @@ export default function PoWorkspaceView({
 
               {poTab === 'stakeholders' && (
                 <div>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-3">Stakeholders are mapped by influence × interest in <button onClick={() => { setView('pm'); if (projects.length) { const pid = projects[0].id; setPmProjectId(pid); fetchStakeholders(pid); } }} className="text-brand-navy hover:underline">PM Artifacts → Stakeholders</button>. Targeted release communication uses that map rather than blast email.</p>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-3">Stakeholders are mapped by influence × interest in{' '}
+                    {/* bespoke: inline prose link — a DS Button's size forces a fixed height that breaks inline text flow */}
+                    {/* eslint-disable-next-line works-view/no-raw-button */}
+                    <button onClick={() => { setView('pm'); if (projects.length) { const pid = projects[0].id; setPmProjectId(pid); fetchStakeholders(pid); } }} className="text-brand-navy hover:underline">PM Artifacts → Stakeholders</button>. Targeted release communication uses that map rather than blast email.</p>
                   <EmptyState icon={Megaphone} title="Targeted communication" subtitle="Send release/status updates to the stakeholders who care — built on the stakeholder map (I15-S14)." />
                 </div>
               )}

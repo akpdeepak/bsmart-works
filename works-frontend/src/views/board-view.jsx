@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Star, SquarePen, X } from 'lucide-react';
 import { DensityToggle } from '@/components/works/atoms/density-toggle';
+import { IconButton } from '@/components/works/atoms/icon-button';
+import { Button } from '@/components/works/button';
 import { Select } from '@/components/works/atoms/select';
 import { DENSITY_PAD } from '@/lib/density';
 import { BoardWipBadge } from '@/components/works/organisms/board-wip-badge';
@@ -242,7 +244,7 @@ export default function BoardView({
 
             {renderColumnCards(colItems, col.key)}
 
-            <button onClick={() => {
+            <Button variant="ghost" size="sm" onClick={() => {
               setNewItem(p => ({
                 ...p,
                 status: workflowColumns
@@ -251,9 +253,9 @@ export default function BoardView({
               }));
               setIsCreateOpen(true);
             }}
-              className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-700 rounded-lg transition-colors">
+              className="mt-2 w-full">
               <span>+</span> {t('deliver.board.addItem')}
-            </button>
+            </Button>
           </div>
         );
       })}
@@ -394,7 +396,7 @@ export default function BoardView({
 
                 {renderColumnCards(colItems, col.key)}
 
-                <button onClick={() => {
+                <Button variant="ghost" size="sm" onClick={() => {
                   // Workflow columns: col.name IS the concrete target status.
                   // Category fallback: resolve the first status of the category via statusResolver.
                   setNewItem(p => ({
@@ -405,9 +407,9 @@ export default function BoardView({
                   }));
                   setIsCreateOpen(true);
                 }}
-                  className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-700 rounded-lg transition-colors">
+                  className="mt-2 w-full">
                   <span>+</span> {t('deliver.board.addItem')}
-                </button>
+                </Button>
               </div>
             );
           })}
@@ -419,14 +421,15 @@ export default function BoardView({
               const collapsed = collapsedLanes.has(lane.key);
               return (
                 <section key={lane.key} className="min-w-full">
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setCollapsedLanes((prev) => {
                       const next = new Set(prev);
                       if (next.has(lane.key)) next.delete(lane.key); else next.add(lane.key);
                       return next;
                     })}
-                    className="mb-2 flex items-center gap-2 rounded-md px-1 py-1 text-sm font-semibold text-brand-navy hover:bg-neutral-100 dark:text-neutral-100 dark:hover:bg-neutral-800"
+                    className="mb-2 h-auto px-1 py-1 text-sm font-semibold text-brand-navy hover:bg-neutral-100 dark:text-neutral-100 dark:hover:bg-neutral-800"
                     aria-expanded={!collapsed}
                   >
                     {collapsed
@@ -436,7 +439,7 @@ export default function BoardView({
                     <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300">
                       {lane.items.length}
                     </span>
-                  </button>
+                  </Button>
                   {!collapsed && renderColumns(lane.items, lane.key)}
                 </section>
               );
@@ -487,20 +490,22 @@ function WorkCard({ item, category, density, densityPad, iv, userName, customFie
           <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.autoId || item.id}</span>
         </div>
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => onStar(item)} title={item.starred ? t('deliver.board.unstar') : t('deliver.board.star')}
-            className={`text-xs p-0.5 transition-colors ${item.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}`}>
+          <IconButton variant="ghost" size="xs" onClick={() => onStar(item)} title={item.starred ? t('deliver.board.unstar') : t('deliver.board.star')}
+            className={item.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}>
             <Star className={`h-3.5 w-3.5 ${item.starred ? 'fill-current' : ''}`} aria-hidden="true" />
-          </button>
-          <button onClick={() => onEdit(item)} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-xs p-0.5" aria-label={t('deliver.board.editWorkItem')}>
+          </IconButton>
+          <IconButton variant="ghost" size="xs" onClick={() => onEdit(item)} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy" aria-label={t('deliver.board.editWorkItem')}>
             <SquarePen className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
-          <button onClick={() => onDelete(item.id)} className="text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label={t('deliver.board.deleteWorkItem')}>
+          </IconButton>
+          <IconButton variant="danger" size="xs" onClick={() => onDelete(item.id)} aria-label={t('deliver.board.deleteWorkItem')}>
             <X className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
+          </IconButton>
         </div>
       </div>
 
       {/* Title */}
+      {/* bespoke: title rendered as plain text (left-aligned, wraps, no button chrome) — a DS Button would force fixed height + centering */}
+      {/* eslint-disable-next-line works-view/no-raw-button */}
       <button type="button"
         className="text-sm font-medium text-neutral-900 dark:text-neutral-100 leading-snug mb-2 cursor-pointer text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
         onClick={() => onEdit(item)}>

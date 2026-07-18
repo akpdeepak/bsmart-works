@@ -1,6 +1,7 @@
 import { useRef, useState, useLayoutEffect } from 'react';
 import { Pencil, EyeOff, Trash2 } from 'lucide-react';
 import { Button } from '@/components/works/button';
+import { IconButton } from '@/components/works/atoms/icon-button';
 import { ALL_TYPES, CATEGORIES, resolveTypeIcon } from '@/lib/work-item-types';
 import { cn } from '@/lib/utils';
 import { FIELD_SCHEMAS, loadFieldConfig, saveFieldConfig } from '@/lib/type-field-schemas';
@@ -121,6 +122,7 @@ function TypeFieldsTab() {
                 const Icon = resolveTypeIcon(t.icon);
                 const sel  = selectedTypeKey === t.typeKey;
                 return (
+                  // eslint-disable-next-line works-view/no-raw-button -- bespoke sidebar list-item selector with conditional selected styling
                   <button key={t.typeKey}
                     onClick={() => { setSelectedTypeKey(t.typeKey); setShowAddForm(false); setEditingKey(null); }}
                     className={cn(
@@ -175,8 +177,8 @@ function TypeFieldsTab() {
                           onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingKey(null); }}
                           className="text-sm font-medium border-b border-brand-navy outline-none bg-transparent w-40"
                         />
-                        <button onClick={saveEdit} className="text-xs text-semantic-success hover:underline">Save</button>
-                        <button onClick={() => setEditingKey(null)} className="text-xs text-neutral-400 hover:underline">Cancel</button>
+                        <Button variant="link" size="sm" onClick={saveEdit} className="text-semantic-success">Save</Button>
+                        <Button variant="link" size="sm" onClick={() => setEditingKey(null)} className="text-neutral-400">Cancel</Button>
                       </div>
                     ) : (
                       <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{f.label}</span>
@@ -190,6 +192,7 @@ function TypeFieldsTab() {
                   </span>
 
                   {/* Required toggle */}
+                  {/* eslint-disable-next-line works-view/no-raw-button -- bespoke conditional required/optional pill (orange-tinted active state) */}
                   <button onClick={() => toggleRequired(f)}
                     className={cn(
                       'text-xs px-2 py-0.5 rounded-full border transition-colors shrink-0',
@@ -202,21 +205,21 @@ function TypeFieldsTab() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-0.5 shrink-0">
-                    <button onClick={() => startEdit(f)} title="Rename"
-                      className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors">
+                    <IconButton variant="ghost" size="xs" aria-label="Rename" title="Rename" onClick={() => startEdit(f)}
+                      className="text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200">
                       <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                    </button>
+                    </IconButton>
                     {f._system
                       ? (
-                        <button onClick={() => hideField(f)} title="Hide this field"
-                          className="p-1 text-neutral-300 hover:text-semantic-warning rounded transition-colors">
+                        <IconButton variant="ghost" size="xs" aria-label="Hide this field" title="Hide this field" onClick={() => hideField(f)}
+                          className="text-neutral-300 hover:text-semantic-warning">
                           <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />
-                        </button>
+                        </IconButton>
                       ) : (
-                        <button onClick={() => removeCustom(f.key)} title="Remove field"
-                          className="p-1 text-neutral-300 hover:text-semantic-danger rounded transition-colors">
+                        <IconButton variant="danger" size="xs" aria-label="Remove field" title="Remove field" onClick={() => removeCustom(f.key)}
+                          className="text-neutral-300 hover:text-semantic-danger">
                           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                        </button>
+                        </IconButton>
                       )
                     }
                   </div>

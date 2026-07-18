@@ -183,10 +183,10 @@ export default function ScrumMasterCockpitView({
                 <Lightbulb className={`h-3.5 w-3.5 mt-0.5 flex-shrink-0 ${TIP_TONE[t.tone] || TIP_TONE.info}`} aria-hidden="true" />
                 <span className="text-sm text-neutral-800 dark:text-neutral-200">{t.text}</span>
                 {t.action && visibleTabs.includes(t.action.tab) && (
-                  <button onClick={() => selectTab(t.action.tab)}
-                    className="ml-1 flex-shrink-0 text-xs font-medium text-brand-navy hover:underline whitespace-nowrap">
+                  <Button variant="link" size="sm" onClick={() => selectTab(t.action.tab)}
+                    className="ml-1 flex-shrink-0">
                     {t.action.label} →
-                  </button>
+                  </Button>
                 )}
               </li>
             ))}
@@ -199,6 +199,7 @@ export default function ScrumMasterCockpitView({
         {hasBothModes ? (
           <div className="inline-flex rounded-lg border border-neutral-200 dark:border-neutral-700 p-0.5" role="tablist" aria-label="Cockpit mode">
             {['run', 'insights'].map((m) => (
+              // eslint-disable-next-line works-view/no-raw-button
               <button key={m} role="tab" aria-selected={mode === m}
                 onClick={() => selectTab(m === 'insights' ? insightsTabs[0] : runTabs[0])}
                 className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${mode === m ? 'bg-brand-navy text-white' : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100'}`}>
@@ -214,6 +215,7 @@ export default function ScrumMasterCockpitView({
 
       <div className="flex flex-wrap gap-1 border-b border-neutral-200 dark:border-neutral-700 mb-5" role="tablist">
         {shownTabs.map(k => (
+          // eslint-disable-next-line works-view/no-raw-button
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => selectTab(k)}
             className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === k ? 'border-brand-navy text-brand-navy dark:text-white' : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'}`}>
             {t(`deliver.cockpit.tab.${k}`)}

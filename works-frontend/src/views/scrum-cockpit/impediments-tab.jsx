@@ -29,8 +29,8 @@ export function ImpedimentsTab({
                   <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${imp.status === 'RESOLVED' ? 'bg-semantic-success text-white' : imp.status === 'ESCALATED' ? 'bg-semantic-danger text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{imp.status}</span>
                   {imp.status !== 'RESOLVED' && (
                     <div className="flex gap-2">
-                      {imp.status !== 'ESCALATED' && <button onClick={() => updateImpediment(imp, { status: 'ESCALATED', escalated: true })} className="text-xs text-semantic-danger hover:underline">Escalate</button>}
-                      <button onClick={() => updateImpediment(imp, { status: 'RESOLVED' })} className="text-xs text-brand-navy hover:underline">Resolve</button>
+                      {imp.status !== 'ESCALATED' && <Button variant="link" size="sm" onClick={() => updateImpediment(imp, { status: 'ESCALATED', escalated: true })} className="text-semantic-danger hover:text-semantic-danger">Escalate</Button>}
+                      <Button variant="link" size="sm" onClick={() => updateImpediment(imp, { status: 'RESOLVED' })}>Resolve</Button>
                     </div>
                   )}
                 </div>

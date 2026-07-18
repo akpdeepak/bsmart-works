@@ -1,4 +1,5 @@
-package com.bcits.works;
+package com.bcits.works.devsync;
+
 import com.bcits.works.ai.AiProvider;
 
 import org.springframework.beans.factory.annotation.Value;

@@ -1,12 +1,10 @@
-package com.bcits.works;
+package com.bcits.works.devsync;
 
 import com.bcits.works.auth.User;
 import com.bcits.works.auth.UserRepository;
-import com.bcits.works.shared.RbacGate;
-
 import com.bcits.works.shared.ApiException;
-
 import com.bcits.works.shared.EventService;
+import com.bcits.works.shared.RbacGate;
 import com.bcits.works.workitems.WorkItem;
 import com.bcits.works.workitems.WorkItemRepository;
 

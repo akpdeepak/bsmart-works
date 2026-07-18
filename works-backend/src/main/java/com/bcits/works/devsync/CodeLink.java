@@ -1,4 +1,4 @@
-package com.bcits.works;
+package com.bcits.works.devsync;
 
 import com.bcits.works.shared.WorkspaceFilterActivator;
 

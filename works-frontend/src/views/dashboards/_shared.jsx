@@ -1,3 +1,4 @@
+import { Table } from '@/components/works/atoms/table';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/works/button';
 import { StatusBadge } from '@/components/works/status-badge';
@@ -18,11 +19,11 @@ export function TodayCard({ title, icon: Icon, iconColor, action, actionLabel, c
           {title}
         </h3>
         {action && (
-          <button type="button" onClick={action}
+          <Button unstyled type="button" onClick={action}
             className="flex items-center gap-1 text-xs text-brand-navy hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded">
             {actionLabel || 'View all'}
             <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
+          </Button>
         )}
       </div>
       <div className="px-5 py-4">{children}</div>
@@ -106,7 +107,7 @@ function renderDataViz(viz, result) {
   const rows = result.rows || [];
   if (!rows.length) return <Empty msg="No matching items." />;
   return (
-    <table className="w-full text-sm">
+    <Table className="w-full text-sm">
       <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
         {rows.slice(0, 8).map((r) => (
           <tr key={r.id}>
@@ -118,7 +119,7 @@ function renderDataViz(viz, result) {
           </tr>
         ))}
       </tbody>
-    </table>
+    </Table>
   );
 }
 
@@ -144,30 +145,30 @@ function AddWidgetMenu({ addable, onAdd, onNew }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative">
-      <button type="button" onClick={() => setOpen((o) => !o)}
+      <Button unstyled type="button" onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu" aria-expanded={open}
         className="flex items-center gap-1 rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:border-brand-navy hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
         <Plus className="h-3.5 w-3.5" aria-hidden="true" />Add widget
-      </button>
+      </Button>
       {open && (
         <div role="menu"
           className="absolute right-0 z-dropdown mt-1 max-h-64 w-56 overflow-auto rounded-lg border border-neutral-200 bg-white py-1 shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
-          <button type="button" role="menuitem"
+          <Button unstyled type="button" role="menuitem"
             onClick={() => { onNew(); setOpen(false); }}
             className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-brand-navy hover:bg-neutral-100 focus-visible:outline-none focus-visible:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-700">
             <Plus className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />New data widget…
-          </button>
+          </Button>
           {addable.length > 0 && (
             <>
               <div className="my-1 border-t border-neutral-100 dark:border-neutral-700" />
               <p className="px-3 py-1 text-2xs font-semibold uppercase tracking-wide text-neutral-400">Re-add default</p>
               {addable.map((w) => (
-                <button key={w.id} type="button" role="menuitem"
+                <Button unstyled key={w.id} type="button" role="menuitem"
                   onClick={() => { onAdd(w); setOpen(false); }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-neutral-700 hover:bg-neutral-100 focus-visible:outline-none focus-visible:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700">
                   <Plus className="h-3.5 w-3.5 flex-shrink-0 text-neutral-400" aria-hidden="true" />
                   {widgetLabel(w)}
-                </button>
+                </Button>
               ))}
             </>
           )}
@@ -219,32 +220,32 @@ export function TodaySurface({ header, registry, ctx, layout, builtinLayout, edi
             </span>
           )}
           {!editing ? (
-            <button type="button" onClick={edit.start}
+            <Button unstyled type="button" onClick={edit.start}
               className={`${tbtn} border-neutral-200 bg-white text-neutral-700 hover:border-brand-navy hover:text-brand-navy dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300`}>
               <Pencil className="h-3.5 w-3.5" aria-hidden="true" />Customize
-            </button>
+            </Button>
           ) : (
             <>
               <AddWidgetMenu addable={addable} onAdd={edit.add} onNew={() => setPickerOpen(true)} />
-              <button type="button" onClick={edit.reset}
+              <Button unstyled type="button" onClick={edit.reset}
                 className={`${tbtn} border-neutral-200 bg-white text-neutral-600 hover:border-semantic-danger hover:text-semantic-danger dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400`}>
                 <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />Reset to default
-              </button>
-              <button type="button" onClick={edit.cancel}
+              </Button>
+              <Button unstyled type="button" onClick={edit.cancel}
                 className={`${tbtn} border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400`}>
                 Cancel
-              </button>
+              </Button>
               {edit.canTemplate && (
-                <button type="button" onClick={edit.saveTemplate}
+                <Button unstyled type="button" onClick={edit.saveTemplate}
                   title="Apply this layout to everyone in the workspace who hasn't personalized their own"
                   className={`${tbtn} border-brand-navy bg-white text-brand-navy hover:bg-brand-navy/10 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200`}>
                   <Users className="h-3.5 w-3.5" aria-hidden="true" />Set as team default
-                </button>
+                </Button>
               )}
-              <button type="button" onClick={edit.save}
+              <Button unstyled type="button" onClick={edit.save}
                 className={`${tbtn} border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-tint`}>
                 <Check className="h-3.5 w-3.5" aria-hidden="true" />Save for me
-              </button>
+              </Button>
             </>
           )}
         </div>

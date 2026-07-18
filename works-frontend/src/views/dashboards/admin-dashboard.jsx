@@ -1,3 +1,4 @@
+import { Table } from '@/components/works/atoms/table';
 import { StatCard } from '@/components/works/stat-card';
 import { DonutChart } from '@/components/works/molecules';
 import { activeMemberCount } from '@/lib/today-metrics';
@@ -77,7 +78,7 @@ const ADMIN_REGISTRY = {
       {ctx.auditLog.length === 0
         ? <Empty msg="No recent role changes." />
         : (
-          <table className="w-full text-sm">
+          <Table className="w-full text-sm">
             <thead>
               <tr className="border-b border-neutral-100 bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
                 <th scope="col" className="px-5 py-2">Member</th>
@@ -100,7 +101,7 @@ const ADMIN_REGISTRY = {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
     </TodayCard>
   ),

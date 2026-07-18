@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -67,6 +69,32 @@ class ArchitectureTest {
         assertThat(missing)
                 .as("every roadmap module must have a package marker before code moves into it")
                 .isEmpty();
+    }
+
+    @Test
+    void domainCarveIsNonVacuousAndFlatRootCannotRegress() throws IOException {
+        Map<String, Long> classesByModule = appClasses.stream()
+                .filter(javaClass -> javaClass.getPackageName().startsWith("com.bcits.works."))
+                .collect(Collectors.groupingBy(javaClass ->
+                                javaClass.getPackageName().substring("com.bcits.works.".length()).split("\\.")[0],
+                        Collectors.counting()));
+
+        assertThat(MODULE_PACKAGES)
+                .as("every declared module must own production classes so the cycle gate is non-vacuous")
+                .allSatisfy(module -> assertThat(classesByModule.getOrDefault(module, 0L))
+                        .as("production classes in module %s", module)
+                        .isPositive());
+
+        final long flatRootSourceFiles;
+        try (var files = Files.list(MODULE_ROOT)) {
+            flatRootSourceFiles = files
+                    .filter(path -> path.getFileName().toString().endsWith(".java"))
+                    .filter(path -> !path.getFileName().toString().equals("package-info.java"))
+                    .count();
+        }
+        assertThat(flatRootSourceFiles)
+                .as("the flat root is a temporary composition layer and must never grow again")
+                .isLessThanOrEqualTo(72);
     }
 
     @Test

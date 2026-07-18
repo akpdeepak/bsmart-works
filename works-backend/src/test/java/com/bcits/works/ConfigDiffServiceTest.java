@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.workspaces.ConfigDiffService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

@@ -151,7 +151,7 @@ export default function LeadershipConsoleView({ workspaceId, onToast }) {
 
       <div className="flex gap-1 overflow-x-auto border-b border-neutral-200 dark:border-neutral-700 mb-6" role="tablist">
         {TABS.map(({ id, label, Icon }) => (
-          <button
+          <Button unstyled
             key={id}
             type="button"
             role="tab"
@@ -164,7 +164,7 @@ export default function LeadershipConsoleView({ workspaceId, onToast }) {
             }`}
           >
             <Icon aria-hidden="true" className="h-4 w-4" />{label}
-          </button>
+          </Button>
         ))}
       </div>
 

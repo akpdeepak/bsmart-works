@@ -496,12 +496,12 @@ export default function BqlView({
               <ul role="listbox" className="absolute left-0 right-0 z-dropdown mt-1 max-h-60 overflow-y-auto rounded-lg border border-neutral-200 bg-white py-1 text-sm shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
                 {ac.options.map((opt, i) => (
                   <li key={opt} role="option" aria-selected={i === ac.index}>
-                    <button type="button"
+                    <Button unstyled type="button"
                       // onMouseDown (not onClick) so it fires before the textarea blur closes the list.
                       onMouseDown={e => { e.preventDefault(); acceptSuggestion(opt); }}
                       className={`flex w-full items-center px-3 py-1.5 text-left font-mono transition-colors ${i === ac.index ? 'bg-brand-navy/5 text-brand-navy dark:bg-brand-navy-tint/20 dark:text-neutral-50' : 'text-neutral-700 hover:bg-neutral-50 dark:text-neutral-200 dark:hover:bg-neutral-700/50'}`}>
                       {opt}
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -553,12 +553,12 @@ export default function BqlView({
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {history.map(q => (
-                  <button key={q} type="button"
+                  <Button unstyled key={q} type="button"
                     onClick={() => { setBqlQuery(q); runQuery({ query: q }); }}
                     title={q}
                     className="max-w-xs truncate rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1 font-mono text-neutral-600 transition-all hover:-translate-y-px hover:border-brand-navy hover:text-brand-navy hover:shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
                     {q}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -627,11 +627,11 @@ export default function BqlView({
                         </>
                       )
                   )}
-                  <button type="button" onClick={() => removeRow(i)} disabled={rows.length === 1}
+                  <Button unstyled type="button" onClick={() => removeRow(i)} disabled={rows.length === 1}
                     className="rounded-md p-1.5 text-neutral-300 transition-colors hover:bg-semantic-danger-surface hover:text-semantic-danger disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
                     aria-label={`Remove clause ${i + 1}`}>
                     <Trash2 aria-hidden="true" className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </div>
               );
             })}
@@ -692,7 +692,7 @@ export default function BqlView({
                 const count = Number(g.count) || 0;
                 const pct = Math.round((count / max) * 100);
                 return (
-                  <button key={g.value || '∅'} type="button" onClick={() => drillInto(g.value)}
+                  <Button unstyled key={g.value || '∅'} type="button" onClick={() => drillInto(g.value)}
                     className="group flex w-full items-center gap-3 rounded-md p-1 text-left transition-colors hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:hover:bg-neutral-900/50"
                     aria-label={`Filter to ${groupLabel(g.value)} (${count} items)`}>
                     <span className="w-40 shrink-0 truncate text-sm font-medium text-neutral-900 group-hover:text-brand-navy dark:text-neutral-100">
@@ -705,7 +705,7 @@ export default function BqlView({
                     <span className="w-12 shrink-0 text-right font-mono text-sm font-semibold text-neutral-700 dark:text-neutral-300">
                       {count}
                     </span>
-                  </button>
+                  </Button>
                 );
               });
             })()}
@@ -772,11 +772,11 @@ function ChipRow({ label, items, onPick }) {
       <span className="w-16 shrink-0 pt-1 font-semibold uppercase tracking-wide text-neutral-400">{label}</span>
       <div className="flex flex-wrap gap-1">
         {items.map(token => (
-          <button key={token} type="button" onClick={() => onPick(token)}
+          <Button unstyled key={token} type="button" onClick={() => onPick(token)}
             className="rounded-md border border-neutral-200 bg-white px-1.5 py-0.5 font-mono text-neutral-700 transition-all hover:-translate-y-px hover:border-brand-navy hover:text-brand-navy hover:shadow-sm active:translate-y-0 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
             aria-label={`Insert ${token}`}>
             {token}
-          </button>
+          </Button>
         ))}
       </div>
     </div>

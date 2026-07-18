@@ -1,3 +1,5 @@
+import { Table } from '@/components/works/atoms/table';
+import { Card } from '@/components/works/atoms/card';
 import { useState } from 'react';
 import { ArrowUp, ArrowDown, Columns3, Download, Check, X, Rows3 } from 'lucide-react';
 import { Button } from '@/components/works/button';
@@ -142,7 +144,7 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
   };
 
   return (
-    <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-md dark:border-neutral-700 dark:bg-neutral-800">
+    <Card padding="none" className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-md dark:border-neutral-700 dark:bg-neutral-800">
       <div className="flex items-center justify-between gap-3 border-b border-neutral-100 px-4 py-3 dark:border-neutral-700/60">
         <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-1 text-sm font-semibold text-neutral-700 dark:bg-neutral-900 dark:text-neutral-200">
           {results.length} result{results.length !== 1 ? 's' : ''}
@@ -164,13 +166,13 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
                 {COLUMNS.map(c => {
                   const on = visibleKeys.includes(c.key);
                   return (
-                    <button key={c.key} type="button" onClick={() => toggleColumn(c.key)}
+                    <Button unstyled key={c.key} type="button" onClick={() => toggleColumn(c.key)}
                       className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-neutral-700 transition-colors hover:bg-neutral-50 dark:text-neutral-200 dark:hover:bg-neutral-700/50">
                       <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${on ? 'border-brand-navy bg-brand-navy text-white' : 'border-neutral-300 dark:border-neutral-600'}`}>
                         {on && <Check aria-hidden="true" className="h-3 w-3" />}
                       </span>
                       {c.label}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
@@ -212,7 +214,7 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
       )}
 
       <div className="max-h-96 overflow-auto">
-        <table className="w-full text-sm">
+        <Table className="w-full text-sm">
           <thead className="sticky top-0 z-base bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500 shadow-sm dark:bg-neutral-900 dark:text-neutral-400">
             <tr>
               {bulkEnabled && (
@@ -253,17 +255,17 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
                       // The first cell is the row's open affordance — a real button so it works by
                       // mouse AND keyboard without making the whole <tr> an interactive control
                       // (which would nest the bulk-select checkbox inside it — nested-interactive, RB-30 §6).
-                      <button type="button" onClick={() => onOpen(item)}
+                      <Button unstyled type="button" onClick={() => onOpen(item)}
                         className="rounded-sm text-left font-medium text-brand-navy hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40 dark:text-neutral-100">
                         {renderCell(col, item)}
-                      </button>
+                      </Button>
                     ) : renderCell(col, item)}
                   </td>
                 ))}
               </tr>
             ))}
           </tbody>
-        </table>
+        </Table>
       </div>
 
       {canShowMore && (
@@ -271,6 +273,6 @@ export default function BqlResultsTable({ results, sort, nameMaps = {}, priority
           <Button variant="ghost" size="sm" onClick={onShowMore}>Show more</Button>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

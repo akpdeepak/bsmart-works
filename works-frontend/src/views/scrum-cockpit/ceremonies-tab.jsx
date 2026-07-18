@@ -17,7 +17,7 @@ export function CeremoniesTab({
             {(ceremonies || []).length === 0
               ? <EmptyState icon={CalendarCheck} title="No ceremonies yet" subtitle="Schedule a standup, planning, review, retro or refinement — attendance is tracked per member." />
               : ceremonies.map(c => (
-                <button key={c.session.id} onClick={() => openCeremony(c.session.id)} className="w-full text-left bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 hover:border-brand-navy/40">
+                <Button unstyled key={c.session.id} onClick={() => openCeremony(c.session.id)} className="w-full text-left bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 hover:border-brand-navy/40">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{CEREMONY_LABELS[c.session.ceremonyType] || c.session.ceremonyType}</span>
                     <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${c.session.status === 'COMPLETED' ? 'bg-semantic-success text-white' : c.session.status === 'LIVE' ? 'bg-semantic-danger text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}`}>{c.session.status}</span>
@@ -26,7 +26,7 @@ export function CeremoniesTab({
                     {c.session.scheduledAt ? new Date(c.session.scheduledAt).toLocaleString() : 'Unscheduled'}
                     {' · '}{c.counts?.joined ?? 0} joined{(c.counts?.absent ?? 0) > 0 ? ` · ${c.counts.absent} absent` : ''}
                   </p>
-                </button>))}
+                </Button>))}
           </div>
           {canManage && (
             <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 h-fit">
@@ -46,7 +46,7 @@ export function CeremoniesTab({
         </div>
       ) : (
         <div className="w-full">
-          <button onClick={() => setActiveCeremony(null)} className="text-xs text-brand-navy hover:underline mb-3"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />All ceremonies</button>
+          <Button unstyled onClick={() => setActiveCeremony(null)} className="text-xs text-brand-navy hover:underline mb-3"><ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />All ceremonies</Button>
           <div className="flex items-center justify-between mb-1">
             <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">{CEREMONY_LABELS[activeCeremony.session.ceremonyType] || activeCeremony.session.ceremonyType} — {activeCeremony.session.status}</h3>
             <div className="flex gap-2 flex-wrap">
@@ -83,7 +83,7 @@ export function CeremoniesTab({
                           <span className="flex items-center gap-2 flex-shrink-0">
                             {a.status === 'JOINED' && a.joinedAt && <span className="text-xs text-neutral-600 dark:text-neutral-400">{new Date(a.joinedAt).toLocaleTimeString()}</span>}
                             {canManage && a.status === 'EXPECTED' && activeCeremony.session.status !== 'COMPLETED' && (
-                              <button onClick={() => excuseCeremony(activeCeremony.session.id, a.userId)} className="text-xs text-brand-navy hover:underline">Mark excused</button>
+                              <Button unstyled onClick={() => excuseCeremony(activeCeremony.session.id, a.userId)} className="text-xs text-brand-navy hover:underline">Mark excused</Button>
                             )}
                           </span>
                         </div>

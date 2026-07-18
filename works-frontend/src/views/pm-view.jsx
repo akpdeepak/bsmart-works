@@ -1,3 +1,4 @@
+import { Table } from '@/components/works/atoms/table';
 import {
   AlertTriangle, Lightbulb, AlertCircle, Link, Scale, Calendar, CheckCircle2,
   Users, BookOpen, Globe, Target, Heart, Clock, ArrowLeft, Ban, X, MapPin,
@@ -6,6 +7,7 @@ import { useState } from 'react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { Modal } from '@/components/works/molecules/modal';
 import { PageHeader } from '@/components/works/atoms/page-header';
 import { PageLayout } from '@/components/works/templates/page-layout';
@@ -78,7 +80,7 @@ export default function PmView({
   if (loading && projects.length === 0) {
     return (
       <PageLayout header={null}>
-        <ListSkeleton rows={4} />
+        <AsyncBoundary loading skeleton={<ListSkeleton rows={4} />} />
       </PageLayout>
     );
   }
@@ -289,7 +291,7 @@ export default function PmView({
                 ? <EmptyState icon={Calendar} title="No meetings yet" subtitle="Log meeting notes with structured agenda, notes, decisions, and action items." />
                 : <div className="space-y-3">
                     {meetings.map(m => (
-                      <button type="button" key={m.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 cursor-pointer hover:shadow-sm transition-shadow w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
+                      <Button unstyled type="button" key={m.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 cursor-pointer hover:shadow-sm transition-shadow w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
                         onClick={() => { setSelectedMeeting(m); setPmTab('meeting-detail'); api.raw(`/meetings/${m.id}`).then(r => r.json()).then(d => setMeetingNotes(d.notes || [])); }}>
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
@@ -301,9 +303,9 @@ export default function PmView({
                             {m.scheduledAt && <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1"><Calendar className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{new Date(m.scheduledAt).toLocaleString()}{m.durationMins ? ` · ${m.durationMins}min` : ''}</p>}
                             {m.location && <p className="text-xs text-neutral-600 dark:text-neutral-400"><MapPin className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{m.location}</p>}
                           </div>
-                          <button onClick={e => { e.stopPropagation(); pmDelete('meeting', m.id); }} className="text-neutral-300 hover:text-semantic-danger text-xs ml-3" aria-label="Delete meeting"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                          <Button unstyled onClick={e => { e.stopPropagation(); pmDelete('meeting', m.id); }} className="text-neutral-300 hover:text-semantic-danger text-xs ml-3" aria-label="Delete meeting"><X className="h-3.5 w-3.5" aria-hidden="true" /></Button>
                         </div>
-                      </button>
+                      </Button>
                     ))}
                   </div>
               }
@@ -314,7 +316,7 @@ export default function PmView({
           {pmTab === 'meeting-detail' && selectedMeeting && (
             <div>
               <div className="flex items-center gap-3 mb-5">
-                <button onClick={() => { setPmTab('meetings'); setSelectedMeeting(null); }} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-sm" aria-label="Back"><ArrowLeft className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Back</button>
+                <Button unstyled onClick={() => { setPmTab('meetings'); setSelectedMeeting(null); }} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-sm" aria-label="Back"><ArrowLeft className="inline-block h-4 w-4 mr-1 align-text-bottom" aria-hidden="true" />Back</Button>
                 <h2 className="font-bold text-brand-navy text-lg">{selectedMeeting.title}</h2>
                 <span className="text-xs bg-brand-navy/10 text-brand-navy px-2 py-0.5 rounded">{selectedMeeting.meetingType}</span>
               </div>
@@ -440,7 +442,7 @@ export default function PmView({
                 <EmptyState icon={Globe} title="No cross-project dependencies" subtitle="Track dependencies between this project and other projects or teams." />
               ) : (
                 <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-                  <table className="w-full text-sm">
+                  <Table className="w-full text-sm">
                     <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
                       <tr>
                         {['Title', 'Target Project', 'Deadline', 'Blocker', 'Status', ''].map(h => (
@@ -474,13 +476,13 @@ export default function PmView({
                             </span>
                           </td>
                           <td className="px-4 py-3">
-                            <button onClick={() => api.send(`/cross-project-dependencies/${dep.id}`, { method: 'DELETE' }).then(() => { showToast('Deleted'); fetchCrossProjectDeps(); }).catch(reportError)}
-                              className="text-xs text-semantic-danger hover:underline">Delete</button>
+                            <Button unstyled onClick={() => api.send(`/cross-project-dependencies/${dep.id}`, { method: 'DELETE' }).then(() => { showToast('Deleted'); fetchCrossProjectDeps(); }).catch(reportError)}
+                              className="text-xs text-semantic-danger hover:underline">Delete</Button>
                           </td>
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </Table>
                 </div>
               )}
 

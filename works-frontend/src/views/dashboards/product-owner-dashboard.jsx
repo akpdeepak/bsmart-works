@@ -1,3 +1,5 @@
+import { Table } from '@/components/works/atoms/table';
+import { Button } from '@/components/works/button';
 import { StatCard } from '@/components/works/stat-card';
 import { TypeBadge } from '@/components/works/work-item-type';
 import { DonutChart } from '@/components/works/molecules';
@@ -134,10 +136,10 @@ const PRODUCT_OWNER_REGISTRY = {
             {ctx.featureStats.done ?? 0} of {ctx.featureStats.total ?? 0} stories done
           </p>
           <p className="mt-1 text-xs text-neutral-500">Across the whole backlog</p>
-          <button type="button" onClick={() => ctx.setView('reports')}
+          <Button unstyled type="button" onClick={() => ctx.setView('reports')}
             className="mt-2 text-xs font-medium text-brand-navy hover:underline focus-visible:outline-none">
             View reports →
-          </button>
+          </Button>
         </div>
       </div>
     </TodayCard>
@@ -173,7 +175,7 @@ const PRODUCT_OWNER_REGISTRY = {
       icon={AlertCircle} iconColor="text-semantic-warning"
       action={() => ctx.setView('backlog')} actionLabel="Groom backlog"
       className="overflow-hidden">
-      <table className="w-full text-sm">
+      <Table className="w-full text-sm">
         <thead>
           <tr className="border-b border-neutral-100 bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
             <th scope="col" className="px-5 py-2">Item</th>
@@ -195,7 +197,7 @@ const PRODUCT_OWNER_REGISTRY = {
             </tr>
           ))}
         </tbody>
-      </table>
+      </Table>
     </TodayCard>
   ),
 };

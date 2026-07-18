@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.security.AccessAnomaly;
 
 import com.bcits.works.shared.WorkspaceFilterActivator;
 import com.bcits.works.projects.Project;

@@ -1,6 +1,5 @@
 package com.bcits.works.automation;
 
-import com.bcits.works.InstalledExtension;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.RbacGate;

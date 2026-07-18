@@ -4,6 +4,7 @@ import {
 import { PageLayout } from '@/components/works/templates/page-layout';
 import { Folder } from 'lucide-react';
 import { Button } from '@/components/works/button';
+import { Card } from '@/components/works/atoms/card';
 import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { statusToCategory } from '@/components/works/status';
@@ -69,7 +70,7 @@ export default function ProjectsView({
                   ? 'text-semantic-warning'
                   : 'text-semantic-success';
               return (
-                <div key={p.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 hover:shadow-sm transition-shadow">
+                <Card key={p.id} padding="none" variant="outlined" className="rounded-xl p-5 hover:shadow-sm transition-shadow">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-brand-navy rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                       {p.keyPrefix}
@@ -98,12 +99,12 @@ export default function ProjectsView({
                           {t('deliver.teams.leadPrefix')}{userName(p.leadUserId)}
                         </p>
                       )}
-                      <button
+                      <Button unstyled
                         onClick={() => handleArchiveProject(p.id)}
                         className="text-xs text-neutral-300 hover:text-neutral-600 mt-1 transition-colors"
                       >
                         {p.archived ? t('deliver.teams.unarchive') : t('deliver.teams.archive')}
-                      </button>
+                      </Button>
                     </div>
                   </div>
 
@@ -195,7 +196,7 @@ export default function ProjectsView({
                       )}
                     </div>
                   ) : null}
-                </div>
+                </Card>
               );
             })}
           </div>

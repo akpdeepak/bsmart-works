@@ -57,7 +57,7 @@ export default function AiStudioView({ workspaceId, onToast }) {
         {TABS.map((t) => {
           const selected = tab === t.id;
           return (
-            <button key={t.id} id={`aistudio-tab-${t.id}`} role="tab" aria-selected={selected}
+            <Button unstyled key={t.id} id={`aistudio-tab-${t.id}`} role="tab" aria-selected={selected}
               aria-controls={`aistudio-panel-${t.id}`} tabIndex={selected ? 0 : -1} type="button"
               onKeyDown={onTabKeyDown}
               onClick={() => setTab(t.id)}
@@ -68,7 +68,7 @@ export default function AiStudioView({ workspaceId, onToast }) {
               }`}>
               <t.icon className="h-4 w-4" aria-hidden="true" />
               {t.label}
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -149,13 +149,13 @@ function AssistantsPanel({ workspaceId, notify }) {
       <ul className="space-y-1 overflow-y-auto" aria-label="Assistants">
         {assistants.map((a) => (
           <li key={a.id}>
-            <button type="button" onClick={() => selectAssistant(a.id)}
+            <Button unstyled type="button" onClick={() => selectAssistant(a.id)}
               className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
                 a.id === activeId ? 'bg-brand-navy/10 text-brand-navy dark:text-white' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'
               }`}>
               <span className="block font-medium">{a.name}</span>
               {a.description && <span className="block truncate text-xs text-neutral-500">{a.description}</span>}
-            </button>
+            </Button>
           </li>
         ))}
       </ul>
@@ -265,11 +265,11 @@ function AgentsPanel({ workspaceId, notify }) {
             <ul className="space-y-2">
               {runs.map((r) => (
                 <li key={r.id}>
-                  <button type="button" onClick={() => agentsClient.getRun(workspaceId, r.id).then(setActive)}
+                  <Button unstyled type="button" onClick={() => agentsClient.getRun(workspaceId, r.id).then(setActive)}
                     className="w-full rounded-md border border-neutral-200 p-2 text-left text-sm hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800">
                     <span className="block truncate font-medium">{r.goal}</span>
                     <span className="text-xs text-neutral-500">{r.stepCount} steps · {r.status}</span>
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>

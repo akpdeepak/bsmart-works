@@ -2,6 +2,7 @@ import { Headset, Building2, Archive, Timer, Star } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { Modal } from '@/components/works/molecules/modal';
 import { PortalFormDesigner } from '@/components/PortalFormDesigner';
 
@@ -40,7 +41,7 @@ export default function ServiceView({
   if (loading && serviceRequests.length === 0 && serviceCustomers.length === 0) {
     return (
       <div className="p-6">
-        <ListSkeleton rows={4} />
+        <AsyncBoundary loading skeleton={<ListSkeleton rows={4} />} />
       </div>
     );
   }
@@ -59,8 +60,8 @@ export default function ServiceView({
             { key: 'slas', label: 'SLA tiers', load: () => fetchServiceTiers() },
             { key: 'csat', label: 'CSAT', load: () => fetchServiceCsat() },
           ].map(t => (
-            <button key={t.key} onClick={() => { setServiceTab(t.key); t.load(); }}
-              className={`text-sm font-medium px-3 py-2 border-b-2 transition-colors ${serviceTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700'}`}>{t.label}</button>
+            <Button unstyled key={t.key} onClick={() => { setServiceTab(t.key); t.load(); }}
+              className={`text-sm font-medium px-3 py-2 border-b-2 transition-colors ${serviceTab === t.key ? 'border-brand-navy text-brand-navy' : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-700'}`}>{t.label}</Button>
           ))}
         </div>
       </div>
@@ -69,10 +70,10 @@ export default function ServiceView({
           <div className="space-y-4">
             <div className="flex gap-2">
               {['open', 'mine', 'unassigned', 'high'].map(q => (
-                <button key={q} onClick={() => { setServiceQueue(q); fetchServiceRequests(q); }}
+                <Button unstyled key={q} onClick={() => { setServiceQueue(q); fetchServiceRequests(q); }}
                   className={`text-xs font-medium px-3 py-1.5 rounded-md border ${serviceQueue === q ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white dark:bg-neutral-800 text-neutral-600 border-neutral-200 dark:border-neutral-700'}`}>
                   {q === 'open' ? 'All open' : q === 'mine' ? 'Mine' : q === 'unassigned' ? 'Unassigned' : 'High priority'}
-                </button>
+                </Button>
               ))}
             </div>
             <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5">
@@ -89,9 +90,9 @@ export default function ServiceView({
                     <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200">{(r.status || '').replace('_', ' ')}</span>
                     {can('work_service') && (
                       <>
-                        {!r.assigneeId && <button onClick={() => assignServiceRequest(r.id)} className="text-xs text-brand-navy hover:underline">Pick up</button>}
-                        {r.status !== 'RESOLVED' && r.status !== 'CLOSED' && <button onClick={() => transitionServiceRequest(r.id, 'RESOLVED')} className="text-xs text-semantic-success hover:underline">Resolve</button>}
-                        {r.status === 'RESOLVED' && <button onClick={() => transitionServiceRequest(r.id, 'CLOSED')} className="text-xs text-neutral-500 hover:underline">Close</button>}
+                        {!r.assigneeId && <Button unstyled onClick={() => assignServiceRequest(r.id)} className="text-xs text-brand-navy hover:underline">Pick up</Button>}
+                        {r.status !== 'RESOLVED' && r.status !== 'CLOSED' && <Button unstyled onClick={() => transitionServiceRequest(r.id, 'RESOLVED')} className="text-xs text-semantic-success hover:underline">Resolve</Button>}
+                        {r.status === 'RESOLVED' && <Button unstyled onClick={() => transitionServiceRequest(r.id, 'CLOSED')} className="text-xs text-neutral-500 hover:underline">Close</Button>}
                       </>
                     )}
                   </div>
@@ -149,7 +150,7 @@ export default function ServiceView({
         {formDesignerTypeId && (
           <div role="dialog" aria-label="Portal form designer" aria-modal="true"
             className="fixed inset-0 z-modal flex">
-            <button type="button" aria-label="Close designer" onClick={() => setFormDesignerTypeId(null)}
+            <Button unstyled type="button" aria-label="Close designer" onClick={() => setFormDesignerTypeId(null)}
               className="absolute inset-0 bg-neutral-900/40 focus-visible:outline-none" />
             <div className="relative ml-auto w-full max-w-5xl h-full bg-white dark:bg-neutral-900 shadow-xl flex flex-col">
               <PortalFormDesigner

@@ -73,8 +73,8 @@ export default function WorkflowSettings({
                     </div>
                     <div className="flex gap-3 items-center" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()} role="none">
                       <span className="font-mono text-xs text-neutral-300">{wf.id}</span>
-                      <button onClick={() => api.raw(`/workflows/${wf.id}`, { method: 'DELETE' }).then(() => { fetchWorkflows(); if (expandedWorkflowId === wf.id) setExpandedWorkflowId(null); })}
-                        className="text-xs text-semantic-danger hover:underline">Delete</button>
+                      <Button unstyled onClick={() => api.raw(`/workflows/${wf.id}`, { method: 'DELETE' }).then(() => { fetchWorkflows(); if (expandedWorkflowId === wf.id) setExpandedWorkflowId(null); })}
+                        className="text-xs text-semantic-danger hover:underline">Delete</Button>
                     </div>
                   </div>
 
@@ -114,7 +114,7 @@ export default function WorkflowSettings({
                                   <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{s.name}</span>
                                   <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${catColor[s.category] || 'bg-neutral-100 text-neutral-600'}`}>{s.category}</span>
                                   {s.isInitial && <span className="text-xs text-brand-amber font-bold">INITIAL</span>}
-                                  <button onClick={() => deleteStatus(wf.id, s.id)} className="text-neutral-300 hover:text-semantic-danger ml-1 text-xs" aria-label="Delete status"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                                  <Button unstyled onClick={() => deleteStatus(wf.id, s.id)} className="text-neutral-300 hover:text-semantic-danger ml-1 text-xs" aria-label="Delete status"><X className="h-3.5 w-3.5" aria-hidden="true" /></Button>
                                 </div>
                               ))}
                             </div>
@@ -173,15 +173,15 @@ export default function WorkflowSettings({
                                         <span className="text-neutral-600 dark:text-neutral-400 text-xs">{fromS?.name || t.fromStatus}</span>
                                         <span className="text-neutral-300"><ArrowRight className="inline-block h-3.5 w-3.5 align-text-bottom" aria-hidden="true" /></span>
                                         <span className="text-neutral-600 dark:text-neutral-400 text-xs">{toS?.name || t.toStatus}</span>
-                                        <button
+                                        <Button unstyled
                                           onClick={() => setExpandedTransId(isExpTrans ? null : t.id)}
                                           className="ml-auto flex items-center gap-1 text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy dark:hover:text-white transition-colors"
                                           aria-expanded={isExpTrans} aria-label="Toggle transition rules">
                                           {totalRules > 0 && <span className="bg-brand-navy text-white text-xs rounded-full px-1.5 py-0.5 font-bold">{totalRules}</span>}
                                           <span className="hidden sm:inline">Rules</span>
                                           <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isExpTrans ? 'rotate-180' : ''}`} aria-hidden="true" />
-                                        </button>
-                                        <button onClick={() => deleteTransition(wf.id, t.id)} className="text-neutral-300 hover:text-semantic-danger text-xs" aria-label="Delete transition"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                                        </Button>
+                                        <Button unstyled onClick={() => deleteTransition(wf.id, t.id)} className="text-neutral-300 hover:text-semantic-danger text-xs" aria-label="Delete transition"><X className="h-3.5 w-3.5" aria-hidden="true" /></Button>
                                       </div>
                                       {isExpTrans && (
                                         <div className="px-3 pb-3 border-t border-neutral-100 dark:border-neutral-600 space-y-3 pt-2">
@@ -192,7 +192,7 @@ export default function WorkflowSettings({
                                               {conditions.map((c, i) => (
                                                 <span key={i} className="inline-flex items-center gap-1 text-xs bg-brand-navy/10 text-brand-navy dark:text-blue-300 px-2 py-0.5 rounded-full">
                                                   {c.type}{c.tier ? ` tier≥${c.tier}` : ''}{c.fieldKey ? ` ${c.fieldKey}=${c.value}` : ''}
-                                                  <button onClick={() => saveRules(conditions.filter((_,j)=>j!==i), validators, postFunctions)} className="hover:text-semantic-danger" aria-label="Remove condition"><X className="h-3 w-3" aria-hidden="true" /></button>
+                                                  <Button unstyled onClick={() => saveRules(conditions.filter((_,j)=>j!==i), validators, postFunctions)} className="hover:text-semantic-danger" aria-label="Remove condition"><X className="h-3 w-3" aria-hidden="true" /></Button>
                                                 </span>
                                               ))}
                                             </div>
@@ -226,7 +226,7 @@ export default function WorkflowSettings({
                                                 <Button variant="ghost" onClick={() => setAddRuleForm(f => ({ ...f, transId: null, section: null }))}>Cancel</Button>
                                               </div>
                                             ) : (
-                                              <button className="text-xs text-brand-navy hover:underline" onClick={() => setAddRuleForm({ transId: t.id, section: 'conditions', type: '', fieldKey: '', value: '', tier: 3 })}>+ Add condition</button>
+                                              <Button unstyled className="text-xs text-brand-navy hover:underline" onClick={() => setAddRuleForm({ transId: t.id, section: 'conditions', type: '', fieldKey: '', value: '', tier: 3 })}>+ Add condition</Button>
                                             )}
                                           </div>
                                           {/* Validators */}
@@ -236,7 +236,7 @@ export default function WorkflowSettings({
                                               {validators.map((v, i) => (
                                                 <span key={i} className="inline-flex items-center gap-1 text-xs bg-semantic-warning/10 text-semantic-warning px-2 py-0.5 rounded-full">
                                                   {v.type}{v.fieldKey ? ` ${v.fieldKey}` : ''}
-                                                  <button onClick={() => saveRules(conditions, validators.filter((_,j)=>j!==i), postFunctions)} className="hover:text-semantic-danger" aria-label="Remove validator"><X className="h-3 w-3" aria-hidden="true" /></button>
+                                                  <Button unstyled onClick={() => saveRules(conditions, validators.filter((_,j)=>j!==i), postFunctions)} className="hover:text-semantic-danger" aria-label="Remove validator"><X className="h-3 w-3" aria-hidden="true" /></Button>
                                                 </span>
                                               ))}
                                             </div>
@@ -260,7 +260,7 @@ export default function WorkflowSettings({
                                                 <Button variant="ghost" onClick={() => setAddRuleForm(f => ({ ...f, transId: null, section: null }))}>Cancel</Button>
                                               </div>
                                             ) : (
-                                              <button className="text-xs text-brand-navy hover:underline" onClick={() => setAddRuleForm({ transId: t.id, section: 'validators', type: '', fieldKey: '', value: '', tier: 3 })}>+ Add validator</button>
+                                              <Button unstyled className="text-xs text-brand-navy hover:underline" onClick={() => setAddRuleForm({ transId: t.id, section: 'validators', type: '', fieldKey: '', value: '', tier: 3 })}>+ Add validator</Button>
                                             )}
                                           </div>
                                           {/* Post-functions */}
@@ -270,7 +270,7 @@ export default function WorkflowSettings({
                                               {postFunctions.map((pf, i) => (
                                                 <span key={i} className="inline-flex items-center gap-1 text-xs bg-semantic-success/10 text-semantic-success px-2 py-0.5 rounded-full">
                                                   {pf.type}{pf.fieldKey ? ` ${pf.fieldKey}=${pf.value}` : ''}
-                                                  <button onClick={() => saveRules(conditions, validators, postFunctions.filter((_,j)=>j!==i))} className="hover:text-semantic-danger" aria-label="Remove post-function"><X className="h-3 w-3" aria-hidden="true" /></button>
+                                                  <Button unstyled onClick={() => saveRules(conditions, validators, postFunctions.filter((_,j)=>j!==i))} className="hover:text-semantic-danger" aria-label="Remove post-function"><X className="h-3 w-3" aria-hidden="true" /></Button>
                                                 </span>
                                               ))}
                                             </div>
@@ -297,7 +297,7 @@ export default function WorkflowSettings({
                                                 <Button variant="ghost" onClick={() => setAddRuleForm(f => ({ ...f, transId: null, section: null }))}>Cancel</Button>
                                               </div>
                                             ) : (
-                                              <button className="text-xs text-brand-navy hover:underline" onClick={() => setAddRuleForm({ transId: t.id, section: 'postFunctions', type: '', fieldKey: '', value: '', tier: 3 })}>+ Add post-function</button>
+                                              <Button unstyled className="text-xs text-brand-navy hover:underline" onClick={() => setAddRuleForm({ transId: t.id, section: 'postFunctions', type: '', fieldKey: '', value: '', tier: 3 })}>+ Add post-function</Button>
                                             )}
                                           </div>
                                         </div>

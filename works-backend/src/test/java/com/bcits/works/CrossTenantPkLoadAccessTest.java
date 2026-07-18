@@ -1,4 +1,8 @@
 package com.bcits.works;
+import com.bcits.works.reporting.CustomDashboardController;
+import com.bcits.works.workspaces.SavedFilter;
+import com.bcits.works.workspaces.SavedFilterController;
+import com.bcits.works.workspaces.SavedFilterRepository;
 
 import com.bcits.works.auth.PermissionScheme;
 import com.bcits.works.auth.PermissionSchemeController;

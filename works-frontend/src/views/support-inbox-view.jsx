@@ -122,14 +122,14 @@ export default function SupportInboxView({ workspaceId }) {
       {/* Status filter */}
       <div className="mb-4 flex flex-wrap gap-1 border-b border-neutral-200 dark:border-neutral-700">
         {STATUS_FILTERS.map(([key, label]) => (
-          <button key={key || 'all'} type="button" onClick={() => setFilter(key)}
+          <Button unstyled key={key || 'all'} type="button" onClick={() => setFilter(key)}
             className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
               filter === key
                 ? 'border-brand-navy text-brand-navy dark:text-white'
                 : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'
             }`}>
             {label}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -154,7 +154,7 @@ export default function SupportInboxView({ workspaceId }) {
             <ul className="divide-y divide-neutral-100 dark:divide-neutral-700">
               {conversations.map((c) => (
                 <li key={c.id}>
-                  <button type="button" onClick={() => openThread(c.id)}
+                  <Button unstyled type="button" onClick={() => openThread(c.id)}
                     aria-current={activeId === c.id}
                     className={`flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40 dark:hover:bg-neutral-700 ${
                       activeId === c.id ? 'bg-neutral-50 dark:bg-neutral-700' : ''
@@ -168,7 +168,7 @@ export default function SupportInboxView({ workspaceId }) {
                     <span className="text-xs text-neutral-500">
                       {c.customerName || 'Customer'} · {c.lastMessageAt ? smartDate(c.lastMessageAt) : ''}
                     </span>
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>

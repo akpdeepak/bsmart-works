@@ -185,7 +185,7 @@ export default function MyWorksView({
       {/* Tab bar */}
       <div role="tablist" className="flex gap-1 mb-5 border-b border-neutral-200 dark:border-neutral-700">
         {tabs.map(tab => (
-          <button
+          <Button unstyled
             key={tab.key}
             role="tab"
             aria-selected={myWorksTab === tab.key}
@@ -198,7 +198,7 @@ export default function MyWorksView({
             )}
           >
             {tab.label}{tab.count != null ? ` (${tab.count})` : ''}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -216,7 +216,7 @@ export default function MyWorksView({
               <div className="flex items-center gap-1.5 mb-3">
                 <span className="text-xs text-neutral-600 dark:text-neutral-400">{t('deliver.myWorks.sort')}</span>
                 {CONFIG.sortOptions.map(s => (
-                  <button
+                  <Button unstyled
                     key={s.key}
                     onClick={() => setSort(s.key)}
                     className={cn(
@@ -227,7 +227,7 @@ export default function MyWorksView({
                     )}
                   >
                     {t(s.labelKey)}
-                  </button>
+                  </Button>
                 ))}
               </div>
               <div className="space-y-2">

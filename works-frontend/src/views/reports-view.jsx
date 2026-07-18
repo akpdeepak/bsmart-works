@@ -1,3 +1,4 @@
+import { Button } from '@/components/works/button';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { BarChart2, AlertTriangle, ChevronDown, Search, Target, CalendarDays, ShieldAlert } from 'lucide-react';
 import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
@@ -85,7 +86,7 @@ function SprintPicker({ sprints, selectedSprintId, onSelect }) {
 
   return (
     <div className="relative mb-5 w-full sm:w-96" ref={ref}>
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}
+      <Button unstyled type="button" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}
         className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm text-neutral-900 dark:text-neutral-100 hover:border-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40">
         <span className="flex items-center gap-2 min-w-0">
           {selected ? (
@@ -96,7 +97,7 @@ function SprintPicker({ sprints, selectedSprintId, onSelect }) {
           ) : <span className="text-neutral-600 dark:text-neutral-400">{t('insights.reports.pickSprint')}</span>}
         </span>
         <ChevronDown className="h-4 w-4 text-neutral-600 dark:text-neutral-400 flex-shrink-0" aria-hidden="true" />
-      </button>
+      </Button>
       {open && (
         <div className="absolute z-dropdown mt-1 w-full min-w-0 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 shadow-lg overflow-hidden">
           <div className="p-2 border-b border-neutral-100 dark:border-neutral-700 flex items-center gap-2">
@@ -110,7 +111,7 @@ function SprintPicker({ sprints, selectedSprintId, onSelect }) {
               <li className="px-3 py-2 text-sm text-neutral-600 dark:text-neutral-400">{t('insights.reports.noSprintMatch')}</li>
             ) : filtered.map((s) => (
               <li key={s.id}>
-                <button type="button" role="option" aria-selected={s.id === selectedSprintId}
+                <Button unstyled type="button" role="option" aria-selected={s.id === selectedSprintId}
                   onClick={() => { onSelect(s.id); setOpen(false); setQ(''); }}
                   className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 text-sm hover:bg-neutral-50 dark:hover:bg-neutral-700/50 ${s.id === selectedSprintId ? 'bg-brand-navy/5 dark:bg-brand-navy-tint/10' : ''}`}>
                   <span className="min-w-0 flex-1">
@@ -120,7 +121,7 @@ function SprintPicker({ sprints, selectedSprintId, onSelect }) {
                     )}
                   </span>
                   <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${s.status === 'ACTIVE' ? 'bg-semantic-success/10 text-semantic-success' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300'}`}>{s.status}</span>
-                </button>
+                </Button>
               </li>
             ))}
           </ul>

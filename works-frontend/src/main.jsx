@@ -1,13 +1,8 @@
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { QueryClientProvider } from '@tanstack/react-query'
-import { queryClient } from './lib/query-client'
 import './index.css'
 import App from './App.jsx'
 import CustomerPortal from './CustomerPortal.jsx'
-import { ErrorBoundary } from './components/works/error-boundary.jsx'
-import { I18nProvider } from './lib/i18n.jsx'
-import { DialogProvider } from './lib/dialog.jsx'
+import { AppProviders } from './app/providers/AppProviders.jsx'
 import { registerServiceWorker } from './lib/sw-register'
 
 // Register the PWA service worker for offline support + installability (iteration 18, Cap S).
@@ -18,15 +13,5 @@ registerServiceWorker()
 const isPortal = window.location.pathname.startsWith('/portal')
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <ErrorBoundary>
-        <I18nProvider>
-          <DialogProvider>
-            {isPortal ? <CustomerPortal /> : <App />}
-          </DialogProvider>
-        </I18nProvider>
-      </ErrorBoundary>
-    </QueryClientProvider>
-  </StrictMode>,
+  <AppProviders>{isPortal ? <CustomerPortal /> : <App />}</AppProviders>,
 )

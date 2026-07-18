@@ -1,3 +1,4 @@
+import { Table } from '@/components/works/atoms/table';
 import { useState, useEffect, useCallback } from 'react';
 import { FileText, FilePlus2, Sparkles, AlertCircle, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/works/button';
@@ -121,7 +122,7 @@ export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onT
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       {t.body && (
-                        <button
+                        <Button unstyled
                           type="button"
                           onClick={() => setExpandedId((prev) => (prev === t.id ? null : t.id))}
                           aria-expanded={expandedId === t.id}
@@ -130,19 +131,19 @@ export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onT
                           {expandedId === t.id
                             ? <><ChevronUp aria-hidden="true" className="h-3 w-3" />Hide</>
                             : <><ChevronDown aria-hidden="true" className="h-3 w-3" />Body</>}
-                        </button>
+                        </Button>
                       )}
                       {onUseTemplate && (
                         <Button variant="secondary" size="sm" onClick={() => onUseTemplate(t)}>Use</Button>
                       )}
-                      <button
+                      <Button unstyled
                         type="button"
                         onClick={() => deleteTemplate(t.id)}
                         aria-label={`Delete template "${t.name}"`}
                         className="w-7 h-7 rounded flex items-center justify-center text-neutral-400 hover:text-semantic-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
                       >
                         <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                   {expandedId === t.id && t.body && (
@@ -236,7 +237,7 @@ function FieldsTable({ fields }) {
     return <p className="text-sm text-neutral-600 dark:text-neutral-400">No structured fields were found.</p>;
   }
   return (
-    <table className="w-full text-sm">
+    <Table className="w-full text-sm">
       <tbody>
         {entries.map(([key, value]) => (
           <tr key={key} className="border-b border-neutral-100 dark:border-neutral-700 last:border-0">
@@ -245,7 +246,7 @@ function FieldsTable({ fields }) {
           </tr>
         ))}
       </tbody>
-    </table>
+    </Table>
   );
 }
 

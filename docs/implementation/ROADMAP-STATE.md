@@ -10,20 +10,18 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 - Program mode: **maximal-scope end-to-end completion** (Deepak, 2026-06-20). The authoritative tracker
   is now `docs/implementation/MASTER-COMPLETION-ROADMAP.md`; this file remains the cross-session resume
   ledger.
-- Active phase: **Phase 2 — structural refactors (W2), IN PROGRESS** (plan in draft PR #417; Phase 1
-  ✅ complete 2026-06-21, PRs #415–#441, ledger reconciled in PR #444).
+- Active phase: **Phase 2 — structural refactors (W2), COMPLETE locally 2026-07-18; PR #481 pending CI/merge.**
+  Phase 3 begins after post-merge validation. Phase 1 completed 2026-06-21 (PRs #415–#441).
   - ✅ **W2-b god classes — all four split & merged:** `ArticleController`→`ArticleService` (PR #446),
     `KpiService`→`KpiMetricCalculator` (PR #447), `BqlCompiler`→`BqlParser`+`BqlSqlEmitter` (PR #448),
     `WorkItemCommandService`→`WorkItemFieldCopier` (PR #449).
-  - ✅ **W2-d (partial):** `locales.js` code-split by language, English-only main bundle (PR #451);
+  - ✅ **W2-d:** `locales.js` code-split by language, English-only main bundle (PR #451);
     `BlockEditor` + the six knowledge-view overlays lazy-loaded via React.lazy/Suspense — initial JS
-    162.9→140.7 kB gz (PR #452). `knowledge-view.jsx`/`BlockEditor.jsx` line-count reduction itself
-    remains open.
-  - ✅ **W2-e (tranche 1):** `AsyncBoundary` adopted in the six list/table views (my-works, projects,
-    releases, reports, notifications, trash) — 0→6 production consumers, all 70 view tests unmodified
-    (PR #453). Dashboard/console + detail-panel tranches remain.
-  - ✅ **W2-f (partial):** the 3 `#94A3B8` hex in status-management-tab tokenized (PR #450); the
-    43-file `worksViewStructureLegacy` ESLint warn block still to migrate.
+    162.9→140.7 kB gz (PR #452); the completion slice preserved the split and bundle-budget gate.
+  - ✅ **W2-e:** `AsyncBoundary` covers the six list/table views plus the primary console, PM,
+    Compliance, Service, marketplace, and support loading surfaces.
+  - ✅ **W2-f:** the 3 `#94A3B8` hex values were tokenized (PR #450), all legacy structural
+    violations were migrated, and the `worksViewStructureLegacy` override was removed.
   - ✅ **W2-a (G-1 kernel):** 35 kernel classes + `dto/` moved to `com.bcits.works.shared` (errors/
     envelope, event store, crypto, the whole tenancy cluster, BQL kernel, utils) — pure move (5
     substantive lines), new ArchUnit rule `sharedKernelDoesNotDependOnDomainModules`, validated by
@@ -141,10 +139,11 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
     security 43). Root flat down 653→156 (the 156 are cross-cutting config/onboarding/cockpit +
     ~30 deferred cycle-breaker classes staged for later port-extraction). ArchUnit + unit +
     0 Checkstyle + guardrails + `ddl-auto=validate` boot. V119.
-  - Bundle-budget gate (I-2) verified already in CI (`perf-budget`, 500 KB gz initial-JS ceiling).
-  - **Still open in Phase 2:** G-2 remaining domain carve (/`automation`/`messaging`/`service`/`knowledge`/`devsync`; + deferred field/value +
-    board/impediment classes; ~360 files still flat), W2-c AppShell decomposition (4,629 lines),
-    AsyncBoundary tranches 2–3, the 43-file legacy lint block, FE monolith line-count reductions.
+  - Bundle-budget gate (I-2) remains enforced in CI (`perf-budget`, 500 KB gz initial-JS ceiling).
+  - ✅ **Phase 2 closeout:** all 14 backend modules are populated; the flat root fell 291→72;
+    `AppShell.jsx` fell 4,628→3,028 with providers/auth/routes/shortcuts/feature state extracted;
+    primary `AsyncBoundary` tranches are complete; the legacy view override is removed. Evidence:
+    `docs/implementation/epics/PHASE-2-STRUCTURAL-REFACTOR-COMPLETION.md`.
   - ✅ Phase 0 (truth reconciliation + master ledger + restored CI pipeline) — PR #407.
   - ✅ **PII vault + crypto-shredding** EPIC complete — PRs #418–#424 (high-water through V114); only the
     deferred CONTRACT plaintext-column drop remains. See `EPIC-P1-pii-vault-completion.md`.
@@ -473,3 +472,15 @@ kernel-direction ArchUnit rule, validated by 1,449 unit tests + a real ddl-auto=
 Resume point: **G-2 domain carve, Identity-first (`auth` first, with the RbacService port in
 shared), one module per PR**; then W2-c AppShell decomposition, AsyncBoundary tranches 2–3, and the
 43-file legacy lint-block migration. No schema changes in any Phase-2 PR so far (high-water V119).
+
+2026-07-18: Phase 2 (W2) is complete locally on `codex/refactor-phase2-completion`; closeout
+[PR #481](https://github.com/akpdeepak/bsmart-works/pull/481) is pending GitHub CI, merge, and
+post-merge `main` validation. The backend carve now populates all
+14 declared modules and reduces the flat package root from 291 to 72 source files, protected by
+cycle, kernel-direction, non-vacuity, and root-budget architecture tests. `AppShell.jsx` is reduced
+from 4,628 to 3,028 lines by extracting providers, authentication, public routes, shortcuts,
+`RouteOutlet`, and four feature-state hooks. Primary `AsyncBoundary` tranches are complete, and the
+legacy structural-lint override is removed. No schema or API contract change; Flyway remains V119.
+Local gates: 1,451 backend unit tests with JaCoCo and Checkstyle, 1,733 frontend tests across 233
+files plus lint/build, and the full repository verification suite. See
+`docs/implementation/epics/PHASE-2-STRUCTURAL-REFACTOR-COMPLETION.md`.

@@ -5,6 +5,9 @@ const root = process.cwd();
 const appShellPath = exists('works-frontend/src/app/AppShell.jsx')
   ? 'works-frontend/src/app/AppShell.jsx'
   : 'works-frontend/src/App.jsx';
+const routeDeckPath = exists('works-frontend/src/app/routes.jsx')
+  ? 'works-frontend/src/app/routes.jsx'
+  : appShellPath;
 
 function read(file) {
   return fs.readFileSync(path.join(root, file), 'utf8');
@@ -73,7 +76,7 @@ const checks = [
   },
   {
     name: 'Router, mobile baseline, and board virtualization',
-    pass: read(appShellPath).includes('React.lazy') &&
+    pass: read(routeDeckPath).includes('React.lazy') &&
       read('works-frontend/src/lib/routes.js').includes('VIEW_PATHS') &&
       read('works-frontend/src/views/board-view.jsx').includes('overflow-x-auto') &&
       read('works-frontend/src/components/works/organisms/virtual-card-stack.jsx').includes('useVirtualList'),

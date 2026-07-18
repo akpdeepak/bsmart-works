@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.workspaces.ConfigSerializationService;
 
 import com.bcits.works.shared.ApiException;
 

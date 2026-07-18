@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.projects.RiskController;
+import com.bcits.works.projects.RiskRepository;
 
 import com.bcits.works.auth.RbacService;
 

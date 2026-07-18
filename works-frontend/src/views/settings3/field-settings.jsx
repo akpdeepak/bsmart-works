@@ -1,3 +1,4 @@
+import { Table } from '@/components/works/atoms/table';
 import { useRef, useState } from 'react';
 import { Check, Eye, LayoutDashboard, FileText, GripVertical } from 'lucide-react';
 import { Button } from '@/components/works/button';
@@ -68,7 +69,7 @@ export function CustomFieldsSettings({
       {fieldDefs.length === 0
         ? <EmptyState icon={FileText} title="No custom fields" subtitle="Create custom fields to capture domain-specific data on work items." />
         : <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
+            <Table className="w-full text-sm">
               <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
                 <tr>
                   {['Field Name', 'Type', 'Key', 'Required', ''].map(h => (
@@ -87,13 +88,13 @@ export function CustomFieldsSettings({
                     <td className="px-4 py-3 font-mono text-xs text-neutral-600 dark:text-neutral-400">{fd.fieldKey}</td>
                     <td className="px-4 py-3"><span className={`text-xs font-semibold ${fd.required ? 'text-semantic-danger' : 'text-neutral-300'}`}>{fd.required ? <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" aria-hidden="true" />Required</span> : 'Optional'}</span></td>
                     <td className="px-4 py-3">
-                      <button onClick={() => api.raw(`/field-defs/${fd.id}`, { method: 'DELETE' }).then(() => fetchFieldDefs())}
-                        className="text-xs text-semantic-danger hover:underline">Delete</button>
+                      <Button unstyled onClick={() => api.raw(`/field-defs/${fd.id}`, { method: 'DELETE' }).then(() => fetchFieldDefs())}
+                        className="text-xs text-semantic-danger hover:underline">Delete</Button>
                     </td>
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
           </div>
       }
     </div>
@@ -264,7 +265,7 @@ export function FieldVisibilitySettings({
         <EmptyState icon={Eye} title="No visibility rules defined" subtitle="All fields are visible and editable by all roles by default. Add rules to restrict access." />
       ) : (
         <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
+          <Table className="w-full text-sm">
             <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
               <tr>
                 {['Field', 'Role', 'Visibility', ''].map(h => (
@@ -285,13 +286,13 @@ export function FieldVisibilitySettings({
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => api.send(`/permission-schemes/field-visibility/rules/${fv.id}`, { method: 'DELETE' }).then(() => { showToast('Rule deleted'); fetchFieldVisibility(); }).catch(reportError)}
-                      className="text-xs text-semantic-danger hover:underline">Delete</button>
+                    <Button unstyled onClick={() => api.send(`/permission-schemes/field-visibility/rules/${fv.id}`, { method: 'DELETE' }).then(() => { showToast('Rule deleted'); fetchFieldVisibility(); }).catch(reportError)}
+                      className="text-xs text-semantic-danger hover:underline">Delete</Button>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         </div>
       )}
     </div>

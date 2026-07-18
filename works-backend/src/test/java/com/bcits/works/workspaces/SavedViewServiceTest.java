@@ -1,7 +1,4 @@
-package com.bcits.works;
-import com.bcits.works.workspaces.SavedView;
-import com.bcits.works.workspaces.SavedViewRepository;
-import com.bcits.works.workspaces.SavedViewService;
+package com.bcits.works.workspaces;
 
 import com.bcits.works.auth.RbacService;
 

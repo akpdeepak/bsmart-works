@@ -120,8 +120,6 @@ import { FlagDevtools } from '@/components/works/organisms/flag-devtools';
 // failures collapses to one message rather than spamming. Transient/data errors surface here;
 // form-field errors stay inline.
 
-import { DashboardView, BoardView, WorkspaceView, AccountView, PoWorkspaceView, LeadershipConsoleView, AdminOpsView, NotificationsView, TrashView, ReleasesView, BqlView, MyWorksView, ScrumMasterCockpitView, ProjectsView, ReportsView, AiStudioView, MarketplaceView, DeveloperPortalView, KnowledgeTemplatesView, SupportInboxView, BacklogView, SprintView, DashboardsView, ReportBuilderView, ComplianceView, ServiceView, KnowledgeView, PublicArticleView, EmbedArticleView, PmView, Settings3View, SearchView } from './lazy-views';
-
 const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 // Avatar + getInitials now live in components/works/atoms/avatar.jsx (imported above).

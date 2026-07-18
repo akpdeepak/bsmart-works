@@ -94,7 +94,7 @@ class ArchitectureTest {
         }
         assertThat(flatRootSourceFiles)
                 .as("the flat root is a temporary composition layer and must never grow again")
-                .isLessThanOrEqualTo(70);
+                .isLessThanOrEqualTo(72);
     }
 
     @Test

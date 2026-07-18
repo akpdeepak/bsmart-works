@@ -1,7 +1,5 @@
 package com.bcits.works;
 import com.bcits.works.projects.IdeaService;
-import com.bcits.works.service.CustomerFeedback;
-import com.bcits.works.service.CustomerFeedbackRepository;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;

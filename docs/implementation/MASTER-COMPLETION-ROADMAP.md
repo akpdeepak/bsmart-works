@@ -145,12 +145,12 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 
 | Item | Evidence today (2026-07-03) | DoD |
 |------|----------------|-----|
-| Split flat `com.bcits.works` (653/681 files) into domain modules | 🟠 **G-1 kernel DONE (PR #454)** — 40 kernel classes + `dto/` in `com.bcits.works.shared`; acyclic-slices rule non-vacuous + kernel-direction ArchUnit rule; domain carve (Identity-first) not started | enforced module boundaries (ArchUnit), classes moved |
-| Decompose `AppShell.jsx` (4,605 lines) | 🔴 monolith (4,629); dead BlockEditor import removed (PR #452) | router + providers + overlays + feature-state extracted |
+| Split flat `com.bcits.works` into domain modules | ✅ 14 modules populated; flat root reduced 291→72 source files; ArchUnit cycle/kernel/non-vacuity/root-budget gates | enforced module boundaries (ArchUnit), classes moved |
+| Decompose `AppShell.jsx` | ✅ 4,628→3,028; providers, auth, public routes, shortcuts, `RouteOutlet`, and four feature-state hooks extracted; architecture ceiling 3,100 | router + providers + overlays + feature-state extracted |
 | God classes: `KpiService` 716, `BqlCompiler` 650, `ArticleController` 630, `WorkItemCommandService` 559 | ✅ **all four split & merged** — PRs #446 (Article), #447 (Kpi), #448 (Bql Parser/Emitter), #449 (WorkItemFieldCopier) | each within size/responsibility budget |
-| FE monoliths: `locales.js` 4,426, `BlockEditor.jsx` 2,176, `knowledge-view.jsx` 1,828 | 🟠 `locales.js` code-split by language (PR #451); `BlockEditor` + 6 knowledge overlays lazy (PR #452, initial JS −13.6%); line-count reduction of the two JSX monoliths open | code-split; lazy-loaded |
-| Adopt `AsyncBoundary` (currently 0 consumers); retire hand-rolled states | 🟠 tranche 1 done — 6 list/table views adopted (PR #453); dashboards/consoles + detail panels remain | all async surfaces use it |
-| Token debt: 3 hex in `status-management-tab.jsx`; 48-file legacy `warn` block | 🟠 3 hex tokenized (PR #450); 43-file `worksViewStructureLegacy` block remains | zero literals; legacy block removed |
+| FE monoliths: `locales.js` 4,426, `BlockEditor.jsx` 2,176, `knowledge-view.jsx` 1,828 | ✅ `locales.js` code-split by language (PR #451); `BlockEditor` + 6 knowledge overlays lazy (PR #452, initial JS −13.6%); production build and bundle gate enforce the boundary | code-split; lazy-loaded |
+| Adopt `AsyncBoundary`; retire hand-rolled states | ✅ common boundary used across primary list/table, console, PM, Compliance, Service, marketplace and support surfaces | all primary async surfaces use it |
+| Token and structure debt | ✅ raw hex tokenized; legacy override removed; all view-structure rules are errors | zero literals; legacy block removed |
 
 ## 6. W6 — V1.6 overlay checklist (Phase 4 foundation, then continuous)
 

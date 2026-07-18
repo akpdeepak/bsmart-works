@@ -9,6 +9,8 @@ import com.bcits.works.projects.Impediment;
 import com.bcits.works.projects.ImpedimentRepository;
 import com.bcits.works.projects.StandupEntryRepository;
 import com.bcits.works.projects.StandupSessionRepository;
+import com.bcits.works.messaging.ActionItem;
+import com.bcits.works.messaging.ActionItemRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

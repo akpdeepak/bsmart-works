@@ -5,6 +5,7 @@ import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.security.CustomerAttributionPiiService;
+import com.bcits.works.messaging.ChatConversation;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

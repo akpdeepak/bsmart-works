@@ -2,8 +2,8 @@ package com.bcits.works.ai;
 
 import com.bcits.works.AutomationCatalog;
 import com.bcits.works.AutomationService;
-import com.bcits.works.Comment;
-import com.bcits.works.CommentRepository;
+import com.bcits.works.messaging.Comment;
+import com.bcits.works.messaging.CommentRepository;
 import com.bcits.works.auth.User;
 import com.bcits.works.auth.UserRepository;
 import com.bcits.works.projects.Project;

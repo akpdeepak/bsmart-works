@@ -5,6 +5,11 @@ import com.bcits.works.auth.RbacService;
 import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.ApiException;
+import com.bcits.works.messaging.ActionItemRepository;
+import com.bcits.works.messaging.Meeting;
+import com.bcits.works.messaging.MeetingController;
+import com.bcits.works.messaging.MeetingNoteRepository;
+import com.bcits.works.messaging.MeetingRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

@@ -16,6 +16,9 @@ import com.bcits.works.workitems.WorkItemBulkService;
 import com.bcits.works.workitems.WorkItemController;
 import com.bcits.works.workitems.WorkItemRepository;
 import com.bcits.works.workitems.WorkflowRuleEngine;
+import com.bcits.works.messaging.NotificationBatchService;
+import com.bcits.works.messaging.NotificationRepository;
+import com.bcits.works.messaging.WatcherService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

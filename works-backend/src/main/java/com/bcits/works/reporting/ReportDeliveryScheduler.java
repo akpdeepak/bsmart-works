@@ -1,7 +1,7 @@
 package com.bcits.works.reporting;
 
-import com.bcits.works.Notification;
-import com.bcits.works.NotificationRepository;
+import com.bcits.works.messaging.Notification;
+import com.bcits.works.messaging.NotificationRepository;
 import com.bcits.works.shared.TenantScope;
 
 import org.slf4j.Logger;

@@ -1,7 +1,7 @@
 package com.bcits.works.security;
 
-import com.bcits.works.ChatConversation;
-import com.bcits.works.ChatConversationRepository;
+import com.bcits.works.messaging.ChatConversation;
+import com.bcits.works.messaging.ChatConversationRepository;
 import com.bcits.works.CustomerFeedback;
 import com.bcits.works.CustomerFeedbackRepository;
 import com.bcits.works.CustomerUser;

@@ -1,6 +1,6 @@
 package com.bcits.works.projects;
 
-import com.bcits.works.ActionItem;
+import com.bcits.works.messaging.ActionItem;
 import com.bcits.works.shared.AuthenticatedUser;
 
 import org.springframework.http.ResponseEntity;

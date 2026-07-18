@@ -7,6 +7,10 @@ import com.bcits.works.auth.UserRepository;
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.messaging.Comment;
+import com.bcits.works.messaging.CommentRepository;
+import com.bcits.works.messaging.CommentService;
+import com.bcits.works.messaging.NotificationRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

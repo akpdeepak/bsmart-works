@@ -8,6 +8,11 @@ import com.bcits.works.shared.EventService;
 import com.bcits.works.security.CustomerAttributionPiiService;
 import com.bcits.works.ai.AiControlPlaneService;
 import com.bcits.works.ai.AiModelTier;
+import com.bcits.works.messaging.ChatConversation;
+import com.bcits.works.messaging.ChatConversationRepository;
+import com.bcits.works.messaging.ChatMessage;
+import com.bcits.works.messaging.ChatMessageRepository;
+import com.bcits.works.messaging.NotificationBatchService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

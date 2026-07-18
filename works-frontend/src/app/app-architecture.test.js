@@ -30,9 +30,10 @@ describe('frontend app architecture', () => {
     expect(source).toContain('export default function AppShell()');
     expect(source).toContain('pathToView');
     expect(source).toContain('ModeRail');
-    expect(lines.length).toBeLessThan(3900);
+    expect(lines.length).toBeLessThan(3100);
     expect(source).toContain("from '@/app/AuthScreens'");
     expect(source).toContain("from '@/app/routes'");
+    expect(source).toContain("from '@/app/routes/RouteOutlet'");
     expect(source).toContain("from '@/hooks/useKnowledgeState'");
     expect(source).toContain("from '@/hooks/useComplianceState'");
     expect(source).toContain("from '@/hooks/usePmState'");

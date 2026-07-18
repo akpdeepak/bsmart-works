@@ -1,7 +1,7 @@
 package com.bcits.works.projects;
 
-import com.bcits.works.ActionItem;
-import com.bcits.works.ActionItemRepository;
+import com.bcits.works.messaging.ActionItem;
+import com.bcits.works.messaging.ActionItemRepository;
 import com.bcits.works.Assumption;
 import com.bcits.works.AssumptionRepository;
 import com.bcits.works.PmIssue;

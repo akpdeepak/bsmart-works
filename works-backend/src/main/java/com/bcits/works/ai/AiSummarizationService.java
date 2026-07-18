@@ -1,8 +1,8 @@
 package com.bcits.works.ai;
 
 import com.bcits.works.AiCapabilities;
-import com.bcits.works.Comment;
-import com.bcits.works.CommentRepository;
+import com.bcits.works.messaging.Comment;
+import com.bcits.works.messaging.CommentRepository;
 import com.bcits.works.projects.Project;
 import com.bcits.works.projects.ProjectRepository;
 import com.bcits.works.workitems.WorkItem;

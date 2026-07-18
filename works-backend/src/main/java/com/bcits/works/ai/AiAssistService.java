@@ -4,7 +4,7 @@ import com.bcits.works.AiCapabilities;
 import com.bcits.works.Article;
 import com.bcits.works.ArticleRepository;
 import com.bcits.works.AutomationService;
-import com.bcits.works.CommentRepository;
+import com.bcits.works.messaging.CommentRepository;
 import com.bcits.works.KnowledgeSpaceRepository;
 import com.bcits.works.auth.User;
 import com.bcits.works.auth.UserRepository;

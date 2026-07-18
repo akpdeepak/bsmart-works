@@ -1,7 +1,7 @@
 package com.bcits.works.projects;
 
-import com.bcits.works.ActionItem;
-import com.bcits.works.ActionItemRepository;
+import com.bcits.works.messaging.ActionItem;
+import com.bcits.works.messaging.ActionItemRepository;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;
 import com.bcits.works.shared.RbacGate;

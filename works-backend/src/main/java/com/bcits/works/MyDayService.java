@@ -7,6 +7,7 @@ import com.bcits.works.projects.ImpedimentRepository;
 import com.bcits.works.projects.StandupEntryRepository;
 import com.bcits.works.projects.StandupSession;
 import com.bcits.works.projects.StandupSessionRepository;
+import com.bcits.works.messaging.ActionItemRepository;
 
 import org.springframework.stereotype.Service;
 

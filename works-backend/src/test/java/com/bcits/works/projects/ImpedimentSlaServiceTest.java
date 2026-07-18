@@ -1,7 +1,7 @@
 package com.bcits.works.projects;
 
 import com.bcits.works.EmailService;
-import com.bcits.works.NotificationRepository;
+import com.bcits.works.messaging.NotificationRepository;
 import com.bcits.works.shared.AppEvent;
 import com.bcits.works.shared.EventRepository;
 import com.bcits.works.shared.EventService;

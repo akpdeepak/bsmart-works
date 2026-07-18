@@ -13,6 +13,8 @@ import com.bcits.works.automation.AutomationRule;
 import com.bcits.works.automation.AutomationRuleRepository;
 import com.bcits.works.automation.AutomationRun;
 import com.bcits.works.automation.AutomationRunRepository;
+import com.bcits.works.messaging.Comment;
+import com.bcits.works.messaging.CommentRepository;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

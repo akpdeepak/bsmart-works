@@ -13,6 +13,7 @@ import com.bcits.works.automation.AutomationRule;
 import com.bcits.works.automation.AutomationRuleRepository;
 import com.bcits.works.automation.AutomationRun;
 import com.bcits.works.automation.AutomationRunRepository;
+import com.bcits.works.messaging.CommentRepository;
 
 // Audit finding #11: AutomationService lifecycle wiring + recursion guard (fix: c3218a3).
 import org.junit.jupiter.api.Tag;

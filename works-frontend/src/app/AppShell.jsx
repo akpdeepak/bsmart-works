@@ -85,42 +85,10 @@ import { Field } from '@/components/works/field';
 import { Avatar } from '@/components/works/atoms/avatar';
 // Route-level code-split — each view loads on demand (WI-21). Vite emits one chunk per
 // import(); the Suspense below shows a skeleton until the chunk is ready.
-const DashboardView = React.lazy(() => import('@/views/dashboard-view'));
-const BoardView = React.lazy(() => import('@/views/board-view'));
-const WorkspaceView = React.lazy(() => import('@/views/workspace-view'));
-const AccountView = React.lazy(() => import('@/views/account-view'));
-const PoWorkspaceView = React.lazy(() => import('@/views/po-workspace-view'));
-const LeadershipConsoleView = React.lazy(() => import('@/views/leadership-console-view'));
-const AdminOpsView = React.lazy(() => import('@/views/admin-ops-view'));
 import { AiMetaBadge } from '@/components/works/ai-meta-badge';
-const NotificationsView = React.lazy(() => import('@/views/notifications-view'));
-const TrashView = React.lazy(() => import('@/views/trash-view'));
-const ReleasesView = React.lazy(() => import('@/views/releases-view'));
-const BqlView = React.lazy(() => import('@/views/bql-view'));
-const MyWorksView = React.lazy(() => import('@/views/my-works-view'));
-const ScrumMasterCockpitView = React.lazy(() => import('@/views/scrum-master-cockpit-view'));
-const ProjectsView = React.lazy(() => import('@/views/projects-view'));
-const ReportsView = React.lazy(() => import('@/views/reports-view'));
-const AiStudioView = React.lazy(() => import('@/views/ai-studio-view'));
-const MarketplaceView = React.lazy(() => import('@/views/marketplace-view'));
-const DeveloperPortalView = React.lazy(() => import('@/views/developer-portal-view'));
-const KnowledgeTemplatesView = React.lazy(() => import('@/views/knowledge-templates-view'));
-const SupportInboxView = React.lazy(() => import('@/views/support-inbox-view'));
 // PortalFormDesigner moved to service-view.jsx (TD-003).
-const BacklogView = React.lazy(() => import('@/views/backlog-view'));
-const SprintView = React.lazy(() => import('@/views/sprint-view'));
-const DashboardsView = React.lazy(() => import('@/views/dashboards-view'));
-const ReportBuilderView = React.lazy(() => import('@/views/reportbuilder-view'));
-const ComplianceView = React.lazy(() => import('@/views/compliance-view'));
-const ServiceView = React.lazy(() => import('@/views/service-view'));
-const KnowledgeView = React.lazy(() => import('@/views/knowledge-view'));
 // KR-066: public article share link — loaded on /p/:token with no auth.
-const PublicArticleView = React.lazy(() => import('@/views/public-article-view'));
 // KR-069: minimal-chrome article embed — loaded on /embed/article/:token with no auth.
-const EmbedArticleView = React.lazy(() => import('@/views/embed-article-view'));
-const PmView = React.lazy(() => import('@/views/pm-view'));
-const Settings3View = React.lazy(() => import('@/views/settings3-view'));
-const SearchView = React.lazy(() => import('@/views/search-view'));
 import { DashboardWidgetCard } from '@/components/works/organisms/dashboard-widget-card';
 import { FlagDevtools } from '@/components/works/organisms/flag-devtools';
 // DashboardDrillModal extracted to src/components/works/organisms/dashboard-drill-modal.jsx (TD-003).
@@ -134,6 +102,8 @@ import { FlagDevtools } from '@/components/works/organisms/flag-devtools';
 // emitter from inside App() via setToastEmitter(); because there is a single toast slot, a burst of
 // failures collapses to one message rather than spamming. Transient/data errors surface here;
 // form-field errors stay inline.
+
+import { DashboardView, BoardView, WorkspaceView, AccountView, PoWorkspaceView, LeadershipConsoleView, AdminOpsView, NotificationsView, TrashView, ReleasesView, BqlView, MyWorksView, ScrumMasterCockpitView, ProjectsView, ReportsView, AiStudioView, MarketplaceView, DeveloperPortalView, KnowledgeTemplatesView, SupportInboxView, BacklogView, SprintView, DashboardsView, ReportBuilderView, ComplianceView, ServiceView, KnowledgeView, PublicArticleView, EmbedArticleView, PmView, Settings3View, SearchView } from './lazy-views';
 
 const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 

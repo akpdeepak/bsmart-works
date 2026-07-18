@@ -10,7 +10,7 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 - Program mode: **maximal-scope end-to-end completion** (Deepak, 2026-06-20). The authoritative tracker
   is now `docs/implementation/MASTER-COMPLETION-ROADMAP.md`; this file remains the cross-session resume
   ledger.
-- Active phase: **Phase 2 — structural refactors (W2), COMPLETE locally 2026-07-18; pending PR/CI/merge.**
+- Active phase: **Phase 2 — structural refactors (W2), COMPLETE locally 2026-07-18; PR #481 pending CI/merge.**
   Phase 3 begins after post-merge validation. Phase 1 completed 2026-06-21 (PRs #415–#441).
   - ✅ **W2-b god classes — all four split & merged:** `ArticleController`→`ArticleService` (PR #446),
     `KpiService`→`KpiMetricCalculator` (PR #447), `BqlCompiler`→`BqlParser`+`BqlSqlEmitter` (PR #448),
@@ -473,8 +473,9 @@ Resume point: **G-2 domain carve, Identity-first (`auth` first, with the RbacSer
 shared), one module per PR**; then W2-c AppShell decomposition, AsyncBoundary tranches 2–3, and the
 43-file legacy lint-block migration. No schema changes in any Phase-2 PR so far (high-water V119).
 
-2026-07-18: Phase 2 (W2) is complete locally on `codex/refactor-phase2-completion`, pending the
-closeout PR, GitHub CI, merge, and post-merge `main` validation. The backend carve now populates all
+2026-07-18: Phase 2 (W2) is complete locally on `codex/refactor-phase2-completion`; closeout
+[PR #481](https://github.com/akpdeepak/bsmart-works/pull/481) is pending GitHub CI, merge, and
+post-merge `main` validation. The backend carve now populates all
 14 declared modules and reduces the flat package root from 291 to 72 source files, protected by
 cycle, kernel-direction, non-vacuity, and root-budget architecture tests. `AppShell.jsx` is reduced
 from 4,628 to 3,028 lines by extracting providers, authentication, public routes, shortcuts,

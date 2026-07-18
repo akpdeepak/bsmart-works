@@ -1,7 +1,5 @@
 package com.bcits.works.automation;
 
-import com.bcits.works.InstalledExtension;
-import com.bcits.works.InstalledExtensionRepository;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;
 

@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.workspaces.SavedView;
+import com.bcits.works.workspaces.SavedViewRepository;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;

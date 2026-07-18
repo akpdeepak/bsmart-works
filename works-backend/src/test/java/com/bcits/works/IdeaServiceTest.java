@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.projects.Idea;
+import com.bcits.works.projects.IdeaService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

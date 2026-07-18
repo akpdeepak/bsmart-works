@@ -1,4 +1,8 @@
 package com.bcits.works;
+import com.bcits.works.workspaces.ConfigController;
+import com.bcits.works.workspaces.ConfigImpactService;
+import com.bcits.works.workspaces.ConfigSerializationService;
+import com.bcits.works.workspaces.ConfigService;
 
 import com.bcits.works.auth.RbacService;
 

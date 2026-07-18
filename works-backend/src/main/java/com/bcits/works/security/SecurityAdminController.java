@@ -1,6 +1,5 @@
 package com.bcits.works.security;
 
-import com.bcits.works.AccessAnomaly;
 import com.bcits.works.AnomalyDetectionService;
 import com.bcits.works.AnomalyDetector;
 import com.bcits.works.auth.ConditionalAccessEvaluator;

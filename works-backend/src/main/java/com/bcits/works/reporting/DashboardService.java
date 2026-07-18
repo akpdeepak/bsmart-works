@@ -1,6 +1,5 @@
 package com.bcits.works.reporting;
 
-import com.bcits.works.RoleDashboardQueryService;
 
 import org.springframework.stereotype.Service;
 

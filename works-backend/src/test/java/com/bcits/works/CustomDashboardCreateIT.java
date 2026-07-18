@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.reporting.CustomDashboardController;
 import com.bcits.works.reporting.Dashboard;
 
 import java.time.OffsetDateTime;

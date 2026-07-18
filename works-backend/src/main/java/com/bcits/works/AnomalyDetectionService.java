@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.security.AccessAnomaly;
+import com.bcits.works.security.AccessAnomalyRepository;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.SecurityAuditLogService;

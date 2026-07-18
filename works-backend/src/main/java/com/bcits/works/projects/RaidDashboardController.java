@@ -2,12 +2,7 @@ package com.bcits.works.projects;
 
 import com.bcits.works.messaging.ActionItem;
 import com.bcits.works.messaging.ActionItemRepository;
-import com.bcits.works.Assumption;
-import com.bcits.works.AssumptionRepository;
-import com.bcits.works.PmIssue;
-import com.bcits.works.PmIssueRepository;
 import com.bcits.works.Risk;
-import com.bcits.works.RiskRepository;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.RbacGate;

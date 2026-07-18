@@ -1,4 +1,8 @@
 package com.bcits.works;
+import com.bcits.works.workspaces.ConfigService;
+import com.bcits.works.workspaces.ConfigTemplate;
+import com.bcits.works.workspaces.ConfigTemplateRepository;
+import com.bcits.works.workspaces.ConfigTemplateService;
 
 import com.bcits.works.shared.ApiException;
 

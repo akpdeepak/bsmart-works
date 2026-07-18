@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.reporting.FocusBlock;
+import com.bcits.works.reporting.FocusBlockRepository;
 
 import com.bcits.works.shared.ApiException;
 

@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.ai.AnthropicAiProvider;
+import com.bcits.works.ai.DeterministicAiProvider;
 import com.bcits.works.ai.AiModelTier;
 import com.bcits.works.ai.AiProvider;
 

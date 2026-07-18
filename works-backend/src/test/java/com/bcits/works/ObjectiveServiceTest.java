@@ -1,4 +1,7 @@
 package com.bcits.works;
+import com.bcits.works.projects.KeyResult;
+import com.bcits.works.projects.Objective;
+import com.bcits.works.projects.ObjectiveService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

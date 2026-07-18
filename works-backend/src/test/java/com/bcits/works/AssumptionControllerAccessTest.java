@@ -1,4 +1,7 @@
 package com.bcits.works;
+import com.bcits.works.projects.Assumption;
+import com.bcits.works.projects.AssumptionController;
+import com.bcits.works.projects.AssumptionRepository;
 
 import com.bcits.works.auth.RbacService;
 

@@ -1,4 +1,7 @@
 package com.bcits.works;
+import com.bcits.works.workspaces.CustomDomain;
+import com.bcits.works.workspaces.CustomDomainRepository;
+import com.bcits.works.workspaces.CustomDomainVerificationJob;
 
 import com.bcits.works.shared.EventService;
 

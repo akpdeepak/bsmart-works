@@ -1,4 +1,8 @@
 package com.bcits.works;
+import com.bcits.works.projects.AssumptionRepository;
+import com.bcits.works.projects.PmIssueRepository;
+import com.bcits.works.projects.RiskRepository;
+import com.bcits.works.messaging.ActionItemRepository;
 
 import com.bcits.works.auth.RbacService;
 

@@ -1,4 +1,7 @@
 package com.bcits.works;
+import com.bcits.works.workspaces.ConfigDiffService;
+import com.bcits.works.workspaces.ConfigImpactService;
+import com.bcits.works.workspaces.ConfigService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;

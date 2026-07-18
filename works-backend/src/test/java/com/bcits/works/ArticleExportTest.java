@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.knowledge.ArticleDocxSerializer;
+import com.bcits.works.knowledge.ArticlePdfExporter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Tag;

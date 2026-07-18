@@ -3,6 +3,9 @@ package com.bcits.works;
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.knowledge.DocumentTemplate;
+import com.bcits.works.knowledge.DocumentTemplateRepository;
+import com.bcits.works.knowledge.DocumentTemplateService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

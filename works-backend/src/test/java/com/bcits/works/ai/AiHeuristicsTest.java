@@ -1,6 +1,6 @@
 package com.bcits.works.ai;
 
-import com.bcits.works.Article;
+import com.bcits.works.knowledge.Article;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.BqlCompiler;
 import com.bcits.works.workitems.WorkItem;

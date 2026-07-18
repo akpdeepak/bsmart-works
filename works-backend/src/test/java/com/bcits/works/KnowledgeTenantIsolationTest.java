@@ -7,6 +7,21 @@ import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.knowledge.Article;
+import com.bcits.works.knowledge.ArticleAnalyticsService;
+import com.bcits.works.knowledge.ArticleApprovalRepository;
+import com.bcits.works.knowledge.ArticleCommentRepository;
+import com.bcits.works.knowledge.ArticleController;
+import com.bcits.works.knowledge.ArticleDao;
+import com.bcits.works.knowledge.ArticleDiffService;
+import com.bcits.works.knowledge.ArticleRepository;
+import com.bcits.works.knowledge.ArticleService;
+import com.bcits.works.knowledge.ArticleVersionRepository;
+import com.bcits.works.knowledge.ArticleWorkflowService;
+import com.bcits.works.knowledge.KnowledgeSpace;
+import com.bcits.works.knowledge.KnowledgeSpaceController;
+import com.bcits.works.knowledge.KnowledgeSpaceRepository;
+import com.bcits.works.knowledge.SpaceFollowerService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

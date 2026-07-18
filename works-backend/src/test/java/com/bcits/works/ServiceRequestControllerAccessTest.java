@@ -7,6 +7,10 @@ import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
+import com.bcits.works.service.ServiceRequest;
+import com.bcits.works.service.ServiceRequestController;
+import com.bcits.works.service.ServiceRequestRepository;
+import com.bcits.works.service.ServiceRequestService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

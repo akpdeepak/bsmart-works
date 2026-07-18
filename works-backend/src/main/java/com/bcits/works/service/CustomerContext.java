@@ -1,8 +1,7 @@
-package com.bcits.works;
+package com.bcits.works.service;
 
 import com.bcits.works.auth.JwtUtil;
 import com.bcits.works.auth.TokenRevocationService;
-
 import com.bcits.works.shared.ApiException;
 
 import jakarta.servlet.http.HttpServletRequest;

@@ -117,6 +117,14 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
     (auth.ConditionalAccessEvaluator/Service reference it → auth↔messaging). True pure move (zero
     widenings); 2 tests co-located. ArchUnit + unit + 0 Checkstyle + guardrails +
     `ddl-auto=validate` boot. V119.
+  - ✅ **W2 G-2 `service` carved (PR-12):** 24 of 30 customer-service classes moved to
+    `com.bcits.works.service` (`ServiceRequest*`, `CustomerAccount*`, `CustomerFeedbackController/
+    Service/Repository`, `Csat*`, `SupportChat*`, `CustomerPortal/AuthController`, `CustomerContext`,
+    `StakeholderCommunication*`, `StakeholderController/Repository`). **6 entities/repos left in root**
+    — `CustomerUser(+Repo)`, `CustomerFeedback(+Repo)`, `Stakeholder(+Repo)` — reached by the
+    security PII adapters (`CustomerUserPiiService`, `PiiVaultBackfillService`, `StakeholderPiiService`);
+    cutting `security→service` broke all 6 cycles. True pure move (zero widenings); 3 tests
+    co-located. ArchUnit + unit + 0 Checkstyle + guardrails + `ddl-auto=validate` boot (25.8s). V119.
   - Bundle-budget gate (I-2) verified already in CI (`perf-budget`, 500 KB gz initial-JS ceiling).
   - **Still open in Phase 2:** G-2 remaining domain carve (/`automation`/`messaging`/`service`/`knowledge`/`devsync`; + deferred field/value +
     board/impediment classes; ~360 files still flat), W2-c AppShell decomposition (4,629 lines),
@@ -157,7 +165,7 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
   (`roles` V7 vs `role_def` V21); WorkflowController null-workspace branch + create-side body-workspaceId
   trust on Team/Report/etc + per-operation perm tightening on the Slice-D controllers; FLS rule seeding;
   the deferred #243 Slice E CONTRACT predicate removal.
-- Last state update: 2026-07-11 (Phase-2 G-2 `messaging` carved — 36 classes, 2 deferred; resume at `service`/`knowledge`/`devsync`)
+- Last state update: 2026-07-11 (Phase-2 G-2 `service` carved — 24 classes, 6 customer entities deferred; resume at `knowledge`/`devsync`)
   Option-A boundary; ArchUnit/Checkstyle/guardrails/boot green; resume at `workitems` carve next)
 
 ## Trigger contract

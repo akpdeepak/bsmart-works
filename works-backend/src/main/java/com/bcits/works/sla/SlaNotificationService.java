@@ -80,7 +80,7 @@ public class SlaNotificationService {
             reassign(instance.getWorkItemId(), targets);
         }
         for (String userId : userIds) {
-            inApp(userId, "SLA_ESCALATION", message, link);
+            inApp(instance.getWorkspaceId(), userId, "SLA_ESCALATION", message, link);
         }
     }
 
@@ -146,8 +146,9 @@ public class SlaNotificationService {
         }
     }
 
-    private void inApp(String userId, String type, String message, String link) {
+    private void inApp(String workspaceId, String userId, String type, String message, String link) {
         Notification n = new Notification();
+        n.setWorkspaceId(workspaceId);
         n.setUserId(userId);
         n.setType(type);
         n.setMessage(message);

@@ -52,6 +52,7 @@ public final class AiCapabilities {
     public static final String SUPPORT_CHAT           = "support_chat";           // Cap N — customer-chat tier-1 auto-response
     public static final String DASHBOARD_SUMMARY      = "dashboard_summary";      // Cap J — chart/dashboard summary + anomaly
     public static final String DASHBOARD_SUGGESTION   = "dashboard_suggestion";   // Cap J — AI-suggested starter dashboard (role + context)
+    public static final String INBOX_SUMMARY          = "inbox_summary";          // EPIC 8 — missed-activity action digest
 
     /** Description of each capability and its deterministic fallback, surfaced to the UI panel. */
     public record Descriptor(String id, String label, AiModelTier defaultTier, String fallback) { }
@@ -139,7 +140,9 @@ public final class AiCapabilities {
             + "notable deltas and statistical outliers — with the charts shown standalone."),
         new Descriptor(DASHBOARD_SUGGESTION, "AI-suggested starter dashboard", AiModelTier.HAIKU,
             "Falls back to the deterministic role-based starter set of widgets — the existing template/widget "
-            + "gallery defaults the user can accept as-is.")
+            + "gallery defaults the user can accept as-is."),
+        new Descriptor(INBOX_SUMMARY, "Missed activity summary", AiModelTier.HAIKU,
+            "Falls back to deterministic action counts grouped by intent, with the same source links.")
     );
 
     private static final Map<String, Descriptor> BY_ID =

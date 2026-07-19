@@ -121,6 +121,7 @@ public class CommentService {
                     .filter(u -> !u.getId().equals(authorId))
                     .forEach(u -> {
                         Notification n = new Notification();
+                        n.setWorkspaceId(wsId);
                         n.setUserId(u.getId());
                         n.setType("MENTION");
                         n.setMessage(actorName + " mentioned you in a comment");

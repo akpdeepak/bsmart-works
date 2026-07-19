@@ -11,11 +11,12 @@
     "epics:1-5": "node scripts/epics-01-05-completion.mjs",
     "epic:6": "node scripts/epic-06-completion.mjs",
     "epic:7": "node scripts/epic-07-completion.mjs",
+    "epic:8": "node scripts/epic-08-completion.mjs",
     "quality-gates": "node scripts/quality-gates.mjs",
     "ai-rules": "node scripts/generate-ai-rules.mjs",
     "ai-rules:check": "node scripts/generate-ai-rules.mjs --check",
     "task-process:check": "node scripts/check-task-execution-contract.mjs",
-    "verify": "npm run guardrails && npm run quality-gates && npm run ai-rules:check && npm run task-process:check && npm run premium-bar && npm run uiux:e2e-scope && npm run epics:1-5 && npm run epic:6 && npm run epic:7"
+    "verify": "npm run guardrails && npm run quality-gates && npm run ai-rules:check && npm run task-process:check && npm run premium-bar && npm run uiux:e2e-scope && npm run epics:1-5 && npm run epic:6 && npm run epic:7 && npm run epic:8"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.0.2",

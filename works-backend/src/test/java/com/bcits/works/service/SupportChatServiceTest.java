@@ -192,6 +192,7 @@ class SupportChatServiceTest {
 
         // Assert: the notification was created exactly once for user-1.
         verify(notificationBatch).createIfNotBatched(
+            eq("ws"),
             eq("user-1"),
             eq("CHAT_ESCALATED"),
             contains("Billing help"),

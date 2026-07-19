@@ -1,12 +1,8 @@
 package com.bcits.works.messaging;
 
 import com.bcits.works.auth.UserPiiService;
-import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
 
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -21,27 +17,24 @@ import java.util.Map;
 @RequestMapping("/api/v1/notifications")
 public class NotificationController {
 
-    private final NotificationRepository notificationRepository;
+    private final NotificationActivityService activity;
     private final AuthenticatedUser authenticatedUser;
     private final UserPiiService userPii;
 
-    public NotificationController(NotificationRepository notificationRepository, AuthenticatedUser authenticatedUser,
+    public NotificationController(NotificationActivityService activity, AuthenticatedUser authenticatedUser,
                                  UserPiiService userPii) {
-        this.notificationRepository = notificationRepository;
+        this.activity = activity;
         this.authenticatedUser = authenticatedUser;
         this.userPii = userPii;
     }
 
     @GetMapping
     public List<Notification> getNotifications(
-            @RequestParam(required = false) String userId,
+            @RequestParam String workspaceId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         String uid = authenticatedUser.id();
-        // Clamp size to avoid runaway queries (RB-10 §4: always paginate list endpoints).
-        int safeSize = Math.min(size, 200);
-        Pageable pageable = PageRequest.of(page, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
-        List<Notification> result = notificationRepository.findByUserId(uid, pageable);
+        List<Notification> result = activity.list(workspaceId, uid, page, size);
         result.forEach(this::resolveActor);
         return result;
     }
@@ -62,31 +55,18 @@ public class NotificationController {
     }
 
     @GetMapping("/unread-count")
-    public Map<String, Long> unreadCount(@RequestParam(required = false) String userId) {
-        userId = authenticatedUser.id();
-        long count = notificationRepository.countByUserIdAndIsRead(userId, false);
+    public Map<String, Long> unreadCount(@RequestParam String workspaceId) {
+        long count = activity.unreadCount(workspaceId, authenticatedUser.id());
         return Map.of("count", count);
     }
 
     @PutMapping("/{id}/read")
-    public Notification markRead(@PathVariable Long id) {
-        String userId = authenticatedUser.id();
-        Notification n = notificationRepository.findById(id)
-                .orElseThrow(() -> ApiException.notFound("Notification", String.valueOf(id)));
-        // A user may only mark their own notifications read — 404 (not 403) so another user's
-        // notification id is never confirmed to exist.
-        if (!userId.equals(n.getUserId())) {
-            throw ApiException.notFound("Notification", String.valueOf(id));
-        }
-        n.setRead(true);
-        return notificationRepository.save(n);
+    public Notification markRead(@PathVariable Long id, @RequestParam String workspaceId) {
+        return activity.markRead(workspaceId, authenticatedUser.id(), id);
     }
 
     @PutMapping("/mark-all-read")
-    public void markAllRead(@RequestParam(required = false) String userId) {
-        userId = authenticatedUser.id();
-        List<Notification> unread = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
-        unread.forEach(n -> n.setRead(true));
-        notificationRepository.saveAll(unread);
+    public void markAllRead(@RequestParam String workspaceId) {
+        activity.markAllRead(workspaceId, authenticatedUser.id());
     }
 }

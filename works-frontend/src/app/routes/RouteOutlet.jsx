@@ -182,14 +182,19 @@ export function RouteOutlet({ model }) {
           {view === 'notifications' && (
             <NotificationsView
               loading={loading}
+              activeWorkspaceId={activeWorkspaceId}
+              inboxItems={model.inboxItems}
+              setInboxItems={model.setInboxItems}
               notifications={notifications}
               setNotifications={setNotifications}
               unreadCount={unreadCount}
-              currentUser={currentUser}
               fetchNotifications={fetchNotifications}
               fetchUnreadCount={fetchUnreadCount}
               setUnreadCount={setUnreadCount}
-              setView={setView}
+              navigate={navigate}
+              workItems={workItems}
+              projects={projects}
+              setSelectedItem={setSelectedItem}
               onError={reportError}
             />
           )}

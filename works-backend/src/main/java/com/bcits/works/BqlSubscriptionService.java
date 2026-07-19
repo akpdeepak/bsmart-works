@@ -147,6 +147,7 @@ public class BqlSubscriptionService {
             view.getBqlFilter() == null ? "" : view.getBqlFilter(), java.nio.charset.StandardCharsets.UTF_8);
         if (inApp) {
             Notification n = new Notification();
+            n.setWorkspaceId(sub.getWorkspaceId());
             n.setUserId(sub.getUserId());
             n.setType("BQL_SUBSCRIPTION");
             n.setMessage("Saved view \"" + view.getName() + "\" has " + count

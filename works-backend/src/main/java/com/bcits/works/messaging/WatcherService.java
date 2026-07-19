@@ -62,10 +62,17 @@ public class WatcherService {
      *                system-originated notification (no actor name is prepended).
      */
     public void notifyWatchers(String workItemId, String actorId, String message, Collection<String> exclude) {
+        notifyWatchers(null, workItemId, actorId, message, exclude);
+    }
+
+    /** Tenant-aware fan-out path. */
+    public void notifyWatchers(String workspaceId, String workItemId, String actorId, String message,
+                               Collection<String> exclude) {
         Set<String> skip = exclude == null ? Set.of() : Set.copyOf(exclude);
         for (String uid : watchers(workItemId)) {
             if (skip.contains(uid)) continue;
             Notification n = new Notification();
+            n.setWorkspaceId(workspaceId);
             n.setUserId(uid);
             n.setActorId(actorId);
             n.setType("WATCH");

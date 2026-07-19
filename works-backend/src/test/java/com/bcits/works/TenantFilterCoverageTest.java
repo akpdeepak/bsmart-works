@@ -64,8 +64,8 @@ class TenantFilterCoverageTest {
      * Global-by-design entities — must never carry the central filter. Seeded verbatim from the
      * inventory's GLOBAL classification (EPIC #243 §4). Rationale per entity is in the EPIC; in short:
      * identity is a unification layer (a user spans workspaces); the workspace row is the tenant root
-     * (filtering it on its own id is circular); notifications/preferences/push/reset-tokens/passkey
-     * challenges are user- or auth-scoped and read before/across any workspace binding; marketplace
+     * (filtering it on its own id is circular); preferences/push/reset-tokens/passkey challenges are
+     * user- or auth-scoped and read before/across any workspace binding; marketplace
      * and config-template are global/shared catalogs whose visibility is enforced in their queries,
      * not by a {@code workspace_id = :ws} filter; role-permission is a global reference vocabulary.
      *
@@ -76,7 +76,6 @@ class TenantFilterCoverageTest {
     static final Set<String> GLOBAL_BY_DESIGN = Set.of(
             "User",
             "Workspace",
-            "Notification",
             "NotificationPreference",
             "PushSubscription",
             "PasswordResetToken",

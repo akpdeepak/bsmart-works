@@ -2,7 +2,7 @@
 
 Date: 2026-07-19
 Branch: `codex/epic-07-today-completion`
-Status: Code-verified; remote PR and merge pending
+Status: Code-verified; PR [#487](https://github.com/akpdeepak/bsmart-works/pull/487) awaiting CI
 
 ## Scope Completed
 

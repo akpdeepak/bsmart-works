@@ -1,6 +1,6 @@
 # EPIC 7 - bSmart Today
 
-Status: Code-verified complete; PR pending
+Status: Code-verified complete; PR [#487](https://github.com/akpdeepak/bsmart-works/pull/487) awaiting CI
 Branch: `codex/epic-07-today-completion`
 Roadmap: V.20 Phase 3 / W3
 

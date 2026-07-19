@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Verifies that the DoD version tag in CLAUDE.md §7 matches the one in the PR template.
+# Verifies that the generated CLAUDE.md copy of Orchestrator §4 matches the PR template.
 # Both files carry a comment:  <!-- dod-version: YYYY-MM-DD-rN -->
-# When §7 checklist is updated, bump the tag in BOTH files together.
+# When the Orchestrator §4 DoD contract changes, bump the canonical tag and PR-template tag together,
+# then regenerate CLAUDE.md from ai-rules/.
 # This script runs in pre-commit and CI to prevent silent drift.
 
 set -euo pipefail
@@ -22,7 +23,7 @@ if [ "$CLAUDE_VER" != "$TEMPLATE_VER" ]; then
   echo "  CLAUDE.md says:   $CLAUDE_VER" >&2
   echo "  PR template says: $TEMPLATE_VER" >&2
   echo "" >&2
-  echo "  Update CLAUDE.md §7 and the PR template together, then bump the dod-version tag in both." >&2
+  echo "  Update ai-rules/00-ORCHESTRATOR.md §4 and the PR template, bump both tags, then regenerate." >&2
   exit 1
 fi
 

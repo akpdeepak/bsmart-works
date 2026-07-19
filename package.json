@@ -15,7 +15,8 @@
     "quality-gates": "node scripts/quality-gates.mjs",
     "ai-rules": "node scripts/generate-ai-rules.mjs",
     "ai-rules:check": "node scripts/generate-ai-rules.mjs --check",
-    "verify": "npm run guardrails && npm run quality-gates && npm run ai-rules:check && npm run premium-bar && npm run uiux:e2e-scope && npm run epics:1-5 && npm run epic:6 && npm run epic:7 && npm run epic:8"
+    "task-process:check": "node scripts/check-task-execution-contract.mjs",
+    "verify": "npm run guardrails && npm run quality-gates && npm run ai-rules:check && npm run task-process:check && npm run premium-bar && npm run uiux:e2e-scope && npm run epics:1-5 && npm run epic:6 && npm run epic:7 && npm run epic:8"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.0.2",

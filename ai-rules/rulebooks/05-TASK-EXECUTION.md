@@ -2,7 +2,8 @@
 
 > Owns **how any task — raised by the user *or* self-identified by an AI tool — goes from idea to
 > merged-on-remote.** This is the detailed, gated expansion of [Orchestrator §2](../00-ORCHESTRATOR.md).
-> Run it for **every** task; Stage 0 decides how much of it applies.
+> Run it for **every** task. Stage 0 right-sizes the detail, but scope planning, acceptance criteria,
+> and validation planning are never skipped.
 > **Enforced by:** the PR template (Definition of Done), the CI gate (blocks merge), `guardrails.sh`,
 > and branch protection on `main`.
 
@@ -12,10 +13,12 @@
 
 **Capture and classify** the task: feature · bug · refactor · chore · spike · hotfix.
 
-**If *you* (the AI tool) surfaced this task, do not fold it into the current work.** Log it as its
-own issue/PR and surface it. The default for self-identified work is **propose, never silently
-expand scope** (RB-10 §9, scope discipline). Anything touching **data model, security, tenant
-isolation, or RBAC → stop and get Deepak's sign-off first** (Orchestrator §5).
+**If *you* (the AI tool) surfaced this task, do not fold it into the current work.** Capture the
+candidate with the same right-sized scope analysis, acceptance criteria, and validation plan, then
+surface or log it separately. Planning does not authorize implementation. The default for
+self-identified work is **propose, never silently expand implementation scope** (RB-10 §9, scope
+discipline). Anything touching **data model, security, tenant isolation, or RBAC → stop and get
+Deepak's sign-off before implementation** (Orchestrator §5).
 
 **Earns-its-place + iteration check:** confirm the task closes a real gap (RB-20 §1) and belongs to
 the **active iteration** (Orchestrator §6). If it's iteration N+1 work, **park it — do not build
@@ -25,10 +28,10 @@ ahead** (RB-20 §2).
 
 | Lane | Examples | Process |
 |------|----------|---------|
-| **Trivial** | typo, copy, comment, doc | branch → fix → PR → CI green → squash-merge. Skip Stages 2–3. |
-| **Small** | one layer, low risk, no schema/tenant/AI | light Stage 2–3 → standard flow |
-| **Standard** | a feature, endpoint, or component | full workflow below |
-| **Large / risky** | schema change, cross-cutting, new capability, **anything tenant/security/AI/compliance** | full workflow **+ Deepak checkpoint at Stage 2** |
+| **Trivial** | typo, copy, comment, doc | micro-plan: one-line bounded scope + acceptance criterion + exact validation check → standard flow |
+| **Small** | one layer, low risk, no schema/tenant/AI | compact execution plan + standard flow |
+| **Standard** | a feature, endpoint, or component | full execution plan + workflow below |
+| **Large / risky** | schema change, cross-cutting, new capability, **anything tenant/security/AI/compliance** | full workflow **+ Deepak checkpoint after the Stage 3 plan is complete** |
 
 ---
 
@@ -41,7 +44,7 @@ ahead** (RB-20 §2).
 
 ---
 
-## Stage 2 — Multidimensional scope analysis — the holistic plan
+## Stage 2 — Scope expansion & execution plan
 
 Walk the [routing table](../00-ORCHESTRATOR.md#3-routing-table). For **each dimension the task
 touches**, write what it requires — this *is* what "multidimensional" means here:
@@ -57,21 +60,60 @@ touches**, write what it requires — this *is* what "multidimensional" means he
 **Holistic / second-order** *(systems-thinking)*: list dependencies, the ripple across the seven
 unification layers, what could break elsewhere, affected downstream iterations, and reversibility.
 
-**Output:** a short written plan — scope, the dimensions above, the approach, the risks, and the
-migration plan if any. On the **Large/risky** lane, this plan is the Deepak checkpoint *before*
-code.
+"Expand scope" here means **expand the analysis** until all work required for the requested outcome
+is visible and decomposed. It does not broaden implementation scope or authorize adjacent work.
+
+### Mandatory execution plan
+
+**Every task produces one written plan, sized to its lane, before execution begins.** The plan must
+contain:
+
+- **Objective** — the outcome and why it matters.
+- **Scope and boundaries** — in scope, out of scope, and affected rule-book dimensions.
+- **Execution steps** — ordered work, dependencies, assumptions, risks, and reversibility.
+- **Acceptance criteria** — specific, testable statements defining done.
+- **Validation plan** — each criterion's test/check, expected result, and evidence.
+- **Change safety** — migration and rollback details when applicable.
+
+Stage 3 completes the acceptance-criteria and validation sections of this same plan. On the
+**Large/risky** lane, the completed Stage 3 plan is the Deepak checkpoint *before* code or other
+implementation.
 
 ---
 
 ## Stage 3 — Test & validation plan *(before code)*
 
-- Turn acceptance criteria into **testable statements**.
+- Map every acceptance criterion to a test case or observation, test level, exact command/check,
+  expected result, and required evidence.
 - Enumerate the **mandatory scenario categories**: happy · edge · error · empty ·
   **unauthorized · cross-tenant** (RB-40 §1) · **performance vs NFR budget** if on a hot path
-  (RB-40 §5) · **accessibility** if UI (RB-30 §6).
+  (RB-40 §5) · **accessibility** if UI (RB-30 §6). Mark a category N/A only with a reason;
+  unauthorized and cross-tenant cannot be N/A when authorization or tenant data is touched.
 - Choose test levels: unit (JUnit 5 / Vitest) · integration (**Testcontainers, real Postgres**) ·
   E2E (Playwright when active).
 - Define **"working as expected"** concretely: the exact checks/observations that will prove it.
+- For coding work, name the test cases that will be authored first and their expected RED result; a
+  pure refactor records the pre-edit characterization baseline instead. Implementation code
+  cannot begin until this plan is complete.
+
+### Coding tasks — test-first TDD
+
+Apply this cycle to every coding-related change that alters executable behavior—including
+application, migration, automation, and infrastructure/configuration code—and every bug fix:
+
+1. **RED — write the test first:** before implementation code, write the smallest relevant automated
+   test and run it. Confirm the expected failure is caused by the missing behavior or broken
+   contract, not by syntax, setup, or an unrelated defect. Record the command and failure evidence.
+2. **GREEN — implement the minimum:** write only enough production code to pass the new test, then
+   run the targeted suite and record the passing evidence.
+3. **REFACTOR — improve while green:** simplify names, structure, and duplication without changing
+   behavior; keep the targeted and related suites green.
+
+Repeat in small increments. Bug fixes begin with a reproducing regression test. Pure refactors first
+establish or add passing characterization coverage, then make production edits in green increments;
+do not manufacture a fake RED. If a coding-related implementation cannot be tested first, stop and get
+Deepak's explicit approval before implementation, with the blocker documented. Non-code work still
+requires the written plan, acceptance criteria, and validation plan, but does not invent TDD evidence.
 
 ---
 
@@ -84,6 +126,10 @@ code.
 ---
 
 ## Stage 5 — Build
+
+For coding-related work, execute the Stage 3 TDD cycle in order. Do not write implementation before the
+test is authored and its intended RED is observed; pure refactors use the documented characterization
+baseline. Keep temporary RED local — never push or merge a red suite.
 
 Apply the in-scope rulebook principles — the build non-negotiables (Orchestrator §2.4):
 one job per layer · **RBAC in the service** · **every query workspace-scoped** · **tokens not
@@ -100,7 +146,8 @@ logged per Stage 0, never smuggled in). Commit in logical increments with clear 
   you push.
 - Validate against acceptance criteria and the "working as expected" definition. UI → verify the
   five states + a11y. Tenant/AI/perf → verify the RB-40 gates.
-- **If anything fails → return to Stage 5. Never force a red change forward** *(failure path)*.
+- **If any final validation fails → return to Stage 5. Never force a red change forward** *(failure
+  path)*. The intentional local RED from the test-first cycle is Stage 5 evidence, not a shippable state.
 
 ---
 
@@ -108,7 +155,9 @@ logged per Stage 0, never smuggled in). Commit in logical increments with clear 
 
 - Push the branch to origin; open the PR (draft early if WIP).
 - **PR description is the communication + traceability artifact** (Orchestrator §2.6, RB-20 §6):
-  what changed · why · capability + iteration · rule books applied · how it was verified.
+  what changed · why · capability + iteration · rule books applied · the pre-execution plan · how it
+  was verified · RED/GREEN/REFACTOR evidence for coding work (or characterization baseline for a pure
+  refactor).
 - Complete the self-review checklist; **the PR template is the Definition of Done** (Orchestrator §4).
 - **Merge is gated:** CI must be **green** (the gate blocks merge) **and** review approved →
   **squash-merge only**. Never merge red; never direct-push to `main`.
@@ -145,5 +194,7 @@ applicable) deployed.**
 ### What's enforced here
 Definition of Done → PR template; the whole gate that blocks merge → `ci.yml`; squash-merge + branch
 protection → repo settings; build non-negotiables → `guardrails.sh` + ESLint + Checkstyle; behavior
-→ JUnit/JaCoCo + Vitest. Triage, right-sizing, and the self-identified-work guardrail are review
-discipline, anchored by Stage 0 and the PR template.
+→ JUnit/JaCoCo + Vitest; the universal plan and TDD policy →
+`scripts/check-task-execution-contract.mjs` + PR evidence/review. Triage, right-sizing, test chronology,
+and the self-identified-work guardrail remain review disciplines anchored by Stage 0 and the PR
+template; CI can require the contract and a green result, but cannot independently prove chronology.

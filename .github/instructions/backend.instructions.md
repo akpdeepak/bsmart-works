@@ -122,13 +122,23 @@ compile to BQL. It is one of the seven unification layers (RB-40 / ENGINEERING-P
 
 ## 7. Testing
 
+- **Test-first is mandatory for coding-related implementation changes that alter executable
+  behavior.** Use **RED → GREEN → REFACTOR** in small increments: author and run the relevant
+  automated test before implementation, confirm it fails for the intended missing behavior, write
+  the minimum code to pass, then improve the design while the targeted and related suites remain
+  green (RB-05 Stage 3).
+- **Bug fixes start with a failing regression test.** Pure refactors establish or add passing
+  characterization coverage before production edits, then proceed in green increments; do not create
+  a fake failure for behavior that already exists.
 - **Pyramid:** many unit, fewer integration, fewest E2E.
 - **Backend:** JUnit 5 + **Testcontainers** (real Postgres, not mocks, for anything touching the
   DB). JaCoCo coverage gate in CI.
 - **Frontend:** Vitest + React Testing Library; test behavior, not implementation.
 - **E2E:** Playwright (scaffold present, not yet active).
-- **Done means demonstrated:** a change isn't done until a test proves its behavior, or it's been
-  run in the app. Every feature includes an **unauthorized** and a **cross-tenant** test (RB-40).
+- **Done means demonstrated:** coding-related behavior requires automated test-first coverage;
+  running the app supplements that proof but does not replace it. A non-code task may use an exact
+  observation from its validation plan. Every feature includes an **unauthorized** and a
+  **cross-tenant** test when authorization or tenant data is touched (RB-40).
 
 ---
 

@@ -9,7 +9,7 @@
 > *what* to do, *why*, *when*, and *how* — and binds each action to the check that enforces it.
 > It does not restate the rules; it **routes** to the rule book that owns them.
 >
-> Version 1.0 · last verified 2026-06-09 · owner: Deepak Pandey
+> Version 1.1 · last verified 2026-07-19 · owner: Deepak Pandey
 
 ---
 
@@ -106,7 +106,12 @@ This loop is itself enforced: the gate at step 5 is the PR template + CI (§4).
 > The six steps below are the **at-a-glance**. The full gated procedure — intake, triage,
 > right-sizing, branch/PR/merge, post-merge remote verification, and failure/rollback paths — is
 > **[RB-05](./rulebooks/05-TASK-EXECUTION.md)**, which is the canonical detail. Stage 0 of RB-05
-> decides how much of the process a given task needs.
+> decides how much detail each stage needs; it does not remove the planning or validation sequence.
+
+**Universal execution invariant:** right-sizing changes the depth, never the sequence. **Every task**
+gets an appropriately detailed **written execution plan before execution** containing bounded scope,
+ordered steps, testable **acceptance criteria**, and a **validation plan**. Every coding-related
+change that alters executable behavior follows **RED → GREEN → REFACTOR** as defined in RB-05 and RB-10.
 
 **1 · Orient — read before you write.**
 *Why:* most defects are misunderstandings, not bad code. *How:* read this orchestrator, then the
@@ -117,22 +122,29 @@ active iteration (§6).
 *Why:* applying the wrong rule book, or missing one, is how silos and inconsistencies start.
 *How:* use the routing table (§3). List every rule book in scope before coding.
 
-**3 · Plan — acceptance criteria + scenarios.**
-*Why:* "done" must be defined before "build," or scope drifts. *How:* write testable acceptance
-criteria; enumerate happy-path, edge, error, empty, and **unauthorized / cross-tenant** scenarios
-(the last two are non-negotiable — see RB-40).
+**3 · Plan — expand and bound the analysis, define done, plan proof.**
+*Why:* "done" must be defined before "build," or scope drifts. *How:* at lane-appropriate depth,
+write the objective; in-scope and out-of-scope boundaries; affected dimensions; dependencies, risks,
+and ordered execution steps; testable acceptance criteria; and the exact validation plan. Enumerate
+happy-path, edge, error, empty, and **unauthorized / cross-tenant** scenarios (the last two are
+non-negotiable when authorization or tenant data is touched — see RB-40). "Expand scope" means expose
+and decompose the work needed for the requested outcome; it never authorizes adjacent features.
 
 **4 · Build — the non-negotiables.**
 *Why:* these are the rules a check will catch anyway; doing them by default is faster than failing CI.
-*How:* one job per layer; RBAC in the service, never the controller or UI; **every query
+*How:* for coding-related changes that alter executable behavior, write and run the relevant test
+first, observe the intended RED,
+write the minimum code for GREEN, then REFACTOR while green. After that: one job per layer; RBAC in
+the service, never the controller or UI; **every query
 workspace-scoped**; design tokens, never literals; one HTTP path (`apiClient`); one error shape;
 Flyway-only schema changes (next migration: §6); validate every DTO at the boundary; change only
 what the task needs.
 
 **5 · Verify — the Definition of Done gate.**
 *Why:* green CI is the contract that lets anyone merge with confidence. *How:* see §4. A change is
-not done until its behavior is demonstrated (a test, or the running app) **and** the DoD gate is
-green **and** the in-scope spec commitments (RB-40) are satisfied — green CI is necessary, not
+not done until coding-related behavior is demonstrated by automated tests (with the running app as
+supplementary evidence), or a non-code outcome by its exact planned observation, **and** the DoD gate
+is green **and** the in-scope spec commitments (RB-40) are satisfied — green CI is necessary, not
 sufficient.
 
 **6 · Communicate — close the loop.**
@@ -173,17 +185,20 @@ to make the gate non-optional; the checks do the enforcing.
 | Java style | Checkstyle (`failOnViolation=true`; baseline clean as of 2026-06-08 — TD-005 closed) | `./mvnw verify` · CI |
 | Backend behavior + coverage | JUnit 5 + JaCoCo gate | CI |
 | Frontend behavior | Vitest + React Testing Library | pre-commit · CI |
+| Scope-first plan + acceptance/validation + test-first TDD contract | `scripts/check-task-execution-contract.mjs` + PR evidence/review | pre-commit · CI · every PR |
 | AI-tool rule files never drift from source | `scripts/generate-ai-rules.mjs --check` | pre-commit · CI |
 | DoD + volatile facts never drift | `scripts/check-dod-sync.sh` (+ extend to cover the §6 migration number) | pre-commit · CI |
 | Definition of Done | `.github/pull_request_template.md` | every PR |
 | The whole gate | `.github/workflows/ci.yml` | every push & PR — **blocks merge** |
 
-**Definition of Done (the gate's contract):** acceptance criteria met · tests prove behavior ·
+**Definition of Done (the gate's contract):** bounded execution plan recorded (scope + steps +
+acceptance criteria + validation plan) · acceptance criteria met · coding changes include test-first
+evidence (RED → GREEN → REFACTOR; characterization baseline for pure refactors) · tests prove behavior ·
 no new lint/guardrail/style violations · tenant-scoped + RBAC-enforced · tokens not literals ·
 migration (if any) is the next sequential number (§6) and forward-only · PR describes change/why/rule-books/verification ·
 in-scope RB-40 commitments satisfied.
 
-<!-- dod-version: 2026-06-04-r1 — keep in sync with .github/pull_request_template.md; verified by scripts/check-dod-sync.sh. Bump in both places when the §4 DoD contract changes. -->
+<!-- dod-version: 2026-07-19-r1 — keep in sync with .github/pull_request_template.md; verified by scripts/check-dod-sync.sh. Bump in both places when the §4 DoD contract changes. -->
 
 ---
 

@@ -1,14 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  Home, User, Bell, Code, LayoutGrid, ListTodo, Zap, Rocket, FolderKanban,
-  BarChart2, LayoutDashboard, FileText, TrendingUp, Headset, Timer, ShieldCheck,
-  Gauge, Map as MapIcon, ClipboardList, Workflow, Plug, Search, BookOpen,
-  SlidersHorizontal, Settings, Trash2, PanelLeftClose, LogOut, ChevronDown, Check, Sparkles,
-  Bot, Package, Code2, MessageSquare, Crown, ShieldHalf,
+  Settings, PanelLeftClose, LogOut, ChevronDown, Check,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/works/atoms/badge';
 import { useI18n } from '@/lib/i18n';
+import { MODES, TIER, moreDestinations, visibleSurfaces } from '@/lib/nav-model';
 
 // Organism — brand-navy sidebar nav (CLAUDE.md §4.6, §4.12).
 // Props are domain-typed: accepts current view, workspace, user, counts.
@@ -22,62 +19,30 @@ import { useI18n } from '@/lib/i18n';
 //  - Collapsed: icon rail, tooltip on hover (§4.12)
 //  - All 5 interactive states on every nav item (§4.8)
 
-// ─── Nav item data ────────────────────────────────────────────────────────────
+function navigationSections(visibility) {
+  const modeSections = MODES.map((mode) => ({
+    id: mode.id,
+    label: mode.label,
+    labelKey: mode.labelKey,
+    items: visibleSurfaces(mode.id, visibility).map((surface) => ({
+      id: surface.id,
+      label: surface.label,
+      icon: surface.Icon,
+      i18nKey: surface.labelKey,
+    })),
+  })).filter((section) => section.items.length > 0);
 
-const NAV_SECTIONS = [
-  { id: null, items: [{ id: 'dashboard', label: 'Today', icon: Home, i18nKey: 'nav.today' }] },
-  { id: 'my-work', label: 'My Work', labelKey: 'nav.section.myWork', items: [
-    { id: 'myworks',       label: 'My Works',      icon: User, i18nKey: 'nav.myWork' },
-    { id: 'notifications', label: 'Notifications', icon: Bell, i18nKey: 'nav.notifications' },
-    { id: 'developer',     label: 'Developer',     icon: Code, i18nKey: 'nav.developer' },
-  ] },
-  { id: 'plan', label: 'Plan & Track', labelKey: 'nav.section.planTrack', items: [
-    { id: 'board',    label: 'Board',         icon: LayoutGrid, i18nKey: 'nav.board' },
-    { id: 'backlog',  label: 'Backlog',       icon: ListTodo, i18nKey: 'nav.backlog' },
-    { id: 'sprint',   label: 'Active Sprint', icon: Zap, i18nKey: 'nav.sprint' },
-    { id: 'releases', label: 'Releases',      icon: Rocket, i18nKey: 'nav.releases' },
-    { id: 'projects', label: 'Teams',          icon: FolderKanban, i18nKey: 'nav.teams' },
-  ] },
-  { id: 'insights', label: 'Insights', labelKey: 'nav.section.insights', items: [
-    { id: 'reports',       label: 'Reports',        icon: BarChart2, i18nKey: 'nav.reports' },
-    { id: 'dashboards',    label: 'Dashboards',     icon: LayoutDashboard, i18nKey: 'nav.dashboards' },
-    { id: 'reportbuilder', label: 'Report Builder', icon: FileText, i18nKey: 'nav.reportBuilder' },
-    { id: 'performance',   label: 'Performance',    icon: TrendingUp, i18nKey: 'nav.performance' },
-  ] },
-  { id: 'service', label: 'Service & Compliance', labelKey: 'nav.section.serviceCompliance', items: [
-    { id: 'service',      label: 'Service Desk',  icon: Headset, i18nKey: 'nav.serviceDesk' },
-    { id: 'supportinbox', label: 'Support Inbox', icon: MessageSquare, i18nKey: 'nav.supportInbox' },
-    { id: 'sla',          label: 'SLA',           icon: Timer, i18nKey: 'nav.sla' },
-    { id: 'compliance',   label: 'Compliance',    icon: ShieldCheck, i18nKey: 'nav.compliance' },
-  ] },
-  { id: 'cockpits', label: 'Cockpits', labelKey: 'nav.section.cockpits', items: [
-    { id: 'smcockpit',   label: 'Sprint Cockpit', icon: Gauge, i18nKey: 'nav.sprintCockpit' },
-    { id: 'poworkspace', label: 'PO Workspace', icon: MapIcon, i18nKey: 'nav.poWorkspace' },
-    { id: 'leadership',  label: 'Leadership',   icon: Crown, i18nKey: 'nav.leadership' },
-    { id: 'adminops',    label: 'Admin Ops',    icon: ShieldHalf, i18nKey: 'nav.adminOps' },
-    { id: 'pm',          label: 'PM Artifacts', icon: ClipboardList, i18nKey: 'nav.pmArtifacts' },
-  ] },
-  { id: 'automate', label: 'Automate & Connect', labelKey: 'nav.section.automateConnect', items: [
-    { id: 'automations',  label: 'Automations',  icon: Workflow, i18nKey: 'nav.automations' },
-    { id: 'integrations', label: 'Integrations', icon: Plug, i18nKey: 'nav.integrations' },
-    { id: 'bql',          label: 'BQL Query',    icon: Search, i18nKey: 'nav.bqlQuery' },
-  ] },
-  { id: 'ai-ecosystem', label: 'AI & Ecosystem', labelKey: 'nav.section.aiEcosystem', items: [
-    { id: 'aistudio',        label: 'AI Studio',        icon: Bot, i18nKey: 'nav.aiStudio' },
-    { id: 'marketplace',     label: 'Marketplace',      icon: Package, i18nKey: 'nav.marketplace' },
-    { id: 'developerportal', label: 'Developer Portal', icon: Code2, i18nKey: 'nav.developerPortal' },
-  ] },
-  { id: 'knowledge', label: 'Knowledge', labelKey: 'nav.section.knowledge', items: [
-    { id: 'knowledge',         label: 'Knowledge',          icon: BookOpen, i18nKey: 'nav.knowledge' },
-    { id: 'knowledgeadvanced', label: 'Templates & Extract', icon: FileText, i18nKey: 'nav.templatesExtract' },
-  ] },
-  { id: 'configure', label: 'Configure', labelKey: 'nav.section.configure', items: [
-    { id: 'settings3', label: 'Workflows & Fields', icon: SlidersHorizontal, i18nKey: 'nav.workflowsFields' },
-    { id: 'aicontrol', label: 'AI Control',         icon: Sparkles, i18nKey: 'nav.aiControl' },
-    { id: 'workspace', label: 'Settings',           icon: Settings, i18nKey: 'nav.settings' },
-    { id: 'trash',     label: 'Trash',              icon: Trash2, i18nKey: 'nav.trash' },
-  ] },
-];
+  const more = moreDestinations(visibility).map((destination) => ({
+    id: destination.id,
+    label: destination.label,
+    icon: destination.Icon,
+    i18nKey: destination.labelKey,
+  }));
+
+  return more.length > 0
+    ? [...modeSections, { id: 'more', label: 'More', labelKey: 'nav.more', items: more }]
+    : modeSections;
+}
 
 // ─── NavItem ──────────────────────────────────────────────────────────────────
 
@@ -165,8 +130,10 @@ export function SidebarNav({
   onSwitchWorkspace,
   onRetryWorkspaces,
   onOpenWorkspaceSettings,
+  visibility = TIER.OWNER,
 }) {
   const { t } = useI18n();
+  const navSections = navigationSections(visibility);
   const hasSwitcher = typeof onSwitchWorkspace === 'function';
   const [wsOpen, setWsOpen] = useState(false);
   const wsRef = useRef(null);
@@ -309,7 +276,7 @@ export function SidebarNav({
         aria-label={t('nav.mainNavigation')}
         className="flex-1 overflow-y-auto p-2"
       >
-        {NAV_SECTIONS.map((section, si) => (
+        {navSections.map((section, si) => (
           <div key={section.id ?? `root-${si}`} className={cn(si > 0 && 'mt-1')}>
             {section.label && !collapsed && (
               <p className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wider text-white/40">

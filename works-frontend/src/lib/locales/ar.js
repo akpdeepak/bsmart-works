@@ -237,6 +237,7 @@ export default {
   "nav.smCockpit": "قمرة SM",
   "nav.sprintCockpit": "قمرة السباق",
   "nav.poWorkspace": "مساحة PO",
+  "nav.account": "حسابي",
   "nav.leadership": "القيادة",
   "nav.adminOps": "عمليات الإدارة",
   "nav.pmArtifacts": "مخرجات PM",

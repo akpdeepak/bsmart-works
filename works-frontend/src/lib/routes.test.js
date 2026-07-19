@@ -6,6 +6,7 @@ import {
   routeQueryState,
   mergeRouteQueryState,
 } from './routes';
+import { navDestinations } from './nav-model';
 
 describe('routes', () => {
   it('round-trips every view through its path', () => {
@@ -19,7 +20,14 @@ describe('routes', () => {
     expect(viewToPath('board')).toBe('/board');
     expect(viewToPath('reportbuilder')).toBe('/report-builder');
     expect(viewToPath('settings3')).toBe('/settings/workflows');
+    expect(viewToPath('aicontrol')).toBe('/settings/ai-control');
     expect(viewToPath('workspace')).toBe('/settings');
+  });
+
+  it('gives every command-palette destination a stable deep link', () => {
+    for (const destination of navDestinations()) {
+      expect(VIEW_PATHS[destination.id], destination.id).toBeTruthy();
+    }
   });
 
   it('returns null for an unknown view so the URL is left untouched', () => {

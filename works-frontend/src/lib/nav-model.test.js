@@ -3,6 +3,7 @@ import {
   TIER, MODES, LENSES, SETUP_DESTINATIONS,
   tierForSurface, canSeeSurface, allowed, navDestinations, visibleModes, visibleSurfaces,
   firstSurfaceOf, modeForView, labelForView, isPrimaryForRole, primarySurfacesFor,
+  breadcrumbTrail, moreDestinations, roleLandingForMode,
 } from './nav-model';
 
 describe('nav-model — tier-based visibility', () => {
@@ -90,6 +91,13 @@ describe('nav-model — visibility resolver + palette', () => {
     expect(dests).toHaveLength(SETUP_DESTINATIONS.length);
     expect(dests.every((d) => d.group === 'More' && d.groupKey === 'nav.more')).toBe(true);
   });
+
+  it('filters the More menu through the same server-authoritative visibility contract', () => {
+    expect(moreDestinations({ surfaces: ['account', 'security'] }).map((d) => d.id))
+      .toEqual(['security', 'account']);
+    expect(moreDestinations(TIER.MEMBER).map((d) => d.id))
+      .toEqual(['account', 'developer', 'bql']);
+  });
 });
 
 describe('nav-model — orientation + role mapping', () => {
@@ -116,5 +124,18 @@ describe('nav-model — orientation + role mapping', () => {
       expect(primarySurfacesFor(l.id).length).toBeGreaterThan(0);
       expect(isPrimaryForRole(l.id, l.view)).toBe(true);
     }
+  });
+
+  it('uses the active role lens to choose a relevant mode landing', () => {
+    expect(roleLandingForMode('deliver', 'developer', TIER.MEMBER)).toBe('board');
+    expect(roleLandingForMode('deliver', 'scrum-master', TIER.LEAD)).toBe('smcockpit');
+    expect(roleLandingForMode('insight', 'leadership', TIER.ADMIN)).toBe('dashboards');
+  });
+
+  it('builds orientation breadcrumbs for rail and More destinations', () => {
+    expect(breadcrumbTrail('board').map((item) => item.label)).toEqual(['Deliver', 'Board']);
+    expect(breadcrumbTrail('aicontrol').map((item) => item.label)).toEqual(['More', 'AI Control']);
+    expect(breadcrumbTrail('board', 'WRK-42').map((item) => item.label))
+      .toEqual(['Deliver', 'Board', 'WRK-42']);
   });
 });

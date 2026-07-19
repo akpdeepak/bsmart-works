@@ -5,6 +5,8 @@ const VARIANTS = {
   onboarding: 'bg-brand-navy/10 text-brand-navy dark:bg-brand-navy-tint/20 dark:text-neutral-100',
   error: 'bg-semantic-danger-surface text-semantic-danger dark:bg-semantic-danger/20',
   success: 'bg-semantic-success-surface text-semantic-success dark:bg-semantic-success/20',
+  warning: 'bg-semantic-warning-surface text-semantic-warning dark:bg-semantic-warning/20',
+  unauthorized: 'bg-neutral-200 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-400',
 };
 
 // Unified zero-data illustration treatment. Callers keep providing a Lucide icon; this atom gives

@@ -34,3 +34,45 @@ export function ListSkeleton({ rows = 5, className }) {
     </div>
   );
 }
+
+// Card-shaped loading placeholder — mirrors a dashboard widget or summary card.
+export function CardSkeleton({ className }) {
+  return (
+    <div aria-busy="true" aria-label="Loading card" className={cn('rounded-lg border border-neutral-100 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-4 space-y-3', className)}>
+      <Skeleton className="h-4 w-2/5" />
+      <Skeleton className="h-8 w-1/3" />
+      <Skeleton className="h-3 w-3/4" />
+    </div>
+  );
+}
+
+// Table-row loading placeholder — N rows of cells mimicking a data table.
+export function TableRowSkeleton({ rows = 5, cols = 4, className }) {
+  return (
+    <div aria-busy="true" aria-label="Loading table" className={cn('space-y-1', className)}>
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="flex items-center gap-4 rounded border border-neutral-100 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2">
+          {Array.from({ length: cols }, (_, c) => (
+            <Skeleton key={c} className={cn('h-3', c === 0 ? 'w-1/4' : c === cols - 1 ? 'w-16' : 'flex-1')} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Chart-shaped loading placeholder — a rectangle that mirrors a chart/graph area.
+export function ChartSkeleton({ className }) {
+  return (
+    <div aria-busy="true" aria-label="Loading chart" className={cn('rounded-lg border border-neutral-100 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-4 space-y-3', className)}>
+      <Skeleton className="h-4 w-1/3" />
+      <Skeleton className="h-40 w-full rounded" />
+    </div>
+  );
+}
+
+// Avatar-shaped loading placeholder — circular placeholder matching user avatars.
+export function AvatarSkeleton({ size = 'md', className }) {
+  const sizeClass = size === 'sm' ? 'h-6 w-6' : size === 'lg' ? 'h-12 w-12' : 'h-8 w-8';
+  return <Skeleton className={cn('rounded-full', sizeClass, className)} />;
+}

@@ -1,4 +1,4 @@
-import { Skeleton } from './skeleton';
+import { Skeleton, CardSkeleton, TableRowSkeleton, ChartSkeleton, AvatarSkeleton } from './skeleton';
 
 export default {
   title: 'Works/Atoms/Skeleton',
@@ -77,3 +77,30 @@ export const KanbanColumn = {
     </div>
   ),
 };
+
+export const CardVariant = {
+  name: 'CardSkeleton',
+  render: () => <CardSkeleton className="w-72" />,
+};
+
+export const TableRowVariant = {
+  name: 'TableRowSkeleton',
+  render: () => <TableRowSkeleton rows={4} cols={3} className="w-full max-w-lg" />,
+};
+
+export const ChartVariant = {
+  name: 'ChartSkeleton',
+  render: () => <ChartSkeleton className="w-96" />,
+};
+
+export const AvatarVariants = {
+  name: 'AvatarSkeleton sizes',
+  render: () => (
+    <div className="flex items-center gap-3 p-4">
+      <AvatarSkeleton size="sm" />
+      <AvatarSkeleton size="md" />
+      <AvatarSkeleton size="lg" />
+    </div>
+  ),
+};
+

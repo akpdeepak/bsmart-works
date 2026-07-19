@@ -1,10 +1,12 @@
 # EPIC 8 - Smart Inbox Completion
 
-Status: Code-verified complete; completion PR pending
+Status: Code-verified complete; completion PR #489 open
 
 Initial slice: [#402](https://github.com/akpdeepak/bsmart-works/pull/402)
 
 Completion branch: `codex/epic-08-smart-inbox-completion`
+
+Completion PR: [#489](https://github.com/akpdeepak/bsmart-works/pull/489)
 
 Validated: 2026-07-19
 

@@ -1,8 +1,10 @@
 # EPIC 8 - Smart Inbox
 
-Status: Code-verified complete; completion PR pending
+Status: Code-verified complete; completion PR #489 open
 
 Branch: `codex/epic-08-smart-inbox-completion`
+
+Completion PR: [#489](https://github.com/akpdeepak/bsmart-works/pull/489)
 
 Roadmap: V.20 Phase 3
 

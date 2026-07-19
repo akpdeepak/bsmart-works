@@ -165,6 +165,7 @@ export const LENSES = [
   { id: 'scrum-master',  label: 'Scrum Master',  view: 'smcockpit',   role: 'scrum-master',  previewTier: TIER.LEAD },
   { id: 'developer',     label: 'Developer',     view: 'developer',   role: 'developer',     previewTier: TIER.MEMBER },
   { id: 'product-owner', label: 'Product Owner', view: 'poworkspace', role: 'product-owner', previewTier: TIER.LEAD },
+  { id: 'support-agent', label: 'Support Agent', view: 'supportinbox', role: 'support-agent', previewTier: TIER.MEMBER },
   { id: 'leadership',    label: 'Leadership',    view: 'leadership',  role: 'executive',     previewTier: TIER.ADMIN },
   { id: 'admin',         label: 'Admin',         view: 'adminops',    role: 'admin',         previewTier: TIER.ADMIN },
 ];
@@ -178,6 +179,7 @@ export const LENSES = [
 //   Developer      — executes the work: own queue, the board, the sprint, code/runbooks, the API.
 //   Scrum Master   — facilitates flow & ceremonies, clears impediments, watches velocity/health.
 //   Product Owner  — owns backlog, value, releases, stakeholders, and the delivery roadmap.
+//   Support Agent  — resolves customer conversations, service requests, and SLA risk.
 //   Leadership     — portfolio outcomes: KPIs, performance, SLA & compliance posture across teams.
 //   Admin          — operates the platform: config, governance, security, integrations, AI control.
 export const ROLE_PROFILES = {
@@ -192,6 +194,10 @@ export const ROLE_PROFILES = {
   'product-owner': {
     landing: 'poworkspace',
     primary: ['poworkspace', 'backlog', 'projects', 'releases', 'reports', 'dashboards', 'pm', 'knowledge', 'knowledgeadvanced', 'notifications'],
+  },
+  'support-agent': {
+    landing: 'supportinbox',
+    primary: ['supportinbox', 'service', 'sla', 'knowledge', 'notifications', 'dashboard'],
   },
   leadership: {
     landing: 'leadership',

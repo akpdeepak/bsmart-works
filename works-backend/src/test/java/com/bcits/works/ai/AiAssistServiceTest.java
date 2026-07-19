@@ -239,13 +239,16 @@ class AiAssistServiceTest {
         high.setPriority("High");
         when(workItems.findByProjectId("PROJ-1")).thenReturn(List.of(high, overdue));
 
-        var result = assist.todayNudges("ws", "caller", "me", true);
+        var result = assist.todayNudges("ws", "me", true);
 
         assertThat(result.nudges()).extracting(AiAssistService.TodayNudge::text)
             .containsExactly(
                 "Focus on WEB-1 - due overdue: Renew expiring certificate",
                 "Pull forward WEB-2 - High priority and still open: Fix login outage"
             );
+        assertThat(result.nudges()).extracting(AiAssistService.TodayNudge::workItemId)
+            .containsExactly("WEB-1", "WEB-2");
+        assertThat(result.summary()).isNotBlank();
         assertThat(result.meta().usedAi()).isTrue();
     }
 

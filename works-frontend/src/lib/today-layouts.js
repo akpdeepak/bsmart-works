@@ -47,6 +47,13 @@ export const BUILTIN_TODAY_LAYOUTS = {
     { id: 'po-activation-funnel', type: 'activation-funnel', span: 6 },
     { id: 'po-engagement', type: 'engagement-score', span: 6 },
   ],
+  'support-agent': [
+    { id: 'sa-stat-escalated', type: 'stat', span: 3, spanSm: 6, config: { k: 'escalated' } },
+    { id: 'sa-stat-open', type: 'stat', span: 3, spanSm: 6, config: { k: 'open' } },
+    { id: 'sa-stat-assigned', type: 'stat', span: 3, spanSm: 6, config: { k: 'assigned' } },
+    { id: 'sa-stat-resolved', type: 'stat', span: 3, spanSm: 6, config: { k: 'resolved' } },
+    { id: 'sa-queue', type: 'support-queue', span: 12 },
+  ],
   executive: [
     { id: 'ex-stat-health', type: 'stat', span: 3, spanSm: 6, config: { k: 'health' } },
     { id: 'ex-stat-overdue', type: 'stat', span: 3, spanSm: 6, config: { k: 'overdue' } },

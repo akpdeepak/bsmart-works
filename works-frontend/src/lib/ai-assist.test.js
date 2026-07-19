@@ -100,41 +100,42 @@ describe('aiAssistClient.suggestDescription', () => {
 
 describe('aiAssistClient.getTodayNudges', () => {
   it('returns nudges from the API on success', async () => {
-    const nudges = [{ text: 'Focus on WORK-123 — it is due today.' }];
-    api.send.mockResolvedValue({ nudges, fallback: false });
+    const nudges = [{ text: 'Focus on WORK-123 - it is due today.', workItemId: 'WORK-123' }];
+    api.send.mockResolvedValue({ summary: 'Focus on the due item.', nudges, fallback: false });
 
-    const res = await aiAssistClient.getTodayNudges('ws-1', 'user-42');
+    const res = await aiAssistClient.getTodayNudges('ws-1');
 
     expect(res.nudges).toEqual(nudges);
     expect(res.fallback).toBe(false);
   });
 
-  it('returns { nudges: [], fallback: true } when the API throws', async () => {
+  it('returns a visible deterministic fallback when the API throws', async () => {
     api.send.mockRejectedValue(new Error('Timeout'));
 
-    const res = await aiAssistClient.getTodayNudges('ws-1', 'user-42');
+    const res = await aiAssistClient.getTodayNudges('ws-1');
 
-    expect(res).toEqual({ nudges: [], fallback: true });
+    expect(res).toMatchObject({ nudges: [], fallback: true, meta: { fallback: true } });
+    expect(res.summary).toMatch(/workspace-scoped priorities/i);
   });
 
-  it('includes both workspaceId and userId in the request URL', async () => {
+  it('scopes the request to the workspace without accepting another user id', async () => {
     api.send.mockResolvedValue({ nudges: [], fallback: false });
 
-    await aiAssistClient.getTodayNudges('ws-abc', 'user-xyz');
+    await aiAssistClient.getTodayNudges('ws-abc');
 
     const [calledUrl] = api.send.mock.calls[0];
     expect(calledUrl).toContain('workspaceId=ws-abc');
-    expect(calledUrl).toContain('userId=user-xyz');
+    expect(calledUrl).not.toContain('userId=');
   });
 
-  it('returns { nudges: [], fallback: true } when AI is disabled (server 403)', async () => {
+  it('returns a deterministic fallback when AI is disabled (server 403)', async () => {
     const err = new Error('AI disabled for workspace');
     err.status = 403;
     api.send.mockRejectedValue(err);
 
-    const res = await aiAssistClient.getTodayNudges('ws-1', 'user-1');
+    const res = await aiAssistClient.getTodayNudges('ws-1');
 
-    expect(res).toEqual({ nudges: [], fallback: true });
+    expect(res).toMatchObject({ nudges: [], fallback: true, meta: { fallback: true } });
   });
 });
 

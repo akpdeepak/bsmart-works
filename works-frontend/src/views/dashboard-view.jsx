@@ -1,32 +1,37 @@
 import { Button } from '@/components/works/button';
 import { Card } from '@/components/works/atoms/card';
 import { useEffect, useState } from 'react';
-import { AlertTriangle, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CheckCircle2, Clock3, Sparkles, X } from 'lucide-react';
 import { TIER } from '@/lib/nav-model';
 import { buildTodayBrief } from '@/lib/today-brief';
+import { availableTodayRoles } from '@/lib/today-roles';
+import {
+  dismissTodayAttention,
+  readTodayAttention,
+  snapshotTodayAttention,
+  snoozeTodayAttention,
+  todayAttentionKey,
+  visibleTodayAttention,
+  writeTodayAttention,
+} from '@/lib/today-attention-state';
 import { builtinTodayLayout, widgetsToLayout, nextSpan } from '@/lib/today-layouts';
+import { TodayAiBrief } from '@/components/works/organisms/today-ai-brief';
 import { DeveloperToday } from './dashboards/developer-dashboard';
 import { ScrumMasterToday } from './dashboards/scrum-master-dashboard';
 import { ProductOwnerToday } from './dashboards/product-owner-dashboard';
+import { SupportAgentToday } from './dashboards/support-agent-dashboard';
 import { ExecutiveToday } from './dashboards/executive-dashboard';
 import { AdminToday } from './dashboards/admin-dashboard';
 import { PageLayout } from '@/components/works/templates/page-layout';
 
-// ── Role tab bar (Admin/Owner only) ───────────────────────────────────────────
+// ── Role tab bar ──────────────────────────────────────────────────────────────
 
-const ROLE_TABS = [
-  { role: 'developer',     label: 'Developer' },
-  { role: 'scrum-master',  label: 'Scrum Master' },
-  { role: 'product-owner', label: 'Product Owner' },
-  { role: 'executive',     label: 'Leadership' },
-  { role: 'admin',         label: 'Admin' },
-];
-
-function RoleTabs({ dashboardRole, onSwitch, userTier }) {
-  if ((userTier ?? 0) < TIER.ADMIN) return null;
+function RoleTabs({ dashboardRole, onSwitch, userRole }) {
+  const roles = availableTodayRoles(userRole);
+  if (roles.length <= 1) return null;
   return (
-    <div className="mb-6 flex flex-wrap border-b border-neutral-200 dark:border-neutral-700">
-      {ROLE_TABS.map(t => (
+    <div className="mb-6 flex flex-wrap border-b border-neutral-200 dark:border-neutral-700" aria-label="Today role layout">
+      {roles.map(t => (
         <Button unstyled key={t.role} type="button"
           aria-current={dashboardRole === t.role ? 'page' : undefined}
           onClick={() => onSwitch(t.role)}
@@ -76,9 +81,26 @@ const ATTENTION_TONE = {
   neutral: { dot: 'bg-brand-navy-tint', text: 'text-brand-navy dark:text-brand-navy-tint', icon: Sparkles },
 };
 
-function DailyClarityBand({ brief, onNavigate }) {
+const SOURCE_LABELS = {
+  myworks: 'Assigned work',
+  board: 'Delivery board',
+  sprint: 'Active sprint',
+  backlog: 'Product backlog',
+  releases: 'Release plan',
+  projects: 'Project portfolio',
+  reports: 'Risk register',
+  workspace: 'Workspace posture',
+  security: 'Security audit',
+  supportinbox: 'Support inbox',
+  developer: 'DevSync',
+  knowledge: 'Knowledge review',
+  sla: 'SLA monitor',
+};
+
+function DailyClarityBand({ brief, onNavigate, onSnooze, onDismiss }) {
   if (!brief) return null;
   const attentionCount = brief.attention.length;
+  const newCount = brief.attention.filter((item) => item.isNew).length;
 
   return (
     <Card as="section" padding="none" aria-labelledby="daily-clarity-heading"
@@ -113,9 +135,10 @@ function DailyClarityBand({ brief, onNavigate }) {
         <div>
           <div className="mb-3 flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Needs attention</h3>
-            <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              {attentionCount} of {brief.attentionLimit}
-            </span>
+            <div className="flex items-center gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+              {newCount > 0 && <span className="text-brand-navy dark:text-brand-navy-tint">{newCount} new since last visit</span>}
+              <span>{attentionCount} of {brief.attentionLimit}</span>
+            </div>
           </div>
           {attentionCount > 0 ? (
             <ul className="grid gap-2 md:grid-cols-2">
@@ -123,14 +146,42 @@ function DailyClarityBand({ brief, onNavigate }) {
                 const tone = ATTENTION_TONE[item.tone] || ATTENTION_TONE.neutral;
                 const Icon = tone.icon;
                 return (
-                  <li key={item.id} className="rounded-lg border border-neutral-100 bg-neutral-50 p-3 dark:border-neutral-700 dark:bg-neutral-900">
+                  <li key={item.attentionKey || item.id} className="rounded-lg border border-neutral-100 bg-neutral-50 p-3 dark:border-neutral-700 dark:bg-neutral-900">
                     <div className="flex items-start gap-3">
                       <span className={`mt-1 h-2.5 w-2.5 rounded-full ${tone.dot}`} aria-hidden="true" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{item.title}</p>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <p className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{item.title}</p>
+                          {item.isNew && (
+                            <span className="rounded bg-brand-navy/10 px-1.5 py-0.5 text-2xs font-semibold text-brand-navy dark:text-brand-navy-tint">
+                              New
+                            </span>
+                          )}
+                        </div>
                         <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">{item.reason}</p>
                       </div>
                       <Icon className={`h-4 w-4 flex-shrink-0 ${tone.text}`} aria-hidden="true" />
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-2 border-t border-neutral-200 pt-2 dark:border-neutral-700">
+                      <span className="truncate text-2xs text-neutral-500">
+                        Source: {SOURCE_LABELS[item.view] || 'Workspace signal'}
+                      </span>
+                      <div className="flex flex-shrink-0 items-center gap-1">
+                        <Button type="button" variant="ghost" size="icon" title="Snooze until tomorrow"
+                          aria-label={`Snooze ${item.title} until tomorrow`} onClick={() => onSnooze?.(item)}
+                          className="h-8 w-8">
+                          <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" title="Dismiss"
+                          aria-label={`Dismiss ${item.title}`} onClick={() => onDismiss?.(item)}
+                          className="h-8 w-8">
+                          <X className="h-3.5 w-3.5" aria-hidden="true" />
+                        </Button>
+                        <Button type="button" variant="secondary" size="sm" onClick={() => onNavigate?.(item.view)}>
+                          Open
+                          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                        </Button>
+                      </div>
                     </div>
                   </li>
                 );
@@ -168,6 +219,7 @@ export default function DashboardView({
   developerDash,
   smDash,
   poDash,
+  supportDash,
   execDash,
   adminDash,
   workItems,
@@ -192,10 +244,19 @@ export default function DashboardView({
     'developer':     developerDash,
     'scrum-master':  smDash,
     'product-owner': poDash,
+    'support-agent': supportDash,
     'executive':     execDash,
     'admin':         adminDash,
   };
   const activeData = DATA_MAP[dashboardRole] ?? null;
+
+  const attentionStoreKey = todayAttentionKey(activeWorkspaceId, currentUser?.id, dashboardRole);
+  const [attentionContext, setAttentionContext] = useState(attentionStoreKey);
+  const [attentionState, setAttentionState] = useState(() => readTodayAttention(attentionStoreKey));
+  if (attentionContext !== attentionStoreKey) {
+    setAttentionContext(attentionStoreKey);
+    setAttentionState(readTodayAttention(attentionStoreKey));
+  }
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState([]);
@@ -257,22 +318,57 @@ export default function DashboardView({
     currentUser, activeWorkspaceId, setView, setIsCreateOpen, setSelectedItem, setIsWorklogOpen, selectedItem,
     showToast, workItems, layout: resolved, builtinLayout: builtin, edit,
   };
-  const todayBrief = activeData ? buildTodayBrief(dashboardRole, activeData) : null;
+  const rawTodayBrief = activeData ? buildTodayBrief(dashboardRole, activeData) : null;
+  const todayBrief = rawTodayBrief ? {
+    ...rawTodayBrief,
+    attention: visibleTodayAttention(rawTodayBrief.attention, attentionState),
+  } : null;
+  const attentionSnapshotKey = rawTodayBrief?.attention
+    .map((item) => `${item.id}:${item.title}:${item.reason}`).join('|') || '';
+  useEffect(() => {
+    if (!rawTodayBrief) return;
+    writeTodayAttention(attentionStoreKey,
+      snapshotTodayAttention(attentionState, rawTodayBrief.attention));
+    // The in-memory state intentionally stays unchanged so "New" remains visible for this visit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attentionStoreKey, attentionSnapshotKey]);
+
+  const updateAttentionState = (next, message) => {
+    setAttentionState(next);
+    writeTodayAttention(attentionStoreKey, next);
+    showToast?.(message);
+  };
+  const snoozeAttention = (item) => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(8, 0, 0, 0);
+    updateAttentionState(snoozeTodayAttention(attentionState, item, tomorrow), 'Snoozed until tomorrow');
+  };
+  const dismissAttention = (item) => {
+    updateAttentionState(dismissTodayAttention(attentionState, item), 'Dismissed from Today');
+  };
+  const openAiSource = (id, title) => {
+    if (id) setSelectedItem?.({ id, title });
+    setView?.('myworks');
+  };
   const roleDashboard = dashboardRole === 'scrum-master'  ? <ScrumMasterToday  data={smDash}       {...sharedProps} />
     : dashboardRole === 'product-owner' ? <ProductOwnerToday data={poDash}       {...sharedProps} />
+    : dashboardRole === 'support-agent' ? <SupportAgentToday data={supportDash}  {...sharedProps} />
     : dashboardRole === 'executive'     ? <ExecutiveToday    data={execDash}     {...sharedProps} />
     : dashboardRole === 'admin'         ? <AdminToday        data={adminDash}    {...sharedProps} />
     :                                     <DeveloperToday    data={developerDash} {...sharedProps} />;
 
   return (
     <PageLayout header={null}>
-      <RoleTabs dashboardRole={dashboardRole} onSwitch={switchRole} userTier={userRole?.tier} />
+      <RoleTabs dashboardRole={dashboardRole} onSwitch={switchRole} userRole={userRole} />
 
       {dashLoading || !activeData
         ? <TodaySkeleton />
         : (
           <>
-            <DailyClarityBand brief={todayBrief} onNavigate={setView} />
+            <TodayAiBrief workspaceId={activeWorkspaceId} onOpenItem={openAiSource} />
+            <DailyClarityBand brief={todayBrief} onNavigate={setView}
+              onSnooze={snoozeAttention} onDismiss={dismissAttention} />
             {roleDashboard}
           </>
         )

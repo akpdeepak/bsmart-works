@@ -251,6 +251,7 @@ export default function AppShell() {
   const [developerDash, setDeveloperDash]       = useState(null);
   const [smDash, setSmDash]                     = useState(null);
   const [poDash, setPoDash]                     = useState(null);
+  const [supportDash, setSupportDash]           = useState(null);
   const [execDash, setExecDash]                 = useState(null);
   const [adminDash, setAdminDash]               = useState(null);
   const [dashLoading, setDashLoading]           = useState(false);
@@ -1532,15 +1533,18 @@ export default function AppShell() {
     if (!widgetMetrics.length) fetchWidgetMetrics(); // metric catalogue (once)
     const wsId = activeWorkspaceId;
     let url;
-    if (role === 'developer') url = `/dashboards/developer`;
+    if (role === 'developer') url = `/dashboards/developer?workspaceId=${encodeURIComponent(wsId)}`;
     else if (role === 'scrum-master') url = `/dashboards/scrum-master?workspaceId=${wsId}`;
     else if (role === 'product-owner') url = `/dashboards/product-owner?workspaceId=${wsId}`;
+    else if (role === 'support-agent') url = `/dashboards/support-agent?workspaceId=${wsId}`;
     else if (role === 'executive') url = `/dashboards/executive?workspaceId=${wsId}`;
     else if (role === 'admin') url = `/dashboards/admin?workspaceId=${wsId}`;
+    else { setDashLoading(false); return; }
     api.raw(url).then(r => r.json()).then(d => {
       if (role === 'developer') setDeveloperDash(d);
       else if (role === 'scrum-master') setSmDash(d);
       else if (role === 'product-owner') setPoDash(d);
+      else if (role === 'support-agent') setSupportDash(d);
       else if (role === 'executive') setExecDash(d);
       else if (role === 'admin') setAdminDash(d);
       setDashLoading(false);
@@ -2576,7 +2580,7 @@ export default function AppShell() {
               setSprintSort, setStandupDraft, setSwimlaneBy, settings3Tab, setUnreadCount, setVarianceSprintId, setView, setViolationFilter,
               setWipLimit, shareInfo, showFieldForm, showRoleForm, showSaveFilter, showToast, showTypeForm, smDash,
               smTab, sprintFilters, sprintItems, sprintMetrics, sprintMetricsLoading, sprintReport, sprints, sprintSort,
-              stakeholders, standupDraft, standups, startCeremony, startStandup, statusResolver, stopShare, submitArticleForReview,
+              stakeholders, standupDraft, standups, startCeremony, startStandup, statusResolver, stopShare, submitArticleForReview, supportDash,
               submitMyStandup, swimlaneBy, teams, testRule, todayLayout, toggleArticleComment, togglePermission, toggleReportSchedule,
               toggleStar, toggleViolationSelect, totalWorkItemCount, transitionServiceRequest, trashItems, unreadCount, updateArticle, updateDashboardWidgetConfig,
               updateImpediment, updateKrProgress, updateRelease, updateReportSection, updateThemeStatus, userName, userRole, users,

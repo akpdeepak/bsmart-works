@@ -41,6 +41,27 @@ describe('buildTodayBrief', () => {
     expect(brief.primaryAction).toEqual({ label: 'Plan my day', view: 'myworks' });
   });
 
+  it('brings approval waits and DevSync changes into the developer queue', () => {
+    const brief = buildTodayBrief('developer', {
+      pendingReviews: [{ id: 'PR-1', title: 'Harden login', repo: 'bsmart/works' }],
+      devSyncHighlights: [
+        { id: 'PR-1', title: 'Harden login', status: 'OPEN' },
+        { id: 'PR-2', title: 'Improve query plan', status: 'MERGED' },
+      ],
+    }, { now });
+
+    expect(brief.attention).toHaveLength(2);
+    expect(brief.attention[0]).toMatchObject({
+      title: 'Harden login',
+      reason: 'Approval is waiting in bsmart/works.',
+      view: 'developer',
+    });
+    expect(brief.attention[1]).toMatchObject({
+      title: 'Improve query plan',
+      view: 'developer',
+    });
+  });
+
   it('summarizes product-owner release and grooming pressure', () => {
     const brief = buildTodayBrief('product-owner', {
       upcomingReleases: [
@@ -63,6 +84,19 @@ describe('buildTodayBrief', () => {
     });
   });
 
+  it('puts product-owner approvals ahead of release planning signals', () => {
+    const brief = buildTodayBrief('product-owner', {
+      approvals: [{ id: 'ART-1', title: 'Incident runbook' }],
+      upcomingReleases: [{ id: 'REL-1', name: 'Mobile 2.0', release_date: '2026-06-28' }],
+    }, { now });
+
+    expect(brief.attention[0]).toMatchObject({
+      title: 'Incident runbook',
+      reason: 'Approval is waiting for your review.',
+      view: 'knowledge',
+    });
+  });
+
   it('highlights admin security posture before audit follow-up', () => {
     const brief = buildTodayBrief('admin', {
       mfaStats: { total: 10, mfa_enabled: 6 },
@@ -78,6 +112,41 @@ describe('buildTodayBrief', () => {
     expect(brief.attention[1]).toMatchObject({
       title: 'Priya Rao',
       view: 'security',
+    });
+  });
+
+  it('prioritizes unassigned support escalations for the support-agent role', () => {
+    const brief = buildTodayBrief('support-agent', {
+      conversations: [
+        { id: 'CHAT-1', subject: 'Billing outage', status: 'ESCALATED', assigned_agent_id: null },
+        { id: 'CHAT-2', subject: 'Password question', status: 'OPEN', assigned_agent_id: 'USR-2' },
+      ],
+    }, { now });
+
+    expect(brief.roleLabel).toBe('Support Agent');
+    expect(brief.attention[0]).toMatchObject({
+      title: 'Billing outage',
+      tone: 'danger',
+      view: 'supportinbox',
+    });
+    expect(brief.primaryAction).toEqual({ label: 'Open support inbox', view: 'supportinbox' });
+  });
+
+  it('puts breached SLA and recent customer messages into support attention', () => {
+    const brief = buildTodayBrief('support-agent', {
+      slaRisks: [{ id: 'SLA-1', title: 'Restore billing', state: 'BREACHED', metric: 'RESOLUTION' }],
+      importantMessages: [{ id: 'MSG-1', subject: 'Payment still failing' }],
+    }, { now });
+
+    expect(brief.attention[0]).toMatchObject({
+      title: 'Restore billing',
+      reason: 'RESOLUTION SLA is breached.',
+      tone: 'danger',
+      view: 'sla',
+    });
+    expect(brief.attention[1]).toMatchObject({
+      title: 'Payment still failing',
+      view: 'supportinbox',
     });
   });
 });

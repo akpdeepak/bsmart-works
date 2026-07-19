@@ -131,11 +131,9 @@ public class AiAssistController {
     @Operation(summary = "AI Today nudges",
         description = "Returns proactive Today dashboard focus nudges. Falls back to deterministic workspace-scoped assigned-work heuristics when AI is off.")
     @GetMapping("/today-nudges")
-    public AiAssistService.TodayNudgesResult todayNudges(@RequestParam String workspaceId,
-                                                         @RequestParam(required = false) String userId) {
+    public AiAssistService.TodayNudgesResult todayNudges(@RequestParam String workspaceId) {
         String callerId = requireMember(workspaceId);
-        String targetUserId = (userId == null || userId.isBlank()) ? callerId : userId;
-        return assist.todayNudges(workspaceId, callerId, targetUserId, true);
+        return assist.todayNudges(workspaceId, callerId, true);
     }
 
     // ── Cap K · compliance suggestions ─────────────────────────────────────────────

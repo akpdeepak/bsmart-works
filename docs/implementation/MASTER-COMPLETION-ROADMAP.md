@@ -62,7 +62,7 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 | **W0** | Truth & control plane | Reconcile overclaiming docs; this ledger; SOURCE-OF-TRUTH reversal | 🟡 in progress | 0 |
 | **W1** | Governance & security closure | #243 central tenant filter, field-level security enforcement, PII vault + crypto-shred, BYOK/KMS, WebAuthn attestation, distributed rate-limit, JWT revocation, SOC2/ISO evidence | ✅ Verified 2026-06-21 (PRs #415–#441; deferred sub-items in §4) | 1 |
 | **W2** | Architecture refactors | EPIC-3 real modularization, EPIC-4 real AppShell decomposition, god-class splits, FE code-split, AsyncBoundary adoption, token debt | ✅ Verified 2026-07-19 | 2 |
-| **W3** | Finish EPICs 3–12 to full scope | Slice → full plan for each shipped EPIC | 🟡 in progress; EPICs 3–6 verified | 3 |
+| **W3** | Finish EPICs 3–12 to full scope | Slice → full plan for each shipped EPIC | 🟡 in progress; EPICs 3–7 verified | 3 |
 | **W4** | EPICs 13–27 — elevation | Premium/AI-native reframe over existing capabilities | ⚪ 0% | 5 |
 | **W5** | EPICs 13–27 — net-new builds | Answer Engine, Canvas, People Graph/Skills, onboarding, analytics, DX | ⚪ 0% | 5 |
 | **W6** | V1.6 overlay | Framework engine, 5 user types, operating model, team-key IDs, inline BQL, query boards, Messenger, profile, brand system, premium states, AI coach | 🟠 ~5% | 4 |
@@ -88,7 +88,7 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 | 4 | Frontend architecture refactor | Completed | ✅ Verified 2026-07-19 | 5-line entry; 2,884-line guarded shell | — |
 | 5 | Premium design system | Completed | ✅ Verified 2026-07-19 | token/state/theme/density system | W7 owns exhaustive product QA |
 | 6 | Simplified navigation | Completed | ✅ Verified 2026-07-19 | built | — |
-| 7 | bSmart Today | Completed | 🟠 ~35% | dashboards built | act/snooze/dismiss flows |
+| 7 | bSmart Today | Completed | ✅ Verified 2026-07-19 | six role layouts, sourced AI brief, actionable max-five attention, full daily signal model | — |
 | 8 | Smart Inbox | Completed | 🟠 ~35% | notifications built | act/convert/snooze flows |
 | 9 | Connect Messaging | Completed | 🔴 ~10% | Messenger absent | full Messenger domain (W6) |
 | 10 | Work-item experience | Completed | 🟠 ~20% | core built | premium redesign + right panel |

@@ -1,35 +1,46 @@
-# EPIC 7 - bSmart Today Completion
+# EPIC 07 Completion - bSmart Today
 
-Status: Completed  
-PR: [#401](https://github.com/akpdeepak/bsmart-works/pull/401)  
-Merge commit: `b581e52d6155f72bfc89d4572c9a276a5221e14b`  
-Completed: 2026-06-20
+Date: 2026-07-19
+Branch: `codex/epic-07-today-completion`
+Status: Code-verified; remote PR and merge pending
 
-## Delivered
+## Scope Completed
 
-- Added a role-aware Today brief model in `works-frontend/src/lib/today-brief.js`.
-- Capped the daily needs-attention list at five items.
-- Prioritized constrained signals from existing workspace-scoped dashboard data:
-  blockers, overdue work, high-priority work, sprint health, release readiness, portfolio risk,
-  MFA posture, audit changes, and adoption quietness.
-- Added a Daily clarity band above each role-specific Today canvas without replacing saved layout
-  customization.
-- Preserved AI nudge fallback behavior and existing role dashboard widgets.
-- Added frontend tests for brief priority/capping, calm empty states, role-specific brief signals,
-  and Daily clarity navigation.
+- Kept Today as the authenticated `/` landing and retained the existing configurable role canvas.
+- Added an authorized support-agent role/layout backed by workspace-scoped customer conversations,
+  SLA risk, and recent unresolved customer messages.
+- Completed the daily signal model across priorities, approval/wait states, blockers, SLA/customer/
+  code risks, messages, DevSync highlights, suggested actions, and quiet wins.
+- Added Open, snooze-until-tomorrow, and dismiss controls to every attention card while retaining the
+  maximum-five default.
+- Namespaced persisted attention state by workspace/user/role, fingerprints current signal content,
+  and marks signals introduced since the prior visit as new.
+- Made the AI brief universal across roles, caller-only, source-linked, metadata-labelled, and
+  visibly deterministic when the AI Control Plane falls back.
+- Closed the developer dashboard's multi-workspace leak: the selected workspace is now mandatory at
+  the controller, service, frontend request, and every aggregate query.
+- Added a two-second read-only transaction budget around role dashboards and executable fresh-DB
+  timing/isolation coverage.
 
-## Validation
+## Code-Derived Evidence
 
-- `cd works-frontend && npm test -- today-brief dashboard-view`
-- `npm run verify`
-- `cd works-frontend && npm run verify`
-- GitHub CI for PR #401 passed all required jobs:
-  frontend lint/build/test, Storybook, Chromatic, backend compile/unit/integration/smoke,
-  guardrails, quality gates, gitleaks, bundle budget, deployment smoke, JetBrains plugin build,
-  conventional commits, AI rules, and DoD version checks.
+`scripts/epic-07-completion.mjs` executes the pure Today model and inspects production wiring. It
+verifies the `/` route, six layouts, selected-workspace predicates, maximum-five behavior, action
+controls, changed-signal handling, caller-only AI sources/fallback, support RBAC/data, all required
+signal domains, server-backed layout customization, the two-second budget, and axe coverage.
 
-## Follow-Up
+## Local Validation
 
-- Continue with EPIC 8 - Smart Inbox.
-- Service/support agent Today-specific cockpit should be implemented when the Service Desk EPIC adds
-  the corresponding role/surface.
+- EPIC gate: 11/11 checks passed.
+- Frontend full suite: 1,797 tests across 246 files passed; ESLint and production build passed.
+- Frontend focused suite: 24 tests passed, including Today behavior and axe.
+- Storybook production build passed.
+- Backend full unit suite: 1,457 tests passed; JaCoCo and Checkstyle passed.
+- Backend focused suite: 37 tests passed.
+- Backend full integration suite: 125 tests passed on fresh PostgreSQL/Flyway schemas.
+- Fresh PostgreSQL/Flyway V119 `WorkspaceTenantIsolationIT`: 7 tests passed, including developer
+  same-user/two-workspace isolation, support conversation/message isolation, and the two-second path.
+- Repository gate: guardrails, quality gates, generated-rule parity, EPICs 1-7, and the task-process
+  contract all passed.
+
+GitHub CI remains required before merge. No migration was needed; Flyway remains V119.

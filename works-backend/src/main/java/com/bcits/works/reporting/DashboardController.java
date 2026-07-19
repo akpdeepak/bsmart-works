@@ -30,9 +30,11 @@ public class DashboardController {
     }
 
     @GetMapping("/developer")
-    public ResponseEntity<Map<String, Object>> getDeveloperDashboard() {
+    public ResponseEntity<Map<String, Object>> getDeveloperDashboard(
+            @RequestParam String workspaceId) {
         String userId = authenticatedUser.id();
-        return ResponseEntity.ok(dashboardService.getDeveloperDashboard(userId));
+        requireView(workspaceId);
+        return ResponseEntity.ok(dashboardService.getDeveloperDashboard(userId, workspaceId));
     }
 
     @GetMapping("/scrum-master")
@@ -45,8 +47,17 @@ public class DashboardController {
     @GetMapping("/product-owner")
     public ResponseEntity<Map<String, Object>> getProductOwnerDashboard(
             @RequestParam String workspaceId) {
+        String userId = authenticatedUser.id();
         requireView(workspaceId);
-        return ResponseEntity.ok(dashboardService.getProductOwnerDashboard(workspaceId));
+        return ResponseEntity.ok(dashboardService.getProductOwnerDashboard(workspaceId, userId));
+    }
+
+    @GetMapping("/support-agent")
+    public ResponseEntity<Map<String, Object>> getSupportAgentDashboard(
+            @RequestParam String workspaceId) {
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "work_service");
+        return ResponseEntity.ok(dashboardService.getSupportAgentDashboard(workspaceId, userId));
     }
 
     @GetMapping("/executive")

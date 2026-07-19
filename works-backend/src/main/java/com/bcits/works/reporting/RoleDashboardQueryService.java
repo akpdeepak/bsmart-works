@@ -16,17 +16,17 @@ public class RoleDashboardQueryService {
         this.jdbc = jdbc;
     }
 
-    public Map<String, Object> getDeveloperDashboard(String userId) {
+    public Map<String, Object> getDeveloperDashboard(String userId, String workspaceId) {
         Map<String, Object> result = new LinkedHashMap<>();
 
         List<Map<String, Object>> myItems = jdbc.queryForList(
             "SELECT wi.id, wi.title, wi.status, wi.type, wi.priority, wi.due_date, wi.project_id, wi.sprint_id, "
                 + "wi.story_points FROM work_items wi JOIN projects p ON p.id = wi.project_id "
-                + "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id "
-                + "WHERE wi.assignee_id = ? AND wi.status != 'Done' AND wi.deleted_at IS NULL AND wm.user_id = ? "
+                + "WHERE p.workspace_id = ? AND wi.assignee_id = ? "
+                + "AND wi.status != 'Done' AND wi.deleted_at IS NULL "
                 + "ORDER BY CASE wi.priority WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 ELSE 4 END, "
                 + "wi.due_date NULLS LAST LIMIT 20",
-            userId, userId);
+            workspaceId, userId);
         result.put("myOpenItems", myItems);
         result.put("myOpenItemCount", myItems.size());
 
@@ -36,61 +36,74 @@ public class RoleDashboardQueryService {
                 + "COALESCE(SUM(wi.story_points), 0) as total_points, "
                 + "COALESCE(SUM(CASE WHEN wi.status = 'Done' THEN wi.story_points ELSE 0 END), 0) as done_points "
                 + "FROM sprints s JOIN projects p ON p.id = s.project_id "
-                + "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.user_id = ? "
                 + "LEFT JOIN work_items wi ON wi.sprint_id = s.id AND wi.deleted_at IS NULL "
-                + "WHERE s.status = 'ACTIVE' GROUP BY s.id LIMIT 1",
-            userId);
+                + "WHERE p.workspace_id = ? AND s.status = 'ACTIVE' GROUP BY s.id LIMIT 1",
+            workspaceId);
         result.put("activeSprint", activeSprint.isEmpty() ? null : activeSprint.get(0));
 
         result.put("mySprintItems", jdbc.queryForList(
             "SELECT wi.id, wi.title, wi.status, wi.type, wi.story_points, wi.priority FROM work_items wi "
                 + "JOIN sprints s ON s.id = wi.sprint_id JOIN projects p ON p.id = wi.project_id "
-                + "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.user_id = ? "
-                + "WHERE s.status = 'ACTIVE' AND wi.assignee_id = ? AND wi.deleted_at IS NULL",
-            userId, userId));
+                + "WHERE p.workspace_id = ? AND s.status = 'ACTIVE' "
+                + "AND wi.assignee_id = ? AND wi.deleted_at IS NULL",
+            workspaceId, userId));
 
         result.put("recentWorklogs", jdbc.queryForList(
             "SELECT wl.id, wl.work_item_id, wl.time_spent_minutes, wl.work_date, wl.description, "
                 + "wi.title as work_item_title FROM worklogs wl JOIN work_items wi ON wi.id = wl.work_item_id "
                 + "JOIN projects p ON p.id = wi.project_id "
-                + "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.user_id = ? "
-                + "WHERE wl.user_id = ? AND wl.work_date >= CURRENT_DATE - INTERVAL '7 days' "
+                + "WHERE p.workspace_id = ? AND wl.user_id = ? "
+                + "AND wl.work_date >= CURRENT_DATE - INTERVAL '7 days' "
                 + "ORDER BY wl.work_date DESC LIMIT 10",
-            userId, userId));
+            workspaceId, userId));
 
         List<Map<String, Object>> weekHours = jdbc.queryForList(
             "SELECT COALESCE(SUM(wl.time_spent_minutes), 0) as total_minutes "
                 + "FROM worklogs wl JOIN work_items wi ON wi.id = wl.work_item_id "
                 + "JOIN projects p ON p.id = wi.project_id "
-                + "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.user_id = ? "
-                + "WHERE wl.user_id = ? AND wl.work_date >= CURRENT_DATE - INTERVAL '7 days'",
-            userId, userId);
+                + "WHERE p.workspace_id = ? AND wl.user_id = ? "
+                + "AND wl.work_date >= CURRENT_DATE - INTERVAL '7 days'",
+            workspaceId, userId);
         result.put("weeklyMinutes", weekHours.isEmpty() ? 0 : weekHours.get(0).get("total_minutes"));
 
         result.put("dailyMinutes", jdbc.queryForList(
             "SELECT wl.work_date, COALESCE(SUM(wl.time_spent_minutes), 0) as minutes "
                 + "FROM worklogs wl JOIN work_items wi ON wi.id = wl.work_item_id "
                 + "JOIN projects p ON p.id = wi.project_id "
-                + "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.user_id = ? "
-                + "WHERE wl.user_id = ? AND wl.work_date >= CURRENT_DATE - INTERVAL '6 days' "
+                + "WHERE p.workspace_id = ? AND wl.user_id = ? "
+                + "AND wl.work_date >= CURRENT_DATE - INTERVAL '6 days' "
                 + "GROUP BY wl.work_date ORDER BY wl.work_date",
-            userId, userId));
+            workspaceId, userId));
 
         result.put("blockers", jdbc.queryForList(
             "SELECT wi.id, wi.title, wi.status, wil.link_type, wb.title as blocking_title "
                 + "FROM work_item_links wil JOIN work_items wi ON wi.id = wil.source_id "
                 + "JOIN work_items wb ON wb.id = wil.target_id JOIN projects p ON p.id = wi.project_id "
-                + "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.user_id = ? "
-                + "WHERE wi.assignee_id = ? AND wil.link_type = 'BLOCKED_BY' AND wi.deleted_at IS NULL",
-            userId, userId));
+                + "WHERE p.workspace_id = ? AND wi.assignee_id = ? "
+                + "AND wil.link_type = 'BLOCKED_BY' AND wi.deleted_at IS NULL",
+            workspaceId, userId));
 
         result.put("overdueItems", jdbc.queryForList(
             "SELECT wi.id, wi.title, wi.status, wi.type, wi.priority, wi.due_date FROM work_items wi "
                 + "JOIN projects p ON p.id = wi.project_id "
-                + "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.user_id = ? "
-                + "WHERE wi.assignee_id = ? AND wi.status != 'Done' AND wi.due_date < CURRENT_DATE "
+                + "WHERE p.workspace_id = ? AND wi.assignee_id = ? "
+                + "AND wi.status != 'Done' AND wi.due_date < CURRENT_DATE "
                 + "AND wi.deleted_at IS NULL ORDER BY wi.due_date LIMIT 5",
-            userId, userId));
+            workspaceId, userId));
+
+        result.put("pendingReviews", jdbc.queryForList(
+            "SELECT pr.id, pr.title, pr.repo, pr.number, pr.url, pr.work_item_id, pr.updated_at "
+                + "FROM pull_request_reviewers prr JOIN pull_requests pr ON pr.id = prr.pull_request_id "
+                + "WHERE pr.workspace_id = ? AND prr.reviewer_id = ? AND prr.state = 'REQUESTED' "
+                + "AND pr.status IN ('OPEN','DRAFT') ORDER BY pr.updated_at DESC LIMIT 5",
+            workspaceId, userId));
+
+        result.put("devSyncHighlights", jdbc.queryForList(
+            "SELECT DISTINCT pr.id, pr.title, pr.status, pr.repo, pr.number, pr.url, pr.work_item_id, pr.updated_at "
+                + "FROM pull_requests pr LEFT JOIN pull_request_reviewers prr ON prr.pull_request_id = pr.id "
+                + "WHERE pr.workspace_id = ? AND (pr.author_id = ? OR prr.reviewer_id = ?) "
+                + "ORDER BY pr.updated_at DESC LIMIT 5",
+            workspaceId, userId, userId));
 
         return result;
     }
@@ -155,7 +168,7 @@ public class RoleDashboardQueryService {
         return result;
     }
 
-    public Map<String, Object> getProductOwnerDashboard(String workspaceId) {
+    public Map<String, Object> getProductOwnerDashboard(String workspaceId, String userId) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("releases", jdbc.queryForList(
             "SELECT r.id, r.name, r.version, r.status, r.release_date, r.project_id, p.name as project_name, "
@@ -202,6 +215,41 @@ public class RoleDashboardQueryService {
                 + "AND (r.release_date IS NULL OR r.release_date >= CURRENT_DATE) "
                 + "ORDER BY r.release_date NULLS LAST LIMIT 5",
             workspaceId));
+        result.put("approvals", jdbc.queryForList(
+            "SELECT a.id, a.title, a.reviewer_due_date, ks.id AS space_id, ks.name AS space_name "
+                + "FROM articles a JOIN knowledge_spaces ks ON ks.id = a.space_id "
+                + "WHERE ks.workspace_id = ? AND a.reviewer_id = ? AND a.status = 'IN_REVIEW' "
+                + "ORDER BY a.reviewer_due_date NULLS LAST, a.submitted_at LIMIT 5",
+            workspaceId, userId));
+        return result;
+    }
+
+    public Map<String, Object> getSupportAgentDashboard(String workspaceId, String userId) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("conversations", jdbc.queryForList(
+            "SELECT id, subject, status, assigned_agent_id, last_message_at "
+                + "FROM chat_conversations WHERE workspace_id = ? AND status != 'RESOLVED' "
+                + "ORDER BY CASE status WHEN 'ESCALATED' THEN 1 WHEN 'OPEN' THEN 2 ELSE 3 END, "
+                + "last_message_at DESC NULLS LAST LIMIT 10",
+            workspaceId));
+        Map<String, Object> counts = jdbc.queryForMap(
+            "SELECT COUNT(*) FILTER (WHERE status = 'ESCALATED') AS escalated, "
+                + "COUNT(*) FILTER (WHERE status = 'OPEN') AS open, "
+                + "COUNT(*) FILTER (WHERE assigned_agent_id = ? AND status != 'RESOLVED') AS assigned_to_me, "
+                + "COUNT(*) FILTER (WHERE status = 'RESOLVED' AND updated_at >= CURRENT_DATE) AS resolved_today "
+                + "FROM chat_conversations WHERE workspace_id = ?",
+            userId, workspaceId);
+        result.put("escalatedCount", counts.get("escalated"));
+        result.put("openCount", counts.get("open"));
+        result.put("assignedToMeCount", counts.get("assigned_to_me"));
+        result.put("resolvedTodayCount", counts.get("resolved_today"));
+        result.put("slaRisks", slaRisks(workspaceId));
+        result.put("importantMessages", jdbc.queryForList(
+            "SELECT cm.id, cm.conversation_id, cm.body, cm.created_at, cc.subject "
+                + "FROM chat_messages cm JOIN chat_conversations cc ON cc.id = cm.conversation_id "
+                + "WHERE cm.workspace_id = ? AND cc.workspace_id = ? AND cm.sender_type = 'CUSTOMER' "
+                + "AND cc.status != 'RESOLVED' ORDER BY cm.created_at DESC LIMIT 5",
+            workspaceId, workspaceId));
         return result;
     }
 
@@ -258,7 +306,19 @@ public class RoleDashboardQueryService {
                 + "WHERE ai.workspace_id = ? AND ai.status NOT IN ('DONE','CANCELLED') "
                 + "AND ai.due_date < CURRENT_DATE ORDER BY ai.due_date LIMIT 5",
             workspaceId));
+        result.put("slaRisks", slaRisks(workspaceId));
         return result;
+    }
+
+    private List<Map<String, Object>> slaRisks(String workspaceId) {
+        return jdbc.queryForList(
+            "SELECT si.id, si.work_item_id, si.state, si.metric, si.due_at, wi.title "
+                + "FROM sla_instances si JOIN work_items wi ON wi.id = si.work_item_id "
+                + "JOIN projects p ON p.id = wi.project_id "
+                + "WHERE si.workspace_id = ? AND p.workspace_id = ? "
+                + "AND (si.state = 'BREACHED' OR (si.state = 'RUNNING' AND si.due_at <= NOW() + INTERVAL '24 hours')) "
+                + "ORDER BY CASE si.state WHEN 'BREACHED' THEN 1 ELSE 2 END, si.due_at LIMIT 5",
+            workspaceId, workspaceId);
     }
 
     public Map<String, Object> getAdminDashboard(String workspaceId) {

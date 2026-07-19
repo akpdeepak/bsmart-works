@@ -34,7 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TodayLayoutService {
 
     public static final Set<String> ROLE_KEYS =
-        Set.of("developer", "scrum-master", "product-owner", "executive", "admin");
+        Set.of("developer", "scrum-master", "product-owner", "support-agent", "executive", "admin");
     static final int MAX_WIDGETS = 12;
     private static final String SURFACE_TODAY = "TODAY";
 

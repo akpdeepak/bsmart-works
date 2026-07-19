@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.reporting.RoleDashboardQueryService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -12,9 +14,11 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.OffsetDateTime;
+import java.time.Duration;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
 
 /**
  * Cross-tenant workspace isolation integration test (RB-40 Â§1 / TD-013).
@@ -54,6 +58,9 @@ class WorkspaceTenantIsolationIT {
     @Autowired
     JdbcTemplate jdbc;
 
+    @Autowired
+    RoleDashboardQueryService roleDashboards;
+
     // â”€â”€ Test fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private static final String WS_A      = "ISOL-WS-A";
@@ -79,6 +86,8 @@ class WorkspaceTenantIsolationIT {
         OffsetDateTime now = OffsetDateTime.now();
 
         // --- Teardown: remove any previous run's fixtures (order matters due to FKs) ------
+        jdbc.update("DELETE FROM chat_messages WHERE conversation_id IN ('ISOL-CHAT-A', 'ISOL-CHAT-B')");
+        jdbc.update("DELETE FROM chat_conversations WHERE id IN ('ISOL-CHAT-A', 'ISOL-CHAT-B')");
         jdbc.update("DELETE FROM work_items      WHERE project_id IN (?, ?)", PROJ_A, PROJ_B);
         jdbc.update("DELETE FROM projects        WHERE id IN (?, ?)",         PROJ_A, PROJ_B);
         jdbc.update("DELETE FROM workspace_members WHERE workspace_id IN (?, ?)", WS_A, WS_B);
@@ -211,6 +220,52 @@ class WorkspaceTenantIsolationIT {
         assertThat(leaked)
             .as("workspace B rows must not be reachable via user A's membership predicate")
             .isEmpty();
+    }
+
+    @Test
+    void developerTodayUsesTheSelectedWorkspaceEvenForAMultiWorkspaceUser() {
+        jdbc.update(
+            "INSERT INTO workspace_members(workspace_id, user_id, system_role) VALUES (?,?,?)",
+            WS_B, USER_A, "MEMBER");
+        jdbc.update("UPDATE work_items SET assignee_id = ? WHERE project_id = ?", USER_A, PROJ_B);
+        jdbc.update("UPDATE work_items SET assignee_id = ? WHERE project_id = ?", USER_A, PROJ_A);
+
+        var dashboard = assertTimeout(Duration.ofSeconds(2),
+            () -> roleDashboards.getDeveloperDashboard(USER_A, WS_A));
+
+        @SuppressWarnings("unchecked")
+        List<java.util.Map<String, Object>> items =
+            (List<java.util.Map<String, Object>>) dashboard.get("myOpenItems");
+        assertThat(items).hasSize(3)
+            .extracting(item -> item.get("id").toString())
+            .allMatch(id -> id.startsWith("ISOL-A-"));
+    }
+
+    @Test
+    void supportTodayKeepsConversationsAndMessagesInsideTheSelectedWorkspace() {
+        jdbc.update(
+            "INSERT INTO chat_conversations(id, workspace_id, subject, status) VALUES (?,?,?,?)",
+            "ISOL-CHAT-A", WS_A, "Workspace A customer", "ESCALATED");
+        jdbc.update(
+            "INSERT INTO chat_conversations(id, workspace_id, subject, status) VALUES (?,?,?,?)",
+            "ISOL-CHAT-B", WS_B, "Workspace B customer", "ESCALATED");
+        jdbc.update(
+            "INSERT INTO chat_messages(id, workspace_id, conversation_id, sender_type, body) VALUES (?,?,?,?,?)",
+            "ISOL-MSG-A", WS_A, "ISOL-CHAT-A", "CUSTOMER", "A-only message");
+        jdbc.update(
+            "INSERT INTO chat_messages(id, workspace_id, conversation_id, sender_type, body) VALUES (?,?,?,?,?)",
+            "ISOL-MSG-B", WS_B, "ISOL-CHAT-B", "CUSTOMER", "B-only message");
+
+        var dashboard = roleDashboards.getSupportAgentDashboard(WS_A, USER_A);
+
+        @SuppressWarnings("unchecked")
+        List<java.util.Map<String, Object>> conversations =
+            (List<java.util.Map<String, Object>>) dashboard.get("conversations");
+        @SuppressWarnings("unchecked")
+        List<java.util.Map<String, Object>> messages =
+            (List<java.util.Map<String, Object>>) dashboard.get("importantMessages");
+        assertThat(conversations).extracting(row -> row.get("subject")).containsExactly("Workspace A customer");
+        assertThat(messages).extracting(row -> row.get("body")).containsExactly("A-only message");
     }
 
     /**

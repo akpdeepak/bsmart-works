@@ -193,13 +193,14 @@ public class AiAssistService {
 
     // ── Cap K · AI-suggested compliance rules ────────────────────────────────────
 
-    public record TodayNudge(String text) { }
-    public record TodayNudgesResult(List<TodayNudge> nudges, boolean fallback, AiMeta meta) { }
+    public record TodayNudge(String text, String workItemId, String title) { }
+    public record TodayNudgesResult(String summary, List<TodayNudge> nudges,
+                                    boolean fallback, AiMeta meta) { }
 
-    public TodayNudgesResult todayNudges(String workspaceId, String callerId, String targetUserId, boolean inContext) {
+    public TodayNudgesResult todayNudges(String workspaceId, String callerId, boolean inContext) {
         LocalDate today = LocalDate.now();
         List<WorkItem> assigned = scopedItems(workspaceId).stream()
-            .filter(w -> targetUserId != null && targetUserId.equals(w.getAssigneeId()))
+            .filter(w -> callerId.equals(w.getAssigneeId()))
             .filter(AiAssistService::isOpenItem)
             .sorted(Comparator
                 .comparing((WorkItem w) -> w.getDueDate() == null ? LocalDate.MAX : w.getDueDate())
@@ -212,20 +213,22 @@ public class AiAssistService {
             .filter(w -> w.getDueDate() != null && !w.getDueDate().isAfter(today))
             .limit(2)
             .map(w -> new TodayNudge("Focus on " + w.getId() + " - due " +
-                (w.getDueDate().isBefore(today) ? "overdue" : "today") + ": " + nv(w.getTitle())))
+                (w.getDueDate().isBefore(today) ? "overdue" : "today") + ": " + nv(w.getTitle()),
+                w.getId(), nv(w.getTitle())))
             .forEach(nudges::add);
 
         assigned.stream()
-            .filter(w -> nudges.stream().noneMatch(n -> n.text().contains(w.getId())))
+            .filter(w -> nudges.stream().noneMatch(n -> w.getId().equals(n.workItemId())))
             .filter(w -> priorityRank(w.getPriority()) <= 1)
             .limit(Math.max(0, 3 - nudges.size()))
             .map(w -> new TodayNudge("Pull forward " + w.getId() + " - " + nv(w.getPriority()) +
-                " priority and still open: " + nv(w.getTitle())))
+                " priority and still open: " + nv(w.getTitle()), w.getId(), nv(w.getTitle())))
             .forEach(nudges::add);
 
         if (nudges.isEmpty() && !assigned.isEmpty()) {
             WorkItem next = assigned.get(0);
-            nudges.add(new TodayNudge("Start with " + next.getId() + " - next assigned open item: " + nv(next.getTitle())));
+            nudges.add(new TodayNudge("Start with " + next.getId() + " - next assigned open item: "
+                + nv(next.getTitle()), next.getId(), nv(next.getTitle())));
         }
 
         String draft = nudges.isEmpty()
@@ -233,7 +236,8 @@ public class AiAssistService {
             : nudges.stream().map(TodayNudge::text).collect(Collectors.joining(" "));
         AiControlPlaneService.AiOutcome out = controlPlane.invoke(new AiControlPlaneService.AiCall(
             workspaceId, callerId, AiCapabilities.COCKPIT_PROTIPS, "Generate Today focus nudges", draft, null, inContext));
-        return new TodayNudgesResult(nudges, out.fallback(), AiMeta.of(out));
+        String summary = out.fallback() || out.text() == null || out.text().isBlank() ? draft : out.text();
+        return new TodayNudgesResult(summary, nudges, out.fallback(), AiMeta.of(out));
     }
 
     public record RuleSuggestion(String name, String scopeBql, String assertionBql, String rationale) { }

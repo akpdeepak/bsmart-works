@@ -12,8 +12,9 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
   ledger.
 - Active phase: **Phase 3 — consolidate EPICs 3–12 to full scope.** Phase 2 completed and merged
   2026-07-18 via PR #481; Phase 1 completed 2026-06-21 (PRs #415–#441). EPICs 1–5 have now been
-  re-verified against production code and executable gates; EPIC 6 is code-verified complete on
-  `codex/epic-06-navigation-completion`, and EPIC 7 is the next incomplete EPIC after merge.
+  re-verified against production code and executable gates; EPIC 6 is merged and post-merge
+  verified, and EPIC 7 is code-verified complete on `codex/epic-07-today-completion` pending its
+  remote PR/CI/merge gate. EPIC 8 remains untouched until that merge completes.
   - ✅ **W2-b god classes — all four split & merged:** `ArticleController`→`ArticleService` (PR #446),
     `KpiService`→`KpiMetricCalculator` (PR #447), `BqlCompiler`→`BqlParser`+`BqlSqlEmitter` (PR #448),
     `WorkItemCommandService`→`WorkItemFieldCopier` (PR #449).
@@ -258,7 +259,7 @@ resume point.
 | EPIC 4 - Frontend Architecture Refactor | Code-verified complete | `codex/epics-01-05-completion` | #398 + [#485](https://github.com/akpdeepak/bsmart-works/pull/485) | 1,771 tests; lint/build; architecture gate | `docs/implementation/epics/EPIC-04-frontend-architecture-refactor-completion.md` | Tested workspace/navigation/overlay/realtime boundaries; 2,884-line guarded shell |
 | EPIC 5 - Premium Design System Refresh | Code-verified complete | `codex/epics-01-05-completion` | #399 + [#485](https://github.com/akpdeepak/bsmart-works/pull/485) | 1,771 tests; Storybook build; a11y/design guardrails | `docs/implementation/epics/EPIC-05-premium-design-system-refresh-completion.md` | Blocking token rules; shared states; theme/density; 32 stories; 21 axe screens |
 | EPIC 6 - Simplified Information Architecture and Navigation | Code-verified complete | `codex/epic-06-navigation-completion` | #400 + [#486](https://github.com/akpdeepak/bsmart-works/pull/486) | 11/11 EPIC gate; 1,782 frontend tests; route/server/locale parity; axe; backend RBAC contract | `docs/implementation/epics/EPIC-06-simplified-navigation-completion.md` | Visible permission-aware More, 38 deep links, role landing, localized palette/breadcrumbs, one nav catalogue |
-| EPIC 7 - bSmart Today | Slice shipped (~35%) | `main` | [#401](https://github.com/akpdeepak/bsmart-works/pull/401) | `cd works-frontend && npm test -- today-brief dashboard-view`; `npm run verify`; `cd works-frontend && npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-07-bsmart-today-completion.md` | Role-aware daily clarity band, max-five attention model, saved widget layout preserved |
+| EPIC 7 - bSmart Today | Code-verified complete; PR pending | `codex/epic-07-today-completion` | #401 + closeout pending | 11/11 EPIC gate; 1,797 frontend tests; Storybook; 1,457 backend unit + 125 integration tests; 7 focused fresh-DB tenant/perf tests; repository gate | `docs/implementation/epics/EPIC-07-bsmart-today-completion.md` | Six roles; full signal model; sourced/fallback AI; act/snooze/dismiss; selected-workspace isolation; 2s budget |
 | EPIC 8 - Smart Inbox | Slice shipped (~35%) | `main` | [#402](https://github.com/akpdeepak/bsmart-works/pull/402) | `cd works-frontend && npm test -- smart-inbox notifications-view`; `npm run verify`; `cd works-frontend && npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-08-smart-inbox-completion.md` | Action-first inbox grouping, actionable badge count, activity history preserved |
 | EPIC 9 - bSmart Connect Messaging | Slice shipped (~10%) | `main` | [#403](https://github.com/akpdeepak/bsmart-works/pull/403) | `cd works-frontend && npm test -- message-actions support-inbox-view`; `cd works-frontend && npm test -- bql-view.a11y`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-09-connect-messaging-completion.md` | Source-cited reviewed message action drafts, support chat workspace/RBAC preserved, BQL loading a11y fix |
 | EPIC 10 - Work Item Experience Redesign | Slice shipped (~20%) | `main` | [#404](https://github.com/akpdeepak/bsmart-works/pull/404) | `cd works-frontend && npm test -- work-item-execution-brief work-item-detail-panel`; `npm run verify`; `cd works-frontend && npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-10-work-item-experience-completion.md` | Cited execution brief, visible due/visibility/DevSync snapshot, display-key preference |
@@ -512,5 +513,16 @@ all account labels, removes the sidebar's duplicate catalogue, and enforces pari
 rendered routes, 37 frontend/backend visibility entries, and 44 keys in 10 locales. Local evidence:
 11/11 executable EPIC checks, 1,782 frontend tests across 243 files with lint/build, 1,454 backend
 unit tests with JaCoCo/Checkstyle, navigation axe, and the `/rbac/me` surface contract test. Closeout
-PR [#486](https://github.com/akpdeepak/bsmart-works/pull/486) is pending GitHub CI; merge only after
-the gates pass, then resume with EPIC 7.
+PR [#486](https://github.com/akpdeepak/bsmart-works/pull/486) passed all required GitHub checks and
+was squash-merged as `c83c34f1`; post-merge `main` CI run `29691690131` and local verification were
+green. EPIC 7 followed on its own branch.
+
+2026-07-19: EPIC 7 was re-audited from source requirements through production code on
+`codex/epic-07-today-completion`. The closeout adds workspace/user/role attention state with
+open/snooze/dismiss and changed-signal behavior, caller-only sourced AI with visible deterministic
+fallback, support-agent Today, approvals/waits, SLA/customer/code risks, messages, and DevSync
+signals. It also closes a developer aggregate leak where one user's memberships could mix multiple
+workspaces. Current evidence: 11/11 executable EPIC checks; 1,797 frontend tests across 246 files
+with lint/build; Storybook build; 1,457 backend unit tests with JaCoCo/Checkstyle; 125 backend
+integration tests; 7 focused fresh-Postgres tenant/performance tests; and the full repository gate.
+Remote PR/CI is next; do not begin EPIC 8 before the EPIC 7 merge and post-merge validation.

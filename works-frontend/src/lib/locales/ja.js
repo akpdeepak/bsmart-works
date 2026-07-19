@@ -237,6 +237,7 @@ export default {
   "nav.smCockpit": "SMコックピット",
   "nav.sprintCockpit": "スプリントコックピット",
   "nav.poWorkspace": "POワークスペース",
+  "nav.account": "マイアカウント",
   "nav.leadership": "リーダーシップ",
   "nav.adminOps": "管理オペレーション",
   "nav.pmArtifacts": "PM成果物",

@@ -148,6 +148,12 @@ export function navDestinations() {
   return out;
 }
 
+// The visible destinations shown by the explicit More menu. This is deliberately derived from
+// the same setup/satellite catalogues as the command palette, so neither path can silently drift.
+export function moreDestinations(vis) {
+  return [...SETUP_DESTINATIONS, ...SATELLITES].filter((destination) => allowed(destination.id, vis));
+}
+
 // ─── Lenses ─────────────────────────────────────────────────────────────────────
 // The top-right lens switcher retunes the workspace to a role. Each lens maps to the existing
 // role cockpit view + the dashboardRole string fetchDashboard() understands, so picking a lens
@@ -344,4 +350,3 @@ export function roleLandingForMode(modeId, lensId, vis) {
   // No role-preferred surface in this mode — fall back to default
   return firstSurfaceOf(modeId, vis);
 }
-

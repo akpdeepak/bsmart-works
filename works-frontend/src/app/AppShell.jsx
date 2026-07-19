@@ -7,7 +7,9 @@ import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
 import { ModeRail } from '@/components/works/organisms/mode-rail';
 import { SubRail } from '@/components/works/organisms/sub-rail';
-import { LENSES, TIER, modeForView, firstSurfaceOf, getMode, labelForView, allowed, navDestinations, primarySurfacesFor } from '@/lib/nav-model';
+import { MoreMenu } from '@/components/works/organisms/more-menu';
+import { ShellBreadcrumbs } from '@/components/works/organisms/shell-breadcrumbs';
+import { LENSES, TIER, modeForView, getMode, labelForView, allowed, navDestinations, primarySurfacesFor, roleLandingForMode } from '@/lib/nav-model';
 import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
 import { WorkItemDetailPanel } from '@/components/works/organisms/work-item-detail-panel';
 import { Modal } from '@/components/works/molecules/modal';
@@ -56,6 +58,7 @@ import { usePmState } from '@/hooks/usePmState';
 import { useKnowledgeState } from '@/hooks/useKnowledgeState';
 import { useComplianceState } from '@/hooks/useComplianceState';
 import { FlagDevtools } from '@/components/works/organisms/flag-devtools';
+import { useI18n } from '@/lib/i18n';
 // DashboardDrillModal extracted to src/components/works/organisms/dashboard-drill-modal.jsx (TD-003).
 // ExportButtons extracted to src/components/works/export-buttons.jsx (TD-003).
 // ReportSectionCard extracted to src/components/works/organisms/report-section-card.jsx (TD-003).
@@ -69,6 +72,7 @@ import { FlagDevtools } from '@/components/works/organisms/flag-devtools';
 // form-field errors stay inline.
 
 export default function AppShell() {
+  const { t } = useI18n();
   const initialSession                  = readStoredSession();
   const [currentUser, setCurrentUser]   = useState(() => initialSession?.user || null);
   const [token, setToken]               = useState(() => initialSession?.token || null);
@@ -2262,7 +2266,10 @@ export default function AppShell() {
     ...navDestinations()
       .filter(d => allowed(d.id, visibility))
       .map(d => ({
-        id: `go-${d.id}`, label: d.label, group: d.group, Icon: d.Icon,
+        id: `go-${d.id}`,
+        label: d.labelKey ? t(d.labelKey) : d.label,
+        group: d.groupKey ? t(d.groupKey) : d.group,
+        Icon: d.Icon,
         run: () => navigate(d.id),
       })),
     { id: 'act-create', label: 'Create work item', group: 'Action', Icon: ListTodo, keywords: ['new', 'add'],
@@ -2374,6 +2381,7 @@ export default function AppShell() {
               <Code aria-hidden="true" className="h-3.5 w-3.5 text-white/70" /> BQL
             </button>
             )}
+            <MoreMenu activeView={view} visibility={visibility} onNavigate={navigate} />
           </div>
 
           {/* CENTER — command-palette intent pill (fills all space between left and right zones) */}
@@ -2488,7 +2496,7 @@ export default function AppShell() {
             <ModeRail
               activeMode={activeMode}
               visibility={visibility}
-              onSelectMode={(m) => navigate(firstSurfaceOf(m, visibility))}
+              onSelectMode={(m) => navigate(roleLandingForMode(m, activeLens?.id, visibility))}
             />
             <SubRail
               activeMode={activeMode}
@@ -2505,8 +2513,10 @@ export default function AppShell() {
           </aside>
 
         {/* CONTENT — wrapped in Suspense so lazy-loaded route chunks show a skeleton (WI-21). */}
-        <div className="flex-1 overflow-auto dark:bg-neutral-900">
-          <RouteOutlet
+        <div className="flex min-w-0 flex-1 flex-col dark:bg-neutral-900">
+          <ShellBreadcrumbs view={view} entityLabel={selectedItem?.title || selectedItem?.id} />
+          <div className="min-h-0 flex-1 overflow-auto">
+            <RouteOutlet
             model={{
               acceptDashboardSuggestion, actionItems, activeCeremony, activeObjective, activeRetro, activeSprint, activeStandup, activeWorkspaceId,
               actOnViolation, addArticleComment, addDashboardWidget, addItemToRelease, addKeyResult, addProjectMember, addReportSection, addRetroNote,
@@ -2573,7 +2583,8 @@ export default function AppShell() {
               varianceResult, varianceSprintId, velocityData, view, violationFilter, voteIdea, voteRetroNote, widgetMetrics,
               wipLimits, workflowDetail, workflows, workItems, workItemTypes, workspaceMembers,
             }}
-          />
+            />
+          </div>
         </div>
         </div>
       </main>

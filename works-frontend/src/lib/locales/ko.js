@@ -237,6 +237,7 @@ export default {
   "nav.smCockpit": "SM 콕핏",
   "nav.sprintCockpit": "스프린트 콕핏",
   "nav.poWorkspace": "PO 워크스페이스",
+  "nav.account": "내 계정",
   "nav.leadership": "리더십",
   "nav.adminOps": "관리자 운영",
   "nav.pmArtifacts": "PM 산출물",

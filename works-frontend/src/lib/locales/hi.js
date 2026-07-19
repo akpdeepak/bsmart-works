@@ -237,6 +237,7 @@ export default {
   "nav.smCockpit": "SM कॉकपिट",
   "nav.sprintCockpit": "स्प्रिंट कॉकपिट",
   "nav.poWorkspace": "PO कार्यक्षेत्र",
+  "nav.account": "मेरा खाता",
   "nav.leadership": "नेतृत्व",
   "nav.adminOps": "एडमिन ऑप्स",
   "nav.pmArtifacts": "PM आर्टिफैक्ट",

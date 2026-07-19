@@ -237,6 +237,7 @@ export default {
   "nav.smCockpit": "SM-Cockpit",
   "nav.sprintCockpit": "Sprint-Cockpit",
   "nav.poWorkspace": "PO-Arbeitsbereich",
+  "nav.account": "Mein Konto",
   "nav.leadership": "Führung",
   "nav.adminOps": "Admin-Ops",
   "nav.pmArtifacts": "PM-Artefakte",

@@ -8,32 +8,39 @@
 
 ## Objective
 
-Keep the primary navigation calm and predictable by enforcing the six-mode rail while keeping every
-existing destination reachable through More, command palette, role lenses, or contextual entrypoints.
+Keep navigation calm and predictable through the six-mode rail while ensuring every rendered
+feature remains permission-aware, localized, deep-linkable, and reachable in two clicks or through
+the command palette.
 
-## Scope in this EPIC slice
+## Scope
 
-- Keep `MODES` limited to Home, Deliver, Insight, Service, Know, Extend.
-- Move setup/admin destinations out of the primary rail into `SETUP_DESTINATIONS`.
-- Preserve command-palette reachability for setup/admin destinations under More.
-- Map setup/admin active views to the Extend rail orientation row.
-- Add navigation model tests so the six-mode contract cannot drift.
+- Preserve exactly Home, Deliver, Insight, Service, Know, and Extend as product modes.
+- Keep setup, administration, role cockpits, account, and BQL off the rail and available through a
+  visible More menu and the command palette.
+- Derive all frontend navigation renderers from `nav-model.js` and keep its visibility catalogue in
+  executable parity with the server-authoritative `NavSurfaces` catalogue.
+- Use role-aware mode landing while an authorized Admin/Owner previews a role.
+- Render localized shell breadcrumbs for mode, surface, and open entity orientation.
+- Give every rendered surface a canonical deep link without breaking existing URLs.
 
 ## Acceptance criteria checklist
 
-- [x] Rail has exactly the six approved modes.
-- [x] Setup is not a top-level rail mode.
-- [x] Setup/admin destinations remain reachable through command palette under More.
-- [x] Active setup/admin views still orient the user in the rail/sub-rail shell.
-- [x] Existing destination visibility continues to use server-authoritative surface lists or tier fallback.
+- [x] Rail has exactly the six approved modes and no setup mode.
+- [x] Primary navigation has no more than eight items.
+- [x] Every rendered view is reachable through rail/sub-rail, More, or command palette.
+- [x] More destinations are filtered by the server surface list or tier fallback.
+- [x] Role-aware navigation declutters without replacing backend authorization.
+- [x] Navigation labels resolve in all ten supported locales.
+- [x] Every navigation destination has a canonical deep link; existing deep links still resolve.
+- [x] Major destinations require no more than two clicks or are command-palette reachable.
+- [x] Breadcrumbs and the contextual work-item panel preserve shell orientation.
+- [x] Keyboard and axe accessibility checks pass.
 
-## Validation planned
+## Validation
 
-- `cd works-frontend && npm test -- nav-model`
-- `cd works-frontend && npm run build`
+- `npm run epic:6`
 - `npm run verify`
+- `cd works-frontend && npm run verify`
+- `cd works-backend && ./mvnw -Dgroups=unit -Dtest=RbacControllerAccessTest test`
 
-## Follow-on notes
-
-- Later EPIC 6 slices can simplify sub-rail ordering and role-aware defaults without expanding the
-  primary rail beyond the six-mode contract.
+No schema or API response-shape change is required. Flyway remains at V119.

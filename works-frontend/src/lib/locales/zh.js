@@ -237,6 +237,7 @@ export default {
   "nav.smCockpit": "SM 驾驶舱",
   "nav.sprintCockpit": "冲刺驾驶舱",
   "nav.poWorkspace": "PO 工作区",
+  "nav.account": "我的账户",
   "nav.leadership": "领导层",
   "nav.adminOps": "管理运营",
   "nav.pmArtifacts": "PM 工件",

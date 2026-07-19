@@ -9,10 +9,11 @@
     "premium-bar": "node scripts/uiux-premium-bar.mjs",
     "uiux:e2e-scope": "node scripts/uiux-end-to-end-scope.mjs",
     "epics:1-5": "node scripts/epics-01-05-completion.mjs",
+    "epic:6": "node scripts/epic-06-completion.mjs",
     "quality-gates": "node scripts/quality-gates.mjs",
     "ai-rules": "node scripts/generate-ai-rules.mjs",
     "ai-rules:check": "node scripts/generate-ai-rules.mjs --check",
-    "verify": "npm run guardrails && npm run quality-gates && npm run ai-rules:check && npm run premium-bar && npm run uiux:e2e-scope && npm run epics:1-5"
+    "verify": "npm run guardrails && npm run quality-gates && npm run ai-rules:check && npm run premium-bar && npm run uiux:e2e-scope && npm run epics:1-5 && npm run epic:6"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.0.2",

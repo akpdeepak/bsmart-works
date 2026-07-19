@@ -33,6 +33,7 @@
 		     (tools.jackson.*), which the Spring Boot 4 parent already manages. -->
 		<webauthn4j.version>0.31.7.RELEASE</webauthn4j.version>
 		<testcontainers.version>2.0.5</testcontainers.version>
+		<byte-buddy.version>1.18.10</byte-buddy.version>
 		<!-- AWS SDK v2 for the real KMS / BYOK key provider (RB-40 §3/§4, EPIC-P1-pii-vault Slice 5).
 		     The BOM aligns the kms client + its transitive AWS modules. -->
 		<awssdk.version>2.29.0</awssdk.version>
@@ -190,6 +191,14 @@
 			<artifactId>testcontainers-postgresql</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Mockito inline mocking on JDK 21 must use an explicit agent; dynamic self-attachment is
+		     environment-dependent and is being removed by future JDKs. -->
+		<dependency>
+			<groupId>net.bytebuddy</groupId>
+			<artifactId>byte-buddy-agent</artifactId>
+			<version>${byte-buddy.version}</version>
+			<scope>test</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>testcontainers-junit-jupiter</artifactId>
@@ -259,11 +268,8 @@
 						<goals><goal>check</goal></goals>
 						<configuration>
 							<haltOnFailure>true</haltOnFailure>
-							<!-- Exclude Spring-managed beans, JPA entities, and DTOs.
-							     Only pure utility/domain classes (ApiError, ApiException,
-							     PageResponse, JwtUtil, GlobalExceptionHandler) are measured.
-							     Everything else requires a live DB or Spring context and belongs
-							     in integration tests. -->
+							<!-- Preserve the established 60% gate for the original unit-test scope.
+							     Business services have a separate, explicit gate below. -->
 							<excludes>
 								<exclude>**/*Controller.class</exclude>
 								<exclude>**/*Repository.class</exclude>
@@ -378,6 +384,29 @@
 							</rules>
 						</configuration>
 					</execution>
+					<execution>
+						<id>jacoco-service-check</id>
+						<phase>verify</phase>
+						<goals><goal>check</goal></goals>
+						<configuration>
+							<haltOnFailure>true</haltOnFailure>
+							<includes>
+								<include>**/*Service.class</include>
+							</includes>
+							<rules>
+								<rule>
+									<element>BUNDLE</element>
+									<limits>
+										<limit>
+											<counter>LINE</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>0.48</minimum>
+										</limit>
+									</limits>
+								</rule>
+							</rules>
+						</configuration>
+					</execution>
 				</executions>
 			</plugin>
 			<!-- Surefire: when running unit tests only (./mvnw -B -Dgroups=unit test),
@@ -386,6 +415,7 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
+					<argLine>@{argLine} -javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${byte-buddy.version}/byte-buddy-agent-${byte-buddy.version}.jar</argLine>
 					<excludes>
 						<exclude>**/*IntegrationTest.java</exclude>
 						<exclude>**/*IT.java</exclude>
@@ -401,6 +431,7 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-failsafe-plugin</artifactId>
 				<configuration>
+					<argLine>@{argLine} -javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${byte-buddy.version}/byte-buddy-agent-${byte-buddy.version}.jar</argLine>
 					<includes>
 						<include>**/*IntegrationTest.java</include>
 						<include>**/*IT.java</include>

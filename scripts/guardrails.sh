@@ -65,7 +65,7 @@ fi
 # RBAC must not be enforced in controllers (belongs in the service layer).
 if [ -d "$BE" ]; then
   check BLOCK "No RBAC annotations in controllers (enforce in RbacService — CLAUDE.md §3)" \
-    "$(grep -RInE '@PreAuthorize|@Secured|hasRole\(' "$BE"/*Controller.java 2>/dev/null || true)"
+    "$(find "$BE" -type f -name '*Controller.java' -exec grep -HnE '@PreAuthorize|@Secured|hasRole\(' {} + 2>/dev/null || true)"
 fi
 
 # Flyway files must be V{n}__snake_case.sql (basename check — portable across macOS/Linux).
@@ -106,7 +106,7 @@ fi
 # @Transactional belongs in the service layer, not controllers (CLAUDE.md §3).
 if [ -d "$BE" ]; then
   check BLOCK "No @Transactional in controllers (belongs in service layer — CLAUDE.md §3)" \
-    "$(grep -RInE '@Transactional' "$BE"/*Controller.java 2>/dev/null || true)"
+    "$(find "$BE" -type f -name '*Controller.java' -exec grep -HnE '@Transactional' {} + 2>/dev/null || true)"
 fi
 
 # No raw identity PII into the append-only event log or immutable audit chain (RB-40 §3 rule 1,

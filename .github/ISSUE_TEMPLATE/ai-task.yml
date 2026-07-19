@@ -1,0 +1,73 @@
+name: AI task contract
+description: Durable task, acceptance, validation, ownership, and handoff record for any coding app.
+title: "[AI Task] "
+labels: ["agent-task", "agent:available", "state:ready"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is the durable task contract. Open a draft PR after planning and post one
+        `bsmart-task-state` JSON comment to claim or hand off the work.
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: Outcome and why it matters.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: In scope and out of scope
+      description: Boundaries, affected domains, assumptions, and dependencies.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Stable AC IDs and testable statements.
+      placeholder: |
+        - AC-1: ...
+        - AC-2: ...
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation plan
+      description: Map each AC ID to its planned test/check, expected result, and evidence.
+    validations:
+      required: true
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk lane
+      options:
+        - Read-only / advisory
+        - Documentation / trivial
+        - Standard code
+        - Large / risky
+        - Release
+    validations:
+      required: true
+  - type: textarea
+    id: paths
+    attributes:
+      label: Reserved paths
+      description: Conservative repository paths or globs owned by the active writer.
+      placeholder: works-backend/src/main/java/com/bcits/works/auth/**
+    validations:
+      required: true
+  - type: textarea
+    id: decisions
+    attributes:
+      label: Decisions and approvals
+      description: Decision IDs, approver, scope, expiry, and invalidation conditions where needed.
+  - type: checkboxes
+    id: ready
+    attributes:
+      label: Ready check
+      options:
+        - label: I confirmed this task does not duplicate an active issue and does not silently expand another task.
+          required: true

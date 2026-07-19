@@ -2,11 +2,12 @@
 
 ## Before you write a line of code
 
-1. Read [`ai-rules/00-ORCHESTRATOR.md`](ai-rules/00-ORCHESTRATOR.md) — the canonical rules. Every AI tool reads a generated view of `ai-rules/`; `CLAUDE.md` is one of those generated views.
-2. Read [`docs/ENGINEERING-PRINCIPLES.md`](docs/ENGINEERING-PRINCIPLES.md) — the *why*.
-3. Confirm the **active iteration** with Deepak. Do not build iteration N+1 while N is in scope.
-4. For any backend change: identify the next Flyway migration number (see the Orchestrator §6 —
-   the single source of truth for it) and the API contract before touching code.
+1. Read [`ai-rules/AGENT-CORE.md`](ai-rules/AGENT-CORE.md), then the applicable rulebook.
+2. Open or claim one GitHub `agent-task` issue and use its scope, acceptance criteria, validation map,
+   risk, lease, and reserved paths. GitHub—not a historical iteration narrative—owns active work.
+3. For code, capture the failing test first, implement the smallest passing change, then refactor on
+   green. For migrations, derive the next number from
+   [`ai-rules/current-state.generated.json`](ai-rules/current-state.generated.json).
 
 ---
 
@@ -39,7 +40,7 @@ cd works-frontend && npm test && npm run build && cd ..
 |------|----------------|-------|
 | Java (Temurin) | 21 | `java -version` must show 21 |
 | Maven wrapper | included | Use `./mvnw`, not a system `mvn` |
-| Node.js | 20 | Match the CI runner version |
+| Node.js | 22 | Match the CI runner version |
 | Docker + Compose | current stable | `docker compose up -d` (Compose v2, no hyphen) |
 
 ---
@@ -74,18 +75,17 @@ npm run dev
 The pre-commit hook runs automatically. To run the same checks manually:
 
 ```bash
-# Single command — runs ALL Definition of Done gates:
-bash scripts/verify.sh
+# Impact-based checks for changed paths:
+npm run verify
 
-# Faster variants:
-bash scripts/verify.sh --frontend   # frontend gates only (no JVM startup)
-bash scripts/verify.sh --backend    # backend gates only
-bash scripts/verify.sh --fast       # skip backend unit tests (lint + build only)
+# Full and release backstops:
+npm run verify:full
+npm run verify:release
 
 # Or individually:
 bash scripts/guardrails.sh                           # brand/arch checks
 node scripts/generate-ai-rules.mjs --check           # AI rules in sync
-bash scripts/check-dod-sync.sh                       # DoD version tag in sync
+bash scripts/check-dod-sync.sh                       # PR/policy contract shape
 cd works-frontend && npm run lint                    # ESLint
 cd works-frontend && npm test                        # Vitest unit + component tests
 cd works-frontend && npm run build                   # Vite production build
@@ -96,12 +96,13 @@ cd works-backend && ./mvnw -B -Dgroups=unit verify   # unit tests + JaCoCo cover
 
 ## Branching workflow
 
-See [`CLAUDE.md §7`](CLAUDE.md) for the full branching strategy. Quick reference:
+See [`ai-rules/rulebooks/05-TASK-EXECUTION.md`](ai-rules/rulebooks/05-TASK-EXECUTION.md) for the
+full coordination strategy. Use an isolated worktree for concurrent agent work:
 
 ```bash
 # Start a new feature (always branch from main)
 git checkout main && git pull origin main
-git checkout -b feat/47-sprint-velocity-chart
+git checkout -b feat/gh-47-sprint-velocity-chart
 
 # Keep your branch current with main (rebase, not merge)
 git fetch origin main && git rebase origin/main
@@ -110,8 +111,8 @@ git fetch origin main && git rebase origin/main
 # feat(sprint): add velocity chart to sprint board
 ```
 
-**Branch naming:** `feat/`, `fix/`, `hotfix/`, `chore/`, `docs/`, `refactor/`, `ci/` prefixes.
-Always include the issue number: `feat/47-short-description`.
+**Branch naming:** `type/gh-<issue>-<short-description>`, using `feat`, `fix`, `hotfix`, `chore`,
+`docs`, `refactor`, or `ci` as the type.
 
 **Merge strategy:** squash merge only — the PR title becomes the squash commit message.
 
@@ -120,8 +121,9 @@ Always include the issue number: `feat/47-short-description`.
 ## Writing a good PR
 
 - PR title = the squash commit message → must be Conventional Commits: `type(scope): description`
-- Fill in the iteration and work item fields in the PR template
-- Tick the Definition of Done checklist honestly — CI enforces most items automatically
+- Link the task issue and keep the machine-readable `bsmart-pr/v1` evidence marker valid
+- Map every acceptance criterion to a validation result and include RED/GREEN/final-green evidence
+  when TDD applies
 - Keep PRs small: one logical change per PR. If a branch has grown beyond 400 lines of diff,
   consider whether it can be split.
 - For UI changes: include before/after screenshots in the PR description.
@@ -144,13 +146,15 @@ Files that are auto-generated (never edit these directly):
 - `CLAUDE.md`
 - `AGENTS.md`
 - `.windsurfrules`
-- `.cursor/rules/bsmart.mdc`
+- `.cursor/rules/*.mdc`
+- `.claude/rules/*.md`
+- `.agents/rules/*.md`
+- nested `AGENTS.md` and `CLAUDE.md` files
 - `.github/copilot-instructions.md`
 - `.github/instructions/*.instructions.md`
 
-If you change the Definition of Done contract (Orchestrator §4 in `ai-rules/00-ORCHESTRATOR.md`),
-bump the `dod-version` tag in both that file and `.github/pull_request_template.md` to the same
-value (`YYYY-MM-DD-rN`).
+Policy IDs and enforcement classes live in `ai-rules/policy-registry.json`; update the canonical
+rule, registry, generated views, and its executable check together.
 
 ---
 

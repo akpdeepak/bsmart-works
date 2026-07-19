@@ -1,4 +1,13 @@
+---
+status: historical
+superseded_by: ai-rules/AGENT-CORE.md
+runtime_context: false
+---
+
 # bSmart Works — AI Agent Implementation Instructions
+
+> Historical source material. It may support requirement discovery when cited by an active task, but
+> it is not an operational instruction set.
 
 ## Purpose
 

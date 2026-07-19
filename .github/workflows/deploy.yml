@@ -16,6 +16,10 @@ name: Deploy
 on:
   workflow_dispatch:
     inputs:
+      release_tag:
+        description: Immutable GitHub release tag (vMAJOR.MINOR.PATCH)
+        required: true
+        type: string
       environment:
         description: Target environment
         required: true
@@ -47,6 +51,17 @@ jobs:
           echo "Production deploy requires confirm_production = 'DEPLOY'" >&2
           exit 1
 
+      - name: Validate immutable release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          if ! [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::release_tag must be an immutable semantic version tag such as v1.2.3"
+            exit 1
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --silent
+
       - name: Validate deployment configuration
         env:
           DEPLOY_SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
@@ -55,6 +70,8 @@ jobs:
           DEPLOY_BACKEND_DIR: ${{ vars.DEPLOY_BACKEND_DIR }}
           DEPLOY_FRONTEND_DIR: ${{ vars.DEPLOY_FRONTEND_DIR }}
           DEPLOY_BACKEND_SERVICE: ${{ vars.DEPLOY_BACKEND_SERVICE }}
+          BACKEND_HEALTH_URL: ${{ vars.BACKEND_HEALTH_URL }}
+          FRONTEND_HEALTH_URL: ${{ vars.FRONTEND_HEALTH_URL }}
         run: |
           missing=0
           require() {
@@ -69,9 +86,11 @@ jobs:
           if [ "${{ inputs.component }}" != "frontend" ]; then
             require DEPLOY_BACKEND_DIR
             require DEPLOY_BACKEND_SERVICE
+            require BACKEND_HEALTH_URL
           fi
           if [ "${{ inputs.component }}" != "backend" ]; then
             require DEPLOY_FRONTEND_DIR
+            require FRONTEND_HEALTH_URL
           fi
           exit "$missing"
 
@@ -84,19 +103,27 @@ jobs:
       run:
         working-directory: works-backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ inputs.release_tag }}
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - name: Package backend
-        run: ./mvnw -B -DskipTests package
+      - name: Test and package backend
+        run: |
+          ./mvnw -B -Dgroups=unit verify
+          jar_path="$(find target -maxdepth 1 -name '*.jar' ! -name '*.original' | head -n 1)"
+          cp "$jar_path" target/app.jar
+          (cd target && sha256sum app.jar > app.jar.sha256)
       - name: Upload JAR
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: backend-jar
-          path: works-backend/target/*.jar
+          path: |
+            works-backend/target/app.jar
+            works-backend/target/app.jar.sha256
           retention-days: 7
 
   build-frontend:
@@ -110,19 +137,27 @@ jobs:
     env:
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || '/api/v1' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          node-version: '20'
+          ref: ${{ inputs.release_tag }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
           cache: npm
           cache-dependency-path: works-frontend/package-lock.json
       - run: npm ci
-      - run: npm run build
+      - run: npm test -- --run
+      - run: |
+          npm run build
+          tar -czf frontend-dist.tar.gz -C dist .
+          sha256sum frontend-dist.tar.gz > frontend-dist.tar.gz.sha256
       - name: Upload dist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: frontend-dist
-          path: works-frontend/dist/
+          path: |
+            works-frontend/frontend-dist.tar.gz
+            works-frontend/frontend-dist.tar.gz.sha256
           retention-days: 7
 
   deploy:
@@ -144,17 +179,28 @@ jobs:
     steps:
       - name: Download backend artifact
         if: inputs.component == 'full-stack' || inputs.component == 'backend'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: backend-jar
           path: deploy/backend
 
       - name: Download frontend artifact
         if: inputs.component == 'full-stack' || inputs.component == 'frontend'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: frontend-dist
           path: deploy/frontend
+
+      - name: Verify downloaded artifacts
+        run: |
+          if [ "${{ inputs.component }}" != "frontend" ]; then
+            (cd deploy/backend && sha256sum -c app.jar.sha256)
+          fi
+          if [ "${{ inputs.component }}" != "backend" ]; then
+            (cd deploy/frontend && sha256sum -c frontend-dist.tar.gz.sha256)
+            mkdir -p deploy/frontend/dist
+            tar -xzf deploy/frontend/frontend-dist.tar.gz -C deploy/frontend/dist
+          fi
 
       - name: Configure SSH
         run: |
@@ -166,12 +212,13 @@ jobs:
       - name: Deploy backend
         if: inputs.component == 'full-stack' || inputs.component == 'backend'
         run: |
-          jar_path="$(find deploy/backend -name '*.jar' -type f | head -n 1)"
+          jar_path="deploy/backend/app.jar"
           if [ -z "$jar_path" ]; then
             echo "::error::Backend JAR artifact not found"
             exit 1
           fi
-          ssh -i ~/.ssh/deploy_key "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST" "mkdir -p '$DEPLOY_BACKEND_DIR'"
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST" \
+            "mkdir -p '$DEPLOY_BACKEND_DIR' && if [ -f '$DEPLOY_BACKEND_DIR/app.jar' ]; then cp '$DEPLOY_BACKEND_DIR/app.jar' '$DEPLOY_BACKEND_DIR/app.jar.rollback'; fi"
           scp -i ~/.ssh/deploy_key "$jar_path" "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST:$DEPLOY_BACKEND_DIR/app.jar.next"
           ssh -i ~/.ssh/deploy_key "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST" \
             "mv '$DEPLOY_BACKEND_DIR/app.jar.next' '$DEPLOY_BACKEND_DIR/app.jar' && sudo systemctl restart '$DEPLOY_BACKEND_SERVICE'"
@@ -179,14 +226,15 @@ jobs:
       - name: Deploy frontend
         if: inputs.component == 'full-stack' || inputs.component == 'frontend'
         run: |
-          ssh -i ~/.ssh/deploy_key "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST" "mkdir -p '$DEPLOY_FRONTEND_DIR'"
-          rsync -az --delete -e "ssh -i ~/.ssh/deploy_key" deploy/frontend/ "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST:$DEPLOY_FRONTEND_DIR/"
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST" \
+            "mkdir -p '$DEPLOY_FRONTEND_DIR' && tar -czf /tmp/bsmart-frontend.rollback.tgz -C '$DEPLOY_FRONTEND_DIR' ."
+          rsync -az --delete -e "ssh -i ~/.ssh/deploy_key" deploy/frontend/dist/ "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST:$DEPLOY_FRONTEND_DIR/"
           if [ -n "$DEPLOY_FRONTEND_RELOAD" ]; then
             ssh -i ~/.ssh/deploy_key "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST" "$DEPLOY_FRONTEND_RELOAD"
           fi
 
       - name: Backend health check
-        if: (inputs.component == 'full-stack' || inputs.component == 'backend') && env.BACKEND_HEALTH_URL != ''
+        if: inputs.component == 'full-stack' || inputs.component == 'backend'
         run: |
           for i in $(seq 1 24); do
             if curl -fsS "$BACKEND_HEALTH_URL" >/tmp/backend-health.json; then
@@ -199,7 +247,19 @@ jobs:
           exit 1
 
       - name: Frontend health check
-        if: (inputs.component == 'full-stack' || inputs.component == 'frontend') && env.FRONTEND_HEALTH_URL != ''
+        if: inputs.component == 'full-stack' || inputs.component == 'frontend'
         run: |
           curl -fsSI "$FRONTEND_HEALTH_URL" >/tmp/frontend-health.txt
           cat /tmp/frontend-health.txt
+
+      - name: Roll back failed deployment
+        if: failure()
+        run: |
+          if [ "${{ inputs.component }}" != "frontend" ]; then
+            ssh -i ~/.ssh/deploy_key "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST" \
+              "if [ -f '$DEPLOY_BACKEND_DIR/app.jar.rollback' ]; then mv '$DEPLOY_BACKEND_DIR/app.jar.rollback' '$DEPLOY_BACKEND_DIR/app.jar' && sudo systemctl restart '$DEPLOY_BACKEND_SERVICE'; fi"
+          fi
+          if [ "${{ inputs.component }}" != "backend" ]; then
+            ssh -i ~/.ssh/deploy_key "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST" \
+              "if [ -f /tmp/bsmart-frontend.rollback.tgz ]; then find '$DEPLOY_FRONTEND_DIR' -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + && tar -xzf /tmp/bsmart-frontend.rollback.tgz -C '$DEPLOY_FRONTEND_DIR'; fi"
+          fi

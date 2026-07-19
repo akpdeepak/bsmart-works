@@ -1,4 +1,13 @@
+---
+status: historical
+superseded_by: ai-rules/AGENT-CORE.md
+runtime_context: false
+---
+
 # bSmart Works — Reusable Validation & Refactor Prompts
+
+> Historical prompt library. Do not use as an autonomous runtime instruction; create a GitHub task
+> contract and follow the current `ai-rules/` process instead.
 
 Two copy-paste prompts that operationalize `VALIDATION_PLAN.md`. Both are self-contained — they carry the canonical invariants inline, so you can paste them into any coding agent/session pointed at the repo.
 

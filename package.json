@@ -16,7 +16,9 @@
     "ai-rules": "node scripts/generate-ai-rules.mjs",
     "ai-rules:check": "node scripts/generate-ai-rules.mjs --check",
     "task-process:check": "node scripts/check-task-execution-contract.mjs",
-    "verify": "npm run guardrails && npm run quality-gates && npm run ai-rules:check && npm run task-process:check && npm run premium-bar && npm run uiux:e2e-scope && npm run epics:1-5 && npm run epic:6 && npm run epic:7 && npm run epic:8"
+    "verify": "node scripts/verify.mjs --profile changed",
+    "verify:full": "node scripts/verify.mjs --profile full",
+    "verify:release": "node scripts/verify.mjs --profile release"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.0.2",

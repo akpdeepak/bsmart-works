@@ -2,10 +2,6 @@
 applyTo: "works-frontend/**"
 ---
 
-<!-- GENERATED FROM ai-rules/ — do not edit by hand.
-     Edit the source in ai-rules/ and run: node scripts/generate-ai-rules.mjs
-     This file is the GitHub Copilot (frontend/design) view of the same rules. -->
-
 # Rule Book 30 — Design & UX
 
 > Owns the **single design system** — look, feel, interaction, accessibility, content. Read after
@@ -27,7 +23,7 @@ applyTo: "works-frontend/**"
 - **One component pattern:** `cva` + `cn()` (see `button.jsx`). Every new component follows it.
 - **Every interactive element has all five states:** default · hover · focus-visible · active ·
   disabled. None may be skipped.
-- **Accessibility is WCAG 2.1 AA, non-negotiable** (§6).
+- **Accessibility target is WCAG 2.2 AA, non-negotiable** (§6).
 
 ## 2. Color tokens
 Use names; `tailwind.config.js` holds the hex.
@@ -41,8 +37,8 @@ Use names; `tailwind.config.js` holds the hex.
 | `neutral-50 / 100 / 200 / 300 / 400 / 600 / 700 / 900` | Surfaces → text, light to dark |
 
 Readable text uses `neutral-900` (primary) or `neutral-600` (muted). **Never `neutral-400` for
-readable text — it fails AA contrast** (it is the disabled/placeholder color). *Open item:* brand
-spec lists `neutral-700` as `#3C4858` vs the config's value — confirm the intended hex.
+readable text — it fails AA contrast** (it is the disabled/placeholder color). Executable token
+configuration is current; changes require a design decision and contrast tests.
 
 ## 3. Typography — hierarchy through weight, not size soup
 | Role | Class | Weight |
@@ -60,8 +56,8 @@ spec lists `neutral-700` as `#3C4858` vs the config's value — confirm the inte
 - **4px base unit.** Card padding `p-4`/`p-6`; vertical rhythm `space-y-6` (24px between sections).
 - **Radius:** `rounded-sm` 4 · `rounded-md` 8 · `rounded-lg` 12 · `rounded-xl` (22px in config —
   code is canonical; spec's 16px is superseded).
-- **Widths:** dashboards/full surfaces `max-w-7xl` (1280px); **reading/detail content `max-w-[880px]`**
-  (added from spec — keeps long text legible).
+- **Widths:** dashboards/full surfaces `max-w-7xl`; reading/detail content **`max-w-reading`**. Both
+  values are defined in the token configuration; components never use arbitrary width literals.
 - **Three-zone shell (mandatory):** persistent left nav · top context bar · scrollable content.
   Nav has one expanded width and one collapsed width — pick the config token and use it everywhere
   (do not hand-set widths per screen).
@@ -81,8 +77,9 @@ spec lists `neutral-700` as `#3C4858` vs the config's value — confirm the inte
   content.
 - **Empty:** explain *why* empty and *what to do next*; illustration icon `h-10 w-10 text-neutral-300`.
 - **Error:** say *what went wrong* and *what to do about it*; never a raw stack trace.
-- **WCAG 2.1 AA:** AA contrast on all text; full keyboard operability; visible focus; labelled
-  controls; semantic HTML. Enforced by `eslint-plugin-jsx-a11y`.
+- **WCAG 2.2 AA:** AA contrast on all text; full keyboard operability; visible focus; labelled
+  controls; semantic HTML; target-size and focus-obscured criteria where applicable. JSX lint is one
+  automated check, not proof of complete WCAG conformance; axe/E2E and design review complete it.
 
 ## 7. Navigation, components, content
 - **Navigation:** one nav model; current location always indicated; no dead ends.
@@ -95,8 +92,9 @@ spec lists `neutral-700` as `#3C4858` vs the config's value — confirm the inte
 ## 8. Formatting & iconography
 - **Dates/times/numbers:** one formatting layer, locale-aware; relative time for recent events,
   absolute on hover; never hand-format in components.
-- **Icons:** Lucide, default 2px stroke (config is canonical; spec's 1.5px is a target — confirm if
-  changing). Sizes: `16` inline · `20` buttons · `24` section. Icons are decorative unless labelled.
+- **Icons:** Lucide, default 2px stroke from current configuration. Sizes: `16` inline · `20` buttons
+  · `24` section. Icons are decorative unless labelled. Any stroke-system change needs one design
+  decision and repository-wide migration.
 
 ## 9. Z-index — the single stacking scale
 Use the named scale only (base → dropdown → sticky → overlay → modal → toast). Arbitrary `z-[...]`
@@ -105,5 +103,6 @@ Use the named scale only (base → dropdown → sticky → overlay → modal →
 ---
 
 ### What's enforced here
-Tokens/no-hex/no-`gray-*`/no-`works-*`, a11y, z-index → ESLint + `guardrails.sh` (save, pre-commit,
-CI). Everything else is design review against this single book.
+Exact enforcement classification is registered in `../policy-registry.json`. Tokens and restricted
+classes are automated; full WCAG and visual/interaction quality retain executable axe/E2E plus
+required design review.

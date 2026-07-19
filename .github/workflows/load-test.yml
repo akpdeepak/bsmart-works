@@ -2,15 +2,13 @@ name: Load Tests (P95 Budgets — RB-40 §5)
 
 # Never runs on push/PR — only on explicit dispatch.
 # Usage: Actions → "Load Tests (P95 Budgets)" → Run workflow
-# Required inputs: base_url (live deployment URL) and auth_token (workspace JWT).
+# Required input: base_url. The workspace JWT is stored as the LOAD_TEST_AUTH_TOKEN environment
+# secret so it never appears in workflow-dispatch history.
 on:
   workflow_dispatch:
     inputs:
       base_url:
         description: 'Target URL (e.g. https://works-staging.bcits.in)'
-        required: true
-      auth_token:
-        description: 'JWT bearer token for a pre-seeded load-test workspace'
         required: true
       workspace_id:
         description: 'Load-test workspace ID'
@@ -43,13 +41,17 @@ jobs:
   load-test:
     name: 'k6 load test — ${{ inputs.scenario }}'
     runs-on: ubuntu-latest
+    environment: load-test
+    env:
+      AUTH_TOKEN: ${{ secrets.LOAD_TEST_AUTH_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Install k6
         run: |
-          curl -sSfL https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-amd64.tar.gz \
-            | tar -xz --strip-components=1 k6-v0.54.0-linux-amd64/k6
+          curl -sSfLO https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-amd64.tar.gz
+          echo 'c7f03434854f837b6790ee81572e4b0f955241974c79a43cbb9f8d0fef069589  k6-v0.54.0-linux-amd64.tar.gz' | sha256sum -c -
+          tar -xzf k6-v0.54.0-linux-amd64.tar.gz --strip-components=1 k6-v0.54.0-linux-amd64/k6
           sudo mv k6 /usr/local/bin/k6
           k6 version
 
@@ -58,7 +60,7 @@ jobs:
         run: |
           k6 run tests/load/page-load.js \
             -e BASE_URL="${{ inputs.base_url }}" \
-            -e AUTH_TOKEN="${{ inputs.auth_token }}" \
+            -e AUTH_TOKEN="$AUTH_TOKEN" \
             -e WORKSPACE_ID="${{ inputs.workspace_id }}" \
             -e PROJECT_ID="${{ inputs.project_id }}" \
             --out json=results-page-load.json
@@ -68,7 +70,7 @@ jobs:
         run: |
           k6 run tests/load/work-item-create.js \
             -e BASE_URL="${{ inputs.base_url }}" \
-            -e AUTH_TOKEN="${{ inputs.auth_token }}" \
+            -e AUTH_TOKEN="$AUTH_TOKEN" \
             -e WORKSPACE_ID="${{ inputs.workspace_id }}" \
             -e PROJECT_ID="${{ inputs.project_id }}" \
             --out json=results-work-item-create.json
@@ -78,7 +80,7 @@ jobs:
         run: |
           k6 run tests/load/search.js \
             -e BASE_URL="${{ inputs.base_url }}" \
-            -e AUTH_TOKEN="${{ inputs.auth_token }}" \
+            -e AUTH_TOKEN="$AUTH_TOKEN" \
             -e WORKSPACE_ID="${{ inputs.workspace_id }}" \
             --out json=results-search.json
 
@@ -87,7 +89,7 @@ jobs:
         run: |
           k6 run tests/load/dashboard.js \
             -e BASE_URL="${{ inputs.base_url }}" \
-            -e AUTH_TOKEN="${{ inputs.auth_token }}" \
+            -e AUTH_TOKEN="$AUTH_TOKEN" \
             -e WORKSPACE_ID="${{ inputs.workspace_id }}" \
             --out json=results-dashboard.json
 
@@ -96,7 +98,7 @@ jobs:
         run: |
           k6 run tests/load/board-drag-drop.js \
             -e BASE_URL="${{ inputs.base_url }}" \
-            -e AUTH_TOKEN="${{ inputs.auth_token }}" \
+            -e AUTH_TOKEN="$AUTH_TOKEN" \
             -e WORKSPACE_ID="${{ inputs.workspace_id }}" \
             --out json=results-board-drag-drop.json
 
@@ -105,7 +107,7 @@ jobs:
         run: |
           k6 run tests/load/ai-cached.js \
             -e BASE_URL="${{ inputs.base_url }}" \
-            -e AUTH_TOKEN="${{ inputs.auth_token }}" \
+            -e AUTH_TOKEN="$AUTH_TOKEN" \
             -e WORKSPACE_ID="${{ inputs.workspace_id }}" \
             --out json=results-ai-cached.json
 
@@ -114,7 +116,7 @@ jobs:
         run: |
           k6 run tests/load/ai-uncached.js \
             -e BASE_URL="${{ inputs.base_url }}" \
-            -e AUTH_TOKEN="${{ inputs.auth_token }}" \
+            -e AUTH_TOKEN="$AUTH_TOKEN" \
             -e WORKSPACE_ID="${{ inputs.workspace_id }}" \
             --out json=results-ai-uncached.json
 
@@ -123,7 +125,7 @@ jobs:
         run: |
           k6 run tests/load/file-upload.js \
             -e BASE_URL="${{ inputs.base_url }}" \
-            -e AUTH_TOKEN="${{ inputs.auth_token }}" \
+            -e AUTH_TOKEN="$AUTH_TOKEN" \
             -e WORKSPACE_ID="${{ inputs.workspace_id }}" \
             -e PROJECT_ID="${{ inputs.project_id }}" \
             --out json=results-file-upload.json
@@ -133,14 +135,14 @@ jobs:
         run: |
           k6 run tests/load/scale-10x.js \
             -e BASE_URL="${{ inputs.base_url }}" \
-            -e AUTH_TOKEN="${{ inputs.auth_token }}" \
+            -e AUTH_TOKEN="$AUTH_TOKEN" \
             -e WORKSPACE_ID="${{ inputs.workspace_id }}" \
             -e PROJECT_ID="${{ inputs.project_id }}" \
             --out json=results-scale-10x.json
 
       - name: Upload k6 JSON results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: k6-results-${{ inputs.scenario }}-${{ github.run_id }}
           path: results-*.json

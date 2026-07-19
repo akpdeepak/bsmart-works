@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "sourceDigest": "8d625512994f3da9faed26802203329385b380b9e4fa4f356b99b3b9fda9abec",
+  "backend": {
+    "java": "21",
+    "springBoot": "4.1.0",
+    "buildTool": "Maven",
+    "basePackage": "com.bcits.works",
+    "domainPackages": [
+      "ai",
+      "auth",
+      "automation",
+      "devsync",
+      "knowledge",
+      "messaging",
+      "projects",
+      "reporting",
+      "security",
+      "service",
+      "shared",
+      "sla",
+      "workitems",
+      "workspaces"
+    ]
+  },
+  "frontend": {
+    "react": "19.2.7",
+    "vite": "8.0.16",
+    "language": "JavaScript/JSX"
+  },
+  "database": {
+    "engine": "PostgreSQL",
+    "migrationTool": "Flyway",
+    "flywayHighWater": 120,
+    "nextMigration": 121
+  },
+  "generatedFrom": [
+    "works-backend/pom.xml",
+    "works-frontend/package.json",
+    "works-backend/src/main/java/com/bcits/works/",
+    "works-backend/src/main/resources/db/migration/"
+  ]
+}

@@ -1,11 +1,12 @@
 # Rule Book 05 — Task Execution & Ways of Working
 
 > Owns **how any task — raised by the user *or* self-identified by an AI tool — goes from idea to
-> merged-on-remote.** This is the detailed, gated expansion of [Orchestrator §2](../00-ORCHESTRATOR.md).
+> its requested delivery state.** This is the detailed, gated expansion of the
+> [Orchestrator](../00-ORCHESTRATOR.md).
 > Run it for **every** task. Stage 0 right-sizes the detail, but scope planning, acceptance criteria,
 > and validation planning are never skipped.
-> **Enforced by:** the PR template (Definition of Done), the CI gate (blocks merge), `guardrails.sh`,
-> and branch protection on `main`.
+> Enforcement is classified truthfully in `../policy-registry.json`; planning/TDD chronology retains
+> a review component even when submitted evidence is machine-validated.
 
 ---
 
@@ -20,18 +21,19 @@ self-identified work is **propose, never silently expand implementation scope** 
 discipline). Anything touching **data model, security, tenant isolation, or RBAC → stop and get
 Deepak's sign-off before implementation** (Orchestrator §5).
 
-**Earns-its-place + iteration check:** confirm the task closes a real gap (RB-20 §1) and belongs to
-the **active iteration** (Orchestrator §6). If it's iteration N+1 work, **park it — do not build
-ahead** (RB-20 §2).
+**Earns-its-place + active-task check:** confirm the task closes a real gap (RB-20 §1) and belongs to
+the approved active program/slice. Historical iteration numbering does not authorize or prohibit work;
+the linked GitHub task and durable decisions do.
 
 **Right-size the rigor — pick a lane** *(added)*:
 
 | Lane | Examples | Process |
 |------|----------|---------|
-| **Trivial** | typo, copy, comment, doc | micro-plan: one-line bounded scope + acceptance criterion + exact validation check → standard flow |
-| **Small** | one layer, low risk, no schema/tenant/AI | compact execution plan + standard flow |
-| **Standard** | a feature, endpoint, or component | full execution plan + workflow below |
-| **Large / risky** | schema change, cross-cutting, new capability, **anything tenant/security/AI/compliance** | full workflow **+ Deepak checkpoint after the Stage 3 plan is complete** |
+| **Read-only / advisory** | review, diagnosis, explanation | micro-plan + acceptance + evidence-backed validation; no branch/PR |
+| **Documentation / trivial mutation** | typo, copy, isolated docs/config | micro-plan + targeted check + PR when repository content changes |
+| **Standard code** | feature, endpoint, component, bug | GitHub task contract + full TDD/validation + impacted CI + PR |
+| **Large / risky** | schema, cross-cutting, tenant/security/AI/compliance | full workflow + durable approval after Stage 3 + independent review |
+| **Release** | tag, production promotion, rollback | verified immutable artifact + environment approval + health/rollback plan |
 
 ---
 
@@ -40,16 +42,16 @@ ahead** (RB-20 §2).
 - **Resolve ambiguity first.** If the task has 2+ valid interpretations, ask **one** sharp question
   rather than planning the wrong thing. Don't proceed on a guess for anything irreversible.
 - **Definition of Ready** (gate to enter Stage 2): scope is clear · acceptance criteria drafted ·
-  active iteration confirmed · dependencies known · the in-scope rule books are listed.
+  requested delivery state and active task confirmed · dependencies known · applicable rules listed.
 
 ---
 
 ## Stage 2 — Scope expansion & execution plan
 
-Walk the [routing table](../00-ORCHESTRATOR.md#3-routing-table). For **each dimension the task
+Walk the [routing table](../00-ORCHESTRATOR.md#2-routing). For **each dimension the task
 touches**, write what it requires — this *is* what "multidimensional" means here:
 
-- **Product (RB-20):** which capability/iteration; does it earn its place.
+- **Product (RB-20):** which requirement/capability/task; does it earn its place.
 - **Engineering (RB-10):** layers touched; data + migration (expand-contract if schema changes);
   API contract; BQL.
 - **Design (RB-30):** screens/components; the five states; tokens.
@@ -117,10 +119,13 @@ requires the written plan, acceptance criteria, and validation plan, but does no
 
 ---
 
-## Stage 4 — Prepare the workspace *(added — was implicit)*
+## Stage 4 — Claim and prepare the workspace
 
-- Branch off `main`: `type/scope-short-desc` (RB-10 §9). **Never work on or push to `main`
-  directly** — it is protected.
+- Repository mutations acquire a GitHub task lease containing owner/app/run identity, expiry,
+  reserved paths, and base SHA. Read-only/advisory work skips this stage.
+- Use an isolated worktree/clone and branch `type/gh-<issue>-<slice>-<slug>` from current `main`.
+  **Never work on or push to `main` directly.** One writer owns a branch/worktree.
+- Open a draft PR after the plan is recorded so checkpoints and handoffs survive app/machine loss.
 - Confirm local hooks are active (husky / pre-commit) so lint + guardrails run on staged files.
 
 ---
@@ -129,11 +134,13 @@ requires the written plan, acceptance criteria, and validation plan, but does no
 
 For coding-related work, execute the Stage 3 TDD cycle in order. Do not write implementation before the
 test is authored and its intended RED is observed; pure refactors use the documented characterization
-baseline. Keep temporary RED local — never push or merge a red suite.
+baseline. A short-lived RED checkpoint may be pushed only to an explicitly draft, non-mergeable PR;
+never mark it ready or merge it. Prefer small cycles and checkpoint every green micro-slice.
 
 Apply the in-scope rulebook principles — the build non-negotiables (Orchestrator §2.4):
 one job per layer · **RBAC in the service** · **every query workspace-scoped** · **tokens not
-literals** · one `apiClient` · one error shape · **Flyway-only** (next migration: Orchestrator §6) ·
+literals** · one `apiClient` · one error shape · **Flyway-only** (next migration computed by
+`generate-project-state.mjs`) ·
 validate every DTO at the boundary · **change only what the task needs** (drive-by improvements get
 logged per Stage 0, never smuggled in). Commit in logical increments with clear messages.
 
@@ -141,9 +148,10 @@ logged per Stage 0, never smuggled in). Commit in logical increments with clear 
 
 ## Stage 6 — Test & validate
 
-- Run the Stage 3 plan: all levels, **all** mandatory scenario categories.
-- Run the gate **locally first** — lint, guardrails, style, unit + integration must be green before
-  you push.
+- Run the Stage 3 plan and all applicable scenario categories.
+- During development run targeted tests. Before review run `verify --profile changed`; large/risky
+  work runs the affected full suites. Full repository/integration/E2E runs on `main`, nightly, and
+  release rather than being duplicated for every small local change.
 - Validate against acceptance criteria and the "working as expected" definition. UI → verify the
   five states + a11y. Tenant/AI/perf → verify the RB-40 gates.
 - **If any final validation fails → return to Stage 5. Never force a red change forward** *(failure
@@ -153,12 +161,10 @@ logged per Stage 0, never smuggled in). Commit in logical increments with clear 
 
 ## Stage 7 — Review & merge *(gated)*
 
-- Push the branch to origin; open the PR (draft early if WIP).
-- **PR description is the communication + traceability artifact** (Orchestrator §2.6, RB-20 §6):
-  what changed · why · capability + iteration · rule books applied · the pre-execution plan · how it
-  was verified · RED/GREEN/REFACTOR evidence for coding work (or characterization baseline for a pure
-  refactor).
-- Complete the self-review checklist; **the PR template is the Definition of Done** (Orchestrator §4).
+- Keep the linked GitHub issue as the single task contract. The PR summarizes the change and carries a
+  machine-readable mapping from acceptance IDs to validation plus TDD evidence; do not copy the full
+  plan into another prose artifact.
+- Complete only applicable review decisions; automated checks report themselves.
 - **Merge is gated:** CI must be **green** (the gate blocks merge) **and** review approved →
   **squash-merge only**. Never merge red; never direct-push to `main`.
 - *Agent note:* merging, pushing to protected `main`, tagging/releasing, and deploying are
@@ -169,16 +175,16 @@ logged per Stage 0, never smuggled in). Commit in logical increments with clear 
 
 ## Stage 8 — Post-merge verification & remote *(sharpened)*
 
-**"Done on my laptop" is not done.** Confirm:
+For repository mutations, confirm:
 
 - the branch was pushed and the **PR is merged on github.com**;
 - **`origin/main` actually contains the change** (not just your local main);
 - **CI is green on `main`**; the feature branch is deleted.
-- **Iteration boundary?** tag + CHANGELOG + release (RB-10 §9); CD deploys from `main`; verify the
-  deploy health-check.
+- **Release task?** tag + CHANGELOG + immutable tested artifact + deployment health/rollback evidence.
 
-The **Definition of Done is met only when the change is on remote `main`, green, and (where
-applicable) deployed.**
+Read-only work is done when its acceptance criteria and evidence-backed validation are delivered.
+Repository mutations are done at the requested delivery state—PR, merged, or released—with required
+checks green. GitHub automation records merge/main verification and releases the task lease atomically.
 
 ---
 
@@ -192,9 +198,7 @@ applicable) deployed.**
 ---
 
 ### What's enforced here
-Definition of Done → PR template; the whole gate that blocks merge → `ci.yml`; squash-merge + branch
-protection → repo settings; build non-negotiables → `guardrails.sh` + ESLint + Checkstyle; behavior
-→ JUnit/JaCoCo + Vitest; the universal plan and TDD policy →
-`scripts/check-task-execution-contract.mjs` + PR evidence/review. Triage, right-sizing, test chronology,
-and the self-identified-work guardrail remain review disciplines anchored by Stage 0 and the PR
-template; CI can require the contract and a green result, but cannot independently prove chronology.
+Submitted task/PR shape and acceptance mappings → contract validators; leases/transitions/path overlap
+→ agent-coordination workflow; build invariants → guardrails, linters, architecture tests, and behavior
+tests; mergeability → required GitHub rules/checks. Triage, right-sizing, and true TDD chronology remain
+required-review controls; automation must not claim it independently proves them.

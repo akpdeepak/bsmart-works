@@ -35,6 +35,8 @@ public class ReportDeliveryScheduler {
     private final JdbcTemplate jdbc;
     private final JavaMailSender mailSender;
 
+    private record ReportContext(String name, String workspaceId) { }
+
     public ReportDeliveryScheduler(ReportScheduleRepository schedules, ReportScheduleService scheduleService,
                                    NotificationRepository notifications, JdbcTemplate jdbc, JavaMailSender mailSender) {
         this.schedules = schedules;
@@ -70,12 +72,13 @@ public class ReportDeliveryScheduler {
     }
 
     private void deliver(ReportSchedule s) {
-        String reportName = jdbc.query("SELECT name FROM reports WHERE id = ?",
-            rs -> rs.next() ? rs.getString(1) : null, s.getReportId());
-        if (reportName == null) {
+        ReportContext report = jdbc.query("SELECT name, workspace_id FROM reports WHERE id = ?",
+            rs -> rs.next() ? new ReportContext(rs.getString(1), rs.getString(2)) : null, s.getReportId());
+        if (report == null || report.workspaceId() == null) {
             log.warn("[REPORT-DELIVERY] Schedule id={} references a missing report", s.getId());
             return;
         }
+        String reportName = report.name();
         String channel = s.getChannel() == null ? "IN_APP" : s.getChannel().toUpperCase();
         boolean inApp = !"EMAIL".equals(channel);
         boolean email = "EMAIL".equals(channel) || "BOTH".equals(channel);
@@ -89,6 +92,7 @@ public class ReportDeliveryScheduler {
             String message = "Hi " + displayName + ", your report \"" + reportName + "\" is ready";
             if (inApp) {
                 Notification n = new Notification();
+                n.setWorkspaceId(report.workspaceId());
                 n.setUserId(userId);
                 n.setType("REPORT_DELIVERED");
                 n.setMessage(message);

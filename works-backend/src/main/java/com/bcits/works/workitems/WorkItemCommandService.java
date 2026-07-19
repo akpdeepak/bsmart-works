@@ -355,7 +355,7 @@ public class WorkItemCommandService {
 
     private void notifyAssigneeOnCreate(WorkItem saved, String userId) {
         if (saved.getAssigneeId() != null && !saved.getAssigneeId().equals(userId)) {
-            createNotification(saved.getAssigneeId(), "ASSIGNED",
+            createNotification(rbac.workspaceForProject(saved.getProjectId()), saved.getAssigneeId(), "ASSIGNED",
                 "You were assigned to: " + saved.getTitle(), "/items/" + saved.getId());
             String actorName = actorName(userId);
             emailService.sendAssignmentEmail(saved.getAssigneeId(), actorName, saved.getId(), saved.getTitle());
@@ -365,7 +365,7 @@ public class WorkItemCommandService {
     private void notifyAssigneeOnUpdate(WorkItem saved, String oldAssignee, String userId) {
         String newAssignee = saved.getAssigneeId();
         if (newAssignee != null && !newAssignee.equals(oldAssignee) && !newAssignee.equals(userId)) {
-            createNotification(newAssignee, "ASSIGNED",
+            createNotification(rbac.workspaceForProject(saved.getProjectId()), newAssignee, "ASSIGNED",
                 "You were assigned to: " + saved.getTitle(), "/items/" + saved.getId());
             emailService.sendAssignmentEmail(newAssignee, actorName(userId), saved.getId(), saved.getTitle());
         }
@@ -396,7 +396,8 @@ public class WorkItemCommandService {
             String ref = saved.getAutoId() != null ? saved.getAutoId() : saved.getId();
             // Name-free message + actor id (RB-40 §3 Slice 4c): the actor's display name is resolved at
             // render via the vault, so the stored notification carries no raw PII.
-            watcherService.notifyWatchers(id, userId, "updated " + ref + " - " + saved.getTitle(),
+            watcherService.notifyWatchers(rbac.workspaceForProject(saved.getProjectId()), id, userId,
+                "updated " + ref + " - " + saved.getTitle(),
                 notified);
         }
     }
@@ -520,8 +521,8 @@ public class WorkItemCommandService {
         }
     }
 
-    private void createNotification(String userId, String type, String message, String link) {
-        batchService.createIfNotBatched(userId, type, message, link);
+    private void createNotification(String workspaceId, String userId, String type, String message, String link) {
+        batchService.createIfNotBatched(workspaceId, userId, type, message, link);
     }
 
     private String actorName(String userId) {

@@ -102,7 +102,7 @@ public class ComplianceNotificationService {
             }
         }
         for (String userId : userIds) {
-            inApp(userId, type, message, link);
+            inApp(rule.getWorkspaceId(), userId, type, message, link);
         }
     }
 
@@ -138,8 +138,9 @@ public class ComplianceNotificationService {
         }
     }
 
-    private void inApp(String userId, String type, String message, String link) {
+    private void inApp(String workspaceId, String userId, String type, String message, String link) {
         Notification n = new Notification();
+        n.setWorkspaceId(workspaceId);
         n.setUserId(userId);
         n.setType(type);
         n.setMessage(message);

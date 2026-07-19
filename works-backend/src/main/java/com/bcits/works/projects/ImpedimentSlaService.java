@@ -126,7 +126,7 @@ public class ImpedimentSlaService {
                 String link = "/impediments/" + i.getId();
                 long age = ImpedimentService.ageDays(i, today);
                 for (String userId : recipients) {
-                    inApp(userId, message, link);
+                    inApp(i.getWorkspaceId(), userId, message, link);
                     // Email is best-effort and preference-gated (notify_sla_breach); @Async + its own
                     // try/catch mean a mail outage never blocks the in-app escalation or the sweep.
                     emailService.sendSlaBreachEmail(userId, i.getTitle(), age, link);
@@ -160,8 +160,9 @@ public class ImpedimentSlaService {
         return ids;
     }
 
-    private void inApp(String userId, String message, String link) {
+    private void inApp(String workspaceId, String userId, String message, String link) {
         Notification n = new Notification();
+        n.setWorkspaceId(workspaceId);
         n.setUserId(userId);
         n.setType(NOTIFICATION_TYPE);
         n.setMessage(message);

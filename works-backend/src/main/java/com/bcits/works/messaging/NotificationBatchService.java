@@ -49,12 +49,14 @@ public class NotificationBatchService {
      * <em>and</em> the user is not in a focus block that suppresses it.
      * Returns true if the notification was created, false if suppressed.
      */
-    public boolean createIfNotBatched(String userId, String type, String message, String link) {
-        return createIfNotBatched(userId, type, message, link, false);
+    /** Workspace-scoped notification path used by all producers. */
+    public boolean createIfNotBatched(String workspaceId, String userId, String type, String message, String link) {
+        return createIfNotBatched(workspaceId, userId, type, message, link, false);
     }
 
-    /** As above, but {@code p0=true} marks a P0 incident that breaks through focus mode. */
-    public boolean createIfNotBatched(String userId, String type, String message, String link, boolean p0) {
+    /** Workspace-scoped notification path with the P0 focus-mode override. */
+    public boolean createIfNotBatched(String workspaceId, String userId, String type, String message,
+                                      String link, boolean p0) {
         if (focusMode.isSuppressed(userId, p0)) {
             log.debug("[FOCUS] Held {} notification for user {} (in focus block; p0={})", type, userId, p0);
             return false;
@@ -62,8 +64,9 @@ public class NotificationBatchService {
         OffsetDateTime windowStart = OffsetDateTime.now().minusMinutes(BATCH_WINDOW_MINUTES);
         List<Map<String, Object>> existing = jdbc.queryForList(
             "SELECT id FROM notifications " +
-            "WHERE user_id = ? AND type = ? AND link = ? AND created_at >= ? AND is_read = false",
-            userId, type, link, windowStart);
+            "WHERE workspace_id IS NOT DISTINCT FROM ? AND user_id = ? AND type = ? AND link = ? "
+                + "AND created_at >= ? AND is_read = false",
+            workspaceId, userId, type, link, windowStart);
 
         if (!existing.isEmpty()) {
             log.debug("[BATCH] Suppressed duplicate {} notification for user {} (link={})", type, userId, link);
@@ -71,6 +74,7 @@ public class NotificationBatchService {
         }
 
         Notification n = new Notification();
+        n.setWorkspaceId(workspaceId);
         n.setUserId(userId);
         n.setType(type);
         n.setMessage(message);

@@ -1,191 +1,191 @@
-import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expectNoA11yViolations } from '@/test/a11y';
 import NotificationsView from './notifications-view';
 
 vi.mock('@/lib/apiClient', () => ({
-  api: { raw: vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) })) },
+  api: {
+    raw: vi.fn(() => Promise.resolve({ ok: true, status: 204, json: () => Promise.resolve({}) })),
+    send: vi.fn(() => Promise.resolve({})),
+  },
 }));
 
-beforeEach(async () => {
-  const { api } = await import('@/lib/apiClient');
-  api.raw.mockClear();
-  api.raw.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
-});
-
-const noop = () => {};
-const baseProps = {
-  notifications: [],
-  setNotifications: noop,
-  unreadCount: 0,
-  currentUser: { id: 'USR-1' },
-  fetchNotifications: noop,
-  fetchUnreadCount: noop,
-  setUnreadCount: noop,
-  setView: noop,
+const ACTION = {
+  key: 'notification:1',
+  intent: 'REPLY',
+  title: 'Reply requested',
+  message: 'You were mentioned on WI-1',
+  sourceType: 'WORK_ITEM',
+  sourceId: 'WI-1',
+  sourceLink: '/items/WI-1',
+  createdAt: '2026-07-19T10:00:00Z',
+  priority: 'NORMAL',
+  primaryAction: { id: 'reply', label: 'Reply', kind: 'INPUT', method: 'POST', path: '/work-items/WI-1/comments' },
+  secondaryActions: [{ id: 'convert', label: 'Convert to work', kind: 'CONVERT', method: 'POST', path: '/work-items' }],
 };
 
+const baseProps = {
+  activeWorkspaceId: 'WS-1',
+  inboxItems: [],
+  setInboxItems: vi.fn(),
+  notifications: [],
+  setNotifications: vi.fn(),
+  unreadCount: 0,
+  setUnreadCount: vi.fn(),
+  fetchNotifications: vi.fn(() => Promise.resolve()),
+  navigate: vi.fn(),
+  workItems: [{ id: 'WI-1', title: 'Source work' }],
+  projects: [{ id: 'P-1', name: 'Project one' }],
+  setSelectedItem: vi.fn(),
+  onError: vi.fn(),
+};
+
+beforeEach(async () => {
+  vi.clearAllMocks();
+  const { api } = await import('@/lib/apiClient');
+  api.raw.mockResolvedValue({ ok: true, status: 204, json: () => Promise.resolve({}) });
+  api.send.mockResolvedValue({});
+});
+
 describe('NotificationsView', () => {
-  it('uses the sanctioned dashboard page shell', () => {
+  it('uses the product page shell and honest empty state', () => {
     const { container } = render(<NotificationsView {...baseProps} />);
     expect(container.firstChild).toHaveClass('max-w-workspace', 'px-6', 'py-6');
-  });
-
-  it('shows the action inbox empty state when there are no actionable notifications', () => {
-    render(<NotificationsView {...baseProps} />);
     expect(screen.getByText('Action inbox is clear')).toBeInTheDocument();
   });
 
-  it('groups actionable notifications and offers mark-all-read only when some need action', () => {
-    render(
-      <NotificationsView
-        {...baseProps}
-        unreadCount={1}
-        notifications={[{ id: 'N1', type: 'ASSIGNED', message: 'You were assigned WRK-1', read: false }]}
-      />,
-    );
-
+  it('groups server-projected actions and renders one primary action', () => {
+    render(<NotificationsView {...baseProps} inboxItems={[ACTION]} unreadCount={1} />);
     expect(screen.getByText('1 actionable item')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Assign' })).toBeInTheDocument();
-    expect(screen.getByText('You were assigned WRK-1')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Mark all as read' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Reply' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reply' })).toBeInTheDocument();
   });
 
-  it('hides mark-all-read when everything is read', () => {
-    render(<NotificationsView {...baseProps} notifications={[{ id: 'N1', type: 'ASSIGNED', message: 'Done', read: true }]} />);
-    expect(screen.queryByRole('button', { name: 'Mark all as read' })).toBeNull();
-  });
-
-  it('marks a single actionable notification read via PUT and updates local state', async () => {
+  it('persists done state in the active workspace', async () => {
     const { api } = await import('@/lib/apiClient');
-    const setNotifications = vi.fn();
-    const setUnreadCount = vi.fn();
-    render(
-      <NotificationsView
-        {...baseProps}
-        setNotifications={setNotifications}
-        setUnreadCount={setUnreadCount}
-        notifications={[{ id: 'N1', type: 'MENTION', message: 'Ping', read: false }]}
-      />,
-    );
-
+    const setInboxItems = vi.fn();
+    render(<NotificationsView {...baseProps} inboxItems={[ACTION]} setInboxItems={setInboxItems} />);
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-    expect(api.raw).toHaveBeenCalledWith('/notifications/N1/read', { method: 'PUT' });
-    await waitFor(() => expect(setNotifications).toHaveBeenCalled());
-    const updater = setNotifications.mock.calls[0][0];
-    const updated = updater([{ id: 'N1', read: false }, { id: 'N2', read: false }]);
-    expect(updated).toEqual([{ id: 'N1', read: true }, { id: 'N2', read: false }]);
+    await waitFor(() => expect(api.raw).toHaveBeenCalledWith('/inbox/done?workspaceId=WS-1', {
+      method: 'POST', body: JSON.stringify({ itemKey: ACTION.key }),
+    }));
+    expect(setInboxItems).toHaveBeenCalled();
   });
 
-  it('marks unread notification read before navigating to a resolved view', async () => {
+  it('persists the selected snooze duration', async () => {
     const { api } = await import('@/lib/apiClient');
-    const setView = vi.fn();
-    const setNotifications = vi.fn();
-    render(
-      <NotificationsView
-        {...baseProps}
-        setView={setView}
-        setNotifications={setNotifications}
-        unreadCount={1}
-        notifications={[{ id: 'N2', type: 'COMPLIANCE', message: 'Compliance alert', read: false, link: '/compliance' }]}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Escalate' }));
-    expect(api.raw).toHaveBeenCalledWith('/notifications/N2/read', { method: 'PUT' });
-    await waitFor(() => expect(setView).toHaveBeenCalledWith('compliance'));
+    render(<NotificationsView {...baseProps} inboxItems={[ACTION]} />);
+    fireEvent.change(screen.getByLabelText('Snooze duration for Reply requested'), { target: { value: '4' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Snooze' }));
+    await waitFor(() => expect(api.raw).toHaveBeenCalledWith('/inbox/snooze?workspaceId=WS-1', expect.objectContaining({
+      method: 'POST',
+    })));
+    const body = JSON.parse(api.raw.mock.calls[0][1].body);
+    expect(body.itemKey).toBe(ACTION.key);
+    expect(new Date(body.until).getTime()).toBeGreaterThan(Date.now() + 3 * 60 * 60 * 1000);
   });
 
-  it('does not navigate for entity links that are not yet routed but still marks read', async () => {
+  it('acts on an approval directly, then records it done', async () => {
     const { api } = await import('@/lib/apiClient');
-    const setView = vi.fn();
-    const setNotifications = vi.fn();
-    render(
-      <NotificationsView
-        {...baseProps}
-        setView={setView}
-        setNotifications={setNotifications}
-        notifications={[{ id: 'N3', type: 'COMMENT', message: 'Comment on WI-42', read: false, link: '/items/WI-42' }]}
-      />,
-    );
+    const approval = {
+      ...ACTION, key: 'article:A-1', intent: 'APPROVE', title: 'Article approval', sourceType: 'ARTICLE',
+      primaryAction: { id: 'approve', label: 'Approve', kind: 'API', method: 'PUT', path: '/articles/A-1/publish' },
+      secondaryActions: [{ id: 'reject', label: 'Reject', kind: 'API', method: 'PUT', path: '/articles/A-1/reject' }],
+    };
+    render(<NotificationsView {...baseProps} inboxItems={[approval]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+    await waitFor(() => expect(api.send).toHaveBeenCalledWith('/articles/A-1/publish', { method: 'PUT' }));
+    expect(api.raw).toHaveBeenCalledWith('/inbox/done?workspaceId=WS-1', expect.any(Object));
+  });
 
+  it('replies from the Inbox and completes the action', async () => {
+    const { api } = await import('@/lib/apiClient');
+    render(<NotificationsView {...baseProps} inboxItems={[ACTION]} />);
     fireEvent.click(screen.getByRole('button', { name: 'Reply' }));
-    expect(api.raw).toHaveBeenCalledWith('/notifications/N3/read', { method: 'PUT' });
-    await waitFor(() => expect(setNotifications).toHaveBeenCalled());
-    expect(setView).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByPlaceholderText('Write a reply'), { target: { value: 'I will take this.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send reply' }));
+    await waitFor(() => expect(api.send).toHaveBeenCalledWith('/work-items/WI-1/comments', {
+      method: 'POST', body: { body: 'I will take this.' },
+    }));
   });
 
-  it('mark-all-read updates local state and resets actionable count', async () => {
-    const setNotifications = vi.fn();
-    const setUnreadCount = vi.fn();
-    render(
-      <NotificationsView
-        {...baseProps}
-        setNotifications={setNotifications}
-        setUnreadCount={setUnreadCount}
-        unreadCount={2}
-        notifications={[
-          { id: 'N1', type: 'MENTION', message: 'A', read: false },
-          { id: 'N2', type: 'ASSIGNED', message: 'B', read: false },
-        ]}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Mark all as read' }));
-    await waitFor(() => expect(setNotifications).toHaveBeenCalled());
-    const updater = setNotifications.mock.calls[0][0];
-    const updated = updater([{ id: 'N1', read: false }, { id: 'N2', read: false }]);
-    expect(updated.every(n => n.read)).toBe(true);
-    expect(setUnreadCount).toHaveBeenCalledWith(0);
-  });
-
-  it('surfaces a failed mark-read via onError instead of silently swallowing it', async () => {
+  it('converts an action to a real work item', async () => {
     const { api } = await import('@/lib/apiClient');
-    api.raw.mockImplementationOnce(() => Promise.reject(new Error('boom')));
-    const onError = vi.fn();
-    render(<NotificationsView {...baseProps} onError={onError}
-      notifications={[{ id: 'N1', type: 'MENTION', message: 'Ping', read: false }]} />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-    await waitFor(() => expect(onError).toHaveBeenCalled());
+    render(<NotificationsView {...baseProps} inboxItems={[ACTION]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Convert to work' }));
+    fireEvent.change(screen.getByLabelText('Work item title'), { target: { value: 'Follow up with reviewer' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create task' }));
+    await waitFor(() => expect(api.send).toHaveBeenCalledWith('/work-items', {
+      method: 'POST', body: expect.objectContaining({ title: 'Follow up with reviewer', projectId: 'P-1' }),
+    }));
   });
 
-  it('surfaces a failed mark-all-read via onError', async () => {
+  it('bulk-clears only low-priority projected items', async () => {
     const { api } = await import('@/lib/apiClient');
-    api.raw.mockImplementationOnce(() => Promise.reject(new Error('boom')));
-    const onError = vi.fn();
-    render(<NotificationsView {...baseProps} onError={onError} unreadCount={1}
-      notifications={[{ id: 'N1', type: 'MENTION', message: 'Ping', read: false }]} />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Mark all as read' }));
-    await waitFor(() => expect(onError).toHaveBeenCalled());
+    api.send.mockResolvedValueOnce({ updated: 1 });
+    render(<NotificationsView {...baseProps} inboxItems={[ACTION, { ...ACTION, key: 'n:2', priority: 'HIGH' }]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Clear low priority' }));
+    await waitFor(() => expect(api.send).toHaveBeenCalledWith('/inbox/bulk-done?workspaceId=WS-1', {
+      method: 'POST', body: { itemKeys: [ACTION.key] },
+    }));
   });
 
-  it('keeps all notifications available in activity history', () => {
-    render(<NotificationsView {...baseProps}
-      notifications={[{ id: 'N1', type: 'SYSTEM', message: 'FYI only', read: false }]} />);
+  it('shows a governed summary and its source links', async () => {
+    const { api } = await import('@/lib/apiClient');
+    api.send.mockResolvedValueOnce({
+      text: 'One reply needs attention.', usedAi: false, fallback: true,
+      sources: [{ key: ACTION.key, title: ACTION.title, sourceLink: ACTION.sourceLink }],
+    });
+    render(<NotificationsView {...baseProps} inboxItems={[ACTION]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Summarize missed activity' }));
+    expect(await screen.findByText('One reply needs attention.')).toBeInTheDocument();
+    expect(screen.getByText('Deterministic summary')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: ACTION.title })).toBeInTheDocument();
+  });
 
+  it('keeps Activity history separate and marks it read with workspace scope', async () => {
+    const { api } = await import('@/lib/apiClient');
+    render(<NotificationsView {...baseProps} notifications={[{ id: 9, message: 'FYI only', read: false, link: '/compliance' }]} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Activity history' }));
     expect(screen.getByText('FYI only')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Mark all activity read' }));
+    await waitFor(() => expect(api.raw).toHaveBeenCalledWith('/notifications/mark-all-read?workspaceId=WS-1', { method: 'PUT' }));
   });
 
-  it('snoozes an actionable item out of the action inbox without deleting activity history', () => {
-    const setUnreadCount = vi.fn();
-    render(<NotificationsView {...baseProps} setUnreadCount={setUnreadCount}
-      notifications={[{ id: 'N1', type: 'MENTION', message: 'Reply needed', read: false }]} />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Snooze' }));
-    expect(screen.getByText('Action inbox is clear')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('tab', { name: 'Activity history' }));
-    expect(screen.getByText('Reply needed')).toBeInTheDocument();
-    expect(screen.getByText('Snoozed')).toBeInTheDocument();
+  it('opens a work-item source in the real detail surface', () => {
+    const setSelectedItem = vi.fn();
+    const navigate = vi.fn();
+    const openAction = { ...ACTION, primaryAction: { id: 'open', label: 'Open', kind: 'OPEN', method: 'GET', path: null } };
+    render(<NotificationsView {...baseProps} inboxItems={[openAction]} setSelectedItem={setSelectedItem} navigate={navigate} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+    expect(setSelectedItem).toHaveBeenCalledWith(baseProps.workItems[0]);
+    expect(navigate).toHaveBeenCalledWith('board');
   });
 
-  it('has no serious a11y violations', async () => {
-    const { container } = render(
-      <NotificationsView {...baseProps} unreadCount={1}
-        notifications={[{ id: 'N1', type: 'MENTION', message: 'Ping', read: false, createdAt: '2026-06-01' }]} />,
-    );
+  it('uses the server preference panel for quiet hours', async () => {
+    const { api } = await import('@/lib/apiClient');
+    api.send.mockResolvedValueOnce({
+      pushEnabled: true, notifyAssign: true, notifyMention: true, notifyComment: true,
+      notifyStatusChange: true, notifySlaBreach: true, notifyAutomation: true,
+      quietHoursEnabled: true, quietHoursStart: 22, quietHoursEnd: 7,
+      p0OverrideQuiet: true, snoozeUntil: null,
+    });
+    render(<NotificationsView {...baseProps} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Preferences' }));
+    expect(await screen.findByLabelText('From')).toHaveValue(22);
+    expect(api.send).toHaveBeenCalledWith('/push/preferences');
+  });
+
+  it('surfaces mutation failures', async () => {
+    const { api } = await import('@/lib/apiClient');
+    api.raw.mockRejectedValueOnce(new Error('offline'));
+    render(<NotificationsView {...baseProps} inboxItems={[ACTION]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(baseProps.onError).toHaveBeenCalled());
+  });
+
+  it('has no serious accessibility violations', async () => {
+    const { container } = render(<NotificationsView {...baseProps} inboxItems={[ACTION]} unreadCount={1} />);
     await expectNoA11yViolations(container);
   });
 });

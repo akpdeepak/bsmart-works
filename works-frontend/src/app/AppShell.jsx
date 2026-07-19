@@ -29,7 +29,6 @@ import { api } from '@/lib/apiClient';
 import { useDialog } from '@/lib/dialog';
 import { reportError, setToastEmitter } from '@/lib/report-error';
 import { layoutToWidgets } from '@/lib/today-layouts';
-import { countActionableNotifications } from '@/lib/smart-inbox';
 import { useCardPrefs } from '@/hooks/useCardPrefs';
 import { useDensity } from '@/hooks/use-density';
 import { buildStatusResolver } from '@/lib/status-config';
@@ -87,6 +86,7 @@ export default function AppShell() {
   const [projects, setProjects]         = useState([]);
   const [users, setUsers]               = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [inboxItems, setInboxItems]       = useState([]);
   const [unreadCount, setUnreadCount]   = useState(0);
   const [loading, setLoading]           = useState(true);
   // X-Total-Count from the /work-items list response — actual server count, which may exceed the
@@ -705,22 +705,25 @@ export default function AppShell() {
   }
 
   function fetchUnreadCount() {
-    if (!currentUser) return;
-    api.raw(`/notifications?userId=${currentUser.id}&page=0&size=50`)
-      .then(r => r.json()).then(d => {
-        const rows = Array.isArray(d) ? d : [];
-        setNotifications(rows);
-        setUnreadCount(countActionableNotifications(rows));
-      }).catch(reportError);
+    if (!currentUser || !activeWorkspaceId) return;
+    api.send(`/inbox/count?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
+      .then(data => setUnreadCount(Number(data?.count) || 0))
+      .catch(reportError);
   }
 
   function fetchNotifications() {
-    api.raw(`/notifications?userId=${currentUser.id}&page=0&size=50`)
-      .then(r => r.json()).then(d => {
-        const rows = Array.isArray(d) ? d : [];
-        setNotifications(rows);
-        setUnreadCount(countActionableNotifications(rows));
-      }).catch(reportError);
+    if (!currentUser || !activeWorkspaceId) return Promise.resolve();
+    const workspace = encodeURIComponent(activeWorkspaceId);
+    return Promise.all([
+      api.send(`/notifications?workspaceId=${workspace}&page=0&size=100`),
+      api.send(`/inbox?workspaceId=${workspace}`),
+    ]).then(([activity, actions]) => {
+      const activityRows = Array.isArray(activity) ? activity : [];
+      const actionRows = Array.isArray(actions) ? actions : [];
+      setNotifications(activityRows);
+      setInboxItems(actionRows);
+      setUnreadCount(actionRows.length);
+    }).catch(reportError);
   }
 
   // Session hand-off from the isolated authentication surface.
@@ -2551,7 +2554,7 @@ export default function AppShell() {
               loading, meetingNotes, meetings, mfaSetup, mfaSetupCode, mfaSetupMsg, mintShare, moveReportSection,
               myDay, myItems, myWorksTab, navigate, newArticleComment, newCeremony, newCustomer, newFeedback,
               newFieldForm, newFieldVisForm, newIdea, newImpediment, newKr, newObjective, newRetro, newRoleForm,
-              newRuleBuilder, newStatusForm, newTheme, newTransitionForm, newTypeForm, notifications, notifPrefs, objectives,
+              newRuleBuilder, newStatusForm, newTheme, newTransitionForm, newTypeForm, notifications, inboxItems, notifPrefs, objectives,
               openArticlePanel, openCeremony, openDashboard, openObjective, openReport, openRetro, openScheduleManager, openStandup,
               patternsResult, permanentDelete, permMatrix, planningResult, planningTimeOff, pmCreate, pmDelete, pmForm,
               pmFormOpen, pmIssues, pmProjectId, pmTab, poDash, poTab, previewWidgetData, projectMemberEmail,
@@ -2572,7 +2575,7 @@ export default function AppShell() {
               setIsSpaceFormOpen, setIsSprintOpen, setIsWorklogOpen, setKnowledgeSearch, setKnowledgeTab, setMeetingNotes, setMfaSetup, setMfaSetupCode,
               setMyWorksTab, setNewArticleComment, setNewCeremony, setNewCustomer, setNewFeedback, setNewFieldForm, setNewFieldVisForm, setNewIdea,
               setNewImpediment, setNewItem, setNewKr, setNewObjective, setNewRetro, setNewRoleForm, setNewStatusForm, setNewTheme,
-              setNewTransitionForm, setNewTypeForm, setNotifications, setPlanningTimeOff, setPmForm, setPmFormOpen, setPmProjectId, setPmTab,
+              setNewTransitionForm, setNewTypeForm, setNotifications, setInboxItems, setPlanningTimeOff, setPmForm, setPmFormOpen, setPmProjectId, setPmTab,
               setPoTab, setProjectMemberEmail, setRefinementMode, setReleaseNotesName, setReleaseSearch, setReportEditMode, setRetroNoteDraft, setReviewSprintId,
               setRiskSprintId, setRuleActive, setRuleBuilder, setSaveFilterName, setScheduleForm, setScheduleManagerOpen, setSelectedArticle, setSelectedDashboard,
               setSelectedItem, setSelectedMeeting, setSelectedRelease, setSelectedReport, setSelectedSpace, setSelectedSprintId, setServiceQueue, setServiceTab,

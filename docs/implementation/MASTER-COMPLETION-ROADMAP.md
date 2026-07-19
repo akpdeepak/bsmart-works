@@ -89,7 +89,7 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 | 5 | Premium design system | Completed | ✅ Verified 2026-07-19 | token/state/theme/density system | W7 owns exhaustive product QA |
 | 6 | Simplified navigation | Completed | ✅ Verified 2026-07-19 | built | — |
 | 7 | bSmart Today | Completed | ✅ Verified 2026-07-19 | six role layouts, sourced AI brief, actionable max-five attention, full daily signal model | — |
-| 8 | Smart Inbox | Completed | 🟠 ~35% | notifications built | act/convert/snooze flows |
+| 8 | Smart Inbox | Completed | ✅ Verified 2026-07-19 | server action projection, exact count, durable state, sourced/fallback AI, direct source actions | — |
 | 9 | Connect Messaging | Completed | 🔴 ~10% | Messenger absent | full Messenger domain (W6) |
 | 10 | Work-item experience | Completed | 🟠 ~20% | core built | premium redesign + right panel |
 | 11 | Project command center | Completed | 🟠 ~25% | projects built | dedicated command surface |

@@ -339,7 +339,8 @@ public class SupportChatService {
         String notifMessage = "Chat escalated: " + (subject.isBlank() ? convo.getId() : subject);
         List<String> recipients = rbac.getMembersWithPermission(convo.getWorkspaceId(), "work_service");
         for (String recipientId : recipients) {
-            notificationBatch.createIfNotBatched(recipientId, "CHAT_ESCALATED", notifMessage, link);
+            notificationBatch.createIfNotBatched(
+                convo.getWorkspaceId(), recipientId, "CHAT_ESCALATED", notifMessage, link);
         }
     }
 

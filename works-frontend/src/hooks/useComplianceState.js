@@ -3,14 +3,13 @@
 // and all associated CRUD/workflow functions.
 import { useState } from 'react';
 
-const COMPLIANCE_WS = 'WS-001';
-
 /**
  * @param {Object}   api
+ * @param {string}   workspaceId
  * @param {Function} showToast
  * @param {Function} reportError
  */
-export function useComplianceState(api, showToast, reportError) {
+export function useComplianceState(api, workspaceId, showToast, reportError) {
   const [complianceTab, setComplianceTab]         = useState('dashboard');
   const [complianceRules, setComplianceRules]     = useState([]);
   const [complianceTemplates, setComplianceTemplates] = useState([]);
@@ -23,7 +22,8 @@ export function useComplianceState(api, showToast, reportError) {
   const [ruleTestResult, setRuleTestResult]       = useState(null);
 
   function fetchComplianceRules() {
-    api.raw(`/compliance/rules?workspaceId=${COMPLIANCE_WS}`).then(r => r.json())
+    if (!workspaceId) return;
+    api.raw(`/compliance/rules?workspaceId=${encodeURIComponent(workspaceId)}`).then(r => r.json())
       .then(d => setComplianceRules(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchComplianceTemplates() {
@@ -31,16 +31,19 @@ export function useComplianceState(api, showToast, reportError) {
       .then(d => setComplianceTemplates(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchComplianceViolations(status = violationFilter) {
-    const qs = status ? `&status=${status}` : '';
-    api.raw(`/compliance/violations?workspaceId=${COMPLIANCE_WS}${qs}`).then(r => r.json())
+    if (!workspaceId) return;
+    const qs = status ? `&status=${encodeURIComponent(status)}` : '';
+    api.raw(`/compliance/violations?workspaceId=${encodeURIComponent(workspaceId)}${qs}`).then(r => r.json())
       .then(d => { setComplianceViolations(Array.isArray(d) ? d : []); setSelectedViolations([]); }).catch(reportError);
   }
   function fetchComplianceDashboard() {
-    api.raw(`/compliance/dashboard?workspaceId=${COMPLIANCE_WS}`).then(r => r.json())
+    if (!workspaceId) return;
+    api.raw(`/compliance/dashboard?workspaceId=${encodeURIComponent(workspaceId)}`).then(r => r.json())
       .then(d => setComplianceDashboard(d)).catch(reportError);
   }
   function fetchComplianceAudit() {
-    api.raw(`/compliance/audit?workspaceId=${COMPLIANCE_WS}`).then(r => r.json())
+    if (!workspaceId) return;
+    api.raw(`/compliance/audit?workspaceId=${encodeURIComponent(workspaceId)}`).then(r => r.json())
       .then(d => setComplianceAudit(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
@@ -81,9 +84,10 @@ export function useComplianceState(api, showToast, reportError) {
 
   function saveRule() {
     const b = ruleBuilder;
+    if (!workspaceId) { showToast('Select a workspace before saving a rule', 'error'); return; }
     if (!b.name.trim() || !b.assertionBql.trim()) { showToast('Name and assertion are required', 'error'); return; }
     const payload = {
-      workspaceId: COMPLIANCE_WS, projectId: b.projectId || null, name: b.name.trim(), description: b.description,
+      workspaceId, projectId: b.projectId || null, name: b.name.trim(), description: b.description,
       scopeBql: b.scopeBql, assertionBql: b.assertionBql, severity: b.severity,
       evaluationMode: b.evaluationMode, notifyTo: buildNotifyTo(b),
       escalateAfterHours: b.escalateAfterHours === '' ? null : Number(b.escalateAfterHours),
@@ -115,7 +119,8 @@ export function useComplianceState(api, showToast, reportError) {
   }
 
   function cloneTemplate(templateId) {
-    api.send(`/compliance/rules/from-template/${templateId}?workspaceId=${COMPLIANCE_WS}`, { method: 'POST' })
+    if (!workspaceId) return;
+    api.send(`/compliance/rules/from-template/${templateId}?workspaceId=${encodeURIComponent(workspaceId)}`, { method: 'POST' })
       .then(() => { showToast('Rule added from template'); fetchComplianceRules(); })
       .catch(e => showToast(e.message || 'Failed to clone template', 'error'));
   }
@@ -147,7 +152,8 @@ export function useComplianceState(api, showToast, reportError) {
   function selectAllViolations(ids) { setSelectedViolations(ids); }
 
   function exportComplianceAudit() {
-    api.raw(`/compliance/audit/export?workspaceId=${COMPLIANCE_WS}`)
+    if (!workspaceId) return;
+    api.raw(`/compliance/audit/export?workspaceId=${encodeURIComponent(workspaceId)}`)
       .then(r => r.blob())
       .then(blob => {
         const url = URL.createObjectURL(blob);

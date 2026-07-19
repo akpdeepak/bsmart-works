@@ -1,24 +1,10 @@
 package com.bcits.works.workitems;
 
-import com.bcits.works.AutomationService;
-import com.bcits.works.BoardWipLimitService;
-import com.bcits.works.EmailService;
-import com.bcits.works.ExtensionExecutionService;
-import com.bcits.works.FunnelService;
-import com.bcits.works.messaging.NotificationBatchService;
-import com.bcits.works.messaging.NotificationRepository;
-import com.bcits.works.messaging.WatcherService;
-import com.bcits.works.auth.UserRepository;
-import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
-import com.bcits.works.shared.EventService;
-import com.bcits.works.shared.FieldVisibilityService;
-import com.bcits.works.shared.RbacGate;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -30,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;
@@ -40,79 +25,42 @@ import java.util.Map;
 @RequestMapping("/api/v1/work-items")
 public class WorkItemController {
 
-    private final WorkItemRepository repository;
-    private final JdbcTemplate jdbc;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacGate rbac;
     private final WorkItemBulkService bulkService;
-    private final WatcherService watcherService;
     private final WorkItemReadService readService;
     private final WorkItemCommandService commandService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final WorkItemEngagementService engagementService;
 
-    public WorkItemController(WorkItemRepository repository, EventService eventService,
-                              JdbcTemplate jdbc, NotificationRepository notificationRepository,
-                              UserRepository userRepository, EmailService emailService,
-                              NotificationBatchService batchService, AuthenticatedUser authenticatedUser,
-                              RbacGate rbac, DodChecklistService dodChecklists,
-                              ExtensionExecutionService extensions,
-                              WorkflowRuleEngine workflowRules,
-                              StatusConfigService statusConfig,
-                              BoardWipLimitService wipLimits,
-                              WorkItemBulkService bulkService,
-                              WatcherService watcherService,
-                              AutomationService automations,
-                              FunnelService funnelService,
-                              FieldVisibilityService fieldVisibility) {
-        this.repository = repository;
-        this.jdbc = jdbc;
+    public WorkItemController(AuthenticatedUser authenticatedUser, WorkItemBulkService bulkService,
+                              WorkItemReadService readService, WorkItemCommandService commandService,
+                              WorkItemEngagementService engagementService) {
         this.authenticatedUser = authenticatedUser;
-        this.rbac = rbac;
         this.bulkService = bulkService;
-        this.watcherService = watcherService;
-        this.readService = new WorkItemReadService(jdbc, authenticatedUser, objectMapper, fieldVisibility);
-        this.commandService = new WorkItemCommandService(repository, eventService, jdbc, userRepository, emailService,
-            batchService, authenticatedUser, rbac, dodChecklists, extensions, workflowRules, statusConfig,
-            wipLimits, watcherService, automations, funnelService, readService, objectMapper);
+        this.readService = readService;
+        this.commandService = commandService;
+        this.engagementService = engagementService;
     }
 
     // ── Watchers (followers) ─────────────────────────────────────────────────────
     // A user watches an item to be notified on any field change or new comment. Access is gated like
     // a read (tier >= 1 in the item's workspace); fan-out happens in updateWorkItem / addComment.
 
-    private String requireItemViewAccess(String userId, String workItemId) {
-        String wsId = rbac.workspaceForWorkItem(workItemId);
-        if (wsId == null || rbac.getUserTier(userId, wsId) < 1) {
-            throw ApiException.notFound("Work item", workItemId);
-        }
-        return wsId;
-    }
-
     @Operation(summary = "Watch a work item", description = "The caller starts watching this item (idempotent).")
     @PostMapping("/{id}/watch")
     public Map<String, Object> watchItem(@PathVariable String id) {
-        String userId = authenticatedUser.id();
-        requireItemViewAccess(userId, id);
-        watcherService.watch(id, userId);
-        return Map.of("watching", true, "watchers", watcherService.watchers(id).size());
+        return engagementService.watch(id);
     }
 
     @Operation(summary = "Unwatch a work item", description = "The caller stops watching this item.")
     @DeleteMapping("/{id}/watch")
     public Map<String, Object> unwatchItem(@PathVariable String id) {
-        String userId = authenticatedUser.id();
-        requireItemViewAccess(userId, id);
-        watcherService.unwatch(id, userId);
-        return Map.of("watching", false, "watchers", watcherService.watchers(id).size());
+        return engagementService.unwatch(id);
     }
 
     @Operation(summary = "List watchers", description = "Returns the watcher user ids and whether the caller is watching.")
     @GetMapping("/{id}/watchers")
     public Map<String, Object> getWatchers(@PathVariable String id) {
-        String userId = authenticatedUser.id();
-        requireItemViewAccess(userId, id);
-        List<String> ids = watcherService.watchers(id);
-        return Map.of("watchers", ids, "watching", ids.contains(userId));
+        return engagementService.watchers(id);
     }
 
     @Operation(summary = "Bulk-edit work items",
@@ -121,15 +69,8 @@ public class WorkItemController {
             + "may not edit are skipped. Status is not a bulk field (it must run the DoD + workflow "
             + "gates per item). Returns the per-item outcome.")
     @PostMapping("/bulk")
-    public WorkItemBulkService.BulkResult bulkEdit(@Valid @RequestBody Map<String, Object> body) {
-        String userId = authenticatedUser.id();
-        Object rawIds = body.get("ids");
-        List<String> ids = rawIds instanceof List<?> list
-            ? list.stream().filter(java.util.Objects::nonNull).map(Object::toString).toList()
-            : List.of();
-        String action = body.get("action") == null ? null : body.get("action").toString();
-        String value = body.get("value") == null ? null : body.get("value").toString();
-        return bulkService.apply(userId, ids, action, value);
+    public WorkItemBulkService.BulkResult bulkEdit(@Valid @RequestBody WorkItemBulkRequest body) {
+        return bulkService.apply(authenticatedUser.id(), body.ids(), body.action(), body.value());
     }
 
     @Operation(summary = "List work items", description = "Returns work items visible to the authenticated user"
@@ -168,18 +109,12 @@ public class WorkItemController {
     // Star / unstar
     @PostMapping("/{id}/star")
     public Map<String, Object> starItem(@PathVariable String id) {
-        String userId = authenticatedUser.id();
-        requireItemViewAccess(userId, id);
-        jdbc.update("INSERT INTO starred_items (user_id, work_item_id) VALUES (?,?) ON CONFLICT DO NOTHING", userId, id);
-        return Map.of("starred", true, "itemId", id);
+        return engagementService.star(id);
     }
 
     @DeleteMapping("/{id}/star")
     public Map<String, Object> unstarItem(@PathVariable String id) {
-        String userId = authenticatedUser.id();
-        requireItemViewAccess(userId, id);
-        jdbc.update("DELETE FROM starred_items WHERE user_id = ? AND work_item_id = ?", userId, id);
-        return Map.of("starred", false, "itemId", id);
+        return engagementService.unstar(id);
     }
 
     @GetMapping("/starred")
@@ -208,10 +143,7 @@ public class WorkItemController {
      *  a client cannot request another user's items (the old, ignored userId param is removed). */
     @GetMapping("/my")
     public List<WorkItem> myWorkItems() {
-        List<WorkItem> items = repository.findMyItemsScoped(authenticatedUser.id());
-        readService.attachTagsBatch(items);
-        readService.attachFieldValuesBatch(items);
-        return items;
+        return readService.getMyWorkItems();
     }
 
     @Operation(summary = "Create work item", description = "Creates a new work item. Requires create_items permission in the target project's workspace.")

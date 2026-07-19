@@ -1,67 +1,28 @@
-/* eslint-disable no-unused-vars, no-undef */
-// AppShell.jsx baseline-debt suppress: ~60 stale imports + a handful of undeclared state vars
-// pre-date the extraction wave. Track in TD-003. All NEW components must pass clean.
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-// DOMPurify was used only by renderMd, which now lives in @/lib/utils (TD-003).
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  Mail, PanelLeft, Check,
-  Home, User, Bell, LayoutGrid, ListTodo, Zap, Rocket, FolderKanban,
-  BarChart2, LayoutDashboard, FileText, TrendingUp, Headset, Timer, ShieldCheck,
-  Gauge, Map as MapIcon, ClipboardList, Workflow, Plug, Search, BookOpen,
-  SlidersHorizontal, Settings, Trash2, Code, Crown, ShieldHalf,
-  CheckCircle2, AlertTriangle, Puzzle, Link,
-  Shield, Construction,
-  MessageCircle, RefreshCw, Repeat, Megaphone,
-  Eye, EyeOff, Target, Star, Clock, Reply,
-  X, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronDown, ChevronUp,
-  Upload, IndentIncrease, IndentDecrease,
-  CornerDownRight, Image as ImageIcon,
-  Activity, BellRing, Keyboard, Fingerprint,
+  Activity, Bell, BellRing, Check, ChevronDown, Code, Eye, Keyboard,
+  ListTodo, PanelLeft, Search, Settings, User, X,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { UserMenu } from '@/components/works/organisms/user-menu';
 import { ModeRail } from '@/components/works/organisms/mode-rail';
 import { SubRail } from '@/components/works/organisms/sub-rail';
 import { LENSES, TIER, modeForView, firstSurfaceOf, getMode, labelForView, allowed, navDestinations, primarySurfacesFor } from '@/lib/nav-model';
-import { CustomizationView } from '@/components/works/organisms/customization-view';
 import { AiCommandBar } from '@/components/works/organisms/ai-command-bar';
-import { DeveloperWorkspace } from '@/components/works/organisms/developer-workspace';
-import { SlaView } from '@/components/works/organisms/sla-view';
-import { PerformancePanel } from '@/components/works/organisms/performance-panel';
-import { AiSettingsPanel } from '@/components/works/organisms/ai-settings-panel';
-import { WorkItemStatusTimeline } from '@/components/works/organisms/work-item-status-timeline';
-import { AcceptanceCriteria } from '@/components/works/organisms/acceptance-criteria';
-// BoardWipBadge moved to board-view.jsx (TD-003)
 import { WorkItemDetailPanel } from '@/components/works/organisms/work-item-detail-panel';
-import { AutomationsPanel } from '@/components/works/organisms/automations-panel';
-import { IntegrationsPanel } from '@/components/works/organisms/integrations-panel';
-import { SecurityCenter } from '@/components/works/organisms/security-center';
-import { AiComplianceSuggestion } from '@/components/works/organisms/ai-compliance-suggestion';
-import { SprintItemList } from '@/components/works/organisms/sprint-item-list';
 import { Modal } from '@/components/works/molecules/modal';
 import { Toast } from '@/components/works/atoms/toast';
 import { ToastStack } from '@/components/works/atoms/toast-stack';
-import { Skeleton } from '@/components/works/atoms/skeleton';
 import { CommandPalette } from '@/components/works/organisms/command-palette';
 import { OfflineBanner } from '@/components/works/organisms/offline-banner';
 import { PresenceBar } from '@/components/works/organisms/presence-bar';
 import { ShortcutsHelp } from '@/components/works/organisms/shortcuts-help';
 import { ConflictResolver } from '@/components/works/organisms/conflict-resolver';
 import { StatusPage } from '@/components/works/organisms/status-page';
-import { PublicDashboardEmbed } from '@/components/works/organisms/public-dashboard-embed';
 import { PushSettingsPanel } from '@/components/works/organisms/push-settings-panel';
-import { connectRealtime, sendPresence, leavePresence } from '@/lib/realtime';
 import { queueDraft, removeDraft, pendingDrafts, syncDrafts } from '@/lib/offline';
-import { queryClient } from '@/lib/query-client';
 import { viewToPath, pathToView, parseEntityRoute } from '@/lib/routes';
-import { StatusBadge } from '@/components/works/status-badge';
-import { statusToCategory } from '@/components/works/status';
 import { Logo } from '@/components/works/logo';
-import { ResetPasswordScreen } from '@/components/works/reset-password-screen';
-import { securityClient } from '@/lib/security';
-import { authenticatePasskey, passkeysSupported } from '@/lib/passkey';
-// DonutChart / BarChart moved to dashboard-widget-card.jsx + report-section-card.jsx (TD-003).
-// exportElementToPng / exportElementToPdf / exportRowsToCsv moved to export-buttons.jsx (TD-003).
 import { api } from '@/lib/apiClient';
 import { useDialog } from '@/lib/dialog';
 import { reportError, setToastEmitter } from '@/lib/report-error';
@@ -70,19 +31,12 @@ import { countActionableNotifications } from '@/lib/smart-inbox';
 import { useCardPrefs } from '@/hooks/useCardPrefs';
 import { useDensity } from '@/hooks/use-density';
 import { buildStatusResolver } from '@/lib/status-config';
-import { EMPTY_FILTERS, DEFAULT_SORT, filterItems, sortItems, normalizeSavedFilter } from '@/lib/work-item-filter';
+import { EMPTY_FILTERS, DEFAULT_SORT, filterItems, sortItems } from '@/lib/work-item-filter';
 import { buildFieldPrefsResolver, saveTypeFieldPrefs } from '@/lib/type-field-prefs';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
-import { isIconComponent, onPressKey, renderMd } from '@/lib/utils';
-import { EmptyState } from '@/components/works/atoms/empty-state';
-import { TYPES, TYPE_ICON_SET, TYPE_ICON_KEYS, ALL_TYPES, TYPES_BY_KEY, MOVABLE_TYPES } from '@/lib/work-item-types';
 import { CreateWorkItemDialog } from '@/components/works/organisms/create-work-item-dialog';
 import { BRAND_NAVY, BRAND_ORANGE, NEUTRAL_600 } from '@/lib/brand-tokens';
-import { TypeBadge, TypeIcon } from '@/components/works/work-item-type';
-// PriorityBadge moved to backlog-view.jsx (TD-003)
-import { StatCard } from '@/components/works/stat-card';
 import { Field } from '@/components/works/field';
-import { Avatar } from '@/components/works/atoms/avatar';
 // Route-level code-split — each view loads on demand (WI-21). Vite emits one chunk per
 // import(); the Suspense below shows a skeleton until the chunk is ready.
 // PortalFormDesigner moved to service-view.jsx (TD-003).
@@ -90,6 +44,10 @@ import { Avatar } from '@/components/works/atoms/avatar';
 // KR-069: minimal-chrome article embed — loaded on /embed/article/:token with no auth.
 import { readStoredSession } from '@/app/session/session-storage';
 import { useGlobalShortcuts } from '@/app/shortcuts/useGlobalShortcuts';
+import { useShellNavigation } from '@/app/navigation/useShellNavigation';
+import { useShellOverlays } from '@/app/overlays/useShellOverlays';
+import { useRealtimePresence } from '@/app/realtime/useRealtimePresence';
+import { useWorkspaceContext } from '@/app/workspaces/useWorkspaceContext';
 import { PublicRoutes } from '@/app/routes/PublicRoutes';
 import { RouteOutlet } from '@/app/routes/RouteOutlet';
 import { AuthScreens } from '@/app/AuthScreens';
@@ -97,16 +55,6 @@ import { useServiceState } from '@/hooks/useServiceState';
 import { usePmState } from '@/hooks/usePmState';
 import { useKnowledgeState } from '@/hooks/useKnowledgeState';
 import { useComplianceState } from '@/hooks/useComplianceState';
-import {
-  AccountView, AdminOpsView, AiStudioView, BacklogView, BoardView, BqlView,
-  ComplianceView, DashboardView, DashboardsView, DeveloperPortalView,
-  KnowledgeTemplatesView, KnowledgeView, LeadershipConsoleView, MarketplaceView,
-  MyWorksView, NotificationsView, PmView, PoWorkspaceView, ProjectsView,
-  ReleasesView, ReportBuilderView, ReportsView, ScrumMasterCockpitView, SearchView,
-  ServiceView, Settings3View, SprintView, SupportInboxView, TrashView, WorkspaceView,
-} from '@/app/routes';
-import { AiMetaBadge } from '@/components/works/ai-meta-badge';
-import { DashboardWidgetCard } from '@/components/works/organisms/dashboard-widget-card';
 import { FlagDevtools } from '@/components/works/organisms/flag-devtools';
 // DashboardDrillModal extracted to src/components/works/organisms/dashboard-drill-modal.jsx (TD-003).
 // ExportButtons extracted to src/components/works/export-buttons.jsx (TD-003).
@@ -120,18 +68,6 @@ import { FlagDevtools } from '@/components/works/organisms/flag-devtools';
 // failures collapses to one message rather than spamming. Transient/data errors surface here;
 // form-field errors stay inline.
 
-const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
-
-// Avatar + getInitials now live in components/works/atoms/avatar.jsx (imported above).
-
-// Work-item type vocabulary + presentation now live in lib/work-item-types.js and
-// components/works/work-item-type.jsx (imported above).
-
-
-// Iteration 15 — surfaces the AI Control Plane verdict (RB-40 §2) honestly: whether AI ran, fell
-// back to the deterministic result, was degraded to the cheap tier, or served a cached response.
-// AiMetaBadge now lives in components/works/ai-meta-badge.jsx (imported above).
-
 export default function AppShell() {
   const initialSession                  = readStoredSession();
   const [currentUser, setCurrentUser]   = useState(() => initialSession?.user || null);
@@ -139,9 +75,8 @@ export default function AppShell() {
   const [mfaSetup, setMfaSetup]         = useState(null); // { otpAuthUri, secret } — enroll flow
   const [mfaSetupCode, setMfaSetupCode] = useState('');
   const [mfaSetupMsg, setMfaSetupMsg]   = useState('');
-
-  const [view, setView]                 = useState(() => pathToView(window.location.pathname) || 'dashboard');
-  const didInitRoute                    = useRef(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const { view, setView, didInitRoute, navigateRef } = useShellNavigation({ selectedItem, setSelectedItem });
   const [toast, setToast]               = useState(null); // { message, type }
   const { confirm, prompt } = useDialog(); // in-app dialogs (lib/dialog.jsx), not window.* natives
   const [workItems, setWorkItems]       = useState([]);
@@ -157,7 +92,6 @@ export default function AppShell() {
   // client-filtering the paginated workItems array (Audit Finding #7).
   const [myItems, setMyItems]           = useState([]);
 
-  const [selectedItem, setSelectedItem] = useState(null);
   const [detailTab, setDetailTab]       = useState('details'); // details | activity | links | attachments
   const [comments, setComments]         = useState([]);
   const [newComment, setNewComment]     = useState('');
@@ -172,22 +106,18 @@ export default function AppShell() {
   const fileInputRef                    = useRef(null);
   const updateTimerRef                  = useRef(null);
 
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isProjectOpen, setIsProjectOpen] = useState(false);
-  const [newItem, setNewItem]           = useState({ title: '', type: 'Task', description: '', assigneeId: '', dueDate: '', tags: '', priority: 'MEDIUM', parentId: '', projectId: '' });
+  const {
+    isCreateOpen, setIsCreateOpen, isProjectOpen, setIsProjectOpen,
+    paletteOpen, setPaletteOpen, overlay, setOverlay,
+    shortcutsHelpOpen, setShortcutsHelpOpen,
+  } = useShellOverlays();
+  const [, setNewItem]                  = useState({ title: '', type: 'Task', description: '', assigneeId: '', dueDate: '', tags: '', priority: 'MEDIUM', parentId: '', projectId: '' });
   const [newProject, setNewProject]     = useState({ name: '', keyPrefix: '', description: '' });
   const [createError, setCreateError]   = useState('');
-
-
-  const [paletteOpen, setPaletteOpen]   = useState(false);
   const goToRef                         = useRef(false); // 'g' then a key — quick go-to (brand §5.2)
-  const navigateRef                     = useRef(null);  // latest navigate(), for global shortcuts
 
   // Iteration 18 (Cap S): real-time presence roster, lightweight overlays (status / push / shortcuts
   // help) opened from the command palette or shortcuts, and the offline-sync conflict queue.
-  const [presence, setPresence]         = useState([]);
-  const [overlay, setOverlay]           = useState(null); // null | 'status' | 'push'
-  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
   const [conflicts, setConflicts]       = useState([]);
 
   const [workspaceMembers, setWorkspaceMembers] = useState([]);
@@ -268,11 +198,21 @@ export default function AppShell() {
   const [wsOpen, setWsOpen]              = useState(false);
   const wsRef                           = useRef(null);
   const lensRef                         = useRef(null);
-  const [workspaces, setWorkspaces]     = useState([]);
-  const [wsLoading, setWsLoading]       = useState(false);
-  const [wsError, setWsError]           = useState(false);
-  const [activeWorkspaceId, setActiveWorkspaceId] =
-    useState(() => localStorage.getItem('bSmartActiveWorkspace') || 'WS-001');
+  const {
+    workspaces,
+    activeWorkspaceId,
+    loading: wsLoading,
+    error: wsError,
+    ready: workspaceReady,
+    refresh: fetchMyWorkspaces,
+    selectWorkspace,
+  } = useWorkspaceContext(api, currentUser);
+  const presence = useRealtimePresence({
+    currentUser,
+    workspaceId: activeWorkspaceId,
+    view,
+    enabled: workspaceReady,
+  });
 
   // Board columns derived from the active workflow — one column per workflow status.
   // Falls back to the three fixed category columns when no workflow is loaded.
@@ -441,7 +381,7 @@ export default function AppShell() {
 
   // Derived from the membership list + the active selection (see fetchMyWorkspaces).
   const workspace = workspaces.find(w => w.id === activeWorkspaceId)
-    || { id: activeWorkspaceId, name: 'Workspace' };
+    || { id: '', name: 'Workspace' };
   // Board WIP limits for the active workspace ({ todoLimit, inProgressLimit, doneLimit }); empty = none.
   const [wipLimits, setWipLimits] = useState({});
 
@@ -456,22 +396,22 @@ export default function AppShell() {
   const apiFetch = (url, options = {}) => api.send(url, options);
 
   useEffect(() => {
-    if (currentUser) {
-      fetchMyWorkspaces();
+    if (currentUser && workspaceReady && activeWorkspaceId) {
       fetchAll();
       fetchDashboard('developer');
       fetchReleases();
       const iv = setInterval(fetchUnreadCount, 30000);
       return () => clearInterval(iv);
     }
+    return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser]);
+  }, [currentUser, workspaceReady, activeWorkspaceId]);
 
   // Deep-link load: when signed in on a non-default URL, run that view's data fetch once (the
   // same side-effects a nav click would trigger), so a refreshed/shared link arrives populated.
   // Also handles entity deep-links: /items/:id opens the detail panel for that work item.
   useEffect(() => {
-    if (!currentUser || didInitRoute.current) return;
+    if (!currentUser || !workspaceReady || !activeWorkspaceId || didInitRoute.current) return;
     didInitRoute.current = true;
     const pathname = window.location.pathname;
     const v = pathToView(pathname);
@@ -484,7 +424,7 @@ export default function AppShell() {
       queueMicrotask(() => setSelectedItem(prev => prev?.id === entityId ? prev : { id: entityId }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser]);
+  }, [currentUser, workspaceReady, activeWorkspaceId]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
@@ -540,60 +480,6 @@ export default function AppShell() {
     setShortcutsHelpOpen,
   });
 
-  // Real-time stream + co-presence (iteration 18, Cap S). Open an SSE connection for the active
-  // workspace: any server-side event invalidates the cached queries so open views refresh within a
-  // second, and the presence roster drives the live "who's here" avatars. A heartbeat keeps this
-  // client in the roster; on unmount/workspace-switch we close the stream and leave presence.
-  useEffect(() => {
-    if (!currentUser || !activeWorkspaceId) return undefined;
-    const dispose = connectRealtime(activeWorkspaceId, {
-      event: () => { queryClient.invalidateQueries(); },
-      presence: (data) => { if (data?.present) setPresence(data.present); },
-    });
-    const beat = () => sendPresence({
-      workspaceId: activeWorkspaceId,
-      name: currentUser.fullName || currentUser.email,
-      location: viewToPath(view) || view,
-    });
-    beat();
-    const timer = setInterval(beat, 15000);
-    return () => {
-      clearInterval(timer);
-      dispose();
-      leavePresence(activeWorkspaceId);
-    };
-    // view is intentionally read live inside beat(); re-subscribing on every view change is wasteful.
-  }, [currentUser, activeWorkspaceId]);
-
-  // Reflect the active view in the URL so views are deep-linkable and refresh-stable. Unknown
-  // views (viewToPath === null) leave the URL alone. Skipped when already correct, so it does not
-  // fight the popstate handler below (no history loop).
-  useEffect(() => {
-    const path = viewToPath(view);
-    if (path && window.location.pathname !== path) {
-      window.history.pushState({ view }, '', path);
-    }
-  }, [view]);
-
-  // Back/forward: drive the view from the URL, routing through navigate so the target view's data
-  // loads (by now the workspace is ready, so its fetches are safe).
-  // Entity deep-links (/items/:id) open the detail panel without changing the view.
-  useEffect(() => {
-    function onPop() {
-      const pathname = window.location.pathname;
-      const entity = parseEntityRoute(pathname);
-      if (entity?.kind === 'work-item') {
-        setSelectedItem(prev => prev?.id === entity.id ? prev : { id: entity.id });
-        return;
-      }
-      const v = pathToView(pathname) || 'dashboard';
-      if (selectedItem) setSelectedItem(null); // close panel when navigating away via back
-      if (navigateRef.current) navigateRef.current(v); else setView(v);
-    }
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, [selectedItem]);
-
   // Track recently viewed items
   useEffect(() => {
     if (!selectedItem) return;
@@ -632,31 +518,31 @@ export default function AppShell() {
   const {
     knowledgeSpaces, knowledgeArticles, knowledgeSpacesLoading, knowledgeArticlesLoading,
     selectedSpace, setSelectedSpace, selectedArticle, setSelectedArticle,
-    articleVersions, setArticleVersions, knowledgeSearch, setKnowledgeSearch,
-    knowledgeSearchResults, setKnowledgeSearchResults, knowledgeTab, setKnowledgeTab,
+    articleVersions, knowledgeSearch, setKnowledgeSearch,
+    knowledgeSearchResults, knowledgeTab, setKnowledgeTab,
     spaceForm, setSpaceForm, articleForm, setArticleForm,
     isSpaceFormOpen, setIsSpaceFormOpen, isArticleFormOpen, setIsArticleFormOpen,
     editingArticle, setEditingArticle, articlePanel, setArticlePanel,
-    articleComments, setArticleComments, articleChildren, setArticleChildren,
-    newArticleComment, setNewArticleComment, articleAnalytics, setArticleAnalytics,
-    fetchKnowledgeSpaces, fetchKnowledgeArticles, fetchArticleDetail, fetchArticleVersions,
+    articleComments, articleChildren,
+    newArticleComment, setNewArticleComment, articleAnalytics,
+    fetchKnowledgeSpaces, fetchKnowledgeArticles, fetchArticleDetail,
     createKnowledgeSpace, deleteKnowledgeSpace, createArticle, updateArticle, deleteArticle,
     submitArticleForReview, publishArticle, rejectArticle, archiveArticle, restoreArticle,
-    fetchArticleComments, addArticleComment, toggleArticleComment, deleteArticleComment,
-    fetchArticleAnalytics, fetchArticleChildren, openArticlePanel, searchKnowledge,
+    addArticleComment, toggleArticleComment, deleteArticleComment,
+    fetchArticleChildren, openArticlePanel, searchKnowledge,
   } = useKnowledgeState(api, activeWorkspaceId, showToast, reportError);
 
   const {
     complianceTab, setComplianceTab, complianceRules, complianceTemplates,
     complianceViolations, complianceDashboard, complianceAudit,
-    violationFilter, setViolationFilter, selectedViolations, setSelectedViolations,
-    ruleBuilder, setRuleBuilder, ruleTestResult, setRuleTestResult,
+    violationFilter, setViolationFilter, selectedViolations,
+    ruleBuilder, setRuleBuilder, ruleTestResult,
     fetchComplianceRules, fetchComplianceTemplates, fetchComplianceViolations,
     fetchComplianceDashboard, fetchComplianceAudit,
     newRuleBuilder, editRuleBuilder, saveRule, testRule, setRuleActive, evaluateRule,
     cloneTemplate, deleteRule, actOnViolation, bulkAcknowledge,
     toggleViolationSelect, selectAllViolations, exportComplianceAudit,
-  } = useComplianceState(api, showToast, reportError);
+  } = useComplianceState(api, activeWorkspaceId, showToast, reportError);
 
   // Access guard — once the real role is known, bounce out of any surface this user can't see
   // (e.g. a deep link or stale URL into an admin area). Server RBAC already 403s the data; this
@@ -665,38 +551,19 @@ export default function AppShell() {
   useEffect(() => {
     if (!roleLoaded) return;
     if (!allowed(view, { tier: userRole.tier, surfaces: userRole.surfaces })) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setView('dashboard');
-      showToast('You don’t have access to that area.', 'error');
+      queueMicrotask(() => {
+        setView('dashboard');
+        showToast('You don’t have access to that area.', 'error');
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleLoaded, view, userRole.tier, userRole.surfaces]);
-
-  // Multi-workspace context (I01-S02). Loads the workspaces the user belongs to and reconciles the
-  // active selection: keep the persisted choice if still a member, else fall back to the first.
-  function fetchMyWorkspaces() {
-    setWsLoading(true); setWsError(false);
-    api.raw(`/workspaces/mine`)
-      .then(r => r.json())
-      .then(list => {
-        const wss = Array.isArray(list) ? list : [];
-        setWorkspaces(wss);
-        setWsLoading(false);
-        if (wss.length > 0 && !wss.some(w => w.id === activeWorkspaceId)) {
-          const fallback = wss[0].id;
-          setActiveWorkspaceId(fallback);
-          localStorage.setItem('bSmartActiveWorkspace', fallback);
-        }
-      })
-      .catch(() => { setWsLoading(false); setWsError(true); });
-  }
 
   // Switching tenant persists the choice and reloads so every workspace-scoped query refetches
   // cleanly under the new workspace — no stale cross-tenant data in this large single-file app.
   const switchWorkspace = (id) => {
     if (id === activeWorkspaceId) { setWsOpen(false); return; }
-    localStorage.setItem('bSmartActiveWorkspace', id);
-    setActiveWorkspaceId(id);
+    if (!selectWorkspace(id)) return;
     setWsOpen(false);
     window.location.reload();
   };
@@ -932,17 +799,6 @@ export default function AppShell() {
           : `Updated ${updated} item${updated === 1 ? '' : 's'}`);
       }))
       .catch(err => { showToast(err.message || 'Bulk edit failed', 'error'); throw err; });
-
-  const handleMoveItem = (itemId, newParentId) => {
-    api.send(`/work-items/${itemId}/parent`, {
-      method: 'PATCH',
-      body: JSON.stringify({ newParentId }),
-    }).then(saved => {
-      setWorkItems(prev => prev.map(i => i.id === saved.id ? saved : i));
-      if (selectedItem?.id === saved.id) setSelectedItem(saved);
-      showToast('Item moved');
-    }).catch(err => showToast(err.message, 'error'));
-  };
 
   const handleDelete = (id) => {
     const item = workItems.find(i => i.id === id);

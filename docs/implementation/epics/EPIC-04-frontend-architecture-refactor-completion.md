@@ -1,31 +1,27 @@
 # EPIC 04 Completion - Frontend Architecture Refactor
 
-Date: 2026-06-20
-Branch: `epic/04-frontend-architecture-refactor`
+Date: 2026-07-19
+Branch: `codex/epics-01-05-completion`
 
 ## Scope completed
 
-- Created the frontend `src/app` architecture boundary.
-- Converted `src/App.jsx` into a thin, stable entry point that renders the app shell.
-- Moved the legacy shell implementation to `src/app/AppShell.jsx` without changing runtime behavior.
-- Added a Vitest architecture guard to keep root `App.jsx` below 25 lines and free of local state,
-  API calls, and file-level lint suppressions.
+- Kept `src/App.jsx` as a 5-line entry point and reduced `src/app/AppShell.jsx` from 4,628 to 2,884
+  lines through provider, auth, public-route, shortcut, route-outlet, and feature-state extraction.
+- Extracted membership-backed workspace selection, navigation/deep-link state, global overlays, and
+  realtime presence into focused hooks with independent tests.
+- Prevented live-data and realtime startup until workspace membership resolves; stale or foreign
+  persisted workspace ids are rejected instead of replaced with an invented tenant.
+- Removed the shell's file-level `no-unused-vars`/`no-undef` suppression and cleaned the hidden stale
+  code it exposed.
+- Kept canonical view/entity deep-link mapping in the route layer and added architecture regression
+  coverage for the extracted boundaries.
 
-## Key files
+## Validation
 
-- `works-frontend/src/App.jsx`
-- `works-frontend/src/app/AppShell.jsx`
-- `works-frontend/src/app/app-architecture.test.js`
-- `docs/implementation/epics/EPIC-04-frontend-architecture-refactor.md`
+- `cd works-frontend && npm run verify`
+- `node scripts/epics-01-05-completion.mjs`
+- Result: ESLint 0 errors (33 visible legacy warnings), 1,771 tests across 240 files, and a successful
+  production build.
 
-## Local validation
-
-- `cd works-frontend && npm test -- app-architecture`
-- `cd works-frontend && npm run build`
-- `npm run verify`
-
-## Follow-on notes
-
-- The legacy shell still owns many responsibilities, but it now lives behind an explicit app
-  boundary. Continue EPIC 4 with route rendering, providers, global overlays, and feature-state
-  extraction in smaller PRs.
+Further feature-level decomposition remains healthy continuous architecture work; it is not an open
+acceptance item for this EPIC.

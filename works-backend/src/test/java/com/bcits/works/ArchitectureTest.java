@@ -136,6 +136,17 @@ class ArchitectureTest {
     }
 
     @Test
+    void workItemControllerRemainsAnHttpAdapter() throws IOException {
+        String source = Files.readString(MODULE_ROOT.resolve("workitems/WorkItemController.java"));
+        long lines = source.lines().count();
+
+        assertThat(lines).isLessThan(400);
+        assertThat(source).doesNotContain("JdbcTemplate", "new WorkItemReadService",
+                "new WorkItemCommandService", "workspaceForWorkItem", ".update(");
+        assertThat(source).contains("WorkItemBulkRequest", "WorkItemEngagementService");
+    }
+
+    @Test
     void repositoriesDoNotDependOnControllers() {
         noClasses().that().haveSimpleNameEndingWith("Repository")
                 .should().dependOnClassesThat().haveSimpleNameEndingWith("Controller")

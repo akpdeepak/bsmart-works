@@ -3,15 +3,11 @@ package com.bcits.works.ai;
 import com.bcits.works.AiCapabilities;
 import com.bcits.works.knowledge.Article;
 import com.bcits.works.knowledge.ArticleRepository;
-import com.bcits.works.AutomationService;
-import com.bcits.works.messaging.CommentRepository;
 import com.bcits.works.knowledge.KnowledgeSpaceRepository;
 import com.bcits.works.auth.User;
 import com.bcits.works.auth.UserRepository;
 import com.bcits.works.projects.Project;
 import com.bcits.works.projects.ProjectRepository;
-import com.bcits.works.shared.EventService;
-import com.bcits.works.shared.RbacGate;
 import com.bcits.works.workitems.WorkItem;
 import com.bcits.works.workitems.WorkItemRepository;
 import com.bcits.works.workspaces.Team;
@@ -73,8 +69,9 @@ public class AiAssistService {
 
     public AiAssistService(AiControlPlaneService controlPlane, WorkItemRepository workItems,
                            ProjectRepository projects, UserRepository users, ArticleRepository articles,
-                           KnowledgeSpaceRepository spaces, TeamRepository teams, CommentRepository comments,
-                           EventService events, RbacGate rbac, AutomationService automations) {
+                           KnowledgeSpaceRepository spaces, TeamRepository teams,
+                           AiCommandExecutionService commandExecution,
+                           AiSummarizationService summarization) {
         this.controlPlane = controlPlane;
         this.workItems = workItems;
         this.projects = projects;
@@ -82,9 +79,8 @@ public class AiAssistService {
         this.articles = articles;
         this.spaces = spaces;
         this.teams = teams;
-        this.commandExecution = new AiCommandExecutionService(workItems, projects, users, comments, events,
-            rbac, automations);
-        this.summarization = new AiSummarizationService(controlPlane, workItems, projects, comments);
+        this.commandExecution = commandExecution;
+        this.summarization = summarization;
     }
 
     // ── Shared result envelope ───────────────────────────────────────────────────

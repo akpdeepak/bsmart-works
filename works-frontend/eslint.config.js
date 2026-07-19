@@ -225,7 +225,7 @@ const worksHookOverrides = {
   rules: { 'react-hooks/set-state-in-effect': 'warn' },
 };
 
-export default defineConfig([globalIgnores(['dist']), vitestTestConfig, e2eNodeConfig, {
+export default defineConfig([globalIgnores(['dist', 'storybook-static']), vitestTestConfig, e2eNodeConfig, {
   files: ['**/*.{js,jsx}'],
   extends: [
     js.configs.recommended,

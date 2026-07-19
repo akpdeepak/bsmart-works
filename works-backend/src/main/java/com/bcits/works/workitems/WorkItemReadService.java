@@ -25,16 +25,26 @@ public class WorkItemReadService {
                     + "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id WHERE wm.user_id = ?)";
 
     private final JdbcTemplate jdbc;
+    private final WorkItemRepository repository;
     private final AuthenticatedUser authenticatedUser;
     private final ObjectMapper objectMapper;
     private final FieldVisibilityService fieldVisibility;
 
-    public WorkItemReadService(JdbcTemplate jdbc, AuthenticatedUser authenticatedUser, ObjectMapper objectMapper,
+    public WorkItemReadService(JdbcTemplate jdbc, WorkItemRepository repository,
+                               AuthenticatedUser authenticatedUser, ObjectMapper objectMapper,
                                FieldVisibilityService fieldVisibility) {
         this.jdbc = jdbc;
+        this.repository = repository;
         this.authenticatedUser = authenticatedUser;
         this.objectMapper = objectMapper;
         this.fieldVisibility = fieldVisibility;
+    }
+
+    public List<WorkItem> getMyWorkItems() {
+        List<WorkItem> items = repository.findMyItemsScoped(authenticatedUser.id());
+        attachTagsBatch(items);
+        attachFieldValuesBatch(items);
+        return items;
     }
 
     public ResponseEntity<List<WorkItem>> getAllWorkItems(String parentId, int page, int size) {

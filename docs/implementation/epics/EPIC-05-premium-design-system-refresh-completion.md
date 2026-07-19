@@ -1,34 +1,27 @@
 # EPIC 05 Completion - Premium Design System Refresh
 
-Date: 2026-06-20
-Branch: `epic/05-premium-design-system-refresh`
+Date: 2026-07-19
+Branch: `codex/epics-01-05-completion`
 
 ## Scope completed
 
-- Introduced the adaptive `max-w-workspace` product-width token for dashboard and work surfaces.
-- Updated `PageLayout` so dashboard width resolves through the shared design-system token.
-- Updated ESLint page-width guardrails and affected tests to prevent drift back to fixed page caps.
-- Applied the token to constrained workspace surfaces including backlog, AI Studio, Knowledge,
-  customization loading, public dashboard embeds, and related shell tests.
-- Documented the layout-width decision in the visual spec and UI/UX progress ledger.
+- Retained shared color, typography, spacing/layout, radius, elevation, motion, and z-index token
+  families and made raw hex, arbitrary spacing, and arbitrary z-index guardrails blocking.
+- Retained shared loading, empty, error, success, permission, and reduced-motion behavior.
+- Added Storybook light/dark theme and comfortable/compact/spacious density controls.
+- Expanded core molecule stories to FormField, SearchInput, PresenceBar, ActivityFeed loading,
+  AiAssistButton, and Modal; the repository now has 32 story files.
+- Kept Storybook a11y configured to fail and verified 21 axe-backed screen tests.
+- Removed tracked JetBrains Gradle/build-report output and ignored future generated plugin output.
 
-## Key files
+## Validation
 
-- `works-frontend/src/index.css`
-- `works-frontend/tailwind.config.js`
-- `works-frontend/src/components/works/templates/page-layout.jsx`
-- `works-frontend/src/lib/design-system-tokens.test.js`
-- `docs/VISUAL-SPEC.md`
-- `docs/UX-PROGRESS.md`
+- `node scripts/epics-01-05-completion.mjs`
+- `cd works-frontend && npm run verify`
+- `cd works-frontend && npm run build-storybook`
+- `bash scripts/guardrails.sh`
+- Result: 1,771 tests across 240 files, production and Storybook builds passed, ESLint has 0 errors,
+  and all blocking design guardrails passed.
 
-## Local validation
-
-- `cd works-frontend && npm test -- page-layout design-system-tokens`
-- `cd works-frontend && npm run lint` (passes with existing warning-only baseline)
-- `cd works-frontend && npm run build`
-- `npm run verify`
-
-## Follow-on notes
-
-- Continue premium-system work by tightening shared empty/loading/error states, compact density
-  adoption, motion token enforcement, and Storybook coverage for remaining core molecules.
+The wider W7 program still owns exhaustive product-wide E2E, accessibility, visual-regression, and
+NFR closure. Those continuous quality goals are not represented as finished by EPIC 5.

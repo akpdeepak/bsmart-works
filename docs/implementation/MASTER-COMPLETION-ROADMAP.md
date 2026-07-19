@@ -61,8 +61,8 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 |----|-----------|----------------|------:|-------|
 | **W0** | Truth & control plane | Reconcile overclaiming docs; this ledger; SOURCE-OF-TRUTH reversal | 🟡 in progress | 0 |
 | **W1** | Governance & security closure | #243 central tenant filter, field-level security enforcement, PII vault + crypto-shred, BYOK/KMS, WebAuthn attestation, distributed rate-limit, JWT revocation, SOC2/ISO evidence | ✅ Verified 2026-06-21 (PRs #415–#441; deferred sub-items in §4) | 1 |
-| **W2** | Architecture refactors | EPIC-3 real modularization, EPIC-4 real AppShell decomposition, god-class splits, FE code-split, AsyncBoundary adoption, token debt | 🟠 ~5% | 2 |
-| **W3** | Finish EPICs 3–12 to full scope | Slice → full plan for each shipped EPIC | 🟠 ~5–50% | 3 |
+| **W2** | Architecture refactors | EPIC-3 real modularization, EPIC-4 real AppShell decomposition, god-class splits, FE code-split, AsyncBoundary adoption, token debt | ✅ Verified 2026-07-19 | 2 |
+| **W3** | Finish EPICs 3–12 to full scope | Slice → full plan for each shipped EPIC | 🟡 in progress; EPICs 3–5 verified | 3 |
 | **W4** | EPICs 13–27 — elevation | Premium/AI-native reframe over existing capabilities | ⚪ 0% | 5 |
 | **W5** | EPICs 13–27 — net-new builds | Answer Engine, Canvas, People Graph/Skills, onboarding, analytics, DX | ⚪ 0% | 5 |
 | **W6** | V1.6 overlay | Framework engine, 5 user types, operating model, team-key IDs, inline BQL, query boards, Messenger, profile, brand system, premium states, AI coach | 🟠 ~5% | 4 |
@@ -74,19 +74,19 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 
 ## 3. Transformation EPIC ledger (00–27) — verified status
 
-> **Verified-status note.** `ROADMAP-STATE.md` marks EPICs 3–12 "Completed." Independent code
-> verification (2026-06-20) shows each is a genuine but partial **first slice**. This ledger carries
-> the verified status; `ROADMAP-STATE.md` is being corrected to "Slice shipped (partial)".
+> **Verified-status note.** The 2026-06-20 audit found EPICs 3–12 were partial first slices. The
+> 2026-07-19 codebase closeout re-verified EPICs 1–5 from production source and executable gates;
+> EPICs 6–12 remain partial until separately closed.
 
 | EPIC | Title | Ledger | **Verified** | Underlying capability | DoD gap to close |
 |------|-------|--------|--------------|----------------------|------------------|
 | 0 | Hardening / Truth / Baseline | Completed | ✅ ~95% | n/a | residual doc drift (this phase) |
-| 1 | Tenant & RBAC hardening | Completed | 🟠 ~90% | built | central filter #243 (W1) |
-| 2 | Prod config & secrets | Completed | ✅ ~95% | n/a | — |
+| 1 | Tenant & RBAC hardening | Completed | ✅ Verified 2026-07-19 | built | — |
+| 2 | Prod config & secrets | Completed | ✅ Verified 2026-07-19 | n/a | — |
 | 25p | Quality gates (partial) | Completed | ✅ (partial scope) | n/a | full W7 bar |
-| 3 | Backend modularization | Completed | 🔴 ~4% | flat pkg intact | real module split (W2) |
-| 4 | Frontend architecture refactor | Completed | 🔴 ~5% | 4,605-line shell | real decomposition (W2) |
-| 5 | Premium design system | Completed | 🟠 ~15% | DS strong | dark/compact/state system |
+| 3 | Backend modularization | Completed | ✅ Verified 2026-07-19 | 14 populated modules | — |
+| 4 | Frontend architecture refactor | Completed | ✅ Verified 2026-07-19 | 5-line entry; 2,884-line guarded shell | — |
+| 5 | Premium design system | Completed | ✅ Verified 2026-07-19 | token/state/theme/density system | W7 owns exhaustive product QA |
 | 6 | Simplified navigation | Completed | 🟠 ~50% | built | full IA, palette, More |
 | 7 | bSmart Today | Completed | 🟠 ~35% | dashboards built | act/snooze/dismiss flows |
 | 8 | Smart Inbox | Completed | 🟠 ~35% | notifications built | act/convert/snooze flows |
@@ -143,14 +143,18 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 
 ## 5. W2 — Architecture refactor checklist (Phase 2)
 
-| Item | Evidence today (2026-07-03) | DoD |
+| Item | Evidence today (2026-07-19) | DoD |
 |------|----------------|-----|
 | Split flat `com.bcits.works` into domain modules | ✅ 14 modules populated; flat root reduced 291→72 source files; ArchUnit cycle/kernel/non-vacuity/root-budget gates | enforced module boundaries (ArchUnit), classes moved |
-| Decompose `AppShell.jsx` | ✅ 4,628→3,028; providers, auth, public routes, shortcuts, `RouteOutlet`, and four feature-state hooks extracted; architecture ceiling 3,100 | router + providers + overlays + feature-state extracted |
+| Decompose `AppShell.jsx` | ✅ 4,628→2,884; providers, auth, public routes, shortcuts, `RouteOutlet`, feature state, workspace membership, navigation, overlays, and realtime extracted; architecture ceiling 3,000 | router + providers + overlays + feature-state extracted |
 | God classes: `KpiService` 716, `BqlCompiler` 650, `ArticleController` 630, `WorkItemCommandService` 559 | ✅ **all four split & merged** — PRs #446 (Article), #447 (Kpi), #448 (Bql Parser/Emitter), #449 (WorkItemFieldCopier) | each within size/responsibility budget |
 | FE monoliths: `locales.js` 4,426, `BlockEditor.jsx` 2,176, `knowledge-view.jsx` 1,828 | ✅ `locales.js` code-split by language (PR #451); `BlockEditor` + 6 knowledge overlays lazy (PR #452, initial JS −13.6%); production build and bundle gate enforce the boundary | code-split; lazy-loaded |
 | Adopt `AsyncBoundary`; retire hand-rolled states | ✅ common boundary used across primary list/table, console, PM, Compliance, Service, marketplace and support surfaces | all primary async surfaces use it |
 | Token and structure debt | ✅ raw hex tokenized; legacy override removed; all view-structure rules are errors | zero literals; legacy block removed |
+
+The EPIC 1–5 closeout evidence is recorded in
+`docs/implementation/epics/EPICS-01-05-CODE-VERIFICATION.md` and enforced by
+`scripts/epics-01-05-completion.mjs`.
 
 ## 6. W6 — V1.6 overlay checklist (Phase 4 foundation, then continuous)
 

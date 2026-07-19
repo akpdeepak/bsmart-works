@@ -188,15 +188,15 @@ if [ -d "$BE" ]; then
     "$(grep -RInE '"[^"]*(SELECT|INSERT|UPDATE|DELETE|FROM\s|WHERE\s|JOIN\s|LIKE\s)[^"]*"\s*\+\s*\b(userId|id|name|title|email|input|param|value)\b' "$BE" 2>/dev/null || true)"
 fi
 
-# ── WARN rules (baseline debt in App.jsx — flip to BLOCK after remediation) ─────
+# ── Frontend architecture and design-system rules ─────────────────────────────
 
 # Raw hex colours in component JSX (the global index.css token defs and test files are exempt).
-check WARN "No raw hex in frontend components (use brand-*/neutral-* tokens — CLAUDE.md §4)" \
+check BLOCK "No raw hex in frontend components (use brand-*/neutral-* tokens — CLAUDE.md §4)" \
   "$(grep -RInE '#[0-9a-fA-F]{3,8}\b' "$FE" 2>/dev/null \
      | grep -vE '(tailwind\.config|tokens|/index\.css:|\.svg|\.test\.)' || true)"
 
 # Arbitrary pixel/rem spacing in className (use the 4px scale).
-check WARN "No arbitrary spacing values (use Tailwind 4px scale — CLAUDE.md §4)" \
+check BLOCK "No arbitrary spacing values (use Tailwind 4px scale — CLAUDE.md §4)" \
   "$(grep -RInE '\b[pmgw]+-\[[0-9]+(px|rem)\]' "$FE" 2>/dev/null || true)"
 
 # Inline fetch()/axios in components (use the apiClient wrapper).
@@ -206,7 +206,7 @@ check WARN "No inline fetch/axios in components (use apiClient — CLAUDE.md §3
 
 # Arbitrary z-index — use the named stacking tokens (z-sticky/z-panel/z-modal/z-toast …) so
 # layers can't fight. See CLAUDE.md §4.21 and the zIndex scale in tailwind.config.js.
-check WARN "No arbitrary z-index (use z-index tokens — CLAUDE.md §4.21)" \
+check BLOCK "No arbitrary z-index (use z-index tokens — CLAUDE.md §4.21)" \
   "$(grep -RInE '\bz-\[[0-9]+\]' "$FE" 2>/dev/null || true)"
 
 # NOTE: contrast (CLAUDE.md §4.17) is intentionally NOT grep-enforced here. `text-neutral-400`

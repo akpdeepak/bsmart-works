@@ -40,12 +40,13 @@ boundaries, explicit APIs, and smaller controller/service responsibilities.
   `security`, and `shared`.
 - Extended `ArchitectureTest` with a durable marker-presence gate while preserving the existing
   service/controller/repository layering and acyclic package gates.
-- Split `WorkItemController` into a 239-line route layer backed by `WorkItemReadService` and
-  `WorkItemCommandService`.
+- Populated all 14 declared modules with production code and enforced cycle, shared-kernel direction,
+  non-vacuity, and flat-root budget rules.
+- Split `WorkItemController` into a 187-line route layer backed by read, command, bulk, hierarchy,
+  and engagement services, with no controller-owned JDBC or RBAC orchestration.
 - Split `DashboardService` into a 35-line facade over role dashboard query orchestration.
-- Split AI command execution and summarization out of `AiAssistService`, reducing it to 397 lines.
-- Touched API contracts remain on existing typed records/entities; no newly introduced ad hoc
-  endpoint map contract required a DTO conversion in this EPIC.
+- Split AI command execution and summarization out of `AiAssistService` and inject those boundaries.
+- Replaced the work-item bulk endpoint's ad hoc map with validated `WorkItemBulkRequest`.
 
 ## Validation completed
 
@@ -55,6 +56,10 @@ boundaries, explicit APIs, and smaller controller/service responsibilities.
 - `cd works-backend && .\mvnw.cmd -Dgroups=unit verify`
 - `npm run quality-gates`
 - `npm run verify`
+- `node scripts/epics-01-05-completion.mjs`
+
+Current closeout result (2026-07-19): 1,454 tests passed, JaCoCo thresholds met, and Checkstyle has
+zero violations.
 
 ## Initial implementation strategy
 
@@ -77,3 +82,5 @@ boundaries, explicit APIs, and smaller controller/service responsibilities.
 - Extracting separate deployable services.
 - Schema-per-module migration.
 - Frontend `App.jsx` refactor, which belongs to EPIC 4.
+- Repository-wide replacement of every legacy, workspace-scoped JDBC adapter outside the named
+  WorkItem/Dashboard/AI orchestration targets.

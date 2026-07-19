@@ -10,8 +10,9 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
 - Program mode: **maximal-scope end-to-end completion** (Deepak, 2026-06-20). The authoritative tracker
   is now `docs/implementation/MASTER-COMPLETION-ROADMAP.md`; this file remains the cross-session resume
   ledger.
-- Active phase: **Phase 2 — structural refactors (W2), COMPLETE and merged 2026-07-18 via PR #481.**
-  Phase 3 is next. Phase 1 completed 2026-06-21 (PRs #415–#441).
+- Active phase: **Phase 3 — consolidate EPICs 3–12 to full scope.** Phase 2 completed and merged
+  2026-07-18 via PR #481; Phase 1 completed 2026-06-21 (PRs #415–#441). EPICs 1–5 have now been
+  re-verified against production code and executable gates; EPIC 6 is the next incomplete EPIC.
   - ✅ **W2-b god classes — all four split & merged:** `ArticleController`→`ArticleService` (PR #446),
     `KpiService`→`KpiMetricCalculator` (PR #447), `BqlCompiler`→`BqlParser`+`BqlSqlEmitter` (PR #448),
     `WorkItemCommandService`→`WorkItemFieldCopier` (PR #449).
@@ -175,13 +176,16 @@ Update this file after every meaningful roadmap session, PR, merge, validation r
     FLS Slice 4 (seed demo rules) + Slice 5 (core-column FLS, Deepak 2026-06-21), PII-vault CONTRACT
     plaintext-column drop, WebAuthn `public_key_pem` column drop, Redis-backed rate limiting (AWS
     infra EPIC).
-- Verified-status correction: EPICs 3–12 are first slices (partial); full completion governed by the master roadmap.
+- Verified-status correction: EPICs 3–5 passed codebase closeout on 2026-07-19; EPICs 6–12 remain
+  first slices (partial) and are governed by the master roadmap.
 - Open follow-ups (flagged, not Phase-1-blocking): field-visibility tier-source reconciliation
   (`roles` V7 vs `role_def` V21); WorkflowController null-workspace branch + create-side body-workspaceId
   trust on Team/Report/etc + per-operation perm tightening on the Slice-D controllers; FLS rule seeding;
   the deferred #243 Slice E CONTRACT predicate removal.
-- Last state update: 2026-07-11 (Phase-2 G-2 domain carve COMPLETE — all 14 modules; resume at W2-c AppShell + FE tranches + Config/Onboarding fold decision)
-  Option-A boundary; ArchUnit/Checkstyle/guardrails/boot green; resume at `workitems` carve next)
+- Last state update: 2026-07-19 (EPICs 1–5 codebase closeout: 18/18 executable checks, 1,454 backend
+  tests, 123 integration tests, 1,771 frontend tests, production/Storybook builds, guardrails, fresh
+  V119 runtime boot, and deployment checks; resume
+  at EPIC 6 after GitHub merge validation).
 
 ## Trigger contract
 
@@ -246,12 +250,12 @@ resume point.
 | EPIC | Status | Branch | PR | Local validation | Completion note | Notes |
 |---|---|---|---|---|---|---|
 | EPIC 0 - Current-State Hardening, Truth, and Delivery Baseline | Completed | `main` | [#393](https://github.com/akpdeepak/bsmart-works/pull/393) | `npm run verify`; `cd works-backend && .\mvnw.cmd -Dgroups=unit verify` | `docs/implementation/epics/EPIC-00-current-state-hardening-completion.md` | Baseline docs, source hygiene, JWT query-token scope, verified shared status category resolver |
-| EPIC 1 - Multi-Tenant Security and RBAC Hardening | Completed | `main` | [#394](https://github.com/akpdeepak/bsmart-works/pull/394) | `cd works-backend && .\mvnw.cmd -Dgroups=unit verify`; `npm run guardrails`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-01-tenant-rbac-hardening-completion.md` | Starred items, SCIM token issuance, dashboards, field layouts, RBAC workspace scope, BQL fallback |
-| EPIC 2 - Production Configuration, Deployment, and Secrets Safety | Completed | `main` | [#395](https://github.com/akpdeepak/bsmart-works/pull/395) | `cd works-backend && .\mvnw.cmd -Dgroups=unit verify`; Compose env config validation; `npm run guardrails`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-02-production-config-secrets-completion.md` | Prod/staging secret guard, health probes, env templates, Compose smoke, backup/restore runbook |
+| EPIC 1 - Multi-Tenant Security and RBAC Hardening | Code-verified complete | `codex/epics-01-05-completion` | #394 + [#485](https://github.com/akpdeepak/bsmart-works/pull/485) | 1,454 backend tests; 18/18 EPIC gate; guardrails | `docs/implementation/epics/EPIC-01-tenant-rbac-hardening-completion.md` | No production default tenant; cross-tenant star/watcher no-mutation; exact SSE query-token scope |
+| EPIC 2 - Production Configuration, Deployment, and Secrets Safety | Code-verified complete | `codex/epics-01-05-completion` | #395 + [#485](https://github.com/akpdeepak/bsmart-works/pull/485) | 1,454 backend tests; three Compose templates; 18/18 EPIC gate | `docs/implementation/epics/EPIC-02-production-config-secrets-completion.md` | Startup guard, health probes, templates/CI smoke, backup/restore verification |
 | EPIC 25 partial - Reliability, Testing, Accessibility, Performance, and Quality Gates | Completed | `main` | [#396](https://github.com/akpdeepak/bsmart-works/pull/396) | `npm run quality-gates`; `cd works-frontend && npm test -- field-settings presence`; `cd works-backend && .\mvnw.cmd -DskipTests "-Djacoco.skip=true" verify`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-25-quality-gates-completion.md` | API contract drift gate, a11y coverage gate, AI fallback telemetry gate, stale route repairs |
-| EPIC 3 - Backend Modularization and Service Boundaries | Slice shipped (~4%) | `main` | [#397](https://github.com/akpdeepak/bsmart-works/pull/397) | Focused backend tests; `cd works-backend && .\mvnw.cmd -Dgroups=unit verify`; `npm run quality-gates`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-03-backend-modularization-completion.md` | WorkItem controller/service split, dashboard facade/query service, AI command/summarization split, module marker gate |
-| EPIC 4 - Frontend Architecture Refactor | Slice shipped (~5%) | `main` | [#398](https://github.com/akpdeepak/bsmart-works/pull/398) | `cd works-frontend && npm test -- app-architecture`; `cd works-frontend && npm run build`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-04-frontend-architecture-refactor-completion.md` | Thin `App.jsx` entrypoint, `src/app/AppShell.jsx` boundary, architecture guard |
-| EPIC 5 - Premium Design System Refresh | Slice shipped (~15%) | `main` | [#399](https://github.com/akpdeepak/bsmart-works/pull/399) | `cd works-frontend && npm test -- page-layout design-system-tokens`; `cd works-frontend && npm run lint`; `cd works-frontend && npm run build`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-05-premium-design-system-refresh-completion.md` | Adaptive `max-w-workspace` token, page-width guardrail, workspace surface width normalization |
+| EPIC 3 - Backend Modularization and Service Boundaries | Code-verified complete | `codex/epics-01-05-completion` | #397 + [#485](https://github.com/akpdeepak/bsmart-works/pull/485) | 1,454 tests; JaCoCo; Checkstyle; architecture gate | `docs/implementation/epics/EPIC-03-backend-modularization-completion.md` | 14 populated modules; 187-line WorkItem adapter; Dashboard facade; injected AI splits |
+| EPIC 4 - Frontend Architecture Refactor | Code-verified complete | `codex/epics-01-05-completion` | #398 + [#485](https://github.com/akpdeepak/bsmart-works/pull/485) | 1,771 tests; lint/build; architecture gate | `docs/implementation/epics/EPIC-04-frontend-architecture-refactor-completion.md` | Tested workspace/navigation/overlay/realtime boundaries; 2,884-line guarded shell |
+| EPIC 5 - Premium Design System Refresh | Code-verified complete | `codex/epics-01-05-completion` | #399 + [#485](https://github.com/akpdeepak/bsmart-works/pull/485) | 1,771 tests; Storybook build; a11y/design guardrails | `docs/implementation/epics/EPIC-05-premium-design-system-refresh-completion.md` | Blocking token rules; shared states; theme/density; 32 stories; 21 axe screens |
 | EPIC 6 - Simplified Information Architecture and Navigation | Slice shipped (~50%) | `main` | [#400](https://github.com/akpdeepak/bsmart-works/pull/400) | `cd works-frontend && npm test -- nav-model`; `cd works-frontend && npm run build`; `npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-06-simplified-navigation-completion.md` | Six-mode rail contract, setup/admin More destinations, command-palette reachability |
 | EPIC 7 - bSmart Today | Slice shipped (~35%) | `main` | [#401](https://github.com/akpdeepak/bsmart-works/pull/401) | `cd works-frontend && npm test -- today-brief dashboard-view`; `npm run verify`; `cd works-frontend && npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-07-bsmart-today-completion.md` | Role-aware daily clarity band, max-five attention model, saved widget layout preserved |
 | EPIC 8 - Smart Inbox | Slice shipped (~35%) | `main` | [#402](https://github.com/akpdeepak/bsmart-works/pull/402) | `cd works-frontend && npm test -- smart-inbox notifications-view`; `npm run verify`; `cd works-frontend && npm run verify`; GitHub CI all checks passed | `docs/implementation/epics/EPIC-08-smart-inbox-completion.md` | Action-first inbox grouping, actionable badge count, activity history preserved |
@@ -487,3 +491,16 @@ legacy structural-lint override is removed. No schema or API contract change; Fl
 Local gates: 1,451 backend unit tests with JaCoCo and Checkstyle, 1,733 frontend tests across 233
 files plus lint/build, and the full repository verification suite. See
 `docs/implementation/epics/PHASE-2-STRUCTURAL-REFACTOR-COMPLETION.md`.
+
+2026-07-19: EPICs 1–5 were re-audited from production code on
+`codex/epics-01-05-completion`; prior completion Markdown was not accepted as evidence. The closeout
+removed the last production `WS-001` paths, made workspace startup membership-backed, extracted and
+tested shell navigation/overlay/realtime/workspace ownership, reduced `AppShell.jsx` to 2,884 lines,
+made `WorkItemController` a 187-line typed HTTP adapter, injected the AI split services, expanded
+Storybook theme/density/core-molecule coverage, and made design-literal guardrails blocking. Local
+evidence: 18/18 executable EPIC checks, 1,454 backend tests with JaCoCo/Checkstyle, 123 integration
+tests, 1,771 frontend tests with lint/build, Storybook build, guardrails, three Compose renders, and a
+fresh PostgreSQL/Flyway V119 runtime boot with readiness `UP`. See
+`docs/implementation/epics/EPICS-01-05-CODE-VERIFICATION.md`. Closeout PR:
+[#485](https://github.com/akpdeepak/bsmart-works/pull/485). Resume at EPIC 6 after it passes GitHub CI
+and merges.

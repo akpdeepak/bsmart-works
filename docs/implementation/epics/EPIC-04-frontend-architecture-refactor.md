@@ -12,13 +12,16 @@
 Turn the frontend root into a clean app boundary so future route, provider, modal, BQL, and feature
 state extractions can happen in small, safe PRs.
 
-## Scope in this EPIC slice
+## Scope in this EPIC
 
 - Create `works-frontend/src/app/` as the app architecture boundary.
 - Convert `works-frontend/src/App.jsx` into a thin stable entry point.
 - Move the legacy shell implementation to `works-frontend/src/app/AppShell.jsx`.
 - Add an architecture test that prevents `App.jsx` from growing back into a stateful monolith.
 - Preserve all existing routes, navigation, auth, workspace, realtime, modal, and view behavior.
+- Extract workspace, navigation, overlays, and realtime ownership behind independently testable
+  boundaries.
+- Remove file-level lint suppression from the shell and gate the phase-2 size ceiling.
 
 ## Acceptance criteria checklist
 
@@ -28,21 +31,23 @@ state extractions can happen in small, safe PRs.
 - [x] Existing navigation and deep links still route through the same shell implementation.
 - [x] Architecture test protects the thin app entrypoint.
 - [x] Existing frontend build remains green.
+- [x] Membership resolution precedes workspace-scoped data and realtime startup.
+- [x] Workspace, navigation, overlays, realtime, and providers have focused tests.
+- [x] Route and entity deep-link mapping remains centralized.
+- [x] `AppShell.jsx` is below the enforced 3,000-line closeout ceiling.
 
 ## Implementation summary
 
-- Moved the legacy 4,596-line shell from `src/App.jsx` to `src/app/AppShell.jsx`.
+- Moved the legacy shell from `src/App.jsx` to `src/app/AppShell.jsx`, then reduced it from 4,628 to
+  2,884 lines through focused extractions.
 - Replaced `src/App.jsx` with a 5-line wrapper that renders `AppShell`.
 - Added `src/app/app-architecture.test.js` to enforce the thin-entry boundary and shell location.
+- Added tested workspace, navigation, overlay, and realtime hooks; removed the file-level lint disable.
 
 ## Validation completed
 
 - `cd works-frontend && npm test -- app-architecture`
 - `cd works-frontend && npm run build`
 - `npm run verify`
-
-## Follow-on notes
-
-- The next EPIC 4 slice should extract route rendering into `src/app/RouteRenderer.jsx`.
-- Subsequent slices should extract workspace/session providers, global overlays, and feature modules
-  without adding new feature state back to `AppShell.jsx`.
+- `cd works-frontend && npm run verify` (1,771 tests, 0 lint errors, production build passed)
+- `node scripts/epics-01-05-completion.mjs`

@@ -693,7 +693,7 @@ export function RouteOutlet({ model }) {
           )}
 
           {view === 'sla' && (
-            <SlaView workspaceId="WS-001" canManage={can('manage_sla')} onToast={showToast} />
+            <SlaView workspaceId={activeWorkspaceId} canManage={can('manage_sla')} onToast={showToast} />
           )}
 
 

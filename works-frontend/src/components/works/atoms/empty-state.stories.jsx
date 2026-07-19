@@ -61,3 +61,23 @@ export const NoSubtitle = {
     title: 'Nothing here yet',
   },
 };
+
+export const WarningState = {
+  args: {
+    icon: AlertCircle,
+    title: 'Approaching limit',
+    subtitle: 'You have used 90% of your storage quota.',
+    variant: 'warning',
+    action: <Button variant="secondary" size="sm">Manage storage</Button>,
+  },
+};
+
+export const UnauthorizedState = {
+  args: {
+    icon: Users,
+    title: 'Access restricted',
+    subtitle: 'You don\'t have permission to view this content. Contact your workspace admin.',
+    variant: 'unauthorized',
+  },
+};
+

@@ -74,7 +74,7 @@ describe('motionTransition', () => {
   });
 
   it('handles all defined roles without throwing', () => {
-    const roles = ['hover', 'press', 'panel', 'modal', 'drawer', 'accordion', 'toast', 'page'];
+    const roles = ['hover', 'press', 'panel', 'modal', 'drawer', 'accordion', 'toast', 'page', 'enter', 'exit', 'expand', 'collapse'];
     for (const role of roles) {
       expect(() => motionTransition(role)).not.toThrow();
       expect(typeof motionTransition(role)).toBe('string');

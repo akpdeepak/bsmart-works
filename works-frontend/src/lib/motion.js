@@ -30,6 +30,10 @@ export const MOTION_ROLE = {
   accordion: { duration: DURATION.base,  easing: EASING.outQuint },
   toast:     { duration: DURATION.base,  easing: EASING.outQuint },
   page:      { duration: DURATION.slow,  easing: EASING.outQuint },
+  enter:     { duration: DURATION.base,  easing: EASING.outQuint },   // content appearance (fade-in, scale-up)
+  exit:      { duration: DURATION.fast,  easing: EASING.outQuint },   // content disappearance (exits should be faster)
+  expand:    { duration: DURATION.base,  easing: EASING.outQuint },   // height/width expansion (collapsible sections)
+  collapse:  { duration: DURATION.fast,  easing: EASING.outQuint },   // height/width contraction
 };
 
 /**

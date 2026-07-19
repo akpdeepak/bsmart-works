@@ -142,6 +142,26 @@
   --dp-row-y: 0.75rem;   /* py-3 */
 }
 
+/* ── Focus ring tokens (WI-25) ───────────────────────────────────────────────
+   Standardized focus-visible ring for all interactive elements. Consumers can
+   either use the Tailwind classes (focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40
+   focus-visible:ring-offset-2) or the .focus-ring utility below.
+   ──────────────────────────────────────────────────────────────────────────── */
+:root {
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-color: rgba(30, 77, 140, 0.4); /* brand-navy-tint at 40% */
+}
+.dark {
+  --focus-ring-color: rgba(154, 168, 188, 0.5); /* neutral-400 at 50% — visible on dark bg */
+}
+
+/* Reusable focus utility — apply to any interactive element */
+.focus-ring:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
 /* ── Optimistic-update shimmer (WI-24) ──────────────────────────────────────────────────────
    Apply `.shimmer` to any element that is in an optimistic-pending state (e.g. a row that has
    been speculatively updated but not yet confirmed by the server). The sweep completes once in

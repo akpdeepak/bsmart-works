@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bSmart Works — Definition of Done gate (CLAUDE.md §21.9).
+# bSmart Works — Definition of Done gate (ai-rules/00-ORCHESTRATOR.md §4).
 # Run this before calling any task complete. All commands must pass.
 #
 # Usage:
@@ -41,6 +41,7 @@ fi
 # ── CLAUDE.md derived files in sync ────────────────────────────────────────────
 if [ "$BACKEND_ONLY" = "0" ] && [ "$FRONTEND_ONLY" = "0" ]; then
   run "AI rules in sync"              node scripts/generate-ai-rules.mjs --check
+  run "Task execution contract"       node scripts/check-task-execution-contract.mjs
   run "DoD version in sync"           bash scripts/check-dod-sync.sh
 fi
 

@@ -96,6 +96,8 @@ jobs:
         with: { node-version: '20' }
       - name: Check derived AI-rules files are up to date
         run: node scripts/generate-ai-rules.mjs --check
+      - name: Check scope-first planning and test-first execution contract
+        run: node scripts/check-task-execution-contract.mjs
 
   dod-in-sync:
     name: DoD version tag in sync

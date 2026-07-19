@@ -1,3 +1,9 @@
+---
+status: historical-requirement-ledger
+live_status: github
+runtime_context: false
+---
+
 # bSmart Works — Master Completion Roadmap & Coverage Ledger
 
 > **Purpose.** This is the single, authoritative tracker for completing the **entire** scope of bSmart

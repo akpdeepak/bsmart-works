@@ -1,3 +1,9 @@
+---
+status: historical
+runtime_context: false
+authority: source-material
+---
+
 # bSmart Works — Complete Implementation Blueprint & Epic Roadmap
 
 This blueprint is based on the current uploaded repository snapshot (`bsmart-works-main (3)(3).zip`) plus the product direction discussed: a simple, minimal, premium, calm, visually engaging, reliable, accurate, habit-forming AI-native enterprise work operating system.

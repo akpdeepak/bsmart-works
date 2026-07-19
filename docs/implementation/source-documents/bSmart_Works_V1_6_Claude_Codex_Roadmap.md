@@ -1,3 +1,9 @@
+---
+status: historical
+runtime_context: false
+authority: source-material
+---
+
 # bSmart Works V1.6 — Claude Code / OpenAI Codex Execution Roadmap
 
 **Roadmap name:** bSmart Works V1.6  

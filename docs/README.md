@@ -1,10 +1,12 @@
 # bSmart Works — Documentation
 
-The canonical source of truth for product, brand, and architecture decisions.
+Documentation index. Canonical operational policy lives in `ai-rules/`, executable current state is
+generated from the repository, and live delivery state lives in GitHub. Documents marked historical
+are source material only unless an active task cites them.
 
 ## Engineering
 - [Engineering Principles](ENGINEERING-PRINCIPLES.md) — product, developer, and architecture practices + how they're enforced
-- [CLAUDE.md](../CLAUDE.md) — machine-readable rules (every AI tool reads this)
+- [AGENT-CORE.md](../ai-rules/AGENT-CORE.md) — compact provider-neutral operating contract
 - [CONTRIBUTING.md](../CONTRIBUTING.md) — setup and daily workflow
 
 ## Design & UI/UX

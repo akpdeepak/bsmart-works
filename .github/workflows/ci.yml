@@ -1,434 +1,224 @@
 name: CI
 
-# The cross-tool / cross-user enforcement gate. No matter which AI tool or person
-# wrote the code, a PR cannot merge unless these checks pass.
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
-# Cancel superseded runs for the same branch/PR. When several commits (or several agents)
-# push in quick succession, only the newest commit runs the full 14-job suite; older in-flight
-# runs are cancelled instead of stacking. This is the highest-leverage reduction in private-repo
-# Actions-minute consumption and is what keeps the repo inside the free monthly allotment.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  secrets-scan:
-    name: Secrets scan (gitleaks)
+  classify:
+    name: Classify changed paths and risk
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    outputs:
+      frontend: ${{ steps.changes.outputs.frontend }}
+      frontend_security: ${{ steps.changes.outputs.frontend_security }}
+      backend: ${{ steps.changes.outputs.backend }}
+      integration: ${{ steps.changes.outputs.integration }}
+      deploy: ${{ steps.changes.outputs.deploy }}
+      jetbrains: ${{ steps.changes.outputs.jetbrains }}
+      risk: ${{ steps.changes.outputs.risk }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          fetch-depth: 0   # full history so gitleaks can scan all commits on the branch
-      # Install gitleaks directly — avoids the gitleaks-action@v2 licence requirement
-      # for private repos. Config: .gitleaks.toml (add allowlist rules there, not here).
-      - name: Install gitleaks
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - id: changes
+        name: Compute impact from the repository-owned classifier
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/classify-changes.mjs --base "$BASE_SHA" --head "$HEAD_SHA" --github-output
+
+  secrets-scan:
+    name: Secrets scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+      - name: Install pinned gitleaks release
         run: |
           set -euo pipefail
           version=8.21.2
-          url="https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_linux_x64.tar.gz"
-          # Retry on transient CDN errors (e.g. a GitHub-releases HTTP 500) with backoff, and download
-          # to a file rather than piping straight into tar — a partial/empty body from a flaky download
-          # can otherwise corrupt extraction and surface as a spurious failing secrets-scan check. A
-          # *persistent* failure still fails the step loudly (--fail); only transient errors are retried.
-          curl --retry 5 --retry-delay 3 --retry-all-errors --fail --silent --show-error --location \
-            --output gitleaks.tar.gz "$url"
+          curl --retry 5 --retry-all-errors --fail --silent --show-error --location \
+            --output gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_linux_x64.tar.gz"
+          echo '5bc41815076e6ed6ef8fbecc9d9b75bcae31f39029ceb55da08086315316e3ba  gitleaks.tar.gz' | sha256sum -c -
           tar -xzf gitleaks.tar.gz gitleaks
-          sudo mv gitleaks /usr/local/bin/gitleaks
-          rm -f gitleaks.tar.gz
-          gitleaks version
-      - name: Scan for secrets
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            gitleaks detect --source . \
-              --log-opts "${{ github.event.pull_request.base.sha }}...${{ github.sha }}" \
-              --config .gitleaks.toml --verbose
-          else
-            gitleaks detect --source . \
-              --log-opts "HEAD~1...HEAD" \
-              --config .gitleaks.toml --verbose
-          fi
+          sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
+      - name: Scan the pushed/PR range
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: gitleaks detect --source . --log-opts "${BASE_SHA}...${{ github.sha }}" --config .gitleaks.toml --verbose
 
-  guardrails:
-    name: Architecture & brand guardrails
+  policy:
+    name: Policy, generated state, rules, links, and guardrails
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Run guardrails
-        run: bash scripts/guardrails.sh
-
-  quality-gates:
-    name: Quality gates (API, a11y, AI fallback)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
-      - name: Run roadmap quality gates
-        run: node scripts/quality-gates.mjs
-
-  deploy-compose-smoke:
-    name: Deployment smoke (compose config)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Validate Docker Compose deploy templates
-        run: |
-          for env_file in deploy/env/local.example deploy/env/staging.example deploy/env/production.example; do
-            echo "Validating ${env_file}"
-            docker compose --env-file "${env_file}" -f docker-compose.deploy.yml config --quiet
-          done
-
-  ai-rules-in-sync:
-    name: AI rules in sync with CLAUDE.md
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
-      - name: Check derived AI-rules files are up to date
-        run: node scripts/generate-ai-rules.mjs --check
-      - name: Check scope-first planning and test-first execution contract
-        run: node scripts/check-task-execution-contract.mjs
-
-  dod-in-sync:
-    name: DoD version tag in sync
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Check CLAUDE.md §7 and PR template carry the same dod-version
-        run: bash scripts/check-dod-sync.sh
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Run the manifest-owned policy and repository quality gates
+        run: node scripts/verify.mjs --profile changed --paths ai-rules/AGENT-CORE.md
 
   commit-lint:
-    name: Conventional commit messages
-    runs-on: ubuntu-latest
+    name: Conventional commits
     if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
-      - run: npm ci
-      - name: Lint all commits on this PR
-        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
-
-  frontend-test:
-    name: Frontend (test)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: works-frontend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
-          cache-dependency-path: works-frontend/package-lock.json
       - run: npm ci
-      - run: npm test   # Vitest — unit + component tests; fails on any failure
-
-  frontend-security:
-    name: Frontend (security audit)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: works-frontend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: works-frontend/package-lock.json
-      - run: npm ci
-      # Fail on HIGH or CRITICAL vulnerabilities. Moderate and below are reported but non-blocking.
-      # To investigate: npm audit  |  To fix automatically: npm audit fix
-      - name: npm audit (high+)
-        run: npm audit --audit-level=high
+      - run: npx commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.event.pull_request.head.sha }}" --verbose
 
   frontend:
-    name: Frontend (lint + build)
+    name: Frontend lint, test, build, and Storybook
+    needs: classify
+    if: needs.classify.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: works-frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
           cache-dependency-path: works-frontend/package-lock.json
       - run: npm ci
-      # Lint is now enforced. App.jsx legacy debt is suppressed with a file-level eslint-disable
-      # comment; all new files must pass clean. Architecture/token rules also run in `guardrails`.
       - run: npm run lint
-      - run: npm run build   # blocking — the app must compile
+      - run: npm test
+      - run: npm run build
+      - run: npm run build-storybook
 
-  frontend-storybook:
-    name: Frontend (Storybook build — TD-014)
+  frontend-security:
+    name: Frontend dependency audit
+    needs: classify
+    if: needs.classify.outputs.frontend_security == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: works-frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
           cache-dependency-path: works-frontend/package-lock.json
       - run: npm ci
-      # Build Storybook (no dev server) — catches broken story imports and component regressions.
-      # Build artefact is written to storybook-static/ (not committed).
-      - run: npm run storybook:build
+      - run: npm audit --audit-level=high
 
-  # API docs generated at /swagger-ui.html
-  backend:
-    name: Backend (compile + checkstyle)
+  backend-unit:
+    name: Backend unit, coverage, and style
+    needs: classify
+    if: needs.classify.outputs.backend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: works-backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
-      # Compile + run Checkstyle only. Tests and JaCoCo are skipped here — the coverage gate
-      # runs in the backend-unit-test job which executes the full verify phase with unit tests.
-      - name: Compile + checkstyle
-        run: ./mvnw -B -DskipTests -Djacoco.skip=true verify
+      - run: ./mvnw -B -Dgroups=unit verify
 
-  backend-unit-test:
-    name: Backend (unit tests)
+  backend-integration:
+    name: Backend integration (single Testcontainers suite)
+    needs: classify
+    if: needs.classify.outputs.integration == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: works-backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
-      # Run only @Tag("unit") tests — no live database required.
-      # Runs the full verify phase so JaCoCo coverage check is enforced (≥60% LINE, haltOnFailure=true).
-      # Report is written to target/site/jacoco/index.html for local inspection.
-      - name: Unit tests + coverage gate
-        run: ./mvnw -B -Dgroups=unit verify
+      - run: ./mvnw -B -Djacoco.skip=true -Dgroups=integration verify
 
-  backend-integration-test:
-    name: Backend (integration — Flyway + Postgres)
+  deploy-smoke:
+    name: Deployment templates
+    needs: classify
+    if: needs.classify.outputs.deploy == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: works-backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
-      # Boots the app against a real Postgres via Testcontainers (Docker is available on
-      # ubuntu-latest) and applies EVERY Flyway migration end-to-end. This is the stage that would
-      # have caught the V35 duplicate-version collision and bad migration SQL before merge.
-      # Invoke failsafe directly (not the surefire `test` phase) so DB-less @SpringBootTest classes
-      # like DemoApplicationTests are not run here, and skip JaCoCo (its gate is the unit job).
-      - name: Integration tests (Testcontainers + Flyway)
-        run: ./mvnw -B -Djacoco.skip=true test-compile failsafe:integration-test failsafe:verify
-
-  backend-smoke-boot:
-    name: Backend (smoke boot — real app + ddl-auto=validate)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: works-backend
-    # Starts the ACTUAL packaged application against a real Postgres with the production config
-    # (Flyway migrations + spring.jpa.hibernate.ddl-auto=validate) and asserts it reaches
-    # "Started ... in N seconds". The Testcontainers integration jobs run a test ApplicationContext
-    # and never exercise a full validated boot, so two whole classes of defect reach main green:
-    #   1. entity<->schema drift  — a JPA @Column with no backing Flyway migration (validate aborts)
-    #   2. bean-wiring / DI failures — a constructor dependency with no registered bean
-    # This job is the gate that catches both before merge.
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: bcits_admin
-          POSTGRES_PASSWORD: works_secure_pass
-          POSTGRES_DB: works_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U bcits_admin -d works_db"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
-      - name: Build application jar
-        run: ./mvnw -B -DskipTests -Djacoco.skip=true package
-      - name: Boot the app against a real DB and assert startup
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Validate deployment Compose files
         run: |
-          JAR="$(find target -maxdepth 1 -name '*.jar' ! -name '*.original' | head -1)"
-          echo "Booting $JAR (Flyway + ddl-auto=validate) against Postgres…"
-          java -jar "$JAR" \
-            --server.port=8080 \
-            --app.attachments.virus-scan-enabled=false \
-            > boot.log 2>&1 &
-          APP_PID=$!
-          for i in $(seq 1 90); do
-            if grep -q "Started .* in .* seconds" boot.log; then
-              echo "✅ Application booted cleanly against a real database."
-              kill "$APP_PID" 2>/dev/null || true
-              exit 0
-            fi
-            if grep -qE "APPLICATION FAILED TO START|Schema-validation:|FlywayException|UnsatisfiedDependencyException|Error creating bean" boot.log; then
-              echo "❌ Boot failed — see log:"; tail -n 120 boot.log
-              kill "$APP_PID" 2>/dev/null || true
-              exit 1
-            fi
-            if ! kill -0 "$APP_PID" 2>/dev/null; then
-              echo "❌ App process exited before startup completed:"; tail -n 120 boot.log
-              exit 1
-            fi
-            sleep 2
+          set -euo pipefail
+          for env_file in deploy/env/local.example deploy/env/staging.example deploy/env/production.example; do
+            docker compose --env-file "$env_file" -f docker-compose.deploy.yml config --quiet
           done
-          echo "❌ Timed out waiting for startup:"; tail -n 120 boot.log
-          kill "$APP_PID" 2>/dev/null || true
-          exit 1
-
-  integration-tests:
-    name: Backend (integration — @Tag("integration") suite + workspace isolation)
-    runs-on: ubuntu-latest
-    needs: [backend, backend-unit-test]
-    # Docker is pre-installed on ubuntu-latest; Testcontainers will pull postgres:16-alpine
-    defaults:
-      run:
-        working-directory: works-backend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
-      # Run the @Tag("integration") test suite via surefire (no exclude filter override needed —
-      # -Dgroups=integration is the selector) plus failsafe for *IntegrationTest classes.
-      # JaCoCo is skipped — coverage gate is the unit job. Docker is available on ubuntu-latest;
-      # Testcontainers will auto-start postgres:16-alpine for any @SpringBootTest that needs a DB.
-      # This job catches: ComplianceEvaluationPerformanceTest, SlaBulkApplyIntegrationTest,
-      # FlywayMigrationIntegrationTest, SecurityAuditIntegrationTest, WorkspaceTenantIsolationIT,
-      # and any future @Tag("integration") tests.
-      - name: Integration tests (Testcontainers + @Tag integration suite)
-        run: ./mvnw -B -Djacoco.skip=true -Dsurefire.excludes="" -Dgroups=integration verify 2>&1
 
   jetbrains-plugin:
-    name: JetBrains plugin (buildPlugin)
+    name: JetBrains plugin
+    needs: classify
+    if: needs.classify.outputs.jetbrains == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: tools/jetbrains-plugin
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
         with:
           distribution: temurin
-          java-version: '17'   # plugin JVM toolchain targets Java 17 (build.gradle.kts)
+          java-version: '17'
           cache: gradle
-      # Gradle wrapper is not present in the plugin directory, so we invoke gradle via the
-      # wrapper at the repo root level — there is none, so install Gradle directly via the
-      # setup-gradle action.
-      - uses: gradle/actions/setup-gradle@v3
+      - uses: gradle/actions/setup-gradle@6cfc8b8e8bb586cc164bef1c478c1eea3a4d6a19
         with:
           gradle-version: '8.7'
-      - name: Build JetBrains plugin
-        run: gradle buildPlugin --no-daemon
+      - run: gradle buildPlugin --no-daemon
 
-  perf-budget:
-    name: Performance budget (bundle size)
+  merge-gate:
+    name: merge-gate
+    if: always()
+    needs:
+      - classify
+      - secrets-scan
+      - policy
+      - commit-lint
+      - frontend
+      - frontend-security
+      - backend-unit
+      - backend-integration
+      - deploy-smoke
+      - jetbrains-plugin
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: works-frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: works-frontend/package-lock.json
-      - run: npm ci
-      - run: npm run build
-      - name: Bundle size check (Doherty proxy — JS < 500 KB gzipped)
+      - name: Require every applicable job to pass
+        env:
+          RESULTS: >-
+            ${{ join(needs.*.result, ' ') }}
         run: |
-          # Only count JS chunks linked directly from index.html (initial load).
-          # Lazy chunks (syntax-highlighting WASM, code-language parsers, etc.) are loaded
-          # on demand and must not count against the startup budget.
-          TOTAL=0
-          while IFS= read -r chunk; do
-            [ -f "dist${chunk}" ] || continue
-            SIZE=$(gzip -c "dist${chunk}" | wc -c)
-            TOTAL=$((TOTAL + SIZE))
-          done < <(grep -oP '(?<=src=")[^"]+\.js[^"]*' dist/index.html | grep -v '^http')
-          echo "Initial JS (gzipped): ${TOTAL} bytes"
-          # 512000 = 500 KB gzipped — Doherty threshold proxy budget
-          if [ "$TOTAL" -gt 512000 ]; then
-            echo "Bundle exceeds 500 KB gzipped (${TOTAL} bytes). Optimize before merging."
-            exit 1
-          fi
-          echo "Bundle within budget (${TOTAL} / 512000 bytes)"
-
-  chromatic:
-    name: Chromatic (visual regression)
-    runs-on: ubuntu-latest
-    continue-on-error: true  # Non-blocking: visual diffs reviewed in the Chromatic UI; missing token is infrastructure gap, not a code defect.
-    # Only run on PRs and pushes to main; skip forks without the secret (they won't have it).
-    # Non-blocking: visual diffs are reviewed in the Chromatic UI — they do not block merge.
-    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
-    defaults:
-      run:
-        working-directory: works-frontend
-    env:
-      CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0    # Chromatic needs full history to diff against the baseline
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: works-frontend/package-lock.json
-      - run: npm ci
-      - name: Publish to Chromatic
-        # Skip gracefully when the secret is not configured (forks, local PRs without the token).
-        # The job succeeds (no step fails) so this check is non-blocking even without a token.
-        if: ${{ env.CHROMATIC_PROJECT_TOKEN != '' }}
-        uses: chromaui/action@latest
-        with:
-          projectToken: ${{ env.CHROMATIC_PROJECT_TOKEN }}
-          workingDir: works-frontend
-          # Exit zero even if there are visual diffs so this job stays non-blocking.
-          # The Chromatic UI is the review surface for visual changes.
-          exitZeroOnChanges: true
+          for result in $RESULTS; do
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+              echo "An applicable CI job did not pass: $RESULTS" >&2
+              exit 1
+            fi
+          done
+          echo "All applicable CI jobs passed or were intentionally skipped: $RESULTS"

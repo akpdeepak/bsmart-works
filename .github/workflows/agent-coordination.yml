@@ -1,0 +1,36 @@
+name: Agent coordination
+
+on:
+  issue_comment:
+    types: [created, edited]
+  schedule:
+    - cron: '17,47 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: agent-coordination-${{ github.event.issue.number || 'lease-scan' }}
+  cancel-in-progress: false
+
+jobs:
+  coordinate:
+    if: github.event_name != 'issue_comment' || !github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Validate claim, handoff, transition, and reserved paths
+        if: github.event_name == 'issue_comment'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/github-task-coordinator.mjs
+      - name: Release expired leases
+        if: github.event_name != 'issue_comment'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/github-task-coordinator.mjs --expire

@@ -27,10 +27,8 @@ guarantees they can never see *another* tenant's data.
   carries no tenant-scope signal anywhere in the file (workspace token, id-scope key, or `RbacService`
   call) — a coarse tripwire for new unscoped raw-SQL surfaces. (2) The leak-proof guarantee — a
   **central Hibernate tenant filter applied once** (this §1: "scoping applied centrally, not re-typed
-  per query") — is now **BUILT (#243):** the single `@FilterDef(workspaceFilter)` is applied to **136
-  entities** (114 direct `workspace_id = :workspaceId` + 22 transitive subquery-condition incl.
-  `work_items`), with `TenantFilterCoverageTest` failing the build if any `@Entity` is neither filtered
-  nor on the `GLOBAL_BY_DESIGN` allow-list. Per-request binding (`CurrentWorkspace.bind()` at the
+  per query") is covered by `TenantFilterCoverageTest`, which fails when an entity is neither filtered
+  nor explicitly global-by-design. Per-request binding (`CurrentWorkspace.bind()` at the
   `RbacService` authorization choke point) is **flag-gated** `tenant.filter.binding.enabled` (default
   off, canary-first); until it is flipped, isolation rests on the retained per-query predicates (kept as
   defence-in-depth — the CONTRACT removal of redundant predicates is deferred until the binding soaks).
@@ -52,10 +50,10 @@ capability calls a model on its own terms.
   builder, rules engine) is part of the feature, not an afterthought. **No fallback documented = it
   does not ship.**
 - **Cost discipline (per workspace):** a monthly budget cap; at **80%** spend, degrade to the
-  cheaper model tier (Haiku); at **100%**, auto-disable AI for the workspace and serve fallbacks.
+  configured economy capability tier; at **100%**, auto-disable AI for the workspace and serve fallbacks.
   Per-user rate limits. **Response caching** for repeated prompts (meaningful spend reduction).
-- **Model tiering:** cheap/fast tier (Haiku) for classification and intent; capable tier (Sonnet)
-  for generation. Never default everything to the expensive tier.
+- **Model tiering:** provider-neutral economy tier for classification/intent and capable tier for
+  generation/reasoning. Concrete provider/model names live in runtime configuration, not policy.
 - **Audit — every invocation logged:** timestamp, user, workspace, capability, prompt size, model
   tier, tokens in/out, cost, and the AI-policy state at call time. This is core data (RB-20 §5).
 - **Data boundary:** redact PII before it leaves the server to a model; respect data residency
@@ -81,10 +79,10 @@ Both cannot be literally true if personal data lives inside the immutable log.
 >   causal structure stay intact and auditable; the personal data becomes cryptographically
 >   unrecoverable. This satisfies erasure **and** preserves the immutable audit trail.
 >
-> **Binding rules (detailed design lands with the compliance iterations, 7–9):**
+> **Binding rules:**
 > 1. **No raw PII outside the vault** — not in event payloads, projections, search indexes, logs, or
->    metrics; only tokens/ciphertext. (A `guardrails.sh` "no-PII-in-events" check is added once the
->    PII field inventory exists.)
+>    metrics; only tokens/ciphertext. Guardrails and architecture tests are defence-in-depth; flow
+>    tests provide behavioral evidence.
 > 2. **Backups must honour erasure** — a backup that can resurrect a destroyed key or pre-shred PII
 >    defeats the right. Key retention ≤ backup retention, and key destruction propagates to
 >    replicas/caches.
@@ -93,9 +91,9 @@ Both cannot be literally true if personal data lives inside the immutable log.
 > 4. **Maintain a PII field inventory + data-residency map** (which vault, which region) — the single
 >    artifact the access-audit and residency requirements both read from.
 >
-> *Scope:* this fixes the **architecture**. The PII field inventory, key-management/rotation design,
-> retention windows, and backup-expiry mechanics are detailed designs to produce — and validate with
-> legal/DPO — at the **start of iterations 7–9**, before any of this is built.
+> *Status:* repository migrations and current tests are the evidence for shipped vault/tokenization
+> mechanics. Key-management operations, retention, residency, backup expiry, and legal/DPO validation
+> remain separately tracked controls; they must not be inferred from this policy text.
 
 ## 4. Security depth *(spec `06 §5.4`, `07 §4.6`)*
 
@@ -105,7 +103,8 @@ Engineering-surface hardening is in RB-10 §8. The platform commitments:
 - **Identity:** MFA for admins; **WebAuthn / passkeys**; **conditional access** (IP allow-list,
   device, geo, time-of-day).
 - **Assurance:** annual penetration test + bug bounty; dependency/security scanning in CI (RB-10 §9).
-- **Certification roadmap:** SOC 2 Type 2 + ISO 27001 targeted at **iteration 19**.
+- **Certification target:** SOC 2 Type 2 + ISO 27001 require externally evidenced audit programs;
+  repository controls alone cannot claim certification.
 
 ## 5. Non-functional budgets *(spec `06 §5.3`)*
 
@@ -122,6 +121,10 @@ Performance is a contract, not a vibe. Test against these (ms):
 | AI (uncached) | 2000 | 5000 | 10000 |
 | File upload | 1500 | 3000 | 8000 |
 
+Every pass/fail claim names a versioned benchmark profile: environment, dataset/seed volume,
+concurrency, warm-up, repetitions, percentile calculation, and variance tolerance. Unprofiled timing
+is diagnostic evidence, not a conformance result.
+
 **Target infrastructure** *(spec `07 §2.4, §4.7`)*: AWS — ECS/EKS, RDS (Multi-AZ), ElastiCache
 (Redis) for cache + AI response cache, S3 + CloudFront, Secrets Manager, ECR; **Terraform** IaC;
 **OpenTelemetry → CloudWatch / Grafana / Prometheus**. Current local stack is Docker Compose
@@ -130,7 +133,7 @@ Performance is a contract, not a vibe. Test against these (ms):
 ---
 
 ### What's enforced here
-Today: server-side AI, security headers, CORS, rate limiting, dependency scanning → `guardrails.sh`
-+ ESLint + CI. **To be added:** the workspace-scope query check (§1) and, as features land, NFR
-checks against §5 and AI-budget/audit instrumentation (§2). Until a check exists, these are review
-gates — flag them in the PR.
+Exact enforcement classification is registered in `../policy-registry.json`. Tenant coverage and
+cross-tenant behavior are automated controls; legal certification, complete privacy operations, and
+unprofiled target infrastructure remain review or target-state controls until their registered checks
+and external evidence exist.

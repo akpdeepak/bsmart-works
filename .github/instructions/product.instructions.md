@@ -1,17 +1,13 @@
 ---
-applyTo: "**"
+applyTo: "docs/implementation/**,docs/product/**,README.md"
 ---
-
-<!-- GENERATED FROM ai-rules/ — do not edit by hand.
-     Edit the source in ai-rules/ and run: node scripts/generate-ai-rules.mjs
-     This file is the GitHub Copilot (product) view of the same rules. -->
 
 # Rule Book 20 — Product & Delivery
 
 > Owns *what we build and whether it earns its place*. Read after the
-> [Orchestrator](../00-ORCHESTRATOR.md). The live iteration number is in Orchestrator §6.
-> **Enforced by:** the PR template (scope + iteration check) and human product review; the
-> discipline here is mostly judgment, backed by `check-dod-sync`.
+> [Orchestrator](../00-ORCHESTRATOR.md). Live work status is the GitHub task/program state.
+> Scope and product judgment are required-review controls; automation validates traceability fields,
+> not whether a feature deserves to exist.
 
 ---
 
@@ -20,10 +16,10 @@ The v3.5 capability map added exactly three things and said no to the rest — c
 A feature ships only if it closes a specific product or architectural gap, not because it's
 interesting. **When in doubt, cut it.**
 
-## 2. Build to the active iteration, not the roadmap
-There are 20 iterations (Orchestrator §6). Working ahead is the most expensive mistake on this
-project — it creates half-built surfaces that block the iterations beneath them. **Confirm the
-active iteration before starting. Never build iteration N+1 while N is in scope.**
+## 2. Build to the active task and program
+Build only the approved GitHub task in the active program/milestone. Historical iteration numbers are
+requirement metadata, not a universal scheduler. Work outside the task is captured separately rather
+than smuggled into the current PR.
 
 ## 3. Defaults for the 80%, customization for the 20%
 Ship opinionated defaults that work for most teams out of the box. Customization is a deliberate,
@@ -43,9 +39,9 @@ done. SLA is **one engine in two contexts** (internal delivery + customer commit
 implementations.
 
 ## 6. PM traceability (non-negotiable process)
-Every unit of work traces to its capability and iteration: **capability → iteration → issue → PR →
-verification.** A PR states which capability/iteration it serves. Work with no traceable product
-reason doesn't get merged. Keep the iteration's current-status accurate (Orchestrator §6, §2 step 6).
+Feature work traces **requirement/capability → program/milestone → issue → PR → verification**. Bugs,
+chores, and policy work trace to their issue and owning area without inventing a capability/iteration.
+Live status is generated from GitHub events rather than copied into a prose ledger.
 
 ---
 

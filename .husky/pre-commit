@@ -2,22 +2,27 @@
 # bSmart Works — pre-commit gate. Mirrors a subset of CI so violations are caught
 # before they ever leave your machine. Edit ai-rules/ (not the derived files).
 
-# 1. Architecture & brand guardrails (whole repo, fast).
+# 1. Process contract tests and generated-state checks.
+node --test scripts/tests/process-system.test.mjs || exit 1
+node scripts/generate-project-state.mjs --check || exit 1
+
+# 2. Architecture & brand guardrails (whole repo, fast).
 bash scripts/guardrails.sh || exit 1
 
-# 2. AI-rules files must stay in sync with CLAUDE.md.
+# 3. Generated AI-rule projections must stay in sync.
 node scripts/generate-ai-rules.mjs --check || {
   echo "AI rules are stale. Run: node scripts/generate-ai-rules.mjs  then re-stage."
   exit 1
 }
 
-# 3. Every task keeps the scope/plan/acceptance/validation + TDD contract.
+# 4. Every task keeps the planning/TDD/coordination/evidence contract.
 node scripts/check-task-execution-contract.mjs || exit 1
 
-# 4. DoD version tag: CLAUDE.md §4 and PR template must carry the same tag.
+# 5. PR and policy contract compatibility check.
 bash scripts/check-dod-sync.sh || exit 1
 
-# 5. Lint staged frontend files (relative paths — robust against spaces in repo path).
+# 6. Documentation links and staged frontend lint.
+node scripts/check-doc-integrity.mjs || exit 1
 staged=$(git diff --cached --name-only --diff-filter=ACM \
   | grep -E '^works-frontend/src/.*\.(js|jsx)$' \
   | sed 's#^works-frontend/##')

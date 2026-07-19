@@ -1,15 +1,12 @@
 package com.bcits.works.automation;
 
 import com.bcits.works.shared.ApiException;
-import com.bcits.works.shared.EncryptionService;
-import com.bcits.works.shared.EventService;
 import com.bcits.works.shared.RbacGate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,9 +19,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.OffsetDateTime;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * OAuth 2.0 authorization-code callback (B23, iteration 13 Cap Q). Handles the redirect from
@@ -54,9 +49,7 @@ public class OAuthCallbackController {
         "GITLAB", "read_api,write_repository"
     );
 
-    private final IntegrationCredentialRepository credentials;
-    private final EncryptionService encryption;
-    private final EventService events;
+    private final OAuthCredentialService credentialService;
     private final RbacGate rbac;
 
     @Value("${oauth.slack.client-id:}") private String slackClientId;
@@ -71,13 +64,9 @@ public class OAuthCallbackController {
         .connectTimeout(Duration.ofSeconds(10))
         .build();
 
-    public OAuthCallbackController(IntegrationCredentialRepository credentials,
-                                   EncryptionService encryption,
-                                   EventService events,
+    public OAuthCallbackController(OAuthCredentialService credentialService,
                                    RbacGate rbac) {
-        this.credentials = credentials;
-        this.encryption = encryption;
-        this.events = events;
+        this.credentialService = credentialService;
         this.rbac = rbac;
     }
 
@@ -89,7 +78,6 @@ public class OAuthCallbackController {
      * On failure redirects to {@code /settings/integrations?error=<reason>}.
      */
     @GetMapping("/callback")
-    @Transactional
     public ResponseEntity<Void> callback(
         @RequestParam String code,
         @RequestParam String state,
@@ -131,28 +119,8 @@ public class OAuthCallbackController {
             return redirect("/settings/integrations?error=TOKEN_EXCHANGE_FAILED");
         }
 
-        // Persist encrypted credentials (upsert by workspace+provider)
-        IntegrationCredential cred = credentials.findByWorkspaceIdAndProvider(workspaceId, providerUpper)
-            .orElseGet(() -> {
-                IntegrationCredential fresh = new IntegrationCredential();
-                fresh.setId(UUID.randomUUID().toString());
-                fresh.setWorkspaceId(workspaceId);
-                fresh.setProvider(providerUpper);
-                fresh.setCreatedAt(OffsetDateTime.now());
-                return fresh;
-            });
-
-        cred.setAccessTokenEnc(encryption.encrypt(tokenResponse.accessToken()));
-        if (tokenResponse.refreshToken() != null) {
-            cred.setRefreshTokenEnc(encryption.encrypt(tokenResponse.refreshToken()));
-        }
-        cred.setScopes(PROVIDER_SCOPES.get(providerUpper));
-        cred.setTokenType(tokenResponse.tokenType() != null ? tokenResponse.tokenType() : "Bearer");
-        cred.setUpdatedAt(OffsetDateTime.now());
-        credentials.save(cred);
-
-        events.record(workspaceId, "OAUTH_CONNECTED", userId,
-            "{\"provider\":\"" + providerUpper + "\",\"workspaceId\":\"" + workspaceId + "\"}");
+        credentialService.store(workspaceId, userId, providerUpper, tokenResponse.accessToken(),
+            tokenResponse.refreshToken(), tokenResponse.tokenType(), PROVIDER_SCOPES.get(providerUpper));
 
         log.info("OAuth credentials stored for provider={} workspace={}", providerUpper, workspaceId);
         return redirect("/settings/integrations?connected=" + providerUpper.toLowerCase());

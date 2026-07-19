@@ -2,6 +2,7 @@
 
 Date: 2026-07-19
 Branch: `codex/epics-01-05-completion`
+PR: [#485](https://github.com/akpdeepak/bsmart-works/pull/485)
 
 ## Method
 

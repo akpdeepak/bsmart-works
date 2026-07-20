@@ -24,7 +24,7 @@ export const TIER = { VIEWER: 1, MEMBER: 2, LEAD: 3, ADMIN: 4, OWNER: 5 };
 // permissions.min_tier as the real contract evolves (tracked as tech-debt).
 export const SURFACE_TIER = {
   // Home
-  dashboard: TIER.VIEWER, myworks: TIER.MEMBER, notifications: TIER.MEMBER,
+  dashboard: TIER.VIEWER, myworks: TIER.MEMBER, notifications: TIER.MEMBER, messenger: TIER.VIEWER,
   // Deliver
   smcockpit: TIER.LEAD, board: TIER.VIEWER, backlog: TIER.MEMBER, sprint: TIER.MEMBER,
   releases: TIER.MEMBER, projects: TIER.VIEWER, pm: TIER.LEAD,
@@ -44,7 +44,7 @@ export const SURFACE_TIER = {
   customization: TIER.ADMIN, security: TIER.OWNER, trash: TIER.LEAD,
   // Satellite cockpits + BQL
   developer: TIER.MEMBER, poworkspace: TIER.LEAD, leadership: TIER.ADMIN,
-  adminops: TIER.ADMIN, bql: TIER.MEMBER,
+  adminops: TIER.ADMIN, operatingmodel: TIER.ADMIN, bql: TIER.MEMBER,
 };
 
 // Minimum tier (1 = everyone) required to see a surface in the nav.
@@ -82,6 +82,7 @@ export const MODES = [
     { id: 'dashboard',     label: 'Today',         labelKey: 'nav.today',         Icon: Home },
     { id: 'myworks',       label: 'My Works',      labelKey: 'nav.myWork',        Icon: User },
     { id: 'notifications', label: 'Notifications', labelKey: 'nav.notifications', Icon: Bell },
+    { id: 'messenger',     label: 'Messenger',     labelKey: 'nav.messenger',     Icon: MessageSquare },
   ] },
   { id: 'deliver', label: 'Deliver', labelKey: 'nav.mode.deliver', Icon: LayoutGrid, surfaces: [
     { id: 'smcockpit', label: 'Sprint Cockpit', labelKey: 'nav.sprintCockpit', Icon: Gauge },
@@ -133,6 +134,7 @@ export const SATELLITES = [
   { id: 'poworkspace', label: 'PO Workspace', labelKey: 'nav.poWorkspace', Icon: MapIcon },
   { id: 'leadership',  label: 'Leadership',   labelKey: 'nav.leadership',  Icon: Crown },
   { id: 'adminops',    label: 'Admin Ops',    labelKey: 'nav.adminOps',    Icon: ShieldHalf },
+  { id: 'operatingmodel', label: 'Operating Model', labelKey: 'nav.operatingModel', Icon: Shield },
   { id: 'bql',         label: 'BQL Query',    labelKey: 'nav.bqlQuery',    Icon: Search },
 ];
 
@@ -205,7 +207,8 @@ export const ROLE_PROFILES = {
   },
   admin: {
     landing: 'adminops',
-    primary: ['adminops', 'workspace', 'settings3', 'aicontrol', 'security', 'integrations', 'automations', 'marketplace', 'customization', 'compliance', 'developerportal', 'trash'],
+    primary: ['adminops', 'operatingmodel', 'workspace', 'settings3', 'aicontrol', 'security', 'integrations', 'automations', 'marketplace', 'customization', 'compliance', 'developerportal', 'trash'],
+    more: []
   },
 };
 

@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
+import com.bcits.works.PiiVaultBackfillService;
 
 /**
  * Runs the one-shot PII-vault backfill ({@link PiiVaultBackfillService}) at startup when

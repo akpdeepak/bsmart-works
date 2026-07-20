@@ -20,6 +20,15 @@ public class TeamService {
     public Team prepareNew(Team team) {
         team.setId("TEAM-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         team.setProjectIds(normalizeProjectIds(team.getProjectIds()));
+        if (team.getFramework() == null || team.getFramework().isBlank()) {
+            team.setFramework("SCRUM");
+        }
+        if (team.getTeamKey() == null || team.getTeamKey().isBlank()) {
+            String name = team.getName();
+            String key = (name != null && name.length() >= 3) ? name.substring(0, 3).toUpperCase() : "TEA";
+            team.setTeamKey(key);
+        }
+        team.setNextSeq(1);
         OffsetDateTime now = OffsetDateTime.now();
         team.setCreatedAt(now);
         team.setUpdatedAt(now);
@@ -30,9 +39,10 @@ public class TeamService {
     public Team applyUpdate(Team existing, Team updated) {
         existing.setName(updated.getName());
         existing.setDescription(updated.getDescription());
-        if (updated.getProjectIds() != null) existing.setProjectIds(normalizeProjectIds(updated.getProjectIds())); {
+        if (updated.getProjectIds() != null) existing.setProjectIds(normalizeProjectIds(updated.getProjectIds()));
+        if (updated.getFramework() != null) existing.setFramework(updated.getFramework());
+        if (updated.getTeamKey() != null) existing.setTeamKey(updated.getTeamKey().toUpperCase());
         existing.setUpdatedAt(OffsetDateTime.now());
-        }
         return existing;
     }
 }

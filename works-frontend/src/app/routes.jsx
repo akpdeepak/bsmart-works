@@ -10,6 +10,7 @@ export const AccountView                = React.lazy(() => import('@/views/accou
 export const PoWorkspaceView            = React.lazy(() => import('@/views/po-workspace-view'));
 export const LeadershipConsoleView      = React.lazy(() => import('@/views/leadership-console-view'));
 export const AdminOpsView               = React.lazy(() => import('@/views/admin-ops-view'));
+export const OperatingModelView         = React.lazy(() => import('@/views/operating-model-view'));
 export const NotificationsView          = React.lazy(() => import('@/views/notifications-view'));
 export const TrashView                  = React.lazy(() => import('@/views/trash-view'));
 export const ReleasesView               = React.lazy(() => import('@/views/releases-view'));
@@ -23,6 +24,7 @@ export const MarketplaceView            = React.lazy(() => import('@/views/marke
 export const DeveloperPortalView        = React.lazy(() => import('@/views/developer-portal-view'));
 export const KnowledgeTemplatesView     = React.lazy(() => import('@/views/knowledge-templates-view'));
 export const SupportInboxView           = React.lazy(() => import('@/views/support-inbox-view'));
+export const MessengerView              = React.lazy(() => import('@/views/messenger-view'));
 export const BacklogView                = React.lazy(() => import('@/views/backlog-view'));
 export const SprintView                 = React.lazy(() => import('@/views/sprint-view'));
 export const DashboardsView             = React.lazy(() => import('@/views/dashboards-view'));

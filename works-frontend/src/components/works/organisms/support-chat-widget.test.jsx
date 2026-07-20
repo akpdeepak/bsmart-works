@@ -128,11 +128,11 @@ describe('SupportChatWidget', () => {
     // We filter by delay (8000 ms = POLL_INTERVAL_MS) so RTL's polling loop does not overwrite
     // the captured callback with its own internal function.
     let capturedPollFn = null;
-    const intervalSpy = vi.spyOn(window, 'setInterval').mockImplementation((fn, delay) => {
+    const intervalSpy = vi.spyOn(globalThis, 'setInterval').mockImplementation((fn, delay) => {
       if (delay === 8000) capturedPollFn = fn; // the component's 8-second poll, not RTL's 50ms loop
       return 999; // fake interval id
     });
-    vi.spyOn(window, 'clearInterval').mockImplementation(() => {});
+    vi.spyOn(globalThis, 'clearInterval').mockImplementation(() => {});
 
     start.mockResolvedValue({
       conversation: { id: 'CHAT-99', status: 'ESCALATED' },

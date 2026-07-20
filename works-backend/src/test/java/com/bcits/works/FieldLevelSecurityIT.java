@@ -9,6 +9,7 @@ import com.bcits.works.shared.BqlContextFactory;
 import com.bcits.works.workitems.FieldDefController;
 import com.bcits.works.workitems.WorkItem;
 import com.bcits.works.workitems.WorkItemReadService;
+import com.bcits.works.workitems.WorkItemFieldValue;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -229,7 +230,7 @@ class FieldLevelSecurityIT {
             .containsEntry(FD_HIDDEN, SALARY_VALUE);
 
         List<WorkItemFieldValue> values = fieldDefController.getValues(ITEM);
-        assertThat(values).extracting(WorkItemFieldValue::getFieldDefId)
+        assertThat(values).extracting(v -> v.getFieldDefId())
             .as("ADMIN sees the HIDDEN field via the dedicated values endpoint")
             .contains(FD_HIDDEN);
     }
@@ -248,7 +249,7 @@ class FieldLevelSecurityIT {
             .doesNotContainKey(FD_HIDDEN);
 
         List<WorkItemFieldValue> values = fieldDefController.getValues(ITEM);
-        assertThat(values).extracting(WorkItemFieldValue::getFieldDefId)
+        assertThat(values).extracting(v -> v.getFieldDefId())
             .as("VIEWER must NOT receive the HIDDEN field via the dedicated values endpoint")
             .doesNotContain(FD_HIDDEN);
     }

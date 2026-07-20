@@ -91,7 +91,7 @@ class WorkItemTrashRouteTest {
             repository, eventService, jdbc, userRepository, emailService, batchService,
             authenticatedUser, rbac, dodChecklists, extensions, workflowRules, statusConfig,
             wipLimits, watcherService, mock(AutomationService.class), mock(FunnelService.class),
-            readService, new ObjectMapper());
+            readService, new ObjectMapper(), org.mockito.Mockito.mock(com.bcits.works.workitems.TeamSequenceGenerator.class));
 
     private final WorkItemController controller = new WorkItemController(
             authenticatedUser, mock(WorkItemBulkService.class), readService, commandService,

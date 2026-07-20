@@ -116,7 +116,7 @@ export default function AppShell() {
     shortcutsHelpOpen, setShortcutsHelpOpen,
   } = useShellOverlays();
   const [, setNewItem]                  = useState({ title: '', type: 'Task', description: '', assigneeId: '', dueDate: '', tags: '', priority: 'MEDIUM', parentId: '', projectId: '' });
-  const [newProject, setNewProject]     = useState({ name: '', keyPrefix: '', description: '' });
+  const [newProject, setNewProject]     = useState({ name: '', keyPrefix: '', description: '', framework: 'SCRUM' });
   const [createError, setCreateError]   = useState('');
   const goToRef                         = useRef(false); // 'g' then a key — quick go-to (brand §5.2)
 
@@ -175,6 +175,8 @@ export default function AppShell() {
 
   // Notification prefs
   const [notifPrefs, setNotifPrefs]     = useState({ notifyAssign: true, notifyComment: true, notifyMention: true, emailDigest: false });
+  // eslint-disable-next-line no-unused-vars
+  const [userPrefs, setUserPrefs]       = useState({ theme: 'system', notificationsEnabled: true, locale: 'en', timezone: 'UTC' });
 
   // Iteration 2 — Sprints & Backlog
   const [sprints, setSprints]           = useState([]);
@@ -366,7 +368,7 @@ export default function AppShell() {
   const [replyingTo, setReplyingTo]     = useState(null);   // comment being replied to
   const [replyBody, setReplyBody]       = useState('');
   const [trashItems, setTrashItems]     = useState([]);
-  const [, setBranding]                 = useState({ primaryColor: BRAND_ORANGE, logoUrl: '', description: '' });
+  const [branding, setBranding]                 = useState({ primaryColor: BRAND_ORANGE, logoUrl: '', description: '' });
   const [projectMembers, setProjectMembers] = useState([]);
   const [projectMemberEmail, setProjectMemberEmail] = useState('');
   const [projectMemberMsg, setProjectMemberMsg] = useState('');
@@ -637,6 +639,7 @@ export default function AppShell() {
     fetchUserRole();
     fetchBranding();
     fetchWipLimits();
+    fetchUserPrefs();
     // Load custom field definitions for card rendering and the field picker. Unified onto field_def
     // (Option B): cards and the detail panel share one definition store; values arrive on each work
     // item as `fieldValues` (batch-attached by the backend), keyed by field_def id.
@@ -934,7 +937,7 @@ export default function AppShell() {
     api.send(`/projects`, { method: 'POST', body: JSON.stringify(newProject) })
       .then(p => {
         setProjects(prev => [...prev, p]);
-        setNewProject({ name: '', keyPrefix: '', description: '' });
+        setNewProject({ name: '', keyPrefix: '', description: '', framework: 'SCRUM' });
         setIsProjectOpen(false);
         showToast('Team created');
       }).catch(err => setCreateError(err.message));
@@ -971,6 +974,28 @@ export default function AppShell() {
   function saveNotifPrefs(prefs) {
     api.raw(`/notification-preferences`, { method: 'PUT', body: JSON.stringify(prefs) })
       .then(() => setNotifPrefs(prefs));
+  }
+
+  function fetchUserPrefs() {
+    api.raw(`/users/me/preferences`)
+      .then(r => r.json())
+      .then(d => {
+        setUserPrefs(d);
+        if (d && d.theme === 'dark') setDarkMode(true);
+        else if (d && d.theme === 'light') setDarkMode(false);
+      })
+      .catch(() => {});
+  }
+
+  function saveUserPrefs(prefs) {
+    api.raw(`/users/me/preferences`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(prefs) })
+      .then(r => r.json())
+      .then(d => {
+        setUserPrefs(d);
+        if (d && d.theme === 'dark') setDarkMode(true);
+        else if (d && d.theme === 'light') setDarkMode(false);
+      })
+      .catch(() => {});
   }
 
   // SPRINT FUNCTIONS
@@ -2322,7 +2347,11 @@ export default function AppShell() {
               onClick={() => navigate('dashboard')}
               className="flex items-center shrink-0 select-none p-0.5 rounded-md hover:bg-white/10 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
             >
-              <Logo size="lg" variant="reverse" />
+              {branding?.logoUrl ? (
+                <img src={branding.logoUrl} alt="Workspace Logo" className="h-6 max-w-24 object-contain" />
+              ) : (
+                <Logo size="lg" variant="reverse" />
+              )}
             </button>
 
             {/* Workspace switcher chip */}
@@ -2564,7 +2593,7 @@ export default function AppShell() {
               reportTemplates, resetCockpitAnalysis, resetTodayLayout, resizeDashboardWidget, restoreArticle, restoreFromTrash, retroClusters, retroNoteDraft,
               retros, reviewResult, reviewSprintId, riskPanel, risks, riskSprintId, roadmapThemes, roles,
               ruleBuilder, ruleTestResult, runBql, runPatterns, runReleaseNotes, runReviewPrep, runRiskPanel, runSprintPlanning,
-              runVariance, saveBranding, savedFilters, saveFieldVisibility, saveFilterName, saveMemberCapacity, saveNotifPrefs, saveReport,
+              runVariance, saveBranding, savedFilters, saveFieldVisibility, saveFilterName, saveMemberCapacity, saveNotifPrefs, saveReport, saveUserPrefs,
               saveRule, saveTodayLayout, saveTodayTemplate, scheduleCeremony, scheduleForm, scheduleManagerOpen, scopeChanges, searchKnowledge,
               selectAllViolations, selectedArticle, selectedDashboard, selectedItem, selectedMeeting, selectedProjectId, selectedRelease, selectedReport,
               selectedSpace, selectedSprintId, selectedViolations, serviceCsat, serviceCustomers, serviceQueue, serviceRequests, serviceTab,
@@ -2855,6 +2884,21 @@ export default function AppShell() {
             <Field label="Description">
               <textarea rows={2} value={newProject.description} onChange={e => setNewProject({ ...newProject, description: e.target.value })}
                 className="input resize-none" placeholder="What does this team work on?" />
+            </Field>
+            <Field label="Framework">
+              <select
+                value={newProject.framework || 'SCRUM'}
+                onChange={e => setNewProject({ ...newProject, framework: e.target.value })}
+                className="input"
+              >
+                <option value="SCRUM">Scrum</option>
+                <option value="KANBAN">Kanban</option>
+                <option value="WATERFALL">Waterfall</option>
+                <option value="LEAN">Lean</option>
+                <option value="DSDM">DSDM</option>
+                <option value="XP">XP</option>
+              </select>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Dictates which features (e.g. Sprints) this team uses.</p>
             </Field>
           </div>
           <div className="flex justify-end gap-3 mt-5">

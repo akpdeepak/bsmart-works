@@ -27,6 +27,7 @@ function ReportPivotStrip({ workspaceId }) {
   useEffect(() => {
     let alive = true;
     if (!workspaceId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState({ loading: false, error: null, byId: {} });
       return undefined;
     }

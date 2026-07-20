@@ -29,6 +29,11 @@ public class Team {
     private String projectIds = "[]";
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
+    
+    // V1.6 Foundational Reframe fields
+    private String framework = "SCRUM";
+    private String teamKey;
+    private int nextSeq = 1;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -44,4 +49,11 @@ public class Team {
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
+    
+    public String getFramework() { return framework; }
+    public void setFramework(String framework) { this.framework = framework; }
+    public String getTeamKey() { return teamKey; }
+    public void setTeamKey(String teamKey) { this.teamKey = teamKey; }
+    public int getNextSeq() { return nextSeq; }
+    public void setNextSeq(int nextSeq) { this.nextSeq = nextSeq; }
 }

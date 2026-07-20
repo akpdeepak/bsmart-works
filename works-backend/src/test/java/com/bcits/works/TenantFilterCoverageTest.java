@@ -17,7 +17,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -75,6 +74,7 @@ class TenantFilterCoverageTest {
      */
     static final Set<String> GLOBAL_BY_DESIGN = Set.of(
             "User",
+            "UserPreference",
             "Workspace",
             "NotificationPreference",
             "PushSubscription",
@@ -109,7 +109,7 @@ class TenantFilterCoverageTest {
                 .importPackages("com.bcits.works");
         entityClasses = imported.stream()
                 .filter(jc -> jc.isAnnotatedWith(Entity.class))
-                .map(JavaClass::reflect)
+                .map(jc -> jc.reflect())
                 .collect(Collectors.toList());
     }
 
@@ -142,7 +142,7 @@ class TenantFilterCoverageTest {
         Set<String> wronglyFiltered = entityClasses.stream()
                 .filter(e -> GLOBAL_BY_DESIGN.contains(e.getSimpleName()))
                 .filter(TenantFilterCoverageTest::isFiltered)
-                .map(Class::getSimpleName)
+                .map(c -> c.getSimpleName())
                 .collect(Collectors.toCollection(TreeSet::new));
         assertThat(wronglyFiltered)
                 .as("global-by-design entities must NOT carry the central tenant filter "
@@ -157,7 +157,7 @@ class TenantFilterCoverageTest {
         Set<String> filteredButStillPending = entityClasses.stream()
                 .filter(e -> PENDING_FILTER.contains(e.getSimpleName()))
                 .filter(TenantFilterCoverageTest::isFiltered)
-                .map(Class::getSimpleName)
+                .map(c -> c.getSimpleName())
                 .collect(Collectors.toCollection(TreeSet::new));
         assertThat(filteredButStillPending)
                 .as("these entities now carry @Filter — remove them from PENDING_FILTER so the "

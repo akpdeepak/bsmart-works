@@ -10,7 +10,6 @@ import com.bcits.works.ExtensionExecutionService;
 import com.bcits.works.FunnelService;
 import com.bcits.works.messaging.NotificationBatchService;
 import com.bcits.works.messaging.WatcherService;
-import com.bcits.works.auth.User;
 import com.bcits.works.auth.UserRepository;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
@@ -52,6 +51,7 @@ public class WorkItemCommandService {
     private final FunnelService funnelService;
     private final WorkItemReadService readService;
     private final ObjectMapper objectMapper;
+    private final TeamSequenceGenerator teamSequenceGenerator;
 
     public WorkItemCommandService(WorkItemRepository repository, EventService eventService,
                                   JdbcTemplate jdbc, UserRepository userRepository,
@@ -61,7 +61,8 @@ public class WorkItemCommandService {
                                   WorkflowRuleEngine workflowRules, StatusConfigService statusConfig,
                                   BoardWipLimitService wipLimits, WatcherService watcherService,
                                   AutomationService automations, FunnelService funnelService,
-                                  WorkItemReadService readService, ObjectMapper objectMapper) {
+                                  WorkItemReadService readService, ObjectMapper objectMapper,
+                                  TeamSequenceGenerator teamSequenceGenerator) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
@@ -80,6 +81,7 @@ public class WorkItemCommandService {
         this.funnelService = funnelService;
         this.readService = readService;
         this.objectMapper = objectMapper;
+        this.teamSequenceGenerator = teamSequenceGenerator;
     }
 
     public WorkItem restoreFromTrash(String id) {
@@ -112,14 +114,39 @@ public class WorkItemCommandService {
         newItem.setId(prefix + "-" + java.util.UUID.randomUUID().toString().substring(0, 6).toUpperCase());
 
         String effectiveWsId = wsId != null ? wsId : "default";
-        String autoIdPrefix = DefaultWorkItemTypes.prefixFor(newItem.getType());
-        Long counter = jdbc.queryForObject(
-            "INSERT INTO work_item_counters (workspace_id, type_key, next_val) VALUES (?, ?, 1) "
-                + "ON CONFLICT (workspace_id, type_key) DO UPDATE "
-                + "  SET next_val = work_item_counters.next_val + 1 "
-                + "RETURNING next_val",
-            Long.class, effectiveWsId, newItem.getType().toUpperCase());
-        newItem.setAutoId(autoIdPrefix + "-" + String.format("%04d", counter));
+        
+        // V1.6 Foundational Reframe: use team-key-based display IDs (PLAT-42) if the project is mapped to a team
+        String teamId = null;
+        String teamKey = null;
+        if (newItem.getProjectId() != null && wsId != null) {
+            try {
+                String pJson = "[\"" + newItem.getProjectId() + "\"]";
+                List<Map<String, Object>> res = jdbc.queryForList(
+                    "SELECT id, team_key FROM teams WHERE workspace_id = ? AND project_ids @> ?::jsonb LIMIT 1", 
+                    wsId, pJson);
+                if (!res.isEmpty()) {
+                    teamId = (String) res.get(0).get("id");
+                    teamKey = (String) res.get(0).get("team_key");
+                }
+            } catch (Exception ex) {
+                log.warn("Failed to find team for project {}", newItem.getProjectId(), ex);
+            }
+        }
+        
+        if (teamId != null && teamKey != null && !teamKey.isBlank()) {
+            int seq = teamSequenceGenerator.getNextSequence(teamId);
+            newItem.setAutoId(teamKey + "-" + seq);
+        } else {
+            // Fallback to old behavior (type-based counter)
+            String autoIdPrefix = DefaultWorkItemTypes.prefixFor(newItem.getType());
+            Long counter = jdbc.queryForObject(
+                "INSERT INTO work_item_counters (workspace_id, type_key, next_val) VALUES (?, ?, 1) "
+                    + "ON CONFLICT (workspace_id, type_key) DO UPDATE "
+                    + "  SET next_val = work_item_counters.next_val + 1 "
+                    + "RETURNING next_val",
+                Long.class, effectiveWsId, newItem.getType().toUpperCase());
+            newItem.setAutoId(autoIdPrefix + "-" + String.format("%04d", counter));
+        }
 
         String initialStatus = statusConfig.initialStatus(effectiveWsId, newItem.getType());
         newItem.setStatus(initialStatus != null ? initialStatus : defaultStatusFor(newItem.getType()));
@@ -172,7 +199,7 @@ public class WorkItemCommandService {
         String userId = authenticatedUser.id();
         var opt = repository.findById(id);
         if (opt.isEmpty()) {
-            return ResponseEntity.<Void>notFound().build();
+            return ResponseEntity.notFound().build();
         }
         var item = opt.get();
         String wsId = rbac.workspaceForProject(item.getProjectId());
@@ -182,14 +209,14 @@ public class WorkItemCommandService {
         jdbc.update("UPDATE work_items SET deleted_at = NOW(), deleted_by = ? WHERE id = ?", userId, id);
         eventService.record(id, "WORK_ITEM_DELETED", userId,
             "{\"title\":\"" + item.getTitle().replace("\"", "'") + "\"}");
-        return ResponseEntity.<Void>noContent().build();
+        return ResponseEntity.noContent().build();
     }
 
     public ResponseEntity<Void> permanentDelete(String id) {
         String userId = authenticatedUser.id();
         var opt = repository.findById(id);
         if (opt.isEmpty()) {
-            return ResponseEntity.<Void>notFound().build();
+            return ResponseEntity.notFound().build();
         }
         var item = opt.get();
         String wsId = rbac.workspaceForProject(item.getProjectId());
@@ -202,7 +229,7 @@ public class WorkItemCommandService {
         jdbc.update("DELETE FROM attachments WHERE work_item_id = ?", id);
         jdbc.update("DELETE FROM starred_items WHERE work_item_id = ?", id);
         repository.delete(item);
-        return ResponseEntity.<Void>noContent().build();
+        return ResponseEntity.noContent().build();
     }
 
     public WorkItem moveParent(String id, Map<String, String> body) {
@@ -526,6 +553,6 @@ public class WorkItemCommandService {
     }
 
     private String actorName(String userId) {
-        return userRepository.findById(userId != null ? userId : "").map(User::getFullName).orElse("Someone");
+        return userRepository.findById(userId != null ? userId : "").map(u -> u.getFullName()).orElse("Someone");
     }
 }

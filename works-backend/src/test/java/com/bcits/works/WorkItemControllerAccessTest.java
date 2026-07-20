@@ -83,7 +83,7 @@ class WorkItemControllerAccessTest {
             repository, eventService, jdbc, userRepository, emailService, batchService,
             authenticatedUser, rbac, dodChecklists, extensions, workflowRules, statusConfig,
             wipLimits, watcherService, mock(AutomationService.class), mock(FunnelService.class),
-            readService, new ObjectMapper());
+            readService, new ObjectMapper(), org.mockito.Mockito.mock(com.bcits.works.workitems.TeamSequenceGenerator.class));
     private final WorkItemEngagementService engagementService = new WorkItemEngagementService(
             jdbc, authenticatedUser, rbac, watcherService);
 

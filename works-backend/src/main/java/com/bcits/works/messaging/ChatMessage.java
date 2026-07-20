@@ -41,6 +41,12 @@ public class ChatMessage {
     @Column(name = "ai_meta")
     private String aiMeta;
 
+    @Column(name = "artifact_type")
+    private String artifactType;
+
+    @Column(name = "artifact_ref")
+    private String artifactRef;
+
     @Column(name = "created_at")
     private OffsetDateTime createdAt;
 
@@ -58,6 +64,10 @@ public class ChatMessage {
     public void setBody(String body) { this.body = body; }
     public String getAiMeta() { return aiMeta; }
     public void setAiMeta(String aiMeta) { this.aiMeta = aiMeta; }
+    public String getArtifactType() { return artifactType; }
+    public void setArtifactType(String artifactType) { this.artifactType = artifactType; }
+    public String getArtifactRef() { return artifactRef; }
+    public void setArtifactRef(String artifactRef) { this.artifactRef = artifactRef; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
 }

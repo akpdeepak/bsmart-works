@@ -1,4 +1,4 @@
-package com.bcits.works;
+package com.bcits.works.workitems;
 
 import com.bcits.works.shared.WorkspaceFilterActivator;
 

@@ -176,8 +176,8 @@ export function SidebarNav({
             onClick={onToggleCollapse}
             className="flex h-full w-full items-center justify-center text-white/60 transition-colors duration-fast hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           >
-            <div className="flex h-7 w-7 items-center justify-center rounded bg-brand-orange text-xs font-bold text-white">
-              {getInitials(workspace.name)}
+            <div className="flex h-7 w-7 items-center justify-center rounded bg-brand-orange text-xs font-bold text-white overflow-hidden">
+              {workspace.logoUrl ? <img src={workspace.logoUrl} alt="" className="h-full w-full object-cover" /> : getInitials(workspace.name)}
             </div>
           </button>
         ) : (
@@ -191,16 +191,16 @@ export function SidebarNav({
                 aria-label={t('nav.switchWorkspace')}
                 className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-left transition-colors duration-[120ms] hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
               >
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-brand-orange text-xs font-bold text-white">
-                  {getInitials(workspace.name)}
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-brand-orange text-xs font-bold text-white overflow-hidden">
+                  {workspace.logoUrl ? <img src={workspace.logoUrl} alt="" className="h-full w-full object-cover" /> : getInitials(workspace.name)}
                 </div>
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold">{workspace.name}</span>
                 <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 text-white/50" />
               </button>
             ) : (
               <>
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-brand-orange text-xs font-bold text-white">
-                  {getInitials(workspace.name)}
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-brand-orange text-xs font-bold text-white overflow-hidden">
+                  {workspace.logoUrl ? <img src={workspace.logoUrl} alt="" className="h-full w-full object-cover" /> : getInitials(workspace.name)}
                 </div>
                 <span className="flex-1 truncate text-sm font-semibold">{workspace.name}</span>
               </>
@@ -246,8 +246,8 @@ export function SidebarNav({
                     aria-current={isActive ? 'true' : undefined}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left outline-none hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:hover:bg-neutral-700"
                   >
-                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-brand-navy text-xs font-bold text-white">
-                      {getInitials(w.name)}
+                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-brand-navy text-xs font-bold text-white overflow-hidden">
+                      {w.logoUrl ? <img src={w.logoUrl} alt="" className="h-full w-full object-cover" /> : getInitials(w.name)}
                     </div>
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">{w.name}</span>
                     {isActive && <Check aria-hidden="true" className="h-4 w-4 shrink-0 text-brand-orange" />}

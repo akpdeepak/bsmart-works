@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "8d625512994f3da9faed26802203329385b380b9e4fa4f356b99b3b9fda9abec",
+  "sourceDigest": "d56407cf9b48b1c12be633d92066c44acc5a1d108b04a2932f412de03c064460",
   "backend": {
     "java": "21",
     "springBoot": "4.1.0",
@@ -31,8 +31,8 @@
   "database": {
     "engine": "PostgreSQL",
     "migrationTool": "Flyway",
-    "flywayHighWater": 120,
-    "nextMigration": 121
+    "flywayHighWater": 122,
+    "nextMigration": 123
   },
   "generatedFrom": [
     "works-backend/pom.xml",

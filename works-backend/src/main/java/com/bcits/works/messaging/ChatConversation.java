@@ -8,6 +8,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import org.hibernate.annotations.Filter;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 
 /**
  * A customer-portal chat conversation (iteration 20, Cap N) — real-time chat with an AI tier-1
@@ -45,6 +47,10 @@ public class ChatConversation {
 
     private String status = "OPEN";
 
+    @Column(name = "conversation_type")
+    @Enumerated(EnumType.STRING)
+    private ConversationType type = ConversationType.SUPPORT;
+
     @Column(name = "assigned_agent_id")
     private String assignedAgentId;
 
@@ -71,6 +77,8 @@ public class ChatConversation {
     public void setSubject(String subject) { this.subject = subject; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public ConversationType getType() { return type; }
+    public void setType(ConversationType type) { this.type = type; }
     public String getAssignedAgentId() { return assignedAgentId; }
     public void setAssignedAgentId(String assignedAgentId) { this.assignedAgentId = assignedAgentId; }
     public OffsetDateTime getCreatedAt() { return createdAt; }

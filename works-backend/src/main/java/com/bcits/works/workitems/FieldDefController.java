@@ -2,8 +2,7 @@ package com.bcits.works.workitems;
 
 import com.bcits.works.FieldDef;
 import com.bcits.works.FieldDefRepository;
-import com.bcits.works.WorkItemFieldValue;
-import com.bcits.works.WorkItemFieldValueRepository;
+
 import com.bcits.works.security.CustomerAttributionPiiService;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
@@ -141,9 +140,9 @@ public class FieldDefController {
         if (values.isEmpty()) {
             return;
         }
-        Set<String> defIds = values.stream().map(WorkItemFieldValue::getFieldDefId).collect(Collectors.toSet());
+        Set<String> defIds = values.stream().map(v -> v.getFieldDefId()).collect(Collectors.toSet());
         Map<String, FieldDef> defs = fieldDefRepo.findAllById(defIds).stream()
-            .collect(Collectors.toMap(FieldDef::getId, fd -> fd));
+            .collect(Collectors.toMap(fd -> fd.getId(), fd -> fd));
         for (WorkItemFieldValue v : values) {
             FieldDef fd = defs.get(v.getFieldDefId());
             if (fd != null && Boolean.TRUE.equals(fd.getPii()) && v.getSubjectToken() != null) {

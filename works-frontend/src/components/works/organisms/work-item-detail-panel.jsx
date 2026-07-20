@@ -67,7 +67,7 @@ export function WorkItemDetailPanel({
         <div className="h-14 flex items-center justify-between px-5 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center gap-2 min-w-0">
             <TypeBadge type={selectedItem.type} compact />
-            <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{selectedItem.autoId || selectedItem.id}</span>
+            <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{selectedItem.displayKey || selectedItem.autoId || selectedItem.id}</span>
             {selectedItem.parentId && (() => {
               const parent = workItems.find(i => i.id === selectedItem.parentId);
               return parent ? (
@@ -75,7 +75,7 @@ export function WorkItemDetailPanel({
                   className="hidden sm:inline-flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 rounded-full px-2 py-0.5 hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 min-w-0"
                   title={`Parent: ${parent.title}`}>
                   <CornerDownRight className="h-3 w-3 flex-shrink-0 rotate-180" aria-hidden="true" />
-                  <span className="truncate max-w-40">{parent.autoId || parent.id} · {parent.title}</span>
+                  <span className="truncate max-w-40">{parent.displayKey || parent.autoId || parent.id} · {parent.title}</span>
                 </button>
               ) : null;
             })()}

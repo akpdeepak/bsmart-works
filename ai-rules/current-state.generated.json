@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "d56407cf9b48b1c12be633d92066c44acc5a1d108b04a2932f412de03c064460",
+  "sourceDigest": "6af3e41fcf607721d7e9c56a861275025997498e1a29772c7882a431b52acc9b",
   "backend": {
     "java": "21",
     "springBoot": "4.1.0",

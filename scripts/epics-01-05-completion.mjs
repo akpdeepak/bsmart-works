@@ -73,7 +73,7 @@ check('EPIC 2', 'Deployment health contributors',
 check('EPIC 2', 'Deploy templates and CI smoke',
   ['local', 'staging', 'production'].every((name) => exists(`deploy/env/${name}.example`)) &&
   sourceHasAll('docker-compose.deploy.yml', ['SPRING_PROFILES_ACTIVE', 'health/readiness']) &&
-  sourceHasAll('.github/workflows/ci.yml', ['deploy-compose-smoke', 'docker compose --env-file']),
+  sourceHasAll('.github/workflows/ci.yml', ['deploy-smoke', 'docker compose --env-file']),
   'local/staging/production templates and Compose validation are CI-enforced');
 check('EPIC 2', 'Backup and restore runbook',
   sourceHasAll('docs/operations/BACKUP-RESTORE.md', ['pg_dump', 'pg_restore', 'uploads.tgz', 'health/readiness']),

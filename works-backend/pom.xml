@@ -31,7 +31,7 @@
 		<jjwt.version>0.13.0</jjwt.version>
 		<!-- Real WebAuthn / FIDO2 verification (RB-40 §4, EPIC-P1-webauthn-fido2). Uses Jackson 3
 		     (tools.jackson.*), which the Spring Boot 4 parent already manages. -->
-		<webauthn4j.version>0.31.7.RELEASE</webauthn4j.version>
+		<webauthn4j.version>0.31.8.RELEASE</webauthn4j.version>
 		<testcontainers.version>2.0.5</testcontainers.version>
 		<byte-buddy.version>1.18.10</byte-buddy.version>
 		<!-- AWS SDK v2 for the real KMS / BYOK key provider (RB-40 §3/§4, EPIC-P1-pii-vault Slice 5).

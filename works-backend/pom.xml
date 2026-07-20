@@ -33,7 +33,7 @@
 		     (tools.jackson.*), which the Spring Boot 4 parent already manages. -->
 		<webauthn4j.version>0.31.8.RELEASE</webauthn4j.version>
 		<testcontainers.version>2.0.5</testcontainers.version>
-		<byte-buddy.version>1.18.10</byte-buddy.version>
+		<byte-buddy.version>1.18.11</byte-buddy.version>
 		<!-- AWS SDK v2 for the real KMS / BYOK key provider (RB-40 §3/§4, EPIC-P1-pii-vault Slice 5).
 		     The BOM aligns the kms client + its transitive AWS modules. -->
 		<awssdk.version>2.29.0</awssdk.version>

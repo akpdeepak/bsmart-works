@@ -16,7 +16,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/internal-messaging")
@@ -40,9 +39,10 @@ public class InternalMessagingController {
     @GetMapping("/conversations")
     public List<ChatConversation> list(@RequestParam String workspaceId) {
         rbac.require(authenticatedUser.id(), workspaceId, "work_read");
-        return conversationRepo.findAll().stream()
-                .filter(c -> c.getType() != ConversationType.SUPPORT)
-                .collect(Collectors.toList());
+        // Narrow in the query, not after the read (RB-40 §1): an unscoped findAll here returned every
+        // tenant's internal threads to any caller holding work_read in a single workspace.
+        return conversationRepo.findByWorkspaceIdAndTypeNotOrderByLastMessageAtDesc(
+                workspaceId, ConversationType.SUPPORT);
     }
 
     @PostMapping("/conversations")

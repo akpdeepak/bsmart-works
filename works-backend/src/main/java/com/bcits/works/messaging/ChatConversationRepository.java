@@ -15,6 +15,12 @@ public interface ChatConversationRepository extends JpaRepository<ChatConversati
 
     List<ChatConversation> findByWorkspaceIdAndStatusOrderByLastMessageAtDesc(String workspaceId, String status);
 
+    /** Internal (bSmart Messenger) threads for one workspace, excluding the customer-support domain.
+     *  Scoped in the query itself (RB-40 §1) so the internal inbox can never post-filter another
+     *  tenant's rows out of an unscoped read. */
+    List<ChatConversation> findByWorkspaceIdAndTypeNotOrderByLastMessageAtDesc(String workspaceId,
+                                                                               ConversationType type);
+
     Optional<ChatConversation> findByWorkspaceIdAndId(String workspaceId, String id);
 
     /** Backfill guard (RB-40 §3, Slice 3): conversations whose denormalised customer_name has not yet

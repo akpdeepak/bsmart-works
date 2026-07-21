@@ -13,36 +13,45 @@
 
 ## 0. TL;DR — read this first
 
-1. **Phase 2 is hard-gated on Phase 1 finishing.** This is not a process preference; it is a
-   file-level collision fact (verified — §3). The headline Phase 2 item (splitting the 663-file flat
-   `com.bcits.works` package) *relocates the exact files Phase 1 is actively editing* (tenant filter,
-   field-level security, PII vault). Running them concurrently makes every in-flight Phase 1 diff
-   un-mergeable, and vice-versa.
-2. **Phase 1 is mid-flight and far from its exit gate.** PII vault (in Phase 1's exit criteria) is
-   being **actively built** on `feat/p1-pii-vault` at full scope — including **email-identity
-   tokenization** (a blind-index for the login email + a JWT-subject change), per Deepak's
-   2026-06-20 direction — and is **not complete**. #243 central tenant filter and field-level
-   security are each only **Slice 1**; BYOK/KMS, WebAuthn attestation, distributed rate-limit / JWT
-   revocation, and SOC2/ISO evidence all still follow. (The committed `EPIC-P1-pii-vault.md` still
-   frames §7 as "for sign-off" — it is stale relative to the build decision; some §7 items, e.g.
-   key-model / retention / legal-DPO, may still be open, but the scope + auth path are decided.)
-3. **So Phase 2 cannot merge until Phase 1 closes.** What *can* be done ahead of time is exactly
-   this package: execution-ready plans so Phase 2 runs fast the moment Phase 1 lands.
-4. **Not all of Phase 2 waits, though.** A subset is genuinely independent of Phase 1's backend
-   security work and can start in isolated worktrees as soon as approved (§4, "Independent now").
+> **Status refresh, 2026-07-21.** This plan was authored 2026-06-20 and sat unmerged while the work
+> it describes was executed. Phase 1 closed **2026-06-21** (PRs #415–#441) and the first Phase 2
+> tranche merged **2026-07-19** (PRs #446–#452, #454–#478). The original §0 dependency argument and
+> the §1 "verified state" column were therefore both overtaken by events; both are corrected below,
+> and §7 of each EPIC plan now records which decisions shipped. **Eight of the nine sign-off
+> decisions are closed by merged code. One remains open: the frontend bundle-budget mechanism
+> (EPIC-04 §7.c).** Sections 2–6 (Definition of Done, slicing, verification) were not affected and
+> stand as written.
+
+1. **The Phase 1 dependency wall is discharged.** Phase 2's backend split relocated the same
+   cross-cutting files Phase 1 was editing (tenant filter, field-level security, PII vault), so the
+   two could not run concurrently. Phase 1 reached its exit gate on 2026-06-21, and the module carve
+   then ran cleanly against it — §3 is retained as the historical rationale, not a live blocker.
+2. **The carve and the FE code-split landed; the decomposition did not.** 14 modules are populated
+   and the flat root fell 291→72 source files; `locales.js` is code-split; token debt is zero. But
+   three of the four god classes are still over budget, `AppShell` remains a 2,946-line component,
+   `AsyncBoundary` reaches 14 of 36 views, and **no bundle budget was ever added** — see §1.
+3. **What remains of Phase 2 is decomposition, not relocation.** Splitting `ArticleService`,
+   `KpiService` and `WorkItemCommandService`; decomposing `RouteOutlet`; finishing the
+   `AsyncBoundary` rollout; adding module→module ArchUnit rules and the `api`/`internal` split that
+   the "API-first modular monolith" goal actually requires; and landing a bundle gate.
+4. **The ratchets must be lowered as work lands.** Both size gates currently sit at their present
+   value — flat root `≤72` with 72, `AppShell` `<3000` with 2,946 — so neither blocks regression.
+   Each Phase 2 PR lowers its gate to the new value.
 
 ---
 
 ## 1. Scope (the W2 ledger rows, mapped to EPICs)
 
-| # | W2 item (roadmap §5) | Verified state today | Owning EPIC plan |
-|---|----------------------|----------------------|------------------|
-| W2-a | Split flat `com.bcits.works` (663/691 files) into domain modules with ArchUnit boundaries | Scaffolded, not started: 14 empty `package-info` markers + an architecture gate exist; **0 classes moved** | [EPIC-03 full](epics/EPIC-03-backend-modularization-phase2.md) |
-| W2-b | God classes within budget: `KpiService` 716, `BqlCompiler` 650, `ArticleController` 630, `WorkItemCommandService` 559 | All oversized; seams identified | [EPIC-03 full](epics/EPIC-03-backend-modularization-phase2.md) |
-| W2-c | Decompose `AppShell.jsx` (4,606 lines) into router + providers + overlays + feature state | Monolith behind a thin `App.jsx` entry; ~180 `useState` | [EPIC-04 full](epics/EPIC-04-frontend-architecture-phase2.md) |
-| W2-d | FE monoliths: `locales.js` 4,426, `BlockEditor.jsx` 2,176, `knowledge-view.jsx` 1,828 — code-split, lazy | Eagerly loaded; `BlockEditor` is the one non-lazy view import | [EPIC-04 full](epics/EPIC-04-frontend-architecture-phase2.md) |
-| W2-e | Adopt `AsyncBoundary` (0 consumers); retire hand-rolled async states | Component exists + well-tested at `atoms/async-boundary.jsx`; **0 production imports**; ~30–45 candidate sites | [EPIC-04 full](epics/EPIC-04-frontend-architecture-phase2.md) |
-| W2-f | Token debt: 3 hex in `status-management-tab.jsx`; the "48-file" legacy `warn` block | 3 hex are all `#94A3B8` (slate-400, off-palette); the warn block is ESLint `worksViewStructureLegacy`, **43 files**, TD-021 | [EPIC-04 full](epics/EPIC-04-frontend-architecture-phase2.md) |
+Measured on `main` at `ef031e0e`, 2026-07-21. "Was" is the 2026-06-20 baseline this plan was written against.
+
+| # | W2 item (roadmap §5) | Was (06-20) | Measured now | Remaining | Owning EPIC plan |
+|---|----------------------|-------------|--------------|-----------|------------------|
+| W2-a | Split flat `com.bcits.works` into domain modules with ArchUnit boundaries | 0 classes moved | **DONE for relocation** — 14 modules populated, flat root 291→72 | **API-first goal not met:** no `api`/`internal` split anywhere, no module→module ArchUnit rule (`auth.UserRepository` imported 14× cross-module, `workitems.WorkItemRepository` 10×); the 72 flat-root files match no slice so the cycle gate skips them | [EPIC-03 full](epics/EPIC-03-backend-modularization-phase2.md) |
+| W2-b | God classes within budget | `KpiService` 716, `BqlCompiler` 650, `ArticleController` 630, `WorkItemCommandService` 559 | `BqlCompiler` **56** (genuinely split → Parser 255 / Emitter 355 / Lexer 106); `ArticleController` 297 **but `ArticleService` 730**; `KpiService` **612**; `WorkItemCommandService` **558** | 1 of 4 decomposed. `ArticleService` is now the largest backend file in the repo — relocated, not split. `KpiService` −104, `WorkItemCommandService` −1 | [EPIC-03 full](epics/EPIC-03-backend-modularization-phase2.md) |
+| W2-c | Decompose `AppShell.jsx` into router + providers + overlays + feature state | 4,606 lines, ~180 `useState` | **2,946 lines, 197 `useState`** | Gate is `<3000` — 54 lines of headroom, so it ratchets nothing. `RouteOutlet.jsx` is 927 lines, opens with a file-level `eslint-disable`, and destructures ~600 props from one object. `app/lazy-views.js` is dead code (0 references) | [EPIC-04 full](epics/EPIC-04-frontend-architecture-phase2.md) |
+| W2-d | FE monoliths code-split, lazy | eager | `locales.js` **4,426→49** + 10 per-language files — **DONE**. `BlockEditor.jsx` **2,176 (unchanged)** and `knowledge-view.jsx` **1,828→1,783** were made lazy, not decomposed | **No bundle budget exists** — `vite.config.js` has `manualChunks`, but nothing in `quality-gates.mjs`, `verification-manifest.json` or `ci.yml` asserts a size limit. This is open decision EPIC-04 §7.c | [EPIC-04 full](epics/EPIC-04-frontend-architecture-phase2.md) |
+| W2-e | Adopt `AsyncBoundary`; retire hand-rolled async states | 0 production imports | **14 of 36 views**, 1 component | 22 views. DoD is "all primary async surfaces" | [EPIC-04 full](epics/EPIC-04-frontend-architecture-phase2.md) |
+| W2-f | Token debt: hex literals + legacy `warn` block | 3 hex; 43-file legacy block | **0 raw hex** in views and components; CI-blocking via `guardrails.sh` | **DONE** | [EPIC-04 full](epics/EPIC-04-frontend-architecture-phase2.md) |
 
 > Phase 2 ≈ taking **EPIC 3 (backend modularization)** and **EPIC 4 (frontend architecture)** from
 > their shipped first slices (~4% / ~5%) to full scope, plus the FE quality debt (W2-e/f).

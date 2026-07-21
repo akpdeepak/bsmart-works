@@ -187,10 +187,31 @@ inventory in §4 must be present and unchanged post-refactor (adversarial re-ver
 
 ## 7. Decisions for Deepak
 
-- **a.** Approve `ArticleController` + `KpiService` splits to start now (independent of Phase 1).
-- **b.** Confirm the 14-module + `shared`-kernel boundary set (§2); decide Config/Onboarding (fold vs.
-  two new markers + `MODULE_PACKAGES` edit).
-- **c.** Confirm "`shared` kernel first, then Identity-first" split order (§3).
-- **d.** Confirm `WorkItemCommandService` + `BqlCompiler` are deferred and co-owned with Phase 1's
-  tenant-filter / FLS slices (not run as independent Phase 2 refactors).
-- **e.** Confirm the `RbacService` port-in-`shared` approach to avoid universal `*→auth` edges.
+> Resolved by execution, 2026-07-21. All five were answered by code that merged on 2026-07-19 while
+> this plan sat unmerged. Two shipped only partially — see the carry-forward below.
+
+- **a.** ~~Approve `ArticleController` + `KpiService` splits to start now.~~ **RESOLVED — shipped**
+  (PRs #446, #447), but **not to budget**: `ArticleController` 630 → 297 while the extracted
+  `ArticleService` is **730 lines**, now the largest backend file in the repo; `KpiService` 716 →
+  **612** (`KpiMetricCalculator` took 157). Both carry forward.
+- **b.** ~~Confirm the 14-module + `shared`-kernel boundary set (§2).~~ **RESOLVED — shipped.** All 14
+  modules are populated with `package-info` markers; flat root 291 → 72 source files. Config and
+  Onboarding were folded into `workspaces` rather than given their own markers.
+- **c.** ~~Confirm "`shared` kernel first, then Identity-first" split order.~~ **RESOLVED — shipped**
+  in that order (PRs #454, #456 kernel; #462 auth; then the remaining domains through #478).
+- **d.** ~~Confirm `WorkItemCommandService` + `BqlCompiler` are deferred and co-owned with Phase 1.~~
+  **RESOLVED — shipped** (PRs #448, #449). `BqlCompiler` 650 → **56** is a genuine decomposition
+  (`BqlParser` 255 / `BqlSqlEmitter` 355 / `BqlLexer` 106). `WorkItemCommandService` 559 → **558**
+  (`WorkItemFieldCopier` took 60) is not — it carries forward.
+- **e.** ~~Confirm the `RbacService` port-in-`shared` approach.~~ **RESOLVED — shipped** as `RbacGate`
+  (PR #460), which did avoid universal `*→auth` edges.
+
+### Carry-forward into the next Phase 2 tranche
+
+1. Decompose `ArticleService` (730), `KpiService` (612), `WorkItemCommandService` (558) to budget.
+2. Add module→module ArchUnit rules and the `api`/`internal` split — **the "API-first modular
+   monolith" half of EPIC 3 was never built.** Today any module may import any other module's JPA
+   repositories directly (`auth.UserRepository` 14× cross-module, `workitems.WorkItemRepository` 10×).
+3. Bring the 72 flat-root files into slices, or extend the cycle gate to cover them — the rule
+   matches `com.bcits.works.(*)..`, so those files (15 of them controllers) are exempt from it today.
+4. Lower the flat-root ratchet below 72 as files move; it currently sits at exactly its present value.

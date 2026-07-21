@@ -178,10 +178,21 @@ guard test is string-based, not behavioral.
 
 ## 7. Decisions for Deepak
 
-- **a.** Approve the independent block (§5 items 1–5) to start ahead of Phase 1 close.
-- **b.** Confirm AppShell leaf-first PR order (§1) and that contested feature hooks (work-items/Today/
-  knowledge) wait for their live branches to merge.
-- **c.** Confirm the bundle-budget mechanism (`size-limit` vs Rollup `manualChunks` +
-  `chunkSizeWarningLimit`) — recommendation: `size-limit` in CI for an explicit, reviewable budget.
-- **d.** Confirm the `locales.js` sync→async `translate()` change is acceptable (keeps `en` static as
-  fallback; behavior preserved by the existing missing-key→English contract).
+> Resolved by execution, 2026-07-21. Three of the four were answered by code that merged on
+> 2026-07-19 while this plan sat unmerged. One is still open.
+
+- **a.** ~~Approve the independent block (§5 items 1–5) to start ahead of Phase 1 close.~~
+  **RESOLVED — moot.** Phase 1 closed 2026-06-21, so nothing needed to run ahead of it.
+- **b.** ~~Confirm AppShell leaf-first PR order (§1).~~ **RESOLVED — shipped.** Providers, auth,
+  public routes, shortcuts, `RouteOutlet`, feature state, workspace membership, navigation, overlays
+  and realtime were extracted leaf-first (PRs #452, #480, and the Phase 2 structural set);
+  `AppShell.jsx` 4,606 → 2,946.
+- **c.** **OPEN — the last Phase 2 decision.** Confirm the bundle-budget mechanism (`size-limit` vs
+  Rollup `manualChunks` + `chunkSizeWarningLimit`) — recommendation stands: `size-limit` in CI for an
+  explicit, reviewable budget. **No budget of any kind exists today**: `vite.config.js` sets
+  `manualChunks`, but no step in `quality-gates.mjs`, `verification-manifest.json` or `ci.yml`
+  asserts a size limit, so the W2-d claim that "the bundle gate enforces the boundary" is currently
+  unsupported.
+- **d.** ~~Confirm the `locales.js` sync→async `translate()` change.~~ **RESOLVED — shipped** (PR
+  #451). `locales.js` 4,426 → 49 lines plus 10 per-language modules; the missing-key→English
+  fallback contract held.

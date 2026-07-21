@@ -7,6 +7,7 @@ export function useGlobalShortcuts({
   setView,
   setIsCreateOpen,
   setShortcutsHelpOpen,
+  onTriggerAi,
 }) {
   useEffect(() => {
     function onKey(event) {
@@ -15,6 +16,12 @@ export function useGlobalShortcuts({
         if (!navigateRef.current) return;
         event.preventDefault();
         setPaletteOpen((open) => !open);
+        return;
+      }
+      if (meta && event.key.toLowerCase() === 'j') {
+        if (!navigateRef.current || !onTriggerAi) return;
+        event.preventDefault();
+        onTriggerAi();
         return;
       }
       if (!navigateRef.current) return;
@@ -59,5 +66,5 @@ export function useGlobalShortcuts({
 
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [goToRef, navigateRef, setIsCreateOpen, setPaletteOpen, setShortcutsHelpOpen, setView]);
+  }, [goToRef, navigateRef, setIsCreateOpen, setPaletteOpen, setShortcutsHelpOpen, setView, onTriggerAi]);
 }

@@ -29,7 +29,7 @@ export const knowledgeAi = {
       body: { text },
     }),
   // Ask the knowledge base (RAG). Returns { answer, citations, meta }.
-  ask: (workspaceId, question) => aiClient.kbAsk(workspaceId, question),
+  ask: (workspaceId, question) => aiClient.ask(workspaceId, question),
 };
 
 // Build the `aiAssist` callback the BlockEditor expects: ({ mode, text, instruction }) → { text, meta }.

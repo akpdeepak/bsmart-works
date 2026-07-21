@@ -51,7 +51,7 @@ describe('AiCommandBar', () => {
 
     const input = screen.getByLabelText('AI command');
     fireEvent.change(input, { target: { value: 'create a bug login' } });
-    fireEvent.click(screen.getByRole('button', { name: /preview plan/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^go$/i }));
 
     await screen.findByDisplayValue('Create Bug: login');
     fireEvent.click(screen.getByRole('button', { name: /confirm & run/i }));

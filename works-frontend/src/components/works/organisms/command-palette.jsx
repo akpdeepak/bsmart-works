@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Search, CornerDownLeft } from 'lucide-react';
+import { Search, CornerDownLeft, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Backdrop } from '@/components/works/atoms/backdrop';
 
@@ -18,7 +18,7 @@ function matches(cmd, q) {
   return q.toLowerCase().split(/\s+/).every((tok) => hay.includes(tok));
 }
 
-export function CommandPalette({ onClose, commands = [], onSearch, placeholder = 'Search actions and pages…' }) {
+export function CommandPalette({ onClose, commands = [], onSearch, onTriggerAi, placeholder = 'Search actions and pages…' }) {
   const [query, setQuery] = React.useState('');
   const [active, setActive] = React.useState(0);
   const [dynamic, setDynamic] = React.useState([]);
@@ -53,8 +53,19 @@ export function CommandPalette({ onClose, commands = [], onSearch, placeholder =
   }, [onSearch, query]);
 
   const filtered = React.useMemo(
-    () => [...commands.filter((c) => matches(c, query)), ...dynamic],
-    [commands, query, dynamic],
+    () => {
+      const results = [...commands.filter((c) => matches(c, query)), ...dynamic];
+      if (onTriggerAi && query.trim()) {
+        results.push({
+          id: 'ai-fallback',
+          label: `Ask AI to "${query.trim()}"`,
+          Icon: Sparkles,
+          run: () => onTriggerAi(query.trim()),
+        });
+      }
+      return results;
+    },
+    [commands, query, dynamic, onTriggerAi],
   );
 
   // Focus the input and lock body scroll while the palette is mounted (= open).

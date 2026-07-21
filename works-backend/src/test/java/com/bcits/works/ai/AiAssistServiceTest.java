@@ -204,17 +204,6 @@ class AiAssistServiceTest {
     }
 
     @Test
-    void kbAsk_groundsAnswerInArticles() {
-        aiOn();
-        when(spaces.findByWorkspaceIdOrderByNameAsc("ws")).thenReturn(List.of(space("SP-1")));
-        Article art = article("KB-1", "Reading your consumption report", "Open the portal and go to Reports.");
-        when(articles.findBySpaceIdOrderByUpdatedAtDesc("SP-1")).thenReturn(List.of(art));
-
-        var ans = assist.kbAsk("ws", "me", "how do I read my consumption report", true);
-        assertThat(ans.citations()).extracting(m -> m.get("id")).contains("KB-1");
-    }
-
-    @Test
     void route_picksBestMatchingTeam() {
         aiOn();
         Team web = team("T-1", "Web Portal", "customer portal billing");

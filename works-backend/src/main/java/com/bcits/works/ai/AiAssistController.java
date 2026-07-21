@@ -32,11 +32,16 @@ import java.util.Map;
 public class AiAssistController {
 
     private final AiAssistService assist;
+    private final AnswerEngineService answerEngine;
     private final AuthenticatedUser authenticatedUser;
     private final RbacGate rbac;
 
-    public AiAssistController(AiAssistService assist, AuthenticatedUser authenticatedUser, RbacGate rbac) {
+    public AiAssistController(AiAssistService assist,
+                              AnswerEngineService answerEngine,
+                              AuthenticatedUser authenticatedUser,
+                              RbacGate rbac) {
         this.assist = assist;
+        this.answerEngine = answerEngine;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
     }
@@ -156,10 +161,10 @@ public class AiAssistController {
 
     // ── Cap I / N · knowledge base + routing ───────────────────────────────────────
 
-    @PostMapping("/kb/ask")
-    public AiAssistService.KbAnswer kbAsk(@RequestParam String workspaceId, @RequestBody Map<String, Object> body) {
+    @PostMapping({"/kb/ask", "/ask"})
+    public AnswerEngineService.AnswerResponse ask(@RequestParam String workspaceId, @RequestBody Map<String, Object> body) {
         String userId = requireMember(workspaceId);
-        return assist.kbAsk(workspaceId, userId, str(body, "question"), inContext(body));
+        return answerEngine.ask(workspaceId, userId, str(body, "question"), inContext(body));
     }
 
     @PostMapping("/kb/suggest")

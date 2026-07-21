@@ -1181,23 +1181,15 @@ export default function AppShell() {
     newCustomer, setNewCustomer, formDesignerTypeId, setFormDesignerTypeId,
     fetchServiceRequests, fetchServiceCustomers, fetchServiceTypes, fetchServiceTiers,
     fetchServiceCsat, assignServiceRequest, transitionServiceRequest, createServiceCustomer,
-  } = useServiceState(api, activeWorkspaceId, showToast, reportError);  function fetchStatusDurations(itemId) {
+  } = useServiceState(api, activeWorkspaceId, showToast, reportError);
+
+  function fetchStatusDurations(itemId) {
     setStatusMetrics(EMPTY_STATUS_METRICS);
     api.raw(`/work-items/${itemId}/status-durations`).then(r => r.json())
       .then(d => setStatusMetrics(d && typeof d === 'object' && !Array.isArray(d)
         ? d
         : { ...EMPTY_STATUS_METRICS, durations: Array.isArray(d) ? d : [] }))
       .catch(reportError);
-  }
-  // severityClass / vStatusClass moved to compliance-view.jsx (TD-003).
-  // eslint-disable-next-line no-unused-vars
-  function humanDuration(seconds) {
-    if (seconds == null) return '—';
-    const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60);
-    if (h >= 24) { const d = Math.floor(h / 24); return `${d}d ${h % 24}h`; }
-    if (h > 0) return `${h}h ${m}m`;
-    if (m > 0) return `${m}m`;
-    return `${seconds}s`;
   }
   function addReportSection(type) {
     const defaults = {

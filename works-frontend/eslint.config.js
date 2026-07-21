@@ -222,7 +222,10 @@ const e2eNodeConfig = {
 // asynchronously in a .then()); downgrading to 'warn' keeps the signal visible without breaking CI.
 const worksHookOverrides = {
   files: ['src/**/*.{js,jsx}'],
-  rules: { 'react-hooks/set-state-in-effect': 'warn' },
+  rules: { 
+    'react-hooks/set-state-in-effect': 'warn',
+    'react-refresh/only-export-components': ['warn', { allowConstantExport: true }]
+  },
 };
 
 export default defineConfig([globalIgnores(['dist', 'storybook-static']), vitestTestConfig, e2eNodeConfig, {

@@ -93,7 +93,7 @@ export default {
       },
       // Named min-height values — avoids banned arbitrary [px] values in settings/content panels.
       minHeight: {
-        content: '520px',   // minimum height for settings tab panels (type-fields tab, etc.)
+        content: '520px',   // minimum height for settings tab panels (detail-fields tab, etc.)
       },
       // Layout dimensions as tokens — so the three-zone shell never needs banned arbitrary
       // px values (w-[360px]). Matches CLAUDE.md §4.6. Use w-sidebar / w-panel etc.

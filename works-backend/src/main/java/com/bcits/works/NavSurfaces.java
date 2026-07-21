@@ -26,6 +26,7 @@ public final class NavSurfaces {
         MIN_TIER.put("dashboard", 1);
         MIN_TIER.put("myworks", 2);
         MIN_TIER.put("notifications", 2);
+        MIN_TIER.put("messenger", 1);
         MIN_TIER.put("account", 1);
         // Deliver
         MIN_TIER.put("smcockpit", 3);
@@ -66,6 +67,7 @@ public final class NavSurfaces {
         MIN_TIER.put("poworkspace", 3);
         MIN_TIER.put("leadership", 4);
         MIN_TIER.put("adminops", 4);
+        MIN_TIER.put("operatingmodel", 4);
         MIN_TIER.put("bql", 2);
     }
 

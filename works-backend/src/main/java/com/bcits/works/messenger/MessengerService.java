@@ -1,6 +1,7 @@
 package com.bcits.works.messenger;
 
 import com.bcits.works.auth.RbacService;
+import com.bcits.works.shared.ApiException;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -38,7 +39,8 @@ public class MessengerService {
 
     public Message sendMessage(String userId, String workspaceId, String channelId, String content) {
         rbac.require(userId, workspaceId, "view_workspace"); // Minimal permission for now
-        
+        requireChannelInWorkspace(workspaceId, channelId);
+
         Message m = new Message();
         m.setId("MSG-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         m.setChannelId(channelId);
@@ -50,6 +52,21 @@ public class MessengerService {
 
     public List<Message> getChannelMessages(String userId, String workspaceId, String channelId) {
         rbac.require(userId, workspaceId, "view_workspace");
+        requireChannelInWorkspace(workspaceId, channelId);
         return messages.findByChannelIdOrderByCreatedAtAsc(channelId);
+    }
+
+    /**
+     * {@code workspaceId} and {@code channelId} arrive as independent path variables, so passing the
+     * RBAC check on the claimed workspace says nothing about who owns the channel. Re-check ownership
+     * before any message is read or written, or a member of one workspace can reach another's channel
+     * by pairing their own workspace id with a foreign channel id (RB-40 §1).
+     */
+    private void requireChannelInWorkspace(String workspaceId, String channelId) {
+        Channel channel = channels.findById(channelId)
+            .orElseThrow(() -> ApiException.notFound("Channel", channelId));
+        if (!channel.getWorkspaceId().equals(workspaceId)) {
+            throw ApiException.forbidden("Channel belongs to a different workspace.");
+        }
     }
 }

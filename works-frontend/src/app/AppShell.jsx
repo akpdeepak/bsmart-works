@@ -175,7 +175,7 @@ export default function AppShell() {
 
   // Notification prefs
   const [notifPrefs, setNotifPrefs]     = useState({ notifyAssign: true, notifyComment: true, notifyMention: true, emailDigest: false });
-  const [userPrefs, setUserPrefs]       = useState({ theme: 'system', notificationsEnabled: true, locale: 'en', timezone: 'UTC' });
+  const [, setUserPrefs]       = useState({ theme: 'system', notificationsEnabled: true, locale: 'en', timezone: 'UTC' });
 
   // Iteration 2 — Sprints & Backlog
   const [sprints, setSprints]           = useState([]);
@@ -315,7 +315,6 @@ export default function AppShell() {
   const [releaseNotesName, setReleaseNotesName] = useState('');
 
   // Iteration 6 — Worklogs
-  const [, setMyWorklogs]                        = useState([]);
   const [worklogForm, setWorklogForm]           = useState({ timeSpentMinutes: 30, description: '', workDate: '' });
   const [isWorklogOpen, setIsWorklogOpen]       = useState(false);
 
@@ -397,7 +396,6 @@ export default function AppShell() {
   });
 
   // Shared request wrapper (throws on error, returns JSON) — delegates to the single apiClient.
-  const apiFetch = (url, options = {}) => api.send(url, options);
 
   useEffect(() => {
     if (currentUser && workspaceReady && activeWorkspaceId) {
@@ -1180,14 +1178,6 @@ export default function AppShell() {
       .catch(reportError);
   }
   // severityClass / vStatusClass moved to compliance-view.jsx (TD-003).
-  function humanDuration(seconds) {
-    if (seconds == null) return '—';
-    const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60);
-    if (h >= 24) { const d = Math.floor(h / 24); return `${d}d ${h % 24}h`; }
-    if (h > 0) return `${h}h ${m}m`;
-    if (m > 0) return `${m}m`;
-    return `${seconds}s`;
-  }
   function addReportSection(type) {
     const defaults = {
       kpi:       { title: 'Open items', config: { metric: 'count', filter: { open: true } } },

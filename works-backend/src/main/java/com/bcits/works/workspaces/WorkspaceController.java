@@ -63,6 +63,13 @@ public class WorkspaceController {
     public Map<String, String> removeMember(@PathVariable String id, @PathVariable String memberId) {
         return workspaceService.removeMember(authenticatedUser.id(), id, memberId);
     }
+    
+    @PutMapping("/{id}/members/{memberId}")
+    public Map<String, String> updateMember(@PathVariable String id, @PathVariable String memberId,
+                                            @RequestBody Map<String, String> payload) {
+        return workspaceService.updateMemberType(authenticatedUser.id(), id, memberId, 
+                payload.get("systemRole"), payload.get("businessUserType"));
+    }
 
     @GetMapping("/{id}/branding")
     public Map<String, Object> getBranding(@PathVariable String id) {

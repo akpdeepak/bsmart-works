@@ -65,7 +65,7 @@ class AnswerEngineServiceTest {
             true, false, "To login, fix the button.", AiModelTier.SONNET, "ENABLED", 0, false);
         when(controlPlane.invoke(any())).thenReturn(out);
 
-        AnswerEngineService.AnswerResponse response = service.ask("ws1", "u1", "How do I login?", false);
+        AnswerEngineService.AnswerResponse response = service.ask("ws1", "u1", "login", false);
 
         assertEquals("To login, fix the button.", response.answer());
         assertEquals("HIGH", response.confidence());
@@ -78,12 +78,12 @@ class AnswerEngineServiceTest {
         when(projects.findByWorkspaceId("ws1")).thenReturn(List.of());
 
         AiControlPlaneService.AiOutcome out = new AiControlPlaneService.AiOutcome(
-            true, true, "I don't know.", AiModelTier.SONNET, "ENABLED", 0, false);
+            true, true, "I don't have enough information to answer that.", AiModelTier.SONNET, "ENABLED", 0, false);
         when(controlPlane.invoke(any())).thenReturn(out);
 
         AnswerEngineService.AnswerResponse response = service.ask("ws1", "u1", "How do I jump?", false);
 
-        assertEquals("I don't know.", response.answer());
+        assertEquals("I don't have enough information to answer that.", response.answer());
         assertEquals("LOW", response.confidence());
         assertEquals(0, response.sources().size());
     }

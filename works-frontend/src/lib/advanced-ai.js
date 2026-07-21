@@ -46,6 +46,12 @@ export const conversationalDashboardsClient = {
     api.send(`/ai/conversational-dashboards/${id}?workspaceId=${ws(workspaceId)}`, { method: 'DELETE' }),
 };
 
+export const artifactsClient = {
+  generate: (workspaceId, prompt) =>
+    api.send(`/ai/artifacts/generate?workspaceId=${ws(workspaceId)}`, { method: 'POST', body: { prompt } }),
+};
+
+
 // Short human label for a control-plane verdict on an AI reply.
 export function aiVerdictLabel(reply) {
   if (!reply) return '';

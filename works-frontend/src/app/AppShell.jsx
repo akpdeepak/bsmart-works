@@ -175,7 +175,6 @@ export default function AppShell() {
 
   // Notification prefs
   const [notifPrefs, setNotifPrefs]     = useState({ notifyAssign: true, notifyComment: true, notifyMention: true, emailDigest: false });
-  // eslint-disable-next-line no-unused-vars
   const [userPrefs, setUserPrefs]       = useState({ theme: 'system', notificationsEnabled: true, locale: 'en', timezone: 'UTC' });
 
   // Iteration 2 — Sprints & Backlog
@@ -316,7 +315,6 @@ export default function AppShell() {
   const [releaseNotesName, setReleaseNotesName] = useState('');
 
   // Iteration 6 — Worklogs
-  // eslint-disable-next-line no-unused-vars
   const [, setMyWorklogs]                        = useState([]);
   const [worklogForm, setWorklogForm]           = useState({ timeSpentMinutes: 30, description: '', workDate: '' });
   const [isWorklogOpen, setIsWorklogOpen]       = useState(false);
@@ -399,7 +397,6 @@ export default function AppShell() {
   });
 
   // Shared request wrapper (throws on error, returns JSON) — delegates to the single apiClient.
-  // eslint-disable-next-line no-unused-vars
   const apiFetch = (url, options = {}) => api.send(url, options);
 
   useEffect(() => {
@@ -411,7 +408,6 @@ export default function AppShell() {
       return () => clearInterval(iv);
     }
     return undefined;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, workspaceReady, activeWorkspaceId]);
 
   // Deep-link load: when signed in on a non-default URL, run that view's data fetch once (the
@@ -430,7 +426,6 @@ export default function AppShell() {
       const entityId = entity.id;
       queueMicrotask(() => setSelectedItem(prev => prev?.id === entityId ? prev : { id: entityId }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, workspaceReady, activeWorkspaceId]);
 
   useEffect(() => {
@@ -454,7 +449,6 @@ export default function AppShell() {
       window.history.pushState({ entity: id }, '', entityPath);
     }
     // Keep detail drawer controls aligned with the selected work item.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTagInput((selectedItem.tags || []).join(', '));
     setActivityEventFilter('');
     const h = headers();
@@ -465,7 +459,6 @@ export default function AppShell() {
     fetchStatusDurations(id); // Iteration 7 (Cap B) — auto time-in-status, projected from the event log
     setDetailTab('details');
     if (fieldDefs.length > 0) fetchFieldValues(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedItem?.id]);
 
   // Close workspace + lens dropdowns on outside click
@@ -490,7 +483,6 @@ export default function AppShell() {
   // Track recently viewed items
   useEffect(() => {
     if (!selectedItem) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRecentlyViewed(prev => {
       const filtered = prev.filter(i => i.id !== selectedItem.id);
       const updated = [{ id: selectedItem.id, title: selectedItem.title, type: selectedItem.type }, ...filtered].slice(0, 8);
@@ -502,7 +494,6 @@ export default function AppShell() {
       .then(r => r.json())
       .then(d => setItemChildren((Array.isArray(d) ? d : []).filter(i => i.parentId === selectedItem.id)))
       .catch(() => setItemChildren([]));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedItem?.id]);
 
   const showToast = (message, type = 'success') => {
@@ -563,7 +554,6 @@ export default function AppShell() {
         showToast('You don’t have access to that area.', 'error');
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleLoaded, view, userRole.tier, userRole.surfaces]);
 
   // Switching tenant persists the choice and reloads so every workspace-scoped query refetches
@@ -1190,7 +1180,6 @@ export default function AppShell() {
       .catch(reportError);
   }
   // severityClass / vStatusClass moved to compliance-view.jsx (TD-003).
-  // eslint-disable-next-line no-unused-vars
   function humanDuration(seconds) {
     if (seconds == null) return '—';
     const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60);
@@ -1664,7 +1653,6 @@ export default function AppShell() {
     fetchStandups(pid);
     fetchRetros(pid);
     fetchSprints(pid);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, projects, i15ProjectId, activeWorkspaceId]);
 
   function clusterRetro() {

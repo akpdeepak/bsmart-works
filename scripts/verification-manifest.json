@@ -12,6 +12,7 @@
     { "id": "frontend-lint", "kind": "frontend", "command": "cd works-frontend && npm run lint" },
     { "id": "frontend-test", "kind": "frontend", "command": "cd works-frontend && npm test" },
     { "id": "frontend-build", "kind": "frontend", "command": "cd works-frontend && npm run build" },
+    { "id": "frontend-bundle-budget", "kind": "frontend", "command": "node scripts/check-bundle-budget.mjs" },
     { "id": "backend-unit", "kind": "backend", "command": "cd works-backend && ./mvnw -B -Dgroups=unit verify" },
     {
       "id": "backend-integration",
@@ -28,12 +29,12 @@
     "changed": ["process-tests", "task-contract", "project-state", "ai-rules", "dod-sync", "repo-quality", "guardrails", "docs-links"],
     "full": [
       "process-tests", "task-contract", "project-state", "ai-rules", "dod-sync", "repo-quality", "guardrails", "docs-links",
-      "frontend-lint", "frontend-test", "frontend-build", "backend-unit",
+      "frontend-lint", "frontend-test", "frontend-build", "frontend-bundle-budget", "backend-unit",
       "backend-integration", "e2e", "deploy-config"
     ],
     "release": [
       "process-tests", "task-contract", "project-state", "ai-rules", "dod-sync", "repo-quality", "guardrails", "docs-links",
-      "frontend-lint", "frontend-test", "frontend-build", "backend-unit",
+      "frontend-lint", "frontend-test", "frontend-build", "frontend-bundle-budget", "backend-unit",
       "backend-integration", "e2e", "deploy-config", "deploy-artifact-verification"
     ]
   }

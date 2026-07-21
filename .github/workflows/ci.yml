@@ -111,6 +111,10 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      # Runs from the repository root: the gate reads works-frontend/dist produced by the step above.
+      - name: Frontend initial-payload budget
+        run: node scripts/check-bundle-budget.mjs
+        working-directory: ${{ github.workspace }}
       - run: npm run build-storybook
 
   frontend-security:

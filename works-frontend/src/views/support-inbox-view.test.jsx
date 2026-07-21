@@ -1,16 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
-const { listConversations, getConversation, assign, reply, resolve } = vi.hoisted(() => ({
-  listConversations: vi.fn(),
-  getConversation: vi.fn(),
-  assign: vi.fn(),
-  reply: vi.fn(),
-  resolve: vi.fn(),
-}));
+const { listConversations, getConversation, assign, reply, resolve, approveDraft, discardDraft } =
+  vi.hoisted(() => ({
+    listConversations: vi.fn(),
+    getConversation: vi.fn(),
+    assign: vi.fn(),
+    reply: vi.fn(),
+    resolve: vi.fn(),
+    approveDraft: vi.fn(),
+    discardDraft: vi.fn(),
+  }));
 
 vi.mock('@/lib/supportChat', () => ({
-  agentChatClient: { listConversations, getConversation, assign, reply, resolve },
+  agentChatClient: { listConversations, getConversation, assign, reply, resolve, approveDraft, discardDraft },
   chatStatusTone: () => 'warning',
   chatStatusLabel: (s) => s || 'Open',
 }));
@@ -30,6 +33,87 @@ describe('SupportInboxView', () => {
     assign.mockReset();
     reply.mockReset();
     resolve.mockReset();
+    approveDraft.mockReset();
+    discardDraft.mockReset();
+  });
+
+  // ── the AI approval gate ──────────────────────────────────────────────────────
+  // AI never replies to a customer on its own; its answer arrives as a pending draft that only an
+  // agent can send. These cover the agent's two exits from that review.
+
+  const withPendingDraft = () => {
+    listConversations.mockResolvedValue([
+      { id: 'CHAT-1', subject: 'Billing question', status: 'OPEN', customerName: 'Asha' },
+    ]);
+    getConversation.mockResolvedValue({
+      conversation: { id: 'CHAT-1', subject: 'Billing question', status: 'OPEN', customerName: 'Asha' },
+      messages: [{ id: 'm1', senderType: 'CUSTOMER', body: 'my bill is wrong' }],
+      pendingDraft: { id: 'DRAFT-1', body: 'For billing questions, open Billing > Statements.', aiMeta: 'ENABLED:HAIKU' },
+    });
+  };
+
+  it('shows the AI suggestion as unsent, outside the transcript', async () => {
+    withPendingDraft();
+    render(<SupportInboxView workspaceId="ws-1" />);
+    fireEvent.click(await screen.findByText('Billing question'));
+
+    expect(await screen.findByText('Suggested reply — not sent yet')).toBeInTheDocument();
+    expect(screen.getByText(/The customer cannot see this/)).toBeInTheDocument();
+    // The draft sits in its own editor — it is not rendered as a message bubble in the thread.
+    expect(screen.getByLabelText('Suggested reply to the customer'))
+      .toHaveValue('For billing questions, open Billing > Statements.');
+  });
+
+  it('sends the suggested reply only when the agent approves it', async () => {
+    withPendingDraft();
+    approveDraft.mockResolvedValue({});
+    render(<SupportInboxView workspaceId="ws-1" />);
+    fireEvent.click(await screen.findByText('Billing question'));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Send to customer' }));
+    // Unedited: null tells the backend to send the AI's own wording.
+    await waitFor(() => expect(approveDraft).toHaveBeenCalledWith('ws-1', 'CHAT-1', 'DRAFT-1', null));
+  });
+
+  it('sends the agent edits rather than the AI wording when the draft is changed', async () => {
+    withPendingDraft();
+    approveDraft.mockResolvedValue({});
+    render(<SupportInboxView workspaceId="ws-1" />);
+    fireEvent.click(await screen.findByText('Billing question'));
+
+    const editor = await screen.findByLabelText('Suggested reply to the customer');
+    fireEvent.change(editor, { target: { value: "I've credited the disputed unit." } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send to customer' }));
+
+    await waitFor(() => expect(approveDraft)
+      .toHaveBeenCalledWith('ws-1', 'CHAT-1', 'DRAFT-1', "I've credited the disputed unit."));
+  });
+
+  it('discards the suggested reply without sending anything', async () => {
+    withPendingDraft();
+    discardDraft.mockResolvedValue({});
+    render(<SupportInboxView workspaceId="ws-1" />);
+    fireEvent.click(await screen.findByText('Billing question'));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Discard' }));
+    await waitFor(() => expect(discardDraft).toHaveBeenCalledWith('ws-1', 'CHAT-1', 'DRAFT-1'));
+    expect(approveDraft).not.toHaveBeenCalled();
+  });
+
+  it('shows no review panel when there is nothing waiting', async () => {
+    listConversations.mockResolvedValue([
+      { id: 'CHAT-1', subject: 'Billing question', status: 'ESCALATED', customerName: 'Asha' },
+    ]);
+    getConversation.mockResolvedValue({
+      conversation: { id: 'CHAT-1', subject: 'Billing question', status: 'ESCALATED', customerName: 'Asha' },
+      messages: [],
+      pendingDraft: null,
+    });
+    render(<SupportInboxView workspaceId="ws-1" />);
+    fireEvent.click(await screen.findByText('Billing question'));
+
+    expect(await screen.findByText('No messages yet.')).toBeInTheDocument();
+    expect(screen.queryByText('Suggested reply — not sent yet')).not.toBeInTheDocument();
   });
 
   it('uses the sanctioned dashboard page shell', async () => {

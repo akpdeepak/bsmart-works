@@ -30,7 +30,7 @@ export function ArticleApprovalPanel({ articleId, requiredApprovals = 1, current
 
   useEffect(() => {
     fetchApprovals();
-  }, [articleId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [articleId]);
 
   const submit = async (decision) => {
     if (busy) return;

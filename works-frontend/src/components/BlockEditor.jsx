@@ -2104,8 +2104,7 @@ export function BlockEditor({ blocks: initialBlocks = [], onChange, aiAssist, wo
   }, [handleUndo, handleRedo, findBarOpen]);
 
   return (
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
-    <div id="block-editor-root" className="space-y-2" onKeyDown={handleEditorKeyDown} onMouseUp={handleEditorMouseUp}>
+    <div id="block-editor-root" className="space-y-2" onKeyDown={handleEditorKeyDown} onMouseUp={handleEditorMouseUp} role="presentation">
       <BlockToolbar onInsert={addBlockAtCursor} />
 
       {/* KR-006: Find & Replace bar — only shown in edit mode (when onChange is provided) */}

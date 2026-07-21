@@ -92,9 +92,11 @@ class ArchitectureTest {
                     .filter(path -> !path.getFileName().toString().equals("package-info.java"))
                     .count();
         }
+        // Ratchet, not a ceiling (Phase 2 §0.4): pinned at the current count, so lower it in the same
+        // PR that moves a class out. Left above the measurement it silently permits regrowth.
         assertThat(flatRootSourceFiles)
                 .as("the flat root is a temporary composition layer and must never grow again")
-                .isLessThanOrEqualTo(72);
+                .isLessThanOrEqualTo(71);
     }
 
     @Test

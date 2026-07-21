@@ -31,8 +31,6 @@ export default function MessengerView({ workspaceId }) {
       .catch((err) => setError(err.message || 'Could not load conversations.'))
       .finally(() => setLoading(false));
   }, [workspaceId]);
-
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadList(); }, [loadList]);
 
   const loadThread = useCallback((id) => {

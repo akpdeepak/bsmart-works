@@ -138,7 +138,6 @@ export function MentionPicker({ workspaceId, onChange, children }) {
 }
 
 /** Render @username mentions in brand-orange in HTML content. */
-// eslint-disable-next-line react-refresh/only-export-components
 export function renderMentions(text) {
   if (!text) return '';
   return text.replace(/@(\w+)/g, '<span class="text-brand-orange font-medium">@$1</span>');

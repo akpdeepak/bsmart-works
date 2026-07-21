@@ -64,7 +64,6 @@ export function WidgetBuilder({ workspaceId, value, onSave, onCancel }) {
       .then((s) => { if (alive) { setFields(s?.fields || []); setSchemaError(null); } })
       .catch((e) => { if (alive) setSchemaError(e.message || t('insights.widgetBuilder.couldNotLoadFields')); });
     return () => { alive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
 
   const dimCount = dimensions.length;
@@ -91,7 +90,6 @@ export function WidgetBuilder({ workspaceId, value, onSave, onCancel }) {
         .catch((e) => { setPreviewError(e.message || t('insights.widgetBuilder.previewFailed')); setPreviewLoading(false); });
     }, 350);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, sourceKind, query, metricKey, mode, measures, dimensions, filters]);
 
   const fieldOptions = fields.map((f) => f.alias);

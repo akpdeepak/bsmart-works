@@ -10,7 +10,6 @@ import {
 import { cn } from '@/lib/utils';
 
 // Default icon per article template type (Lucide component).
-// eslint-disable-next-line react-refresh/only-export-components
 export const TEMPLATE_ICONS = {
   KB:               BookOpen,
   RUNBOOK:          Terminal,

@@ -71,7 +71,6 @@ export function SlaView({ workspaceId, canManage = false, onToast }) {
 
   // Fetch the active tab's data on mount and whenever it changes. `load` is await-first; the
   // post-await setState is the documented data-in-effect pattern used across this app.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   // Switch tab — show the skeleton immediately (event handler: setState allowed here).
@@ -330,8 +329,6 @@ function TargetsEditor({ policy, toast }) {
       setLoaded(true);
     }
   }, [policy.id, toast]);
-
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   function addTarget() {

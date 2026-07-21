@@ -75,7 +75,7 @@ export function StatusTransitionPopover({
       setScheduleEnabled(false);
       setScheduledAt('');
     }
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Close on Escape or outside click
   useEffect(() => {

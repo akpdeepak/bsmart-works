@@ -59,14 +59,11 @@ export function I18nProvider({ children }) {
 
   // `version` is a deliberate dependency: translate() reads a mutable module-level table that a
   // lazy locale load mutates, so bumping `version` must give `t` a fresh identity to re-render.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const t = useCallback((key) => translate(locale, key), [locale, version]);
 
   const value = useMemo(() => ({ locale, setLocale, t, locales: LOCALES }), [locale, setLocale, t]);
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
-
-// eslint-disable-next-line react-refresh/only-export-components
 export function useI18n() {
   const ctx = useContext(I18nContext);
   // A safe default so components work even if rendered outside the provider (e.g. isolated tests).

@@ -158,8 +158,6 @@ const FALLBACK = {
   prompt: () => Promise.resolve(null),
   alert: () => Promise.resolve(),
 };
-
-// eslint-disable-next-line react-refresh/only-export-components
 export function useDialog() {
   return React.useContext(DialogContext) || FALLBACK;
 }

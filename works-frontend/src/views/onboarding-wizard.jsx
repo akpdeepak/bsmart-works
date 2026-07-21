@@ -68,7 +68,6 @@ function ChooseTemplate({ templates, onSelect, applying, selected }) {
           const isSelected = selected === t.id;
           return (
             <li key={t.id} className="relative">
-              {/* eslint-disable-next-line works-view/no-raw-button -- card-button pattern: full-card interactive affordance, no Button variant fits */}
               <button
                 type="button"
                 disabled={applying}
@@ -233,7 +232,6 @@ export default function OnboardingWizard({ workspaceId, onDone, onCreateItem, on
   return (
     <div className="fixed inset-0 z-modal flex items-center justify-center bg-neutral-900/60 p-4"
       role="dialog" aria-modal="true" aria-labelledby="wizard-title">
-      {/* eslint-disable-next-line works-view/no-inline-card-chrome, works-view/sanctioned-page-widths */}
       <div className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-neutral-900">
 
         {/* Header */}

@@ -69,7 +69,6 @@ export function SupportChatWidget({ token, workspaceId, accountId, customerName 
         // Stale id (conversation deleted / different workspace token) — clear it silently.
         try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // intentionally runs once on mount
 
   // While the panel is open and a conversation exists, poll every 8 s for agent replies.
@@ -87,7 +86,6 @@ export function SupportChatWidget({ token, workspaceId, accountId, customerName 
     }, POLL_INTERVAL_MS);
     return () => clearInterval(pollRef.current);
   // client is re-created from `token` each render; exclude it to avoid restart on every render.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, conversation?.id, apply]);
 
   const send = useCallback(async () => {

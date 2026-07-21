@@ -2,16 +2,12 @@
 // Renders a colored pill. When `onClick` is provided the badge is
 // a button; otherwise it is a presentational span (read-mode list cards).
 import { cn } from '@/lib/utils';
-
-// eslint-disable-next-line react-refresh/only-export-components
 export const STATUS_COLORS = {
   DRAFT:     'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300',
   IN_REVIEW: 'bg-semantic-warning/10 text-semantic-warning',
   PUBLISHED: 'bg-semantic-success/10 text-semantic-success',
   ARCHIVED:  'bg-neutral-200 dark:bg-neutral-600 text-neutral-400',
 };
-
-// eslint-disable-next-line react-refresh/only-export-components
 export const STATUS_LABELS = {
   DRAFT:     'Draft',
   IN_REVIEW: 'In Review',

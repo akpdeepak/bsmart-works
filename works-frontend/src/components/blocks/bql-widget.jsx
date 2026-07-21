@@ -112,8 +112,7 @@ export function BqlWidget({ block, onChange, workspaceId, readOnly = false }) {
 
   // Read mode auto-runs once the workspace is known (external-state sync — the documented exception
   // to react-hooks/set-state-in-effect, matching the dashboard widgets).
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { if (readOnly && workspaceId && c.query.trim()) run(); }, [readOnly, workspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (readOnly && workspaceId && c.query.trim()) run(); }, [readOnly, workspaceId]);
 
   const set = (patch) => onChange?.(patch);
 

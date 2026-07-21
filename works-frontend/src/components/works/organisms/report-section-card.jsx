@@ -17,7 +17,6 @@ function PivotSectionBody({ spec, workspaceId }) {
   useEffect(() => {
     let alive = true;
     if (!workspaceId || !spec) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState({ loading: false, error: workspaceId ? null : 'No workspace selected.', result: null });
       return undefined;
     }
@@ -27,7 +26,6 @@ function PivotSectionBody({ spec, workspaceId }) {
       .catch((e) => { if (alive) setState({ loading: false, error: e.message || 'Could not load this section.', result: null }); });
     return () => { alive = false; };
     // specKey captures the spec identity; spec itself is intentionally excluded.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, specKey]);
   return <PivotChart type={spec?.chartType || 'pivot_table'} result={state.result} loading={state.loading} error={state.error} />;
 }

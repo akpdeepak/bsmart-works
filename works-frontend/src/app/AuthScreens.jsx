@@ -1,9 +1,9 @@
-/* eslint-disable no-unused-vars */
+
 // AuthScreens.jsx — extracted from AppShell (TD-003 Phase 1)
 // Owns all authentication state and rendering: login, signup, MFA challenge/enroll,
 // forgot-password, email verification, passkey. Zero interaction with the app shell
 // once the user is authenticated (calls onLogin to hand off).
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Mail, Check, ShieldCheck,
   Eye, EyeOff, ArrowLeft, X,
@@ -22,7 +22,7 @@ import { authenticatePasskey, passkeysSupported } from '@/lib/passkey';
  * @param {Function} props.onLogin     - (user, token) => void — called on successful authentication
  * @param {Function} props.showToast   - (message, type) => void
  */
-export function AuthScreens({ api, onLogin, showToast }) {
+export function AuthScreens({ api, onLogin }) {
   const [authMode, setAuthMode]           = useState('login');
   const [authForm, setAuthForm]           = useState({ email: '', password: '', fullName: '' });
   const [authError, setAuthError]         = useState('');

@@ -102,7 +102,7 @@ export function TodayWidgetPicker({ onClose, onAdd, metrics = [], onPreview }) {
         .catch((e) => setPreview({ error: e?.message || 'Preview failed' }));
     }, 350);
     return () => clearTimeout(handle);
-  }, [sourceKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sourceKey]);
 
   function handleAdd() {
     const source = buildSource();

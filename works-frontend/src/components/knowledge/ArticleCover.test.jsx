@@ -32,7 +32,6 @@ describe('ArticleCover (KR-009)', () => {
   });
 
   it('blocks javascript: scheme URLs (XSS prevention)', () => {
-    // eslint-disable-next-line no-script-url
     const { container } = render(<ArticleCover image="javascript:alert(1)" />);
     expect(container.firstChild).toBeNull();
   });

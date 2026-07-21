@@ -100,7 +100,6 @@ export default function ScrumMasterCockpitView({
 
   // Reset the manual-touch flag on project switch so the phase-aware default applies afresh.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTabTouched(false);
   }, [i15ProjectId]);
 

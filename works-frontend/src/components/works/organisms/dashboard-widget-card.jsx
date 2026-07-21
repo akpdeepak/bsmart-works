@@ -29,7 +29,6 @@ function PivotWidgetBody({ config, workspaceId, resolved }) {
     if (hasResolved) return undefined; // server already resolved this widget — skip the client query
     let alive = true;
     if (!workspaceId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState({ loading: false, error: 'No workspace selected.', result: null });
       return undefined;
     }
@@ -39,7 +38,6 @@ function PivotWidgetBody({ config, workspaceId, resolved }) {
       .catch((e) => { if (alive) setState({ loading: false, error: e.message || 'Could not load this widget.', result: null }); });
     return () => { alive = false; };
     // specKey captures the config object identity; config itself is intentionally excluded.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, specKey, hasResolved]);
 
   if (hasResolved) {

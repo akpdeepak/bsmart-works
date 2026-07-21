@@ -330,7 +330,6 @@ export default function DashboardView({
     writeTodayAttention(attentionStoreKey,
       snapshotTodayAttention(attentionState, rawTodayBrief.attention));
     // The in-memory state intentionally stays unchanged so "New" remains visible for this visit.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attentionStoreKey, attentionSnapshotKey]);
 
   const updateAttentionState = (next, message) => {

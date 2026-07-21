@@ -8,7 +8,6 @@ import { TagSuggestionChips } from '@/components/knowledge/TagSuggestionChips';
 import { knowledgeAi } from '@/lib/knowledge-ai';
 
 // readOnly is accepted as prop for future use (read-mode vs edit-mode styling). Currently unused.
-// eslint-disable-next-line no-unused-vars
 export function ArticlePropertiesPanel({ article, wordCount, onClose, readOnly = false,
   workspaceId, articleText, onAcceptTag }) {
   const [suggestions, setSuggestions] = useState([]);

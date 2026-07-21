@@ -53,7 +53,6 @@ export function CheckWritingPanel({ articleText, workspaceId, open, onClose, onA
         if (!cancelled) setBusy(false);
       });
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   if (!open) return null;

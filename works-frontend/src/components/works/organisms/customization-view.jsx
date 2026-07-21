@@ -82,8 +82,6 @@ export function CustomizationView({ workspaceId, canManage = false, isOwner = fa
       setLoading(false);
     }
   }, [workspaceId, tab]);
-
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   function selectTab(id) {

@@ -44,8 +44,6 @@ export default function SupportInboxView({ workspaceId }) {
       .catch((err) => setError(err.message || 'Could not load conversations.'))
       .finally(() => setLoading(false));
   }, [workspaceId, filter]);
-
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadList(); }, [loadList]);
 
   // Subscribe to CHAT_* SSE events so the inbox refreshes when a new chat arrives or a

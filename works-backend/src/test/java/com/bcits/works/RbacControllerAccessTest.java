@@ -1,5 +1,10 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.RbacController;
+import com.bcits.works.auth.RbacService;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -40,7 +45,10 @@ class RbacControllerAccessTest {
 
         Map<String, Object> result = controller.myRole(WORKSPACE);
 
-        assertThat(result).containsEntry("role", "ADMIN").containsEntry("tier", 4);
+        assertThat(result)
+                .containsEntry("role", "ADMIN")
+                .containsEntry("tier", 4)
+                .containsEntry("surfaces", NavSurfaces.visibleFor(4));
         verify(rbac).getUserRole(CALLER, WORKSPACE);
         verify(rbac, never()).getUserRole(eq(CALLER), eq("WS-001"));
     }

@@ -1,5 +1,16 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.RbacService;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.shared.FieldVisibilityService;
+import com.bcits.works.security.CustomerAttributionPiiService;
+import com.bcits.works.workitems.FieldDefController;
+import com.bcits.works.workitems.WorkItemFieldValue;
+import com.bcits.works.workitems.WorkItemFieldValueRepository;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -34,9 +45,10 @@ class FieldDefControllerAccessTest {
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
     private final FieldVisibilityService fieldVisibility = mock(FieldVisibilityService.class);
+    private final CustomerAttributionPiiService fieldValuePii = mock(CustomerAttributionPiiService.class);
 
     private final FieldDefController controller =
-            new FieldDefController(fieldDefRepo, valueRepo, authenticatedUser, rbac, fieldVisibility);
+            new FieldDefController(fieldDefRepo, valueRepo, authenticatedUser, rbac, fieldVisibility, fieldValuePii);
 
     FieldDefControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

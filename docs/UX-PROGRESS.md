@@ -327,8 +327,9 @@ the SR table and the visual element — this is the expected, correct behaviour.
 **Structural lint enforcement (ESLint):**
 Four `works-view/*` rules (no-raw-button, no-raw-table, no-inline-card-chrome, sanctioned-page-widths)
 flipped from `'warn'` to `'error'` — new view files will now fail CI if they use raw primitives.
-43 legacy files with known violations retain `'warn'` via a `worksViewStructureLegacy` override block
-(transparent in config; tracked as TD-021). Also downgraded `react-hooks/set-state-in-effect` to
+The Phase-2 completion slice migrated the remaining 39 legacy files and removed the
+`worksViewStructureLegacy` override, closing TD-021; all four structural rules now remain errors for
+every view. Also downgraded `react-hooks/set-state-in-effect` to
 `'warn'` at config level (idiomatic async-load pattern used throughout views/).
 
 **eslint-disable sweep (views/):**

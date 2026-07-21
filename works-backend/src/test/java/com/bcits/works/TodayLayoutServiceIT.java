@@ -1,5 +1,8 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.reporting.DashboardWidget;
+
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;

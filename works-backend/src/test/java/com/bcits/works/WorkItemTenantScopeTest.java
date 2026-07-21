@@ -1,5 +1,19 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.FieldVisibilityService;
+import com.bcits.works.workitems.WorkItemBulkService;
+import com.bcits.works.workitems.WorkItemCommandService;
+import com.bcits.works.workitems.WorkItemController;
+import com.bcits.works.workitems.WorkItemEngagementService;
+import com.bcits.works.workitems.WorkItemReadService;
+import com.bcits.works.workitems.WorkItemRepository;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -25,25 +39,15 @@ import static org.mockito.Mockito.when;
 class WorkItemTenantScopeTest {
 
     private final WorkItemRepository repository = mock(WorkItemRepository.class);
-    private final EventService eventService = mock(EventService.class);
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
-    private final NotificationRepository notificationRepository = mock(NotificationRepository.class);
-    private final UserRepository userRepository = mock(UserRepository.class);
-    private final EmailService emailService = mock(EmailService.class);
-    private final NotificationBatchService batchService = mock(NotificationBatchService.class);
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
-    private final RbacService rbac = mock(RbacService.class);
-    private final DodChecklistService dodChecklists = mock(DodChecklistService.class);
-    private final ExtensionExecutionService extensions = mock(ExtensionExecutionService.class);
-    private final WorkflowRuleEngine workflowRules = mock(WorkflowRuleEngine.class);
-    private final StatusConfigService statusConfig = mock(StatusConfigService.class);
-    private final BoardWipLimitService wipLimits = mock(BoardWipLimitService.class);
+    private final FieldVisibilityService fieldVisibility = mock(FieldVisibilityService.class);
+    private final WorkItemReadService readService = new WorkItemReadService(
+            jdbc, repository, authenticatedUser, new ObjectMapper(), fieldVisibility);
 
     private final WorkItemController controller = new WorkItemController(
-            repository, eventService, jdbc, notificationRepository, userRepository, emailService,
-            batchService, authenticatedUser, rbac, dodChecklists, extensions, workflowRules,
-            statusConfig, wipLimits, mock(WorkItemBulkService.class), mock(WatcherService.class),
-            mock(AutomationService.class), mock(FunnelService.class), mock(FieldVisibilityService.class));
+            authenticatedUser, mock(WorkItemBulkService.class), readService,
+            mock(WorkItemCommandService.class), mock(WorkItemEngagementService.class));
 
     @Test
     @SuppressWarnings("unchecked")

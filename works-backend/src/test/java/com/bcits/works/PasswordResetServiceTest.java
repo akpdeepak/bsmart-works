@@ -1,5 +1,8 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.PasswordResetService;
+import com.bcits.works.auth.PasswordResetToken;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -12,7 +15,7 @@ class PasswordResetServiceTest {
 
     // Pure helpers don't touch the injected collaborators, so nulls are fine here.
     private final PasswordResetService service =
-            new PasswordResetService(null, null, null, null, "http://localhost:5173");
+            new PasswordResetService(null, null, null, null, null, "http://localhost:5173");
 
     @Test
     void newToken_isLongOpaqueAndUnique() {

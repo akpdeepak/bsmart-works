@@ -25,6 +25,7 @@ export const VIEW_PATHS = {
   poworkspace: '/po-workspace',
   leadership: '/leadership',
   adminops: '/admin-ops',
+  operatingmodel: '/operating-model',
   pm: '/pm-artifacts',
   automations: '/automations',
   integrations: '/integrations',
@@ -36,11 +37,13 @@ export const VIEW_PATHS = {
   developerportal: '/developer-portal',
   supportinbox: '/support-inbox',
   settings3: '/settings/workflows',
+  aicontrol: '/settings/ai-control',
   customization: '/customization',
   workspace: '/settings',
   account: '/account',
   trash: '/trash',
   search: '/search',
+  messenger: '/messenger',
 };
 
 const PATH_VIEWS = Object.fromEntries(Object.entries(VIEW_PATHS).map(([v, p]) => [p, v]));

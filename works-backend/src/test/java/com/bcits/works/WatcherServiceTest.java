@@ -1,4 +1,7 @@
 package com.bcits.works;
+import com.bcits.works.messaging.Notification;
+import com.bcits.works.messaging.NotificationRepository;
+import com.bcits.works.messaging.WatcherService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -51,7 +54,7 @@ class WatcherServiceTest {
         when(jdbc.queryForList(anyString(), eq(String.class), eq("WI-1")))
                 .thenReturn(List.of("u1", "u2", "actor"));
 
-        service.notifyWatchers("WI-1", "Alice updated WI-1", Set.of("actor"));
+        service.notifyWatchers("WI-1", "actor", "updated WI-1", Set.of("actor"));
 
         ArgumentCaptor<Notification> cap = ArgumentCaptor.forClass(Notification.class);
         verify(notifications, times(2)).save(cap.capture());
@@ -60,14 +63,16 @@ class WatcherServiceTest {
             assertThat(n.getType()).isEqualTo("WATCH");
             assertThat(n.getLink()).isEqualTo("/items/WI-1");
             assertThat(n.isRead()).isFalse();
-            assertThat(n.getMessage()).isEqualTo("Alice updated WI-1");
+            // Stored message is name-free + carries the actor id; the actor name is resolved at render (RB-40 §3).
+            assertThat(n.getMessage()).isEqualTo("updated WI-1");
+            assertThat(n.getActorId()).isEqualTo("actor");
         });
     }
 
     @Test
     void notifyWatchers_noWatchers_savesNothing() {
         when(jdbc.queryForList(anyString(), eq(String.class), eq("WI-1"))).thenReturn(List.of());
-        service.notifyWatchers("WI-1", "msg", Set.of());
+        service.notifyWatchers("WI-1", "actor", "msg", Set.of());
         verify(notifications, never()).save(any());
     }
 }

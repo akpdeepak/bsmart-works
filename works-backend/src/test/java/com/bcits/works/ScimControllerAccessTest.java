@@ -1,5 +1,17 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.RbacService;
+import com.bcits.works.auth.ScimController;
+import com.bcits.works.auth.ScimToken;
+
+import com.bcits.works.auth.ScimTokenRepository;
+import com.bcits.works.auth.UserRepository;
+
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.EventService;
+import com.bcits.works.auth.UserPiiService;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -36,7 +48,8 @@ class ScimControllerAccessTest {
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
     private final EventService events = mock(EventService.class);
     private final RbacService rbac = mock(RbacService.class);
-    private final ScimController controller = new ScimController(scimTokens, users, jdbc, events, rbac);
+    private final UserPiiService userPii = mock(UserPiiService.class);
+    private final ScimController controller = new ScimController(scimTokens, users, jdbc, events, rbac, userPii);
 
     // ── auth gate ─────────────────────────────────────────────────────────────
 

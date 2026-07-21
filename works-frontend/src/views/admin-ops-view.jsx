@@ -8,9 +8,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Activity, UserPlus, CreditCard, Sparkles, ScrollText, Plug, UserCheck, FileCheck2,
-  RefreshCw, Wand2, Play, Check, X, ShieldAlert, TrendingUp,
+  RefreshCw, Wand2, Play, Check, X, TrendingUp,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { Skeleton } from '@/components/works/atoms/skeleton';
 import { Card as AtomCard, CardHeader, CardTitle, CardBody } from '@/components/works/atoms/card';
@@ -131,20 +132,15 @@ export default function AdminOpsView({ workspaceId, onToast }) {
 
         {/* TabPanels always rendered so Tab's aria-controls resolves to existing IDs (axe valid-attr-value). */}
         <TabPanel value="health">
-          {error ? (
-            <EmptyState
-              icon={ShieldAlert}
-              title="Couldn't load this view"
-              subtitle={error}
-              action={<Button variant="secondary" size="sm" leftIcon={<RefreshCw className="h-4 w-4" />} onClick={refresh}>Try again</Button>}
-            />
-          ) : loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4" aria-busy="true" aria-label="Loading">
-              <Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" />
-            </div>
-          ) : (
+          <AsyncBoundary
+            loading={loading}
+            error={error}
+            onRetry={refresh}
+            className="grid grid-cols-1 md:grid-cols-3 gap-4"
+            skeleton={<><Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" /></>}
+          >
             <HealthTab data={data.health} />
-          )}
+          </AsyncBoundary>
         </TabPanel>
         <TabPanel value="lifecycle">{!error && !loading && <LifecycleTab workspaceId={workspaceId} data={data.lifecycle} onChanged={refresh} notify={notify} />}</TabPanel>
         <TabPanel value="seats">{!error && !loading && <SeatsTab data={data.seats} />}</TabPanel>
@@ -266,9 +262,9 @@ function LifecycleTab({ workspaceId, data, onChanged, notify }) {
           <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {runs.map((r) => (
               <li key={r.id} className="flex items-center justify-between py-2 text-sm">
-                <button type="button" onClick={() => openRun(r.id)} className="text-brand-navy-tint hover:underline text-left">
+                <Button unstyled type="button" onClick={() => openRun(r.id)} className="text-brand-navy-tint hover:underline text-left">
                   {r.subjectName}
-                </button>
+                </Button>
                 <span className="text-neutral-600 dark:text-neutral-400">{r.kind} · {r.status} · {smartDate(r.startedAt)}</span>
               </li>
             ))}
@@ -385,13 +381,13 @@ function AuditTab({ workspaceId, data, onChanged, notify }) {
         {saved.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {saved.map((q) => (
-              <button
+              <Button unstyled
                 key={q.id} type="button"
                 onClick={() => { setFilters({ eventType: q.eventType || '', actorId: q.actorId || '', search: q.searchText || '' }); }}
                 className="rounded-md bg-neutral-100 dark:bg-neutral-800 px-2.5 py-1 text-xs text-neutral-700 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700"
               >
                 {q.name}
-              </button>
+              </Button>
             ))}
           </div>
         )}
@@ -633,9 +629,9 @@ function EvidenceTab({ workspaceId, data, onChanged, notify }) {
           <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {packages.map((p) => (
               <li key={p.id} className="flex items-center justify-between py-2 text-sm">
-                <button type="button" onClick={() => setSelected(p)} className="text-brand-navy-tint hover:underline text-left">
+                <Button unstyled type="button" onClick={() => setSelected(p)} className="text-brand-navy-tint hover:underline text-left">
                   {p.framework} · {p.period}
-                </button>
+                </Button>
                 <span className="text-neutral-600 dark:text-neutral-400">{smartDate(p.generatedAt)}</span>
               </li>
             ))}

@@ -1,4 +1,13 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
+
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.projects.ImpedimentRepository;
+import com.bcits.works.projects.StandupEntryRepository;
+import com.bcits.works.projects.StandupSession;
+import com.bcits.works.projects.StandupSessionRepository;
+import com.bcits.works.messaging.ActionItemRepository;
 
 import org.springframework.stereotype.Service;
 
@@ -25,11 +34,11 @@ public class MyDayService {
     private final ActionItemRepository actionItems;
     private final StandupSessionRepository standups;
     private final StandupEntryRepository entries;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public MyDayService(WorkItemRepository workItems, ImpedimentRepository impediments,
                         ActionItemRepository actionItems, StandupSessionRepository standups,
-                        StandupEntryRepository entries, RbacService rbac) {
+                        StandupEntryRepository entries, RbacGate rbac) {
         this.workItems = workItems;
         this.impediments = impediments;
         this.actionItems = actionItems;

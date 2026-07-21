@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.reporting.Report;
+import com.bcits.works.reporting.ReportRepository;
 
 import java.util.List;
 import org.junit.jupiter.api.Tag;

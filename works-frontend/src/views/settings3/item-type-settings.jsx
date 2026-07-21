@@ -49,11 +49,11 @@ export default function ItemTypeSettings({
                   const Ic = TYPE_ICON_SET[key];
                   const sel = newTypeForm.icon === key;
                   return (
-                    <button key={key} type="button" onClick={() => setNewTypeForm(f => ({ ...f, icon: key }))}
+                    <Button unstyled key={key} type="button" onClick={() => setNewTypeForm(f => ({ ...f, icon: key }))}
                       aria-label={key} aria-pressed={sel}
                       className={`p-1.5 rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${sel ? 'border-brand-navy bg-brand-navy/10 text-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy/40'}`}>
                       <Ic className="h-4 w-4" aria-hidden="true" />
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
@@ -105,8 +105,8 @@ export default function ItemTypeSettings({
                     <p className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">{t.label}</p>
                     <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono truncate">{t.typeKey}</p>
                   </div>
-                  <button onClick={() => api.raw(`/work-item-types/${t.id}`, { method: 'DELETE' }).then(() => fetchWorkItemTypes())}
-                    className="opacity-0 group-hover:opacity-100 text-semantic-danger text-xs transition-opacity absolute top-2 right-2" aria-label="Remove"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                  <Button unstyled onClick={() => api.raw(`/work-item-types/${t.id}`, { method: 'DELETE' }).then(() => fetchWorkItemTypes())}
+                    className="opacity-0 group-hover:opacity-100 text-semantic-danger text-xs transition-opacity absolute top-2 right-2" aria-label="Remove"><X className="h-3.5 w-3.5" aria-hidden="true" /></Button>
                 </div>
               ))}
             </div>

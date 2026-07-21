@@ -182,9 +182,9 @@ export default function DashboardsView({
           <>
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3 min-w-0">
-                <button onClick={() => setSelectedDashboard(null)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0">
+                <Button unstyled onClick={() => setSelectedDashboard(null)} className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0">
                   <ArrowLeft className="inline-block h-3.5 w-3.5 mr-1 align-text-bottom" aria-hidden="true" />{t('insights.dashboards.title')}
-                </button>
+                </Button>
                 <h1 className="text-xl font-semibold text-neutral-900 dark:text-white truncate">{selectedDashboard.name}</h1>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -192,13 +192,13 @@ export default function DashboardsView({
                   rows={workItems.map(i => ({ ID: i.id, Title: i.title, Type: i.type, Status: i.status, Priority: i.priority, Assignee: i.assigneeId }))}
                   filename={selectedDashboard.name || 'dashboard'} onError={() => showToast(t('insights.common.exportFailed'), 'error')} />}
                 {!dashboardEditMode && (
-                  <button onClick={() => mintShare(selectedDashboard.id)}
-                    className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">{t('insights.common.share')}</button>
+                  <Button unstyled onClick={() => mintShare(selectedDashboard.id)}
+                    className="text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors">{t('insights.common.share')}</Button>
                 )}
                 <Button variant={dashboardEditMode ? 'action' : 'secondary'} onClick={() => setDashboardEditMode(e => !e)}>
                   {dashboardEditMode ? t('insights.common.done') : t('insights.common.edit')}
                 </Button>
-                <button onClick={() => deleteDashboard(selectedDashboard.id)} className="text-xs text-semantic-danger hover:underline">{t('insights.common.delete')}</button>
+                <Button unstyled onClick={() => deleteDashboard(selectedDashboard.id)} className="text-xs text-semantic-danger hover:underline">{t('insights.common.delete')}</Button>
               </div>
             </div>
 
@@ -216,16 +216,16 @@ export default function DashboardsView({
                     <span className="text-xs font-semibold text-neutral-700 w-16 flex-shrink-0">Public link</span>
                     <input readOnly aria-label="Public dashboard link" value={publicLink}
                       className="flex-1 min-w-0 text-xs font-mono rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-2 py-1" />
-                    <button onClick={() => { navigator.clipboard?.writeText(publicLink); showToast('Link copied'); }}
-                      className="text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors flex-shrink-0">Copy</button>
-                    <button onClick={() => stopShare(selectedDashboard.id)} className="text-xs text-semantic-danger hover:underline flex-shrink-0">Stop sharing</button>
+                    <Button unstyled onClick={() => { navigator.clipboard?.writeText(publicLink); showToast('Link copied'); }}
+                      className="text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors flex-shrink-0">Copy</Button>
+                    <Button unstyled onClick={() => stopShare(selectedDashboard.id)} className="text-xs text-semantic-danger hover:underline flex-shrink-0">Stop sharing</Button>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-neutral-700 w-16 flex-shrink-0">Embed</span>
                     <input readOnly aria-label="Embed iframe snippet" value={iframeSnippet}
                       className="flex-1 min-w-0 text-xs font-mono rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-2 py-1" />
-                    <button onClick={() => { navigator.clipboard?.writeText(iframeSnippet); showToast('Embed code copied'); }}
-                      className="text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors flex-shrink-0">Copy</button>
+                    <Button unstyled onClick={() => { navigator.clipboard?.writeText(iframeSnippet); showToast('Embed code copied'); }}
+                      className="text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy transition-colors flex-shrink-0">Copy</Button>
                   </div>
                   <p className="text-xs text-neutral-600 dark:text-neutral-400">Paste the embed code into an internal portal or customer status page. The view is read-only and updates with the dashboard.</p>
                 </div>
@@ -235,11 +235,11 @@ export default function DashboardsView({
             <div className="flex flex-wrap items-center gap-2 mb-4">
               <span className="text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400">{t('insights.dashboards.scope')}</span>
               {['PROJECT', 'TEAM', 'ORG'].map(s => (
-                <button key={s} type="button"
+                <Button unstyled key={s} type="button"
                   onClick={() => { setDashboardScope(s); fetchDashboardAggregate(s, dashboardTeamId); }}
                   className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${dashboardScope === s ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy'}`}>
                   {s === 'PROJECT' ? t('insights.dashboards.project') : s === 'TEAM' ? t('insights.dashboards.team') : t('insights.dashboards.organization')}
-                </button>
+                </Button>
               ))}
               {dashboardScope === 'TEAM' && (
                 <select value={dashboardTeamId || ''} aria-label="Team"
@@ -263,21 +263,21 @@ export default function DashboardsView({
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider w-20 flex-shrink-0">Basics</span>
-                    <button onClick={() => addDashboardWidget('SCORECARD', { filter: { open: true } }, 'Open items')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Scorecard</button>
-                    <button onClick={() => addDashboardWidget('STATUS_BAR', {}, 'By status')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Status breakdown</button>
-                    <button onClick={() => addDashboardWidget('ITEM_LIST', { filter: { open: true }, limit: 6 }, 'Open work items')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Item list</button>
-                    <button onClick={() => addDashboardWidget('PIE', { dimension: 'status' }, 'Items by status')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Pie chart</button>
-                    <button onClick={() => addDashboardWidget('BAR', { dimension: 'priority' }, 'Items by priority')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Bar chart</button>
-                    <button onClick={() => setEditingPivot('new')} className="text-xs px-2 py-1 rounded-lg border border-brand-navy/40 text-brand-navy dark:text-brand-amber hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">+ Custom chart</button>
+                    <Button unstyled onClick={() => addDashboardWidget('SCORECARD', { filter: { open: true } }, 'Open items')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Scorecard</Button>
+                    <Button unstyled onClick={() => addDashboardWidget('STATUS_BAR', {}, 'By status')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Status breakdown</Button>
+                    <Button unstyled onClick={() => addDashboardWidget('ITEM_LIST', { filter: { open: true }, limit: 6 }, 'Open work items')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Item list</Button>
+                    <Button unstyled onClick={() => addDashboardWidget('PIE', { dimension: 'status' }, 'Items by status')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Pie chart</Button>
+                    <Button unstyled onClick={() => addDashboardWidget('BAR', { dimension: 'priority' }, 'Items by priority')} className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">Bar chart</Button>
+                    <Button unstyled onClick={() => setEditingPivot('new')} className="text-xs px-2 py-1 rounded-lg border border-brand-navy/40 text-brand-navy dark:text-brand-amber hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">+ Custom chart</Button>
                   </div>
                   {EXTRA_WIDGET_CATEGORIES.map(cat => (
                     <div key={cat} className="flex flex-wrap items-center gap-1.5">
                       <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider w-20 flex-shrink-0">{cat}</span>
                       {EXTRA_WIDGET_PRESETS.filter(p => p.category === cat).map(p => (
-                        <button key={p.title} onClick={() => addDashboardWidget(p.type, p.config, p.title, p.w)}
+                        <Button unstyled key={p.title} onClick={() => addDashboardWidget(p.type, p.config, p.title, p.w)}
                           className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-brand-navy hover:bg-white dark:hover:bg-neutral-800 transition-colors">
                           {p.title}
-                        </button>
+                        </Button>
                       ))}
                     </div>
                   ))}

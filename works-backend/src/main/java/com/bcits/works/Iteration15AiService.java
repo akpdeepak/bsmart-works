@@ -1,4 +1,15 @@
 package com.bcits.works;
+import com.bcits.works.projects.IdeaService;
+import com.bcits.works.shared.RbacGate;
+
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.projects.Impediment;
+import com.bcits.works.projects.ImpedimentRepository;
+import com.bcits.works.projects.Sprint;
+import com.bcits.works.projects.SprintDao;
+import com.bcits.works.projects.SprintRepository;
+import com.bcits.works.ai.AiAssistService;
+import com.bcits.works.ai.AiControlPlaneService;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -30,12 +41,12 @@ public class Iteration15AiService {
     private final SprintDao sprintDao;
     private final ImpedimentRepository impediments;
     private final CustomerFeedbackRepository feedback;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public Iteration15AiService(AiControlPlaneService controlPlane, JdbcTemplate jdbc,
                                 SprintRepository sprints, SprintDao sprintDao,
                                 ImpedimentRepository impediments,
-                                CustomerFeedbackRepository feedback, RbacService rbac) {
+                                CustomerFeedbackRepository feedback, RbacGate rbac) {
         this.controlPlane = controlPlane;
         this.jdbc = jdbc;
         this.impediments = impediments;

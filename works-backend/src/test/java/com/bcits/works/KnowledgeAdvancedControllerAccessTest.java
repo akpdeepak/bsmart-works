@@ -1,5 +1,18 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.RbacService;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.ai.StructuredExtractionController;
+import com.bcits.works.ai.StructuredExtractionService;
+import com.bcits.works.knowledge.ArticleCollaborationController;
+import com.bcits.works.knowledge.ArticleCollaborationService;
+import com.bcits.works.knowledge.DocumentTemplate;
+import com.bcits.works.knowledge.DocumentTemplateController;
+import com.bcits.works.knowledge.DocumentTemplateService;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;

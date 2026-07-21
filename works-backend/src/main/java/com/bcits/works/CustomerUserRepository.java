@@ -14,6 +14,15 @@ public interface CustomerUserRepository extends JpaRepository<CustomerUser, Stri
 
     boolean existsByEmailIgnoreCase(String email);
 
+    /** Blind-index portal-login lookup once the raw email is tokenized (RB-40 §3, Slice 3). */
+    Optional<CustomerUser> findByEmailHmac(String emailHmac);
+
+    /** Blind-index duplicate-email guard (mirrors {@link #existsByEmailIgnoreCase}). */
+    boolean existsByEmailHmac(String emailHmac);
+
+    /** Backfill guard (RB-40 §3): customer-portal users not yet assigned a vault subject token. */
+    List<CustomerUser> findBySubjectTokenIsNull();
+
     List<CustomerUser> findByCustomerAccountIdOrderByCreatedAtDesc(String customerAccountId);
 
     List<CustomerUser> findByWorkspaceIdOrderByCreatedAtDesc(String workspaceId);

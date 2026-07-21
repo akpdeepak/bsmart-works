@@ -6,6 +6,10 @@ import { Settings } from 'lucide-react';
 import { ALL_TYPES, CATEGORIES, resolveTypeIcon } from '@/lib/work-item-types';
 import { useDialog } from '@/lib/dialog';
 import { cn } from '@/lib/utils';
+import { NEUTRAL_600 } from '@/lib/brand-tokens';
+
+// Default colour for a new status swatch — the canonical neutral-600 token (RB-30 §1: no raw hex).
+const DEFAULT_STATUS_COLOR = NEUTRAL_600;
 
 // Category + outcome vocabularies (backend-canonical values → friendly labels).
 const CATEGORY_OPTIONS = [
@@ -41,7 +45,7 @@ export default function StatusManagementTab({ api, workspaceId, reportError }) {
   const [configs, setConfigs] = useState(null); // null = loading
   const [selectedType, setSelectedType] = useState(ALL_TYPES[0]?.typeKey ?? null);
   const [adding, setAdding] = useState(false);
-  const [addForm, setAddForm] = useState({ name: '', category: 'TODO', color: '#94A3B8' });
+  const [addForm, setAddForm] = useState({ name: '', category: 'TODO', color: DEFAULT_STATUS_COLOR });
   const [busy, setBusy] = useState(false);
   const addInputRef = useRef(null);
   useEffect(() => { if (adding) addInputRef.current?.focus(); }, [adding]);
@@ -114,7 +118,7 @@ export default function StatusManagementTab({ api, workspaceId, reportError }) {
         outcome: 'NEUTRAL',
       },
     }));
-    setAddForm({ name: '', category: 'TODO', color: '#94A3B8' });
+    setAddForm({ name: '', category: 'TODO', color: DEFAULT_STATUS_COLOR });
     setAdding(false);
   };
 
@@ -256,7 +260,7 @@ function StatusRow({ s, idx, total, busy, onPatch, onMove, onDelete, onSetInitia
 
       {/* Color + name + initial */}
       <div className="flex items-center gap-2 min-w-0">
-        <input type="color" value={s.color || '#94A3B8'} onChange={(e) => onPatch(s, { color: e.target.value })}
+        <input type="color" value={s.color || DEFAULT_STATUS_COLOR} onChange={(e) => onPatch(s, { color: e.target.value })}
           className="h-5 w-5 rounded cursor-pointer border border-neutral-200 dark:border-neutral-600 bg-transparent p-0 flex-shrink-0" aria-label={`Color for ${s.name}`} />
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} onBlur={commitName}
           onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}

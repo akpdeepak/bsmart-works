@@ -1,5 +1,14 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.RbacService;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.projects.Dependency;
+import com.bcits.works.projects.DependencyController;
+import com.bcits.works.projects.DependencyRepository;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;

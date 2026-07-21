@@ -1,5 +1,25 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.RbacService;
+
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.EventService;
+import com.bcits.works.knowledge.Article;
+import com.bcits.works.knowledge.ArticleAnalyticsService;
+import com.bcits.works.knowledge.ArticleApprovalRepository;
+import com.bcits.works.knowledge.ArticleCommentRepository;
+import com.bcits.works.knowledge.ArticleDao;
+import com.bcits.works.knowledge.ArticleDiffService;
+import com.bcits.works.knowledge.ArticleRepository;
+import com.bcits.works.knowledge.ArticleService;
+import com.bcits.works.knowledge.ArticleVersion;
+import com.bcits.works.knowledge.ArticleVersionRepository;
+import com.bcits.works.knowledge.ArticleWorkflowService;
+import com.bcits.works.knowledge.KnowledgeSpace;
+import com.bcits.works.knowledge.KnowledgeSpaceRepository;
+import com.bcits.works.knowledge.SpaceFollowerService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -36,15 +56,23 @@ class ArticleServiceTest {
 
     private final ArticleRepository articleRepository = mock(ArticleRepository.class);
     private final ArticleVersionRepository articleVersionRepository = mock(ArticleVersionRepository.class);
+    private final ArticleCommentRepository articleCommentRepository = mock(ArticleCommentRepository.class);
     private final KnowledgeSpaceRepository knowledgeSpaceRepository = mock(KnowledgeSpaceRepository.class);
     private final ArticleApprovalRepository approvalRepository = mock(ArticleApprovalRepository.class);
+    private final ArticleWorkflowService workflowService = mock(ArticleWorkflowService.class);
+    private final ArticleAnalyticsService analyticsService = mock(ArticleAnalyticsService.class);
+    private final ArticleDiffService diffService = mock(ArticleDiffService.class);
+    private final ArticleDao articleDao = mock(ArticleDao.class);
     private final EventService eventService = mock(EventService.class);
     private final RbacService rbac = mock(RbacService.class);
     private final WebhookService webhookService = mock(WebhookService.class);
+    private final SpaceFollowerService spaceFollowerService = mock(SpaceFollowerService.class);
 
     private final ArticleService service = new ArticleService(
-            articleRepository, articleVersionRepository, knowledgeSpaceRepository,
-            approvalRepository, eventService, rbac, webhookService);
+            articleRepository, articleVersionRepository, articleCommentRepository,
+            knowledgeSpaceRepository, approvalRepository, workflowService,
+            analyticsService, diffService, articleDao, eventService, rbac,
+            webhookService, spaceFollowerService);
 
     @BeforeEach
     void setUp() {

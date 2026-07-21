@@ -1,4 +1,17 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.reporting.ConversationalDashboard;
+import com.bcits.works.reporting.ConversationalDashboardService;
+import com.bcits.works.ai.AiAgentRun;
+import com.bcits.works.ai.AiAgentService;
+import com.bcits.works.ai.AiAssistant;
+import com.bcits.works.ai.AiAssistantService;
+import com.bcits.works.ai.AiMemory;
+import com.bcits.works.ai.AiMemoryService;
 
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -30,11 +43,11 @@ public class AdvancedAiController {
     private final AiMemoryService memory;
     private final ConversationalDashboardService dashboards;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public AdvancedAiController(AiAssistantService assistants, AiAgentService agents, AiMemoryService memory,
                                 ConversationalDashboardService dashboards, AuthenticatedUser authenticatedUser,
-                                RbacService rbac) {
+                                RbacGate rbac) {
         this.assistants = assistants;
         this.agents = agents;
         this.memory = memory;

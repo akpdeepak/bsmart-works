@@ -24,7 +24,7 @@ export const TIER = { VIEWER: 1, MEMBER: 2, LEAD: 3, ADMIN: 4, OWNER: 5 };
 // permissions.min_tier as the real contract evolves (tracked as tech-debt).
 export const SURFACE_TIER = {
   // Home
-  dashboard: TIER.VIEWER, myworks: TIER.MEMBER, notifications: TIER.MEMBER,
+  dashboard: TIER.VIEWER, myworks: TIER.MEMBER, notifications: TIER.MEMBER, messenger: TIER.VIEWER,
   // Deliver
   smcockpit: TIER.LEAD, board: TIER.VIEWER, backlog: TIER.MEMBER, sprint: TIER.MEMBER,
   releases: TIER.MEMBER, projects: TIER.VIEWER, pm: TIER.LEAD,
@@ -44,7 +44,7 @@ export const SURFACE_TIER = {
   customization: TIER.ADMIN, security: TIER.OWNER, trash: TIER.LEAD,
   // Satellite cockpits + BQL
   developer: TIER.MEMBER, poworkspace: TIER.LEAD, leadership: TIER.ADMIN,
-  adminops: TIER.ADMIN, bql: TIER.MEMBER,
+  adminops: TIER.ADMIN, operatingmodel: TIER.ADMIN, bql: TIER.MEMBER,
 };
 
 // Minimum tier (1 = everyone) required to see a surface in the nav.
@@ -82,6 +82,7 @@ export const MODES = [
     { id: 'dashboard',     label: 'Today',         labelKey: 'nav.today',         Icon: Home },
     { id: 'myworks',       label: 'My Works',      labelKey: 'nav.myWork',        Icon: User },
     { id: 'notifications', label: 'Notifications', labelKey: 'nav.notifications', Icon: Bell },
+    { id: 'messenger',     label: 'Messenger',     labelKey: 'nav.messenger',     Icon: MessageSquare },
   ] },
   { id: 'deliver', label: 'Deliver', labelKey: 'nav.mode.deliver', Icon: LayoutGrid, surfaces: [
     { id: 'smcockpit', label: 'Sprint Cockpit', labelKey: 'nav.sprintCockpit', Icon: Gauge },
@@ -133,6 +134,7 @@ export const SATELLITES = [
   { id: 'poworkspace', label: 'PO Workspace', labelKey: 'nav.poWorkspace', Icon: MapIcon },
   { id: 'leadership',  label: 'Leadership',   labelKey: 'nav.leadership',  Icon: Crown },
   { id: 'adminops',    label: 'Admin Ops',    labelKey: 'nav.adminOps',    Icon: ShieldHalf },
+  { id: 'operatingmodel', label: 'Operating Model', labelKey: 'nav.operatingModel', Icon: Shield },
   { id: 'bql',         label: 'BQL Query',    labelKey: 'nav.bqlQuery',    Icon: Search },
 ];
 
@@ -148,6 +150,12 @@ export function navDestinations() {
   return out;
 }
 
+// The visible destinations shown by the explicit More menu. This is deliberately derived from
+// the same setup/satellite catalogues as the command palette, so neither path can silently drift.
+export function moreDestinations(vis) {
+  return [...SETUP_DESTINATIONS, ...SATELLITES].filter((destination) => allowed(destination.id, vis));
+}
+
 // ─── Lenses ─────────────────────────────────────────────────────────────────────
 // The top-right lens switcher retunes the workspace to a role. Each lens maps to the existing
 // role cockpit view + the dashboardRole string fetchDashboard() understands, so picking a lens
@@ -159,6 +167,7 @@ export const LENSES = [
   { id: 'scrum-master',  label: 'Scrum Master',  view: 'smcockpit',   role: 'scrum-master',  previewTier: TIER.LEAD },
   { id: 'developer',     label: 'Developer',     view: 'developer',   role: 'developer',     previewTier: TIER.MEMBER },
   { id: 'product-owner', label: 'Product Owner', view: 'poworkspace', role: 'product-owner', previewTier: TIER.LEAD },
+  { id: 'support-agent', label: 'Support Agent', view: 'supportinbox', role: 'support-agent', previewTier: TIER.MEMBER },
   { id: 'leadership',    label: 'Leadership',    view: 'leadership',  role: 'executive',     previewTier: TIER.ADMIN },
   { id: 'admin',         label: 'Admin',         view: 'adminops',    role: 'admin',         previewTier: TIER.ADMIN },
 ];
@@ -172,6 +181,7 @@ export const LENSES = [
 //   Developer      — executes the work: own queue, the board, the sprint, code/runbooks, the API.
 //   Scrum Master   — facilitates flow & ceremonies, clears impediments, watches velocity/health.
 //   Product Owner  — owns backlog, value, releases, stakeholders, and the delivery roadmap.
+//   Support Agent  — resolves customer conversations, service requests, and SLA risk.
 //   Leadership     — portfolio outcomes: KPIs, performance, SLA & compliance posture across teams.
 //   Admin          — operates the platform: config, governance, security, integrations, AI control.
 export const ROLE_PROFILES = {
@@ -187,13 +197,18 @@ export const ROLE_PROFILES = {
     landing: 'poworkspace',
     primary: ['poworkspace', 'backlog', 'projects', 'releases', 'reports', 'dashboards', 'pm', 'knowledge', 'knowledgeadvanced', 'notifications'],
   },
+  'support-agent': {
+    landing: 'supportinbox',
+    primary: ['supportinbox', 'service', 'sla', 'knowledge', 'notifications', 'dashboard'],
+  },
   leadership: {
     landing: 'leadership',
     primary: ['leadership', 'dashboards', 'reports', 'performance', 'projects', 'sla', 'compliance', 'service', 'supportinbox', 'aicontrol'],
   },
   admin: {
     landing: 'adminops',
-    primary: ['adminops', 'workspace', 'settings3', 'aicontrol', 'security', 'integrations', 'automations', 'marketplace', 'customization', 'compliance', 'developerportal', 'trash'],
+    primary: ['adminops', 'operatingmodel', 'workspace', 'settings3', 'aicontrol', 'security', 'integrations', 'automations', 'marketplace', 'customization', 'compliance', 'developerportal', 'trash'],
+    more: []
   },
 };
 
@@ -268,4 +283,79 @@ export function labelForView(view) {
   if (more) return more.label;
   const l = LENSES.find((x) => x.view === view);
   return l ? l.label : view;
+}
+
+// ─── Breadcrumb trail ────────────────────────────────────────────────────────
+// Given a view id, produce the breadcrumb hierarchy: [Mode, Surface] (+ optional entity label).
+// Returns an array of { label, labelKey, id, href?, onClick? } objects ready for the Breadcrumb
+// atom. The last item in the array is the current page (no href — rendered as plain text).
+//
+// Examples:
+//   breadcrumbTrail('board')       → [{ label: 'Deliver', id: 'deliver' }, { label: 'Board', id: 'board' }]
+//   breadcrumbTrail('workspace')   → [{ label: 'More', id: 'more' }, { label: 'Settings', id: 'workspace' }]
+//   breadcrumbTrail('dashboard')   → [{ label: 'Home', id: 'today' }, { label: 'Today', id: 'dashboard' }]
+export function breadcrumbTrail(view, entityLabel) {
+  // Check mode surfaces first
+  for (const m of MODES) {
+    const surface = m.surfaces.find((s) => s.id === view);
+    if (surface) {
+      const trail = [
+        { label: m.label, labelKey: m.labelKey, id: m.id },
+        { label: surface.label, labelKey: surface.labelKey, id: surface.id },
+      ];
+      if (entityLabel) trail.push({ label: entityLabel, id: 'entity' });
+      return trail;
+    }
+  }
+
+  // Check setup/satellite destinations (grouped under "More")
+  const moreDest = [...SETUP_DESTINATIONS, ...SATELLITES].find((s) => s.id === view);
+  if (moreDest) {
+    const trail = [
+      { label: 'More', labelKey: 'nav.more', id: 'more' },
+      { label: moreDest.label, labelKey: moreDest.labelKey, id: moreDest.id },
+    ];
+    if (entityLabel) trail.push({ label: entityLabel, id: 'entity' });
+    return trail;
+  }
+
+  // Check lenses — map to their owning mode
+  const lens = LENSES.find((l) => l.view === view);
+  if (lens) {
+    const modeId = modeForView(view);
+    const mode = getMode(modeId);
+    const trail = [
+      { label: mode.label, labelKey: mode.labelKey, id: mode.id },
+      { label: lens.label, labelKey: `nav.${lens.id}`, id: view },
+    ];
+    if (entityLabel) trail.push({ label: entityLabel, id: 'entity' });
+    return trail;
+  }
+
+  // Fallback: single-item trail
+  return [{ label: labelForView(view), id: view }];
+}
+
+// ─── Role-aware mode landing ─────────────────────────────────────────────────
+// When a lens is active, prefer the role's primary surface within a mode (instead of the
+// tier-ordered first surface). Falls back to firstSurfaceOf when the lens has no primary
+// surface in the mode or when no lens is active.
+//
+// Example: a Developer clicking the "Deliver" mode should land on 'board' (their primary
+// surface there) rather than 'smcockpit' (which is first in the surface list but LEAD-tier).
+export function roleLandingForMode(modeId, lensId, vis) {
+  if (!lensId) return firstSurfaceOf(modeId, vis);
+
+  const profile = ROLE_PROFILES[lensId];
+  if (!profile?.primary) return firstSurfaceOf(modeId, vis);
+
+  const mode = getMode(modeId);
+  // Find the first surface in this mode that is in the role's primary list AND visible
+  for (const surfaceId of profile.primary) {
+    const inMode = mode.surfaces.some((s) => s.id === surfaceId);
+    if (inMode && allowed(surfaceId, vis)) return surfaceId;
+  }
+
+  // No role-preferred surface in this mode — fall back to default
+  return firstSurfaceOf(modeId, vis);
 }

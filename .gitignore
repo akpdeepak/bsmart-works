@@ -1,5 +1,7 @@
 .DS_Store
-.claude/
+.claude/*
+!.claude/rules/
+!.claude/rules/*.md
 /node_modules/
 works-frontend/node_modules/
 works-frontend/dist/
@@ -11,6 +13,8 @@ works-backend/target/
 *.log
 *.zip
 .runtime-logs/
+tools/jetbrains-plugin/.gradle/
+tools/jetbrains-plugin/build/
 
 # Environment variable files — never commit real secrets
 # .env.example files ARE committed — they document variable shape without real values

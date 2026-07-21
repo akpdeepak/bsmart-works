@@ -25,3 +25,10 @@
 Backend verification passed 1,341 unit tests with 0 Checkstyle violations. Compose configuration
 validation passed for local, staging, and production templates. Guardrails passed all blocking rules;
 the existing non-blocking frontend raw-hex baseline warning remains.
+
+## Codebase re-verification - 2026-07-19
+
+The production configuration guard, health contributors, environment templates, CI Compose smoke
+job, and backup/restore readiness check were re-audited directly in code and automation. They are now
+covered by `scripts/epics-01-05-completion.mjs`; the current full backend suite passes 1,454 tests with
+JaCoCo and Checkstyle. Local/staging/production Compose rendering is part of the closeout gate.

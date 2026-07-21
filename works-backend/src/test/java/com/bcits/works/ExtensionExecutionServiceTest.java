@@ -1,4 +1,8 @@
 package com.bcits.works;
+import com.bcits.works.workspaces.ConfigService;
+
+import com.bcits.works.shared.EventService;
+import com.bcits.works.workitems.WorkItem;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

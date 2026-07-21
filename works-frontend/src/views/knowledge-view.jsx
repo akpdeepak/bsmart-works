@@ -1,17 +1,13 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import {
   Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen,
   AlertTriangle, Pencil, Eye, ChevronRight, LayoutTemplate,
   Copy, SlidersHorizontal, Share2, CheckSquare, Square, Filter, X, Home,
   ListTree, Download, Printer,
 } from 'lucide-react';
-import { MeetingNotesAssistant } from '@/components/knowledge/MeetingNotesAssistant';
-import { CreateWorkItemsFromChecklist } from '@/components/knowledge/CreateWorkItemsFromChecklist';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
-import { BlockEditor } from '@/components/BlockEditor';
 import { BlockRenderer } from '@/components/BlockRenderer';
-import { KnowAiPanel } from '@/components/knowledge/KnowAiPanel';
 import { ArticleSummarizeButton } from '@/components/knowledge/ArticleSummarizeButton';
 import { AiTextAssist } from '@/components/knowledge/AiTextAssist';
 import { ArticleCover, COVER_GRADIENTS } from '@/components/knowledge/ArticleCover';
@@ -19,8 +15,6 @@ import { ArticleIconPicker } from '@/components/knowledge/ArticleIconPicker';
 import { StatusBadge } from '@/components/knowledge/StatusBadge';
 import { StatusTransitionPopover } from '@/components/knowledge/StatusTransitionPopover';
 import { PageTreeSidebar } from '@/components/knowledge/PageTreeSidebar';
-import { BlockCommentsPanel } from '@/components/knowledge/BlockCommentsPanel';
-import { TemplatePickerModal } from '@/components/knowledge/TemplatePickerModal';
 import { PresenceBar } from '@/components/works/molecules/presence-bar';
 import { SearchModeToggle } from '@/components/knowledge/SearchModeToggle';
 import { useSearchMode } from '@/hooks/use-search-mode';
@@ -35,10 +29,10 @@ import { FollowSpaceButton } from '@/components/knowledge/FollowSpaceButton';
 import { BulkActionBar } from '@/components/knowledge/BulkActionBar';
 import { RelatedArticles } from '@/components/knowledge/RelatedArticles';
 import { ArticleSharePopover } from '@/components/knowledge/ArticleSharePopover';
-import { KnowledgeRoadmapPanel } from '@/components/knowledge/KnowledgeRoadmapPanel';
 import { useRecentArticles } from '@/hooks/use-recent-articles';
 import { onPressKey, renderMd } from '@/lib/utils';
 import { blocksText, countWords } from '@/lib/doc-stats';
+import { articleText, articlePreview, articleOutline, parseArticleBlocks, safeDownloadName, downloadBlob, STATUS_CHIP } from './knowledge/knowledge-view-helpers';
 import { downloadMarkdown } from '@/lib/export';
 import { makeAiAssist, knowledgeAi } from '@/lib/knowledge-ai';
 import { capabilityEnabled } from '@/lib/ai';
@@ -46,69 +40,16 @@ import { api } from '@/lib/apiClient';
 import { useArticlePresence } from '@/hooks/use-article-presence';
 import { useEditLock } from '@/hooks/use-edit-lock';
 
-// Plain text of an article for AI summary — block content when present, else the markdown body.
-function articleText(article) {
-  if (!article) return '';
-  let blocks;
-  try { blocks = JSON.parse(article.contentBlocks || '[]'); } catch { blocks = []; }
-  if (Array.isArray(blocks) && blocks.length > 0) return blocksText(blocks);
-  return article.content || '';
-}
-
-// Preview text for article list cards — uses blocksText() for block-format articles so they never
-// show an empty snippet in the list (previously art.content was always empty for block articles).
-function articlePreview(art, maxLen = 120) {
-  let text = art.content || '';
-  try {
-    const blocks = JSON.parse(art.contentBlocks || '[]');
-    if (Array.isArray(blocks) && blocks.length > 0) text = blocksText(blocks);
-  } catch { /* keep art.content fallback */ }
-  const trimmed = text.trim();
-  return trimmed.length > maxLen ? `${trimmed.substring(0, maxLen)}…` : trimmed;
-}
-
-function parseArticleBlocks(article) {
-  if (!article?.contentBlocks) return [];
-  try {
-    const parsed = JSON.parse(article.contentBlocks || '[]');
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function articleOutline(article) {
-  return parseArticleBlocks(article)
-    .filter((block) => ['heading1', 'heading2', 'heading3'].includes(block.type) && String(block.content || '').trim())
-    .map((block, index) => ({
-      id: block.id || `heading-${index}`,
-      text: String(block.content || '').trim(),
-      level: block.type === 'heading1' ? 1 : block.type === 'heading2' ? 2 : 3,
-    }));
-}
-
-function safeDownloadName(title, extension) {
-  const base = String(title || 'article').replace(/[^a-zA-Z0-9 _-]/g, '').trim() || 'article';
-  return `${base}.${extension}`;
-}
-
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
-const STATUS_CHIP = {
-  PUBLISHED: 'bg-semantic-success-surface text-semantic-success',
-  DRAFT:     'bg-neutral-100 dark:bg-neutral-700 text-neutral-500',
-  IN_REVIEW: 'bg-semantic-warning-surface text-semantic-warning',
-  ARCHIVED:  'bg-neutral-200 dark:bg-neutral-600 text-neutral-500',
-};
+// Code-split the editor and the conditionally-rendered overlays (Phase 2 / W2-d): browsing Know
+// must not download the 2k-line BlockEditor or the modals/panels a reader never opens. These are
+// named exports, hence the { default } shim.
+const BlockEditor = lazy(() => import('@/components/BlockEditor').then(m => ({ default: m.BlockEditor })));
+const MeetingNotesAssistant = lazy(() => import('@/components/knowledge/MeetingNotesAssistant').then(m => ({ default: m.MeetingNotesAssistant })));
+const CreateWorkItemsFromChecklist = lazy(() => import('@/components/knowledge/CreateWorkItemsFromChecklist').then(m => ({ default: m.CreateWorkItemsFromChecklist })));
+const KnowAiPanel = lazy(() => import('@/components/knowledge/KnowAiPanel').then(m => ({ default: m.KnowAiPanel })));
+const BlockCommentsPanel = lazy(() => import('@/components/knowledge/BlockCommentsPanel').then(m => ({ default: m.BlockCommentsPanel })));
+const TemplatePickerModal = lazy(() => import('@/components/knowledge/TemplatePickerModal').then(m => ({ default: m.TemplatePickerModal })));
+const KnowledgeRoadmapPanel = lazy(() => import('@/components/knowledge/KnowledgeRoadmapPanel').then(m => ({ default: m.KnowledgeRoadmapPanel })));
 
 // Shared article list card — used in both the space view and search results.
 // KR-038: selectable — shows a checkbox when bulkMode is true.
@@ -139,7 +80,7 @@ function ArticleCard({ art, onClick, selected = false, onToggleSelect, bulkMode 
       <div className="flex items-start gap-3">
         {/* KR-038: checkbox — shown in bulk mode */}
         {bulkMode && (
-          <button
+          <Button unstyled
             type="button"
             aria-label={selected ? `Deselect ${art.title}` : `Select ${art.title}`}
             onClick={(e) => { e.stopPropagation(); toggle(); }}
@@ -148,7 +89,7 @@ function ArticleCard({ art, onClick, selected = false, onToggleSelect, bulkMode 
             {selected
               ? <CheckSquare className="h-4 w-4 text-brand-navy" aria-hidden="true" />
               : <Square className="h-4 w-4" aria-hidden="true" />}
-          </button>
+          </Button>
         )}
         <div
           className="flex-1 min-w-0"
@@ -606,11 +547,11 @@ export default function KnowledgeView({
         <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">Knowledge Spaces</h2>
-            <button
+            <Button unstyled
               onClick={() => setIsSpaceFormOpen(true)}
               className="w-6 h-6 flex items-center justify-center rounded bg-brand-navy text-white text-sm hover:bg-brand-navy-tint transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
               title="New space"
-            >+</button>
+            >+</Button>
           </div>
           {/* KR-041/KR-044: search bar with mode toggle + 300ms debounce FTS + KR-042 excerpt dropdown */}
           <div className="flex items-center gap-1.5 mb-1.5">
@@ -659,7 +600,7 @@ export default function KnowledgeView({
               >
                 {ftsResults.map(r => (
                   <li key={r.id} role="option" aria-selected="false">
-                    <button
+                    <Button unstyled
                       type="button"
                       onMouseDown={() => { selectArticle(r); setFtsOpen(false); setKnowledgeSearch(''); }}
                       className="w-full text-left px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
@@ -675,7 +616,7 @@ export default function KnowledgeView({
                           }}
                         />
                       )}
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -685,13 +626,13 @@ export default function KnowledgeView({
 
         {/* All articles shortcut */}
         <div className="px-2 py-1">
-          <button
+          <Button unstyled
             onClick={() => { setSelectedSpace(null); setSelectedArticle(null); setKnowledgeTab('all'); fetchKnowledgeArticles(null); }}
             className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${knowledgeTab === 'all' && !selectedSpace ? 'bg-brand-navy/10 text-brand-navy' : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700'}`}
           >
             <FileText className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
             All Articles
-          </button>
+          </Button>
         </div>
 
         {/* KR-036: Recently viewed */}
@@ -699,7 +640,7 @@ export default function KnowledgeView({
           <section aria-label="Recently viewed" className="px-2 py-1 border-t border-neutral-100 dark:border-neutral-700">
             <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider px-3 py-1">Recent</p>
             {recentArticles.map(r => (
-              <button
+              <Button unstyled
                 key={r.id}
                 onClick={() => {
                   const art = [...(knowledgeArticles || []), ...(knowledgeSearchResults || [])].find(a => a.id === r.id) || r;
@@ -709,7 +650,7 @@ export default function KnowledgeView({
               >
                 {r.icon ? <span aria-hidden="true">{r.icon}</span> : <FileText className="h-3 w-3 flex-shrink-0" aria-hidden="true" />}
                 <span className="truncate">{r.title}</span>
-              </button>
+              </Button>
             ))}
           </section>
         )}
@@ -727,7 +668,7 @@ export default function KnowledgeView({
           ) : null}
           {knowledgeSpaces.map(space => (
             <div key={space.id}>
-              <button
+              <Button unstyled
                 onClick={() => { setSelectedSpace(space); setSelectedArticle(null); setEditingArticle(false); setKnowledgeTab('space'); fetchKnowledgeArticles(space.id); }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors group flex items-center justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${selectedSpace?.id === space.id ? 'bg-brand-navy/10 text-brand-navy' : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700'}`}
               >
@@ -738,7 +679,7 @@ export default function KnowledgeView({
                 <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ml-1 ${space.visibility === 'PUBLIC' ? 'bg-semantic-success-surface text-semantic-success' : space.visibility === 'PRIVATE' ? 'bg-semantic-danger-surface text-semantic-danger' : 'bg-brand-navy/10 text-brand-navy'}`}>
                   {space.visibility || 'TEAM'}
                 </span>
-              </button>
+              </Button>
 
               {/* KR-033: page tree — rendered inline below the selected space */}
               {selectedSpace?.id === space.id && (
@@ -773,7 +714,9 @@ export default function KnowledgeView({
           <div className="flex-1 overflow-y-auto p-6">
             {aiAssist && knowledgeTab !== 'search' && (
               <div className="mb-5">
-                <KnowAiPanel workspaceId={workspaceId} onOpenArticle={openArticleById} />
+                <Suspense fallback={<div className="h-24 animate-pulse rounded-md bg-neutral-100" aria-hidden="true" />}>
+                  <KnowAiPanel workspaceId={workspaceId} onOpenArticle={openArticleById} />
+                </Suspense>
               </div>
             )}
 
@@ -786,7 +729,7 @@ export default function KnowledgeView({
                     {filteredSearchResults.length} result{filteredSearchResults.length !== 1 ? 's' : ''} for &ldquo;{knowledgeSearch}&rdquo;
                   </span>
                   {/* KR-043: filter toggle */}
-                  <button
+                  <Button unstyled
                     type="button"
                     onClick={() => setFiltersOpen((o) => !o)}
                     aria-expanded={filtersOpen}
@@ -799,13 +742,13 @@ export default function KnowledgeView({
                         {searchStatusFilter.length + searchTypeFilter.length + (searchDateFilter !== 'all' ? 1 : 0)}
                       </span>
                     )}
-                  </button>
-                  <button
+                  </Button>
+                  <Button unstyled
                     onClick={() => { setKnowledgeTab('spaces'); setKnowledgeSearch(''); setAiAnswer(null); setSearchStatusFilter([]); setSearchTypeFilter([]); setSearchDateFilter('all'); setFiltersOpen(false); }}
                     className="text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
                   >
                     Clear
-                  </button>
+                  </Button>
                 </div>
 
                 {/* KR-043: filter panel */}
@@ -815,7 +758,7 @@ export default function KnowledgeView({
                       <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-1.5">Status</p>
                       <div className="flex flex-wrap gap-1.5">
                         {STATUS_FILTERS.map((s) => (
-                          <button
+                          <Button unstyled
                             key={s}
                             type="button"
                             onClick={() => setSearchStatusFilter((prev) =>
@@ -825,7 +768,7 @@ export default function KnowledgeView({
                             className={`text-xs px-2 py-0.5 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${searchStatusFilter.includes(s) ? 'border-brand-navy bg-brand-navy/10 text-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-500'}`}
                           >
                             {s}
-                          </button>
+                          </Button>
                         ))}
                       </div>
                     </div>
@@ -833,7 +776,7 @@ export default function KnowledgeView({
                       <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-1.5">Template</p>
                       <div className="flex flex-wrap gap-1.5">
                         {TEMPLATE_TYPES.map((t) => (
-                          <button
+                          <Button unstyled
                             key={t}
                             type="button"
                             onClick={() => setSearchTypeFilter((prev) =>
@@ -843,7 +786,7 @@ export default function KnowledgeView({
                             className={`text-xs px-2 py-0.5 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${searchTypeFilter.includes(t) ? 'border-brand-navy bg-brand-navy/10 text-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-500'}`}
                           >
                             {t}
-                          </button>
+                          </Button>
                         ))}
                       </div>
                     </div>
@@ -851,7 +794,7 @@ export default function KnowledgeView({
                       <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-1.5">Updated</p>
                       <div className="flex gap-1.5">
                         {[['all', 'All time'], ['7d', 'Last 7 days'], ['30d', 'Last 30 days']].map(([v, label]) => (
-                          <button
+                          <Button unstyled
                             key={v}
                             type="button"
                             onClick={() => setSearchDateFilter(v)}
@@ -859,7 +802,7 @@ export default function KnowledgeView({
                             className={`text-xs px-2 py-0.5 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${searchDateFilter === v ? 'border-brand-navy bg-brand-navy/10 text-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-500'}`}
                           >
                             {label}
-                          </button>
+                          </Button>
                         ))}
                       </div>
                     </div>
@@ -907,13 +850,13 @@ export default function KnowledgeView({
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-3">
                     {selectedSpace && (
-                      <button
+                      <Button unstyled
                         onClick={() => { setSelectedSpace(null); setKnowledgeTab('spaces'); }}
                         className="text-xs text-neutral-500 hover:text-brand-navy transition-colors flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
                       >
                         <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
                         Spaces
-                      </button>
+                      </Button>
                     )}
                     <div>
                       <h1 className="text-xl font-bold text-brand-navy dark:text-white">
@@ -935,12 +878,12 @@ export default function KnowledgeView({
                       />
                     )}
                     {selectedSpace && can('manage_projects') && (
-                      <button
+                      <Button unstyled
                         onClick={() => deleteKnowledgeSpace(selectedSpace.id)}
                         className="text-xs text-semantic-danger hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-semantic-danger/40 rounded"
                       >
                         Delete Space
-                      </button>
+                      </Button>
                     )}
                     {selectedSpace && (
                       <>
@@ -1019,20 +962,20 @@ export default function KnowledgeView({
 
               {/* Row 1: back arrow + title + status/meta */}
               <div className="flex items-start gap-3">
-                <button
+                <Button unstyled
                   onClick={goBack}
                   className="mt-0.5 text-neutral-400 hover:text-brand-navy transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
                   aria-label={navStack.length > 0 ? `Back to ${navStack[navStack.length - 1].title}` : 'Back to article list'}
                 >
                   <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                </button>
+                </Button>
                 <div className="flex-1 min-w-0">
                   {navStack.length > 0 && (
                     <nav aria-label="Article breadcrumb" className="flex items-center gap-1 text-xs text-neutral-500 mb-0.5 flex-wrap">
                       {navStack.map((ancestor, i) => (
                         <span key={ancestor.id} className="flex items-center gap-1">
                           {i > 0 && <ChevronRight aria-hidden="true" className="h-2.5 w-2.5 flex-shrink-0" />}
-                          <button
+                          <Button unstyled
                             type="button"
                             onClick={() => {
                               setNavStack(navStack.slice(0, i));
@@ -1045,7 +988,7 @@ export default function KnowledgeView({
                             className="hover:text-brand-navy hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded truncate max-w-32"
                           >
                             {ancestor.title}
-                          </button>
+                          </Button>
                         </span>
                       ))}
                       <ChevronRight aria-hidden="true" className="h-2.5 w-2.5 flex-shrink-0" />
@@ -1119,14 +1062,14 @@ export default function KnowledgeView({
                   { key: 'comments',  label: `Comments (${articleComments.length})` },
                   { key: 'analytics', label: 'Analytics' },
                 ].map(p => (
-                  <button
+                  <Button unstyled
                     key={p.key}
                     onClick={() => openArticlePanel(p.key)}
                     aria-pressed={articlePanel === p.key}
                     className={`text-xs px-2.5 py-1 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${articlePanel === p.key ? 'bg-brand-navy text-white border-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy'}`}
                   >
                     {p.label}
-                  </button>
+                  </Button>
                 ))}
 
                 <span className="text-neutral-200 dark:text-neutral-700 select-none mx-0.5" aria-hidden="true">|</span>
@@ -1145,7 +1088,7 @@ export default function KnowledgeView({
                 {/* KR-066: share link — only for PUBLISHED articles */}
                 {selectedArticle.status === 'PUBLISHED' && (
                   <div className="relative">
-                    <button
+                    <Button unstyled
                       type="button"
                       onClick={() => setSharePopoverOpen((o) => !o)}
                       aria-expanded={sharePopoverOpen}
@@ -1154,7 +1097,7 @@ export default function KnowledgeView({
                     >
                       <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
                       Share
-                    </button>
+                    </Button>
                     {sharePopoverOpen && (
                       <ArticleSharePopover
                         articleId={selectedArticle.id}
@@ -1169,7 +1112,7 @@ export default function KnowledgeView({
 
                 {/* KR-037: set as space home — available to managers in edit mode */}
                 {editingArticle && selectedSpace && can('manage_projects') && (
-                  <button
+                  <Button unstyled
                     type="button"
                     title="Set as space home page"
                     aria-label="Set as space home"
@@ -1183,7 +1126,7 @@ export default function KnowledgeView({
                   >
                     <Home className="h-3.5 w-3.5" aria-hidden="true" />
                     Set home
-                  </button>
+                  </Button>
                 )}
 
                 <span className="text-neutral-200 dark:text-neutral-700 select-none mx-0.5" aria-hidden="true">|</span>
@@ -1194,7 +1137,7 @@ export default function KnowledgeView({
 
                 <span className="text-neutral-200 dark:text-neutral-700 select-none mx-0.5" aria-hidden="true">|</span>
 
-                <button
+                <Button unstyled
                   type="button"
                   onClick={() => handleArticleExport('pdf')}
                   disabled={exportBusy === 'pdf'}
@@ -1202,8 +1145,8 @@ export default function KnowledgeView({
                 >
                   <Download className="h-3.5 w-3.5" aria-hidden="true" />
                   PDF
-                </button>
-                <button
+                </Button>
+                <Button unstyled
                   type="button"
                   onClick={() => handleArticleExport('docx')}
                   disabled={exportBusy === 'docx'}
@@ -1211,42 +1154,44 @@ export default function KnowledgeView({
                 >
                   <Download className="h-3.5 w-3.5" aria-hidden="true" />
                   DOCX
-                </button>
-                <button
+                </Button>
+                <Button unstyled
                   type="button"
                   onClick={() => handleArticleExport('md')}
                   className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
                 >
                   <Download className="h-3.5 w-3.5" aria-hidden="true" />
                   Markdown
-                </button>
-                <button
+                </Button>
+                <Button unstyled
                   type="button"
                   onClick={() => handleArticleExport('print')}
                   className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
                 >
                   <Printer className="h-3.5 w-3.5" aria-hidden="true" />
                   Print
-                </button>
+                </Button>
 
                 {/* KR-077: convert unchecked action items to work items */}
                 {selectedArticle.templateType === 'MEETING_NOTES' && (() => {
                   const blocks = parseArticleBlocks(selectedArticle);
                   return Array.isArray(blocks) && blocks.some(b => b.type === 'checklist' && (b.metadata?.items || []).some(i => !i.done)) ? (
-                    <CreateWorkItemsFromChecklist
-                      blocks={blocks}
-                      articleTitle={selectedArticle.title}
-                      workspaceId={workspaceId}
-                      onBlocksChange={(updated) => {
-                        const json = JSON.stringify(updated);
-                        setSelectedArticle(a => ({ ...a, contentBlocks: json }));
-                        scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
-                      }}
-                    />
+                    <Suspense fallback={null}>
+                      <CreateWorkItemsFromChecklist
+                        blocks={blocks}
+                        articleTitle={selectedArticle.title}
+                        workspaceId={workspaceId}
+                        onBlocksChange={(updated) => {
+                          const json = JSON.stringify(updated);
+                          setSelectedArticle(a => ({ ...a, contentBlocks: json }));
+                          scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
+                        }}
+                      />
+                    </Suspense>
                   ) : null;
                 })()}
 
-                <button
+                <Button unstyled
                   onClick={() => setEditingArticle(e => !e)}
                   className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${editingArticle ? 'bg-neutral-100 dark:bg-neutral-700 border-neutral-200 dark:border-neutral-600 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-600' : 'border-brand-navy text-brand-navy hover:bg-brand-navy hover:text-white'}`}
                 >
@@ -1254,20 +1199,20 @@ export default function KnowledgeView({
                     ? <><Eye className="h-3.5 w-3.5" aria-hidden="true" />View</>
                     : <><Pencil className="h-3.5 w-3.5" aria-hidden="true" />Edit</>
                   }
-                </button>
+                </Button>
 
                 {/* KR-022: Duplicate article */}
-                <button
+                <Button unstyled
                   aria-label="Duplicate this article"
                   onClick={handleDuplicate}
                   className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
                 >
                   <Copy className="h-3.5 w-3.5" aria-hidden="true" />
                   Duplicate
-                </button>
+                </Button>
 
                 {/* KR-011: Properties panel toggle */}
-                <button
+                <Button unstyled
                   onClick={() => {
                     const next = !propertiesOpen;
                     setPropertiesOpen(next);
@@ -1278,43 +1223,43 @@ export default function KnowledgeView({
                 >
                   <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
                   Properties
-                </button>
+                </Button>
 
-                <button
+                <Button unstyled
                   onClick={() => deleteArticle(selectedArticle.id)}
                   className="text-xs text-semantic-danger hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-semantic-danger/40 rounded"
                 >
                   Delete
-                </button>
+                </Button>
 
                 {editingArticle && (
                   <>
                     <span className="text-neutral-200 dark:text-neutral-700 select-none mx-0.5" aria-hidden="true">|</span>
                     {selectedArticle.coverImage ? (
                       <>
-                        <button
+                        <Button unstyled
                           type="button"
                           onClick={() => { setCoverUrlDraft(selectedArticle.coverImage); setCoverPickerOpen(true); }}
                           className="text-xs text-neutral-500 hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
                         >
                           Change cover
-                        </button>
-                        <button
+                        </Button>
+                        <Button unstyled
                           type="button"
                           onClick={() => applyCover(null)}
                           className="text-xs text-neutral-400 hover:text-semantic-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-semantic-danger/40 rounded"
                         >
                           Remove cover
-                        </button>
+                        </Button>
                       </>
                     ) : (
-                      <button
+                      <Button unstyled
                         type="button"
                         onClick={() => { setCoverUrlDraft(''); setCoverPickerOpen(true); }}
                         className="text-xs text-neutral-500 hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
                       >
                         Add cover
-                      </button>
+                      </Button>
                     )}
                   </>
                 )}
@@ -1345,24 +1290,24 @@ export default function KnowledgeView({
                             placeholder="https://… image URL"
                             className="flex-1 text-sm border border-neutral-200 dark:border-neutral-700 rounded-md px-3 py-1.5 bg-transparent text-neutral-900 dark:text-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
                           />
-                          <button type="button" onClick={() => applyCover(coverUrlDraft)}
+                          <Button unstyled type="button" onClick={() => applyCover(coverUrlDraft)}
                             className="text-xs px-3 py-1.5 rounded-md bg-brand-navy text-white hover:bg-brand-navy-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
                             Use URL
-                          </button>
+                          </Button>
                         </div>
                         <p className="text-xs text-neutral-500">Or choose a gradient preset:</p>
                         <div className="grid grid-cols-6 gap-1.5">
                           {Object.entries(COVER_GRADIENTS).map(([key, cls]) => (
-                            <button key={key} type="button" aria-label={key} title={key}
+                            <Button unstyled key={key} type="button" aria-label={key} title={key}
                               onClick={() => applyCover(`gradient:${key}`)}
                               className={`h-8 rounded-md ${cls} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 hover:ring-2 hover:ring-brand-navy`}
                             />
                           ))}
                         </div>
-                        <button type="button" onClick={() => setCoverPickerOpen(false)}
+                        <Button unstyled type="button" onClick={() => setCoverPickerOpen(false)}
                           className="text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded">
                           Cancel
-                        </button>
+                        </Button>
                       </div>
                     )}
 
@@ -1400,14 +1345,16 @@ export default function KnowledgeView({
 
                     {/* KR-077: meeting notes assistant — shown when templateType is MEETING_NOTES */}
                     {selectedArticle.templateType === 'MEETING_NOTES' && (
-                      <MeetingNotesAssistant
-                        workspaceId={workspaceId}
-                        onInsert={(blocks) => {
-                          const json = JSON.stringify(blocks);
-                          setSelectedArticle(a => ({ ...a, contentBlocks: json, contentFormat: 'blocks' }));
-                          scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
-                        }}
-                      />
+                      <Suspense fallback={<div className="h-24 animate-pulse rounded-md bg-neutral-100" aria-hidden="true" />}>
+                        <MeetingNotesAssistant
+                          workspaceId={workspaceId}
+                          onInsert={(blocks) => {
+                            const json = JSON.stringify(blocks);
+                            setSelectedArticle(a => ({ ...a, contentBlocks: json, contentFormat: 'blocks' }));
+                            scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
+                          }}
+                        />
+                      </Suspense>
                     )}
 
                     {/* Block editor — always used; markdown articles are migrated to a paragraph block on first edit */}
@@ -1423,25 +1370,27 @@ export default function KnowledgeView({
                           <span className="text-2xs text-semantic-success" aria-live="polite">Saved</span>
                         )}
                       </div>
-                      <BlockEditor
-                        key={selectedArticle.id}
-                        aiAssist={aiAssist}
-                        workspaceId={workspaceId}
-                        readOnly={!lockGranted}
-                        blocks={(() => {
-                          const parsed = parseArticleBlocks(selectedArticle);
-                          if (parsed.length > 0) return parsed;
-                          if (selectedArticle.content) {
-                            return [{ id: `blk-migrate-${selectedArticle.id}`, type: 'paragraph', content: selectedArticle.content, metadata: {} }];
-                          }
-                          return [];
-                        })()}
-                        onChange={blocks => {
-                          const json = JSON.stringify(blocks);
-                          setSelectedArticle(a => ({ ...a, contentBlocks: json, contentFormat: 'blocks' }));
-                          scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
-                        }}
-                      />
+                      <Suspense fallback={<div className="h-48 animate-pulse rounded-md bg-neutral-100" aria-hidden="true" />}>
+                        <BlockEditor
+                          key={selectedArticle.id}
+                          aiAssist={aiAssist}
+                          workspaceId={workspaceId}
+                          readOnly={!lockGranted}
+                          blocks={(() => {
+                            const parsed = parseArticleBlocks(selectedArticle);
+                            if (parsed.length > 0) return parsed;
+                            if (selectedArticle.content) {
+                              return [{ id: `blk-migrate-${selectedArticle.id}`, type: 'paragraph', content: selectedArticle.content, metadata: {} }];
+                            }
+                            return [];
+                          })()}
+                          onChange={blocks => {
+                            const json = JSON.stringify(blocks);
+                            setSelectedArticle(a => ({ ...a, contentBlocks: json, contentFormat: 'blocks' }));
+                            scheduleBlockSave(selectedArticle.id, { contentBlocks: json, contentFormat: 'blocks', templateType: selectedArticle.templateType });
+                          }}
+                        />
+                      </Suspense>
                     </div>
 
                     <Button
@@ -1512,7 +1461,7 @@ export default function KnowledgeView({
                         </h3>
                         <div className="space-y-1">
                           {articleChildren.map(child => (
-                            <button
+                            <Button unstyled
                               key={child.id}
                               onClick={() => selectSubArticle(child)}
                               className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 text-sm text-brand-navy dark:text-blue-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 transition-colors group"
@@ -1523,7 +1472,7 @@ export default function KnowledgeView({
                                 {child.status || 'DRAFT'}
                               </span>
                               <ChevronRight className="h-3.5 w-3.5 text-neutral-400 flex-shrink-0" aria-hidden="true" />
-                            </button>
+                            </Button>
                           ))}
                         </div>
                       </div>
@@ -1540,28 +1489,30 @@ export default function KnowledgeView({
                   </h3>
                   <nav className="space-y-1">
                     {outline.map((item) => (
-                      <button
+                      <Button unstyled
                         key={item.id}
                         type="button"
                         onClick={() => handleHeadingJump(item.id)}
                         className={`block w-full text-left rounded px-2 py-1 text-xs text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${item.level === 2 ? 'pl-4' : item.level === 3 ? 'pl-6' : ''}`}
                       >
                         {item.text}
-                      </button>
+                      </Button>
                     ))}
                   </nav>
                 </aside>
               )}
 
               {/* ── KR-025: Block comments panel ── */}
-              <BlockCommentsPanel
-                articleId={selectedArticle?.id}
-                blockId={blockCommentPanel.blockId}
-                workspaceId={workspaceId}
-                currentUserId={currentUser?.id}
-                open={blockCommentPanel.open}
-                onClose={() => setBlockCommentPanel({ open: false, blockId: null })}
-              />
+              <Suspense fallback={null}>
+                <BlockCommentsPanel
+                  articleId={selectedArticle?.id}
+                  blockId={blockCommentPanel.blockId}
+                  workspaceId={workspaceId}
+                  currentUserId={currentUser?.id}
+                  open={blockCommentPanel.open}
+                  onClose={() => setBlockCommentPanel({ open: false, blockId: null })}
+                />
+              </Suspense>
 
               {/* KR-011: Article properties panel */}
               {propertiesOpen && (
@@ -1581,14 +1532,16 @@ export default function KnowledgeView({
 
               {/* ── Contextual side panels ── */}
               {!focusMode && !propertiesOpen && !articlePanel && (
-                <KnowledgeRoadmapPanel
-                  article={selectedArticle}
-                  articles={[...(knowledgeArticles || []), ...(knowledgeSearchResults || [])]}
-                  related={articleChildren}
-                  comments={articleComments}
-                  searchQuery={knowledgeSearch}
-                  onOpenArticle={openArticleById}
-                />
+                <Suspense fallback={<div className="w-80 flex-shrink-0 animate-pulse border-l border-neutral-200 bg-neutral-100" aria-hidden="true" />}>
+                  <KnowledgeRoadmapPanel
+                    article={selectedArticle}
+                    articles={[...(knowledgeArticles || []), ...(knowledgeSearchResults || [])]}
+                    related={articleChildren}
+                    comments={articleComments}
+                    searchQuery={knowledgeSearch}
+                    onOpenArticle={openArticleById}
+                  />
+                </Suspense>
               )}
 
               {articlePanel === 'history' && (
@@ -1605,7 +1558,7 @@ export default function KnowledgeView({
                           <p className="text-xs text-neutral-500">{v.savedAt ? new Date(v.savedAt).toLocaleString() : '—'}</p>
                           {/* Restore both markdown content and block content so block-format
                               articles restore correctly, not just their (empty) markdown body. */}
-                          <button
+                          <Button unstyled
                             onClick={() => setSelectedArticle(a => ({
                               ...a,
                               content: v.content ?? a.content,
@@ -1614,7 +1567,7 @@ export default function KnowledgeView({
                             className="text-xs text-brand-navy hover:underline mt-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
                           >
                             Restore
-                          </button>
+                          </Button>
                         </div>
                       ))}
                     </div>
@@ -1645,14 +1598,14 @@ export default function KnowledgeView({
                             {articleVersions.map(v => <option key={v.id} value={v.versionNumber}>v{v.versionNumber}</option>)}
                           </select>
                         </label>
-                        <button
+                        <Button unstyled
                           type="button"
                           onClick={loadVersionDiff}
                           disabled={diffVersions.loading || !diffVersions.from || !diffVersions.to}
                           className="text-xs px-2.5 py-1.5 rounded-lg bg-brand-navy text-white hover:bg-brand-navy-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 disabled:opacity-60"
                         >
                           {diffVersions.loading ? 'Loading' : 'Diff'}
-                        </button>
+                        </Button>
                       </div>
                       {diffVersions.error && (
                         <p className="mt-2 text-xs text-semantic-danger">{diffVersions.error}</p>
@@ -1707,18 +1660,18 @@ export default function KnowledgeView({
                         </div>
                         <p className="text-xs text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">{c.body}</p>
                         <div className="flex items-center gap-3 mt-1.5">
-                          <button
+                          <Button unstyled
                             onClick={() => toggleArticleComment(selectedArticle.id, c.id, !c.resolved)}
                             className="text-xs text-brand-navy hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
                           >
                             {c.resolved ? 'Reopen' : 'Resolve'}
-                          </button>
-                          <button
+                          </Button>
+                          <Button unstyled
                             onClick={() => deleteArticleComment(selectedArticle.id, c.id)}
                             className="text-xs text-semantic-danger hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-semantic-danger/40 rounded"
                           >
                             Delete
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -1796,32 +1749,34 @@ export default function KnowledgeView({
 
       {/* KR-012: Focus mode exit button — fixed at top-right when focus mode is active */}
       {focusMode && (
-        <button
+        <Button unstyled
           aria-label="Exit focus mode"
           onClick={() => setFocusMode(false)}
           className="fixed top-4 right-4 z-modal text-xs px-3 py-1.5 rounded-lg bg-neutral-900/80 text-white hover:bg-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 flex items-center gap-1.5"
         >
           Exit focus <X className="h-3 w-3" aria-hidden="true" />
-        </button>
+        </Button>
       )}
 
       {/* WI-29: template picker modal */}
       {templatePickerOpen && (
-        <TemplatePickerModal
-          workspaceId={workspaceId}
-          onClose={() => setTemplatePickerOpen(false)}
-          onApplyTemplate={(template) => {
-            // Pre-fill a new article with the template's body as the initial content.
-            setArticleForm({
-              title: '',
-              content: template.body || '',
-              templateType: template.category || 'KB',
-              status: 'DRAFT',
-            });
-            setIsArticleFormOpen(true);
-            setTemplatePickerOpen(false);
-          }}
-        />
+        <Suspense fallback={null}>
+          <TemplatePickerModal
+            workspaceId={workspaceId}
+            onClose={() => setTemplatePickerOpen(false)}
+            onApplyTemplate={(template) => {
+              // Pre-fill a new article with the template's body as the initial content.
+              setArticleForm({
+                title: '',
+                content: template.body || '',
+                templateType: template.category || 'KB',
+                status: 'DRAFT',
+              });
+              setIsArticleFormOpen(true);
+              setTemplatePickerOpen(false);
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );

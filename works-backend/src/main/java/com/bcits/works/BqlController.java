@@ -1,4 +1,18 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.shared.BqlException;
+import com.bcits.works.shared.BqlField;
+import com.bcits.works.shared.BqlFieldRegistry;
+
+import com.bcits.works.shared.BqlContext;
+
+import com.bcits.works.shared.BqlCompiler;
+import com.bcits.works.shared.BqlContextFactory;
+import com.bcits.works.shared.BqlExecutionService;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,14 +65,14 @@ public class BqlController {
     private final BqlExecutionService execution;
     private final BqlContextFactory contextFactory;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public BqlController(JdbcTemplate jdbc,
                          BqlCompiler compiler,
                          BqlExecutionService execution,
                          BqlContextFactory contextFactory,
                          AuthenticatedUser authenticatedUser,
-                         RbacService rbac) {
+                         RbacGate rbac) {
         this.jdbc = jdbc;
         this.compiler = compiler;
         this.execution = execution;

@@ -1,5 +1,18 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.RbacService;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.shared.EventService;
+import com.bcits.works.knowledge.Article;
+import com.bcits.works.knowledge.ArticleRepository;
+import com.bcits.works.knowledge.ArticleWatcherController;
+import com.bcits.works.knowledge.ArticleWatcherService;
+import com.bcits.works.knowledge.KnowledgeSpace;
+import com.bcits.works.knowledge.KnowledgeSpaceRepository;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;

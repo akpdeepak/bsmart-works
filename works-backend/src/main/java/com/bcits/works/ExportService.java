@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;

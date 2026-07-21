@@ -15,7 +15,7 @@ work.
 
 ## Scope in this PR
 
-- Fix starred work-item tenant leaks for star, unstar, and starred listing.
+- Fix starred/watched work-item tenant leaks for star, unstar, watch, unwatch, and listing.
 - Require RBAC permission for SCIM token issuance.
 - Remove arbitrary developer dashboard `userId` access and use the authenticated caller.
 - Require explicit workspace authorization for dashboard role views.
@@ -31,6 +31,8 @@ work.
 - A caller outside the target work item's workspace must receive not-found semantics and no database
   mutation.
 - The starred-items list must be scoped to work items in workspaces where the caller is a member.
+- Watch/unwatch/list-watcher operations must resolve the target workspace and deny cross-tenant ids
+  with no mutation.
 - SCIM token issuance must require a JWT-authenticated caller with either `manage_security` or
   `manage_integrations` in the target workspace.
 - Dashboard role endpoints must require explicit workspace access and avoid tenant-default fallbacks.
@@ -73,6 +75,7 @@ work.
 - [x] Star/unstar requires workspace view access for the target work item.
 - [x] Starred list query is tenant-scoped.
 - [x] Cross-tenant star/unstar tests prove no mutation occurs.
+- [x] Cross-tenant watch/unwatch tests prove no mutation occurs.
 - [x] SCIM token issuance requires `manage_security` or `manage_integrations`.
 - [x] SCIM permission tests cover unauthenticated, forbidden, and allowed paths.
 - [x] Developer dashboard uses authenticated user identity only.
@@ -95,6 +98,7 @@ work.
 - [x] Create EPIC 1 plan.
 - [x] Harden starred work-item mutations.
 - [x] Scope starred work-item listing.
+- [x] Move star/watch engagement orchestration behind a workspace-gated service boundary.
 - [x] Harden SCIM token issuance.
 - [x] Harden dashboard controller and SQL scoping.
 - [x] Harden field-layout project/workspace resolution.

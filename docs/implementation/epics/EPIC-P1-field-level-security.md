@@ -341,3 +341,146 @@ Pure application logic over existing tables; no migration. Remove the redaction 
 helpers — behavior returns to exactly today's. Zero data/schema risk. Because production
 `field_visibility`/`role_def` are empty, the enforcement is a no-op on current data, so the change is
 inert (and therefore safe) until rules are authored.
+
+---
+
+# Slice 2 — as-built (2026-06-21) · close the BQL HIDDEN-field inference leak
+
+> Per-item execution block (RB-05 / task-execution loop). Doubles as the PR description. Closes the
+> "BQL field-level filtering" item that Slice 1 deferred (§6, "Explicitly OUT of scope"). No migration.
+
+## S2.0 Scope
+Slice 1 stripped a HIDDEN field's **value** from read responses, but BQL was a side channel: the
+**compile path never consulted field visibility**. A low-tier user could (a) **filter** on a HIDDEN
+custom field and binary-search its value from which rows match (`salary > X` → `id IN (SELECT
+work_item_id FROM work_item_field_value WHERE field_def_id=? AND value > X)` — an inference oracle the
+value-redaction does not close), and (b) **enumerate** HIDDEN fields' names/types via the
+`GET /bql/schema` autocomplete. Slice 2 closes both.
+
+## S2.1 Analysis — verified (independent read + a 4-agent adversarial discovery workflow)
+- The custom-field BQL surface for a **user** is built in exactly one place: `BqlContextFactory.forUser`
+  (`SELECT id, field_key, field_type FROM field_def WHERE workspace_id=?`, no visibility check). Its
+  three callers are the **only** user-facing custom-field BQL entry points: `BqlController` (ad-hoc
+  `/bql` execute + `/bql/schema`), `SavedViewService.runView`, `BqlSubscriptionService`.
+- System/trusted BQL (`BqlContext.trusted` — compliance, the legacy `compile(q,userId)`,
+  `BqlQueryExecutor`) and the 2-arg `BqlContext.forUser` (KPI, Pivot) carry **no custom fields**
+  (`Map.of()`), so they cannot reference a custom field at all — not a leak vector, and correctly
+  unaffected.
+- `BqlCompiler.resolve(alias)` checks `ctx.customField(alias)` first; an alias not in the context falls
+  to `BqlFieldRegistry.resolve`, which **throws `BqlException("Unknown field: …")`**. So removing a
+  HIDDEN field from the context makes it indistinguishable from a non-existent field — fail-closed.
+- `FieldVisibilityService.hiddenFieldIds(workspaceId, tier)` already exists (Slice 1) and is the right
+  resolver. `field_visibility`/`role_def` are empty in prod → **inert until an admin authors rules**
+  (same safe-rollout property as Slice 1; no flag needed — it can only ever hide a field that an
+  explicit HIDDEN rule already covers).
+
+## S2.2 Mechanism (one central guard, whole surface)
+`BqlContextFactory.forUser(userId, workspaceId)`: compute tier once; build the custom-field map; then
+**exclude** any field_def in `fieldVisibility.hiddenFieldIds(workspaceId, tier)`. Because `/bql`,
+`/bql/schema`, saved-views and subscriptions all obtain their context here, the single guard closes
+**both** the filter-inference oracle **and** the schema-enumeration leak across all four entry points.
+
+## S2.3 Files
+- `BqlContextFactory.java` — inject `FieldVisibilityService`; exclude HIDDEN field_defs in `forUser`.
+- `FieldLevelSecurityIT.java` — +2 ITs reusing the existing fixture: `lowTier_cannotFilterOnHidden
+  Field_inBql_inferenceOracleClosed` (context + end-to-end compile) and
+  `bqlSchema_omitsHiddenCustomField_forLowTier_butListsItForHighTier`.
+- This doc.
+
+## S2.4 Acceptance criteria
+- A field with an explicit HIDDEN rule for the caller's tier is **not queryable in BQL** (compiler
+  rejects it as unknown) and **not listed** by `/bql/schema`; a higher tier with no rule keeps both;
+  an un-ruled field is unaffected (no over-restriction). ✔ (IT)
+- System/trusted + KPI/Pivot BQL unaffected (no custom fields). ✔ (BQL regression ITs green)
+- No migration; inert in prod until rules are authored. ✔
+
+## S2.5 Validation (local, 2026-06-21)
+- Unit: `-Dgroups=unit clean verify` → **1406/0**, checkstyle clean, coverage met.
+- Guardrails: blocking rules pass.
+- Integration: `FieldLevelSecurityIT` **13/13** (11 prior + 2 new); regression `BqlWorkspaceScopeIT`
+  6/6, `BqlSubscriptionIT` 4/4, `BqlRunAuditIT` 3/3.
+
+## S2.6 Follow-on
+FLS Slice 3 (resolver unit test, `rbac.require(manage_permissions)` on `setFieldVisibility`,
+`field_visibility(field_def_id)` index) and Slice 4 (seed demo rules / admin UI) remain. The built-in
+"sensitive" tier gate (`BqlContextFactory` `canSeeSensitive`, businessValue at tier≥3) is a separate,
+coarser mechanism, unchanged here.
+
+---
+
+# Slice 3 — as-built (2026-06-21) · guard the FLS rule surface + unit-test the resolver + index the FK
+
+> Per-item execution block (RB-05 / task-execution loop). Doubles as the PR description. No data
+> change; the index is additive and the guards are inert on current data (the FLS tables are empty).
+
+## S3.0 Scope
+Three closures the prior slices deferred: (a) **the field-visibility rule mutators were unguarded** —
+any authenticated user could author/modify/read another tenant's FLS rules (a security-control
+tampering + privilege-escalation hole, since these rows ARE the control); (b) **no unit test** pinned
+the resolver's fail-open-read / fail-closed-write contract; (c) **the field_visibility→role_def FK was
+unindexed**, so the hot read-redaction join had no supporting index.
+
+## S3.1 Mechanism
+- **RBAC guards** on `PermissionSchemeController`'s field-visibility surface — `setFieldVisibility`,
+  `deleteFieldVisibility`, and the previously-open `getFieldVisibility` read — each now resolves the
+  owning workspace (from the `role_def` for writes, the `field_def` for reads, both already
+  workspace-filtered) and calls `rbac.require(userId, ws, "manage_permissions")` **before** any
+  read/mutation. `setFieldVisibility` additionally rejects a cross-workspace field/role pairing
+  (`ApiException.badRequest("CROSS_WORKSPACE", …)`) so a rule cannot be injected across tenants.
+  `FieldDefRepository` is injected to anchor the read/consistency check.
+- **Unit test** `FieldVisibilityServiceTest` (Mockito, 8 tests): null-workspace and non-member
+  short-circuits (no DB touch), member returns the HIDDEN+READ_ONLY sets, read path fails OPEN
+  (empty set) on a DB fault, write resolver returns the configured verdict / defaults to EDITABLE on
+  no-rule / **propagates (fails CLOSED) on a DB error**.
+- **Access test** `PermissionSchemeControllerAccessTest` (Mockito, 5 tests): cross-tenant 403 on
+  set/get/delete before any repo write, the cross-workspace-mismatch 400, and the authorized
+  same-workspace happy path that saves.
+
+## S3.2 Index decision (deviates from the plan's stated column — deliberately, to avoid redundant-index debt)
+The plan said index `field_visibility(field_def_id)`. **That index would be redundant**: V21 already
+declares `UNIQUE(field_def_id, role_def_id)`, whose btree's LEADING column is `field_def_id`, so
+`field_def_id` lookups (`findByFieldDefId`, the write resolver's `WHERE fv.field_def_id = ?`) are
+already covered. The genuinely-uncovered access is the **join on `fv.role_def_id`** used by the hot
+read-redaction batch (`hiddenFieldIds`/`readOnlyFieldIds`: `JOIN role_def rd ON rd.id = fv.role_def_id`)
+and the `ON DELETE CASCADE` from `role_def`. **V116** therefore indexes `field_visibility(role_def_id)`
+(RB-10 §3: "index every foreign key"), the correct, non-redundant addition.
+
+## S3.3 Files
+- `V116__field_visibility_role_def_index.sql` (new) — `idx_field_visibility_role_def`. **High-water now V116.**
+- `PermissionSchemeController.java` — inject `FieldDefRepository`; guard `getFieldVisibility` /
+  `setFieldVisibility` / `deleteFieldVisibility`; cross-workspace consistency check.
+- `FieldVisibilityServiceTest.java` (new, unit, 8).
+- `PermissionSchemeControllerAccessTest.java` (new, unit, 5).
+- `ai-rules/00-ORCHESTRATOR.md` §6 (high-water V116, next V117) + regenerated AI-rule files.
+
+## S3.4 Acceptance criteria
+- The FLS rule surface is gated on `manage_permissions` for the owning workspace; cross-tenant
+  authoring/reading is denied 403; a cross-workspace field/role pairing is rejected 400. ✔ (access test)
+- The resolver's fail-open-read / fail-closed-write / EDITABLE-default contract is unit-pinned. ✔
+- The FK is indexed; Flyway boots V1→V116 and `ddl-auto=validate` passes. ✔
+- No behaviour change on current data (FLS tables empty; index additive). ✔
+
+## S3.5 Validation (local, 2026-06-21)
+- Unit: `-Dgroups=unit clean verify` → **1431 tests, 0 failures**, checkstyle 0, coverage met.
+- Guardrails: all **blocking** rules pass (pre-existing frontend hex baseline warn only).
+- Integration (Docker): `FlywayMigrationIntegrationTest` 2/2 (V1→V116 boot + validate),
+  `FieldLevelSecurityIT` 13/13 (no FLS regression).
+
+## S3.6 Follow-on / flagged (NOT in this slice — scope discipline)
+- **Other unguarded mutators on `PermissionSchemeController`** (`create`/`delete` scheme,
+  `createRole`/`deleteRole` parity, `setPermissions`) are a separate RBAC-hardening item — logged, not
+  smuggled in here.
+- FLS Slice 4 (seed demo `role_def` + `field_visibility` rows so enforcement is exercisable in a
+  running app) remains. Slice 5 (core-column FLS) deferred by Deepak (2026-06-21).
+
+## Status
+
+**EPIC COMPLETE for Phase-1 scope (2026-06-21)** — the three enforcement slices are built,
+validated, and merged on remote `main`: Slice 1 server-side read redaction + write guard (PR #416),
+Slice 2 HIDDEN-field exclusion from the user BQL context — closes the BQL exfiltration path
+(PR #427), Slice 3 rule-surface RBAC guard + resolver contract test + `field_visibility→role_def`
+FK index V116 (PR #430).
+
+**Remaining, outside Phase-1 scope:** Slice 4 (seed demo rules / admin UI so enforcement is
+exercisable out of the box — enforcement is inert-but-safe until rules are authored) and Slice 5
+(core-column FLS), both explicitly deferred by Deepak on 2026-06-21.

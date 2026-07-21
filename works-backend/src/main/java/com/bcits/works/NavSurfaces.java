@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -9,9 +10,9 @@ import java.util.Map;
  * navigation surfaces a member may SEE (the front-end consumes {@code /rbac/me.surfaces} and only
  * falls back to its own copy if the server omits it).
  *
- * <p>Tier hierarchy mirrors {@link RbacService}: VIEWER(1) &lt; MEMBER(2) &lt; LEAD(3) &lt;
+ * <p>Tier hierarchy mirrors {@link RbacGate}: VIEWER(1) &lt; MEMBER(2) &lt; LEAD(3) &lt;
  * ADMIN(4) &lt; OWNER(5). This governs nav VISIBILITY (declutter) only — it is NOT the access
- * boundary. Every action/query is still authorised by {@link RbacService} (RB-10 §2, RB-40 §1);
+ * boundary. Every action/query is still authorised by {@link RbacGate} (RB-10 §2, RB-40 §1);
  * hiding a surface never grants or denies access.
  */
 public final class NavSurfaces {
@@ -25,6 +26,7 @@ public final class NavSurfaces {
         MIN_TIER.put("dashboard", 1);
         MIN_TIER.put("myworks", 2);
         MIN_TIER.put("notifications", 2);
+        MIN_TIER.put("messenger", 1);
         MIN_TIER.put("account", 1);
         // Deliver
         MIN_TIER.put("smcockpit", 3);
@@ -65,6 +67,7 @@ public final class NavSurfaces {
         MIN_TIER.put("poworkspace", 3);
         MIN_TIER.put("leadership", 4);
         MIN_TIER.put("adminops", 4);
+        MIN_TIER.put("operatingmodel", 4);
         MIN_TIER.put("bql", 2);
     }
 

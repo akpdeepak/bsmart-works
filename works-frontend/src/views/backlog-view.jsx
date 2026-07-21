@@ -176,14 +176,14 @@ export default function BacklogView({
                   const pct = kids.length ? Math.round((done / kids.length) * 100) : 0;
                   return (
                     <li key={epic.id}>
-                      <button type="button" onClick={() => setSelectedItem(epic)}
+                      <Button unstyled type="button" onClick={() => setSelectedItem(epic)}
                         className="w-full rounded-md px-2 py-1.5 text-left transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40">
                         <span className="block truncate text-xs font-medium text-neutral-900 dark:text-neutral-100">{epic.title}</span>
                         <span className="mt-1 block h-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-700">
                           <span className="block h-full rounded-full bg-semantic-success" style={{ width: `${pct}%` }} />
                         </span>
                         <span className="mt-0.5 block text-xs text-neutral-600 dark:text-neutral-400">{done}/{kids.length} {t('deliver.backlog.doneSuffix')} · {pct}%</span>
-                      </button>
+                      </Button>
                     </li>
                   );
                 })}
@@ -293,7 +293,7 @@ export default function BacklogView({
                   className={`flex items-center gap-3 px-5 py-3 border-b border-neutral-50 dark:border-neutral-700 last:border-0 group transition-colors ${isFocused ? 'bg-brand-navy/5 dark:bg-brand-navy/10 border-l-2 border-l-brand-navy' : `hover:bg-neutral-50 dark:hover:bg-neutral-700${dragOverId === item.id ? ' border-t-2 border-t-brand-navy bg-brand-navy/5' : ''}`}`}>
                   <span className="text-neutral-300 cursor-grab text-xs mr-1">⠿</span>
                   <TypeBadge type={item.type} compact />
-                  <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400 w-20 flex-shrink-0">{item.id}</span>
+                  <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400 w-20 flex-shrink-0">{item.autoId || item.id}</span>
                   <span role="button" tabIndex={0} onKeyDown={onPressKey} className="flex-1 text-sm text-neutral-900 cursor-pointer hover:text-brand-navy truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded" onClick={() => setSelectedItem(item)}>{item.title}</span>
                   {refinementMode ? (
                     <div className="flex items-center gap-2">

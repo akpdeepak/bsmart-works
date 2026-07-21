@@ -29,8 +29,8 @@
  * identical to before this layer existed.
  */
 @org.hibernate.annotations.FilterDef(
-        name = WorkspaceFilterActivator.FILTER_NAME,
+        name = com.bcits.works.shared.WorkspaceFilterActivator.FILTER_NAME,
         parameters = @org.hibernate.annotations.ParamDef(
-                name = WorkspaceFilterActivator.PARAM_NAME,
+                name = com.bcits.works.shared.WorkspaceFilterActivator.PARAM_NAME,
                 type = String.class))
 package com.bcits.works;

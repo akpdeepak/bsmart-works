@@ -1,4 +1,13 @@
 package com.bcits.works;
+import com.bcits.works.reporting.AggregationService;
+
+import com.bcits.works.workspaces.Team;
+import com.bcits.works.workspaces.TeamRepository;
+import com.bcits.works.shared.RbacGate;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,7 +29,7 @@ import java.util.Map;
  * <p><b>Tenant safety (RB-40 §1, RB-10 §2):</b> the caller never dictates which workspace's rows
  * come back. The workspace is <i>derived from the data</i> — from the project (PROJECT) or the team
  * (TEAM), or taken from the request only for ORG/PERSONAL — and then the caller's membership +
- * {@code view_items} permission is proven via {@link RbacService} before any query runs. Every query
+ * {@code view_items} permission is proven via {@link RbacGate} before any query runs. Every query
  * is finally bounded by a mandatory {@link #WORKSPACE_SCOPE} predicate, so a foreign project/team id
  * can never leak rows. Identifiers (status/type/priority) are fixed literals; all user values are bound.
  */
@@ -37,11 +46,11 @@ public class AggregationController {
     private final TeamRepository teamRepository;
     private final AggregationService aggregationService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public AggregationController(JdbcTemplate jdbc, TeamRepository teamRepository,
                                  AggregationService aggregationService, AuthenticatedUser authenticatedUser,
-                                 RbacService rbac) {
+                                 RbacGate rbac) {
         this.jdbc = jdbc;
         this.teamRepository = teamRepository;
         this.aggregationService = aggregationService;

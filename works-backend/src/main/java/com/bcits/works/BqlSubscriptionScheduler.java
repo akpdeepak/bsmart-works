@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.TenantScope;
+
 import java.time.OffsetDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

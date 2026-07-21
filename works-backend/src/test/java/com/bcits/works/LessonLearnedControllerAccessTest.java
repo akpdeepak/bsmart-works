@@ -1,4 +1,13 @@
 package com.bcits.works;
+import com.bcits.works.projects.LessonLearned;
+import com.bcits.works.projects.LessonLearnedController;
+import com.bcits.works.projects.LessonLearnedRepository;
+
+import com.bcits.works.auth.RbacService;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

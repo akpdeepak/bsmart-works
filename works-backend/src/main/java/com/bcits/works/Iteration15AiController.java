@@ -1,4 +1,10 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.projects.SprintVarianceService;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,11 +30,11 @@ public class Iteration15AiController {
     private final CockpitCoachService coachService;
     private final CockpitDigestService digestService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public Iteration15AiController(Iteration15AiService service, SprintVarianceService varianceService,
                                    CockpitCoachService coachService, CockpitDigestService digestService,
-                                   AuthenticatedUser authenticatedUser, RbacService rbac) {
+                                   AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.service = service;
         this.varianceService = varianceService;
         this.coachService = coachService;

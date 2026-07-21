@@ -1,4 +1,10 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
+
+import com.bcits.works.shared.AuthenticatedUser;
+import com.bcits.works.service.CsatResponse;
+import com.bcits.works.service.CsatResponseRepository;
+import com.bcits.works.service.CsatService;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,10 +26,10 @@ public class ServiceCsatController {
     private final CsatResponseRepository csat;
     private final CsatService csatService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public ServiceCsatController(CsatResponseRepository csat, CsatService csatService,
-                                 AuthenticatedUser authenticatedUser, RbacService rbac) {
+                                 AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.csat = csat;
         this.csatService = csatService;
         this.authenticatedUser = authenticatedUser;

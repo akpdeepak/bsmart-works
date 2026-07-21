@@ -1,5 +1,28 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.RbacService;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.EventService;
+import com.bcits.works.knowledge.Article;
+import com.bcits.works.knowledge.ArticleAnalyticsService;
+import com.bcits.works.knowledge.ArticleApprovalRepository;
+import com.bcits.works.knowledge.ArticleCommentRepository;
+import com.bcits.works.knowledge.ArticleController;
+import com.bcits.works.knowledge.ArticleDao;
+import com.bcits.works.knowledge.ArticleDiffService;
+import com.bcits.works.knowledge.ArticleRepository;
+import com.bcits.works.knowledge.ArticleService;
+import com.bcits.works.knowledge.ArticleVersionRepository;
+import com.bcits.works.knowledge.ArticleWorkflowService;
+import com.bcits.works.knowledge.KnowledgeSpace;
+import com.bcits.works.knowledge.KnowledgeSpaceController;
+import com.bcits.works.knowledge.KnowledgeSpaceRepository;
+import com.bcits.works.knowledge.SpaceFollowerService;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
@@ -47,15 +70,18 @@ class KnowledgeTenantIsolationTest {
     private final ArticleDao articleDao = mock(ArticleDao.class);
     private final KnowledgeSpaceRepository spaceRepository = mock(KnowledgeSpaceRepository.class);
     private final RbacService rbac = mock(RbacService.class);
-    private final ArticleService articleService = mock(ArticleService.class);
-    private final ArticleWatcherService articleWatcherService = mock(ArticleWatcherService.class);
+    private final ArticleApprovalRepository approvalRepository = mock(ArticleApprovalRepository.class);
     private final SpaceFollowerService spaceFollowerService = mock(SpaceFollowerService.class);
     private final WebhookService webhookService = mock(WebhookService.class);
 
-    private final ArticleController articles = new ArticleController(
-        articleRepository, articleVersionRepository, articleCommentRepository, workflowService,
-        analyticsService, diffService, eventService, authenticatedUser, articleDao, spaceRepository, rbac,
-        articleService, articleWatcherService, spaceFollowerService, webhookService);
+    // A real ArticleService (built from the mocks) so the controller's delegation actually runs the
+    // tenant/RBAC isolation logic that now lives in the service (RB-10 §2, RB-40 §1).
+    private final ArticleService articleService = new ArticleService(
+        articleRepository, articleVersionRepository, articleCommentRepository,
+        spaceRepository, approvalRepository, workflowService,
+        analyticsService, diffService, articleDao, eventService, rbac,
+        webhookService, spaceFollowerService);
+    private final ArticleController articles = new ArticleController(articleService, authenticatedUser);
     private final KnowledgeSpaceController spaces = new KnowledgeSpaceController(
         spaceRepository, articleRepository, eventService, authenticatedUser, rbac);
 

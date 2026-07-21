@@ -1,41 +1,53 @@
 # EPIC 7 - bSmart Today
 
-Status: In progress  
-Branch: `epic/07-bsmart-today`  
-Roadmap: V.20
+Status: Code-verified complete; PR [#487](https://github.com/akpdeepak/bsmart-works/pull/487) awaiting CI
+Branch: `codex/epic-07-today-completion`
+Roadmap: V.20 Phase 3 / W3
 
 ## Intent
 
-Make Home/Today a calm daily clarity surface instead of only a configurable dashboard grid. The
-experience should answer: what matters now, what needs attention, and what should I do next.
+Make `/` a calm, role-aware daily clarity surface that answers what matters, why it matters, and
+what the user can do next without opening a dense reporting grid.
 
-## Source Requirements
+## Code-Reconciled Scope
 
-- Today is the default authenticated landing page.
-- Today must feel calm, habit-forming, and role-aware.
-- The daily surface should include a greeting/confidence message, AI/manual brief fallback,
-  max-five needs-attention list, work today, approvals/waiting, risks, suggested next actions, and
-  quiet wins.
-- Role-specific Today layouts are required for developer, team lead or scrum master, product owner,
-  executive, and admin. Support/service agent coverage follows the Service Desk EPIC unless that
-  role is already available in the current navigation model.
-- Today must not leak cross-workspace data.
-- Today should remain fast on seeded data.
+The June 2026 slice supplied the Daily clarity band and configurable role canvases, but production
+code still lacked actionable attention state, support-agent Today, selected-workspace scoping on the
+developer aggregate, visible AI provenance/fallback, and several source-domain signals. This
+closeout owns those gaps.
 
-## Implementation Slice
+- Keep Today as the authenticated `/` landing page.
+- Preserve developer, scrum-master/team-lead, product-owner/PM, executive, and admin layouts; add
+  the support-agent layout because Service Desk and customer chat already exist in production.
+- Build attention from real priorities, approvals/waits, blockers, SLA/customer/code risk,
+  important customer messages, and DevSync activity.
+- Show at most five signals, with a reason, source, Open action, snooze, and dismiss on each.
+- Persist attention state by workspace, user, and role; a changed signal fingerprint must reappear
+  and returning users must see newly introduced signals.
+- Render the AI summary returned by the AI Control Plane, exact work-item source links, model/fallback
+  metadata, and a deterministic fallback when AI is unavailable.
+- Preserve personal and workspace role-template widget customization.
+- Require selected-workspace predicates and server RBAC for every Today aggregate.
+- Enforce a two-second read budget and validate the hot path on a fresh seeded PostgreSQL schema.
 
-- Add a pure `buildTodayBrief` helper that derives the daily clarity model from already fetched,
-  workspace-scoped role dashboard data.
-- Cap attention items at five and prioritize constrained signals:
-  blockers, overdue work, high priority work, sprint health, release readiness, portfolio risk, MFA
-  posture, and audit follow-up.
-- Render a daily clarity band above the existing role-specific Today canvas.
-- Preserve the existing configurable widget canvas and saved Today layout behavior.
-- Add frontend tests for role-aware brief construction and dashboard action routing.
+## Acceptance Scenarios
 
-## Validation Plan
+- Happy: every authorized role opens a populated, actionable Today surface.
+- Edge: attention remains capped at five; changed dismissed signals return; snoozed signals return
+  after their deadline.
+- Empty: quiet-win copy replaces an empty attention list; AI fallback remains visible.
+- Error: failed AI calls produce deterministic content rather than a blank card.
+- Unauthorized: dashboard endpoints fail before service access when workspace/permission checks fail.
+- Cross-tenant: a multi-workspace user receives only the explicitly selected workspace; support
+  conversations and messages cannot cross the workspace boundary.
+- Performance: dashboard reads carry a two-second transaction timeout and the selected-workspace
+  integration scenario completes inside two seconds on seeded data.
 
-- `cd works-frontend && npm test -- today-brief dashboard-view`
-- `cd works-frontend && npm run build`
+## Verification
+
+- `node scripts/epic-07-completion.mjs`
+- `cd works-frontend && npm run verify`
+- `cd works-backend && ./mvnw -Dgroups=unit verify`
+- `cd works-backend && ./mvnw test-compile failsafe:integration-test failsafe:verify`
 - `npm run verify`
-- GitHub PR checks before merge to `main`
+- GitHub PR checks, squash merge, and post-merge `main` verification

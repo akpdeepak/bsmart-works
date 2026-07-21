@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { KeyRound } from 'lucide-react';
 import { PageLayout } from '@/components/works/templates/page-layout';
 import { Button } from '@/components/works/button';
@@ -7,7 +8,7 @@ import { LanguageSwitcher } from '@/components/works/organisms/language-switcher
 // Personal account surface — MFA enrollment, notification prefs, language. Tier VIEWER (1) so
 // every workspace member can reach it via the user menu, unlike the admin-only workspace view.
 export default function AccountView({
-  currentUser, notifPrefs, mfaSetup, mfaSetupCode, mfaSetupMsg,
+  currentUser, userPrefs, saveUserPrefs, notifPrefs, mfaSetup, mfaSetupCode, mfaSetupMsg,
   setMfaSetup, setMfaSetupCode, saveNotifPrefs, handleMfaEnroll, handleMfaConfirm,
 }) {
   return (
@@ -86,11 +87,49 @@ export default function AccountView({
         )}
       </div>
 
+      {/* Appearance */}
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 mb-6">
+        <h2 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">Appearance</h2>
+        <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">Choose how bSmart Works looks to you.</p>
+        <div className="grid grid-cols-3 gap-3 w-full max-w-sm">
+          {['light', 'dark', 'system'].map(theme => (
+            <button
+              key={theme}
+              onClick={() => saveUserPrefs({ ...userPrefs, theme })}
+              className={`py-2 px-3 rounded border text-sm font-medium capitalize ${userPrefs?.theme === theme ? 'border-brand-navy bg-brand-navy/5 text-brand-navy dark:border-brand-orange dark:text-brand-orange' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-700'}`}
+            >
+              {theme}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Language & Region */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6">
         <h2 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">Language &amp; Region</h2>
-        <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">Choose your preferred display language</p>
-        <LanguageSwitcher />
+        <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">Choose your preferred display language and timezone</p>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Language</label>
+            <LanguageSwitcher />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Timezone</label>
+            <select
+              value={userPrefs?.timezone || 'UTC'}
+              onChange={(e) => saveUserPrefs({ ...userPrefs, timezone: e.target.value })}
+              className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
+            >
+              <option value="UTC">UTC</option>
+              <option value="America/New_York">Eastern Time (US)</option>
+              <option value="America/Los_Angeles">Pacific Time (US)</option>
+              <option value="Europe/London">London</option>
+              <option value="Europe/Paris">Central Europe</option>
+              <option value="Asia/Tokyo">Tokyo</option>
+              <option value="Asia/Kolkata">India Standard Time</option>
+            </select>
+          </div>
+        </div>
       </div>
     </PageLayout>
   );

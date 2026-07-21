@@ -1,5 +1,13 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.RbacService;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.automation.AutomationController;
+import com.bcits.works.automation.AutomationRule;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 

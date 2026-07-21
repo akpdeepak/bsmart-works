@@ -1,5 +1,17 @@
 package com.bcits.works;
 
+import com.bcits.works.workspaces.TeamRoleService;
+import com.bcits.works.shared.RbacGate;
+
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.projects.RetroNote;
+import com.bcits.works.projects.RetroNoteRepository;
+import com.bcits.works.projects.RetroSession;
+import com.bcits.works.projects.RetroSessionRepository;
+import com.bcits.works.projects.SprintVarianceService;
+import com.bcits.works.ai.AiAssistService;
+import com.bcits.works.ai.AiControlPlaneService;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -32,11 +44,11 @@ public class CockpitCoachService {
     private final RetroSessionRepository retroSessions;
     private final RetroNoteRepository retroNotes;
     private final TeamRoleService teamRoles;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public CockpitCoachService(AiControlPlaneService controlPlane, JdbcTemplate jdbc,
                                RetroSessionRepository retroSessions, RetroNoteRepository retroNotes,
-                               TeamRoleService teamRoles, RbacService rbac) {
+                               TeamRoleService teamRoles, RbacGate rbac) {
         this.controlPlane = controlPlane;
         this.jdbc = jdbc;
         this.retroSessions = retroSessions;

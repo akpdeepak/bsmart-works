@@ -1,5 +1,10 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.User;
+import com.bcits.works.auth.UserRepository;
+
+
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;

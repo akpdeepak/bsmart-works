@@ -1,5 +1,16 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.RbacService;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.reporting.DashboardSuggestionService;
+import com.bcits.works.reporting.DashboardSummaryService;
+import com.bcits.works.ai.AiControlPlaneService;
+import com.bcits.works.ai.AiInvocationRepository;
+import com.bcits.works.ai.AiWorkspaceSettingsService;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;

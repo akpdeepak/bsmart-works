@@ -1,5 +1,14 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.RbacService;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.security.CustomerAttributionPiiService;
+import com.bcits.works.service.SupportChatAgentController;
+import com.bcits.works.service.SupportChatService;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -32,8 +41,10 @@ class SupportChatAgentControllerAccessTest {
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
 
+    private final CustomerAttributionPiiService attributionPii = mock(CustomerAttributionPiiService.class);
+
     private final SupportChatAgentController controller =
-        new SupportChatAgentController(chat, authenticatedUser, rbac);
+        new SupportChatAgentController(chat, authenticatedUser, rbac, attributionPii);
 
     SupportChatAgentControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

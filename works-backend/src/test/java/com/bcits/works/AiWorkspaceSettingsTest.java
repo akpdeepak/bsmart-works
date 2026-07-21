@@ -1,5 +1,10 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.ai.AiWorkspaceSettings;
+import com.bcits.works.ai.AiWorkspaceSettingsRepository;
+import com.bcits.works.ai.AiWorkspaceSettingsService;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 

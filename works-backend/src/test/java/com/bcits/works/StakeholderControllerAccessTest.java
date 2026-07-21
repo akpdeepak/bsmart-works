@@ -1,5 +1,13 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.RbacService;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.security.StakeholderPiiService;
+import com.bcits.works.service.StakeholderController;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -29,8 +37,10 @@ class StakeholderControllerAccessTest {
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
 
+    private final StakeholderPiiService stakeholderPii = mock(StakeholderPiiService.class);
+
     private final StakeholderController controller =
-            new StakeholderController(repo, authenticatedUser, rbac);
+            new StakeholderController(repo, authenticatedUser, rbac, stakeholderPii);
 
     StakeholderControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

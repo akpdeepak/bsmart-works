@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.shared.AuditHashChain;
+import com.bcits.works.shared.AuditLogEntry;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

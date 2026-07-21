@@ -4,6 +4,7 @@ const ROLE_LABELS = {
   developer: 'Developer',
   'scrum-master': 'Scrum Master',
   'product-owner': 'Product Owner',
+  'support-agent': 'Support Agent',
   executive: 'Leadership',
   admin: 'Admin',
 };
@@ -12,6 +13,7 @@ const ROLE_ACTIONS = {
   developer: { label: 'Plan my day', view: 'myworks' },
   'scrum-master': { label: 'Review board', view: 'board' },
   'product-owner': { label: 'Groom backlog', view: 'backlog' },
+  'support-agent': { label: 'Open support inbox', view: 'supportinbox' },
   executive: { label: 'Open portfolio', view: 'projects' },
   admin: { label: 'Manage workspace', view: 'workspace' },
 };
@@ -20,6 +22,7 @@ const ROLE_SECONDARY_ACTIONS = {
   developer: { label: 'Open sprint', view: 'sprint' },
   'scrum-master': { label: 'Open sprint', view: 'sprint' },
   'product-owner': { label: 'Open releases', view: 'releases' },
+  'support-agent': { label: 'Open service desk', view: 'service' },
   executive: { label: 'Open releases', view: 'releases' },
   admin: { label: 'Open security', view: 'security' },
 };
@@ -28,6 +31,7 @@ const ROLE_QUIET_WINS = {
   developer: 'No urgent personal queue pressure is visible right now.',
   'scrum-master': 'Sprint signals are calm enough for focused facilitation.',
   'product-owner': 'Backlog and release signals are not showing immediate pressure.',
+  'support-agent': 'No customer conversation needs urgent attention right now.',
   executive: 'Portfolio signals are steady enough for a measured review.',
   admin: 'Workspace administration has no urgent signal in this view.',
 };
@@ -50,7 +54,7 @@ function isHighPriority(item) {
 }
 
 function itemTitle(item, fallback) {
-  return item?.title || item?.name || item?.summary || fallback;
+  return item?.title || item?.name || item?.subject || item?.summary || fallback;
 }
 
 function withId(prefix, item, index) {
@@ -70,6 +74,8 @@ function cap(items) {
 function developerAttention(data, today) {
   const blockers = data?.blockers || [];
   const items = data?.myOpenItems || [];
+  const pendingReviews = data?.pendingReviews || [];
+  const devSyncHighlights = data?.devSyncHighlights || [];
   return cap([
     ...blockers.map((blocker, index) => ({
       id: withId('blocker', blocker, index),
@@ -79,6 +85,13 @@ function developerAttention(data, today) {
         : 'Blocked work needs clearing before flow can continue.',
       tone: 'danger',
       view: 'myworks',
+    })),
+    ...pendingReviews.map((review, index) => ({
+      id: withId('review', review, index),
+      title: itemTitle(review, 'Code review request'),
+      reason: `Approval is waiting in ${review.repo || 'the code review queue'}.`,
+      tone: 'warning',
+      view: 'developer',
     })),
     ...items.filter((item) => isOverdue(item.due_date || item.dueDate, today)).map((item, index) => ({
       id: withId('overdue', item, index),
@@ -94,6 +107,15 @@ function developerAttention(data, today) {
       tone: 'warning',
       view: 'myworks',
     })),
+    ...devSyncHighlights
+      .filter((highlight) => !pendingReviews.some((review) => review.id === highlight.id))
+      .map((highlight, index) => ({
+        id: withId('devsync', highlight, index),
+        title: itemTitle(highlight, 'DevSync update'),
+        reason: `${highlight.status || 'Code'} activity changed and may affect today's work.`,
+        tone: 'neutral',
+        view: 'developer',
+      })),
   ]);
 }
 
@@ -132,7 +154,17 @@ function scrumMasterAttention(data) {
 function productOwnerAttention(data, today) {
   const ungroomed = data?.ungroomedItems || [];
   const upcoming = data?.upcomingReleases || [];
+  const approvals = data?.approvals || [];
   return cap([
+    ...approvals.map((approval, index) => ({
+      id: withId('approval', approval, index),
+      title: itemTitle(approval, 'Article approval'),
+      reason: approval.reviewer_due_date
+        ? `Approval is waiting; review due ${approval.reviewer_due_date}.`
+        : 'Approval is waiting for your review.',
+      tone: 'warning',
+      view: 'knowledge',
+    })),
     ...upcoming.filter((release) => isOverdue(release.release_date, today)).map((release, index) => ({
       id: withId('release-overdue', release, index),
       title: itemTitle(release, 'Release date needs review'),
@@ -162,6 +194,18 @@ function productOwnerAttention(data, today) {
   ]);
 }
 
+function slaRiskAttention(data) {
+  return (data?.slaRisks || []).map((risk, index) => ({
+    id: withId('sla', risk, index),
+    title: itemTitle(risk, 'SLA risk'),
+    reason: risk.state === 'BREACHED'
+      ? `${risk.metric || 'Service'} SLA is breached.`
+      : `${risk.metric || 'Service'} SLA is due within 24 hours.`,
+    tone: risk.state === 'BREACHED' ? 'danger' : 'warning',
+    view: 'sla',
+  }));
+}
+
 function executiveAttention(data) {
   const overdueActions = data?.overdueActions || [];
   const raid = data?.raidSummary || [];
@@ -170,6 +214,7 @@ function executiveAttention(data) {
   const health = data?.overallHealth ?? null;
 
   return cap([
+    ...slaRiskAttention(data),
     ...(health !== null && health < 50 ? [{
       id: 'portfolio-health',
       title: 'Portfolio health below target',
@@ -191,6 +236,37 @@ function executiveAttention(data) {
       tone: risks + issues > 5 ? 'danger' : 'warning',
       view: 'reports',
     }] : []),
+  ]);
+}
+
+function supportAgentAttention(data) {
+  const conversations = data?.conversations || [];
+  const messages = data?.importantMessages || [];
+  return cap([
+    ...slaRiskAttention(data),
+    ...conversations.filter((item) => item.status === 'ESCALATED').map((item, index) => ({
+      id: withId('support-escalated', item, index),
+      title: itemTitle(item, 'Escalated customer conversation'),
+      reason: item.assigned_agent_id
+        ? 'Customer escalation is assigned and waiting for progress.'
+        : 'Customer escalation is waiting for an agent.',
+      tone: 'danger',
+      view: 'supportinbox',
+    })),
+    ...messages.map((message, index) => ({
+      id: withId('support-message', message, index),
+      title: itemTitle(message, 'Customer message'),
+      reason: 'A customer sent a recent message in an unresolved conversation.',
+      tone: 'warning',
+      view: 'supportinbox',
+    })),
+    ...conversations.filter((item) => item.status === 'OPEN').map((item, index) => ({
+      id: withId('support-open', item, index),
+      title: itemTitle(item, 'Open customer conversation'),
+      reason: 'Customer conversation is open and needs review.',
+      tone: 'warning',
+      view: 'supportinbox',
+    })),
   ]);
 }
 
@@ -231,6 +307,8 @@ function attentionFor(role, data, today) {
       return scrumMasterAttention(data);
     case 'product-owner':
       return productOwnerAttention(data, today);
+    case 'support-agent':
+      return supportAgentAttention(data);
     case 'executive':
       return executiveAttention(data);
     case 'admin':

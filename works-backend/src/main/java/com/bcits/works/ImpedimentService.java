@@ -1,5 +1,14 @@
 package com.bcits.works;
 
+import com.bcits.works.workspaces.TeamRoleService;
+import com.bcits.works.shared.RbacGate;
+
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.EventService;
+import com.bcits.works.projects.Impediment;
+import com.bcits.works.projects.ImpedimentRepository;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,11 +39,11 @@ public class ImpedimentService {
         "executive", Set.of("DECISION_NEEDED"));
 
     private final ImpedimentRepository repo;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final EventService events;
     private final TeamRoleService teamRoles;
 
-    public ImpedimentService(ImpedimentRepository repo, RbacService rbac, EventService events,
+    public ImpedimentService(ImpedimentRepository repo, RbacGate rbac, EventService events,
                              TeamRoleService teamRoles) {
         this.repo = repo;
         this.rbac = rbac;
@@ -105,7 +114,7 @@ public class ImpedimentService {
     }
 
     /** Age of an open impediment in whole days from when it was raised; 0 if unknown. */
-    static long ageDays(Impediment i, LocalDate today) {
+    public static long ageDays(Impediment i, LocalDate today) {
         if (i.getRaisedAt() == null) return 0;
         LocalDate end = i.getResolvedAt() != null ? i.getResolvedAt() : today;
         long days = end.toEpochDay() - i.getRaisedAt().toEpochDay();
@@ -113,12 +122,12 @@ public class ImpedimentService {
     }
 
     /** Raise types the given team role may create; empty set for unknown roles. Pure. */
-    static Set<String> allowedRaiseTypes(String roleKey) {
+    public static Set<String> allowedRaiseTypes(String roleKey) {
         return RAISE_TYPES_BY_ROLE.getOrDefault(roleKey, Set.of());
     }
 
     /** SLA contract: a CRITICAL raise left unresolved for more than one day is breached. Pure. */
-    static boolean slaBreached(Impediment i, LocalDate today) {
+    public static boolean slaBreached(Impediment i, LocalDate today) {
         return "CRITICAL".equals(i.getSeverity()) && !"RESOLVED".equals(i.getStatus())
                 && ageDays(i, today) > 1;
     }

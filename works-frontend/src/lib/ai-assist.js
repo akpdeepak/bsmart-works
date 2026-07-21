@@ -79,21 +79,22 @@ export const aiAssistClient = {
   /**
    * Get proactive nudges for the Today dashboard.
    *
-   * Fallback: { nudges: [], fallback: true }
-   * → TodayNudges section renders nothing (clean degradation: AI off = section absent).
-   * The Today dashboard still renders its full manual layout when nudges are empty.
+   * Fallback: a deterministic, workspace-scoped summary with fallback metadata. The Today
+   * surface renders it honestly and keeps the manual dashboard available.
    *
    * @param {string} workspaceId
-   * @param {string} userId
-   * @returns {Promise<{ nudges: Array<{ text: string }>, fallback: boolean }>}
+   * @returns {Promise<{ summary: string, nudges: Array<{ text: string, workItemId: string, title: string }>, fallback: boolean, meta: object }>}
    */
-  async getTodayNudges(workspaceId, userId) {
+  async getTodayNudges(workspaceId) {
     try {
-      return await api.send(
-        `/ai/today-nudges?workspaceId=${ws(workspaceId)}&userId=${encodeURIComponent(userId)}`
-      );
+      return await api.send(`/ai/today-nudges?workspaceId=${ws(workspaceId)}`);
     } catch {
-      return { nudges: [], fallback: true };
+      return {
+        summary: 'AI is unavailable. Use the workspace-scoped priorities below as your daily brief.',
+        nudges: [],
+        fallback: true,
+        meta: { fallback: true },
+      };
     }
   },
 };

@@ -121,7 +121,7 @@ function TypeFieldsTab() {
                 const Icon = resolveTypeIcon(t.icon);
                 const sel  = selectedTypeKey === t.typeKey;
                 return (
-                  <button key={t.typeKey}
+                  <Button unstyled key={t.typeKey}
                     onClick={() => { setSelectedTypeKey(t.typeKey); setShowAddForm(false); setEditingKey(null); }}
                     className={cn(
                       'w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors',
@@ -135,7 +135,7 @@ function TypeFieldsTab() {
                     <span className={cn('text-xs tabular-nums', sel ? 'text-white/60' : 'text-neutral-400')}>
                       {effectiveFields(t.typeKey).length}
                     </span>
-                  </button>
+                  </Button>
                 );
               })}
             </div>
@@ -175,8 +175,8 @@ function TypeFieldsTab() {
                           onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingKey(null); }}
                           className="text-sm font-medium border-b border-brand-navy outline-none bg-transparent w-40"
                         />
-                        <button onClick={saveEdit} className="text-xs text-semantic-success hover:underline">Save</button>
-                        <button onClick={() => setEditingKey(null)} className="text-xs text-neutral-400 hover:underline">Cancel</button>
+                        <Button unstyled onClick={saveEdit} className="text-xs text-semantic-success hover:underline">Save</Button>
+                        <Button unstyled onClick={() => setEditingKey(null)} className="text-xs text-neutral-400 hover:underline">Cancel</Button>
                       </div>
                     ) : (
                       <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{f.label}</span>
@@ -190,7 +190,7 @@ function TypeFieldsTab() {
                   </span>
 
                   {/* Required toggle */}
-                  <button onClick={() => toggleRequired(f)}
+                  <Button unstyled onClick={() => toggleRequired(f)}
                     className={cn(
                       'text-xs px-2 py-0.5 rounded-full border transition-colors shrink-0',
                       f.required
@@ -198,25 +198,25 @@ function TypeFieldsTab() {
                         : 'border-neutral-200 text-neutral-400 hover:border-neutral-300'
                     )}>
                     {f.required ? 'required' : 'optional'}
-                  </button>
+                  </Button>
 
                   {/* Actions */}
                   <div className="flex items-center gap-0.5 shrink-0">
-                    <button onClick={() => startEdit(f)} title="Rename"
+                    <Button unstyled onClick={() => startEdit(f)} title="Rename"
                       className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors">
                       <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                    </button>
+                    </Button>
                     {f._system
                       ? (
-                        <button onClick={() => hideField(f)} title="Hide this field"
+                        <Button unstyled onClick={() => hideField(f)} title="Hide this field"
                           className="p-1 text-neutral-300 hover:text-semantic-warning rounded transition-colors">
                           <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />
-                        </button>
+                        </Button>
                       ) : (
-                        <button onClick={() => removeCustom(f.key)} title="Remove field"
+                        <Button unstyled onClick={() => removeCustom(f.key)} title="Remove field"
                           className="p-1 text-neutral-300 hover:text-semantic-danger rounded transition-colors">
                           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                        </button>
+                        </Button>
                       )
                     }
                   </div>

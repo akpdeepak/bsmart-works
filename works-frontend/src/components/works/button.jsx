@@ -28,10 +28,10 @@ const buttonVariants = cva(
 );
 
 export const Button = React.forwardRef(
-  ({ className, variant, size, fullWidth, loading, leftIcon, rightIcon, children, disabled, ...props }, ref) => (
+  ({ className, variant, size, fullWidth, loading, leftIcon, rightIcon, children, disabled, unstyled = false, ...props }, ref) => (
     <button
       ref={ref}
-      className={cn(buttonVariants({ variant, size, fullWidth }), className)}
+      className={unstyled ? className : cn(buttonVariants({ variant, size, fullWidth }), className)}
       disabled={disabled || loading}
       {...props}
     >

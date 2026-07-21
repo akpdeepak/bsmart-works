@@ -1,5 +1,18 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.FieldVisibilityService;
+import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.WorkItemBulkService;
+import com.bcits.works.workitems.WorkItemCommandService;
+import com.bcits.works.workitems.WorkItemController;
+import com.bcits.works.workitems.WorkItemEngagementService;
+import com.bcits.works.workitems.WorkItemReadService;
+import com.bcits.works.workitems.WorkItemRepository;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
@@ -41,27 +54,15 @@ class WorkItemControllerPaginationTest {
     private static final String CALLER = "user-A";
 
     private final WorkItemRepository repository   = mock(WorkItemRepository.class);
-    private final EventService eventService       = mock(EventService.class);
     private final JdbcTemplate jdbc               = mock(JdbcTemplate.class);
-    private final NotificationRepository notifRepo = mock(NotificationRepository.class);
-    private final UserRepository userRepository   = mock(UserRepository.class);
-    private final EmailService emailService       = mock(EmailService.class);
-    private final NotificationBatchService batch  = mock(NotificationBatchService.class);
     private final AuthenticatedUser auth          = mock(AuthenticatedUser.class);
-    private final RbacService rbac                = mock(RbacService.class);
-    private final DodChecklistService dod         = mock(DodChecklistService.class);
-    private final ExtensionExecutionService ext   = mock(ExtensionExecutionService.class);
-    private final WorkflowRuleEngine wfRules      = mock(WorkflowRuleEngine.class);
-    private final StatusConfigService statusCfg   = mock(StatusConfigService.class);
-    private final BoardWipLimitService wip        = mock(BoardWipLimitService.class);
-
-    private final WatcherService watchers          = mock(WatcherService.class);
+    private final FieldVisibilityService fieldVisibility = mock(FieldVisibilityService.class);
+    private final WorkItemReadService readService = new WorkItemReadService(
+            jdbc, repository, auth, new ObjectMapper(), fieldVisibility);
 
     private final WorkItemController controller = new WorkItemController(
-            repository, eventService, jdbc, notifRepo, userRepository,
-            emailService, batch, auth, rbac, dod, ext, wfRules, statusCfg, wip,
-            mock(WorkItemBulkService.class), watchers, mock(AutomationService.class),
-            mock(FunnelService.class), mock(FieldVisibilityService.class));
+            auth, mock(WorkItemBulkService.class), readService,
+            mock(WorkItemCommandService.class), mock(WorkItemEngagementService.class));
 
     WorkItemControllerPaginationTest() {
         when(auth.id()).thenReturn(CALLER);

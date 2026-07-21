@@ -1,3 +1,9 @@
+---
+status: historical
+runtime_context: false
+superseded_by: ai-rules/README.md
+---
+
 # Claude Code — install prompt
 
 > **Status: already applied.** This prompt was used to bootstrap the `ai-rules/` system into this repo.

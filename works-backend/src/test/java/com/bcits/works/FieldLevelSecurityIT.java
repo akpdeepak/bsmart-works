@@ -1,5 +1,16 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.shared.BqlContext;
+import com.bcits.works.shared.BqlException;
+
+import com.bcits.works.shared.BqlCompiler;
+import com.bcits.works.shared.BqlContextFactory;
+import com.bcits.works.workitems.FieldDefController;
+import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.WorkItemReadService;
+import com.bcits.works.workitems.WorkItemFieldValue;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -22,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
@@ -65,6 +77,9 @@ class FieldLevelSecurityIT {
     @Autowired JdbcTemplate jdbc;
     @Autowired WorkItemReadService readService;
     @Autowired FieldDefController fieldDefController;
+    @Autowired BqlContextFactory contextFactory;   // FLS Slice 2: BQL custom-field gate
+    @Autowired BqlCompiler bqlCompiler;             // FLS Slice 2: end-to-end compile rejection
+    @Autowired BqlController bqlController;         // FLS Slice 2: /bql/schema enumeration
     @PersistenceContext EntityManager em;
 
     // ── Fixture ids ──────────────────────────────────────────────────────────────────────────
@@ -215,7 +230,7 @@ class FieldLevelSecurityIT {
             .containsEntry(FD_HIDDEN, SALARY_VALUE);
 
         List<WorkItemFieldValue> values = fieldDefController.getValues(ITEM);
-        assertThat(values).extracting(WorkItemFieldValue::getFieldDefId)
+        assertThat(values).extracting(v -> v.getFieldDefId())
             .as("ADMIN sees the HIDDEN field via the dedicated values endpoint")
             .contains(FD_HIDDEN);
     }
@@ -234,7 +249,7 @@ class FieldLevelSecurityIT {
             .doesNotContainKey(FD_HIDDEN);
 
         List<WorkItemFieldValue> values = fieldDefController.getValues(ITEM);
-        assertThat(values).extracting(WorkItemFieldValue::getFieldDefId)
+        assertThat(values).extracting(v -> v.getFieldDefId())
             .as("VIEWER must NOT receive the HIDDEN field via the dedicated values endpoint")
             .doesNotContain(FD_HIDDEN);
     }
@@ -416,5 +431,74 @@ class FieldLevelSecurityIT {
             .as("the list/board choke point strips HIDDEN but keeps un-ruled fields")
             .doesNotContainKey(FD_HIDDEN)
             .containsEntry(FD_NORMAL, EXTRA_VALUE);
+    }
+
+    // ── (5) FLS Slice 2: a HIDDEN field cannot be INFERRED via BQL (filter oracle + schema leak) ──
+    // The read path (above) strips a HIDDEN field's VALUE from responses, but BQL was a side channel:
+    // a low-tier user could filter on the HIDDEN field (e.g. `salary > X`) and binary-search its value
+    // from which rows match, and the /bql/schema autocomplete listed the HIDDEN field's existence/type.
+    // Slice 2 excludes HIDDEN custom fields from the per-user BQL context so both channels are closed.
+
+    /**
+     * The inference oracle is closed: for the VIEWER (Salary HIDDEN) the field is not in the BQL
+     * context, so the compiler rejects a filter on it exactly like an unknown field — no row-presence
+     * oracle. The ADMIN (no rule) may still filter on it, and an un-ruled field stays queryable for the
+     * VIEWER (no over-restriction).
+     */
+    @Test
+    void lowTier_cannotFilterOnHiddenField_inBql_inferenceOracleClosed() {
+        BqlContext low = contextFactory.forUser(USER_LOW, WS);
+        assertThat(low.customField("salary"))
+            .as("VIEWER: the HIDDEN custom field is NOT queryable in BQL").isNull();
+        assertThat(low.customField("title_extra"))
+            .as("VIEWER: an un-ruled custom field stays queryable (no over-restriction)").isNotNull();
+
+        BqlContext high = contextFactory.forUser(USER_HIGH, WS);
+        assertThat(high.customField("salary"))
+            .as("ADMIN (no HIDDEN rule): the field remains queryable").isNotNull();
+
+        // End-to-end compile: filtering on the HIDDEN field is rejected for the VIEWER (unknown field),
+        // so result-count/row-presence can never reveal its value; ADMIN may still filter on it.
+        assertThatThrownBy(() -> bqlCompiler.compileFor("salary = '42'", low))
+            .as("VIEWER filtering on a HIDDEN field is rejected — the binary-search oracle is closed")
+            .isInstanceOf(BqlException.class)
+            .hasMessageContaining("Unknown field");
+        assertThatCode(() -> bqlCompiler.compileFor("salary = '42'", high))
+            .as("ADMIN can still filter on the field").doesNotThrowAnyException();
+        assertThatCode(() -> bqlCompiler.compileFor("title_extra = '42'", low))
+            .as("VIEWER can still filter on an un-ruled custom field").doesNotThrowAnyException();
+    }
+
+    /**
+     * The schema/autocomplete endpoint ({@code GET /bql/schema}) must not enumerate a HIDDEN field's
+     * existence/type to a user who may not see it. It builds its context via the same
+     * {@code BqlContextFactory.forUser}, so the Slice 2 exclusion closes this surface too: the VIEWER's
+     * schema omits the HIDDEN field but keeps the un-ruled one; the ADMIN still sees it.
+     */
+    @Test
+    void bqlSchema_omitsHiddenCustomField_forLowTier_butListsItForHighTier() {
+        actAs(USER_LOW);
+        List<String> lowAliases = schemaCustomFieldAliases(WS);
+        assertThat(lowAliases)
+            .as("VIEWER's BQL schema must NOT enumerate the HIDDEN custom field")
+            .doesNotContain("salary")
+            .as("VIEWER's BQL schema still lists an un-ruled custom field")
+            .contains("title_extra");
+
+        actAs(USER_HIGH);
+        assertThat(schemaCustomFieldAliases(WS))
+            .as("ADMIN (no rule) still sees the field in the BQL schema (no over-restriction)")
+            .contains("salary", "title_extra");
+    }
+
+    /** Custom-field aliases the {@code /bql/schema} endpoint exposes to the acting user. */
+    @SuppressWarnings("unchecked")
+    private List<String> schemaCustomFieldAliases(String workspaceId) {
+        Map<String, Object> schema = bqlController.schema(workspaceId);
+        List<Map<String, Object>> fields = (List<Map<String, Object>>) schema.get("fields");
+        return fields.stream()
+            .filter(f -> Boolean.TRUE.equals(f.get("custom")))
+            .map(f -> String.valueOf(f.get("alias")))
+            .toList();
     }
 }

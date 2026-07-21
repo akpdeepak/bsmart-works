@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "steps": [
+    { "id": "process-tests", "kind": "policy", "command": "node --test scripts/tests/*.test.mjs" },
+    { "id": "task-contract", "kind": "policy", "command": "node scripts/check-task-execution-contract.mjs" },
+    { "id": "project-state", "kind": "policy", "command": "node scripts/generate-project-state.mjs --check" },
+    { "id": "ai-rules", "kind": "policy", "command": "node scripts/generate-ai-rules.mjs --check" },
+    { "id": "dod-sync", "kind": "policy", "command": "bash scripts/check-dod-sync.sh" },
+    { "id": "repo-quality", "kind": "policy", "command": "node scripts/quality-gates.mjs && node scripts/uiux-premium-bar.mjs && node scripts/uiux-end-to-end-scope.mjs && node scripts/epics-01-05-completion.mjs && node scripts/epic-06-completion.mjs && node scripts/epic-07-completion.mjs && node scripts/epic-08-completion.mjs" },
+    { "id": "guardrails", "kind": "policy", "command": "bash scripts/guardrails.sh" },
+    { "id": "docs-links", "kind": "docs", "command": "node scripts/check-doc-integrity.mjs" },
+    { "id": "frontend-lint", "kind": "frontend", "command": "cd works-frontend && npm run lint" },
+    { "id": "frontend-test", "kind": "frontend", "command": "cd works-frontend && npm test" },
+    { "id": "frontend-build", "kind": "frontend", "command": "cd works-frontend && npm run build" },
+    { "id": "backend-unit", "kind": "backend", "command": "cd works-backend && ./mvnw -B -Dgroups=unit verify" },
+    {
+      "id": "backend-integration",
+      "kind": "backend-integration",
+      "selectors": ["**/*IntegrationTest.java", "**/*IT.java"],
+      "command": "cd works-backend && ./mvnw -B -Djacoco.skip=true -Dgroups=integration verify"
+    },
+    { "id": "e2e", "kind": "e2e", "command": "bash scripts/run-e2e.sh" },
+    { "id": "jetbrains-plugin", "kind": "jetbrains", "command": "cd tools/jetbrains-plugin && gradle buildPlugin --no-daemon" },
+    { "id": "deploy-config", "kind": "deploy", "command": "for env_file in deploy/env/local.example deploy/env/staging.example deploy/env/production.example; do docker compose --env-file \"$env_file\" -f docker-compose.deploy.yml config --quiet || exit 1; done" },
+    { "id": "deploy-artifact-verification", "kind": "release", "command": "node scripts/verify-deploy-artifact.mjs" }
+  ],
+  "profiles": {
+    "changed": ["process-tests", "task-contract", "project-state", "ai-rules", "dod-sync", "repo-quality", "guardrails", "docs-links"],
+    "full": [
+      "process-tests", "task-contract", "project-state", "ai-rules", "dod-sync", "repo-quality", "guardrails", "docs-links",
+      "frontend-lint", "frontend-test", "frontend-build", "backend-unit",
+      "backend-integration", "e2e", "deploy-config"
+    ],
+    "release": [
+      "process-tests", "task-contract", "project-state", "ai-rules", "dod-sync", "repo-quality", "guardrails", "docs-links",
+      "frontend-lint", "frontend-test", "frontend-build", "backend-unit",
+      "backend-integration", "e2e", "deploy-config", "deploy-artifact-verification"
+    ]
+  }
+}

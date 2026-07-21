@@ -5,6 +5,9 @@ import { api } from '@/lib/apiClient';
 import { downloadMarkdown } from '@/lib/export';
 import KnowledgeView from './knowledge-view';
 
+const LAZY_EDITOR_TEST_TIMEOUT_MS = 15_000;
+const LAZY_EDITOR_QUERY_TIMEOUT_MS = 10_000;
+
 vi.mock('@/lib/apiClient', () => ({ api: { send: vi.fn(), raw: vi.fn() } }));
 vi.mock('@/lib/export', () => ({ downloadMarkdown: vi.fn() }));
 
@@ -95,7 +98,7 @@ describe('KnowledgeView', () => {
 
   // ── UAT: Know Studio editing flow ──────────────────────────────────────────────
 
-  it('opens a block-format article in the block editor (always uses block editor)', () => {
+  it('opens a block-format article in the block editor (always uses block editor)', async () => {
     const blocks = JSON.stringify([{ id: 'b1', type: 'heading1', content: 'My Heading', metadata: {} }]);
     render(
       <KnowledgeView {...baseProps} editingArticle
@@ -103,21 +106,27 @@ describe('KnowledgeView', () => {
         selectedArticle={{ id: 'A1', title: 'Doc', status: 'DRAFT', contentFormat: 'blocks', contentBlocks: blocks }} />,
     );
     // The block editor is always rendered — content from the article's blocks is visible.
-    expect(screen.getByLabelText('Block editor')).toBeInTheDocument();
-  });
+    // (The editor is code-split, so its first render resolves asynchronously.)
+    expect(await screen.findByLabelText('Block editor', {}, {
+      timeout: LAZY_EDITOR_QUERY_TIMEOUT_MS,
+    })).toBeInTheDocument();
+  }, LAZY_EDITOR_TEST_TIMEOUT_MS);
 
-  it('autosaves block edits quietly after a debounce, not on every keystroke', () => {
+  it('autosaves block edits quietly after a debounce, not on every keystroke', async () => {
+    const updateArticle = vi.fn(() => Promise.resolve({}));
+    const blocks = JSON.stringify([{ id: 'b1', type: 'paragraph', content: '', metadata: {} }]);
+    render(
+      <KnowledgeView {...baseProps} editingArticle
+        updateArticle={updateArticle}
+        selectedSpace={{ id: 'S1', name: 'Ops' }}
+        selectedArticle={{ id: 'A1', title: 'Doc', status: 'DRAFT', contentFormat: 'blocks', contentBlocks: blocks }} />,
+    );
+    // Resolve the code-split editor chunk with real timers, THEN freeze the clock for the debounce.
+    const para = await screen.findByLabelText('Paragraph content', {}, {
+      timeout: LAZY_EDITOR_QUERY_TIMEOUT_MS,
+    });
     vi.useFakeTimers();
     try {
-      const updateArticle = vi.fn(() => Promise.resolve({}));
-      const blocks = JSON.stringify([{ id: 'b1', type: 'paragraph', content: '', metadata: {} }]);
-      render(
-        <KnowledgeView {...baseProps} editingArticle
-          updateArticle={updateArticle}
-          selectedSpace={{ id: 'S1', name: 'Ops' }}
-          selectedArticle={{ id: 'A1', title: 'Doc', status: 'DRAFT', contentFormat: 'blocks', contentBlocks: blocks }} />,
-      );
-      const para = screen.getByLabelText('Paragraph content');
       fireEvent.change(para, { target: { value: 'h' } });
       fireEvent.change(para, { target: { value: 'he' } });
       fireEvent.change(para, { target: { value: 'hel' } });
@@ -131,7 +140,7 @@ describe('KnowledgeView', () => {
     } finally {
       vi.useRealTimers();
     }
-  });
+  }, LAZY_EDITOR_TEST_TIMEOUT_MS);
 
   it('fetches full article detail on open (so views/analytics are tracked)', () => {
     const fetchArticleDetail = vi.fn();

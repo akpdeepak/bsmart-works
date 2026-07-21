@@ -1,4 +1,11 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.EventService;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -29,11 +36,11 @@ public class RequestTypeController {
     private final RequestTypeService typeService;
     private final EventService eventService;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
     public RequestTypeController(RequestTypeRepository types, RequestTypeService typeService,
-                                 EventService eventService, AuthenticatedUser authenticatedUser, RbacService rbac) {
+                                 EventService eventService, AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.types = types;
         this.typeService = typeService;
         this.eventService = eventService;

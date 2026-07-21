@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -70,6 +72,32 @@ class ArchitectureTest {
     }
 
     @Test
+    void domainCarveIsNonVacuousAndFlatRootCannotRegress() throws IOException {
+        Map<String, Long> classesByModule = appClasses.stream()
+                .filter(javaClass -> javaClass.getPackageName().startsWith("com.bcits.works."))
+                .collect(Collectors.groupingBy(javaClass ->
+                                javaClass.getPackageName().substring("com.bcits.works.".length()).split("\\.")[0],
+                        Collectors.counting()));
+
+        assertThat(MODULE_PACKAGES)
+                .as("every declared module must own production classes so the cycle gate is non-vacuous")
+                .allSatisfy(module -> assertThat(classesByModule.getOrDefault(module, 0L))
+                        .as("production classes in module %s", module)
+                        .isPositive());
+
+        final long flatRootSourceFiles;
+        try (var files = Files.list(MODULE_ROOT)) {
+            flatRootSourceFiles = files
+                    .filter(path -> path.getFileName().toString().endsWith(".java"))
+                    .filter(path -> !path.getFileName().toString().equals("package-info.java"))
+                    .count();
+        }
+        assertThat(flatRootSourceFiles)
+                .as("the flat root is a temporary composition layer and must never grow again")
+                .isLessThanOrEqualTo(72);
+    }
+
+    @Test
     void modulePackagesDoNotCaseCollideWithTopLevelClasses() throws IOException {
         // Regression guard (#243 boot failure): a sub-package whose name matches a top-level class
         // name case-insensitively (e.g. package `project` vs class `Project.java`) makes the JVM
@@ -108,6 +136,17 @@ class ArchitectureTest {
     }
 
     @Test
+    void workItemControllerRemainsAnHttpAdapter() throws IOException {
+        String source = Files.readString(MODULE_ROOT.resolve("workitems/WorkItemController.java"));
+        long lines = source.lines().count();
+
+        assertThat(lines).isLessThan(400);
+        assertThat(source).doesNotContain("JdbcTemplate", "new WorkItemReadService",
+                "new WorkItemCommandService", "workspaceForWorkItem", ".update(");
+        assertThat(source).contains("WorkItemBulkRequest", "WorkItemEngagementService");
+    }
+
+    @Test
     void repositoriesDoNotDependOnControllers() {
         noClasses().that().haveSimpleNameEndingWith("Repository")
                 .should().dependOnClassesThat().haveSimpleNameEndingWith("Controller")
@@ -124,12 +163,45 @@ class ArchitectureTest {
     }
 
     @Test
+    void eventAndAuditLayerDoNotDependOnPiiEntities() {
+        // RB-40 §3 rule 1 (EPIC-P1-pii-vault Slice 4d): the append-only event log and the immutable
+        // audit chain must carry only opaque ids/tokens — never raw personal data, which crypto-shred
+        // cannot reach once written. Structurally forbid the event/audit-writing layer from depending on
+        // the PII-carrying identity entities, so a future change cannot serialize a name/email into an
+        // immutable record without failing the build. The grep guardrail (scripts/guardrails.sh) backs
+        // this at the call-site level; this is the structural backstop.
+        noClasses().that().haveSimpleName("EventService")
+                .or().haveSimpleName("AppEvent")
+                .or().haveSimpleName("SecurityAuditLogService")
+                .should().dependOnClassesThat().haveSimpleName("User")
+                .orShould().dependOnClassesThat().haveSimpleName("CustomerUser")
+                .orShould().dependOnClassesThat().haveSimpleName("Stakeholder")
+                .because("the immutable event log + audit chain must carry only ids/tokens, never raw PII (RB-40 §3 rule 1)")
+                .check(appClasses);
+    }
+
+    @Test
     void modulePackagesAreFreeOfCycles() {
         // Forward-ready: as domains are carved into com.bcits.works.<module> packages (Identity
         // first — ADR-0001 §7), this fails the build on any cyclic dependency between modules.
         slices().matching("com.bcits.works.(*)..")
                 .should().beFreeOfCycles()
                 .because("modules must stay acyclic so they remain independently extractable (ADR-0001)")
+                .check(appClasses);
+    }
+
+    @Test
+    void sharedKernelDoesNotDependOnDomainModules() {
+        // The kernel may be depended on by every module but must never point back into one.
+        // References to the flat root package are tolerated only until the domain carve empties it
+        // (EPIC-03 Phase 2 §3) — this rule locks the direction against the carved modules.
+        List<String> domainModules = MODULE_PACKAGES.stream()
+                .filter(p -> !p.equals("shared"))
+                .map(p -> "com.bcits.works." + p + "..")
+                .toList();
+        noClasses().that().resideInAPackage("com.bcits.works.shared..")
+                .should().dependOnClassesThat().resideInAnyPackage(domainModules.toArray(String[]::new))
+                .because("shared is the kernel: everything may depend on it; it depends on no domain module (EPIC-03 Phase 2 §2)")
                 .check(appClasses);
     }
 }

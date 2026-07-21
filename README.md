@@ -11,10 +11,10 @@ bSmart Works is a full-stack, multi-tenant project management platform covering 
 | Layer | Choice |
 |-------|--------|
 | Backend | Java 21 · Spring Boot 4.1.0 · Maven |
-| Database | PostgreSQL · Flyway migrations · event-sourced (`events` table) |
+| Database | PostgreSQL · Flyway migrations · append-only event/audit history (`events`) |
 | Auth | Spring Security · JWT (stateless) · MFA TOTP · WebAuthn/passkeys |
 | Frontend | React 19.2 · Vite 8 · JavaScript/JSX · Tailwind CSS |
-| AI | Anthropic Claude API (Haiku/Sonnet) via AI Control Plane |
+| AI | Provider-neutral model adapters via the AI Control Plane |
 
 ---
 
@@ -32,7 +32,7 @@ See [DEPLOY-LOCAL.md](DEPLOY-LOCAL.md) for full instructions, environment variab
 
 **Develop locally (hot-reload):**
 ```bash
-# Prerequisites: Java 21, Node 20, Docker
+# Prerequisites: Java 21, Node 22, Docker
 npm install                          # wires husky pre-commit hook
 docker compose up -d                 # backing services
 cd works-backend && ./mvnw spring-boot:run   # API on :8080
@@ -49,8 +49,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development workflow.
 |-----|----------------|
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, daily loop, branching, pre-commit, PR checklist |
 | [DEPLOY-LOCAL.md](DEPLOY-LOCAL.md) | Docker Compose full-stack deployment |
-| [TECH-DEBT.md](TECH-DEBT.md) | Known deliberate shortcuts + payoff triggers |
-| [CURRENT-STATE.md](CURRENT-STATE.md) | Current implementation inventory and roadmap baseline |
+| GitHub issues labelled `tech-debt` | Known deliberate shortcuts, owner, and payoff trigger |
+| [CURRENT-STATE.md](CURRENT-STATE.md) | Pointer to the generated executable-state inventory |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [SECURITY.md](SECURITY.md) | Vulnerability disclosure + security posture |
 | [ACCESSIBILITY.md](ACCESSIBILITY.md) | WCAG 2.2 AA conformance |
@@ -75,7 +75,7 @@ node scripts/generate-ai-rules.mjs
 
 ## Project status
 
-- **Iterations complete:** 1–20 (all 20 iterations shipped)
-- **Flyway high-water:** V109 (next: V110)
-- **Active work:** bSmart Transformation Roadmap V.20 / V1.6 overlay, beginning with EPIC 0 safety and truth baseline
+- **Executable state:** [`ai-rules/current-state.generated.json`](ai-rules/current-state.generated.json)
+- **Active work:** GitHub `agent-task` issues, linked pull requests, and required checks
+- **Program reference:** bSmart Transformation Roadmap V.20 / V1.6 overlay
 - **Owner:** Deepak Pandey / BCITS

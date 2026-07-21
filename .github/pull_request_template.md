@@ -1,52 +1,49 @@
-<!-- bSmart Works PR. The checklist mirrors the Orchestrator's Definition of Done (ai-rules/00-ORCHESTRATOR.md §4).
-     CI enforces most of these automatically; tick the rest honestly.
-     dod-version: 2026-06-04-r1 — must match the tag in ai-rules/00-ORCHESTRATOR.md. -->
+<!-- bSmart Works PR — keep this concise. The linked issue owns the full task contract. -->
 
-## What & why
-<!-- One or two sentences. Link the iteration/work item. -->
+## Summary
 
-- Iteration: <!-- e.g. 5 — confirm this work belongs to the active iteration -->
-- Work item / issue:
+<!-- What changed and why? -->
 
-## Definition of Done
+## Scope
 
-**Backend**
-- [ ] New endpoints validate input with `@Valid`, sit under `/api/v1/`, plural kebab path
-- [ ] Schema changes are a Flyway migration (next sequential `V{n}__snake_case.sql` — Orchestrator §6), plural table names
-- [ ] RBAC checks are in the service layer via `RbacService`, not in controllers
-- [ ] Errors use the standard `{ code, message, field? }` shape via `@ControllerAdvice`
-- [ ] New code is in `com.bcits.works` (package rename TD-001 complete)
-- [ ] Logging uses SLF4J `Logger` — no `System.out.println`
-- [ ] AI features have a documented deterministic fallback
-- [ ] Any PR touching auth, CORS, RBAC, JWT, or file upload is labelled `security-review`
+- Task: <!-- GH-123 / #123 -->
+- In scope:
+- Out of scope:
+- Risk lane: <!-- docs | standard | large/risky | release -->
 
-**Frontend / UI**
-- [ ] No raw hex / arbitrary px — token classes only (`brand-*`, `neutral-*`, `semantic-*`)
-- [ ] New components follow the `button.jsx` cva + `cn()` pattern, filed at the correct Atomic Design level
-- [ ] Every interactive element has all 5 states: default, hover, active, disabled, focus ring
-- [ ] Every new section or panel supports expand/collapse with localStorage persistence
-- [ ] Loading states use skeleton screens (`animate-pulse`) — no content-area spinners
-- [ ] Empty states include: icon + why it's empty + CTA to fix it
-- [ ] Form errors are inline beneath the field, not toast-only
-- [ ] Page-level actions sit in the sticky header top-right, not floating or in sidebar
-- [ ] No Tailwind `gray-*` classes — only `neutral-*` from the token set
-- [ ] Orange/amber appear at most 1–2 times per screen
-- [ ] All text meets WCAG 2.1 AA contrast (`text-neutral-400` or lighter never used for body text)
-- [ ] Status/state never communicated by colour alone — label or icon always accompanies colour
-- [ ] Every custom non-`<button>` click target has `role`, `tabIndex`, and keyboard handler
-- [ ] Focus moves into opened panels/modals; returns to trigger on close
-- [ ] Lists that can exceed ~100 rows use virtual scrolling
-- [ ] Mutations use optimistic UI — UI updates before API response
-- [ ] Z-index uses named tokens (`z-modal`, `z-toast` …), not arbitrary values
-- [ ] All HTTP goes through the `apiClient` wrapper (no inline fetch/axios)
-- [ ] New list endpoints use `PageResponse<T>` + `Pageable` — no bare `findAll()` on user data
+## Validation
 
-**Cross-cutting**
-- [ ] Scope matches the task — no speculative features or abstractions
-- [ ] PR diff ≤ 400 lines of changed code, or the description explains why it is larger
-- [ ] Any new npm/Maven dependency is documented in the PR description (why added, license, bundle impact)
-- [ ] `node scripts/generate-ai-rules.mjs --check` passes (AI rules in sync with CLAUDE.md)
-- [ ] `bash scripts/check-dod-sync.sh` passes (DoD version tag in sync)
+<!-- Human-readable summary. Exact AC/test mappings belong in the JSON evidence block below. -->
 
-## Screenshots / evidence
-<!-- For UI changes, before/after. For API changes, a sample request/response. -->
+<!-- bsmart-pr-evidence
+{
+  "protocol": "bsmart-pr/v1",
+  "task": "GH-000",
+  "planUrl": "https://github.com/akpdeepak/bsmart-works/issues/000",
+  "acceptance": [
+    { "id": "AC-1", "evidence": ["TEST-1"] }
+  ],
+  "validation": [
+    { "id": "TEST-1", "command": "replace with exact command", "status": "passed" }
+  ],
+  "tdd": {
+    "applicable": true,
+    "red": { "command": "replace", "evidence": "intended failure" },
+    "green": { "command": "replace", "evidence": "targeted pass" },
+    "finalGreen": { "command": "replace", "evidence": "pass after refactor" }
+  }
+}
+-->
+
+## Review-only decisions
+
+- [ ] Scope matches the linked task; follow-ups are separate.
+- [ ] Data model, migration, security, tenant isolation, RBAC, and AI risks have the required decision record/reviewer, or are not applicable.
+- [ ] UI evidence is attached for user-visible changes, or is not applicable.
+- [ ] The PR is ready only when its required checks and mapped acceptance evidence are green.
+
+## Screenshots or operational evidence
+
+<!-- Add links or N/A. Keep full logs in check artifacts. -->
+
+<!-- dod-version: 2026-07-19-r1 -->

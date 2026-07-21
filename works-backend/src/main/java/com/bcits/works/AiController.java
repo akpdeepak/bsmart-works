@@ -1,4 +1,20 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.PageResponse;
+import com.bcits.works.reporting.DashboardSuggestionService;
+import com.bcits.works.reporting.DashboardSummaryService;
+import com.bcits.works.ai.AiBudget;
+import com.bcits.works.ai.AiControlPlaneService;
+import com.bcits.works.ai.AiInvocation;
+import com.bcits.works.ai.AiInvocationRepository;
+import com.bcits.works.ai.AiPolicy;
+import com.bcits.works.ai.AiWorkspaceSettings;
+import com.bcits.works.ai.AiWorkspaceSettingsService;
 
 import jakarta.validation.Valid;
 import org.springframework.data.domain.PageRequest;
@@ -27,13 +43,13 @@ public class AiController {
     private final AiControlPlaneService controlPlane;
     private final AiInvocationRepository invocations;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final AiWorkspaceSettingsService settingsService;
     private final DashboardSummaryService dashboardSummary;
     private final DashboardSuggestionService dashboardSuggestion;
 
     public AiController(AiControlPlaneService controlPlane, AiInvocationRepository invocations,
-                        AuthenticatedUser authenticatedUser, RbacService rbac,
+                        AuthenticatedUser authenticatedUser, RbacGate rbac,
                         AiWorkspaceSettingsService settingsService,
                         DashboardSummaryService dashboardSummary,
                         DashboardSuggestionService dashboardSuggestion) {

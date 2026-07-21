@@ -1,34 +1,31 @@
-import { describe, it, expect } from 'vitest';
-import { classifyInboxItem, countActionableNotifications, getActionableInboxItems, groupInboxItems } from './smart-inbox';
+import { describe, expect, it } from 'vitest';
+import {
+  classifyInboxItem, countActionableNotifications, getActionableInboxItems, groupInboxItems,
+} from './smart-inbox';
 
-describe('smart inbox classification', () => {
-  it('maps common notification signals to action groups', () => {
-    expect(classifyInboxItem({ type: 'MENTION', message: 'Priya mentioned you' }).id).toBe('reply');
-    expect(classifyInboxItem({ type: 'ASSIGNED', message: 'WRK-1 assigned to you' }).id).toBe('assign');
-    expect(classifyInboxItem({ type: 'SLA_ESCALATION', message: 'Response SLA breached' }).id).toBe('escalate');
-    expect(classifyInboxItem({ type: 'ARTICLE_APPROVAL', message: 'Approval requested' }).id).toBe('approve');
-    expect(classifyInboxItem({ type: 'BQL_SUBSCRIPTION', message: 'Saved query changed' }).id).toBe('review');
+describe('smart inbox projection helpers', () => {
+  it('uses notification types instead of message-text heuristics for compatibility callers', () => {
+    expect(classifyInboxItem({ type: 'MENTION', message: 'opaque' }).id).toBe('reply');
+    expect(classifyInboxItem({ type: 'ASSIGNED', message: 'opaque' }).id).toBe('assign');
+    expect(classifyInboxItem({ type: 'SLA_ESCALATION', message: 'opaque' }).id).toBe('escalate');
+    expect(classifyInboxItem({ type: 'REPORT_DELIVERED', message: 'approval words do not matter' }).id).toBe('activity');
   });
 
-  it('counts actionable items, excluding read and snoozed activity', () => {
-    const snoozedIds = new Set(['N2']);
+  it('keeps informational and read notifications out of compatibility action counts', () => {
     const notifications = [
-      { id: 'N1', type: 'MENTION', message: 'You were mentioned', read: false },
-      { id: 'N2', type: 'ASSIGNED', message: 'Assigned to you', read: false },
-      { id: 'N3', type: 'REPORT_DELIVERED', message: 'Weekly report delivered', read: true },
-      { id: 'N4', type: 'SYSTEM', message: 'FYI only', read: false },
+      { id: 'N1', type: 'MENTION', read: false },
+      { id: 'N2', type: 'ASSIGNED', read: true },
+      { id: 'N3', type: 'WATCH', read: false },
     ];
-
-    expect(countActionableNotifications(notifications, { snoozedIds })).toBe(1);
-    expect(getActionableInboxItems(notifications, { snoozedIds }).map((item) => item.id)).toEqual(['N1']);
+    expect(countActionableNotifications(getActionableInboxItems(notifications))).toBe(1);
   });
 
-  it('groups actionable items by required action', () => {
-    const items = getActionableInboxItems([
-      { id: 'N1', type: 'MENTION', message: 'You were mentioned', read: false },
-      { id: 'N2', type: 'SLA_ESCALATION', message: 'SLA breached', read: false },
+  it('groups server items in the product action order', () => {
+    const groups = groupInboxItems([
+      { key: 'n:1', intent: 'ESCALATE' },
+      { key: 'n:2', intent: 'REPLY' },
+      { key: 'n:3', intent: 'APPROVE' },
     ]);
-
-    expect(groupInboxItems(items).map((group) => group.id)).toEqual(['reply', 'escalate']);
+    expect(groups.map((group) => group.id)).toEqual(['approve', 'reply', 'escalate']);
   });
 });

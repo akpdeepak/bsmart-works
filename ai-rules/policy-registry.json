@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "id": "BSW-TASK-001",
+      "title": "Every task has scope, acceptance criteria, and validation",
+      "source": "ai-rules/rulebooks/05-TASK-EXECUTION.md",
+      "enforcement": "auto-block",
+      "check": "node scripts/validate-pr-evidence.mjs --event $GITHUB_EVENT_PATH"
+    },
+    {
+      "id": "BSW-TDD-001",
+      "title": "Executable behavior follows RED, GREEN, REFACTOR",
+      "source": "ai-rules/rulebooks/05-TASK-EXECUTION.md",
+      "enforcement": "required-review",
+      "check": "PR evidence validates presence; reviewer validates chronology"
+    },
+    {
+      "id": "BSW-AI-001",
+      "title": "Provider instruction projections remain in sync and within budget",
+      "source": "ai-rules/AGENT-CORE.md",
+      "enforcement": "auto-block",
+      "check": "node scripts/generate-ai-rules.mjs --check"
+    },
+    {
+      "id": "BSW-STATE-001",
+      "title": "Current project facts match executable sources",
+      "source": "ai-rules/current-state.generated.json",
+      "enforcement": "auto-block",
+      "check": "node scripts/generate-project-state.mjs --check"
+    },
+    {
+      "id": "BSW-COORD-001",
+      "title": "Active writers have valid leases and non-overlapping paths",
+      "source": "ai-rules/rulebooks/05-TASK-EXECUTION.md",
+      "enforcement": "auto-block",
+      "check": "node scripts/github-task-coordinator.mjs"
+    },
+    {
+      "id": "BSW-SEC-001",
+      "title": "Tenant data is workspace scoped",
+      "source": "ai-rules/rulebooks/40-GOVERNANCE.md",
+      "enforcement": "auto-block",
+      "check": "TenantFilterCoverageTest and CrossTenantPkLoadAccessTest"
+    },
+    {
+      "id": "BSW-DESIGN-001",
+      "title": "Frontend uses the design system and accessible primitives",
+      "source": "ai-rules/rulebooks/30-DESIGN.md",
+      "enforcement": "auto-block",
+      "check": "bash scripts/guardrails.sh and frontend lint"
+    },
+    {
+      "id": "BSW-GIT-001",
+      "title": "Main is changed only through reviewed, green pull requests",
+      "source": "ai-rules/rulebooks/05-TASK-EXECUTION.md",
+      "enforcement": "required-review",
+      "check": "GitHub repository ruleset"
+    },
+    {
+      "id": "BSW-PERF-001",
+      "title": "Hot paths meet versioned benchmark profiles",
+      "source": "ai-rules/rulebooks/40-GOVERNANCE.md",
+      "enforcement": "target-state",
+      "check": "Performance profile rollout is tracked separately"
+    }
+  ]
+}

@@ -1,5 +1,9 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.security.ComplianceViolation;
+import com.bcits.works.security.ComplianceViolationService;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 

@@ -6,7 +6,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '@/lib/apiClient';
-import { translate, RTL_LOCALES, DEFAULT_LOCALE, LOCALES } from '@/lib/locales';
+import { translate, loadLocale, RTL_LOCALES, DEFAULT_LOCALE, LOCALES } from '@/lib/locales';
 
 const STORAGE_KEY = 'works.locale';
 const I18nContext = createContext(null);
@@ -25,9 +25,19 @@ function initialLocale() {
 
 export function I18nProvider({ children }) {
   const [locale, setLocaleState] = useState(initialLocale);
+  // Bumped once a lazily-loaded locale chunk arrives, so `t` re-runs against the newly registered table.
+  const [version, setVersion] = useState(0);
 
   // Apply <html lang/dir> whenever the locale changes.
   useEffect(() => { applyDocumentLocale(locale); }, [locale]);
+
+  // Lazy-load the non-default locale chunk, then trigger a re-render so `t` resolves the new strings.
+  useEffect(() => {
+    if (locale === DEFAULT_LOCALE) return;
+    let alive = true;
+    loadLocale(locale).then(() => { if (alive) setVersion((v) => v + 1); });
+    return () => { alive = false; };
+  }, [locale]);
 
   // On mount, reconcile with the signed-in user's saved preference (best-effort; ignored when
   // unauthenticated, since /users/me requires a token).
@@ -47,7 +57,10 @@ export function I18nProvider({ children }) {
     api.send('/users/me/locale', { method: 'PUT', body: { locale: next } }).catch(() => {});
   }, []);
 
-  const t = useCallback((key) => translate(locale, key), [locale]);
+  // `version` is a deliberate dependency: translate() reads a mutable module-level table that a
+  // lazy locale load mutates, so bumping `version` must give `t` a fresh identity to re-render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const t = useCallback((key) => translate(locale, key), [locale, version]);
 
   const value = useMemo(() => ({ locale, setLocale, t, locales: LOCALES }), [locale, setLocale, t]);
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

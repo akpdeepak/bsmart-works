@@ -1,4 +1,14 @@
 package com.bcits.works;
+import com.bcits.works.shared.RbacGate;
+
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.EventService;
+import com.bcits.works.reporting.Dashboard;
+import com.bcits.works.reporting.DashboardLayoutService;
+import com.bcits.works.reporting.DashboardRepository;
+import com.bcits.works.reporting.DashboardWidget;
+import com.bcits.works.reporting.DashboardWidgetRepository;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -23,8 +33,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TodayLayoutService {
 
-    static final Set<String> ROLE_KEYS =
-        Set.of("developer", "scrum-master", "product-owner", "executive", "admin");
+    public static final Set<String> ROLE_KEYS =
+        Set.of("developer", "scrum-master", "product-owner", "support-agent", "executive", "admin");
     static final int MAX_WIDGETS = 12;
     private static final String SURFACE_TODAY = "TODAY";
 
@@ -32,11 +42,11 @@ public class TodayLayoutService {
     private final DashboardWidgetRepository widgets;
     private final DashboardLayoutService layoutService;
     private final EventService eventService;
-    private final RbacService rbac;
+    private final RbacGate rbac;
 
     public TodayLayoutService(DashboardRepository dashboards, DashboardWidgetRepository widgets,
                               DashboardLayoutService layoutService, EventService eventService,
-                              RbacService rbac) {
+                              RbacGate rbac) {
         this.dashboards = dashboards;
         this.widgets = widgets;
         this.layoutService = layoutService;

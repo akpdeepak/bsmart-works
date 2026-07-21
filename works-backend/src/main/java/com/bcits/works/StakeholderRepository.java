@@ -8,6 +8,9 @@ import java.util.List;
 public interface StakeholderRepository extends JpaRepository<Stakeholder, String> {
     List<Stakeholder> findByProjectIdAndDeletedAtIsNull(String projectId);
 
+    /** Backfill guard (RB-40 §3, Slice 3): stakeholders not yet assigned a vault subject token. */
+    List<Stakeholder> findBySubjectTokenIsNull();
+
     /** Workspace-scoped fallback (RB-40 §1): only stakeholders in workspaces the caller belongs to. */
     @Query(nativeQuery = true,
            value = "SELECT * FROM stakeholder WHERE deleted_at IS NULL " +

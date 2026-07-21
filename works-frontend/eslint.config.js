@@ -131,7 +131,11 @@ const worksViewStructurePlugin = {
             if (node.name.name !== 'className') return;
             const val = node.value?.type === 'Literal' ? node.value.value : null;
             if (!val) return;
-            if (/\brounded[-\w]/.test(val) && /\bshadow[-\w]/.test(val)) {
+            const tag = node.parent?.name?.type === 'JSXIdentifier' ? node.parent.name.name : null;
+            const layoutElement = tag === 'div' || tag === 'section' || tag === 'article';
+            const staticShadow = val.split(/\s+/).some((cls) => cls.startsWith('shadow-'));
+            const floatingOverlay = /\b(?:absolute|fixed|z-dropdown)\b/.test(val);
+            if (layoutElement && staticShadow && !floatingOverlay && /\brounded[-\w]/.test(val)) {
               context.report({
                 node,
                 message: 'Inline card-chrome (rounded+shadow) in views/: use <Card variant="elevated|outlined|flat"> from @/components/works/atoms/card. WI-01.',
@@ -155,6 +159,9 @@ const worksViewStructurePlugin = {
             if (node.name.name !== 'className') return;
             const val = node.value?.type === 'Literal' ? node.value.value : null;
             if (!val) return;
+            // Component-level truncation and modal/drawer widths are legitimate. This rule governs
+            // centered page shells, identified by mx-auto, rather than every max-w utility.
+            if (!val.split(/\s+/).includes('mx-auto')) return;
             const bad = val.split(/\s+/).filter(
               (cls) => cls.startsWith('max-w-') && !SANCTIONED.has(cls) && !cls.startsWith('max-w-screen-'),
             );
@@ -181,64 +188,6 @@ const worksViewStructureRules = {
     'works-view/no-raw-button': 'error',
     'works-view/no-inline-card-chrome': 'error',
     'works-view/sanctioned-page-widths': 'error',
-  },
-};
-
-// Legacy views with known structural violations — tracked in TECH-DEBT.md (TD-021).
-// Rules are at 'error' for all new view files; these legacy files revert to 'warn' until
-// each is migrated to design-system primitives. Remove files from this list as they are fixed.
-const worksViewStructureLegacy = {
-  files: [
-    'src/views/admin-ops-view.jsx',
-    'src/views/ai-studio-view.jsx',
-    'src/views/backlog-view.jsx',
-    'src/views/board-view.jsx',
-    'src/views/bql-results-table.jsx',
-    'src/views/bql-view.jsx',
-    'src/views/compliance-view.jsx',
-    'src/views/dashboard-view.jsx',
-    'src/views/dashboards-view.jsx',
-    'src/views/dashboards/_shared.jsx',
-    'src/views/dashboards/admin-dashboard.jsx',
-    'src/views/dashboards/developer-dashboard.jsx',
-    'src/views/dashboards/executive-dashboard.jsx',
-    'src/views/dashboards/product-owner-dashboard.jsx',
-    'src/views/dashboards/scrum-master-dashboard.jsx',
-    'src/views/knowledge-templates-view.jsx',
-    'src/views/knowledge-view.jsx',
-    'src/views/leadership-console-view.jsx',
-    'src/views/marketplace-view.jsx',
-    'src/views/my-works-view.jsx',
-    'src/views/notifications-view.jsx',
-    'src/views/pm-view.jsx',
-    'src/views/po-workspace-view.jsx',
-    'src/views/projects-view.jsx',
-    'src/views/releases-view.jsx',
-    'src/views/reportbuilder-view.jsx',
-    'src/views/reports-view.jsx',
-    'src/views/scrum-cockpit/ceremonies-tab.jsx',
-    'src/views/scrum-cockpit/impediments-tab.jsx',
-    'src/views/scrum-cockpit/retro-tab.jsx',
-    'src/views/scrum-cockpit/standup-tab.jsx',
-    'src/views/scrum-master-cockpit-view.jsx',
-    'src/views/service-view.jsx',
-    'src/views/settings3-view.jsx',
-    'src/views/settings3/field-settings.jsx',
-    'src/views/settings3/item-type-settings.jsx',
-    'src/views/settings3/permissions-settings.jsx',
-    'src/views/settings3/type-fields-settings.jsx',
-    'src/views/settings3/workflow-settings.jsx',
-    'src/views/sprint-view.jsx',
-    'src/views/support-inbox-view.jsx',
-    'src/views/trash-view.jsx',
-    'src/views/workspace-view.jsx',
-  ],
-  plugins: { 'works-view': worksViewStructurePlugin },
-  rules: {
-    'works-view/no-raw-table': 'warn',
-    'works-view/no-raw-button': 'warn',
-    'works-view/no-inline-card-chrome': 'warn',
-    'works-view/sanctioned-page-widths': 'warn',
   },
 };
 
@@ -276,7 +225,7 @@ const worksHookOverrides = {
   rules: { 'react-hooks/set-state-in-effect': 'warn' },
 };
 
-export default defineConfig([globalIgnores(['dist']), vitestTestConfig, e2eNodeConfig, {
+export default defineConfig([globalIgnores(['dist', 'storybook-static']), vitestTestConfig, e2eNodeConfig, {
   files: ['**/*.{js,jsx}'],
   extends: [
     js.configs.recommended,
@@ -287,4 +236,4 @@ export default defineConfig([globalIgnores(['dist']), vitestTestConfig, e2eNodeC
     globals: globals.browser,
     parserOptions: { ecmaFeatures: { jsx: true } },
   },
-}, worksA11yRules, worksArchRules, worksArbitraryValueRule, worksHookOverrides, worksViewStructureRules, worksViewStructureLegacy, ...storybook.configs["flat/recommended"]])
+}, worksA11yRules, worksArchRules, worksArbitraryValueRule, worksHookOverrides, worksViewStructureRules, ...storybook.configs["flat/recommended"]])

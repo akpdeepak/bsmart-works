@@ -19,6 +19,7 @@ export default function PublicArticleView({ token }) {
 
   useEffect(() => {
     if (!token) { setLoading(false); setError('No share token.'); return; }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError(null);
     api.send(`/public/articles/${encodeURIComponent(token)}`)

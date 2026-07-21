@@ -1,10 +1,35 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.RbacService;
+import com.bcits.works.auth.UserRepository;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.EventService;
+import com.bcits.works.shared.FieldVisibilityService;
+import com.bcits.works.workitems.DodChecklistService;
+import com.bcits.works.workitems.StatusConfigService;
+import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.WorkItemBulkService;
+import com.bcits.works.workitems.WorkItemCommandService;
+import com.bcits.works.workitems.WorkItemController;
+import com.bcits.works.workitems.WorkItemEngagementService;
+import com.bcits.works.workitems.WorkItemReadService;
+import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.workitems.WorkflowRuleEngine;
+import com.bcits.works.messaging.NotificationBatchService;
+import com.bcits.works.messaging.WatcherService;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,7 +45,7 @@ import static org.mockito.Mockito.when;
 /**
  * Cross-tenant / unauthorized access tests for the work-item write paths.
  *
- * <p>Tenant isolation here is enforced by manual per-call scoping (RB-40 §1): the controller
+ * <p>Tenant isolation here is enforced by manual per-call scoping (RB-40 §1): the service layer
  * resolves the <em>resource's</em> workspace from its project, then gates the write through
  * {@link RbacService}. These tests prove that wiring — a caller acting on a resource in a
  * workspace they don't belong to is denied <b>before</b> anything is persisted — without needing a
@@ -40,7 +65,6 @@ class WorkItemControllerAccessTest {
     private final WorkItemRepository repository = mock(WorkItemRepository.class);
     private final EventService eventService = mock(EventService.class);
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
-    private final NotificationRepository notificationRepository = mock(NotificationRepository.class);
     private final UserRepository userRepository = mock(UserRepository.class);
     private final EmailService emailService = mock(EmailService.class);
     private final NotificationBatchService batchService = mock(NotificationBatchService.class);
@@ -51,12 +75,21 @@ class WorkItemControllerAccessTest {
     private final WorkflowRuleEngine workflowRules = mock(WorkflowRuleEngine.class);
     private final StatusConfigService statusConfig = mock(StatusConfigService.class);
     private final BoardWipLimitService wipLimits = mock(BoardWipLimitService.class);
+    private final WatcherService watcherService = mock(WatcherService.class);
+    private final FieldVisibilityService fieldVisibility = mock(FieldVisibilityService.class);
+    private final WorkItemReadService readService = new WorkItemReadService(
+            jdbc, repository, authenticatedUser, new ObjectMapper(), fieldVisibility);
+    private final WorkItemCommandService commandService = new WorkItemCommandService(
+            repository, eventService, jdbc, userRepository, emailService, batchService,
+            authenticatedUser, rbac, dodChecklists, extensions, workflowRules, statusConfig,
+            wipLimits, watcherService, mock(AutomationService.class), mock(FunnelService.class),
+            readService, new ObjectMapper(), org.mockito.Mockito.mock(com.bcits.works.workitems.TeamSequenceGenerator.class));
+    private final WorkItemEngagementService engagementService = new WorkItemEngagementService(
+            jdbc, authenticatedUser, rbac, watcherService);
 
     private final WorkItemController controller = new WorkItemController(
-            repository, eventService, jdbc, notificationRepository, userRepository,
-            emailService, batchService, authenticatedUser, rbac, dodChecklists, extensions, workflowRules,
-            statusConfig, wipLimits, mock(WorkItemBulkService.class), mock(WatcherService.class),
-            mock(AutomationService.class), mock(FunnelService.class), mock(FieldVisibilityService.class));
+            authenticatedUser, mock(WorkItemBulkService.class), readService, commandService,
+            engagementService);
 
     WorkItemControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);
@@ -230,6 +263,29 @@ class WorkItemControllerAccessTest {
         assertThat(controller.starItem("WRK-2")).containsEntry("starred", true);
 
         verify(jdbc).update(anyString(), eq(CALLER), eq("WRK-2"));
+    }
+
+    @Test
+    void watchItem_deniedForCallerOutsideTheResourceWorkspace() {
+        when(rbac.workspaceForWorkItem("WRK-1")).thenReturn(FOREIGN_WS);
+        when(rbac.getUserTier(CALLER, FOREIGN_WS)).thenReturn(0);
+
+        assertThatThrownBy(() -> controller.watchItem("WRK-1"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+
+        verify(watcherService, never()).watch(anyString(), anyString());
+    }
+
+    @Test
+    void watchers_areScopedAndReportTheCurrentCaller() {
+        when(rbac.workspaceForWorkItem("WRK-2")).thenReturn("ws-A");
+        when(rbac.getUserTier(CALLER, "ws-A")).thenReturn(1);
+        when(watcherService.watchers("WRK-2")).thenReturn(List.of(CALLER, "user-B"));
+
+        assertThat(controller.getWatchers("WRK-2"))
+                .containsEntry("watching", true)
+                .containsEntry("watchers", List.of(CALLER, "user-B"));
     }
 
     // RbacService.require() throws 403 when the caller lacks the permission in that workspace.

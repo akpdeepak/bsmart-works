@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.WorkspaceFilterActivator;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -22,6 +24,11 @@ public class CustomerFeedback {
     private String projectId;
     private String source = "PORTAL"; // PORTAL | EMAIL | COMMENT | INTERVIEW
     private String customer;
+    // Opaque vault token for the free-text "customer" attribution (RB-40 §3 Slice 3): the value is
+    // tokenized into the per-subject vault under this per-record token, resolved at render and
+    // "[erased]" after a shred. Replaces the persisted plaintext copy (dropped in the deferred CONTRACT).
+    @Column(name = "customer_subject_token")
+    private String customerSubjectToken;
     @NotBlank @Column(columnDefinition = "TEXT") private String content;
     private String sentiment;         // POSITIVE | NEUTRAL | NEGATIVE
     private String theme;
@@ -42,6 +49,8 @@ public class CustomerFeedback {
     public void setSource(String source) { this.source = source; }
     public String getCustomer() { return customer; }
     public void setCustomer(String customer) { this.customer = customer; }
+    public String getCustomerSubjectToken() { return customerSubjectToken; }
+    public void setCustomerSubjectToken(String customerSubjectToken) { this.customerSubjectToken = customerSubjectToken; }
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
     public String getSentiment() { return sentiment; }

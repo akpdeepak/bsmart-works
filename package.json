@@ -8,10 +8,17 @@
     "guardrails": "bash scripts/guardrails.sh",
     "premium-bar": "node scripts/uiux-premium-bar.mjs",
     "uiux:e2e-scope": "node scripts/uiux-end-to-end-scope.mjs",
+    "epics:1-5": "node scripts/epics-01-05-completion.mjs",
+    "epic:6": "node scripts/epic-06-completion.mjs",
+    "epic:7": "node scripts/epic-07-completion.mjs",
+    "epic:8": "node scripts/epic-08-completion.mjs",
     "quality-gates": "node scripts/quality-gates.mjs",
     "ai-rules": "node scripts/generate-ai-rules.mjs",
     "ai-rules:check": "node scripts/generate-ai-rules.mjs --check",
-    "verify": "npm run guardrails && npm run quality-gates && npm run ai-rules:check && npm run premium-bar && npm run uiux:e2e-scope"
+    "task-process:check": "node scripts/check-task-execution-contract.mjs",
+    "verify": "node scripts/verify.mjs --profile changed",
+    "verify:full": "node scripts/verify.mjs --profile full",
+    "verify:release": "node scripts/verify.mjs --profile release"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.0.2",

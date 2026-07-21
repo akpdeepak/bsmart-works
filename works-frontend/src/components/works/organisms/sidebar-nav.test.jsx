@@ -45,6 +45,14 @@ describe('SidebarNav', () => {
     }
   });
 
+  it('derives visibility from the shared server surface contract', () => {
+    render(<SidebarNav {...defaultProps} visibility={{ surfaces: ['dashboard', 'account'] }} />);
+    expect(screen.getByRole('button', { name: /^Today$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /My Account/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Backlog/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Security/i })).not.toBeInTheDocument();
+  });
+
   it('uses the brand-orange tone for the unread notifications badge', () => {
     render(<SidebarNav {...defaultProps} unreadCount={3} />);
     expect(screen.getByText('3').className).toMatch(/bg-brand-orange/);

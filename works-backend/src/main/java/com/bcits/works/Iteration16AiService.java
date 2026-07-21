@@ -1,4 +1,7 @@
 package com.bcits.works;
+import com.bcits.works.reporting.LeadershipService;
+import com.bcits.works.ai.AiAssistService;
+import com.bcits.works.ai.AiControlPlaneService;
 
 import org.springframework.stereotype.Service;
 

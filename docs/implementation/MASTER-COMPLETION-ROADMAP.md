@@ -1,3 +1,9 @@
+---
+status: historical-requirement-ledger
+live_status: github
+runtime_context: false
+---
+
 # bSmart Works — Master Completion Roadmap & Coverage Ledger
 
 > **Purpose.** This is the single, authoritative tracker for completing the **entire** scope of bSmart
@@ -60,9 +66,9 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 | WS | Workstream | Scope summary | Today | Phase |
 |----|-----------|----------------|------:|-------|
 | **W0** | Truth & control plane | Reconcile overclaiming docs; this ledger; SOURCE-OF-TRUTH reversal | 🟡 in progress | 0 |
-| **W1** | Governance & security closure | #243 central tenant filter, field-level security enforcement, PII vault + crypto-shred, BYOK/KMS, WebAuthn attestation, distributed rate-limit, JWT revocation, SOC2/ISO evidence | 🟠 ~15% | 1 |
-| **W2** | Architecture refactors | EPIC-3 real modularization, EPIC-4 real AppShell decomposition, god-class splits, FE code-split, AsyncBoundary adoption, token debt | 🟠 ~5% | 2 |
-| **W3** | Finish EPICs 3–12 to full scope | Slice → full plan for each shipped EPIC | 🟠 ~5–50% | 3 |
+| **W1** | Governance & security closure | #243 central tenant filter, field-level security enforcement, PII vault + crypto-shred, BYOK/KMS, WebAuthn attestation, distributed rate-limit, JWT revocation, SOC2/ISO evidence | ✅ Verified 2026-06-21 (PRs #415–#441; deferred sub-items in §4) | 1 |
+| **W2** | Architecture refactors | EPIC-3 real modularization, EPIC-4 real AppShell decomposition, god-class splits, FE code-split, AsyncBoundary adoption, token debt | ✅ Verified 2026-07-19 | 2 |
+| **W3** | Finish EPICs 3–12 to full scope | Slice → full plan for each shipped EPIC | 🟡 in progress; EPICs 3–7 verified | 3 |
 | **W4** | EPICs 13–27 — elevation | Premium/AI-native reframe over existing capabilities | ⚪ 0% | 5 |
 | **W5** | EPICs 13–27 — net-new builds | Answer Engine, Canvas, People Graph/Skills, onboarding, analytics, DX | ⚪ 0% | 5 |
 | **W6** | V1.6 overlay | Framework engine, 5 user types, operating model, team-key IDs, inline BQL, query boards, Messenger, profile, brand system, premium states, AI coach | 🟠 ~5% | 4 |
@@ -74,22 +80,22 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 
 ## 3. Transformation EPIC ledger (00–27) — verified status
 
-> **Verified-status note.** `ROADMAP-STATE.md` marks EPICs 3–12 "Completed." Independent code
-> verification (2026-06-20) shows each is a genuine but partial **first slice**. This ledger carries
-> the verified status; `ROADMAP-STATE.md` is being corrected to "Slice shipped (partial)".
+> **Verified-status note.** The 2026-06-20 audit found EPICs 3–12 were partial first slices. The
+> 2026-07-19 codebase closeout re-verified EPICs 1–5 from production source and executable gates;
+> EPICs 7–12 remain partial until separately closed.
 
 | EPIC | Title | Ledger | **Verified** | Underlying capability | DoD gap to close |
 |------|-------|--------|--------------|----------------------|------------------|
 | 0 | Hardening / Truth / Baseline | Completed | ✅ ~95% | n/a | residual doc drift (this phase) |
-| 1 | Tenant & RBAC hardening | Completed | 🟠 ~90% | built | central filter #243 (W1) |
-| 2 | Prod config & secrets | Completed | ✅ ~95% | n/a | — |
+| 1 | Tenant & RBAC hardening | Completed | ✅ Verified 2026-07-19 | built | — |
+| 2 | Prod config & secrets | Completed | ✅ Verified 2026-07-19 | n/a | — |
 | 25p | Quality gates (partial) | Completed | ✅ (partial scope) | n/a | full W7 bar |
-| 3 | Backend modularization | Completed | 🔴 ~4% | flat pkg intact | real module split (W2) |
-| 4 | Frontend architecture refactor | Completed | 🔴 ~5% | 4,605-line shell | real decomposition (W2) |
-| 5 | Premium design system | Completed | 🟠 ~15% | DS strong | dark/compact/state system |
-| 6 | Simplified navigation | Completed | 🟠 ~50% | built | full IA, palette, More |
-| 7 | bSmart Today | Completed | 🟠 ~35% | dashboards built | act/snooze/dismiss flows |
-| 8 | Smart Inbox | Completed | 🟠 ~35% | notifications built | act/convert/snooze flows |
+| 3 | Backend modularization | Completed | ✅ Verified 2026-07-19 | 14 populated modules | — |
+| 4 | Frontend architecture refactor | Completed | ✅ Verified 2026-07-19 | 5-line entry; 2,884-line guarded shell | — |
+| 5 | Premium design system | Completed | ✅ Verified 2026-07-19 | token/state/theme/density system | W7 owns exhaustive product QA |
+| 6 | Simplified navigation | Completed | ✅ Verified 2026-07-19 | built | — |
+| 7 | bSmart Today | Completed | ✅ Verified 2026-07-19 | six role layouts, sourced AI brief, actionable max-five attention, full daily signal model | — |
+| 8 | Smart Inbox | Completed | ✅ Verified 2026-07-19 | server action projection, exact count, durable state, sourced/fallback AI, direct source actions | — |
 | 9 | Connect Messaging | Completed | 🔴 ~10% | Messenger absent | full Messenger domain (W6) |
 | 10 | Work-item experience | Completed | 🟠 ~20% | core built | premium redesign + right panel |
 | 11 | Project command center | Completed | 🟠 ~25% | projects built | dedicated command surface |
@@ -115,24 +121,46 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 
 | Item | Status | DoD |
 |------|-------:|-----|
-| #243 central Hibernate tenant filter on all ~150 entities | 🟠 ~10% (Project only) | filter auto-applied, per-query predicates removed, cross-tenant IT on every entity |
-| Field-level security **enforcement** (response filtering per-field/role) | 🟠 ~20% (defined, not applied) | hidden fields never serialized; tests prove redaction |
-| PII vault + crypto-shredding (tokenize User PII, key-per-subject) | 🟠 ~5% (scaffold) | no raw PII outside vault; erase = destroy key; projections re-derivable |
-| BYOK / KMS (`AwsKmsProvider`) | 🔴 stub (throws) | real KMS envelope encryption + rotation |
-| WebAuthn attestation + origin binding | 🟠 partial | attestation verified; origin/RP-ID bound |
-| Distributed rate limiting + JWT revocation | 🟠 per-instance | survives horizontal scale |
-| SOC2 / ISO 27001 control evidence reconciled to code | 🟠 docs-only | evidence package maps controls → code/tests |
+| #243 central Hibernate tenant filter on all ~150 entities | ✅ Verified (2026-06-21 — PRs #415, #426, #431, #432, #436) | `@Filter` on 136 entities (114 direct + 22 transitive subquery); central binding at the RBAC choke point behind `tenant.filter.binding.enabled` (default off, canary-first); findById/PK ownership re-checks; `TenantFilterCoverageTest` + `CrossTenantPkLoadAccessTest` + cross-tenant ITs. *Deferred:* Slice E CONTRACT removal of the redundant per-query predicates — kept as defence-in-depth until the binding soaks. |
+| Field-level security **enforcement** (response filtering per-field/role) | ✅ Verified (2026-06-21 — PRs #416, #427, #430) | read redaction at `WorkItemReadService` + write guard + BQL HIDDEN-field exclusion (inference leak closed) + resolver tests + `manage_permissions` guard + FK index (V116). *Deferred by Deepak 2026-06-21:* Slice 4 (seed demo visibility rules / admin rule UI) + Slice 5 (core-column FLS — new data-model mechanism, design-first). |
+| PII vault + crypto-shredding (tokenize User PII, key-per-subject) | ✅ Verified (2026-06-21 — PRs #418–#423; V110–V114) | user/customer/stakeholder identity vault, email blind index, denorm tokenization, tenant-declared PII custom fields, name-free notifications, machine-enforced no-raw-PII-in-events; erase = crypto-shred. *Deferred:* the CONTRACT column-drop of superseded raw columns. |
+| BYOK / KMS (`AwsKmsProvider`) | ✅ Verified (2026-06-21 — PR #424) | real AWS KMS envelope encryption (per-subject DEK wrapping), LocalStack-validated; BYOK-ready provider replaces the throwing stub. |
+| WebAuthn attestation + origin binding | ✅ Verified (2026-06-21 — PRs #438–#441, WA1–WA4) | real FIDO2 via webauthn4j 0.31.7: attestation + clientData(type/origin/challenge) + rpIdHash verified, counter-regression clone detection, `navigator.credentials` frontend, legacy signed-nonce path removed (V119). *Deferred:* the `public_key_pem` CONTRACT column-drop. |
+| Distributed rate limiting + JWT revocation | ✅ Verified (2026-06-21 — PRs #429, #433, #434, #435) | token-version revocation incl. customer-portal parity (V115) + logout/jti blocklist (V117) + DB-backed cross-instance window store behind `app.rate-limit.distributed` (default off; V118) + write-endpoint limits. *Deferred:* Redis/ElastiCache-backed store → the AWS infra EPIC (W8). |
+| SOC2 / ISO 27001 control evidence reconciled to code | ✅ Verified (2026-06-21 — PR #436) | `docs/compliance/CONTROL-MATRIX.md` maps each SOC2 CC / ISO Annex A control → implementing code → the test/guardrail that proves it. |
+
+> **W1 status (2026-06-21): Phase 1 COMPLETE.** All seven rows verified and merged to remote `main`
+> across PRs **#415–#441** (see `epics/W1-PHASE1-COMPLETION-PLAN.md` and the `EPIC-P1-*` docs for the
+> per-slice verification detail). Flyway high-water: **V119**.
+>
+> **Explicitly deferred sub-items (by design, tracked — not open gaps):**
+> - **#243 Slice E** — CONTRACT removal of the redundant per-query tenant predicates (defence-in-depth
+>   until `tenant.filter.binding.enabled` soaks in canary).
+> - **FLS Slice 4** (seed visibility rules / admin rule UI) + **FLS Slice 5** (core-column FLS) —
+>   deferred by Deepak, 2026-06-21.
+> - **PII vault** — CONTRACT drop of superseded raw columns.
+> - **WebAuthn** — `webauthn_credentials.public_key_pem` CONTRACT column-drop.
+> - **Redis-backed distributed rate limit** — deferred to the AWS infra EPIC (W8); the DB-backed store
+>   covers horizontal scale until then.
+>
+> **Default-off flags awaiting canary enablement:** `tenant.filter.binding.enabled` (central tenant-filter
+> binding; per-query predicates remain the enforcing layer until flipped) and `app.rate-limit.distributed`
+> (DB-backed shared rate-limit store).
 
 ## 5. W2 — Architecture refactor checklist (Phase 2)
 
-| Item | Evidence today | DoD |
+| Item | Evidence today (2026-07-19) | DoD |
 |------|----------------|-----|
-| Split flat `com.bcits.works` (653/681 files) into domain modules | empty `package-info.java` markers | enforced module boundaries (ArchUnit), classes moved |
-| Decompose `AppShell.jsx` (4,605 lines) | renamed monolith | router + providers + overlays + feature-state extracted |
-| God classes: `KpiService` 716, `BqlCompiler` 650, `ArticleController` 630, `WorkItemCommandService` 559 | oversized | each within size/responsibility budget |
-| FE monoliths: `locales.js` 4,426, `BlockEditor.jsx` 2,176, `knowledge-view.jsx` 1,828 | oversized | code-split; lazy-loaded |
-| Adopt `AsyncBoundary` (currently 0 consumers); retire hand-rolled states | orphaned | all async surfaces use it |
-| Token debt: 3 hex in `status-management-tab.jsx`; 48-file legacy `warn` block | residual | zero literals; legacy block removed |
+| Split flat `com.bcits.works` into domain modules | ✅ 14 modules populated; flat root reduced 291→72 source files; ArchUnit cycle/kernel/non-vacuity/root-budget gates | enforced module boundaries (ArchUnit), classes moved |
+| Decompose `AppShell.jsx` | ✅ 4,628→2,884; providers, auth, public routes, shortcuts, `RouteOutlet`, feature state, workspace membership, navigation, overlays, and realtime extracted; architecture ceiling 3,000 | router + providers + overlays + feature-state extracted |
+| God classes: `KpiService` 716, `BqlCompiler` 650, `ArticleController` 630, `WorkItemCommandService` 559 | ✅ **all four split & merged** — PRs #446 (Article), #447 (Kpi), #448 (Bql Parser/Emitter), #449 (WorkItemFieldCopier) | each within size/responsibility budget |
+| FE monoliths: `locales.js` 4,426, `BlockEditor.jsx` 2,176, `knowledge-view.jsx` 1,828 | ✅ `locales.js` code-split by language (PR #451); `BlockEditor` + 6 knowledge overlays lazy (PR #452, initial JS −13.6%); production build and bundle gate enforce the boundary | code-split; lazy-loaded |
+| Adopt `AsyncBoundary`; retire hand-rolled states | ✅ common boundary used across primary list/table, console, PM, Compliance, Service, marketplace and support surfaces | all primary async surfaces use it |
+| Token and structure debt | ✅ raw hex tokenized; legacy override removed; all view-structure rules are errors | zero literals; legacy block removed |
+
+The EPIC 1–5 closeout evidence is recorded in
+`docs/implementation/epics/EPICS-01-05-CODE-VERIFICATION.md` and enforced by
+`scripts/epics-01-05-completion.mjs`.
 
 ## 6. W6 — V1.6 overlay checklist (Phase 4 foundation, then continuous)
 
@@ -214,3 +242,7 @@ EPIC's DoD. Phase 6 is the dedicated closure sweep for anything systemic.
 - 2026-06-20 — Phase 0: ledger created; scope set to maximal (incl. superseded items); EPIC 3–12
   verified status recorded; doc reconciliation (SECURITY.md, ROADMAP-STATE.md, ORCHESTRATOR §6,
   SOURCE-OF-TRUTH) in progress.
+- 2026-07-02 — W1 reconciliation: Phase 1 / W1 completed and merged 2026-06-21 (PRs #415–#441;
+  Flyway high-water V119) but this ledger still showed pre-execution statuses. §4 rows flipped to
+  ✅ Verified with per-row merged-PR notes; explicitly deferred sub-items and the two default-off
+  flags (`tenant.filter.binding.enabled`, `app.rate-limit.distributed`) recorded; §2 W1 row updated.

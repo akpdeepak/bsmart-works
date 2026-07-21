@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.security.ComplianceRule;
+import com.bcits.works.security.ComplianceRuleService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

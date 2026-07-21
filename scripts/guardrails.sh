@@ -65,7 +65,7 @@ fi
 # RBAC must not be enforced in controllers (belongs in the service layer).
 if [ -d "$BE" ]; then
   check BLOCK "No RBAC annotations in controllers (enforce in RbacService — CLAUDE.md §3)" \
-    "$(grep -RInE '@PreAuthorize|@Secured|hasRole\(' "$BE"/*Controller.java 2>/dev/null || true)"
+    "$(find "$BE" -type f -name '*Controller.java' -exec grep -HnE '@PreAuthorize|@Secured|hasRole\(' {} + 2>/dev/null || true)"
 fi
 
 # Flyway files must be V{n}__snake_case.sql (basename check — portable across macOS/Linux).
@@ -106,7 +106,18 @@ fi
 # @Transactional belongs in the service layer, not controllers (CLAUDE.md §3).
 if [ -d "$BE" ]; then
   check BLOCK "No @Transactional in controllers (belongs in service layer — CLAUDE.md §3)" \
-    "$(grep -RInE '@Transactional' "$BE"/*Controller.java 2>/dev/null || true)"
+    "$(find "$BE" -type f -name '*Controller.java' -exec grep -HnE '@Transactional' {} + 2>/dev/null || true)"
+fi
+
+# No raw identity PII into the append-only event log or immutable audit chain (RB-40 §3 rule 1,
+# EPIC-P1-pii-vault Slice 4d). A getFullName()/getEmail() must never be an argument to an
+# EventService.record*/recordDiff or an audit-log record() call: PII is tokenized into the per-subject
+# vault and resolved at render, so the immutable log carries only ids/tokens (crypto-shred cannot reach
+# it). Same-line tripwire — the structural backstop is ArchitectureTest (event/audit layer ⊥ PII
+# entities). Currently clean (Slices 1/2 + 4a); keep it clean.
+if [ -d "$BE" ]; then
+  check BLOCK "No raw PII (getFullName/getEmail) in event/audit writes (RB-40 §3 rule 1)" \
+    "$(grep -RInE '\.(record|recordDiff|recordInWorkspace)[[:space:]]*\(.*\.get(FullName|Email)\(\)' "$BE" 2>/dev/null || true)"
 fi
 
 # Every @Query that issues a SELECT in a Repository must reference workspace scope (RB-40 §1).
@@ -177,15 +188,15 @@ if [ -d "$BE" ]; then
     "$(grep -RInE '"[^"]*(SELECT|INSERT|UPDATE|DELETE|FROM\s|WHERE\s|JOIN\s|LIKE\s)[^"]*"\s*\+\s*\b(userId|id|name|title|email|input|param|value)\b' "$BE" 2>/dev/null || true)"
 fi
 
-# ── WARN rules (baseline debt in App.jsx — flip to BLOCK after remediation) ─────
+# ── Frontend architecture and design-system rules ─────────────────────────────
 
 # Raw hex colours in component JSX (the global index.css token defs and test files are exempt).
-check WARN "No raw hex in frontend components (use brand-*/neutral-* tokens — CLAUDE.md §4)" \
+check BLOCK "No raw hex in frontend components (use brand-*/neutral-* tokens — CLAUDE.md §4)" \
   "$(grep -RInE '#[0-9a-fA-F]{3,8}\b' "$FE" 2>/dev/null \
      | grep -vE '(tailwind\.config|tokens|/index\.css:|\.svg|\.test\.)' || true)"
 
 # Arbitrary pixel/rem spacing in className (use the 4px scale).
-check WARN "No arbitrary spacing values (use Tailwind 4px scale — CLAUDE.md §4)" \
+check BLOCK "No arbitrary spacing values (use Tailwind 4px scale — CLAUDE.md §4)" \
   "$(grep -RInE '\b[pmgw]+-\[[0-9]+(px|rem)\]' "$FE" 2>/dev/null || true)"
 
 # Inline fetch()/axios in components (use the apiClient wrapper).
@@ -195,7 +206,7 @@ check WARN "No inline fetch/axios in components (use apiClient — CLAUDE.md §3
 
 # Arbitrary z-index — use the named stacking tokens (z-sticky/z-panel/z-modal/z-toast …) so
 # layers can't fight. See CLAUDE.md §4.21 and the zIndex scale in tailwind.config.js.
-check WARN "No arbitrary z-index (use z-index tokens — CLAUDE.md §4.21)" \
+check BLOCK "No arbitrary z-index (use z-index tokens — CLAUDE.md §4.21)" \
   "$(grep -RInE '\bz-\[[0-9]+\]' "$FE" 2>/dev/null || true)"
 
 # NOTE: contrast (CLAUDE.md §4.17) is intentionally NOT grep-enforced here. `text-neutral-400`

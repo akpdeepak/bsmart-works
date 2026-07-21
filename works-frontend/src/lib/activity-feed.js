@@ -11,6 +11,9 @@ const SENTENCE_MAP = {
   WORK_ITEM_CREATED:          (e) => `Created this ${e.payload?.type ?? 'item'}`,
   STATUS_CHANGED:             (e) => `Changed status to ${e.payload?.toStatus ?? 'unknown'}`,
   WORK_ITEM_ASSIGNED:         (e) => `Assigned to ${e.payload?.assigneeName ?? 'someone'}`,
+  // The assignee old/new values are user IDs in the immutable events log (RB-40 §3, no PII in events);
+  // the server resolves them to display names at render via the PII vault. "to" empty = unassigned.
+  ASSIGNED:                   (e) => assignedSentence(e.new_value ?? e.newValue, e.old_value ?? e.oldValue),
   WORK_ITEM_UPDATED:          (e) => `Updated ${e.payload?.field ?? 'a field'}`,
   COMMENT_ADDED:              () => `Added a comment`,
   WORK_ITEM_TYPE_CHANGED:     (e) => `Changed type to ${e.payload?.toType ?? 'unknown'}`,
@@ -22,6 +25,22 @@ const SENTENCE_MAP = {
   WATCHER_ADDED:              () => `Started following`,
   SPRINT_ASSIGNED:            (e) => `Moved to ${e.payload?.sprintName ?? 'a sprint'}`,
 };
+
+/**
+ * Sentence for an ASSIGNED event whose from/to are server-resolved assignee display names
+ * (null = unassigned). Covers assign, reassign, and unassign.
+ *
+ * @param {string|null|undefined} to   new assignee display name (null/empty = unassigned)
+ * @param {string|null|undefined} from previous assignee display name (null/empty = was unassigned)
+ * @returns {string}
+ */
+function assignedSentence(to, from) {
+  const toName = to && String(to).trim() ? String(to) : null;
+  const fromName = from && String(from).trim() ? String(from) : null;
+  if (!toName) return 'Unassigned this item';
+  if (fromName) return `Reassigned from ${fromName} to ${toName}`;
+  return `Assigned to ${toName}`;
+}
 
 /**
  * Convert a single event object into a human-readable sentence.

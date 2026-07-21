@@ -1,4 +1,13 @@
 package com.bcits.works;
+import com.bcits.works.automation.InstalledExtension;
+import com.bcits.works.automation.InstalledExtensionRepository;
+
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.EventService;
+import com.bcits.works.automation.MarketplaceListing;
+import com.bcits.works.automation.MarketplaceListingRepository;
+import com.bcits.works.automation.MarketplaceService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

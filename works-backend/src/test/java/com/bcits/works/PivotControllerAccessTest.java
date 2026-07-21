@@ -1,5 +1,13 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.reporting.PivotService;
+import com.bcits.works.reporting.PivotSpec;
+import com.bcits.works.reporting.WidgetDataController;
+import com.bcits.works.reporting.WidgetDataService;
+
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Tag;

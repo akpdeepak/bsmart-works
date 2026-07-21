@@ -1,9 +1,8 @@
 # Rule Book 10 — Engineering & Architecture
 
 > Owns *how the system is built*. Read after the [Orchestrator](../00-ORCHESTRATOR.md).
-> Stack facts here are **code-canonical** (see the reconciliation ledger in
-> [`SOURCE-OF-TRUTH.md`](../SOURCE-OF-TRUTH.md) §4). Volatile facts (migration number, iteration)
-> live in Orchestrator §6 — never duplicated here.
+> Executable manifests and source layout are canonical. Their generated summary is
+> `../current-state.generated.json`; volatile facts are never copied here.
 > **Enforced by:** `guardrails.sh`, Checkstyle, JUnit/JaCoCo, Vitest, ESLint, CI gate.
 
 ---
@@ -12,12 +11,12 @@
 
 | | Choice | Note |
 |---|--------|------|
-| Backend | **Java 21 · Spring Boot 4.0.x · Maven** (`mvnw`) | not Gradle; not Spring Boot 3 |
+| Backend | **Java 21 · Spring Boot 4.1.0 · Maven** (`mvnw`) | derived from `pom.xml` |
 | Persistence | Spring Data JPA + Hibernate · PostgreSQL · Flyway | no jOOQ |
 | Auth | Spring Security + **JWT (stateless)** · MFA TOTP | OAuth2/SAML are spec targets, not built |
 | Frontend | **React 19.2 · Vite 8 · JavaScript/JSX · Tailwind 4** | not Angular; not TypeScript |
 | Data fetching | TanStack Query via a single `apiClient` | no inline `fetch`/`axios` |
-| Package | `com.bcits.works` (flat) | TD-001 rename complete; sub-package split is a separate planned task |
+| Package | `com.bcits.works` with domain subpackages | modular-monolith carve is active/current |
 
 **Do not "fix" the stack to match the spec inside a feature PR.** Closing a spec-vs-code gap
 (package rename, TS migration) is a planned migration with its own issue and PR (§3.7 of
@@ -28,15 +27,11 @@ ENGINEERING-PRINCIPLES). Build to the code that exists.
 ## 2. Architecture rules
 
 **Modular monolith today, evolving to extractable services.** One deployable now, but every domain is
-a **service-in-waiting**: an enforced module with its own schema, a versioned public API, and events on
-the shared backbone — so it can be lifted out without a rewrite. The target service map, capability and
-iteration mapping, and cross-service patterns (CQRS read-models, transactional outbox, tenant-context
-propagation) live in [ADR-0001](../../docs/architecture/ADR-0001-service-decomposition.md). **Extract on
-demand, never preemptively** — split a module into its own deployable only when reuse in another app or
-scale calls for it, **platform / unification-layer services first** (Identity, AI Control Plane,
-Knowledge, Collaboration). Do not add Kafka, a search cluster, or a new language until that trigger
-fires. **Never fragment a unification layer** (one identity, one event store, one AI plane, one query
-language) across services.
+a **service-in-waiting**: an enforced module with a stable public boundary and events on the shared
+backbone. **Extract on demand, never preemptively**—only through an accepted decision and linked task
+when reuse, scale, or operational isolation justifies it. Broker/search/new-language targets are not
+current implementation facts and must not land incidentally. **Never fragment a unification layer**
+(one identity, one event store, one AI plane, one query language) across services.
 
 **One job per layer:**
 
@@ -48,8 +43,9 @@ language) across services.
 
 - **RBAC in the service layer, never the controller or UI** (`RbacService`). If the only thing
   stopping access is a hidden button, it isn't stopped.
-- **Every query is workspace-scoped** — no repository method returns rows across tenants. See
-  RB-40 §1; this is being added to `guardrails.sh`.
+- **Every query is workspace-scoped** — no repository method returns rows across tenants. Enforced by
+  the central Hibernate tenant filter (#243, on 136 entities) + `guardrails.sh` query-scope checks +
+  `TenantFilterCoverageTest`. See RB-40 §1.
 - **Stateless:** JWT carries its own state; no server-side sessions; services hold no request
   state between calls. This is what lets the app scale by adding instances.
 - **Validate at the boundary:** every incoming DTO is `@Valid`; the service assumes clean input.
@@ -58,11 +54,12 @@ language) across services.
 
 ## 3. Data & persistence
 
-- **Flyway only.** Never touch the schema by hand. Next migration number: **Orchestrator §6**.
+- **Flyway only.** Never touch the schema by hand. Compute the next migration number from migration
+  files via `scripts/generate-project-state.mjs`.
   Migrations are **forward-only** — to undo, write a new forward migration; never edit a shipped one.
 - **Plural, snake_case tables** (`work_items`, `projects`). One concept, one name across all layers
   (§5).
-- **Event-sourced from day one.** Every state change emits to the **append-only `events`** table
+- **Event-backed audit history.** Audited domain changes emit to the **append-only `events`** table
   (mapped by `AppEvent`, written by `EventService`). Events are never updated or deleted. The dead
   `event_log` was dropped in V20. *(PII never lives in events — it is tokenized into a PII vault and
   crypto-shredded on erasure, so the log stays immutable; see RB-40 §3.)*
@@ -113,13 +110,23 @@ compile to BQL. It is one of the seven unification layers (RB-40 / ENGINEERING-P
 
 ## 7. Testing
 
+- **Test-first is mandatory for coding-related implementation changes that alter executable
+  behavior.** Use **RED → GREEN → REFACTOR** in small increments: author and run the relevant
+  automated test before implementation, confirm it fails for the intended missing behavior, write
+  the minimum code to pass, then improve the design while the targeted and related suites remain
+  green (RB-05 Stage 3).
+- **Bug fixes start with a failing regression test.** Pure refactors establish or add passing
+  characterization coverage before production edits, then proceed in green increments; do not create
+  a fake failure for behavior that already exists.
 - **Pyramid:** many unit, fewer integration, fewest E2E.
 - **Backend:** JUnit 5 + **Testcontainers** (real Postgres, not mocks, for anything touching the
   DB). JaCoCo coverage gate in CI.
 - **Frontend:** Vitest + React Testing Library; test behavior, not implementation.
 - **E2E:** Playwright (scaffold present, not yet active).
-- **Done means demonstrated:** a change isn't done until a test proves its behavior, or it's been
-  run in the app. Every feature includes an **unauthorized** and a **cross-tenant** test (RB-40).
+- **Done means demonstrated:** coding-related behavior requires automated test-first coverage;
+  running the app supplements that proof but does not replace it. A non-code task may use an exact
+  observation from its validation plan. Every feature includes an **unauthorized** and a
+  **cross-tenant** test when authorization or tenant data is touched (RB-40).
 
 ---
 
@@ -136,7 +143,7 @@ and the cert roadmap live in RB-40 §4.*
 
 - **Branching:** GitHub Flow. `main` is the **single, always-shippable trunk** — the only
   long-lived branch (no `develop`, no `master`/release branch). Work on short-lived
-  `type/scope-short-desc` branches off `main` → PR → CI green → **squash-merge** → delete the
+  `type/gh-<issue>-<slice>-<slug>` branches off `main` → PR → CI green → **squash-merge** → delete the
   branch. "Shippable" is marked by a **release tag**, never a second long-lived branch (a branch
   keeps moving; a tag is frozen and is what you roll back to).
 - **PRs:** small and single-purpose; draft early; self-review checklist before opening; the PR
@@ -158,12 +165,12 @@ and the cert roadmap live in RB-40 §4.*
   health-check endpoint. *(Target infra — AWS/ECS, RDS, ElastiCache, Terraform, OTel — is RB-40 §5.)*
 - **Observability:** environment-appropriate log levels; structured logging; no secrets or PII in
   logs.
-- **Technical debt:** recorded in `TECH-DEBT.md` with rationale and payoff trigger; paid down
-  deliberately, not via drive-by refactors inside feature PRs.
+- **Technical debt:** recorded as a labelled GitHub issue with rationale, impact, evidence, owner, and
+  payoff trigger; paid down deliberately, not via drive-by refactors inside feature PRs.
 
 ---
 
 ### What's enforced here
-Tokens/no-hex, no-inline-fetch, RBAC-in-service, Flyway-only, package layout, a11y →
-`guardrails.sh` + ESLint. Java style → Checkstyle. Behavior + coverage → JUnit/JaCoCo + Vitest.
-**Gap being closed:** workspace-scope check (RB-40 §1).
+Exact enforcement classes and checks are registered in `../policy-registry.json`. Guardrails and
+linters cover syntax/structure; JUnit/Vitest/architecture tests cover behavior; tenant scope requires
+the registered central-filter and cross-tenant tests. Review-only claims are not represented as CI proof.

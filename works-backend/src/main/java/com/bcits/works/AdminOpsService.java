@@ -1,5 +1,15 @@
 package com.bcits.works;
 
+import com.bcits.works.workspaces.LicenseSeats;
+import com.bcits.works.workspaces.LicenseSeatsRepository;
+import com.bcits.works.shared.RbacGate;
+
+import com.bcits.works.shared.ApiException;
+
+import com.bcits.works.shared.EventService;
+import com.bcits.works.ai.AiControlPlaneService;
+import com.bcits.works.automation.WebhookDelivery;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,13 +29,13 @@ import java.util.Map;
 public class AdminOpsService {
 
     private final JdbcTemplate jdbc;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final AiControlPlaneService aiControlPlane;
     private final LicenseSeatsRepository seats;
     private final WebhookService webhooks;
     private final EventService events;
 
-    public AdminOpsService(JdbcTemplate jdbc, RbacService rbac, AiControlPlaneService aiControlPlane,
+    public AdminOpsService(JdbcTemplate jdbc, RbacGate rbac, AiControlPlaneService aiControlPlane,
                            LicenseSeatsRepository seats, WebhookService webhooks, EventService events) {
         this.jdbc = jdbc;
         this.rbac = rbac;

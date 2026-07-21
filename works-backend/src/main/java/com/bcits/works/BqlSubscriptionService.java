@@ -1,4 +1,17 @@
 package com.bcits.works;
+import com.bcits.works.workspaces.SavedView;
+import com.bcits.works.workspaces.SavedViewRepository;
+import com.bcits.works.shared.RbacGate;
+
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.shared.BqlContext;
+
+import com.bcits.works.shared.BqlContextFactory;
+import com.bcits.works.shared.BqlExecutionService;
+import com.bcits.works.security.BqlRunAudit;
+import com.bcits.works.security.BqlRunAuditService;
+import com.bcits.works.messaging.Notification;
+import com.bcits.works.messaging.NotificationRepository;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -28,7 +41,7 @@ public class BqlSubscriptionService {
 
     private final BqlSubscriptionRepository subs;
     private final SavedViewRepository views;
-    private final RbacService rbac;
+    private final RbacGate rbac;
     private final BqlExecutionService execution;
     private final BqlContextFactory contextFactory;
     private final BqlRunAuditService runAudit;
@@ -36,7 +49,7 @@ public class BqlSubscriptionService {
     private final EmailService email;
 
     public BqlSubscriptionService(BqlSubscriptionRepository subs, SavedViewRepository views,
-                                  RbacService rbac, BqlExecutionService execution,
+                                  RbacGate rbac, BqlExecutionService execution,
                                   BqlContextFactory contextFactory, BqlRunAuditService runAudit,
                                   NotificationRepository notifications, EmailService email) {
         this.subs = subs;
@@ -134,6 +147,7 @@ public class BqlSubscriptionService {
             view.getBqlFilter() == null ? "" : view.getBqlFilter(), java.nio.charset.StandardCharsets.UTF_8);
         if (inApp) {
             Notification n = new Notification();
+            n.setWorkspaceId(sub.getWorkspaceId());
             n.setUserId(sub.getUserId());
             n.setType("BQL_SUBSCRIPTION");
             n.setMessage("Saved view \"" + view.getName() + "\" has " + count

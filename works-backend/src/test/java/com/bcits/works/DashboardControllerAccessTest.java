@@ -1,5 +1,13 @@
 package com.bcits.works;
 
+import com.bcits.works.auth.RbacService;
+
+import com.bcits.works.shared.AuthenticatedUser;
+
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.reporting.DashboardController;
+import com.bcits.works.reporting.DashboardService;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -33,14 +41,26 @@ class DashboardControllerAccessTest {
     }
 
     @Test
-    void developerDashboardUsesAuthenticatedUserOnly() {
-        when(dashboardService.getDeveloperDashboard(CALLER)).thenReturn(Map.of("myOpenItemCount", 0));
+    void developerDashboardUsesAuthenticatedUserAndAuthorizedWorkspace() {
+        when(dashboardService.getDeveloperDashboard(CALLER, WORKSPACE))
+                .thenReturn(Map.of("myOpenItemCount", 0));
 
-        var response = controller.getDeveloperDashboard();
+        var response = controller.getDeveloperDashboard(WORKSPACE);
 
         assertThat(response.getBody()).containsEntry("myOpenItemCount", 0);
-        verify(dashboardService).getDeveloperDashboard(CALLER);
-        verify(dashboardService, never()).getDeveloperDashboard("other-user");
+        verify(rbac).require(CALLER, WORKSPACE, "view_items");
+        verify(dashboardService).getDeveloperDashboard(CALLER, WORKSPACE);
+        verify(dashboardService, never()).getDeveloperDashboard(eq("other-user"), anyString());
+    }
+
+    @Test
+    void developerDashboardRejectsForeignWorkspaceBeforeQuery() {
+        doThrow(ApiException.forbidden("denied")).when(rbac).require(CALLER, WORKSPACE, "view_items");
+
+        assertThatThrownBy(() -> controller.getDeveloperDashboard(WORKSPACE))
+                .isInstanceOf(ApiException.class);
+
+        verify(dashboardService, never()).getDeveloperDashboard(anyString(), anyString());
     }
 
     @Test
@@ -67,11 +87,23 @@ class DashboardControllerAccessTest {
 
     @Test
     void productDashboardPassesExplicitWorkspaceAfterAuthorization() {
-        when(dashboardService.getProductOwnerDashboard(WORKSPACE)).thenReturn(Map.of("releases", 0));
+        when(dashboardService.getProductOwnerDashboard(WORKSPACE, CALLER)).thenReturn(Map.of("releases", 0));
 
         controller.getProductOwnerDashboard(WORKSPACE);
 
         verify(rbac).require(eq(CALLER), eq(WORKSPACE), eq("view_items"));
-        verify(dashboardService).getProductOwnerDashboard(WORKSPACE);
+        verify(dashboardService).getProductOwnerDashboard(WORKSPACE, CALLER);
+    }
+
+    @Test
+    void supportDashboardRequiresServicePermissionAndKeepsCallerIdentity() {
+        when(dashboardService.getSupportAgentDashboard(WORKSPACE, CALLER))
+                .thenReturn(Map.of("escalatedCount", 1));
+
+        var response = controller.getSupportAgentDashboard(WORKSPACE);
+
+        assertThat(response.getBody()).containsEntry("escalatedCount", 1);
+        verify(rbac).require(CALLER, WORKSPACE, "work_service");
+        verify(dashboardService).getSupportAgentDashboard(WORKSPACE, CALLER);
     }
 }

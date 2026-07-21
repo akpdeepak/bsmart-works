@@ -1,3 +1,9 @@
+---
+status: historical
+runtime_context: false
+authority: source-material
+---
+
 # bSmart Works - Final Execution Decision Document
 
 **Purpose:** This is the final practical handoff document to use with Claude Code, OpenAI Codex, or any developer/agent working on bSmart Works.

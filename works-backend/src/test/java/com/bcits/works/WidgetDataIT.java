@@ -1,5 +1,9 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.ApiException;
+import com.bcits.works.reporting.WidgetDataService;
+import com.bcits.works.reporting.WidgetSource;
+
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;

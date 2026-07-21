@@ -1,3 +1,9 @@
+---
+status: current-program-reference
+live_status: github
+authority: requirements-sequencing
+---
+
 # bSmart Works Transformation Roadmap V.20
 
 This document makes Deepak's transformation roadmap executable across Claude Code, Codex, GPT Code,
@@ -22,8 +28,8 @@ The non-negotiable product principle is:
 
 The `bSmart_Works_Final_Execution_Decision_Document.md` is the execution prioritization layer. Use
 it beside the implementation roadmap, UI/UX expanded roadmap, and AI agent implementation
-instructions. If documents overlap, use the stricter requirement. If priority conflicts arise, follow
-the Final Execution Decision Document for sequencing and the blueprint files for detailed epic scope.
+instructions. Resolve overlaps with `ai-rules/SOURCE-OF-TRUTH.md`; never improvise a "stricter wins"
+rule. If priority conflicts remain after applying that policy, raise the conflict in the active issue.
 
 ## V1.6 requirements overlay
 
@@ -88,30 +94,12 @@ When Deepak says either phrase below, treat it as a command to work the roadmap 
 - `Start the bSmart Transformation Roadmap`
 - `Resume the bSmart Transformation Roadmap`
 
-## Required source material
+## Required context
 
-Read these before planning or coding:
-
-1. `docs/implementation/source-documents/bSmart_Works_Final_Execution_Decision_Document.md`
-2. `docs/implementation/source-documents/bSmart_Works_Implementation_Blueprint_Epic_Roadmap.md`
-3. `docs/implementation/source-documents/bSmart_Works_Implementation_Blueprint_Epic_Roadmap_UIUX_Expanded.md`
-4. `docs/implementation/source-documents/bSmart_Works_AI_Agent_Implementation_Instructions.md`
-5. `docs/implementation/source-documents/bSmart_Works_V1_6_Claude_Codex_Roadmap.md`
-6. `C:\Users\user\Downloads\bSmart_Works_Final_Execution_Decision_Document.md`
-7. `C:\Users\user\Downloads\bSmart_Works_Implementation_Blueprint_Epic_Roadmap.md`
-8. `C:\Users\user\Downloads\bSmart_Works_Implementation_Blueprint_Epic_Roadmap_UIUX_Expanded.md`
-9. `C:\Users\user\Downloads\bSmart_Works_AI_Agent_Implementation_Instructions.md`
-10. `C:\Users\user\Downloads\bSmart_Works_V1_6_Claude_Codex_Roadmap.md`
-11. `AGENTS.md`
-12. `CLAUDE.md`
-13. `ai-rules/00-ORCHESTRATOR.md`
-14. `ai-rules/SOURCE-OF-TRUTH.md`
-15. Applicable `ai-rules/rulebooks/*`
-16. `docs/implementation/ROADMAP-STATE.md`
-
-The repo-tracked source documents are canonical for remote/GitHub-only sessions. If local Downloads
-files are unavailable, continue from the repo-tracked copies and record that limitation in the active
-EPIC plan only if the repo copies are also missing.
+Read the active GitHub issue and linked pull request first, then
+`ai-rules/current-state.generated.json`, `ai-rules/SOURCE-OF-TRUTH.md`, and the applicable rulebooks.
+Read only the requirement excerpts cited by the task. Files under `source-documents/` are historical
+source material, not mandatory runtime context and not live status.
 
 ## Roadmap operating rules
 
@@ -128,8 +116,9 @@ EPIC plan only if the repo copies are also missing.
 - Treat security, RBAC, tenant isolation, workspace scoping, auditability, and production safety as
   first-order requirements.
 - Treat the UI/UX expanded blueprint as a mandatory overlay for every frontend-facing EPIC.
-- Do not claim an EPIC is complete until code is merged to GitHub `main`, local `main` is updated,
-  verification is run, and the completion note plus `ROADMAP-STATE.md` are updated.
+- Do not claim an EPIC is complete until code is merged to GitHub `main` and the main-branch checks
+  record `MAIN_VERIFIED` and `DONE`. The closeout workflow updates the GitHub task atomically; do not
+  maintain a second manual completion ledger.
 
 ## Preserved product modes
 
@@ -224,51 +213,32 @@ productivity scores, commit-count ranking, LOC ranking, or inactive-developer la
 
 ## Start sequence
 
-1. Run `git status --short --branch`.
-2. If uncommitted changes exist, inspect them and preserve them.
-3. Sync `main` when safe:
-   - `git checkout main`
-   - `git fetch origin`
-   - `git pull --ff-only origin main`
-4. Read the required source material.
-5. Inspect existing `docs/implementation/epics/` plans and completion notes.
-6. Read `docs/implementation/ROADMAP-STATE.md`.
-7. Select the next incomplete EPIC in roadmap order.
-8. Create a dedicated branch: `epic/<epic-number>-<short-slug>`.
-9. Create or update `docs/implementation/epics/EPIC-XX-<slug>.md`.
-10. Implement incrementally.
-11. Run the applicable tests and guardrails.
-12. Push branch and create PR.
-13. Merge only when CI/review/acceptance criteria pass.
-14. Pull latest `main`.
-15. Run post-merge validation.
-16. Create `docs/implementation/epics/EPIC-XX-<slug>-completion.md`.
-17. Update `docs/implementation/ROADMAP-STATE.md`.
+1. Inspect the worktree and preserve existing changes.
+2. Select or create one GitHub `agent-task` issue containing scope, acceptance criteria, validation
+   mapping, risk, and reserved paths.
+3. Claim the task with a `bsmart-task/v1` lease. Resolve any active path-reservation overlap before
+   editing.
+4. Create an isolated worktree from current `origin/main` on
+   `type/gh-<issue>-<short-slug>` and open a linked draft pull request early.
+5. For code, capture the failing test (`RED`) before implementation; then record `GREEN`, run the
+   changed verification profile, and move to `VALIDATED`/`REVIEW`.
+6. Merge only after the PR evidence contract and required checks pass. Main CI performs closeout.
 
 ## Resume sequence
 
-1. Run `git status --short --branch`.
-2. Identify current branch and whether it is an EPIC branch.
-3. Inspect uncommitted changes and preserve them.
-4. Inspect recent commits and open EPIC docs.
-5. Read `docs/implementation/ROADMAP-STATE.md`.
-6. Determine the latest safe point:
-   - planning not started
-   - plan created
-   - implementation in progress
-   - tests failing
-   - PR open
-   - PR merged but local validation incomplete
-   - completion note/state update pending
-7. Continue from that point. Do not restart unless the state is proven stale.
-8. If state and code disagree, trust current code/GitHub evidence, then repair the state file.
+1. Inspect the worktree without overwriting local changes.
+2. Open the active GitHub issue, latest valid `bsmart-task/v1` state, lease, linked PR, head SHA, and
+   check results.
+3. If the lease expired, claim it; if another lease is active, do not edit its reserved paths.
+4. Continue from the recorded `nextAction` at the exact branch/head. If GitHub state and code differ,
+   executable code and checks win; post a corrected state transition rather than editing a prose
+   ledger.
 
 ## Required EPIC artifacts
 
-Every EPIC must produce:
-
-- `docs/implementation/epics/EPIC-XX-<slug>.md`
-- `docs/implementation/epics/EPIC-XX-<slug>-completion.md`
+Every EPIC must have one GitHub task contract and linked pull request evidence. Existing EPIC plans
+remain requirement references; new completion state is recorded by GitHub automation, not a manual
+`*-completion.md` file.
 
 Frontend-heavy EPICs also produce:
 
@@ -319,7 +289,7 @@ Complete these before building new major features:
 
 1. Fix backend Dockerfile JAR copy pattern.
 2. Update README with actual current repo state.
-3. Update TECH-DEBT so it does not contradict implemented modules.
+3. Reconcile open GitHub `tech-debt` issues with implemented modules.
 4. Create `CURRENT-STATE.md` listing implemented, partial, stubbed, future, deprecated, and hidden
    features.
 5. Add production JWT secret validation.

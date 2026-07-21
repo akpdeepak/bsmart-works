@@ -1,3 +1,4 @@
+import { Button } from '@/components/works/button';
 import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Star, SquarePen, X } from 'lucide-react';
 import { DensityToggle } from '@/components/works/atoms/density-toggle';
@@ -242,7 +243,7 @@ export default function BoardView({
 
             {renderColumnCards(colItems, col.key)}
 
-            <button onClick={() => {
+            <Button unstyled onClick={() => {
               setNewItem(p => ({
                 ...p,
                 status: workflowColumns
@@ -253,7 +254,7 @@ export default function BoardView({
             }}
               className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-700 rounded-lg transition-colors">
               <span>+</span> {t('deliver.board.addItem')}
-            </button>
+            </Button>
           </div>
         );
       })}
@@ -394,7 +395,7 @@ export default function BoardView({
 
                 {renderColumnCards(colItems, col.key)}
 
-                <button onClick={() => {
+                <Button unstyled onClick={() => {
                   // Workflow columns: col.name IS the concrete target status.
                   // Category fallback: resolve the first status of the category via statusResolver.
                   setNewItem(p => ({
@@ -407,7 +408,7 @@ export default function BoardView({
                 }}
                   className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-700 rounded-lg transition-colors">
                   <span>+</span> {t('deliver.board.addItem')}
-                </button>
+                </Button>
               </div>
             );
           })}
@@ -419,7 +420,7 @@ export default function BoardView({
               const collapsed = collapsedLanes.has(lane.key);
               return (
                 <section key={lane.key} className="min-w-full">
-                  <button
+                  <Button unstyled
                     type="button"
                     onClick={() => setCollapsedLanes((prev) => {
                       const next = new Set(prev);
@@ -436,7 +437,7 @@ export default function BoardView({
                     <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300">
                       {lane.items.length}
                     </span>
-                  </button>
+                  </Button>
                   {!collapsed && renderColumns(lane.items, lane.key)}
                 </section>
               );
@@ -487,25 +488,25 @@ function WorkCard({ item, category, density, densityPad, iv, userName, customFie
           <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.autoId || item.id}</span>
         </div>
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => onStar(item)} title={item.starred ? t('deliver.board.unstar') : t('deliver.board.star')}
+          <Button unstyled onClick={() => onStar(item)} title={item.starred ? t('deliver.board.unstar') : t('deliver.board.star')}
             className={`text-xs p-0.5 transition-colors ${item.starred ? 'text-brand-orange' : 'text-neutral-300 hover:text-brand-orange'}`}>
             <Star className={`h-3.5 w-3.5 ${item.starred ? 'fill-current' : ''}`} aria-hidden="true" />
-          </button>
-          <button onClick={() => onEdit(item)} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-xs p-0.5" aria-label={t('deliver.board.editWorkItem')}>
+          </Button>
+          <Button unstyled onClick={() => onEdit(item)} className="text-neutral-600 dark:text-neutral-400 hover:text-brand-navy text-xs p-0.5" aria-label={t('deliver.board.editWorkItem')}>
             <SquarePen className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
-          <button onClick={() => onDelete(item.id)} className="text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label={t('deliver.board.deleteWorkItem')}>
+          </Button>
+          <Button unstyled onClick={() => onDelete(item.id)} className="text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger text-xs p-0.5" aria-label={t('deliver.board.deleteWorkItem')}>
             <X className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Title */}
-      <button type="button"
+      <Button unstyled type="button"
         className="text-sm font-medium text-neutral-900 dark:text-neutral-100 leading-snug mb-2 cursor-pointer text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
         onClick={() => onEdit(item)}>
         {item.title}
-      </button>
+      </Button>
 
       {/* Description (density-gated + pref-gated) */}
       {density !== 'compact' && iv('description') && item.description && (

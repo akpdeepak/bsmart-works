@@ -315,7 +315,6 @@ export default function AppShell() {
   const [releaseNotesName, setReleaseNotesName] = useState('');
 
   // Iteration 6 — Worklogs
-  const [, setMyWorklogs]                        = useState([]);
   const [worklogForm, setWorklogForm]           = useState({ timeSpentMinutes: 30, description: '', workDate: '' });
   const [isWorklogOpen, setIsWorklogOpen]       = useState(false);
 
@@ -397,7 +396,7 @@ export default function AppShell() {
   });
 
   // Shared request wrapper (throws on error, returns JSON) — delegates to the single apiClient.
-  const apiFetch = (url, options = {}) => api.send(url, options);
+
 
   useEffect(() => {
     if (currentUser && workspaceReady && activeWorkspaceId) {
@@ -1171,7 +1170,9 @@ export default function AppShell() {
     newCustomer, setNewCustomer, formDesignerTypeId, setFormDesignerTypeId,
     fetchServiceRequests, fetchServiceCustomers, fetchServiceTypes, fetchServiceTiers,
     fetchServiceCsat, assignServiceRequest, transitionServiceRequest, createServiceCustomer,
-  } = useServiceState(api, activeWorkspaceId, showToast, reportError);  function fetchStatusDurations(itemId) {
+  } = useServiceState(api, activeWorkspaceId, showToast, reportError);
+
+  function fetchStatusDurations(itemId) {
     setStatusMetrics(EMPTY_STATUS_METRICS);
     api.raw(`/work-items/${itemId}/status-durations`).then(r => r.json())
       .then(d => setStatusMetrics(d && typeof d === 'object' && !Array.isArray(d)
@@ -1179,7 +1180,20 @@ export default function AppShell() {
         : { ...EMPTY_STATUS_METRICS, durations: Array.isArray(d) ? d : [] }))
       .catch(reportError);
   }
-  // severityClass / vStatusClass moved to compliance-view.jsx (TD-003).
+
+  function handleWipLimitWarning() {
+    if (!activeWorkspaceId) return;
+    const cols = boardColumns || [];
+    let warning = false;
+    cols.forEach((col) => {
+      const colItems = workItems.filter(i => i.status === col.name);
+      if (wipLimits[col.name] && colItems.length > wipLimits[col.name]) {
+        warning = true;
+      }
+    });
+    if (warning) showToast('WIP Limit Exceeded in one or more columns', 'warning');
+  }
+
   function humanDuration(seconds) {
     if (seconds == null) return '—';
     const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60);
@@ -2603,7 +2617,7 @@ export default function AppShell() {
               stakeholders, standupDraft, standups, startCeremony, startStandup, statusResolver, stopShare, submitArticleForReview, supportDash,
               submitMyStandup, swimlaneBy, teams, testRule, todayLayout, toggleArticleComment, togglePermission, toggleReportSchedule,
               toggleStar, toggleViolationSelect, totalWorkItemCount, transitionServiceRequest, trashItems, unreadCount, updateArticle, updateDashboardWidgetConfig,
-              updateImpediment, updateKrProgress, updateRelease, updateReportSection, updateThemeStatus, userName, userRole, users,
+              updateImpediment, updateKrProgress, updateRelease, updateReportSection, updateThemeStatus, userName, userPrefs, userRole, users,
               varianceResult, varianceSprintId, velocityData, view, violationFilter, voteIdea, voteRetroNote, widgetMetrics,
               wipLimits, workflowDetail, workflows, workItems, workItemTypes, workspaceMembers,
             }}

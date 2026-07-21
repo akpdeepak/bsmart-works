@@ -145,11 +145,11 @@ public class AttachmentController {
                 "File exceeds maximum allowed size of " + (maxSizeBytes / 1024 / 1024) + " MB");
         }
 
-        // 2. Block dangerous MIME types regardless of extension
+        // 2. Refuse executables and browser-active documents. The declared Content-Type is uploader
+        //    -supplied, so AttachmentContentPolicy also matches on the extension (RB-10 §8).
         String mimeType = file.getContentType() != null ? file.getContentType().toLowerCase() : "application/octet-stream";
-        if (mimeType.contains("application/x-msdownload") ||
-            mimeType.contains("application/x-executable") ||
-            mimeType.contains("application/x-sh")) {
+        String declaredName = file.getOriginalFilename();
+        if (AttachmentContentPolicy.isUploadBlocked(mimeType, declaredName)) {
             throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                 "File type not permitted: " + mimeType);
         }
@@ -193,11 +193,16 @@ public class AttachmentController {
         Path filePath = Paths.get(uploadDir).resolve((String) row.get("storage_path"));
         org.springframework.core.io.Resource resource = new org.springframework.core.io.FileSystemResource(filePath);
         if (!resource.exists()) return ResponseEntity.notFound().build();
-        String mime = (String) row.get("mime_type");
-        if (mime == null) mime = "application/octet-stream";
+        // The stored mime_type was declared by the uploader, so it is never echoed back verbatim:
+        // only preview-safe types render inline, everything else downloads as an opaque stream. This
+        // also neutralises rows written before the upload policy existed (RB-10 §8).
+        String storedMime = (String) row.get("mime_type");
+        String fileName = AttachmentContentPolicy.headerSafeFileName((String) row.get("file_name"));
         return ResponseEntity.ok()
-            .header("Content-Type", mime)
-            .header("Content-Disposition", "inline; filename=\"" + row.get("file_name") + "\"")
+            .header("Content-Type", AttachmentContentPolicy.safeContentType(storedMime))
+            .header("X-Content-Type-Options", "nosniff")
+            .header("Content-Disposition",
+                AttachmentContentPolicy.contentDisposition(storedMime) + "; filename=\"" + fileName + "\"")
             .body(resource);
     }
 

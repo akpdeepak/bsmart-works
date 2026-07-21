@@ -93,4 +93,18 @@ describe('Settings3View', () => {
     // The honest read-only status is shown instead (Story row marks FD-1 hidden).
     expect(screen.getAllByText(/^Hidden$/).length).toBeGreaterThan(0);
   });
+
+  // Regression: a second "Fields" tab persisted per-type field config to localStorage while telling
+  // the admin "Changes are saved to this workspace" (a false front). Per-type field config is owned
+  // by the server-backed "Detail Fields" tab (type_field_prefs), so the duplicate tab is retired.
+  it('offers only the server-backed Detail Fields tab, not the retired localStorage one', () => {
+    render(<Settings3View {...baseProps} />);
+    expect(screen.queryByRole('button', { name: /^fields$/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /^detail fields$/i })).toBeInTheDocument();
+  });
+
+  it('does not claim workspace persistence anywhere it only writes to this browser', () => {
+    const { container } = render(<Settings3View {...baseProps} settings3Tab="detail-fields" />);
+    expect(container.textContent).not.toMatch(/saved to this workspace/i);
+  });
 });

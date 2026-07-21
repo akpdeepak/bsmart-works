@@ -6,7 +6,6 @@ import WorkflowSettings from './settings3/workflow-settings';
 import { CustomFieldsSettings, FieldLayoutSettings, FieldVisibilitySettings } from './settings3/field-settings';
 import PermissionsSettings from './settings3/permissions-settings';
 import ItemTypeSettings from './settings3/item-type-settings';
-import TypeFieldsSettings from './settings3/type-fields-settings';
 
 const SUB_TABS = [
   { key: 'workflows',   label: 'Workflows' },
@@ -16,7 +15,6 @@ const SUB_TABS = [
   { key: 'visibility',  label: 'Field Visibility' },
   { key: 'permissions', label: 'Permissions' },
   { key: 'types',       label: 'Item Types' },
-  { key: 'type-fields', label: 'Fields' },
   { key: 'detail-fields', label: 'Detail Fields' },
 ];
 
@@ -194,11 +192,6 @@ export default function Settings3View({
           togglePermission={togglePermission}
           createRole={createRole}
         />
-      )}
-
-      {/* TYPE FIELDS TAB */}
-      {settings3Tab === 'type-fields' && (
-        <TypeFieldsSettings />
       )}
 
       {/* ITEM TYPES TAB */}

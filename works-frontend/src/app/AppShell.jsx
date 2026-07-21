@@ -124,6 +124,15 @@ export default function AppShell() {
   // help) opened from the command palette or shortcuts, and the offline-sync conflict queue.
   const [conflicts, setConflicts]       = useState([]);
 
+  // EPIC 13: Universal AI Command Layer
+  const [aiTriggerCount, setAiTriggerCount] = useState(0);
+  const [aiTriggerQuery, setAiTriggerQuery] = useState('');
+  const handleTriggerAi = (query = '') => {
+    setPaletteOpen(false);
+    setAiTriggerQuery(query);
+    setAiTriggerCount((c) => c + 1);
+  };
+
   const [workspaceMembers, setWorkspaceMembers] = useState([]);
   const [inviteEmail, setInviteEmail]   = useState('');
   const [inviteMsg, setInviteMsg]       = useState('');
@@ -476,6 +485,7 @@ export default function AppShell() {
     setView,
     setIsCreateOpen,
     setShortcutsHelpOpen,
+    onTriggerAi: handleTriggerAi,
   });
 
   // Track recently viewed items
@@ -2463,6 +2473,8 @@ export default function AppShell() {
               workspaceId={activeWorkspaceId}
               onToast={showToast}
               onExecuted={() => { fetchAll(); fetchNotifications(); }}
+              triggerCount={aiTriggerCount}
+              triggerQuery={aiTriggerQuery}
             />
             {can('create_items') && (
               <Button variant="action" className="hidden md:inline-flex" onClick={() => { setView('board'); setIsCreateOpen(true); }}>
@@ -2783,6 +2795,7 @@ export default function AppShell() {
           onClose={() => setPaletteOpen(false)}
           commands={paletteCommands}
           onSearch={commandSearch}
+          onTriggerAi={handleTriggerAi}
         />
       )}
 

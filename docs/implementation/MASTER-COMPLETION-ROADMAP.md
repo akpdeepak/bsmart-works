@@ -100,7 +100,7 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 | 10 | Work-item experience | Completed | 🟠 ~20% | core built | premium redesign + right panel |
 | 11 | Project command center | Completed | 🟠 ~25% | projects built | dedicated command surface |
 | 12 | DevSync intelligence | Completed | 🟠 ~25% | dev workspace built | raw event ingestion + flow |
-| 13 | Universal AI Command | Not started | ⚪ 0% | ~75% (Cap P + AI plane) | NL command across app |
+| 13 | Universal AI Command | Completed | 🟢 100% | ~75% (Cap P + AI plane) | NL command across app |
 | 14 | Answer Engine | Not started | ⚪ 0% | ~40% (KB answer exists) | RAG answer surface |
 | 15 | Canvas / AI artifacts | Not started | ⚪ 0% | ~25% | generative canvas |
 | 16 | Knowledge & Doc Workspace | Not started | ⚪ 0% | ~95% (deepest) | premium knowledge flows |

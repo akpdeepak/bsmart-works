@@ -17,11 +17,12 @@ const HINTS = [
   'Add comment on WEB-12: Starting work today',
 ];
 
-export function AiCommandBar({ workspaceId, onToast, onExecuted }) {
+export function AiCommandBar({ workspaceId, onToast, onExecuted, triggerCount, triggerQuery }) {
   const [capabilities, setCapabilities] = useState([]);
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [plan, setPlan] = useState(null);          // { text, steps:[{action,description,params,_include}] }
+  const [answer, setAnswer] = useState(null);      // { answer, sources, confidence }
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState(0);
   const [listening, setListening] = useState(false);
@@ -40,6 +41,13 @@ export function AiCommandBar({ workspaceId, onToast, onExecuted }) {
   }, [workspaceId]);
 
   useEffect(() => {
+    if (triggerCount > 0) {
+      setOpen(true);
+      if (triggerQuery) setText(triggerQuery);
+    }
+  }, [triggerCount, triggerQuery]);
+
+  useEffect(() => {
     if (!open) return undefined;
     const id = setInterval(() => setHint((h) => (h + 1) % HINTS.length), 3500);
     return () => clearInterval(id);
@@ -52,6 +60,7 @@ export function AiCommandBar({ workspaceId, onToast, onExecuted }) {
   const close = useCallback(() => {
     setOpen(false);
     setPlan(null);
+    setAnswer(null);
     setText('');
     if (recognitionRef.current) { recognitionRef.current.stop(); setListening(false); }
   }, []);
@@ -66,14 +75,26 @@ export function AiCommandBar({ workspaceId, onToast, onExecuted }) {
   // AI is off for this workspace → the button disappears entirely (not just dims).
   if (!anyCapabilityEnabled(capabilities)) return null;
 
+  const isQuestion = (str) => {
+    const s = str.trim().toLowerCase();
+    return s.endsWith('?') || /^(who|what|where|when|why|how|can|is|are|do|does|will|should|could|would)\b/.test(s);
+  };
+
   const parse = async () => {
     if (!text.trim()) return;
     setBusy(true);
     try {
-      const result = await aiClient.parseCommand(workspaceId, text.trim());
-      setPlan({ ...result, steps: (result.steps || []).map((s) => ({ ...s, _include: true })) });
+      if (isQuestion(text)) {
+        const result = await aiClient.ask(workspaceId, text.trim());
+        setAnswer(result);
+        setPlan(null);
+      } else {
+        const result = await aiClient.parseCommand(workspaceId, text.trim());
+        setPlan({ ...result, steps: (result.steps || []).map((s) => ({ ...s, _include: true })) });
+        setAnswer(null);
+      }
     } catch (e) {
-      notify(e.message || 'Could not parse command', 'error');
+      notify(e.message || 'Could not process request', 'error');
     } finally {
       setBusy(false);
     }
@@ -168,14 +189,46 @@ export function AiCommandBar({ workspaceId, onToast, onExecuted }) {
             </div>
 
             <div className="p-4 space-y-4 max-h-[60vh] overflow-auto">
-              {!plan && (
+              {!plan && !answer && (
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-neutral-600">
-                    Type a command in English, Hindi or Hinglish — I&apos;ll show a plan before doing anything.
+                    Type a command or ask a question — I&apos;ll preview the plan or find the answer.
                   </p>
                   <Button variant="action" onClick={parse} disabled={busy || !text.trim()}>
-                    {busy ? 'Reading…' : 'Preview plan'}
+                    {busy ? 'Processing…' : 'Go'}
                   </Button>
+                </div>
+              )}
+
+              {/* Answer Engine View (Epic 14) */}
+              {answer && (
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between">
+                    <p className="text-sm text-neutral-900 dark:text-neutral-100 font-medium">
+                      {answer.answer}
+                    </p>
+                    {answer.confidence === 'HIGH' ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-brand-green/20 text-brand-green uppercase tracking-wide shrink-0">High Confidence</span>
+                    ) : (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-brand-orange/20 text-brand-orange uppercase tracking-wide shrink-0">Low Confidence</span>
+                    )}
+                  </div>
+                  {answer.sources && answer.sources.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-600">Sources</p>
+                      <ul className="space-y-1">
+                        {answer.sources.map((s, i) => (
+                          <li key={i} className="text-xs flex items-center gap-2">
+                            <span className="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 font-mono">{s.id}</span>
+                            <span className="text-neutral-700 dark:text-neutral-300">{s.title}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-end">
+                    <Button variant="secondary" onClick={() => setAnswer(null)} disabled={busy}>Ask another</Button>
+                  </div>
                 </div>
               )}
 

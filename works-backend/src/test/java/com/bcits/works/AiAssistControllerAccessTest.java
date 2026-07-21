@@ -7,6 +7,7 @@ import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.ai.AiAssistController;
 import com.bcits.works.ai.AiAssistService;
+import com.bcits.works.ai.AnswerEngineService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -38,10 +39,11 @@ class AiAssistControllerAccessTest {
     private static final String FOREIGN_WS = "ws-B";
 
     private final AiAssistService assist = mock(AiAssistService.class);
+    private final AnswerEngineService answerEngine = mock(AnswerEngineService.class);
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
 
-    private final AiAssistController controller = new AiAssistController(assist, authenticatedUser, rbac);
+    private final AiAssistController controller = new AiAssistController(assist, answerEngine, authenticatedUser, rbac);
 
     AiAssistControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);
@@ -70,9 +72,9 @@ class AiAssistControllerAccessTest {
     }
 
     @Test
-    void kbAsk_deniedForNonMember() {
-        assertThatThrownBy(() -> controller.kbAsk(FOREIGN_WS, Map.of("question", "x"))).isInstanceOf(ApiException.class);
-        verify(assist, never()).kbAsk(anyString(), anyString(), any(), anyBoolean());
+    void ask_deniedForNonMember() {
+        assertThatThrownBy(() -> controller.ask(FOREIGN_WS, Map.of("question", "x"))).isInstanceOf(ApiException.class);
+        verify(answerEngine, never()).ask(anyString(), anyString(), any(), anyBoolean());
     }
 
     @Test

@@ -38,7 +38,6 @@ import static com.bcits.works.ai.AiHeuristics.rankSimilar;
 import static com.bcits.works.ai.AiHeuristics.renderPlanSummary;
 import static com.bcits.works.ai.AiHeuristics.renderTemplate;
 import static com.bcits.works.ai.AiHeuristics.slaRisk;
-import static com.bcits.works.ai.AiHeuristics.snippet;
 import static com.bcits.works.ai.AiHeuristics.str;
 
 /**
@@ -295,24 +294,6 @@ public class AiAssistService {
 
     // ── Cap I · RAG over the knowledge base + Cap N · article suggestion ──────────
 
-    public record KbAnswer(String answer, List<Map<String, Object>> citations, AiMeta meta) { }
-
-    public KbAnswer kbAsk(String workspaceId, String userId, String question, boolean inContext) {
-        List<Article> ranked = rankArticles(workspaceArticles(workspaceId), nv(question), 3);
-        List<Map<String, Object>> citations = ranked.stream()
-            .map(a -> Map.<String, Object>of("id", a.getId(), "title", nv(a.getTitle())))
-            .collect(Collectors.toList());
-        String grounded = ranked.isEmpty()
-            ? "No knowledge-base article addresses that yet."
-            : "Based on " + ranked.size() + " article(s): " + snippet(ranked.get(0).getContent());
-        AiControlPlaneService.AiOutcome out = controlPlane.invoke(new AiControlPlaneService.AiCall(
-            workspaceId, userId, AiCapabilities.KB_RAG, "KB question: " + question, grounded, null, inContext));
-        // Fallback: ranked search results without a synthesised answer.
-        String answer = out.fallback()
-            ? (ranked.isEmpty() ? "No matching articles." : "See related articles below.")
-            : out.text();
-        return new KbAnswer(answer, citations, AiMeta.of(out));
-    }
 
     public Map<String, Object> kbSuggest(String workspaceId, String userId, String text, boolean inContext) {
         List<Article> ranked = rankArticles(workspaceArticles(workspaceId), nv(text), 3);

@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -28,12 +29,44 @@ import static org.mockito.Mockito.when;
 @Tag("unit")
 class FunnelMetricsServiceTest {
 
+    /** The designated internal (dogfood) workspace — the only one that may see platform aggregates. */
+    private static final String INTERNAL_WS = "WS-001";
+
     private final RbacService rbac = mock(RbacService.class);
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
 
-    private final FunnelMetricsService service = new FunnelMetricsService(rbac, jdbc);
+    private final FunnelMetricsService service = new FunnelMetricsService(rbac, jdbc, INTERNAL_WS);
 
     // ── Admin gate ────────────────────────────────────────────────────────────
+
+    /**
+     * The metrics below aggregate across every workspace on the platform. Admin tier in the
+     * caller's OWN tenant must not unlock that — only admin of the internal workspace may
+     * (HEART-METRICS.md §7). Otherwise every DISCOM admin reads platform-wide activation counts.
+     */
+    @Test
+    void adminOfAnotherTenant_cannotReadPlatformAggregates() {
+        when(rbac.getUserTier("USR-TENANT-ADM", "WS-CUSTOMER")).thenReturn(4);
+        when(rbac.isAdmin("USR-TENANT-ADM", "WS-CUSTOMER")).thenReturn(true);
+
+        assertThatThrownBy(() -> service.heartMetrics("USR-TENANT-ADM", "WS-CUSTOMER"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(e -> assertThat(((ApiException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+        verifyNoInteractions(jdbc);
+    }
+
+    /** Unconfigured internal workspace fails closed rather than opening the surface to everyone. */
+    @Test
+    void unconfiguredInternalWorkspace_failsClosed() {
+        FunnelMetricsService unconfigured = new FunnelMetricsService(rbac, jdbc, "");
+        when(rbac.getUserTier("USR-ADM", INTERNAL_WS)).thenReturn(4);
+        when(rbac.isAdmin("USR-ADM", INTERNAL_WS)).thenReturn(true);
+
+        assertThatThrownBy(() -> unconfigured.heartMetrics("USR-ADM", INTERNAL_WS))
+                .isInstanceOf(ApiException.class)
+                .satisfies(e -> assertThat(((ApiException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+        verifyNoInteractions(jdbc);
+    }
 
     @Test
     void nonMember_sees404() {

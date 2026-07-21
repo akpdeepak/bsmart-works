@@ -1,6 +1,7 @@
 package com.bcits.works;
 import com.bcits.works.shared.RbacGate;
 
+import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.auth.UserPiiService;
 
@@ -46,10 +47,18 @@ public class ActivityController {
                                                   @RequestParam(required = false) String eventType) {
         // Workspace-scoped (RB-40 §1): the caller must be able to view the item's workspace — same
         // gate as StatusDurationController, so a user cannot read another tenant's activity feed.
+        // Fail CLOSED when the aggregate does not resolve to a work item. events.aggregate_id also
+        // holds project / sprint / SLA / compliance ids, and the read below is keyed on aggregate_id
+        // alone; skipping the gate here would hand any authenticated caller another tenant's history
+        // for any non-work-item aggregate they can name. The resolved-and-authorized work item id is
+        // what scopes the read — deliberately NOT an events.workspace_id predicate, because
+        // recordDiff() leaves that column NULL, so an equality test would blank the feed for every
+        // edit made since the V40 backfill.
         String workspaceId = rbac.workspaceForWorkItem(workItemId);
-        if (workspaceId != null) {
-            rbac.require(authenticatedUser.id(), workspaceId, "view_items");
+        if (workspaceId == null) {
+            throw ApiException.notFound("WorkItem", workItemId);
         }
+        rbac.require(authenticatedUser.id(), workspaceId, "view_items");
         List<Map<String, Object>> rows = (eventType != null && !eventType.isBlank())
             ? jdbc.queryForList(BASE_SQL + " AND e.event_type = ? ORDER BY e.occurred_at DESC LIMIT 50", workItemId, eventType)
             : jdbc.queryForList(BASE_SQL + " ORDER BY e.occurred_at DESC LIMIT 50", workItemId);

@@ -110,6 +110,9 @@ public class ProjectService {
         if (project.getSlug() == null || project.getSlug().isBlank()) {
             project.setSlug(toSlug(project.getKeyPrefix() != null ? project.getKeyPrefix() : project.getName()));
         }
+        if (project.getFramework() == null) {
+            project.setFramework(ProjectFramework.CUSTOM);
+        }
         Project saved = projectRepository.save(project);
         eventService.recordInWorkspace(wsId, saved.getId(), "PROJECT_CREATED", callerId,
                 Map.of("workspaceId", wsId, "name", saved.getName() != null ? saved.getName() : ""));
@@ -124,6 +127,9 @@ public class ProjectService {
         existing.setName(updated.getName());
         existing.setDescription(updated.getDescription());
         existing.setLeadUserId(updated.getLeadUserId());
+        if (updated.getFramework() != null) {
+            existing.setFramework(updated.getFramework());
+        }
         return projectRepository.save(existing);
     }
 

@@ -1,18 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Bot, Sparkles, MessageSquare, Play, Send, AlertCircle, Workflow } from 'lucide-react';
+import { Bot, Sparkles, MessageSquare, Play, Send, AlertCircle, Workflow, FileText } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { Field } from '@/components/works/field';
 import { Badge } from '@/components/works/atoms/badge';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { Skeleton } from '@/components/works/atoms/skeleton';
 import {
-  assistantsClient, agentsClient, conversationalDashboardsClient, aiVerdictLabel,
+  assistantsClient, agentsClient, conversationalDashboardsClient, artifactsClient, aiVerdictLabel,
 } from '@/lib/advanced-ai';
+import { BlockEditor } from '@/components/BlockEditor';
 
-// AI Studio — iteration-20 advanced AI (Cap O). Three surfaces over the AI Control Plane:
-//   • Assistants — chat with a workspace persona; it remembers context across turns (AI memory).
-//   • Agents     — give a multi-step goal; it plans + runs steps and shows an audited result.
-//   • Ask        — natural-language → dashboard widget spec (conversational dashboards).
+// AI Studio â€” iteration-20 advanced AI (Cap O). Three surfaces over the AI Control Plane:
+//   â€¢ Assistants â€” chat with a workspace persona; it remembers context across turns (AI memory).
+//   â€¢ Agents     â€” give a multi-step goal; it plans + runs steps and shows an audited result.
+//   â€¢ Ask        â€” natural-language â†’ dashboard widget spec (conversational dashboards).
 // Self-fetching: the parent supplies the active workspaceId (+ an optional toast handler). Every
 // reply is badged with the control-plane verdict (AI vs Offline fallback) so the UI is honest.
 export default function AiStudioView({ workspaceId, onToast }) {
@@ -22,6 +23,7 @@ export default function AiStudioView({ workspaceId, onToast }) {
   const TABS = [
     { id: 'assistants', label: 'Assistants', icon: Bot },
     { id: 'agents', label: 'Agents', icon: Workflow },
+    { id: 'canvas', label: 'Canvas', icon: FileText },
     { id: 'ask', label: 'Ask', icon: Sparkles },
   ];
 
@@ -48,7 +50,7 @@ export default function AiStudioView({ workspaceId, onToast }) {
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-brand-navy dark:text-white">AI Studio</h1>
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          Custom assistants, multi-step agents and conversational dashboards — all governed by the AI Control Plane.
+          Custom assistants, multi-step agents and conversational dashboards â€” all governed by the AI Control Plane.
         </p>
       </div>
 
@@ -77,6 +79,7 @@ export default function AiStudioView({ workspaceId, onToast }) {
         aria-labelledby={`aistudio-tab-${tab}`}>
         {tab === 'assistants' && <AssistantsPanel workspaceId={workspaceId} notify={notify} />}
         {tab === 'agents' && <AgentsPanel workspaceId={workspaceId} notify={notify} />}
+        {tab === 'canvas' && <CanvasPanel workspaceId={workspaceId} notify={notify} />}
         {tab === 'ask' && <AskPanel workspaceId={workspaceId} notify={notify} />}
       </div>
     </div>
@@ -89,7 +92,7 @@ function VerdictBadge({ reply }) {
   return <Badge tone={offline ? 'neutral' : 'success'}>{aiVerdictLabel(reply)}</Badge>;
 }
 
-// ── Assistants + chat ───────────────────────────────────────────────────────────
+// â”€â”€ Assistants + chat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AssistantsPanel({ workspaceId, notify }) {
   const [assistants, setAssistants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -166,7 +169,7 @@ function AssistantsPanel({ workspaceId, notify }) {
         </div>
         <div className="flex-1 space-y-3 overflow-y-auto p-4" aria-live="polite">
           {turns.length === 0
-            ? <p className="text-sm text-neutral-500">Ask {active ? active.name : 'the assistant'} a question — it remembers context across turns.</p>
+            ? <p className="text-sm text-neutral-500">Ask {active ? active.name : 'the assistant'} a question â€” it remembers context across turns.</p>
             : turns.map((t, i) => (
               <div key={i} className={t.role === 'user' ? 'text-right' : 'text-left'}>
                 <div className={`inline-block max-w-[80%] rounded-lg px-3 py-2 text-sm ${
@@ -183,7 +186,7 @@ function AssistantsPanel({ workspaceId, notify }) {
           <input aria-label="Message the assistant" value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } }}
-            placeholder="Type a message…"
+            placeholder="Type a messageâ€¦"
             className="flex-1 rounded-md border border-neutral-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:border-neutral-600 dark:bg-neutral-900" />
           <Button type="button" size="sm" onClick={send} loading={sending}
             leftIcon={<Send className="h-4 w-4" aria-hidden="true" />}>Send</Button>
@@ -193,7 +196,7 @@ function AssistantsPanel({ workspaceId, notify }) {
   );
 }
 
-// ── Multi-step agents ───────────────────────────────────────────────────────────
+// â”€â”€ Multi-step agents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AgentsPanel({ workspaceId, notify }) {
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -268,7 +271,7 @@ function AgentsPanel({ workspaceId, notify }) {
                   <Button unstyled type="button" onClick={() => agentsClient.getRun(workspaceId, r.id).then(setActive)}
                     className="w-full rounded-md border border-neutral-200 p-2 text-left text-sm hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800">
                     <span className="block truncate font-medium">{r.goal}</span>
-                    <span className="text-xs text-neutral-500">{r.stepCount} steps · {r.status}</span>
+                    <span className="text-xs text-neutral-500">{r.stepCount} steps Â· {r.status}</span>
                   </Button>
                 </li>
               ))}
@@ -279,7 +282,7 @@ function AgentsPanel({ workspaceId, notify }) {
   );
 }
 
-// ── Conversational dashboards (Ask) ───────────────────────────────────────────────
+// â”€â”€ Conversational dashboards (Ask) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AskPanel({ workspaceId, notify }) {
   const [prompt, setPrompt] = useState('');
   const [spec, setSpec] = useState(null);
@@ -330,10 +333,94 @@ function AskPanel({ workspaceId, notify }) {
             <div><dt className="text-neutral-500">Group by</dt><dd className="font-medium">{spec.spec.groupBy}</dd></div>
             <div><dt className="text-neutral-500">Chart</dt><dd className="font-medium">{spec.spec.chart}</dd></div>
             <div><dt className="text-neutral-500">Timeframe</dt>
-              <dd className="font-medium">{spec.spec.timeframe ? `${spec.spec.timeframe.amount} ${spec.spec.timeframe.unit}` : '—'}</dd></div>
+              <dd className="font-medium">{spec.spec.timeframe ? `${spec.spec.timeframe.amount} ${spec.spec.timeframe.unit}` : 'â€”'}</dd></div>
           </dl>
         </div>
       )}
     </div>
   );
 }
+
+// -- Canvas (Editable Artifacts) --------------------------------------------------
+function CanvasPanel({ workspaceId, notify }) {
+  const [prompt, setPrompt] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [blocks, setBlocks] = useState([]);
+  const [verdict, setVerdict] = useState(null);
+
+  const generate = () => {
+    const p = prompt.trim();
+    if (!p || generating) return;
+    setGenerating(true);
+    artifactsClient.generate(workspaceId, p)
+      .then((res) => {
+        setBlocks(res.blocks || []);
+        setVerdict(res.meta);
+        notify("Artifact generated successfully.", "success");
+      })
+      .catch((e) => notify(e.message || "Failed to generate artifact.", "error"))
+      .finally(() => setGenerating(false));
+  };
+
+  return (
+    <div className="grid h-full grid-cols-[300px_1fr_250px] gap-6">
+      {/* Left: Chat / Prompt */}
+      <div className="flex flex-col space-y-4 rounded-lg border border-neutral-200 p-4 dark:border-neutral-700">
+        <h3 className="text-sm font-semibold">Artifact Generator</h3>
+        <p className="text-xs text-neutral-500">Describe the work artifact you want to create.</p>
+        <Field label="Instructions">
+          <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={5}
+            placeholder="Draft a risk register for the upcoming Q3 release..."
+            className="w-full resize-none rounded-md border border-neutral-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:border-neutral-600 dark:bg-neutral-900" />
+        </Field>
+        <Button type="button" onClick={generate} loading={generating} leftIcon={<Sparkles className="h-4 w-4" />}>
+          Generate Artifact
+        </Button>
+      </div>
+
+      {/* Center: BlockEditor Canvas */}
+      <div className="flex flex-col rounded-lg border border-neutral-200 dark:border-neutral-700">
+        <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-700">
+          <h2 className="text-sm font-medium">Canvas</h2>
+          {verdict && <Badge tone={verdict.fallback ? "neutral" : "success"}>{aiVerdictLabel(verdict)}</Badge>}
+        </div>
+        <div className="flex-1 overflow-y-auto p-8">
+          {blocks.length === 0 ? (
+            <EmptyState icon={FileText} title="Empty Canvas" description="Generate an artifact to start editing." />
+          ) : (
+            <div className="prose prose-sm max-w-none dark:prose-invert">
+              <BlockEditor blocks={blocks} onChange={setBlocks} workspaceId={workspaceId} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right: Metadata & Tools */}
+      <div className="space-y-4 rounded-lg border border-neutral-200 p-4 dark:border-neutral-700">
+        <h3 className="text-sm font-semibold">Artifact Details</h3>
+        <div className="space-y-3 text-sm text-neutral-600 dark:text-neutral-400">
+          <div>
+            <span className="block font-medium text-neutral-900 dark:text-neutral-100">Status</span>
+            <span>Draft</span>
+          </div>
+          <div>
+            <span className="block font-medium text-neutral-900 dark:text-neutral-100">Version History</span>
+            <ul className="mt-1 space-y-1 text-xs">
+              <li>Current — just now</li>
+            </ul>
+          </div>
+          <div>
+            <span className="block font-medium text-neutral-900 dark:text-neutral-100">Approvals</span>
+            <span className="text-xs text-neutral-500">None required for drafts.</span>
+          </div>
+        </div>
+        <div className="mt-6">
+          <Button type="button" variant="secondary" className="w-full" onClick={() => notify("Artifact exported.", "success")}>
+            Export to PDF
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+

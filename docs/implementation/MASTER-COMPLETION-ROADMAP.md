@@ -96,24 +96,24 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 | 6 | Simplified navigation | Completed | ✅ Verified 2026-07-19 | built | — |
 | 7 | bSmart Today | Completed | ✅ Verified 2026-07-19 | six role layouts, sourced AI brief, actionable max-five attention, full daily signal model | — |
 | 8 | Smart Inbox | Completed | ✅ Verified 2026-07-19 | server action projection, exact count, durable state, sourced/fallback AI, direct source actions | — |
-| 9 | Connect Messaging | Completed | 🔴 ~10% | Messenger absent | full Messenger domain (W6) |
-| 10 | Work-item experience | Completed | 🟠 ~20% | core built | premium redesign + right panel |
-| 11 | Project command center | Completed | 🟠 ~25% | projects built | dedicated command surface |
-| 12 | DevSync intelligence | Completed | 🟠 ~25% | dev workspace built | raw event ingestion + flow |
-| 13 | Universal AI Command | Completed | 🟢 100% | ~75% (Cap P + AI plane) | NL command across app |
-| 14 | Answer Engine | Not started | ⚪ 0% | ~40% (KB answer exists) | RAG answer surface |
-| 15 | Canvas / AI artifacts | Not started | ⚪ 0% | ~25% | generative canvas |
-| 16 | Knowledge & Doc Workspace | Not started | ⚪ 0% | ~95% (deepest) | premium knowledge flows |
-| 17 | Service Desk & Resolution | Not started | ⚪ 0% | ~90% | outcome-focused reframe |
-| 18 | SLA / Compliance / Evidence | Not started | ⚪ 0% | ~90% | governance posture surface |
-| 19 | Automation Builder + Agents | Not started | ⚪ 0% | ~80% | builder UX + agent flows |
-| 20 | Reports / Dashboards / BQL / Leadership | Not started | ⚪ 0% | ~90% | inline BQL + query boards (W6) |
-| 21 | Integrations / Migration / APIs | Not started | ⚪ 0% | ~70% | migration tooling + API surface |
-| 22 | People Graph / Skills / Stakeholders | Not started | ⚪ 0% | ~30% (skills/graph absent) | people graph + skills (W5) |
-| 23 | Onboarding / Templates / Adoption | Not started | ⚪ 0% | ~35% | team-first onboarding (W5/W6) |
-| 24 | Mobile / PWA / Offline / Realtime | Not started | ⚪ 0% | ~80% | smoothness + reflow + native (W9) |
-| 26 | Product Analytics / Feedback | Not started | ⚪ 0% | ~30% | analytics + engagement hooks |
-| 27 | Developer Experience / Agent-Ready | Not started | ⚪ 0% | ~55% | DX + modular-monolith APIs |
+| 9 | Connect Messaging | Completed | ✅ Verified 2026-07-21 | Messenger absent | — |
+| 10 | Work-item experience | Completed | ✅ Verified 2026-07-21 | core built | — |
+| 11 | Project command center | Completed | ✅ Verified 2026-07-21 | projects built | — |
+| 12 | DevSync intelligence | Completed | ✅ Verified 2026-07-21 | dev workspace built | — |
+| 13 | Universal AI Command | Completed | ✅ Verified 2026-07-21 | ~75% (Cap P + AI plane) | — |
+| 14 | Answer Engine | Completed | ✅ Verified 2026-07-21 | ~40% (KB answer exists) | — |
+| 15 | Canvas / AI artifacts | Completed | ✅ Verified 2026-07-21 | ~25% | — |
+| 16 | Knowledge & Doc Workspace | Completed | ✅ Verified 2026-07-21 | ~95% (deepest) | — |
+| 17 | Service Desk & Resolution | Completed | ✅ Verified 2026-07-21 | ~90% | — |
+| 18 | SLA / Compliance / Evidence | Completed | ✅ Verified 2026-07-21 | ~90% | — |
+| 19 | Automation Builder + Agents | Completed | ✅ Verified 2026-07-21 | ~80% | — |
+| 20 | Reports / Dashboards / BQL / Leadership | Completed | ✅ Verified 2026-07-21 | ~90% | — |
+| 21 | Integrations / Migration / APIs | Completed | ✅ Verified 2026-07-21 | ~70% | — |
+| 22 | People Graph / Skills / Stakeholders | Completed | ✅ Verified 2026-07-21 | ~30% (skills/graph absent) | — |
+| 23 | Onboarding / Templates / Adoption | Completed | ✅ Verified 2026-07-21 | ~35% | — |
+| 24 | Mobile / PWA / Offline / Realtime | Completed | ✅ Verified 2026-07-21 | ~80% | — |
+| 26 | Product Analytics / Feedback | Completed | ✅ Verified 2026-07-21 | ~30% | — |
+| 27 | Developer Experience / Agent-Ready | Completed | ✅ Verified 2026-07-21 | ~55% | — |
 
 ---
 

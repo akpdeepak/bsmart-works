@@ -168,6 +168,26 @@ public class AiAssistService {
         return new GeneratedDraft(k, draft, AiMeta.of(out));
     }
 
+    public record ArtifactGenerationResult(List<Map<String, Object>> blocks, AiMeta meta) { }
+
+    public ArtifactGenerationResult generateArtifact(String workspaceId, String userId, String prompt, boolean inContext) {
+        String cleanPrompt = nv(prompt).replace("\"", "\\\"");
+        String draft = "{\"blocks\":[{\"id\":\"h1\",\"type\":\"heading\",\"content\":\"Generated Artifact\",\"metadata\":{\"level\":1}},"
+            + "{\"id\":\"p1\",\"type\":\"paragraph\",\"content\":\"Generated from prompt: " + cleanPrompt + "\",\"metadata\":{}}]}";
+        AiControlPlaneService.AiOutcome out = controlPlane.invoke(new AiControlPlaneService.AiCall(
+            workspaceId, userId, AiCapabilities.GENERATION, "Generate canvas artifact for: " + prompt, draft, null, inContext));
+
+        
+        List<Map<String, Object>> blocks = new ArrayList<>();
+        blocks.add(Map.of("id", "h1", "type", "heading", "content", "AI Generated Artifact", "metadata", Map.of("level", 1)));
+        blocks.add(Map.of("id", "p1", "type", "paragraph", "content", "Based on your prompt: " + prompt, "metadata", Map.of()));
+        
+        // We simulate that `out.text()` could be a JSON block array string in a real AI,
+        // but for this phase we provide a deterministic fallback block list (RB-40).
+        return new ArtifactGenerationResult(blocks, AiMeta.of(out));
+    }
+
+
     // ── Cap O · Anomaly explanation ──────────────────────────────────────────────
 
     public record AnomalyExplanation(String explanation, double delta, int index, List<String> citations, AiMeta meta) { }

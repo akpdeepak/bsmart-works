@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "f01f57399b54db6e787e72290b222e7dfc0234f6eb1ae4654f1364ce00c8a2a0",
+  "sourceDigest": "0fc58de804a37d4a9cdc9cdf6893121ede2c19de34cf5b6ccde11a0a466a01a6",
   "backend": {
     "java": "21",
     "springBoot": "4.1.0",
@@ -13,6 +13,7 @@
       "devsync",
       "knowledge",
       "messaging",
+      "messenger",
       "projects",
       "reporting",
       "security",
@@ -31,8 +32,8 @@
   "database": {
     "engine": "PostgreSQL",
     "migrationTool": "Flyway",
-    "flywayHighWater": 123,
-    "nextMigration": 124
+    "flywayHighWater": 125,
+    "nextMigration": 126
   },
   "generatedFrom": [
     "works-backend/pom.xml",

@@ -7,6 +7,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.Filter;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import java.time.OffsetDateTime;
 
 /**
@@ -38,6 +40,9 @@ public class Project {
     private String leadUserId;
     private OffsetDateTime createdAt;
     private boolean isArchived;
+    
+    @Enumerated(EnumType.STRING)
+    private ProjectFramework framework;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -57,4 +62,6 @@ public class Project {
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
     public boolean isArchived() { return isArchived; }
     public void setArchived(boolean archived) { isArchived = archived; }
+    public ProjectFramework getFramework() { return framework; }
+    public void setFramework(ProjectFramework framework) { this.framework = framework; }
 }

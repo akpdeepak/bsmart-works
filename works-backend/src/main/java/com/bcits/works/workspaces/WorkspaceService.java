@@ -102,13 +102,14 @@ public class WorkspaceService {
     public List<Map<String, String>> getMembers(String callerId, String workspaceId) {
         requireMember(callerId, workspaceId);
         return jdbc.query(
-            "SELECT u.id, u.full_name, u.email, wm.system_role FROM workspace_members wm "
+            "SELECT u.id, u.full_name, u.email, wm.system_role, wm.business_user_type FROM workspace_members wm "
             + "JOIN users u ON u.id = wm.user_id WHERE wm.workspace_id = ?",
             (rs, row) -> Map.of(
                 "id", rs.getString("id"),
                 "fullName", rs.getString("full_name"),
                 "email", rs.getString("email"),
-                "role", rs.getString("system_role")
+                "role", rs.getString("system_role"),
+                "businessUserType", rs.getString("business_user_type")
             ), workspaceId);
     }
 
@@ -118,8 +119,9 @@ public class WorkspaceService {
         String resolvedRole = (role == null || role.isBlank()) ? "MEMBER" : role;
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> ApiException.notFound("User", email));
-        jdbc.update("INSERT INTO workspace_members (workspace_id, user_id, system_role) "
-                + "VALUES (?, ?, ?) ON CONFLICT DO NOTHING", workspaceId, user.getId(), resolvedRole);
+        jdbc.update("INSERT INTO workspace_members (workspace_id, user_id, system_role, business_user_type) "
+                + "VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING", 
+                workspaceId, user.getId(), resolvedRole, BusinessUserType.INDIVIDUAL.name());
         eventService.recordInWorkspace(workspaceId, workspaceId, "MEMBER_ADDED", callerId,
                 Map.of("workspaceId", workspaceId, "userId", user.getId(), "role", resolvedRole));
         funnelService.onTeammateInvited(workspaceId, callerId, user.getId());
@@ -134,6 +136,26 @@ public class WorkspaceService {
         eventService.recordInWorkspace(workspaceId, workspaceId, "MEMBER_REMOVED", callerId,
                 Map.of("workspaceId", workspaceId, "userId", memberId));
         return Map.of("message", "Member removed");
+    }
+
+    @Transactional
+    public Map<String, String> updateMemberType(String callerId, String workspaceId, String memberId, 
+                                                String systemRole, String businessUserType) {
+        rbac.require(callerId, workspaceId, "manage_workspace");
+        if (systemRole != null) {
+            jdbc.update("UPDATE workspace_members SET system_role = ? WHERE workspace_id = ? AND user_id = ?",
+                    systemRole, workspaceId, memberId);
+        }
+        if (businessUserType != null) {
+            try {
+                BusinessUserType.valueOf(businessUserType);
+                jdbc.update("UPDATE workspace_members SET business_user_type = ? WHERE workspace_id = ? AND user_id = ?",
+                        businessUserType, workspaceId, memberId);
+            } catch (IllegalArgumentException e) {
+                throw ApiException.badRequest("INVALID_BUSINESS_USER_TYPE", "Invalid business user type");
+            }
+        }
+        return Map.of("message", "Member updated");
     }
 
     // ── Branding ─────────────────────────────────────────────────────────────

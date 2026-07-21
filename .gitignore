@@ -25,3 +25,7 @@ tools/jetbrains-plugin/build/
 .env.production.local
 works-backend/.env
 works-frontend/.env.local
+
+# Local lint tooling output (never commit)
+works-frontend/lint_output.txt
+works-frontend/lint_results.json

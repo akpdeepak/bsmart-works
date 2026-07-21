@@ -208,9 +208,9 @@ export function AiCommandBar({ workspaceId, onToast, onExecuted, triggerCount, t
                       {answer.answer}
                     </p>
                     {answer.confidence === 'HIGH' ? (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-brand-green/20 text-brand-green uppercase tracking-wide shrink-0">High Confidence</span>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-brand-green/20 text-brand-green uppercase tracking-wide shrink-0">High Confidence</span>
                     ) : (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-brand-orange/20 text-brand-orange uppercase tracking-wide shrink-0">Low Confidence</span>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-brand-orange/20 text-brand-orange uppercase tracking-wide shrink-0">Low Confidence</span>
                     )}
                   </div>
                   {answer.sources && answer.sources.length > 0 && (

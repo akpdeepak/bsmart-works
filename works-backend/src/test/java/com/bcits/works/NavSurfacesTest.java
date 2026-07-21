@@ -43,4 +43,15 @@ class NavSurfacesTest {
     void unknownSurfaceDefaultsToEveryone() {
         assertThat(NavSurfaces.minTier("nonexistent-surface")).isEqualTo(1);
     }
+
+    @Test
+    void connectSurfacesAreCatalogedAtTheFrontEndTier() {
+        // Messenger and Operating Model are navigable front-end destinations, so the server-side
+        // catalog must carry them at the same tier as lib/nav-model.js SURFACE_TIER (EPIC 6/9).
+        assertThat(NavSurfaces.minTier("messenger")).isEqualTo(1);
+        assertThat(NavSurfaces.minTier("operatingmodel")).isEqualTo(4);
+        assertThat(NavSurfaces.visibleFor(1)).contains("messenger");
+        assertThat(NavSurfaces.visibleFor(3)).doesNotContain("operatingmodel");
+        assertThat(NavSurfaces.visibleFor(4)).contains("operatingmodel");
+    }
 }

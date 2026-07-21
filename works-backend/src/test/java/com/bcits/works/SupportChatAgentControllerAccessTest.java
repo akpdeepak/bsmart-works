@@ -85,6 +85,25 @@ class SupportChatAgentControllerAccessTest {
         verify(chat, never()).resolve(anyString(), anyString(), anyString());
     }
 
+    /**
+     * Approving a draft is what turns AI text into a customer-visible message, so a non-member must
+     * be stopped at the boundary before the service can append anything.
+     */
+    @Test
+    void approveDraft_deniedForNonMember_nothingSent() {
+        assertThatThrownBy(() -> controller.approveDraft("CHAT-1", "DRAFT-1", FOREIGN_WS, null))
+            .isInstanceOf(ApiException.class)
+            .satisfies(e -> assertThat(((ApiException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+        verify(chat, never()).approveDraft(anyString(), anyString(), anyString(), anyString(), any());
+    }
+
+    @Test
+    void discardDraft_deniedForNonMember() {
+        assertThatThrownBy(() -> controller.discardDraft("CHAT-1", "DRAFT-1", FOREIGN_WS))
+            .isInstanceOf(ApiException.class);
+        verify(chat, never()).discardDraft(anyString(), anyString(), anyString(), anyString());
+    }
+
     @Test
     void missingWorkspaceIsRejected() {
         assertThatThrownBy(() -> controller.list("", null))

@@ -14,6 +14,11 @@ import { connectRealtime } from '@/lib/realtime';
 // the conversation list (filterable by status), open a thread, claim it, reply, and resolve. Self-
 // contained: fetches its own data through the single apiClient via agentChatClient; the backend
 // enforces work_service RBAC and workspace scope. Tokens only, all five states, keyboard-operable.
+//
+// This view is also where the AI approval gate is worked. AI never replies to a customer on its own
+// — its tier-1 answer arrives as `pendingDraft`, which is agent-only and absent from every
+// customer-facing response. Sending it is an explicit agent action, so the reviewer is always the
+// one who decided the customer should see those words.
 const STATUS_FILTERS = [
   ['', 'All'],
   ['ESCALATED', 'Needs agent'],
@@ -33,6 +38,10 @@ export default function SupportInboxView({ workspaceId }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [actionDraft, setActionDraft] = useState(null);
+  // The AI's suggested reply, waiting on this agent. It is not part of the transcript and the
+  // customer cannot see it — approving is what sends it.
+  const [pendingDraft, setPendingDraft] = useState(null);
+  const [draftEdit, setDraftEdit] = useState('');
   const replyRef = useRef(null);
 
   const loadList = useCallback(() => {
@@ -70,7 +79,12 @@ export default function SupportInboxView({ workspaceId }) {
     setError('');
     setActionDraft(null);
     agentChatClient.getConversation(workspaceId, id)
-      .then((res) => { setThread(res.conversation); setMessages(res.messages || []); })
+      .then((res) => {
+        setThread(res.conversation);
+        setMessages(res.messages || []);
+        setPendingDraft(res.pendingDraft || null);
+        setDraftEdit(res.pendingDraft?.body || '');
+      })
       .catch((err) => setError(err.message || 'Could not open the conversation.'));
   }, [workspaceId]);
 
@@ -98,6 +112,26 @@ export default function SupportInboxView({ workspaceId }) {
       .finally(() => setBusy(false));
   };
 
+  const approveDraft = () => {
+    if (!thread || !pendingDraft || busy) return;
+    const edited = draftEdit.trim();
+    setBusy(true);
+    agentChatClient.approveDraft(workspaceId, thread.id, pendingDraft.id,
+      edited === pendingDraft.body ? null : edited)
+      .then(() => refreshActive())
+      .catch((err) => setError(err.message || 'Could not send the suggested reply.'))
+      .finally(() => setBusy(false));
+  };
+
+  const discardDraft = () => {
+    if (!thread || !pendingDraft || busy) return;
+    setBusy(true);
+    agentChatClient.discardDraft(workspaceId, thread.id, pendingDraft.id)
+      .then(() => refreshActive())
+      .catch((err) => setError(err.message || 'Could not discard the suggested reply.'))
+      .finally(() => setBusy(false));
+  };
+
   const resolve = () => {
     if (!thread) return;
     setBusy(true);
@@ -116,7 +150,7 @@ export default function SupportInboxView({ workspaceId }) {
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Support inbox</h1>
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          Customer chat conversations — AI handles tier-1; you take over when they escalate.
+          Customer chat conversations — AI suggests a tier-1 reply, you decide what gets sent.
         </p>
       </div>
 
@@ -221,6 +255,35 @@ export default function SupportInboxView({ workspaceId }) {
               </div>
 
               <div className="border-t border-neutral-200 p-3 dark:border-neutral-700">
+                {pendingDraft && (
+                  <div className="mb-3 rounded-lg border border-semantic-warning/30 bg-semantic-warning-surface p-3">
+                    <p className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
+                      <Bot className="h-4 w-4" aria-hidden="true" />
+                      Suggested reply — not sent yet
+                    </p>
+                    <p className="mt-1 text-xs text-neutral-600">
+                      The customer cannot see this. Edit it if you need to, then send it or discard it.
+                    </p>
+                    <label htmlFor="ai-draft" className="sr-only">Suggested reply to the customer</label>
+                    <textarea
+                      id="ai-draft" rows={3} value={draftEdit}
+                      onChange={(e) => setDraftEdit(e.target.value)}
+                      className="mt-2 w-full resize-none rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 dark:bg-neutral-900 dark:text-neutral-100"
+                    />
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <Button type="button" size="sm" onClick={approveDraft} loading={busy}
+                        disabled={!draftEdit.trim()}
+                        leftIcon={<Send className="h-3.5 w-3.5" aria-hidden="true" />}>
+                        Send to customer
+                      </Button>
+                      <Button type="button" size="sm" variant="secondary" onClick={discardDraft} loading={busy}
+                        leftIcon={<X className="h-3.5 w-3.5" aria-hidden="true" />}>
+                        Discard
+                      </Button>
+                      <span className="text-xs text-neutral-600">{pendingDraft.aiMeta}</span>
+                    </div>
+                  </div>
+                )}
                 {actionDraft && (
                   <div className="mb-3 rounded-lg border border-brand-navy/20 bg-brand-navy/5 p-3">
                     <div className="flex items-start justify-between gap-3">

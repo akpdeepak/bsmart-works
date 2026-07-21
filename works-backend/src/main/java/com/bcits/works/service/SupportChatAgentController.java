@@ -1,5 +1,6 @@
 package com.bcits.works.service;
 
+import com.bcits.works.messaging.ChatAiDraft;
 import com.bcits.works.messaging.ChatConversation;
 import com.bcits.works.security.CustomerAttributionPiiService;
 import com.bcits.works.shared.ApiException;
@@ -54,12 +55,44 @@ public class SupportChatAgentController {
         return convos;
     }
 
-    /** Open a single conversation with its full transcript. */
+    /**
+     * Open a single conversation with its full transcript, plus any AI reply awaiting review.
+     * The pending draft is agent-only — it is deliberately absent from every customer-facing
+     * response until an agent approves it.
+     */
     @GetMapping("/conversations/{id}")
     public Map<String, Object> get(@PathVariable String id, @RequestParam String workspaceId) {
         requireWorkspace(workspaceId);
         rbac.require(authenticatedUser.id(), workspaceId, "work_service");
-        return envelope(chat.getConversationForAgent(workspaceId, id));
+        Map<String, Object> out = envelope(chat.getConversationForAgent(workspaceId, id));
+        out.put("pendingDraft", chat.pendingDraft(workspaceId, id));
+        return out;
+    }
+
+    /**
+     * Approve the AI's suggested reply and send it to the customer, optionally after editing it.
+     * This is the only endpoint that makes an AI-composed reply customer-visible, which is why it
+     * requires the same {@code work_service} permission as writing a reply by hand.
+     */
+    @PostMapping("/conversations/{id}/drafts/{draftId}/approve")
+    public Map<String, Object> approveDraft(@PathVariable String id, @PathVariable String draftId,
+                                            @RequestParam String workspaceId,
+                                            @RequestBody(required = false) Map<String, Object> body) {
+        requireWorkspace(workspaceId);
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "work_service");
+        String edited = body == null ? null : str(body.get("body"));
+        return envelope(chat.approveDraft(workspaceId, userId, id, draftId, edited));
+    }
+
+    /** Reject the AI's suggested reply. Nothing is sent — the customer never sees the draft. */
+    @PostMapping("/conversations/{id}/drafts/{draftId}/discard")
+    public ChatAiDraft discardDraft(@PathVariable String id, @PathVariable String draftId,
+                                    @RequestParam String workspaceId) {
+        requireWorkspace(workspaceId);
+        String userId = authenticatedUser.id();
+        rbac.require(userId, workspaceId, "work_service");
+        return chat.discardDraft(workspaceId, userId, id, draftId);
     }
 
     /** Claim the conversation (self-assign + escalate to agent-owned). */

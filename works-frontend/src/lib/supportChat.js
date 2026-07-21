@@ -53,6 +53,18 @@ export const agentChatClient = {
       method: 'POST',
       body: { body },
     }),
+  // AI never sends its own tier-1 answer — it is held as a draft until an agent approves it here.
+  // `body` is optional: pass edited text to send that instead of the AI's wording.
+  approveDraft: (workspaceId, id, draftId, body = null) =>
+    api.send(
+      `/support-chat/conversations/${encodeURIComponent(id)}/drafts/${encodeURIComponent(draftId)}/approve?workspaceId=${ws(workspaceId)}`,
+      { method: 'POST', body: { body } },
+    ),
+  discardDraft: (workspaceId, id, draftId) =>
+    api.send(
+      `/support-chat/conversations/${encodeURIComponent(id)}/drafts/${encodeURIComponent(draftId)}/discard?workspaceId=${ws(workspaceId)}`,
+      { method: 'POST' },
+    ),
   resolve: (workspaceId, id) =>
     api.send(`/support-chat/conversations/${encodeURIComponent(id)}/resolve?workspaceId=${ws(workspaceId)}`, {
       method: 'PUT',

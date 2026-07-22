@@ -90,12 +90,26 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 >
 > **Reconciliation (2026-07-21 code audit).** An adversarial roadmap-vs-code audit found the blanket
 > "Completed / ✅ Verified 2026-07-21" flip for EPICs 13–27 was not supported by the source. The DoD
-> requires each row be *adversarially re-verified* (§1.7); that guard was not applied. Rows 13–15,
-> 22, and 23 are reverted to honest 🟠/🔴 status below, with the specific code evidence. Net finding:
-> the **core delivery/knowledge/service/SLA/reporting/security spine is genuinely built** (16–21 hold
-> up), but the **AI-native elevation (13–15) ships deterministic-only unless `ANTHROPIC_API_KEY` is
-> configured**, EPIC-15 artifacts and EPIC-22 skills/graph are **not built** (stub / absent), and the
-> whole **V1.6 overlay is scaffolding, not enforced behavior** (see §6, and issues #522–#524).
+> requires each row be *adversarially re-verified* (§1.7); that guard was not applied. Rows 7, 9,
+> 13–15, 22, and 23 are reverted to honest 🟠/🔴 status below, with the specific code evidence. Net
+> finding: the **core delivery/knowledge/service/SLA/reporting/security spine is genuinely built**
+> (8, 10, 11, 16–21 hold up; EPIC-24 PWA/offline/realtime, EPIC-26 analytics also real), but the
+> **AI-native elevation (13–15) ships deterministic-only unless `ANTHROPIC_API_KEY` is configured**,
+> EPIC-15 artifacts and EPIC-22 skills/graph are **not built** (stub / absent), EPIC-7's AI brief and
+> EPIC-9's message→artifact conversion are **stubs/absent**, and the whole **V1.6 overlay is
+> scaffolding, not enforced behavior** (see §6, and issues #522–#524).
+>
+> **Second-pass note (2026-07-21).** A follow-up full-scope sweep confirmed the positives above and
+> found two additional overclaims (rows 7, 9, now corrected). It also confirmed all four roadmap
+> "Do not do now" **guardrails are RESPECTED** in code: the AI human-approval gate is structural
+> (separate `chat_ai_drafts` store; customer read path cannot reach an unapproved draft), no
+> autonomous data-mutating agent exists (`AiAgentService` is read-only; `AiCommandExecutionService`
+> is two-phase, human-triggered, RBAC-gated), only the three permitted low-code builders exist, and
+> messaging is work-aware not social-first. Two mid-flight structural items are honestly ratcheted,
+> not finished: EPIC-3 carve (71 files still at the flat root) and EPIC-4 AppShell (still ~2,937
+> lines / 199 `useState`, guarded by a zero-slack size ratchet). One integrity gap noted:
+> `WorkItemCommandService.validateParentType` enforces only the static `DefaultWorkItemTypes`
+> hierarchy and ignores `WorkItemTypeConfig`, so **custom work-type parent rules are unenforced**.
 
 | EPIC | Title | Ledger | **Verified** | Underlying capability | DoD gap to close |
 |------|-------|--------|--------------|----------------------|------------------|
@@ -107,9 +121,9 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 | 4 | Frontend architecture refactor | Completed | ✅ Verified 2026-07-19 | 5-line entry; 2,884-line guarded shell | — |
 | 5 | Premium design system | Completed | ✅ Verified 2026-07-19 | token/state/theme/density system | W7 owns exhaustive product QA |
 | 6 | Simplified navigation | Completed | ✅ Verified 2026-07-19 | built | — |
-| 7 | bSmart Today | Completed | ✅ Verified 2026-07-19 | six role layouts, sourced AI brief, actionable max-five attention, full daily signal model | — |
+| 7 | bSmart Today | 🟠 ~55% | ⚠️ overclaimed (code audit 2026-07-21) | layout framework real; **"sourced AI daily brief" and "max-5 attention" model are absent** (`MyDayService` has zero AI, no priority cap) | build brief + attention model |
 | 8 | Smart Inbox | Completed | ✅ Verified 2026-07-19 | server action projection, exact count, durable state, sourced/fallback AI, direct source actions | — |
-| 9 | Connect Messaging | Completed | ✅ Verified 2026-07-21 | Messenger absent | — |
+| 9 | Connect Messaging | 🟠 ~40% | ⚠️ overclaimed (code audit 2026-07-21) | reuses support-chat tables (type-filter, not separate storage); no threads/realtime; **message→artifact conversion is a stub** (`artifactRef`=throwaway UUID); phase4 `/messenger` is an orphan duplicate (#522) | real conversation model + artifact conversion |
 | 10 | Work-item experience | Completed | ✅ Verified 2026-07-21 | core built | — |
 | 11 | Project command center | Completed | ✅ Verified 2026-07-21 | projects built | — |
 | 12 | DevSync intelligence | Completed | ✅ Verified 2026-07-21 | dev workspace built | — |
@@ -274,3 +288,8 @@ EPIC's DoD. Phase 6 is the dedicated closure sweep for anything systemic.
   with binding default-off), and team-key display IDs. Filed tech-debt issues **#522** (orphaned
   phase4 `/messenger` duplicating EPIC-9 internal-messaging), **#523** (operating-model/business-user-
   type stored but unenforced), **#524** (framework engine dead code, 3-of-6 frameworks).
+- 2026-07-21 — Second-pass full-scope sweep. Confirmed EPICs 8/10/11/16–21/24/26 genuinely built and
+  all four "Do not do now" guardrails RESPECTED in code. Found and corrected two further overclaims:
+  EPIC-7 (Today — AI brief + attention model absent) and EPIC-9 (Connect Messaging — stub artifact
+  conversion, support-chat table reuse) → 🟠. Recorded mid-flight ratchets (EPIC-3 root carve,
+  EPIC-4 AppShell) and the custom work-type parent-validation gap as known, non-overclaimed items.

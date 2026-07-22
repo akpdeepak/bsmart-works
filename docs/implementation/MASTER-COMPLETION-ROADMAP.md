@@ -46,7 +46,7 @@ is recorded in the SOURCE-OF-TRUTH ledger as part of Phase 0. Items now back **i
 
 | # | Finding | Impact | Action |
 |---|---------|--------|--------|
-| **CF-3** | **Root cause of the ledger overclaim: `scripts/update-roadmap.js`.** It regex-stamps every EPIC 9–27 row to `Completed \| ✅ Verified 2026-07-21` and W4/W5 to `✅ Verified` with **no verification of code** — a pure marker-flip. This is the exact "draft-helper marked Completed" failure the DoD (§1.7) exists to prevent, and it produced the overclaims corrected in the 2026-07-21 reconciliation. | Re-running the script silently reverts any honest reconciliation of this ledger. It is not wired into CI, so it does not gate anything — but it is a live footgun that manufactures false "Verified" status. | **Recommended:** delete or neutralize the script (status must come from adversarial verification / GitHub checks, not a stamping regex). Flagged to Deepak; adjacent to the three filed tech-debt issues (#522–#524). |
+| **CF-3** | ~~**Root cause of the ledger overclaim: `scripts/update-roadmap.js`**~~ **RESOLVED (2026-07-21).** The script regex-stamped every EPIC 9–27 row to `Completed \| ✅ Verified` and W4/W5 to `✅ Verified` with **no verification of code** — a pure marker-flip that produced the overclaims. **It has been deleted.** | Was a live footgun that manufactured false "Verified" status. Removed so status can only come from adversarial verification / GitHub checks. | **Closed** — script deleted in the feature PR. |
 
 ## 1. The Definition of Done (the bar every row is held to)
 
@@ -121,22 +121,22 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 | 4 | Frontend architecture refactor | Completed | ✅ Verified 2026-07-19 | 5-line entry; 2,884-line guarded shell | — |
 | 5 | Premium design system | Completed | ✅ Verified 2026-07-19 | token/state/theme/density system | W7 owns exhaustive product QA |
 | 6 | Simplified navigation | Completed | ✅ Verified 2026-07-19 | built | — |
-| 7 | bSmart Today | 🟠 ~55% | ⚠️ overclaimed (code audit 2026-07-21) | layout framework real; **"sourced AI daily brief" and "max-5 attention" model are absent** (`MyDayService` has zero AI, no priority cap) | build brief + attention model |
+| 7 | bSmart Today | 🟠 ~70% | ⬆️ built 2026-07-21 | **max-5 attention model now built** (`MyDayService.attentionScore` + capped `attention` list, tested); AI brief still deterministic-by-default | brief LLM wiring |
 | 8 | Smart Inbox | Completed | ✅ Verified 2026-07-19 | server action projection, exact count, durable state, sourced/fallback AI, direct source actions | — |
-| 9 | Connect Messaging | 🟠 ~40% | ⚠️ overclaimed (code audit 2026-07-21) | reuses support-chat tables (type-filter, not separate storage); no threads/realtime; **message→artifact conversion is a stub** (`artifactRef`=throwaway UUID); phase4 `/messenger` is an orphan duplicate (#522) | real conversation model + artifact conversion |
+| 9 | Connect Messaging | 🟠 ~60% | ⬆️ built 2026-07-21 | **message→artifact conversion now real** (`MessageArtifactService` creates ActionItem/Decision, tested); still support-chat table reuse; phase4 `/messenger` orphan remains (#522) | conversation model; resolve #522 |
 | 10 | Work-item experience | Completed | ✅ Verified 2026-07-21 | core built | — |
 | 11 | Project command center | Completed | ✅ Verified 2026-07-21 | projects built | — |
 | 12 | DevSync intelligence | Completed | ✅ Verified 2026-07-21 | dev workspace built | — |
 | 13 | Universal AI Command | 🟠 ~75% | ⚠️ overclaimed as Verified | Control plane real; **AI is deterministic-by-default** (no API key → fallback) | wire/annotate live-AI path |
-| 14 | Answer Engine | 🟠 ~40% | ⚠️ overclaimed as Verified (code audit 2026-07-21) | retrieval is substring `.contains` over in-memory articles/items; canned answer without a key | real retrieval/ranking |
-| 15 | Canvas / AI artifacts | 🔴 ~15% | ⛔ **not built — stub** (code audit 2026-07-21) | `generateArtifact` returns 2 hardcoded blocks and **discards model output** (`AiAssistService.java:173-188`) | build real generation |
+| 14 | Answer Engine | 🟠 ~55% | ⬆️ built 2026-07-21 | **ranked term-based retrieval now built** (`RetrievalScorer`, title-weighted, tested) replacing whole-query substring; answer text still deterministic-by-default | LLM answer synthesis |
+| 15 | Canvas / AI artifacts | 🟠 ~50% | ⬆️ built 2026-07-21 | **now consumes real model output** (parses text→blocks) with a real editable scaffold fallback (`AiAssistService.generateArtifact`, tested); no longer a stub | richer block types |
 | 16 | Knowledge & Doc Workspace | Completed | ✅ Verified 2026-07-21 | ~95% (deepest) | — |
 | 17 | Service Desk & Resolution | Completed | ✅ Verified 2026-07-21 | ~90% | — |
 | 18 | SLA / Compliance / Evidence | Completed | ✅ Verified 2026-07-21 | ~90% (evidence bundle is self-generated markdown, not attested) | — |
 | 19 | Automation Builder + Agents | Completed | ✅ Verified 2026-07-21 | ~80% | — |
 | 20 | Reports / Dashboards / BQL / Leadership | Completed | ✅ Verified 2026-07-21 | ~90% | — |
 | 21 | Integrations / Migration / APIs | Completed | ✅ Verified 2026-07-21 | ~70% | — |
-| 22 | People Graph / Skills / Stakeholders | 🔴 ~15% | ⛔ **skills/graph not built** (code audit 2026-07-21) | only flat `Stakeholder` contact entity; no skills model, no relationship graph | build skills/graph |
+| 22 | People Graph / Skills / Stakeholders | 🟠 ~45% | ⬆️ built 2026-07-21 | **skills + person-skill graph now built** (V126, `SkillService`, workspace-scoped, "who holds skill X", tested); frontend UI still to come | skills UI; endorsements |
 | 23 | Onboarding / Templates / Adoption | 🟠 ~35% | ⚠️ overclaimed as Verified | playbook engine real; no seeded starter template/playbook library | seed adoption content |
 | 24 | Mobile / PWA / Offline / Realtime | Completed | ✅ Verified 2026-07-21 | ~80% | — |
 | 26 | Product Analytics / Feedback | Completed | ✅ Verified 2026-07-21 | ~30% | — |
@@ -198,12 +198,12 @@ The EPIC 1–5 closeout evidence is recorded in
 
 | Item | Status | Maps to EPIC | Evidence / defect |
 |------|-------:|--------------|-------------------|
-| Framework engine (Scrum/Kanban/Waterfall/Lean/DSDM/XP) | 🔴 ~10% | 6/10/23 | stored enum only; `getFrameworkCapabilities` is **dead code**, covers 3 of 6 → **#524** |
-| 5 business user types (Individual/Team Lead/Management/Admin/Owner) | 🔴 ~15% | 1/6/22 | enum + column + UI matrix, **not consulted by RBAC** → **#523** |
-| Admin/Owner operating-model configurability | 🔴 ~15% | 6/22 | `operating_model_policies` CRUD stored but **never enforced** → **#523** |
+| Framework engine (Scrum/Kanban/Waterfall/Lean/DSDM/XP) | 🟢 ~65% | 6/10/23 | **built 2026-07-21** — all 6 frameworks declare real capabilities on `ProjectFramework`; sprint creation enforced by framework; `/projects/{id}/capabilities`; dead code removed (closes #524) |
+| 5 business user types (Individual/Team Lead/Management/Admin/Owner) | 🟢 ~60% | 1/6/22 | **built 2026-07-21** — now consulted by authorization via the deny-override gate (closes #523) |
+| Admin/Owner operating-model configurability | 🟢 ~60% | 6/22 | **built 2026-07-21** — `operating_model_policies` now enforced as a deny-override at invite + framework-manage paths (closes #523) |
 | Team-key display IDs (e.g. `PLAT-42`) | 🟢 ~70% | 10/22/23 | **built & wired** (`WorkItemCommandService:118-138` + seq generator + unique index) |
 | Inline BQL filters + dynamic query boards | 🟠 ~20% | 20/10 | inline BQL filters **absent** (faceted bar); BQL *widgets* exist, no BQL-driven work boards |
-| **bSmart Messenger** (work-context, separate from support chat) + message→artifact | 🟠 ~40% | 9/13/14 | EPIC-9 `internal-messaging` UI is real; phase4 `/messenger` is an **orphan duplicate**; **no** message→artifact conversion → **#522** |
+| **bSmart Messenger** (work-context, separate from support chat) + message→artifact | 🟠 ~60% | 9/13/14 | EPIC-9 `internal-messaging` UI is real; **message→artifact conversion now built** (`MessageArtifactService`, 2026-07-21); phase4 `/messenger` orphan still to resolve → **#522** |
 | Profile / preference center | 🟢 ~80% | 22 | **built** (`account-view.jsx`, `UserPreferenceController`, `user_preferences`) |
 | Brand-placement system (shell/onboarding/portal/reports/exports/email/PWA) | 🟠 ~25% | 5/22 | config wired to shell+portal only (2 of 7); `logo.jsx` hardcoded, ignores `branding.logoUrl` |
 | Premium microcopy / next-best-action / guided states | 🟠 partial | 5 + continuous | unchanged |
@@ -293,3 +293,11 @@ EPIC's DoD. Phase 6 is the dedicated closure sweep for anything systemic.
   EPIC-7 (Today — AI brief + attention model absent) and EPIC-9 (Connect Messaging — stub artifact
   conversion, support-chat table reuse) → 🟠. Recorded mid-flight ratchets (EPIC-3 root carve,
   EPIC-4 AppShell) and the custom work-type parent-validation gap as known, non-overclaimed items.
+- 2026-07-21 — **Overclaimed features built (one PR, test-first).** Closed the code side of the
+  reconciliation instead of only descoping: framework engine now real + enforced (closes #524);
+  operating-model / business-user-type now enforced as a deny-override (closes #523); EPIC-9
+  message→artifact conversion real; EPIC-7 max-5 attention model; EPIC-14 ranked retrieval; EPIC-15
+  canvas consumes real model output; EPIC-22 skills/people-graph model (V126). Root-cause
+  `scripts/update-roadmap.js` deleted (CF-3). 1,576 unit tests green; tenant coverage + guardrails +
+  state --check green. Rows above upgraded to honest ⬆️ status; none flipped to ✅ Verified (full DoD
+  — frontend, live-AI, load/a11y — still open per EPIC).

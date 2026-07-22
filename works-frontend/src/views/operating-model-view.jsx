@@ -50,7 +50,7 @@ export default function OperatingModelView({ workspaceId, api, onToast }) {
     }).catch(e => onToast?.(e.message || 'Failed to update policy', 'error'));
   }
 
-  // Deny-override model (#523): a capability is allowed by default (role RBAC decides) unless an
+  // Deny-override model (issue 523): a capability is allowed by default (role RBAC decides) unless an
   // explicit policy row restricts it. Unchecking a box writes allowed=false, which the server
   // enforces as a restriction for that business user type; it never grants beyond the user's role.
   function hasPolicy(typeId, res, action) {

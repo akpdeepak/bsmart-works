@@ -4,6 +4,7 @@ import com.bcits.works.CurrentWorkspace;
 import com.bcits.works.auth.UserRepository;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;
+import com.bcits.works.shared.OperatingModelGate;
 import com.bcits.works.shared.RbacGate;
 
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -33,16 +34,18 @@ public class ProjectService {
     private final RbacGate rbac;
     private final JdbcTemplate jdbc;
     private final CurrentWorkspace currentWorkspace;
+    private final OperatingModelGate operatingModel;
 
     public ProjectService(ProjectRepository projectRepository, UserRepository userRepository,
                           EventService eventService, RbacGate rbac, JdbcTemplate jdbc,
-                          CurrentWorkspace currentWorkspace) {
+                          CurrentWorkspace currentWorkspace, OperatingModelGate operatingModel) {
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
         this.eventService = eventService;
         this.rbac = rbac;
         this.jdbc = jdbc;
         this.currentWorkspace = currentWorkspace;
+        this.operatingModel = operatingModel;
     }
 
     private void requireMember(String callerId, String workspaceId) {
@@ -95,6 +98,33 @@ public class ProjectService {
                 + "JOIN users u ON u.id = pm.user_id WHERE pm.project_id = ?", projectId);
     }
 
+    // ── Framework capabilities (delivery behaviour gating) ────────────────────
+
+    /**
+     * Delivery capabilities enabled by the project's framework (RBAC read). Kanban/Waterfall/Lean
+     * return {@code sprintsEnabled=false}; the UI uses this to hide framework-inapplicable surfaces,
+     * and the server enforces it via {@link #requireFrameworkCapability}.
+     */
+    public Map<String, Boolean> capabilities(String callerId, String projectId) {
+        Project p = loadForMember(callerId, projectId);
+        return ProjectFramework.orDefault(p.getFramework()).capabilities();
+    }
+
+    /**
+     * Enforce a framework capability on a write path (e.g. creating a sprint on a Kanban project).
+     * Throws 422 when the project's framework does not enable {@code capabilityKey}. The caller is
+     * responsible for the RBAC/tenant check first; this only adds the framework rule.
+     */
+    public void requireFrameworkCapability(String projectId, String capabilityKey) {
+        Project p = projectRepository.findById(projectId)
+                .orElseThrow(() -> ApiException.notFound("Project", projectId));
+        ProjectFramework framework = ProjectFramework.orDefault(p.getFramework());
+        if (!framework.allows(capabilityKey)) {
+            throw ApiException.badRequest("FRAMEWORK_CAPABILITY_DISABLED",
+                    "This project's " + framework + " framework does not enable " + capabilityKey + ".");
+        }
+    }
+
     // ── Write (RBAC-gated) ────────────────────────────────────────────────────
 
     @Transactional
@@ -127,7 +157,10 @@ public class ProjectService {
         existing.setName(updated.getName());
         existing.setDescription(updated.getDescription());
         existing.setLeadUserId(updated.getLeadUserId());
-        if (updated.getFramework() != null) {
+        if (updated.getFramework() != null && updated.getFramework() != existing.getFramework()) {
+            // Operating-model deny-override (V1.6): changing the delivery framework is a
+            // "manage framework" action an Admin/Owner may bar for a business user type.
+            operatingModel.requireAllowed(callerId, existing.getWorkspaceId(), "framework", "manage");
             existing.setFramework(updated.getFramework());
         }
         return projectRepository.save(existing);

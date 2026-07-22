@@ -50,9 +50,12 @@ class SprintControllerAccessTest {
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
     private final StatusConfigService statusConfig = mock(StatusConfigService.class);
+    private final com.bcits.works.projects.ProjectService projectService =
+            mock(com.bcits.works.projects.ProjectService.class);
 
     private final SprintController controller = new SprintController(
-            sprintRepository, workItemRepository, eventService, sprintDao, authenticatedUser, rbac, statusConfig);
+            sprintRepository, workItemRepository, eventService, sprintDao, authenticatedUser, rbac, statusConfig,
+            projectService);
 
     SprintControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);

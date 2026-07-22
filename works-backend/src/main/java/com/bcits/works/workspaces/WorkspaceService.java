@@ -4,6 +4,7 @@ import com.bcits.works.FunnelService;
 
 import com.bcits.works.auth.User;
 import com.bcits.works.auth.UserRepository;
+import com.bcits.works.shared.OperatingModelGate;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
@@ -40,16 +41,18 @@ public class WorkspaceService {
     private final EventService eventService;
     private final JdbcTemplate jdbc;
     private final FunnelService funnelService;
+    private final OperatingModelGate operatingModel;
 
     public WorkspaceService(WorkspaceRepository workspaceRepository, UserRepository userRepository,
                             RbacGate rbac, EventService eventService, JdbcTemplate jdbc,
-                            FunnelService funnelService) {
+                            FunnelService funnelService, OperatingModelGate operatingModel) {
         this.workspaceRepository = workspaceRepository;
         this.userRepository = userRepository;
         this.rbac = rbac;
         this.eventService = eventService;
         this.jdbc = jdbc;
         this.funnelService = funnelService;
+        this.operatingModel = operatingModel;
     }
 
     // ── Tenant isolation guard (RB-40 §1) ────────────────────────────────────
@@ -116,6 +119,9 @@ public class WorkspaceService {
     @Transactional
     public Map<String, String> addMember(String callerId, String workspaceId, String email, String role) {
         rbac.require(callerId, workspaceId, "invite_members");
+        // Operating-model deny-override (V1.6): an Admin/Owner may bar a business user type from
+        // inviting even when their role tier would allow it. No policy = role RBAC alone decides.
+        operatingModel.requireAllowed(callerId, workspaceId, "user", "invite");
         String resolvedRole = (role == null || role.isBlank()) ? "MEMBER" : role;
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> ApiException.notFound("User", email));

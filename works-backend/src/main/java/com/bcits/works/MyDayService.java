@@ -74,8 +74,11 @@ public class MyDayService {
         }
         int score = 0;
         if (dueDate != null && today != null) {
-            if (dueDate.isBefore(today)) score += 100;
-            else if (dueDate.isEqual(today)) score += 50;
+            if (dueDate.isBefore(today)) {
+                score += 100;
+            } else if (dueDate.isEqual(today)) {
+                score += 50;
+            }
         }
         if (priority != null) {
             switch (priority.toLowerCase()) {

@@ -95,6 +95,33 @@ public class ProjectService {
                 + "JOIN users u ON u.id = pm.user_id WHERE pm.project_id = ?", projectId);
     }
 
+    // ── Framework capabilities (delivery behaviour gating) ────────────────────
+
+    /**
+     * Delivery capabilities enabled by the project's framework (RBAC read). Kanban/Waterfall/Lean
+     * return {@code sprintsEnabled=false}; the UI uses this to hide framework-inapplicable surfaces,
+     * and the server enforces it via {@link #requireFrameworkCapability}.
+     */
+    public Map<String, Boolean> capabilities(String callerId, String projectId) {
+        Project p = loadForMember(callerId, projectId);
+        return ProjectFramework.orDefault(p.getFramework()).capabilities();
+    }
+
+    /**
+     * Enforce a framework capability on a write path (e.g. creating a sprint on a Kanban project).
+     * Throws 422 when the project's framework does not enable {@code capabilityKey}. The caller is
+     * responsible for the RBAC/tenant check first; this only adds the framework rule.
+     */
+    public void requireFrameworkCapability(String projectId, String capabilityKey) {
+        Project p = projectRepository.findById(projectId)
+                .orElseThrow(() -> ApiException.notFound("Project", projectId));
+        ProjectFramework framework = ProjectFramework.orDefault(p.getFramework());
+        if (!framework.allows(capabilityKey)) {
+            throw ApiException.badRequest("FRAMEWORK_CAPABILITY_DISABLED",
+                    "This project's " + framework + " framework does not enable " + capabilityKey + ".");
+        }
+    }
+
     // ── Write (RBAC-gated) ────────────────────────────────────────────────────
 
     @Transactional

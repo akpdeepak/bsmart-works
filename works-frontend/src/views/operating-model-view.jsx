@@ -50,15 +50,18 @@ export default function OperatingModelView({ workspaceId, api, onToast }) {
     }).catch(e => onToast?.(e.message || 'Failed to update policy', 'error'));
   }
 
+  // Deny-override model (#523): a capability is allowed by default (role RBAC decides) unless an
+  // explicit policy row restricts it. Unchecking a box writes allowed=false, which the server
+  // enforces as a restriction for that business user type; it never grants beyond the user's role.
   function hasPolicy(typeId, res, action) {
     const p = policies?.find(x => x.userType === typeId && x.resourceType === res && x.actionName === action);
-    return p ? p.allowed : false;
+    return p ? p.allowed : true;
   }
 
   return (
     <PageLayout
       title="Operating Model"
-      description="Govern permission rules mapped to the 5 core User Types and set default frameworks."
+      description="Restrict what each of the 5 core user types may do. Capabilities are allowed by default (subject to role); unchecking a box bars that user type from the action even when their role would allow it. It never grants more than a user's role."
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
         {USER_TYPES.map(type => {

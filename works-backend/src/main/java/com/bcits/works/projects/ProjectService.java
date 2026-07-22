@@ -4,6 +4,7 @@ import com.bcits.works.CurrentWorkspace;
 import com.bcits.works.auth.UserRepository;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;
+import com.bcits.works.shared.OperatingModelGate;
 import com.bcits.works.shared.RbacGate;
 
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -33,16 +34,18 @@ public class ProjectService {
     private final RbacGate rbac;
     private final JdbcTemplate jdbc;
     private final CurrentWorkspace currentWorkspace;
+    private final OperatingModelGate operatingModel;
 
     public ProjectService(ProjectRepository projectRepository, UserRepository userRepository,
                           EventService eventService, RbacGate rbac, JdbcTemplate jdbc,
-                          CurrentWorkspace currentWorkspace) {
+                          CurrentWorkspace currentWorkspace, OperatingModelGate operatingModel) {
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
         this.eventService = eventService;
         this.rbac = rbac;
         this.jdbc = jdbc;
         this.currentWorkspace = currentWorkspace;
+        this.operatingModel = operatingModel;
     }
 
     private void requireMember(String callerId, String workspaceId) {
@@ -154,7 +157,10 @@ public class ProjectService {
         existing.setName(updated.getName());
         existing.setDescription(updated.getDescription());
         existing.setLeadUserId(updated.getLeadUserId());
-        if (updated.getFramework() != null) {
+        if (updated.getFramework() != null && updated.getFramework() != existing.getFramework()) {
+            // Operating-model deny-override (V1.6): changing the delivery framework is a
+            // "manage framework" action an Admin/Owner may bar for a business user type.
+            operatingModel.requireAllowed(callerId, existing.getWorkspaceId(), "framework", "manage");
             existing.setFramework(updated.getFramework());
         }
         return projectRepository.save(existing);

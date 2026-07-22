@@ -29,7 +29,8 @@ class ProjectFrameworkTest {
     private final ProjectRepository projectRepository = mock(ProjectRepository.class);
     private final ProjectService service = new ProjectService(
             projectRepository, mock(UserRepository.class), mock(EventService.class),
-            mock(RbacGate.class), mock(JdbcTemplate.class), mock(CurrentWorkspace.class));
+            mock(RbacGate.class), mock(JdbcTemplate.class), mock(CurrentWorkspace.class),
+            mock(com.bcits.works.shared.OperatingModelGate.class));
 
     private Project projectWith(ProjectFramework framework) {
         Project p = new Project();

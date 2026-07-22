@@ -51,7 +51,8 @@ class WorkspaceServiceTest {
 
     private final FunnelService funnelService = mock(FunnelService.class);
     private final WorkspaceService service =
-            new WorkspaceService(workspaceRepository, userRepository, rbac, eventService, jdbc, funnelService);
+            new WorkspaceService(workspaceRepository, userRepository, rbac, eventService, jdbc, funnelService,
+                    mock(com.bcits.works.shared.OperatingModelGate.class));
 
     private Workspace ws(String id) {
         Workspace w = new Workspace();

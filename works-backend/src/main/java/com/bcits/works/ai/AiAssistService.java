@@ -171,20 +171,77 @@ public class AiAssistService {
     public record ArtifactGenerationResult(List<Map<String, Object>> blocks, AiMeta meta) { }
 
     public ArtifactGenerationResult generateArtifact(String workspaceId, String userId, String prompt, boolean inContext) {
-        String cleanPrompt = nv(prompt).replace("\"", "\\\"");
-        String draft = "{\"blocks\":[{\"id\":\"h1\",\"type\":\"heading\",\"content\":\"Generated Artifact\",\"metadata\":{\"level\":1}},"
-            + "{\"id\":\"p1\",\"type\":\"paragraph\",\"content\":\"Generated from prompt: " + cleanPrompt + "\",\"metadata\":{}}]}";
+        // Seed / deterministic fallback content handed to the control plane. When AI is off, over
+        // budget, or unavailable the outcome is a fallback and we return a structured scaffold; when
+        // a model answers, we parse ITS text into editable blocks instead of discarding it (the prior
+        // implementation always returned two hardcoded blocks and threw out.text() away).
+        String seed = "Create a structured document for: " + nv(prompt)
+                + "\nUse short markdown headings and paragraphs.";
         AiControlPlaneService.AiOutcome out = controlPlane.invoke(new AiControlPlaneService.AiCall(
-            workspaceId, userId, AiCapabilities.GENERATION, "Generate canvas artifact for: " + prompt, draft, null, inContext));
+            workspaceId, userId, AiCapabilities.GENERATION, "Generate canvas artifact for: " + prompt, seed, null, inContext));
 
-        
-        List<Map<String, Object>> blocks = new ArrayList<>();
-        blocks.add(Map.of("id", "h1", "type", "heading", "content", "AI Generated Artifact", "metadata", Map.of("level", 1)));
-        blocks.add(Map.of("id", "p1", "type", "paragraph", "content", "Based on your prompt: " + prompt, "metadata", Map.of()));
-        
-        // We simulate that `out.text()` could be a JSON block array string in a real AI,
-        // but for this phase we provide a deterministic fallback block list (RB-40).
+        List<Map<String, Object>> blocks = out.fallback()
+            ? scaffoldBlocks(prompt)
+            : parseBlocks(out.text(), prompt);
         return new ArtifactGenerationResult(blocks, AiMeta.of(out));
+    }
+
+    private static Map<String, Object> block(String id, String type, String content, Map<String, Object> metadata) {
+        Map<String, Object> b = new java.util.LinkedHashMap<>();
+        b.put("id", id);
+        b.put("type", type);
+        b.put("content", content);
+        b.put("metadata", metadata);
+        return b;
+    }
+
+    private static String headingFrom(String prompt) {
+        String p = nv(prompt).strip();
+        if (p.isEmpty()) return "Untitled artifact";
+        String firstLine = p.split("\\r?\\n", 2)[0].strip();
+        return firstLine.length() > 120 ? firstLine.substring(0, 120) : firstLine;
+    }
+
+    /** Parse real model output into editable blocks: markdown-ish headings, bullets, and paragraphs. */
+    private List<Map<String, Object>> parseBlocks(String text, String prompt) {
+        List<Map<String, Object>> blocks = new ArrayList<>();
+        blocks.add(block("b0", "heading", headingFrom(prompt), Map.of("level", 1)));
+        if (text == null || text.isBlank()) {
+            blocks.add(block("b1", "paragraph", "", Map.of()));
+            return blocks;
+        }
+        int i = 1;
+        for (String line : text.split("\\r?\\n")) {
+            String t = line.strip();
+            if (t.isEmpty()) continue;
+            if (t.startsWith("### ")) {
+                blocks.add(block("b" + i++, "heading", t.substring(4).strip(), Map.of("level", 3)));
+            } else if (t.startsWith("## ")) {
+                blocks.add(block("b" + i++, "heading", t.substring(3).strip(), Map.of("level", 2)));
+            } else if (t.startsWith("# ")) {
+                blocks.add(block("b" + i++, "heading", t.substring(2).strip(), Map.of("level", 2)));
+            } else if (t.startsWith("- ") || t.startsWith("* ")) {
+                blocks.add(block("b" + i++, "bullet", t.substring(2).strip(), Map.of()));
+            } else {
+                blocks.add(block("b" + i++, "paragraph", t, Map.of()));
+            }
+        }
+        return blocks;
+    }
+
+    /** Deterministic fallback (RB-40 §2): a usable, editable outline scaffold seeded from the prompt. */
+    private List<Map<String, Object>> scaffoldBlocks(String prompt) {
+        List<Map<String, Object>> blocks = new ArrayList<>();
+        blocks.add(block("b0", "heading", headingFrom(prompt), Map.of("level", 1)));
+        blocks.add(block("b1", "paragraph",
+            "Draft outline generated without AI. Fill in each section below.", Map.of()));
+        blocks.add(block("b2", "heading", "Overview", Map.of("level", 2)));
+        blocks.add(block("b3", "paragraph", "", Map.of()));
+        blocks.add(block("b4", "heading", "Details", Map.of("level", 2)));
+        blocks.add(block("b5", "paragraph", "", Map.of()));
+        blocks.add(block("b6", "heading", "Next steps", Map.of("level", 2)));
+        blocks.add(block("b7", "paragraph", "", Map.of()));
+        return blocks;
     }
 
 

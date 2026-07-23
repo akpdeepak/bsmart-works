@@ -4,6 +4,7 @@ import { api } from '@/lib/apiClient';
 import { Button } from '@/components/works/button';
 import { Avatar } from '@/components/works/atoms/avatar';
 import { RoleBadge } from '@/components/works/role-badge';
+import { SkillsPanel } from '@/components/works/organisms/skills-panel';
 
 // Workspace Settings view — workspace-scoped admin surface (tier ADMIN+). Personal settings
 // (MFA, notifications, language) live in AccountView which all members can reach.
@@ -96,9 +97,12 @@ export default function WorkspaceView({
                             </select>
                         }
                         <select defaultValue={m.businessUserType || 'INDIVIDUAL'}
+                              aria-label="Business user type"
                               onChange={e => {
-                                api.put(`/workspaces/${activeWorkspaceId}/members/${m.id}`, {
-                                  businessUserType: e.target.value
+                                // api.send, not api.put — the API client exports raw/send only.
+                                api.send(`/workspaces/${activeWorkspaceId}/members/${m.id}`, {
+                                  method: 'PUT',
+                                  body: { businessUserType: e.target.value },
                                 }).then(d => showToast(d.message || 'Business user type updated'))
                                   .catch(err => showToast(err.message, 'error'));
                               }}
@@ -178,6 +182,14 @@ export default function WorkspaceView({
                   </>
                 )}
               </div>
+
+              {/* EPIC-22 — skills catalogue + the "who holds skill X" people graph */}
+              <SkillsPanel
+                workspaceId={activeWorkspaceId}
+                members={workspaceMembers}
+                can={can}
+                onToast={showToast}
+              />
 
             </PageLayout>
   );

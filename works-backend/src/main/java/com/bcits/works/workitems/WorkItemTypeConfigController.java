@@ -76,6 +76,8 @@ public class WorkItemTypeConfigController {
         c.setIcon(updated.getIcon());
         c.setColor(updated.getColor());
         c.setTypeKey(updated.getTypeKey());
+        // The hierarchy rule is enforced by ParentTypeRules, so it has to be persistable to matter.
+        c.setValidParentTypes(updated.getValidParentTypes());
         return typeConfigRepo.save(c);
     }
 

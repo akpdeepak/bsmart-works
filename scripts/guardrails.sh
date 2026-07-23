@@ -162,6 +162,13 @@ fi
 #   at all (the exact regression we want to catch early). Kept as WARN because the file-level
 #   exemption is intentionally generous (an unrelated rbac.* elsewhere in the file silences it) —
 #   the real guarantee is the central filter in #243, not this grep.
+#
+#   *Dao.java / *Repository.java are in the file-name filter because raw SQL migrates OUT of
+#   Controller/Service as domains are refactored (DeveloperWorkspaceDao was carved out of
+#   DeveloperWorkspaceService and left the tripwire's field of view entirely). Verified to add zero
+#   firings on the current tree. This does NOT make the rule able to catch a single unscoped
+#   statement inside an otherwise-scoped file — that is still the rejected per-statement grep, and
+#   the coverage that actually catches it is a per-feature cross-tenant IT (RB-40 §1).
 if [ -d "$BE" ]; then
   _ws='workspace_id|workspace_members|workspaceId'
   _idscope='project_id|sprint_id|release_id|work_item_id|parent_id|aggregate_id|[^a-zA-Z_]id *= *\?'
@@ -174,7 +181,8 @@ if [ -d "$BE" ]; then
     grep -qiE "$_idscope" "$_f" 2>/dev/null && continue        # has an id-scope key — narrowed
     grep -qE "$_rbac" "$_f" 2>/dev/null && continue            # resolves/checks tenant via RBAC
     _rawleak="${_rawleak:+${_rawleak}$'\n'}${_f}"
-  done < <(find "$BE" \( -name '*Controller.java' -o -name '*Service.java' \) 2>/dev/null)
+  done < <(find "$BE" \( -name '*Controller.java' -o -name '*Service.java' \
+                         -o -name '*Dao.java' -o -name '*Repository.java' \) 2>/dev/null)
   check WARN "Raw JdbcTemplate work_items SQL must carry a tenant-scope signal (RB-40 §1; central filter is #243)" "$_rawleak"
   unset _ws _idscope _rbac _rawleak _f
 fi

@@ -116,7 +116,7 @@ public class DeveloperWorkspaceService {
             "id", b.getId(), "title", b.getTitle(), "startsAt", b.getStartsAt(),
             "endsAt", b.getEndsAt(), "status", b.getStatus(), "allowP0", b.isAllowP0())).toList());
         out.put("focusStatus", focusMode.status(userId));
-        out.put("recentActivity", dao.recentActivity(userId));
+        out.put("recentActivity", dao.recentActivity(workspaceId, userId));
         return out;
     }
 
@@ -131,7 +131,7 @@ public class DeveloperWorkspaceService {
             if (!"OPEN".equals(pr.getStatus()) && !"DRAFT".equals(pr.getStatus())) continue;
             String priority = null;
             if (pr.getWorkItemId() != null) {
-                priority = dao.workItemPriority(pr.getWorkItemId());
+                priority = dao.workItemPriority(workspaceId, pr.getWorkItemId());
             }
             long ageHours = pr.getCreatedAt() == null ? 0 : ChronoUnit.HOURS.between(pr.getCreatedAt(), now);
             int size = (pr.getAdditions() == null ? 0 : pr.getAdditions())

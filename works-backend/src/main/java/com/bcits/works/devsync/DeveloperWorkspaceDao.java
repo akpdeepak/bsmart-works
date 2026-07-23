@@ -83,23 +83,33 @@ public class DeveloperWorkspaceDao {
     /**
      * The user's 12 most recent events <b>in this workspace</b> (own actor stream).
      *
-     * <p>The {@code workspace_id} predicate is what keeps a multi-workspace member's stream apart
-     * (RB-40 §1): {@code actor_id} alone matches the same person in every tenant they belong to.
-     * {@code events.workspace_id} is nullable (V40 expand step), and a pre-V40 event that names no
-     * workspace belongs to no tenant, so equality — which never matches NULL — is the fail-closed
-     * behaviour we want. Covered by {@code DeveloperWorkspaceTenantIsolationIT}.
+     * <p>Tenant scope cannot rest on {@code events.workspace_id} alone (RB-40 §1). {@code actor_id}
+     * by itself matches the same person in every tenant they belong to, but the column is nullable
+     * and <b>still written NULL today</b>: {@code EventService.record} and {@code recordDiff} both
+     * build their row through {@code baseEvent}, which never sets it — only {@code recordInWorkspace}
+     * does, and roughly half the producers in the codebase have not adopted it ("the rest leave
+     * workspace_id null", {@code EventService}). A bare {@code workspace_id = ?} therefore reads as
+     * fail-closed while actually deleting about half of the feed it is meant to protect.
+     *
+     * <p>So an event belongs to this workspace when it either carries the id, or carries none and
+     * its aggregate is a work item owned by this workspace. An event with no workspace and an
+     * aggregate we cannot place stays excluded — that part is genuinely fail-closed. Covered by
+     * {@code DeveloperWorkspaceTenantIsolationIT}.
      */
     public List<Map<String, Object>> recentActivity(String workspaceId, String userId) {
         return jdbc.query(
-            "SELECT aggregate_id, event_type, occurred_at FROM events " +
-            "WHERE workspace_id = ? AND actor_id = ? ORDER BY occurred_at DESC LIMIT 12",
+            "SELECT e.aggregate_id, e.event_type, e.occurred_at FROM events e " +
+            "WHERE e.actor_id = ? AND (e.workspace_id = ? OR (e.workspace_id IS NULL AND EXISTS (" +
+            "  SELECT 1 FROM work_items wi JOIN projects p ON p.id = wi.project_id " +
+            "  WHERE wi.id = e.aggregate_id AND p.workspace_id = ?))) " +
+            "ORDER BY e.occurred_at DESC LIMIT 12",
             (rs, i) -> {
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("aggregateId", rs.getString("aggregate_id"));
                 m.put("eventType", rs.getString("event_type"));
                 m.put("occurredAt", rs.getObject("occurred_at"));
                 return m;
-            }, workspaceId, userId);
+            }, userId, workspaceId, workspaceId);
     }
 
     /**

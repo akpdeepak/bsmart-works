@@ -111,8 +111,11 @@ class DeveloperWorkspaceTenantIsolationIT {
         seedEvent(AGG_A2, WS_A, "WORK_ITEM_UPDATED", now.minusMinutes(3));
         seedEvent(AGG_B1, WS_B, "WORK_ITEM_CREATED", now.minusMinutes(2));
         seedEvent(AGG_B2, WS_B, "WORK_ITEM_UPDATED", now.minusMinutes(1));
-        // Pre-V40 event with no workspace dimension: must fail closed, never fall through to a tenant.
+        // No workspace dimension and an aggregate that names no work item: belongs to no tenant.
         seedEvent(AGG_LEGACY, null, "LEGACY_EVENT", now.minusMinutes(5));
+        // No workspace dimension either — but this is what EventService.record/recordDiff write on
+        // every call today, and the aggregate is a workspace-A work item, so it belongs to A.
+        seedEvent(ITEM_A, null, "WORK_ITEM_UPDATED", now.minusMinutes(6));
 
         // A PR that lives in workspace A but references workspace B's work item. This is the exact
         // shape the unscoped priority lookup leaked: the tenant guard on the PR passes, then the
@@ -167,15 +170,39 @@ class DeveloperWorkspaceTenantIsolationIT {
         assertThat(activity).extracting(e -> e.get("aggregateId")).doesNotContain(AGG_A1, AGG_A2);
     }
 
+    /**
+     * An event with no {@code workspace_id} whose aggregate cannot be placed belongs to no tenant.
+     * This is the only genuinely fail-closed case.
+     */
     @Test
-    void recentActivity_failsClosedOnEventsWithNoWorkspace() {
+    void recentActivity_failsClosedOnEventsWithNoWorkspaceAndNoPlaceableAggregate() {
         assertThat(rows(service.home(WS_A, USER), "recentActivity"))
             .extracting(e -> e.get("aggregateId"))
-            .as("a pre-V40 event carrying no workspace_id belongs to no tenant, so it belongs to none")
+            .as("no workspace id and an aggregate that matches no work item — belongs to nobody")
             .doesNotContain(AGG_LEGACY);
         assertThat(rows(service.home(WS_B, USER), "recentActivity"))
             .extracting(e -> e.get("aggregateId"))
             .doesNotContain(AGG_LEGACY);
+    }
+
+    /**
+     * The regression a bare {@code workspace_id = ?} predicate would cause. NULL is not a historical
+     * artefact: {@code EventService.record} and {@code recordDiff} write it on every call today
+     * (only {@code recordInWorkspace} sets the column, and about half the producers use it), so
+     * matching on the column alone silently empties most of the feed. An event that names no
+     * workspace but whose aggregate is a work item in this workspace still belongs here — and, just
+     * as importantly, still must not appear in the other tenant.
+     */
+    @Test
+    void recentActivity_keepsUnlabelledEventsWhoseAggregateThisWorkspaceOwns() {
+        assertThat(rows(service.home(WS_A, USER), "recentActivity"))
+            .extracting(e -> e.get("aggregateId"))
+            .as("written by EventService.record today; the aggregate is a workspace-A work item")
+            .contains(ITEM_A);
+        assertThat(rows(service.home(WS_B, USER), "recentActivity"))
+            .extracting(e -> e.get("aggregateId"))
+            .as("the same unlabelled event must not leak into the other tenant (RB-40 §1)")
+            .doesNotContain(ITEM_A);
     }
 
     @Test

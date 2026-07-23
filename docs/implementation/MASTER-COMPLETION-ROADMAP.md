@@ -71,10 +71,10 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 |----|-----------|----------------|------:|-------|
 | **W0** | Truth & control plane | Reconcile overclaiming docs; this ledger; SOURCE-OF-TRUTH reversal | 🟡 in progress | 0 |
 | **W1** | Governance & security closure | #243 central tenant filter, field-level security enforcement, PII vault + crypto-shred, BYOK/KMS, WebAuthn attestation, distributed rate-limit, JWT revocation, SOC2/ISO evidence | ✅ Verified 2026-06-21 (PRs #415–#441; deferred sub-items in §4) | 1 |
-| **W2** | Architecture refactors | EPIC-3 real modularization, EPIC-4 real AppShell decomposition, god-class splits, FE code-split, AsyncBoundary adoption, token debt | ✅ Verified 2026-07-19 | 2 |
+| **W2** | Architecture refactors | EPIC-3 real modularization, EPIC-4 real AppShell decomposition, god-class splits, FE code-split, AsyncBoundary adoption, token debt | 🟠 **~50% — the 2026-07-19 ✅ was not code-backed** (see §5): FE code-split and token debt hold; 3 of 4 god classes unsplit, 72 files still at the flat root, AppShell ratcheted not decomposed, AsyncBoundary 17/36 | 2 |
 | **W3** | Finish EPICs 3–12 to full scope | Slice → full plan for each shipped EPIC | 🟡 in progress; EPICs 3–7 verified | 3 |
 | **W4** | EPICs 13–27 — elevation | Premium/AI-native reframe over existing capabilities | 🟠 partial (16–21 real; 13–15 deterministic-only) | 5 |
-| **W5** | EPICs 13–27 — net-new builds | Answer Engine, Canvas, People Graph/Skills, onboarding, analytics, DX | 🔴 thin (Canvas stub, skills/graph absent) | 5 |
+| **W5** | EPICs 13–27 — net-new builds | Answer Engine, Canvas, People Graph/Skills, onboarding, analytics, DX | 🟠 partial — skills/graph **built** (V126 + `SkillService` + `SkillsPanel`, #525/#526) and Canvas parses real model output; onboarding playbook engine exists but seeds no playbooks | 5 |
 | **W6** | V1.6 overlay | Framework engine, 5 user types, operating model, team-key IDs, inline BQL, query boards, Messenger, profile, brand system, premium states, AI coach | 🟠 ~25% (scaffolding, mostly unenforced — see §6, #522–#524) | 4 |
 | **W7** | Quality / test / NFR bar | Coverage gate scope+floor, FE coverage, E2E, load tests, a11y breadth, i18n completion | 🟠 ~25–40% | 6 (continuous) |
 | **W8** | Infra target-state | AWS + Terraform + OTel + message broker | ⚪ 0% | 7 |
@@ -147,7 +147,7 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 | 20 | Reports / Dashboards / BQL / Leadership | Completed | ✅ Verified 2026-07-21 | ~90% | — |
 | 21 | Integrations / Migration / APIs | Completed | ✅ Verified 2026-07-21 | ~70% | — |
 | 22 | People Graph / Skills / Stakeholders | 🟠 ~60% | ⬆️ built 2026-07-21 · UI 2026-07-23 | skills + person-skill graph (V126, `SkillService`, workspace-scoped, "who holds skill X"); **`SkillsPanel` now surfaces it** in Workspace Settings with all five async states and a permission-gated write path (12 tests) | endorsements; stakeholder map |
-| 23 | Onboarding / Templates / Adoption | 🟠 ~35% | ⚠️ overclaimed as Verified | playbook engine real; no seeded starter template/playbook library | seed adoption content |
+| 23 | Onboarding / Templates / Adoption | 🟠 ~40% | ⚠️ overclaimed as Verified · gap restated 2026-07-23 | playbook engine real (`OnboardingPlaybook{,Service,Step,Repository}`); **project templates *are* seeded** — `V93__onboarding_wizard_templates.sql` populates `config_templates`, so the earlier "no seeded starter template" half of this claim was wrong. What is genuinely absent: **no migration seeds a single playbook row**, so the engine ships empty | seed playbook content |
 | 24 | Mobile / PWA / Offline / Realtime | Completed | ✅ Verified 2026-07-21 | ~80% | — |
 | 26 | Product Analytics / Feedback | Completed | ✅ Verified 2026-07-21 | ~30% | — |
 | 27 | Developer Experience / Agent-Ready | Completed | ✅ Verified 2026-07-21 | ~55% | — |
@@ -186,14 +186,26 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 
 ## 5. W2 — Architecture refactor checklist (Phase 2)
 
-| Item | Evidence today (2026-07-19) | DoD |
-|------|----------------|-----|
-| Split flat `com.bcits.works` into domain modules | ✅ 14 modules populated; flat root reduced 291→72 source files; ArchUnit cycle/kernel/non-vacuity/root-budget gates | enforced module boundaries (ArchUnit), classes moved |
-| Decompose `AppShell.jsx` | ✅ 4,628→2,884; providers, auth, public routes, shortcuts, `RouteOutlet`, feature state, workspace membership, navigation, overlays, and realtime extracted; architecture ceiling 3,000 | router + providers + overlays + feature-state extracted |
-| God classes: `KpiService` 716, `BqlCompiler` 650, `ArticleController` 630, `WorkItemCommandService` 559 | ✅ **all four split & merged** — PRs #446 (Article), #447 (Kpi), #448 (Bql Parser/Emitter), #449 (WorkItemFieldCopier) | each within size/responsibility budget |
-| FE monoliths: `locales.js` 4,426, `BlockEditor.jsx` 2,176, `knowledge-view.jsx` 1,828 | ✅ `locales.js` code-split by language (PR #451); `BlockEditor` + 6 knowledge overlays lazy (PR #452, initial JS −13.6%); production build and bundle gate enforce the boundary | code-split; lazy-loaded |
-| Adopt `AsyncBoundary`; retire hand-rolled states | ✅ common boundary used across primary list/table, console, PM, Compliance, Service, marketplace and support surfaces | all primary async surfaces use it |
-| Token and structure debt | ✅ raw hex tokenized; legacy override removed; all view-structure rules are errors | zero literals; legacy block removed |
+> **Corrected 2026-07-23 (Phase 0 truth pass).** This table read all-✅ and §2 marked W2
+> "✅ Verified 2026-07-19". A direct code audit of `main` at `08d4cb6c` contradicts that on four of
+> six rows. The figures below are `wc -l` / file counts taken from that commit, not carried forward
+> from the 2026-07-19 note. `PHASE-2-EXECUTION-PLAN.md` §0 already said the same thing
+> ("three of the four god classes are still over budget, `AppShell` remains a 2,946-line
+> component") — that plan was right and this table was wrong.
+
+| Item | Measured on `main` @ `08d4cb6c` (2026-07-23) | DoD | Status |
+|------|----------------|-----|--------|
+| Split flat `com.bcits.works` into domain modules | 14 modules populated and the flat root is down from 291 — but **72 `.java` files remain at the flat root**, including `AutomationService.java`, so the domain it names has no module. No `api`/`internal` split and no module→module ArchUnit rule exists anywhere | enforced module boundaries (ArchUnit), classes moved | 🟠 **relocation only** |
+| Decompose `AppShell.jsx` | **2,933 lines / 199 `useState`**. Providers, auth, public routes, shortcuts, `RouteOutlet`, navigation, overlays and realtime are extracted, but feature state is not; the gate is a size ratchet pinned at the current value, which prevents growth rather than proving decomposition | router + providers + overlays + feature-state extracted | 🟠 **partial** |
+| God classes | `BqlCompiler` **genuinely split** (56, via Parser/Emitter/Lexer) — 1 of 4. `ArticleService` **730** (largest backend file in the repo), `KpiService` **612**, `WorkItemCommandService` **590**. PRs #446–#449 moved and renamed code; only #448 decomposed it | each within size/responsibility budget | 🔴 **1 of 4** |
+| FE monoliths: `locales.js` 4,426, `BlockEditor.jsx` 2,176, `knowledge-view.jsx` 1,828 | ✅ `locales.js` code-split by language (PR #451); `BlockEditor` + 6 knowledge overlays lazy (PR #452, initial JS −13.6%); initial-payload budget gate enforces the boundary in CI | code-split; lazy-loaded | ✅ |
+| Adopt `AsyncBoundary`; retire hand-rolled states | **17 of 36 views** import it | all primary async surfaces use it | 🟠 **~47%** |
+| Token and structure debt | ✅ raw hex tokenized; legacy override removed; all view-structure rules are errors; `guardrails.sh` blocks regressions | zero literals; legacy block removed | ✅ |
+
+**W2 exit criteria are therefore not met.** Two rows hold; four do not. Phase 2 closes when the three
+remaining god classes are split, `AppShell` feature state is extracted, the flat root is emptied
+behind an `api`/`internal` boundary with a module→module ArchUnit rule, and `AsyncBoundary` reaches
+the primary async surfaces.
 
 The EPIC 1–5 closeout evidence is recorded in
 `docs/implementation/epics/EPICS-01-05-CODE-VERIFICATION.md` and enforced by
@@ -329,3 +341,24 @@ EPIC's DoD. Phase 6 is the dedicated closure sweep for anything systemic.
   views); live-LLM synthesis (13–15); inline BQL filters; EPIC-23 seed content; brand placement on
   the remaining 5 of 7 surfaces; W7 quality (JaCoCo scope/floor, FE coverage threshold, E2E, load,
   a11y breadth, i18n ~8%); and all of W8/W9 (AWS/Terraform/OTel/broker/SSO/native/jOOQ).
+- 2026-07-23 — **Phase 0 truth pass: ledger audited against code, not against itself.** Every status
+  in §2/§3/§5/§6 was re-checked by reading `main` at `08d4cb6c`. Three corrections:
+  1. **W2 claimed ✅ Verified without code backing** — the largest untrue statement in this document,
+     and the same overclaim pattern §3 was reconciled for on 2026-07-21. Four of six §5 rows miss
+     their DoD: 3 of 4 god classes unsplit (`ArticleService` 730, `KpiService` 612,
+     `WorkItemCommandService` 590; only `BqlCompiler` genuinely decomposed), **72** `.java` files
+     still at the flat root including `AutomationService`, `AppShell` ratcheted at 2,933 rather than
+     decomposed, `AsyncBoundary` at 17 of 36 views. §2 and §5 now carry the measured figures.
+     `PHASE-2-EXECUTION-PLAN.md` §0 had said this all along; the plan was right and the ledger wrong.
+  2. **EPIC 23's gap was misstated** — project templates *are* seeded (`V93` → `config_templates`);
+     what is missing is seeded *playbooks*, of which there are none.
+  3. **The W5 row was stale in the opposite direction** — still read "skills/graph absent" after
+     #525 built them and #526 shipped the UI.
+  Confirmed accurate by the audit and left unchanged: W1 (142 `@Filter` entities,
+  `TenantFilterCoverageTest`, `tenant.filter.binding.enabled` default-off, FLS, PII vault, real
+  `AwsKmsProvider`, webauthn4j 0.31.8, V115/V117/V118); AI deterministic-by-default
+  (`ai.anthropic.api-key=${ANTHROPIC_API_KEY:}`); the outbound-AI approval gate (`chat_ai_drafts` +
+  `approveDraft`); inline BQL filters genuinely absent; and **W8/W9 at a true 0%** — zero jOOQ, zero
+  SAML/OIDC login dependencies (the only source hits are an `IntegrationCatalog` string constant and
+  a keyword classifier in `IdeaService`), zero native iOS/Android code, zero broker dependencies,
+  zero Terraform, zero OpenTelemetry.

@@ -320,7 +320,12 @@ EPIC's DoD. Phase 6 is the dedicated closure sweep for anything systemic.
   defects fixed with regression tests — `internalChat.js` and the business-user-type control both
   called API-client methods that do not exist (`api.get`/`api.post`/`api.put`), so the Messenger
   view and the user-type dropdown threw on every use. `logo.jsx` made branding-aware; AppShell
-  ratchet re-pinned 2937→2933. Flyway high-water → **127**. Not in this PR and still open: the
-  Phase-2 god-class splits (`ArticleService` 663, `WorkItemCommandService` ~540, `KpiService`),
-  AppShell decomposition, live-LLM synthesis (13–15), inline BQL filters, EPIC-23 seed content,
-  W7 quality sweeps, and all of W8/W9 (AWS/Terraform/OTel/broker/SSO/native/jOOQ).
+  ratchet re-pinned 2937→2933. Flyway high-water → **127**.
+  Not in this PR and still open — measured on this branch, not inferred: the Phase-2 god-class
+  splits (`ArticleService` **730**, `KpiService` **612**, `WorkItemCommandService` **558→590**, which
+  this PR *grew* by 32 lines even after moving the hierarchy logic out to `ParentTypeRules`);
+  AppShell decomposition (2,933 lines / 199 `useState`); the EPIC-3 `api`/`internal` split and
+  module→module ArchUnit rules (71 files still at the flat root); `AsyncBoundary` adoption (17 of 36
+  views); live-LLM synthesis (13–15); inline BQL filters; EPIC-23 seed content; brand placement on
+  the remaining 5 of 7 surfaces; W7 quality (JaCoCo scope/floor, FE coverage threshold, E2E, load,
+  a11y breadth, i18n ~8%); and all of W8/W9 (AWS/Terraform/OTel/broker/SSO/native/jOOQ).

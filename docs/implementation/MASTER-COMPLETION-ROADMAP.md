@@ -110,6 +110,16 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 > lines / 199 `useState`, guarded by a zero-slack size ratchet). One integrity gap noted:
 > `WorkItemCommandService.validateParentType` enforces only the static `DefaultWorkItemTypes`
 > hierarchy and ignores `WorkItemTypeConfig`, so **custom work-type parent rules are unenforced**.
+>
+> **Follow-up closeout (2026-07-23).** The named residuals of the 2026-07-21 reconciliation were
+> closed: the custom work-type parent gap above (`ParentTypeRules` now resolves a workspace's
+> `valid_parent_types` ahead of the built-in hierarchy, and the rule is persistable), the orphan
+> phase4 `/messenger` backend (**#522** — package deleted, tables dropped by V127, EPIC-9
+> `internal-messaging` confirmed canonical), and the missing EPIC-22 skills UI (`SkillsPanel`).
+> Two runtime defects were found while doing it and fixed: `internalChat.js` called `api.get`/
+> `api.post`, which the API client does not export, and double-prefixed `/api/v1` — so **every**
+> EPIC-9 Messenger call threw; the business-user-type control called the same non-existent
+> `api.put`. Both were shipped by #521 and neither had a test. AppShell ratchet re-pinned 2937→2933.
 
 | EPIC | Title | Ledger | **Verified** | Underlying capability | DoD gap to close |
 |------|-------|--------|--------------|----------------------|------------------|
@@ -123,7 +133,7 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 | 6 | Simplified navigation | Completed | ✅ Verified 2026-07-19 | built | — |
 | 7 | bSmart Today | 🟠 ~70% | ⬆️ built 2026-07-21 | **max-5 attention model now built** (`MyDayService.attentionScore` + capped `attention` list, tested); AI brief still deterministic-by-default | brief LLM wiring |
 | 8 | Smart Inbox | Completed | ✅ Verified 2026-07-19 | server action projection, exact count, durable state, sourced/fallback AI, direct source actions | — |
-| 9 | Connect Messaging | 🟠 ~60% | ⬆️ built 2026-07-21 | **message→artifact conversion now real** (`MessageArtifactService` creates ActionItem/Decision, tested); still support-chat table reuse; phase4 `/messenger` orphan remains (#522) | conversation model; resolve #522 |
+| 9 | Connect Messaging | 🟠 ~70% | ⬆️ built 2026-07-21 · fixed 2026-07-23 | message→artifact conversion real (`MessageArtifactService`); **#522 resolved** — orphan phase4 `/messenger` package + tables removed (V127), EPIC-9 `internal-messaging` is the single surface; **its client was throwing on every call and now works** (tested) | conversation model |
 | 10 | Work-item experience | Completed | ✅ Verified 2026-07-21 | core built | — |
 | 11 | Project command center | Completed | ✅ Verified 2026-07-21 | projects built | — |
 | 12 | DevSync intelligence | Completed | ✅ Verified 2026-07-21 | dev workspace built | — |
@@ -136,7 +146,7 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 | 19 | Automation Builder + Agents | Completed | ✅ Verified 2026-07-21 | ~80% | — |
 | 20 | Reports / Dashboards / BQL / Leadership | Completed | ✅ Verified 2026-07-21 | ~90% | — |
 | 21 | Integrations / Migration / APIs | Completed | ✅ Verified 2026-07-21 | ~70% | — |
-| 22 | People Graph / Skills / Stakeholders | 🟠 ~45% | ⬆️ built 2026-07-21 | **skills + person-skill graph now built** (V126, `SkillService`, workspace-scoped, "who holds skill X", tested); frontend UI still to come | skills UI; endorsements |
+| 22 | People Graph / Skills / Stakeholders | 🟠 ~60% | ⬆️ built 2026-07-21 · UI 2026-07-23 | skills + person-skill graph (V126, `SkillService`, workspace-scoped, "who holds skill X"); **`SkillsPanel` now surfaces it** in Workspace Settings with all five async states and a permission-gated write path (12 tests) | endorsements; stakeholder map |
 | 23 | Onboarding / Templates / Adoption | 🟠 ~35% | ⚠️ overclaimed as Verified | playbook engine real; no seeded starter template/playbook library | seed adoption content |
 | 24 | Mobile / PWA / Offline / Realtime | Completed | ✅ Verified 2026-07-21 | ~80% | — |
 | 26 | Product Analytics / Feedback | Completed | ✅ Verified 2026-07-21 | ~30% | — |
@@ -203,9 +213,9 @@ The EPIC 1–5 closeout evidence is recorded in
 | Admin/Owner operating-model configurability | 🟢 ~60% | 6/22 | **built 2026-07-21** — `operating_model_policies` now enforced as a deny-override at invite + framework-manage paths (closes #523) |
 | Team-key display IDs (e.g. `PLAT-42`) | 🟢 ~70% | 10/22/23 | **built & wired** (`WorkItemCommandService:118-138` + seq generator + unique index) |
 | Inline BQL filters + dynamic query boards | 🟠 ~20% | 20/10 | inline BQL filters **absent** (faceted bar); BQL *widgets* exist, no BQL-driven work boards |
-| **bSmart Messenger** (work-context, separate from support chat) + message→artifact | 🟠 ~60% | 9/13/14 | EPIC-9 `internal-messaging` UI is real; **message→artifact conversion now built** (`MessageArtifactService`, 2026-07-21); phase4 `/messenger` orphan still to resolve → **#522** |
+| **bSmart Messenger** (work-context, separate from support chat) + message→artifact | 🟢 ~70% | 9/13/14 | one surface again — the orphan phase4 `/messenger` package and its `channels`/`messages` tables are gone (V127, closes **#522**); the EPIC-9 client's broken `api.get`/`api.post` calls fixed and pinned by tests; message→artifact conversion built (`MessageArtifactService`) |
 | Profile / preference center | 🟢 ~80% | 22 | **built** (`account-view.jsx`, `UserPreferenceController`, `user_preferences`) |
-| Brand-placement system (shell/onboarding/portal/reports/exports/email/PWA) | 🟠 ~25% | 5/22 | config wired to shell+portal only (2 of 7); `logo.jsx` hardcoded, ignores `branding.logoUrl` |
+| Brand-placement system (shell/onboarding/portal/reports/exports/email/PWA) | 🟠 ~35% | 5/22 | `logo.jsx` now honours `branding.logoUrl` in every variant (2026-07-23), so tenant branding is one component instead of a per-surface conditional; the shell consumes it. Still 2 of 7 surfaces — reports, exports, email and PWA remain unbranded |
 | Premium microcopy / next-best-action / guided states | 🟠 partial | 5 + continuous | unchanged |
 | AI work coach + executive brief (fallback + policy) | 🟠 ~50% | 13/14/15/20 | **exists** (`CockpitCoachService` Cap V, deterministic fallback) — prior "0 files" was wrong; AI text deterministic-by-default |
 | Performance / observability / pagination / caching / virtualization / indexes | 🟠 partial | 24/25/27 | unchanged |
@@ -301,3 +311,16 @@ EPIC's DoD. Phase 6 is the dedicated closure sweep for anything systemic.
   `scripts/update-roadmap.js` deleted (CF-3). 1,576 unit tests green; tenant coverage + guardrails +
   state --check green. Rows above upgraded to honest ⬆️ status; none flipped to ✅ Verified (full DoD
   — frontend, live-AI, load/a11y — still open per EPIC).
+- 2026-07-23 — **Reconciliation follow-ups closed (one PR).** Custom work-type parent rules are now
+  enforced (`ParentTypeRules`: a workspace's `valid_parent_types` wins over the built-in hierarchy;
+  an empty list stays "unconfigured" because V68 made the column `NOT NULL DEFAULT '[]'`, and the
+  rule is now persisted by the type-config `PUT`). #522 closed: the orphan phase4 `messenger`
+  package deleted and `channels`/`messages` dropped by **V127**, leaving EPIC-9 `internal-messaging`
+  as the one internal-messaging surface. EPIC-22 gained its UI (`SkillsPanel`). Two #521 runtime
+  defects fixed with regression tests — `internalChat.js` and the business-user-type control both
+  called API-client methods that do not exist (`api.get`/`api.post`/`api.put`), so the Messenger
+  view and the user-type dropdown threw on every use. `logo.jsx` made branding-aware; AppShell
+  ratchet re-pinned 2937→2933. Flyway high-water → **127**. Not in this PR and still open: the
+  Phase-2 god-class splits (`ArticleService` 663, `WorkItemCommandService` ~540, `KpiService`),
+  AppShell decomposition, live-LLM synthesis (13–15), inline BQL filters, EPIC-23 seed content,
+  W7 quality sweeps, and all of W8/W9 (AWS/Terraform/OTel/broker/SSO/native/jOOQ).

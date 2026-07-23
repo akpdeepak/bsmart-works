@@ -2335,11 +2335,7 @@ export default function AppShell() {
               onClick={() => navigate('dashboard')}
               className="flex items-center shrink-0 select-none p-0.5 rounded-md hover:bg-white/10 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
             >
-              {branding?.logoUrl ? (
-                <img src={branding.logoUrl} alt="Workspace Logo" className="h-6 max-w-24 object-contain" />
-              ) : (
-                <Logo size="lg" variant="reverse" />
-              )}
+              <Logo size="lg" variant="reverse" logoUrl={branding?.logoUrl} />
             </button>
 
             {/* Workspace switcher chip */}

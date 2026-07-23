@@ -16,6 +16,7 @@ import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.EventService;
 import com.bcits.works.shared.RbacGate;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -517,12 +518,43 @@ public class WorkItemCommandService {
             throw ApiException.notFound("Parent work item", parentId);
         }
         String parentType = parents.get(0).getType();
-        Set<String> allowed = DefaultWorkItemTypes.VALID_CHILDREN.getOrDefault(parentType, Set.of());
-        if (!allowed.contains(childType)) {
+        Set<String> allowed = ParentTypeRules.allowedParents(
+            childType, configuredParentTypes(rbac.workspaceForWorkItem(parentId), childType));
+        if (!allowed.contains(upper(parentType))) {
             throw ApiException.badRequest("INVALID_PARENT_TYPE",
                 "A " + childType + " cannot be a child of " + parentType + ". "
-                    + "Allowed children: " + allowed);
+                    + "Allowed parents: " + allowed);
         }
+    }
+
+    /**
+     * The workspace's own {@code valid_parent_types} rule for {@code childType}, or null when the
+     * workspace has not configured one. Workspace-scoped (RB-40 §1) — a type rule from another
+     * tenant can never widen this tenant's hierarchy.
+     */
+    private List<String> configuredParentTypes(String workspaceId, String childType) {
+        if (workspaceId == null || childType == null) {
+            return null;
+        }
+        List<String> raw = jdbc.queryForList(
+            "SELECT valid_parent_types FROM work_item_type_config "
+                + "WHERE workspace_id = ? AND UPPER(type_key) = ? LIMIT 1",
+            String.class, workspaceId, upper(childType));
+        if (raw.isEmpty() || raw.get(0) == null || raw.get(0).isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(raw.get(0), new TypeReference<List<String>>() { });
+        } catch (Exception e) {
+            // A malformed rule must not silently widen the hierarchy — fall back to the built-in one.
+            log.warn("Ignoring unreadable valid_parent_types for type {} in workspace {}: {}",
+                childType, workspaceId, e.getMessage());
+            return null;
+        }
+    }
+
+    private static String upper(String value) {
+        return value == null ? null : value.trim().toUpperCase(java.util.Locale.ROOT);
     }
 
     private String defaultStatusFor(String typeKey) {

@@ -17,8 +17,8 @@ test('generated current state reflects executable repository facts', () => {
   assert.equal(state.backend.springBoot, '4.1.0');
   assert.equal(state.backend.java, '21');
   assert.ok(state.backend.domainPackages.includes('auth'));
-  assert.equal(state.database.flywayHighWater, 122);
-  assert.equal(state.database.nextMigration, 123);
+  assert.equal(state.database.flywayHighWater, 127);
+  assert.equal(state.database.nextMigration, 128);
   assert.match(state.sourceDigest, /^[0-9a-f]{64}$/);
 });
 

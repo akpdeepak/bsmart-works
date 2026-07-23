@@ -248,6 +248,38 @@ capability calls a model on its own terms.
 - **Data boundary:** redact PII before it leaves the server to a model; respect data residency
   (§4); AI calls originate **server-side only** (RB-10 §8).
 
+### 2.1 Human approval gate for outbound AI *(roadmap AI guardrail)*
+
+The transformation roadmap bounds what AI is allowed to do on its own: it may "summarize, draft,
+recommend, explain, and prepare actions for review", and it "must not automatically merge code,
+**send customer-visible messages**, delete or modify critical records, change security settings,
+publish official reports, create official commitments, or bypass RBAC/tenant boundaries."
+
+> **DECISION (2026-07-21): review-before-send, with no opt-out.** Any AI-composed text bound for a
+> person outside the workspace is a **draft** until a human with the relevant permission approves it.
+> There is no workspace setting, feature flag, or per-capability tier that re-enables auto-send: a
+> switch whose ON position violates the guardrail is not a mitigation. Rejected alternative:
+> auto-send defaulted off behind an audited opt-in.
+>
+> **Binding rules:**
+> 1. **The draft is not the message.** Unapproved AI text lives in its own store and is served only
+>    to internal reviewers. Correctness must not depend on a `WHERE` clause remembering to exclude
+>    it from a customer-facing read — the customer read path must not be able to reach it at all.
+> 2. **Approval is attributable.** The sent message records the approving user, so no
+>    customer-visible turn is anonymous. Approve and reject are both audited as events.
+> 3. **Stale drafts expire, they do not queue.** When the context a draft answered has moved on, the
+>    draft is superseded rather than left approvable.
+> 4. **The control plane still runs.** Holding output for review is not a reason to bypass §2 —
+>    scope, budget, cache and the invocation audit row apply to drafting exactly as to sending.
+> 5. **Fixed, human-authored constants are not AI messages.** A canned acknowledgement chosen by a
+>    deterministic fallback is reviewed at the time it is written into the code, so it may be sent
+>    without a per-message gate. Model output never qualifies.
+>
+> *Status:* enforced for customer support chat (`SupportChatService`: control-plane output becomes a
+> PENDING `chat_ai_drafts` row; only `approveDraft` appends to the customer transcript). Any new
+> capability that can emit outbound content adopts the same gate; this is a review control until a
+> registered architecture test covers it repository-wide.
+
 ## 3. Data governance & the audit/erasure reconciliation *(spec `06 §5.5` ⟷ `06 §5.1`)*
 
 Required: data export, **right-to-be-forgotten**, access audit, data residency (GDPR / India DPDP).

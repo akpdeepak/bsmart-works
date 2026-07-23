@@ -25,15 +25,18 @@ public class InternalMessagingController {
     private final ChatMessageRepository messageRepo;
     private final AuthenticatedUser authenticatedUser;
     private final RbacGate rbac;
+    private final MessageArtifactService messageArtifacts;
 
     public InternalMessagingController(ChatConversationRepository conversationRepo,
                                        ChatMessageRepository messageRepo,
                                        AuthenticatedUser authenticatedUser,
-                                       RbacGate rbac) {
+                                       RbacGate rbac,
+                                       MessageArtifactService messageArtifacts) {
         this.conversationRepo = conversationRepo;
         this.messageRepo = messageRepo;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
+        this.messageArtifacts = messageArtifacts;
     }
 
     @GetMapping("/conversations")
@@ -96,16 +99,13 @@ public class InternalMessagingController {
         msg.setBody(body.get("body"));
         msg.setCreatedAt(OffsetDateTime.now());
 
-        // message-to-artifact conversion (tasks, decisions)
-        String text = msg.getBody();
-        if (text != null) {
-            if (text.startsWith("/task ")) {
-                msg.setArtifactType("TASK");
-                msg.setArtifactRef(UUID.randomUUID().toString()); // Placeholder ref
-            } else if (text.startsWith("/decision ")) {
-                msg.setArtifactType("DECISION");
-                msg.setArtifactRef(UUID.randomUUID().toString()); // Placeholder ref
-            }
+        // Message-to-artifact conversion: a "/task" or "/decision" message creates a real, workspace-
+        // scoped artifact and links the message to it (its actual id), rather than a throwaway ref.
+        MessageArtifactService.Artifact artifact =
+                messageArtifacts.convert(workspaceId, authenticatedUser.id(), msg.getBody());
+        if (artifact != null) {
+            msg.setArtifactType(artifact.type());
+            msg.setArtifactRef(artifact.ref());
         }
         
         c.setUpdatedAt(OffsetDateTime.now());

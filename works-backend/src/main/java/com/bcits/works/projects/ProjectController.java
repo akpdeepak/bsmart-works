@@ -43,6 +43,11 @@ public class ProjectController {
         return projectService.getBySlug(authenticatedUser.id(), slug);
     }
 
+    @GetMapping("/{id}/capabilities")
+    public Map<String, Boolean> getCapabilities(@PathVariable String id) {
+        return projectService.capabilities(authenticatedUser.id(), id);
+    }
+
     @PostMapping
     public Project createProject(@Valid @RequestBody Project project) {
         return projectService.create(authenticatedUser.id(), project);

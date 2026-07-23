@@ -44,7 +44,8 @@ class ProjectServiceTest {
     private final CurrentWorkspace currentWorkspace = mock(CurrentWorkspace.class);
 
     private final ProjectService service =
-            new ProjectService(projectRepository, userRepository, eventService, rbac, jdbc, currentWorkspace);
+            new ProjectService(projectRepository, userRepository, eventService, rbac, jdbc, currentWorkspace,
+                    mock(com.bcits.works.shared.OperatingModelGate.class));
 
     private Project project(String id, String wsId) {
         Project p = new Project();

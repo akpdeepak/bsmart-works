@@ -1,9 +1,25 @@
 
 // bSmart Works logo. Brand spec §2 — four variants.
 // SVGs live in public/ and are never recreated inline.
-export function Logo({ size = 'md', variant = 'default' }) {
+//
+// White-label: a workspace may configure its own mark (`settings.branding.logoUrl`). Pass it as
+// `logoUrl` and it replaces the product lockup in every variant, so tenant branding is one
+// component rather than a conditional re-hand-rolled per surface. Pre-auth surfaces have no
+// workspace yet and so keep the product lockup by simply not passing one.
+export function Logo({ size = 'md', variant = 'default', logoUrl, alt }) {
   const textSize = size === 'sm' ? 'text-lg' : size === 'lg' ? 'text-3xl' : 'text-2xl';
   const boxSize  = size === 'sm' ? 'w-7 h-7'  : size === 'lg' ? 'w-12 h-12' : 'w-9 h-9';
+  const markHeight = size === 'sm' ? 'h-7' : size === 'lg' ? 'h-12' : 'h-9';
+
+  if (logoUrl && logoUrl.trim()) {
+    return (
+      <img
+        src={logoUrl}
+        alt={alt || 'Workspace logo'}
+        className={`${markHeight} max-w-32 w-auto object-contain`}
+      />
+    );
+  }
 
   // Standalone glyph (favicon/dock/avatar contexts)
   if (variant === 'icon') {

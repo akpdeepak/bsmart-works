@@ -273,6 +273,31 @@ class AiAssistServiceTest {
         org.mockito.Mockito.verify(users, org.mockito.Mockito.never()).findAll();
     }
 
+    // ── generateArtifact (EPIC-15 canvas) ───────────────────────────────────────
+
+    @Test
+    void generateArtifact_aiOn_parsesModelOutputIntoBlocks() {
+        aiOn();   // outcome.text() echoes the seed the service sent to the control plane
+        var res = assist.generateArtifact("ws", "me", "Release checklist", true);
+        assertThat(res.blocks()).isNotEmpty();
+        assertThat(res.blocks().get(0).get("type")).isEqualTo("heading");
+        assertThat(res.blocks().get(0).get("content")).isEqualTo("Release checklist");
+        // The former stub returned two hardcoded blocks and discarded out.text(); prove the model's
+        // text now becomes blocks.
+        assertThat(res.blocks().stream()
+                .anyMatch(b -> String.valueOf(b.get("content")).contains("structured document"))).isTrue();
+        assertThat(res.meta().usedAi()).isTrue();
+    }
+
+    @Test
+    void generateArtifact_fallback_returnsEditableScaffold() {
+        aiFallback();
+        var res = assist.generateArtifact("ws", "me", "Release checklist", true);
+        assertThat(res.blocks()).extracting(b -> b.get("content")).contains("Overview", "Next steps");
+        assertThat(res.blocks().get(0).get("content")).isEqualTo("Release checklist");
+        assertThat(res.meta().fallback()).isTrue();
+    }
+
     // ── deterministicNlToBql (iter-10 Cap O fallback) ───────────────────────────
 
     @Test

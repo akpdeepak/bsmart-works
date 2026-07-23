@@ -70,6 +70,16 @@ class ActivityControllerAccessTest {
     }
 
     @Test
+    void getActivity_unresolvableAggregate_failsClosedAndNeverReadsEvents() {
+        // events.aggregate_id also holds project / sprint / SLA / compliance ids, which never resolve
+        // through work_items. Falling open there would serve any tenant's history to any caller.
+        when(rbac.workspaceForWorkItem("PROJ-999")).thenReturn(null);
+
+        assertThrows(ApiException.class, () -> controller.getActivity("PROJ-999", null));
+        verifyNoInteractions(jdbc);
+    }
+
+    @Test
     void getActivity_member_passesGateAndQueriesScopedToItem() {
         controller.getActivity(ITEM_IN_A, null);
         verify(rbac).require(CALLER, WS_A, "view_items");

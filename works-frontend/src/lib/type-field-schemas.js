@@ -288,40 +288,17 @@ export const FIELD_SCHEMAS = {
   ],
 };
 
-// ── Field config persistence ───────────────────────────────────────────────────
-// Stored in localStorage as { [typeKey]: { overrides: {[fieldKey]: {label,required}},
-//   custom: [{key,label,type,required,options}], hidden: [fieldKey] } }
-
-const FIELD_CONFIG_KEY = 'bsmart-field-config';
-
-export function loadFieldConfig() {
-  try { return JSON.parse(localStorage.getItem(FIELD_CONFIG_KEY)) ?? {}; }
-  catch { return {}; }
-}
-
-export function saveFieldConfig(config) {
-  localStorage.setItem(FIELD_CONFIG_KEY, JSON.stringify(config));
-}
-
 /**
- * Returns the effective field list for a type, merging the baseline schema with any
- * workspace customizations (label overrides, hidden fields, custom fields).
- * Each field is augmented with `_system: true|false`.
+ * Returns the field list for a type — the baseline schema, augmented with `_system: true`.
+ *
+ * There is deliberately no client-side override layer here. Per-type field visibility and order are
+ * workspace configuration owned by the server (`type_field_prefs`, edited in Settings → Detail
+ * Fields). This function used to merge in a localStorage config that only a since-retired settings
+ * tab could write, which meant an admin was told the change was saved to the workspace when it lived
+ * in one browser profile. Any per-type customization added here must go through the server.
  */
-export function getEffectiveSchema(typeKey, fieldConfig = null) {
-  const cfg = (fieldConfig ?? loadFieldConfig())[typeKey] ?? {};
-  const base = FIELD_SCHEMAS[typeKey] ?? [];
-
-  const effective = base
-    .filter(f => !(cfg.hidden ?? []).includes(f.key))
-    .map(f => ({
-      ...f,
-      ...(cfg.overrides?.[f.key] ?? {}),
-      _system: true,
-    }));
-
-  const custom = (cfg.custom ?? []).map(f => ({ ...f, _system: false }));
-  return [...effective, ...custom];
+export function getEffectiveSchema(typeKey) {
+  return (FIELD_SCHEMAS[typeKey] ?? []).map(f => ({ ...f, _system: true }));
 }
 
 /** Default form values for a given type key. */

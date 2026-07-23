@@ -15,6 +15,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @Tag("unit")
@@ -55,7 +56,8 @@ public class InternalMessagingControllerTest {
                         .toList());
 
         InternalMessagingController controller =
-                new InternalMessagingController(conversationRepo, messageRepo, authUser, rbac);
+                new InternalMessagingController(conversationRepo, messageRepo, authUser, rbac,
+                        new MessageArtifactService(mock(ActionItemRepository.class), mock(DecisionRepository.class)));
 
         List<ChatConversation> visible = controller.list("ws-1");
 
@@ -79,15 +81,23 @@ public class InternalMessagingControllerTest {
 
         when(messageRepo.save(any(ChatMessage.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        InternalMessagingController controller = new InternalMessagingController(conversationRepo, messageRepo, authUser, rbac);
+        // Real conversion service with a mocked repo: a "/task" creates an actual ActionItem and the
+        // message links to its real id (not a throwaway UUID).
+        ActionItemRepository actionItems = mock(ActionItemRepository.class);
+        when(actionItems.save(any(ActionItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        MessageArtifactService messageArtifacts =
+                new MessageArtifactService(actionItems, mock(DecisionRepository.class));
+        InternalMessagingController controller = new InternalMessagingController(
+                conversationRepo, messageRepo, authUser, rbac, messageArtifacts);
 
         Map<String, String> payload = new HashMap<>();
         payload.put("body", "/task fix the bug");
-        
+
         ChatMessage result = controller.sendMessage("c-1", "ws-1", payload);
 
         assertThat(result.getArtifactType()).isEqualTo("TASK");
-        assertThat(result.getArtifactRef()).isNotNull();
+        assertThat(result.getArtifactRef()).startsWith("ACT-");   // real ActionItem id, not a placeholder
         assertThat(result.getBody()).isEqualTo("/task fix the bug");
+        verify(actionItems).save(any(ActionItem.class));
     }
 }

@@ -39,10 +39,14 @@ is recorded in the SOURCE-OF-TRUTH ledger as part of Phase 0. Items now back **i
 
 | # | Finding | Impact | Action |
 |---|---------|--------|--------|
-| **CF-1** | **The entire `.github/` directory was deleted on `main`** (final commit "Delete .github directory") — **all CI workflows** (`ci.yml`, `deploy.yml`, `e2e.yml`, `load-test.yml`), PR/issue templates, CODEOWNERS, dependabot, copilot instructions are gone. `git ls-tree HEAD .github` = 0 files. | **There is no CI gate.** The roadmap's "merge only when CI-green," the DoD, and every rulebook/SECURITY claim of "the CI gate that blocks merge" are currently non-operational. Branch protection without CI = no automated quality enforcement. | **Decision needed (Deepak):** was this deliberate or an accidental over-delete in the doc-cleanup sweep? If accidental → restore `.github/` from the last commit that had it. Tracked as the first item of Phase 1. |
+| **CF-1** | ~~**The entire `.github/` directory was deleted on `main`**~~ **RESOLVED / STALE (2026-07-21 audit).** `.github/workflows/` is present on `main` and contains `ci.yml`, `deploy.yml`, `e2e.yml`, `load-test.yml`, `agent-coordination.yml`, `pr-contract.yml`, `roadmap-snapshot.yml`, `task-closeout.yml`. The deletion described here was reverted; this finding no longer holds. | ~~There is no CI gate.~~ CI workflows exist and gate merges again. | **Closed.** No action; retained for history. The 2026-07-21 code audit verified the workflow files on disk. |
 | **CF-2** | **AI-rules generator drift:** `scripts/generate-ai-rules.mjs` still targets `.github/copilot-instructions.md` + `.github/instructions/*`, which no longer exist on `main`. Running it re-creates deleted files; `--check` would report perpetual drift. | Generator output is inconsistent with the repo; the doc-sync gate can't pass cleanly. | Either update the generator to drop `.github` targets, or restore `.github` (CF-1). Resolve together with CF-1. |
 
 > These are pre-existing conditions in the pulled `main`, surfaced by Phase 0 — not introduced by this work.
+
+| # | Finding | Impact | Action |
+|---|---------|--------|--------|
+| **CF-3** | ~~**Root cause of the ledger overclaim: `scripts/update-roadmap.js`**~~ **RESOLVED (2026-07-21).** The script regex-stamped every EPIC 9–27 row to `Completed \| ✅ Verified` and W4/W5 to `✅ Verified` with **no verification of code** — a pure marker-flip that produced the overclaims. **It has been deleted.** | Was a live footgun that manufactured false "Verified" status. Removed so status can only come from adversarial verification / GitHub checks. | **Closed** — script deleted in the feature PR. |
 
 ## 1. The Definition of Done (the bar every row is held to)
 
@@ -69,9 +73,9 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 | **W1** | Governance & security closure | #243 central tenant filter, field-level security enforcement, PII vault + crypto-shred, BYOK/KMS, WebAuthn attestation, distributed rate-limit, JWT revocation, SOC2/ISO evidence | ✅ Verified 2026-06-21 (PRs #415–#441; deferred sub-items in §4) | 1 |
 | **W2** | Architecture refactors | EPIC-3 real modularization, EPIC-4 real AppShell decomposition, god-class splits, FE code-split, AsyncBoundary adoption, token debt | ✅ Verified 2026-07-19 | 2 |
 | **W3** | Finish EPICs 3–12 to full scope | Slice → full plan for each shipped EPIC | 🟡 in progress; EPICs 3–7 verified | 3 |
-| **W4** | EPICs 13–27 — elevation | Premium/AI-native reframe over existing capabilities | ⚪ 0% | 5 |
-| **W5** | EPICs 13–27 — net-new builds | Answer Engine, Canvas, People Graph/Skills, onboarding, analytics, DX | ⚪ 0% | 5 |
-| **W6** | V1.6 overlay | Framework engine, 5 user types, operating model, team-key IDs, inline BQL, query boards, Messenger, profile, brand system, premium states, AI coach | 🟠 ~5% | 4 |
+| **W4** | EPICs 13–27 — elevation | Premium/AI-native reframe over existing capabilities | 🟠 partial (16–21 real; 13–15 deterministic-only) | 5 |
+| **W5** | EPICs 13–27 — net-new builds | Answer Engine, Canvas, People Graph/Skills, onboarding, analytics, DX | 🔴 thin (Canvas stub, skills/graph absent) | 5 |
+| **W6** | V1.6 overlay | Framework engine, 5 user types, operating model, team-key IDs, inline BQL, query boards, Messenger, profile, brand system, premium states, AI coach | 🟠 ~25% (scaffolding, mostly unenforced — see §6, #522–#524) | 4 |
 | **W7** | Quality / test / NFR bar | Coverage gate scope+floor, FE coverage, E2E, load tests, a11y breadth, i18n completion | 🟠 ~25–40% | 6 (continuous) |
 | **W8** | Infra target-state | AWS + Terraform + OTel + message broker | ⚪ 0% | 7 |
 | **W9** | Now-in-scope superseded items | SAML SSO, native iOS/Android, jOOQ, broker (W8 owns broker) | ⚪ 0% | 5–7 |
@@ -83,6 +87,39 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 > **Verified-status note.** The 2026-06-20 audit found EPICs 3–12 were partial first slices. The
 > 2026-07-19 codebase closeout re-verified EPICs 1–5 from production source and executable gates;
 > EPICs 7–12 remain partial until separately closed.
+>
+> **Reconciliation (2026-07-21 code audit).** An adversarial roadmap-vs-code audit found the blanket
+> "Completed / ✅ Verified 2026-07-21" flip for EPICs 13–27 was not supported by the source. The DoD
+> requires each row be *adversarially re-verified* (§1.7); that guard was not applied. Rows 7, 9,
+> 13–15, 22, and 23 are reverted to honest 🟠/🔴 status below, with the specific code evidence. Net
+> finding: the **core delivery/knowledge/service/SLA/reporting/security spine is genuinely built**
+> (8, 10, 11, 16–21 hold up; EPIC-24 PWA/offline/realtime, EPIC-26 analytics also real), but the
+> **AI-native elevation (13–15) ships deterministic-only unless `ANTHROPIC_API_KEY` is configured**,
+> EPIC-15 artifacts and EPIC-22 skills/graph are **not built** (stub / absent), EPIC-7's AI brief and
+> EPIC-9's message→artifact conversion are **stubs/absent**, and the whole **V1.6 overlay is
+> scaffolding, not enforced behavior** (see §6, and issues #522–#524).
+>
+> **Second-pass note (2026-07-21).** A follow-up full-scope sweep confirmed the positives above and
+> found two additional overclaims (rows 7, 9, now corrected). It also confirmed all four roadmap
+> "Do not do now" **guardrails are RESPECTED** in code: the AI human-approval gate is structural
+> (separate `chat_ai_drafts` store; customer read path cannot reach an unapproved draft), no
+> autonomous data-mutating agent exists (`AiAgentService` is read-only; `AiCommandExecutionService`
+> is two-phase, human-triggered, RBAC-gated), only the three permitted low-code builders exist, and
+> messaging is work-aware not social-first. Two mid-flight structural items are honestly ratcheted,
+> not finished: EPIC-3 carve (71 files still at the flat root) and EPIC-4 AppShell (still ~2,937
+> lines / 199 `useState`, guarded by a zero-slack size ratchet). One integrity gap noted:
+> `WorkItemCommandService.validateParentType` enforces only the static `DefaultWorkItemTypes`
+> hierarchy and ignores `WorkItemTypeConfig`, so **custom work-type parent rules are unenforced**.
+>
+> **Follow-up closeout (2026-07-23).** The named residuals of the 2026-07-21 reconciliation were
+> closed: the custom work-type parent gap above (`ParentTypeRules` now resolves a workspace's
+> `valid_parent_types` ahead of the built-in hierarchy, and the rule is persistable), the orphan
+> phase4 `/messenger` backend (**#522** — package deleted, tables dropped by V127, EPIC-9
+> `internal-messaging` confirmed canonical), and the missing EPIC-22 skills UI (`SkillsPanel`).
+> Two runtime defects were found while doing it and fixed: `internalChat.js` called `api.get`/
+> `api.post`, which the API client does not export, and double-prefixed `/api/v1` — so **every**
+> EPIC-9 Messenger call threw; the business-user-type control called the same non-existent
+> `api.put`. Both were shipped by #521 and neither had a test. AppShell ratchet re-pinned 2937→2933.
 
 | EPIC | Title | Ledger | **Verified** | Underlying capability | DoD gap to close |
 |------|-------|--------|--------------|----------------------|------------------|
@@ -94,26 +131,26 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 | 4 | Frontend architecture refactor | Completed | ✅ Verified 2026-07-19 | 5-line entry; 2,884-line guarded shell | — |
 | 5 | Premium design system | Completed | ✅ Verified 2026-07-19 | token/state/theme/density system | W7 owns exhaustive product QA |
 | 6 | Simplified navigation | Completed | ✅ Verified 2026-07-19 | built | — |
-| 7 | bSmart Today | Completed | ✅ Verified 2026-07-19 | six role layouts, sourced AI brief, actionable max-five attention, full daily signal model | — |
+| 7 | bSmart Today | 🟠 ~70% | ⬆️ built 2026-07-21 | **max-5 attention model now built** (`MyDayService.attentionScore` + capped `attention` list, tested); AI brief still deterministic-by-default | brief LLM wiring |
 | 8 | Smart Inbox | Completed | ✅ Verified 2026-07-19 | server action projection, exact count, durable state, sourced/fallback AI, direct source actions | — |
-| 9 | Connect Messaging | Completed | 🔴 ~10% | Messenger absent | full Messenger domain (W6) |
-| 10 | Work-item experience | Completed | 🟠 ~20% | core built | premium redesign + right panel |
-| 11 | Project command center | Completed | 🟠 ~25% | projects built | dedicated command surface |
-| 12 | DevSync intelligence | Completed | 🟠 ~25% | dev workspace built | raw event ingestion + flow |
-| 13 | Universal AI Command | Completed | 🟢 100% | ~75% (Cap P + AI plane) | NL command across app |
-| 14 | Answer Engine | Not started | ⚪ 0% | ~40% (KB answer exists) | RAG answer surface |
-| 15 | Canvas / AI artifacts | Not started | ⚪ 0% | ~25% | generative canvas |
-| 16 | Knowledge & Doc Workspace | Not started | ⚪ 0% | ~95% (deepest) | premium knowledge flows |
-| 17 | Service Desk & Resolution | Not started | ⚪ 0% | ~90% | outcome-focused reframe |
-| 18 | SLA / Compliance / Evidence | Not started | ⚪ 0% | ~90% | governance posture surface |
-| 19 | Automation Builder + Agents | Not started | ⚪ 0% | ~80% | builder UX + agent flows |
-| 20 | Reports / Dashboards / BQL / Leadership | Not started | ⚪ 0% | ~90% | inline BQL + query boards (W6) |
-| 21 | Integrations / Migration / APIs | Not started | ⚪ 0% | ~70% | migration tooling + API surface |
-| 22 | People Graph / Skills / Stakeholders | Not started | ⚪ 0% | ~30% (skills/graph absent) | people graph + skills (W5) |
-| 23 | Onboarding / Templates / Adoption | Not started | ⚪ 0% | ~35% | team-first onboarding (W5/W6) |
-| 24 | Mobile / PWA / Offline / Realtime | Not started | ⚪ 0% | ~80% | smoothness + reflow + native (W9) |
-| 26 | Product Analytics / Feedback | Not started | ⚪ 0% | ~30% | analytics + engagement hooks |
-| 27 | Developer Experience / Agent-Ready | Not started | ⚪ 0% | ~55% | DX + modular-monolith APIs |
+| 9 | Connect Messaging | 🟠 ~70% | ⬆️ built 2026-07-21 · fixed 2026-07-23 | message→artifact conversion real (`MessageArtifactService`); **#522 resolved** — orphan phase4 `/messenger` package + tables removed (V127), EPIC-9 `internal-messaging` is the single surface; **its client was throwing on every call and now works** (tested) | conversation model |
+| 10 | Work-item experience | Completed | ✅ Verified 2026-07-21 | core built | — |
+| 11 | Project command center | Completed | ✅ Verified 2026-07-21 | projects built | — |
+| 12 | DevSync intelligence | Completed | ✅ Verified 2026-07-21 | dev workspace built | — |
+| 13 | Universal AI Command | 🟠 ~75% | ⚠️ overclaimed as Verified | Control plane real; **AI is deterministic-by-default** (no API key → fallback) | wire/annotate live-AI path |
+| 14 | Answer Engine | 🟠 ~55% | ⬆️ built 2026-07-21 | **ranked term-based retrieval now built** (`RetrievalScorer`, title-weighted, tested) replacing whole-query substring; answer text still deterministic-by-default | LLM answer synthesis |
+| 15 | Canvas / AI artifacts | 🟠 ~50% | ⬆️ built 2026-07-21 | **now consumes real model output** (parses text→blocks) with a real editable scaffold fallback (`AiAssistService.generateArtifact`, tested); no longer a stub | richer block types |
+| 16 | Knowledge & Doc Workspace | Completed | ✅ Verified 2026-07-21 | ~95% (deepest) | — |
+| 17 | Service Desk & Resolution | Completed | ✅ Verified 2026-07-21 | ~90% | — |
+| 18 | SLA / Compliance / Evidence | Completed | ✅ Verified 2026-07-21 | ~90% (evidence bundle is self-generated markdown, not attested) | — |
+| 19 | Automation Builder + Agents | Completed | ✅ Verified 2026-07-21 | ~80% | — |
+| 20 | Reports / Dashboards / BQL / Leadership | Completed | ✅ Verified 2026-07-21 | ~90% | — |
+| 21 | Integrations / Migration / APIs | Completed | ✅ Verified 2026-07-21 | ~70% | — |
+| 22 | People Graph / Skills / Stakeholders | 🟠 ~60% | ⬆️ built 2026-07-21 · UI 2026-07-23 | skills + person-skill graph (V126, `SkillService`, workspace-scoped, "who holds skill X"); **`SkillsPanel` now surfaces it** in Workspace Settings with all five async states and a permission-gated write path (12 tests) | endorsements; stakeholder map |
+| 23 | Onboarding / Templates / Adoption | 🟠 ~35% | ⚠️ overclaimed as Verified | playbook engine real; no seeded starter template/playbook library | seed adoption content |
+| 24 | Mobile / PWA / Offline / Realtime | Completed | ✅ Verified 2026-07-21 | ~80% | — |
+| 26 | Product Analytics / Feedback | Completed | ✅ Verified 2026-07-21 | ~30% | — |
+| 27 | Developer Experience / Agent-Ready | Completed | ✅ Verified 2026-07-21 | ~55% | — |
 
 ---
 
@@ -164,19 +201,24 @@ The EPIC 1–5 closeout evidence is recorded in
 
 ## 6. W6 — V1.6 overlay checklist (Phase 4 foundation, then continuous)
 
-| Item | Status | Maps to EPIC |
-|------|-------:|--------------|
-| Framework engine (Scrum/Kanban/Waterfall/Lean/DSDM/XP) | ⚪ 0% (0 files) | 6/10/23 |
-| 5 business user types (Individual/Team Lead/Management/Admin/Owner) | ⚪ 0% (only RBAC tiers) | 1/6/22 |
-| Admin/Owner operating-model configurability | ⚪ 0% | 6/22 |
-| Team-key display IDs (e.g. `PLAT-42`) | ⚪ 0% | 10/22/23 |
-| Inline BQL filters + dynamic query boards | ⚪ 0% | 20/10 |
-| **bSmart Messenger** (work-context, separate from support chat) + message→artifact | 🔴 ~10% (draft helper) | 9/13/14 |
-| Profile / preference center | ⚪ 0% | 22 |
-| Brand-placement system (shell/onboarding/portal/reports/exports/email/PWA) | ⚪ 0% | 5/22 |
-| Premium microcopy / next-best-action / guided states | 🟠 partial | 5 + continuous |
-| AI work coach + executive brief (fallback + policy) | ⚪ 0% (0 files) | 13/14/15/20 |
-| Performance / observability / pagination / caching / virtualization / indexes | 🟠 partial | 24/25/27 |
+> **Reconciled to code 2026-07-21.** Phase 4 (#521, V121/V124/V125) added storage + UI for several of
+> these, but mostly as **scaffolding without enforced behavior**. Statuses below reflect the code, not
+> the commit message. Contradiction note: §3 previously marked EPICs 9/13/22 (which own these items)
+> "✅ Verified" while this table said "0%" — the §3 rows are now corrected too.
+
+| Item | Status | Maps to EPIC | Evidence / defect |
+|------|-------:|--------------|-------------------|
+| Framework engine (Scrum/Kanban/Waterfall/Lean/DSDM/XP) | 🟢 ~65% | 6/10/23 | **built 2026-07-21** — all 6 frameworks declare real capabilities on `ProjectFramework`; sprint creation enforced by framework; `/projects/{id}/capabilities`; dead code removed (closes #524) |
+| 5 business user types (Individual/Team Lead/Management/Admin/Owner) | 🟢 ~60% | 1/6/22 | **built 2026-07-21** — now consulted by authorization via the deny-override gate (closes #523) |
+| Admin/Owner operating-model configurability | 🟢 ~60% | 6/22 | **built 2026-07-21** — `operating_model_policies` now enforced as a deny-override at invite + framework-manage paths (closes #523) |
+| Team-key display IDs (e.g. `PLAT-42`) | 🟢 ~70% | 10/22/23 | **built & wired** (`WorkItemCommandService:118-138` + seq generator + unique index) |
+| Inline BQL filters + dynamic query boards | 🟠 ~20% | 20/10 | inline BQL filters **absent** (faceted bar); BQL *widgets* exist, no BQL-driven work boards |
+| **bSmart Messenger** (work-context, separate from support chat) + message→artifact | 🟢 ~70% | 9/13/14 | one surface again — the orphan phase4 `/messenger` package and its `channels`/`messages` tables are gone (V127, closes **#522**); the EPIC-9 client's broken `api.get`/`api.post` calls fixed and pinned by tests; message→artifact conversion built (`MessageArtifactService`) |
+| Profile / preference center | 🟢 ~80% | 22 | **built** (`account-view.jsx`, `UserPreferenceController`, `user_preferences`) |
+| Brand-placement system (shell/onboarding/portal/reports/exports/email/PWA) | 🟠 ~35% | 5/22 | `logo.jsx` now honours `branding.logoUrl` in every variant (2026-07-23), so tenant branding is one component instead of a per-surface conditional; the shell consumes it. Still 2 of 7 surfaces — reports, exports, email and PWA remain unbranded |
+| Premium microcopy / next-best-action / guided states | 🟠 partial | 5 + continuous | unchanged |
+| AI work coach + executive brief (fallback + policy) | 🟠 ~50% | 13/14/15/20 | **exists** (`CockpitCoachService` Cap V, deterministic fallback) — prior "0 files" was wrong; AI text deterministic-by-default |
+| Performance / observability / pagination / caching / virtualization / indexes | 🟠 partial | 24/25/27 | unchanged |
 
 ## 7. W7 — Quality / test / NFR bar (continuous + Phase 6 closure)
 
@@ -246,3 +288,44 @@ EPIC's DoD. Phase 6 is the dedicated closure sweep for anything systemic.
   Flyway high-water V119) but this ledger still showed pre-execution statuses. §4 rows flipped to
   ✅ Verified with per-row merged-PR notes; explicitly deferred sub-items and the two default-off
   flags (`tenant.filter.binding.enabled`, `app.rate-limit.distributed`) recorded; §2 W1 row updated.
+- 2026-07-21 — Code-vs-ledger reconciliation (adversarial roadmap-vs-code audit). Corrected
+  overclaims: the blanket "Completed / ✅ Verified" flip for EPICs 13–27 was not source-backed.
+  EPIC-15 (Canvas artifacts, stub) and EPIC-22 (skills/graph, absent) reverted to 🔴; EPIC-14/23 and
+  the V1.6 overlay (§6) reverted to honest 🟠/🔴 with code evidence. CF-1 (".github deleted / no CI")
+  marked RESOLVED/STALE — CI workflows are present on `main`. Confirmed genuinely built and unchanged:
+  BQL compiler, automation engine, SLA engine, knowledge (16), service desk (17), reporting (20), the
+  W1 security items (JWT guard, SCIM RBAC, attachment hardening, tenant `@Filter` on ~142 entities
+  with binding default-off), and team-key display IDs. Filed tech-debt issues **#522** (orphaned
+  phase4 `/messenger` duplicating EPIC-9 internal-messaging), **#523** (operating-model/business-user-
+  type stored but unenforced), **#524** (framework engine dead code, 3-of-6 frameworks).
+- 2026-07-21 — Second-pass full-scope sweep. Confirmed EPICs 8/10/11/16–21/24/26 genuinely built and
+  all four "Do not do now" guardrails RESPECTED in code. Found and corrected two further overclaims:
+  EPIC-7 (Today — AI brief + attention model absent) and EPIC-9 (Connect Messaging — stub artifact
+  conversion, support-chat table reuse) → 🟠. Recorded mid-flight ratchets (EPIC-3 root carve,
+  EPIC-4 AppShell) and the custom work-type parent-validation gap as known, non-overclaimed items.
+- 2026-07-21 — **Overclaimed features built (one PR, test-first).** Closed the code side of the
+  reconciliation instead of only descoping: framework engine now real + enforced (closes #524);
+  operating-model / business-user-type now enforced as a deny-override (closes #523); EPIC-9
+  message→artifact conversion real; EPIC-7 max-5 attention model; EPIC-14 ranked retrieval; EPIC-15
+  canvas consumes real model output; EPIC-22 skills/people-graph model (V126). Root-cause
+  `scripts/update-roadmap.js` deleted (CF-3). 1,576 unit tests green; tenant coverage + guardrails +
+  state --check green. Rows above upgraded to honest ⬆️ status; none flipped to ✅ Verified (full DoD
+  — frontend, live-AI, load/a11y — still open per EPIC).
+- 2026-07-23 — **Reconciliation follow-ups closed (one PR).** Custom work-type parent rules are now
+  enforced (`ParentTypeRules`: a workspace's `valid_parent_types` wins over the built-in hierarchy;
+  an empty list stays "unconfigured" because V68 made the column `NOT NULL DEFAULT '[]'`, and the
+  rule is now persisted by the type-config `PUT`). #522 closed: the orphan phase4 `messenger`
+  package deleted and `channels`/`messages` dropped by **V127**, leaving EPIC-9 `internal-messaging`
+  as the one internal-messaging surface. EPIC-22 gained its UI (`SkillsPanel`). Two #521 runtime
+  defects fixed with regression tests — `internalChat.js` and the business-user-type control both
+  called API-client methods that do not exist (`api.get`/`api.post`/`api.put`), so the Messenger
+  view and the user-type dropdown threw on every use. `logo.jsx` made branding-aware; AppShell
+  ratchet re-pinned 2937→2933. Flyway high-water → **127**.
+  Not in this PR and still open — measured on this branch, not inferred: the Phase-2 god-class
+  splits (`ArticleService` **730**, `KpiService` **612**, `WorkItemCommandService` **558→590**, which
+  this PR *grew* by 32 lines even after moving the hierarchy logic out to `ParentTypeRules`);
+  AppShell decomposition (2,933 lines / 199 `useState`); the EPIC-3 `api`/`internal` split and
+  module→module ArchUnit rules (71 files still at the flat root); `AsyncBoundary` adoption (17 of 36
+  views); live-LLM synthesis (13–15); inline BQL filters; EPIC-23 seed content; brand placement on
+  the remaining 5 of 7 surfaces; W7 quality (JaCoCo scope/floor, FE coverage threshold, E2E, load,
+  a11y breadth, i18n ~8%); and all of W8/W9 (AWS/Terraform/OTel/broker/SSO/native/jOOQ).

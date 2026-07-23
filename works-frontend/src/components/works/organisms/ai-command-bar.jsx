@@ -41,6 +41,7 @@ export function AiCommandBar({ workspaceId, onToast, onExecuted, triggerCount, t
   }, [workspaceId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (triggerCount > 0) {
       setOpen(true);
       if (triggerQuery) setText(triggerQuery);

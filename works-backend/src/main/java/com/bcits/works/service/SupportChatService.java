@@ -1,6 +1,8 @@
 package com.bcits.works.service;
 
 import com.bcits.works.ai.AiControlPlaneService;
+import com.bcits.works.messaging.ChatAiDraft;
+import com.bcits.works.messaging.ChatAiDraftRepository;
 import com.bcits.works.messaging.ChatConversation;
 import com.bcits.works.messaging.ChatConversationRepository;
 import com.bcits.works.messaging.ChatMessage;
@@ -31,10 +33,20 @@ import java.util.regex.Pattern;
  * {@code "support_chat"}) so scope / budget / cache / audit and the deterministic fallback apply
  * once, centrally (RB-40 §2).
  *
+ * <p><b>Human approval gate.</b> The tier-1 answer is <em>never</em> sent to the customer by the AI
+ * itself. The transformation roadmap's AI guardrail allows AI to draft and "prepare actions for
+ * review" but forbids it from automatically sending customer-visible messages, so
+ * {@link #draftResponse} parks the answer as a PENDING {@link ChatAiDraft} and notifies the agents
+ * who can act on it. Only {@link #approveDraft} appends the corresponding AI turn to the
+ * customer-visible transcript, attributed to the approving agent. Drafts live in their own table
+ * rather than behind a visibility flag on {@link ChatMessage}, which keeps the transcript
+ * append-only (RB-10 §3) and makes the guarantee structural: the customer read path never queries
+ * drafts, so an unapproved reply cannot leak through a forgotten predicate.
+ *
  * <p>Fallback contract (RB-40 §2): when AI is off, over budget, or unavailable the control plane
  * returns a fallback outcome — the conversation is escalated to a human agent with a canned holding
- * reply. When AI is on, the deterministic answer is posted as the tier-1 reply and the conversation
- * is marked {@code AI_HANDLED}, unless the customer explicitly asks for a human (then it escalates).
+ * reply. That holding reply is a fixed, human-authored constant, not model output, so it is not a
+ * message the AI composed. The customer explicitly asking for a human escalates as well.
  *
  * <p>Every read and mutation is workspace-scoped (RB-40 §1) — a conversation that does not belong to
  * the caller's workspace is reported as not-found. The agent-side actions are RBAC-gated by the
@@ -55,6 +67,12 @@ public class SupportChatService {
     static final String AI = "AI";
     static final String AGENT = "AGENT";
 
+    // AI draft review states. A draft is created PENDING and leaves that state exactly once.
+    static final String PENDING = "PENDING";
+    static final String APPROVED = "APPROVED";
+    static final String DISCARDED = "DISCARDED";
+    static final String SUPERSEDED = "SUPERSEDED";
+
     // The canned acknowledgement served (and the conversation escalated) when AI cannot answer.
     static final String HOLDING_REPLY =
         "Thanks for reaching out. I'm connecting you with a support agent who will reply shortly.";
@@ -66,6 +84,7 @@ public class SupportChatService {
 
     private final ChatConversationRepository conversations;
     private final ChatMessageRepository messages;
+    private final ChatAiDraftRepository drafts;
     private final AiControlPlaneService controlPlane;
     private final EventService events;
     private final RbacGate rbac;
@@ -73,11 +92,13 @@ public class SupportChatService {
     private final CustomerAttributionPiiService attributionPii;
 
     public SupportChatService(ChatConversationRepository conversations, ChatMessageRepository messages,
+                              ChatAiDraftRepository drafts,
                               AiControlPlaneService controlPlane, EventService events,
                               RbacGate rbac, NotificationBatchService notificationBatch,
                               CustomerAttributionPiiService attributionPii) {
         this.conversations = conversations;
         this.messages = messages;
+        this.drafts = drafts;
         this.controlPlane = controlPlane;
         this.events = events;
         this.rbac = rbac;
@@ -121,28 +142,30 @@ public class SupportChatService {
 
         List<ChatMessage> appended = new ArrayList<>();
         appended.add(append(convo, CUSTOMER, customerId, firstMessage, null));
-        appended.addAll(autoRespond(convo, firstMessage, customerId));
+        appended.addAll(draftResponse(convo, firstMessage, customerId));
         return new ChatResult(convo, appended);
     }
 
-    /** Append a follow-up customer message to an existing conversation, then run the auto-response. */
+    /** Append a follow-up customer message to an existing conversation, then draft a tier-1 reply. */
     @Transactional
     public ChatResult postCustomerMessage(String workspaceId, String conversationId, String customerId, String body) {
         require(body, "MESSAGE_REQUIRED", "A message is required.", "body");
         ChatConversation convo = loadScoped(workspaceId, conversationId);
         List<ChatMessage> appended = new ArrayList<>();
         appended.add(append(convo, CUSTOMER, customerId, body, null));
-        // A resolved thread reopens when the customer writes again.
+        // A resolved thread reopens when the customer writes again. Persist that explicitly: the
+        // drafting path below no longer ends in a status write, so the reopen would otherwise rest
+        // on dirty checking alone.
         if (RESOLVED.equals(convo.getStatus())) {
-            convo.setStatus(OPEN);
+            setStatus(convo, OPEN);
         }
-        // Skip AI auto-response when a human agent has already taken the thread — firing the AI
-        // auto-responder on an escalated/agent-owned conversation wastes AI budget (RB-40 §2) and
-        // creates confusing double-replies from two "senders".
+        // Skip AI drafting when a human agent has already taken the thread — drafting on an
+        // escalated/agent-owned conversation wastes AI budget (RB-40 §2) and puts a suggestion in
+        // front of an agent who is already writing their own reply.
         boolean alreadyEscalated = ESCALATED.equals(convo.getStatus());
         boolean agentAssigned = convo.getAssignedAgentId() != null;
         if (!alreadyEscalated && !agentAssigned) {
-            appended.addAll(autoRespond(convo, body, customerId));
+            appended.addAll(draftResponse(convo, body, customerId));
         }
         return new ChatResult(convo, appended);
     }
@@ -154,12 +177,23 @@ public class SupportChatService {
     }
 
     /**
-     * Tier-1 auto-response. Builds a deterministic FAQ answer from the customer's message and routes
-     * it through the AI Control Plane. On fallback (AI off / over budget): post the canned holding
-     * reply and escalate. On AI-on: post the answer ({@code AI_HANDLED}) — but if the customer asked
-     * for a human, escalate instead. Returns only the turns appended in this round.
+     * Tier-1 draft generation. Builds a deterministic FAQ answer from the customer's message and
+     * routes it through the AI Control Plane — so scope, budget, cache and the
+     * {@code AiControlPlaneService} audit row apply to every draft exactly as before.
+     *
+     * <p>On fallback (AI off / over budget): post the canned holding reply and escalate (RB-40 §2).
+     * That reply is a fixed constant rather than model output, so it is safe to send unreviewed.
+     *
+     * <p>On AI-on: the answer is <b>not</b> sent. It is parked as a PENDING {@link ChatAiDraft} and
+     * the agents who can act on it are notified; an agent must approve it before the customer sees
+     * anything. Any earlier pending draft on this conversation is superseded first, so nobody can
+     * approve a reply written against a message the customer has already moved past. A customer who
+     * explicitly asks for a human escalates as before.
+     *
+     * @return only the turns appended to the customer-visible transcript this round — which, when AI
+     *     is on, is deliberately empty.
      */
-    private List<ChatMessage> autoRespond(ChatConversation convo, String customerText, String customerId) {
+    private List<ChatMessage> draftResponse(ChatConversation convo, String customerText, String customerId) {
         List<ChatMessage> appended = new ArrayList<>();
         String draft = faqAnswer(customerText);
         AiControlPlaneService.AiOutcome out = controlPlane.invoke(new AiControlPlaneService.AiCall(
@@ -174,13 +208,61 @@ public class SupportChatService {
         }
 
         String answer = out.text() == null || out.text().isBlank() ? draft : out.text();
-        appended.add(append(convo, AI, null, answer, aiMeta(out)));
+        supersedePendingDrafts(convo);
+        ChatAiDraft pending = saveDraft(convo, answer, aiMeta(out));
+        events.recordInWorkspace(convo.getWorkspaceId(), convo.getId(), "CHAT_AI_DRAFT_CREATED", customerId,
+            Map.of("draftId", pending.getId(), "policyState", nv(out.policyState())));
+        notifyAgents(convo, "CHAT_AI_DRAFT_PENDING", "AI reply awaiting review: ");
         if (wantsHuman(customerText)) {
             escalate(convo, customerId, "customer_requested_human");
-        } else if (!ESCALATED.equals(convo.getStatus())) {
-            setStatus(convo, AI_HANDLED);
         }
         return appended;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════════
+    //  AI draft review — the only path that makes an AI-composed reply customer-visible
+    // ══════════════════════════════════════════════════════════════════════════════
+
+    /** The reply currently awaiting review on this conversation, or {@code null}. Workspace-scoped. */
+    public ChatAiDraft pendingDraft(String workspaceId, String conversationId) {
+        ChatConversation convo = loadScoped(workspaceId, conversationId);
+        List<ChatAiDraft> pending = drafts.findByConversationIdAndStatusOrderByCreatedAtAsc(convo.getId(), PENDING);
+        return pending.isEmpty() ? null : pending.get(pending.size() - 1);
+    }
+
+    /**
+     * Approve a pending AI draft, optionally with the agent's edits, and append it to the transcript.
+     * This is the single place an AI-composed reply becomes customer-visible, and it always carries
+     * the approving agent's id as the sender so the transcript stays attributable.
+     */
+    @Transactional
+    public ChatResult approveDraft(String workspaceId, String agentId, String conversationId,
+                                   String draftId, String editedBody) {
+        ChatConversation convo = loadScoped(workspaceId, conversationId);
+        ChatAiDraft draft = loadPendingDraft(workspaceId, convo, draftId);
+        String body = editedBody == null || editedBody.isBlank() ? draft.getBody() : editedBody.trim();
+        require(body, "MESSAGE_REQUIRED", "An approved reply cannot be empty.", "body");
+        boolean edited = !body.equals(draft.getBody());
+
+        ChatMessage msg = append(convo, AI, agentId, body, draft.getAiMeta() + ":approved");
+        decide(draft, APPROVED, agentId);
+        if (!ESCALATED.equals(convo.getStatus()) && !RESOLVED.equals(convo.getStatus())) {
+            setStatus(convo, AI_HANDLED);
+        }
+        events.recordInWorkspace(workspaceId, convo.getId(), "CHAT_AI_DRAFT_APPROVED", agentId,
+            Map.of("draftId", draft.getId(), "messageId", msg.getId(), "edited", String.valueOf(edited)));
+        return new ChatResult(convo, List.of(msg));
+    }
+
+    /** Reject a pending AI draft. Nothing is appended — the customer never sees the discarded text. */
+    @Transactional
+    public ChatAiDraft discardDraft(String workspaceId, String agentId, String conversationId, String draftId) {
+        ChatConversation convo = loadScoped(workspaceId, conversationId);
+        ChatAiDraft draft = loadPendingDraft(workspaceId, convo, draftId);
+        decide(draft, DISCARDED, agentId);
+        events.recordInWorkspace(workspaceId, convo.getId(), "CHAT_AI_DRAFT_DISCARDED", agentId,
+            Map.of("draftId", draft.getId()));
+        return draft;
     }
 
     // ══════════════════════════════════════════════════════════════════════════════
@@ -331,17 +413,65 @@ public class SupportChatService {
         setStatus(convo, ESCALATED);
         events.recordInWorkspace(convo.getWorkspaceId(), convo.getId(), "CHAT_ESCALATED", actorId,
             Map.of("reason", nv(reason)));
-        // Notify all workspace members who can handle customer service (RB-10 §2: RBAC in the
-        // service layer). The notification batch window (5 min) deduplicates rapid-fire escalations
-        // on the same conversation (e.g. AI fallback + customer also requesting human).
+        notifyAgents(convo, "CHAT_ESCALATED", "Chat escalated: ");
+    }
+
+    /**
+     * Notify every workspace member who can handle customer service (RB-10 §2: RBAC in the service
+     * layer). The notification batch window (5 min) deduplicates rapid-fire alerts on the same
+     * conversation — e.g. a draft raised and the customer also asking for a human in one turn.
+     */
+    private void notifyAgents(ChatConversation convo, String type, String prefix) {
         String link = "/support/inbox/" + convo.getId();
         String subject = nv(convo.getSubject());
-        String notifMessage = "Chat escalated: " + (subject.isBlank() ? convo.getId() : subject);
+        String notifMessage = prefix + (subject.isBlank() ? convo.getId() : subject);
         List<String> recipients = rbac.getMembersWithPermission(convo.getWorkspaceId(), "work_service");
         for (String recipientId : recipients) {
-            notificationBatch.createIfNotBatched(
-                convo.getWorkspaceId(), recipientId, "CHAT_ESCALATED", notifMessage, link);
+            notificationBatch.createIfNotBatched(convo.getWorkspaceId(), recipientId, type, notifMessage, link);
         }
+    }
+
+    // ── AI draft internals ────────────────────────────────────────────────────────
+
+    private ChatAiDraft saveDraft(ChatConversation convo, String body, String aiMeta) {
+        ChatAiDraft draft = new ChatAiDraft();
+        draft.setId("DRAFT-" + shortId());
+        draft.setWorkspaceId(convo.getWorkspaceId());
+        draft.setConversationId(convo.getId());
+        draft.setBody(body == null ? "" : body.trim());
+        draft.setAiMeta(aiMeta);
+        draft.setStatus(PENDING);
+        draft.setCreatedAt(OffsetDateTime.now());
+        return drafts.save(draft);
+    }
+
+    /** Retire drafts written against an older customer message so a stale one can never be approved. */
+    private void supersedePendingDrafts(ChatConversation convo) {
+        for (ChatAiDraft stale : drafts.findByConversationIdAndStatusOrderByCreatedAtAsc(convo.getId(), PENDING)) {
+            decide(stale, SUPERSEDED, null);
+        }
+    }
+
+    private void decide(ChatAiDraft draft, String status, String agentId) {
+        draft.setStatus(status);
+        draft.setDecidedBy(agentId);
+        draft.setDecidedAt(OffsetDateTime.now());
+        drafts.save(draft);
+    }
+
+    /**
+     * Load a draft an agent may still act on. The workspace narrows the lookup (RB-40 §1) and the
+     * conversation is re-checked, so a draft id from another tenant — or from another conversation
+     * in the same tenant — reads as not-found rather than as an approvable reply.
+     */
+    private ChatAiDraft loadPendingDraft(String workspaceId, ChatConversation convo, String draftId) {
+        ChatAiDraft draft = drafts.findByWorkspaceIdAndId(workspaceId, draftId)
+            .filter(d -> convo.getId().equals(d.getConversationId()))
+            .orElseThrow(() -> ApiException.notFound("Draft", draftId));
+        if (!PENDING.equals(draft.getStatus())) {
+            throw ApiException.conflict("This draft has already been " + nv(draft.getStatus()).toLowerCase(Locale.ROOT) + ".");
+        }
+        return draft;
     }
 
     private void setStatus(ChatConversation convo, String status) {

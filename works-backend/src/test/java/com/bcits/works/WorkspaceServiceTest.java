@@ -51,7 +51,8 @@ class WorkspaceServiceTest {
 
     private final FunnelService funnelService = mock(FunnelService.class);
     private final WorkspaceService service =
-            new WorkspaceService(workspaceRepository, userRepository, rbac, eventService, jdbc, funnelService);
+            new WorkspaceService(workspaceRepository, userRepository, rbac, eventService, jdbc, funnelService,
+                    mock(com.bcits.works.shared.OperatingModelGate.class));
 
     private Workspace ws(String id) {
         Workspace w = new Workspace();
@@ -135,7 +136,7 @@ class WorkspaceServiceTest {
         assertThat(result.get("userId")).isEqualTo("USR-NEW");
         verify(rbac).require("USR-ADMIN", "WS-001", "invite_members");
         // role defaults to MEMBER when not supplied
-        verify(jdbc).update(contains("INSERT INTO workspace_members"), eq("WS-001"), eq("USR-NEW"), eq("MEMBER"));
+        verify(jdbc).update(contains("INSERT INTO workspace_members"), eq("WS-001"), eq("USR-NEW"), eq("MEMBER"), eq("INDIVIDUAL"));
         verify(eventService).recordInWorkspace(eq("WS-001"), eq("WS-001"), eq("MEMBER_ADDED"), eq("USR-ADMIN"), any(java.util.Map.class));
     }
 

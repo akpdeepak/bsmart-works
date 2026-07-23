@@ -4,6 +4,7 @@ import { api } from '@/lib/apiClient';
 import { Button } from '@/components/works/button';
 import { Avatar } from '@/components/works/atoms/avatar';
 import { RoleBadge } from '@/components/works/role-badge';
+import { SkillsPanel } from '@/components/works/organisms/skills-panel';
 
 // Workspace Settings view — workspace-scoped admin surface (tier ADMIN+). Personal settings
 // (MFA, notifications, language) live in AccountView which all members can reach.
@@ -31,6 +32,7 @@ export default function WorkspaceView({
                           <p className="text-xs text-neutral-600 dark:text-neutral-400">{m.email}</p>
                         </div>
                         <span className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full">{m.role}</span>
+                        <span className="text-xs border border-brand-orange text-brand-orange px-2 py-0.5 rounded-full ml-1">{m.businessUserType || 'INDIVIDUAL'}</span>
                         {m.id !== currentUser.id && (
                           <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveMember(m.id)}
                             className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-semantic-danger transition-colors">Remove</Button>
@@ -94,6 +96,19 @@ export default function WorkspaceView({
                               {['VIEWER','MEMBER','LEAD','ADMIN'].map(r => <option key={r} value={r}>{r}</option>)}
                             </select>
                         }
+                        <select defaultValue={m.businessUserType || 'INDIVIDUAL'}
+                              aria-label="Business user type"
+                              onChange={e => {
+                                // api.send, not api.put — the API client exports raw/send only.
+                                api.send(`/workspaces/${activeWorkspaceId}/members/${m.id}`, {
+                                  method: 'PUT',
+                                  body: { businessUserType: e.target.value },
+                                }).then(d => showToast(d.message || 'Business user type updated'))
+                                  .catch(err => showToast(err.message, 'error'));
+                              }}
+                              className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-200 rounded px-2 py-1 focus:outline-none text-neutral-700 ml-2">
+                              {['INDIVIDUAL','TEAM_LEAD','MANAGEMENT','ADMIN','OWNER'].map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
                       </div>
                     ))}
                   </div>
@@ -167,6 +182,14 @@ export default function WorkspaceView({
                   </>
                 )}
               </div>
+
+              {/* EPIC-22 — skills catalogue + the "who holds skill X" people graph */}
+              <SkillsPanel
+                workspaceId={activeWorkspaceId}
+                members={workspaceMembers}
+                can={can}
+                onToast={showToast}
+              />
 
             </PageLayout>
   );

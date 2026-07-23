@@ -11,7 +11,10 @@ import com.bcits.works.AiCapabilities;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -96,24 +99,32 @@ public class AnswerEngineService {
             .collect(Collectors.toList());
     }
 
+    // Term-based ranked retrieval (RetrievalScorer): score every candidate by how many query terms it
+    // contains (title weighted above body), keep only matches, and return the top {@code limit} by
+    // descending score. This surfaces multi-term and partial matches that the former whole-query
+    // substring filter missed, and orders results by relevance instead of arbitrary list position.
     private List<Article> rankArticles(List<Article> all, String query, int limit) {
-        if (query == null || query.isBlank()) return List.of();
-        String q = query.toLowerCase();
+        Set<String> terms = RetrievalScorer.tokenize(query);
+        if (terms.isEmpty()) return List.of();
         return all.stream()
-            .filter(a -> (a.getTitle() != null && a.getTitle().toLowerCase().contains(q)) ||
-                         (a.getContent() != null && a.getContent().toLowerCase().contains(q)))
+            .map(a -> Map.entry(a, RetrievalScorer.score(terms, a.getTitle(), a.getContent())))
+            .filter(e -> e.getValue() > 0)
+            .sorted(Comparator.<Map.Entry<Article, Integer>>comparingInt(Map.Entry::getValue).reversed())
             .limit(limit)
+            .map(Map.Entry::getKey)
             .collect(Collectors.toList());
     }
 
     private List<WorkItem> rankItems(List<WorkItem> all, String query, int limit) {
-        if (query == null || query.isBlank()) return List.of();
-        String q = query.toLowerCase();
+        Set<String> terms = RetrievalScorer.tokenize(query);
+        if (terms.isEmpty()) return List.of();
         return all.stream()
-            .filter(w -> (w.getTitle() != null && w.getTitle().toLowerCase().contains(q)) ||
-                         (w.getDescription() != null && w.getDescription().toLowerCase().contains(q)) ||
-                         (w.getStatus() != null && w.getStatus().toLowerCase().contains(q)))
+            .map(w -> Map.entry(w, RetrievalScorer.score(terms, w.getTitle(),
+                    (w.getDescription() == null ? "" : w.getDescription()) + " " + (w.getStatus() == null ? "" : w.getStatus()))))
+            .filter(e -> e.getValue() > 0)
+            .sorted(Comparator.<Map.Entry<WorkItem, Integer>>comparingInt(Map.Entry::getValue).reversed())
             .limit(limit)
+            .map(Map.Entry::getKey)
             .collect(Collectors.toList());
     }
 

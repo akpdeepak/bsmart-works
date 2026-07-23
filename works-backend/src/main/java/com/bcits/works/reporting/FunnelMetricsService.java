@@ -3,6 +3,7 @@ package com.bcits.works.reporting;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.RbacGate;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -15,10 +16,12 @@ import java.util.Map;
  * WI-10 — internal HEART/funnel metrics for the dogfood admin dashboard (HEART-METRICS.md §7).
  *
  * <p>Platform-level analytics: aggregates funnel event counts across all workspaces. The caller
- * must be ADMIN-tier in their own workspace (the "internal bSmart Works" workspace) to access this
- * view — matching the design in HEART-METRICS.md §7 ("role: ADMIN within the bSmart Works
- * workspace used internally"). The cross-workspace query is intentional for this platform-ops
- * surface and is distinct from the per-tenant tenant-isolation requirement (RB-40 §1).
+ * must be ADMIN-tier in the <b>configured internal workspace</b> ({@code metrics.internal-workspace-id}),
+ * matching the design in HEART-METRICS.md §7 ("role: ADMIN within the bSmart Works workspace used
+ * internally"). Admin tier in the caller's own tenant is deliberately NOT sufficient — the gate is
+ * against the internal workspace specifically, so a customer admin cannot read platform-wide
+ * activation counts. The cross-workspace query is intentional for this platform-ops surface and is
+ * distinct from the per-tenant tenant-isolation requirement (RB-40 §1).
  */
 @Service
 public class FunnelMetricsService {
@@ -38,10 +41,13 @@ public class FunnelMetricsService {
 
     private final RbacGate rbac;
     private final JdbcTemplate jdbc;
+    private final String internalWorkspaceId;
 
-    public FunnelMetricsService(RbacGate rbac, JdbcTemplate jdbc) {
+    public FunnelMetricsService(RbacGate rbac, JdbcTemplate jdbc,
+                                @Value("${metrics.internal-workspace-id:}") String internalWorkspaceId) {
         this.rbac = rbac;
         this.jdbc = jdbc;
+        this.internalWorkspaceId = internalWorkspaceId;
     }
 
     /**
@@ -87,11 +93,20 @@ public class FunnelMetricsService {
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
+    /**
+     * Gate for the platform-ops surface. The queries below aggregate across EVERY workspace, so the
+     * check is deliberately against the configured internal (dogfood) workspace — not whichever
+     * workspace the caller names. Admin tier in one's own tenant confers no access here, otherwise
+     * any customer admin could read platform-wide activation counts (HEART-METRICS.md §7).
+     * Unconfigured {@code metrics.internal-workspace-id} fails closed.
+     */
     private void requireAdmin(String callerId, String wsId) {
-        if (wsId == null || rbac.getUserTier(callerId, wsId) < 1) {
+        if (internalWorkspaceId == null || internalWorkspaceId.isBlank()
+                || wsId == null || !internalWorkspaceId.equals(wsId)
+                || rbac.getUserTier(callerId, internalWorkspaceId) < 1) {
             throw ApiException.notFound("Workspace", wsId);
         }
-        if (!rbac.isAdmin(callerId, wsId)) {
+        if (!rbac.isAdmin(callerId, internalWorkspaceId)) {
             throw ApiException.forbidden("HEART dashboard requires workspace administrator access.");
         }
     }

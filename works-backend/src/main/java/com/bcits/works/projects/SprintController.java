@@ -44,11 +44,12 @@ public class SprintController {
     private final AuthenticatedUser authenticatedUser;
     private final RbacGate rbac;
     private final StatusConfigService statusConfig;
+    private final ProjectService projectService;
 
     public SprintController(SprintRepository sprintRepository, WorkItemRepository workItemRepository,
                             EventService eventService, SprintDao sprintDao,
                             AuthenticatedUser authenticatedUser, RbacGate rbac,
-                            StatusConfigService statusConfig) {
+                            StatusConfigService statusConfig, ProjectService projectService) {
         this.sprintRepository = sprintRepository;
         this.workItemRepository = workItemRepository;
         this.eventService = eventService;
@@ -56,6 +57,7 @@ public class SprintController {
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
         this.statusConfig = statusConfig;
+        this.projectService = projectService;
     }
 
     // Resolve an item's board category (TODO | IN_PROGRESS | DONE) from the workspace's configured
@@ -108,6 +110,9 @@ public class SprintController {
         String wsId = rbac.workspaceForProject(sprint.getProjectId());
         if (wsId == null) throw ApiException.notFound("Project", sprint.getProjectId());
         rbac.require(userId, wsId, "manage_sprints");
+        // Framework engine: Kanban/Waterfall/Lean projects do not run sprints. Reject rather than
+        // create a sprint the methodology does not support (422). Scrum/XP/DSDM/Custom allow it.
+        projectService.requireFrameworkCapability(sprint.getProjectId(), ProjectFramework.SPRINTS_ENABLED);
         sprint.setId("SPR-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         sprint.setStatus("PLANNING");
         sprint.setCreatedAt(OffsetDateTime.now());

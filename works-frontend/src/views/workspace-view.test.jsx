@@ -1,6 +1,11 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import WorkspaceView from './workspace-view';
+import { api } from '@/lib/apiClient';
+
+vi.mock('@/lib/apiClient', () => ({
+  api: { send: vi.fn(() => Promise.resolve({ message: 'ok' })), raw: vi.fn(() => Promise.resolve({ json: () => ({}) })) },
+}));
 
 const noop = () => {};
 const baseProps = {
@@ -54,5 +59,24 @@ describe('WorkspaceView', () => {
     render(<WorkspaceView {...baseProps} can={() => false} />);
     expect(screen.queryByText('Role Management')).toBeNull();
     expect(screen.queryByText('Workspace Branding')).toBeNull();
+  });
+
+  /**
+   * The business-user-type control called `api.put`, which the API client does not export, so
+   * changing a member's type threw instead of saving (#521 shipped the enforcement server-side).
+   */
+  it('saves a business user type through a method the API client exports', async () => {
+    render(<WorkspaceView {...baseProps} activeWorkspaceId="WS-1" />);
+    const [typeSelect] = screen.getAllByLabelText('Business user type');
+    fireEvent.change(typeSelect, { target: { value: 'TEAM_LEAD' } });
+    await waitFor(() => expect(api.send).toHaveBeenCalledWith(
+      '/workspaces/WS-1/members/USR-1',
+      { method: 'PUT', body: { businessUserType: 'TEAM_LEAD' } },
+    ));
+  });
+
+  it('renders the skills and people graph surface', () => {
+    render(<WorkspaceView {...baseProps} activeWorkspaceId="WS-1" />);
+    expect(screen.getByRole('heading', { name: /Skills & People Graph/ })).toBeInTheDocument();
   });
 });

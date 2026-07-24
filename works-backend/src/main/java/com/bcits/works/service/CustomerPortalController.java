@@ -2,8 +2,6 @@ package com.bcits.works.service;
 
 import com.bcits.works.AutomationCatalog;
 import com.bcits.works.AutomationService;
-import com.bcits.works.RequestType;
-import com.bcits.works.RequestTypeRepository;
 import com.bcits.works.projects.Project;
 import com.bcits.works.projects.ProjectRepository;
 import com.bcits.works.shared.ApiException;

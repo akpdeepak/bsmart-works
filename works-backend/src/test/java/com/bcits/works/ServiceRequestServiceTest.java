@@ -1,4 +1,6 @@
 package com.bcits.works;
+
+import com.bcits.works.service.RequestType;
 import com.bcits.works.sla.CustomerSlaTier;
 import com.bcits.works.service.ServiceRequest;
 import com.bcits.works.service.ServiceRequestService;

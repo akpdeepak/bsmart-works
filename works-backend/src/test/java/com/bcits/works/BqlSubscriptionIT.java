@@ -1,5 +1,9 @@
 package com.bcits.works;
 
+import com.bcits.works.reporting.BqlSubscription;
+import com.bcits.works.reporting.BqlSubscriptionRepository;
+import com.bcits.works.reporting.BqlSubscriptionService;
+
 import com.bcits.works.shared.ApiException;
 
 import org.junit.jupiter.api.BeforeEach;

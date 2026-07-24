@@ -1,4 +1,4 @@
-package com.bcits.works;
+package com.bcits.works.reporting;
 
 import com.bcits.works.shared.AuthenticatedUser;
 

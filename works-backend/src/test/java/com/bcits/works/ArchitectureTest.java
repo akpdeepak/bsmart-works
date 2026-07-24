@@ -1,5 +1,6 @@
 package com.bcits.works;
 
+
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -96,7 +97,7 @@ class ArchitectureTest {
         // PR that moves a class out. Left above the measurement it silently permits regrowth.
         assertThat(flatRootSourceFiles)
                 .as("the flat root is a temporary composition layer and must never grow again")
-                .isLessThanOrEqualTo(71);
+                .isLessThanOrEqualTo(59);
     }
 
     @Test

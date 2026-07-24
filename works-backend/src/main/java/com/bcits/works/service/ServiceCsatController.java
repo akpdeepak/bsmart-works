@@ -1,10 +1,7 @@
-package com.bcits.works;
+package com.bcits.works.service;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
-import com.bcits.works.service.CsatResponse;
-import com.bcits.works.service.CsatResponseRepository;
-import com.bcits.works.service.CsatService;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

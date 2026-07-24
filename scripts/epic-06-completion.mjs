@@ -53,7 +53,7 @@ check('Every rendered feature is reachable',
   unreachableViews.length === 0 && appShell.includes("id: 'act-search-all'") && appShell.includes("navigate('search')"),
   unreachableViews.length ? `not in navigation: ${unreachableViews.join(', ')}` : 'rail, More, or command palette reaches every rendered feature');
 
-const backendSurfaceSource = read('works-backend/src/main/java/com/bcits/works/NavSurfaces.java');
+const backendSurfaceSource = read('works-backend/src/main/java/com/bcits/works/shared/NavSurfaces.java');
 const backendSurfaceIds = [...backendSurfaceSource.matchAll(/MIN_TIER\.put\("([^"]+)"/g)].map((match) => match[1]);
 check('Frontend and backend visibility catalogues match', sameMembers(destinationIds, backendSurfaceIds),
   `${destinationIds.length} frontend destinations match ${backendSurfaceIds.length} server-authoritative surfaces`);

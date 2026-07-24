@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { useQueryClient } from '@tanstack/react-query';
 import { Sparkles, BookmarkPlus, Bookmark, Check, AlertCircle, Plus, Trash2, SlidersHorizontal, Link2, Clock, Play, Terminal, Database, Search, LayoutGrid, Wand2 } from 'lucide-react';
 import { api } from '@/lib/apiClient';
@@ -715,8 +716,8 @@ export default function BqlView({
 
       {/* Loading — skeleton rows while a query runs and we have nothing to show yet (RB-30 §6). */}
       {bqlLoading && !groups && bqlResults.length === 0 && (
-        <Card variant="outlined" padding="sm" role="status" aria-busy="true" aria-label="Loading query results">
-          <ListSkeleton rows={6} />
+        <Card variant="outlined" padding="sm">
+          <AsyncBoundary loading label="Loading query results" skeleton={<ListSkeleton rows={6} />} />
         </Card>
       )}
 
@@ -736,7 +737,10 @@ export default function BqlView({
           canShowMore={bqlResults.length >= resultSize && resultSize < 500}
         />
       )}
-      {/* Error state — the query couldn't run; offer to jump back to the editor. */}
+      {/* Error state — deliberately NOT routed through AsyncBoundary (GH-537). The shared boundary's
+          error branch offers a generic "Try again" retry; here the useful affordance is "Fix query",
+          which focuses the editor at the parse-error position. Keeping the tailored action is worth
+          more to the user than uniformity, so only the loading and empty states are shared. */}
       {!bqlLoading && !groups && bqlResults.length === 0 && bqlError && (
         <div className="rounded-xl border border-dashed border-semantic-danger/40 bg-white dark:border-semantic-danger/40 dark:bg-neutral-800">
           <EmptyState icon={AlertCircle} title="This query couldn't run" subtitle={bqlError}
@@ -746,9 +750,13 @@ export default function BqlView({
       {/* No-results state — the query ran but matched nothing. */}
       {!bqlLoading && !groups && bqlResults.length === 0 && bqlQuery && !bqlError && (
         <div className="rounded-xl border border-dashed border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800">
-          <EmptyState icon={Search} title="No results"
-            subtitle="No work items match this query. Adjust a clause and run it again."
-            action={<Button variant="secondary" onClick={() => runQuery()}>Run again</Button>} />
+          <AsyncBoundary
+            empty
+            emptyIcon={Search}
+            emptyTitle="No results"
+            emptySubtitle="No work items match this query. Adjust a clause and run it again."
+            emptyAction={<Button variant="secondary" onClick={() => runQuery()}>Run again</Button>}
+          />
         </div>
       )}
     </PageLayout>

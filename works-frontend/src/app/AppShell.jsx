@@ -33,7 +33,6 @@ import { useCardPrefs } from '@/hooks/useCardPrefs';
 import { useDensity } from '@/hooks/use-density';
 import { buildStatusResolver } from '@/lib/status-config';
 import { EMPTY_FILTERS, DEFAULT_SORT, filterItems, sortItems } from '@/lib/work-item-filter';
-import { buildFieldPrefsResolver, saveTypeFieldPrefs } from '@/lib/type-field-prefs';
 import { aiClient, anyCapabilityEnabled } from '@/lib/ai';
 import { CreateWorkItemDialog } from '@/components/works/organisms/create-work-item-dialog';
 import { BRAND_NAVY, BRAND_ORANGE, NEUTRAL_600 } from '@/lib/brand-tokens';
@@ -56,6 +55,11 @@ import { useServiceState } from '@/hooks/useServiceState';
 import { usePmState } from '@/hooks/usePmState';
 import { useKnowledgeState } from '@/hooks/useKnowledgeState';
 import { useComplianceState } from '@/hooks/useComplianceState';
+import { useDashboardsState } from '@/hooks/useDashboardsState';
+import { useReportsState } from '@/hooks/useReportsState';
+import { useCustomFieldsState } from '@/hooks/useCustomFieldsState';
+import { useScrumMasterCockpitState } from '@/hooks/useScrumMasterCockpitState';
+import { useProductOwnerState } from '@/hooks/useProductOwnerState';
 import { FlagDevtools } from '@/components/works/organisms/flag-devtools';
 import { useI18n } from '@/lib/i18n';
 // DashboardDrillModal extracted to src/components/works/organisms/dashboard-drill-modal.jsx (TD-003).
@@ -142,29 +146,10 @@ export default function AppShell() {
 
   // Card field customisation — preferences persisted per-user in localStorage
   const cardPrefs = useCardPrefs();
-  const [customFieldDefs, setCustomFieldDefs] = useState([]);
   // Per-type status configuration (names, categories, colors, lapse thresholds) — resolves the
   // status a work item stores (a string) to its category/color/clock across every surface.
   const [statusConfig, setStatusConfig] = useState([]);
   const statusResolver = useMemo(() => buildStatusResolver(statusConfig), [statusConfig]);
-  // Per-type field preferences — which fields show on the detail surface, per work-item type.
-  const [typeFieldPrefs, setTypeFieldPrefs] = useState([]);
-  const fieldPrefs = useMemo(() => buildFieldPrefsResolver(typeFieldPrefs), [typeFieldPrefs]);
-  // Toggle a field's visibility for a type (bulk-replaces that type's prefs server-side).
-  const handleToggleFieldPref = (typeKey, fieldKey, visible) => {
-    const forType = typeFieldPrefs
-      .filter(p => p.typeKey === typeKey && p.fieldKey !== fieldKey)
-      .map(p => ({ fieldKey: p.fieldKey, visible: p.visible, sortOrder: p.sortOrder }));
-    const next = [...forType, { fieldKey, visible }];
-    saveTypeFieldPrefs(api, activeWorkspaceId, typeKey, next)
-      .then(updated => setTypeFieldPrefs(Array.isArray(updated) ? updated : []))
-      .catch(reportError);
-  };
-  // Bulk-replace a type's field prefs (visibility + order) — used by the Settings field editor.
-  const handleSaveFieldPrefs = (typeKey, prefList) =>
-    saveTypeFieldPrefs(api, activeWorkspaceId, typeKey, prefList)
-      .then(updated => setTypeFieldPrefs(Array.isArray(updated) ? updated : []))
-      .catch(reportError);
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false); // off-canvas drawer under md (G1)
   const [subRailCollapsed, setSubRailCollapsed] = useState(false);
@@ -234,7 +219,6 @@ export default function AppShell() {
 
   // Iteration 3 — Workflows, Custom Fields, Permissions, BQL
   const [workflows, setWorkflows]           = useState([]);
-  const [fieldDefs, setFieldDefs]           = useState([]);
   const [roles, setRoles]                   = useState([]);
   const [bqlQuery, setBqlQuery]           = useState('');
   const [bqlResults, setBqlResults]       = useState([]);
@@ -249,8 +233,6 @@ export default function AppShell() {
   const [workflowDetail, setWorkflowDetail]         = useState(null); // { statuses, transitions }
   const [newStatusForm, setNewStatusForm]           = useState({ name: '', color: BRAND_NAVY, category: 'IN_PROGRESS' });
   const [newTransitionForm, setNewTransitionForm]   = useState({ name: '', fromStatus: '', toStatus: '' });
-  const [showFieldForm, setShowFieldForm]           = useState(false);
-  const [newFieldForm, setNewFieldForm]             = useState({ name: '', fieldType: 'TEXT', required: false, description: '' });
   const [showTypeForm, setShowTypeForm]             = useState(false);
   const [newTypeForm, setNewTypeForm]               = useState({ label: '', typeKey: '', icon: 'package' });
   const [showRoleForm, setShowRoleForm]             = useState(false);
@@ -279,59 +261,12 @@ export default function AppShell() {
 
   // Iteration 15 — Scrum Master Cockpit (Cap V) + Product Owner Workspace (Cap W)
   const [i15ProjectId, setI15ProjectId]         = useState('');
-  const [smTab, setSmTab]                       = useState('impediments'); // impediments | standup | risk | planning | retro | review | patterns
-  const [poTab, setPoTab]                       = useState('roadmap');     // roadmap | ideas | feedback | okr | releasenotes | stakeholders
-  const [impediments, setImpediments]           = useState([]);
-  const [newImpediment, setNewImpediment]       = useState({ title: '', raiseType: 'IMPEDIMENT', severity: 'MEDIUM', category: '', description: '' });
-  const [standups, setStandups]                 = useState([]);
-  const [activeStandup, setActiveStandup]       = useState(null); // { session, entries }
-  const [standupDraft, setStandupDraft]         = useState({ yesterday: '', today: '', blockers: '' });
-  const [retros, setRetros]                     = useState([]);
-  const [activeRetro, setActiveRetro]           = useState(null); // { session, notes }
-  const [newRetro, setNewRetro]                 = useState({ title: '', template: 'START_STOP_CONTINUE', anonymous: false });
-  const [retroNoteDraft, setRetroNoteDraft]     = useState({});   // columnKey -> text
-  const [riskPanel, setRiskPanel]               = useState(null);
-  const [planningResult, setPlanningResult]     = useState(null);
-  const [planningTimeOff, setPlanningTimeOff]   = useState(0);
-  const [capacityBoard, setCapacityBoard]       = useState(null); // { members, teamCapacityPoints, ... } Capacity tab
-  const [reviewSprintId, setReviewSprintId]     = useState('');
-  const [reviewResult, setReviewResult]         = useState(null);
-  const [patternsResult, setPatternsResult]     = useState(null);
-  const [riskSprintId, setRiskSprintId]         = useState('');
-  const [varianceSprintId, setVarianceSprintId] = useState('');
-  const [varianceResult, setVarianceResult]     = useState(null);
-  const [cockpitContext, setCockpitContext]     = useState(null); // { roleKey, tier, canManageSprints, canCreateItems, activeSprint, liveCeremony }
-  const [cockpitLoading, setCockpitLoading]     = useState({});   // tab key -> bool, drives loading skeletons
-  const [coachTips, setCoachTips]               = useState(null); // { roleKey, tips, narrative, meta }
-  const [digest, setDigest]                     = useState(null); // { sprint, rag, deliveryRate, ... } executive Health lens
-  const [retroClusters, setRetroClusters]       = useState(null); // { retroId, themes, narrative, meta }
-  const [ceremonies, setCeremonies]             = useState([]);   // [{ session, counts }]
-  const [activeCeremony, setActiveCeremony]     = useState(null); // { session, attendance, counts }
-  const [newCeremony, setNewCeremony]           = useState({ ceremonyType: 'STANDUP', scheduledAt: '' });
-  const [myDay, setMyDay]                       = useState(null); // { myItems, myImpediments, myActions, todayStandup, myStandupEntry }
-  const [roadmapThemes, setRoadmapThemes]       = useState([]);
-  const [newTheme, setNewTheme]                 = useState({ name: '', status: 'PLANNED', quarter: '', description: '' });
-  const [ideas, setIdeas]                       = useState([]);
-  const [newIdea, setNewIdea]                   = useState({ title: '', description: '' });
-  const [feedbackItems, setFeedbackItems]       = useState([]);
-  const [newFeedback, setNewFeedback]           = useState({ customer: '', source: 'PORTAL', content: '' });
-  const [feedbackClusters, setFeedbackClusters] = useState(null);
-  const [objectives, setObjectives]             = useState([]);
-  const [activeObjective, setActiveObjective]   = useState(null); // { objective, keyResults, progressPercent }
-  const [newObjective, setNewObjective]         = useState({ title: '', level: 'TEAM', quarter: '' });
-  const [newKr, setNewKr]                       = useState({ title: '', metricType: 'PERCENT', startValue: 0, targetValue: 100, currentValue: 0 });
-  const [releaseNotesResult, setReleaseNotesResult] = useState(null);
-  const [releaseNotesName, setReleaseNotesName] = useState('');
 
   // Iteration 6 — Worklogs
   const [worklogForm, setWorklogForm]           = useState({ timeSpentMinutes: 30, description: '', workDate: '' });
   const [isWorklogOpen, setIsWorklogOpen]       = useState(false);
 
   // Iteration 3 completions
-  const [fieldValues, setFieldValues] = useState({});
-  const [fieldLayouts, setFieldLayouts] = useState([]);
-  const [fieldVisibility, setFieldVisibility] = useState([]);
-  const [newFieldVisForm, setNewFieldVisForm] = useState({ fieldDefId: '', roleId: '', visibility: 'EDITABLE' });
 
   // Iteration 4 completions
   const [crossProjectDeps, setCrossProjectDeps] = useState([]);
@@ -344,26 +279,7 @@ export default function AppShell() {
   });
   const [activityEventFilter, setActivityEventFilter] = useState('');
   const [velocityData, setVelocityData] = useState([]);
-  // Iteration 6 — custom dashboards
-  const [customDashboards, setCustomDashboards] = useState([]);
-  const [selectedDashboard, setSelectedDashboard] = useState(null); // { ...dashboard, widgets: [] }
-  const [dashboardEditMode, setDashboardEditMode] = useState(false);
-  const [dragWidgetId, setDragWidgetId] = useState(null);
-  const [dashboardDrill, setDashboardDrill] = useState(null); // { title, items } — drill-down modal
-  const [dashboardScope, setDashboardScope] = useState('PROJECT'); // PROJECT (loaded set) | TEAM | ORG
-  const [dashboardTeamId, setDashboardTeamId] = useState(null);
-  const [dashboardAggregate, setDashboardAggregate] = useState(null); // server scope aggregate, or null for PROJECT
-  const [teams, setTeams] = useState([]);
-  const [shareInfo, setShareInfo] = useState(null); // { id, token } when the share panel is open
-  const [reports, setReports] = useState([]);
-  const [reportTemplates, setReportTemplates] = useState([]);
-  const [selectedReport, setSelectedReport] = useState(null);
-  const [reportSections, setReportSections] = useState([]);
-  const [reportEditMode, setReportEditMode] = useState(false);
-  // Iteration 6 — scheduled report delivery (Cap J, S04)
-  const [scheduleManagerOpen, setScheduleManagerOpen] = useState(false);
-  const [reportSchedules, setReportSchedules] = useState([]);
-  const [scheduleForm, setScheduleForm] = useState({ cadence: 'WEEKLY', channel: 'IN_APP', recipients: '' });
+  // Custom dashboards and custom reports live in useDashboardsState / useReportsState (GH-537).
   const EMPTY_STATUS_METRICS = { durations: [], leadSeconds: null, cycleSeconds: null, leadRunning: false, cycleRunning: false };
   const [statusMetrics, setStatusMetrics] = useState(EMPTY_STATUS_METRICS);
   const [deleteUndoItem, setDeleteUndoItem] = useState(null);
@@ -549,6 +465,83 @@ export default function AppShell() {
     cloneTemplate, deleteRule, actOnViolation, bulkAcknowledge,
     toggleViolationSelect, selectAllViolations, exportComplianceAudit,
   } = useComplianceState(api, activeWorkspaceId, showToast, reportError);
+
+  const {
+    customDashboards, selectedDashboard, setSelectedDashboard,
+    dashboardEditMode, setDashboardEditMode, setDragWidgetId,
+    dashboardDrill, setDashboardDrill, dashboardScope, setDashboardScope,
+    dashboardTeamId, setDashboardTeamId, dashboardAggregate,
+    teams, shareInfo,
+    fetchCustomDashboards, openDashboard, fetchTeams, fetchDashboardAggregate,
+    mintShare, stopShare, createDashboard, acceptDashboardSuggestion, deleteDashboard,
+    addDashboardWidget, removeDashboardWidget, resizeDashboardWidget,
+    updateDashboardWidgetConfig, reorderDashboardWidgets,
+  } = useDashboardsState(api, activeWorkspaceId, showToast, reportError, prompt);
+
+  const {
+    reports, reportTemplates, selectedReport, setSelectedReport,
+    reportSections, reportEditMode, setReportEditMode,
+    scheduleManagerOpen, setScheduleManagerOpen, reportSchedules,
+    scheduleForm, setScheduleForm,
+    fetchReports, fetchReportTemplates, openReport,
+    createBlankReport, createReportFromTemplate, saveReport, deleteReport,
+    openScheduleManager, createReportSchedule,
+    toggleReportSchedule, deleteReportSchedule,
+    addReportSection, updateReportSection, moveReportSection, removeReportSection,
+  } = useReportsState(api, activeWorkspaceId, showToast, reportError, prompt);
+
+  const {
+    fieldDefs, customFieldDefs, setCustomFieldDefs,
+    showFieldForm, setShowFieldForm, newFieldForm, setNewFieldForm,
+    fieldValues, setFieldValues, fieldLayouts, fieldVisibility,
+    newFieldVisForm, setNewFieldVisForm,
+    setTypeFieldPrefs, fieldPrefs,
+    fetchFieldDefs, createFieldDef, fetchFieldValues, saveFieldValue,
+    fetchFieldLayouts, fetchFieldVisibility, saveFieldVisibility,
+    handleToggleFieldPref, handleSaveFieldPrefs,
+  } = useCustomFieldsState(api, activeWorkspaceId, showToast, reportError);
+
+  // Cap V / Cap W share one project selector (i15ProjectId), so it stays in the shell and is
+  // handed to both hooks rather than duplicated in either.
+  const cockpitShell = { view, setView, projects, users, workspaceMembers, fetchSprints, i15ProjectId, setI15ProjectId };
+  const {
+    smTab, setSmTab,
+    impediments, newImpediment, setNewImpediment,
+    standups, activeStandup, setActiveStandup, standupDraft, setStandupDraft,
+    retros, activeRetro, setActiveRetro, newRetro, setNewRetro,
+    retroNoteDraft, setRetroNoteDraft, retroClusters,
+    riskPanel, riskSprintId, setRiskSprintId,
+    planningResult, planningTimeOff, setPlanningTimeOff, capacityBoard,
+    reviewSprintId, setReviewSprintId, reviewResult,
+    patternsResult, varianceSprintId, setVarianceSprintId, varianceResult,
+    cockpitContext, cockpitLoading, coachTips, digest,
+    ceremonies, activeCeremony, setActiveCeremony, newCeremony, setNewCeremony,
+    myDay,
+    resetCockpitAnalysis, openCockpit, fetchCoachTips, fetchDigest, clusterRetro,
+    fetchMyDay, submitMyStandup, fetchCockpitContext,
+    fetchCeremonies, scheduleCeremony, openCeremony, startCeremony, joinCeremony,
+    excuseCeremony, completeCeremony,
+    fetchImpediments, createImpediment, updateImpediment,
+    fetchStandups, startStandup, openStandup, recordStandup, advanceStandup, completeStandup,
+    fetchRetros, createRetro, openRetro, addRetroNote, voteRetroNote, convertRetroNote,
+    runSprintPlanning, fetchCapacity, saveMemberCapacity,
+    runRiskPanel, runVariance, runReviewPrep, runPatterns,
+  } = useScrumMasterCockpitState(api, activeWorkspaceId, showToast, reportError, cockpitShell);
+
+  const {
+    poTab, setPoTab,
+    roadmapThemes, newTheme, setNewTheme,
+    ideas, newIdea, setNewIdea,
+    feedbackItems, newFeedback, setNewFeedback, feedbackClusters,
+    objectives, activeObjective, newObjective, setNewObjective, newKr, setNewKr,
+    releaseNotesResult, releaseNotesName, setReleaseNotesName,
+    openPoWorkspace,
+    createTheme, updateThemeStatus, deleteTheme,
+    createIdea, voteIdea, promoteIdea,
+    createFeedback, clusterFeedback,
+    createObjective, openObjective, addKeyResult, updateKrProgress,
+    runReleaseNotes,
+  } = useProductOwnerState(api, activeWorkspaceId, showToast, reportError, { setView, projects, i15ProjectId, setI15ProjectId });
 
   // Access guard — once the real role is known, bounce out of any surface this user can't see
   // (e.g. a deep link or stale URL into an admin area). Server RBAC already 403s the data; this
@@ -1030,148 +1023,6 @@ export default function AppShell() {
       .then(r => r.json()).then(d => setVelocityData(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
-  // ── Iteration 6 — custom dashboards ──────────────────────────────────────────
-  function fetchCustomDashboards() {
-    api.raw(`/dashboards`)
-      .then(r => r.json()).then(d => setCustomDashboards(Array.isArray(d) ? d : (d?.items || []))).catch(reportError);
-  }
-
-  function openDashboard(id) {
-    api.raw(`/dashboards/${id}`)
-      .then(r => r.json()).then(d => {
-        setSelectedDashboard(d); setDashboardEditMode(false); setShareInfo(null);
-        setDashboardScope('PROJECT'); setDashboardTeamId(null); setDashboardAggregate(null);
-      }).catch(reportError);
-  }
-
-  // Teams power the TEAM scope selector on dashboards.
-  function fetchTeams() {
-    api.raw(`/teams?workspaceId=${activeWorkspaceId}`)
-      .then(r => r.json()).then(d => setTeams(Array.isArray(d) ? d : [])).catch(reportError);
-  }
-
-  // Fetch the server-side scope aggregate for a dashboard. PROJECT uses the client-loaded
-  // work items (aggregate = null); TEAM/ORG aggregate across many projects (iteration 6).
-  function fetchDashboardAggregate(scope, teamId) {
-    if (scope === 'PROJECT') { setDashboardAggregate(null); return; }
-    const qs = scope === 'TEAM'
-      ? `scope=TEAM&teamId=${encodeURIComponent(teamId || '')}`
-      : `scope=ORG&workspaceId=${activeWorkspaceId}`;
-    api.raw(`/insights/work-items?${qs}`)
-      .then(r => r.json()).then(d => setDashboardAggregate(d))
-      .catch(() => { setDashboardAggregate(null); showToast('Could not load scoped data', 'error'); });
-  }
-
-  // Mint (idempotent) / revoke a dashboard's public share token for read-only embedding.
-  function mintShare(id) {
-    api.send(`/dashboards/${id}/share`, { method: 'POST' })
-      .then(d => setShareInfo({ id, token: d.shareToken }))
-      .catch(() => showToast('Could not create share link', 'error'));
-  }
-  function stopShare(id) {
-    api.send(`/dashboards/${id}/share`, { method: 'DELETE' })
-      .then(() => { setShareInfo(null); showToast('Sharing stopped'); })
-      .catch(() => showToast('Could not stop sharing', 'error'));
-  }
-
-  async function createDashboard() {
-    const name = await prompt({ title: 'New dashboard', label: 'Dashboard name', placeholder: 'e.g. Sprint health', confirmLabel: 'Create' });
-    if (!name || !name.trim()) return;
-    api.send(`/dashboards`, { method: 'POST', body: JSON.stringify({ name: name.trim(), scope: 'PERSONAL', workspaceId: activeWorkspaceId }) })
-      .then(d => { showToast('Dashboard created'); fetchCustomDashboards(); openDashboard(d.id); setDashboardEditMode(true); })
-      .catch(() => showToast('Failed to create dashboard', 'error'));
-  }
-
-  // Cap J — accept an AI-suggested starter dashboard: create the dashboard, then add its proposed
-  // widgets via the existing widget endpoints (INSIGHTS-AI-ALIGNMENT-REVIEW §2.2). The widget set is
-  // the deterministic role-based starter set the panel previewed; returns a promise the panel awaits.
-  function acceptDashboardSuggestion(suggestion) {
-    const widgets = (suggestion && suggestion.widgets) || [];
-    return api.send(`/dashboards`, { method: 'POST', body: JSON.stringify({ name: (suggestion && suggestion.name) || 'Suggested dashboard', scope: 'PERSONAL', workspaceId: activeWorkspaceId }) })
-      .then(async (d) => {
-        for (const w of widgets) {
-          const body = { widgetType: w.widgetType, title: w.title, config: JSON.stringify(w.config || {}), gridW: w.gridW || 4, gridH: 2 };
-          await api.send(`/dashboards/${d.id}/widgets`, { method: 'POST', body: JSON.stringify(body) });
-        }
-        fetchCustomDashboards();
-        openDashboard(d.id);
-        return d;
-      });
-  }
-
-  function deleteDashboard(id) {
-    api.send(`/dashboards/${id}`, { method: 'DELETE' })
-      .then(() => { showToast('Dashboard deleted'); setSelectedDashboard(null); fetchCustomDashboards(); })
-      .catch(() => showToast('Failed to delete dashboard', 'error'));
-  }
-
-  // ── Iteration 6 — custom reports ─────────────────────────────────────────────
-  function fetchReports() {
-    api.raw(`/reports`).then(r => r.json()).then(d => setReports(Array.isArray(d) ? d : (d?.items || []))).catch(reportError);
-  }
-  function fetchReportTemplates() {
-    api.raw(`/reports/templates`).then(r => r.json()).then(d => setReportTemplates(Array.isArray(d) ? d : [])).catch(reportError);
-  }
-  function openReport(id) {
-    api.raw(`/reports/${id}`).then(r => r.json()).then(d => {
-      setSelectedReport(d);
-      try { setReportSections(JSON.parse(d.sections || '[]')); } catch { setReportSections([]); }
-      setReportEditMode(false);
-    }).catch(reportError);
-  }
-  async function createBlankReport() {
-    const name = await prompt({ title: 'New report', label: 'Report name', placeholder: 'e.g. Monthly delivery summary', confirmLabel: 'Create' });
-    if (!name || !name.trim()) return;
-    api.send(`/reports`, { method: 'POST', body: JSON.stringify({ name: name.trim(), sections: '[]', workspaceId: activeWorkspaceId }) })
-      .then(d => { showToast('Report created'); fetchReports(); openReport(d.id); setReportEditMode(true); })
-      .catch(() => showToast('Failed to create report', 'error'));
-  }
-  function createReportFromTemplate(tpl) {
-    api.send(`/reports`, { method: 'POST', body: JSON.stringify({ name: tpl.name, description: tpl.description, sections: tpl.sections, workspaceId: activeWorkspaceId }) })
-      .then(d => { showToast('Report created from template'); fetchReports(); openReport(d.id); setReportEditMode(true); })
-      .catch(() => showToast('Failed to create report', 'error'));
-  }
-  function saveReport() {
-    if (!selectedReport) return;
-    api.send(`/reports/${selectedReport.id}`, { method: 'PUT', body: JSON.stringify({ ...selectedReport, sections: JSON.stringify(reportSections) }) })
-      .then(d => { setSelectedReport(d); showToast('Report saved'); fetchReports(); })
-      .catch(() => showToast('Failed to save report', 'error'));
-  }
-  function deleteReport(id) {
-    api.send(`/reports/${id}`, { method: 'DELETE' })
-      .then(() => { showToast('Report deleted'); setSelectedReport(null); fetchReports(); })
-      .catch(() => showToast('Failed to delete report', 'error'));
-  }
-
-  // ── Iteration 6 — scheduled report delivery (Cap J, S04) ─────────────────────
-  function openScheduleManager(reportId) {
-    setScheduleForm({ cadence: 'WEEKLY', channel: 'IN_APP', recipients: '' });
-    setScheduleManagerOpen(true);
-    fetchReportSchedules(reportId);
-  }
-  function fetchReportSchedules(reportId) {
-    api.raw(`/report-schedules?reportId=${reportId}`).then(r => r.json())
-      .then(d => setReportSchedules(Array.isArray(d) ? d : [])).catch(reportError);
-  }
-  function createReportSchedule() {
-    if (!selectedReport) return;
-    const payload = { reportId: selectedReport.id, cadence: scheduleForm.cadence,
-      channel: scheduleForm.channel, recipients: scheduleForm.recipients.trim() };
-    api.send(`/report-schedules`, { method: 'POST', body: JSON.stringify(payload) })
-      .then(() => { showToast('Schedule created'); setScheduleForm({ cadence: 'WEEKLY', channel: 'IN_APP', recipients: '' }); fetchReportSchedules(selectedReport.id); })
-      .catch(e => showToast(e.message || 'Failed to create schedule', 'error'));
-  }
-  function toggleReportSchedule(s) {
-    api.send(`/report-schedules/${s.id}`, { method: 'PUT', body: JSON.stringify({ ...s, active: !s.active }) })
-      .then(() => fetchReportSchedules(selectedReport.id))
-      .catch(e => showToast(e.message || 'Failed to update schedule', 'error'));
-  }
-  function deleteReportSchedule(id) {
-    api.send(`/report-schedules/${id}`, { method: 'DELETE' })
-      .then(() => { showToast('Schedule removed'); fetchReportSchedules(selectedReport.id); })
-      .catch(e => showToast(e.message || 'Failed to remove schedule', 'error'));
-  }
-
   // Service Desk domain state and commands.
   const {
     serviceTab, setServiceTab, serviceQueue, setServiceQueue,
@@ -1188,83 +1039,6 @@ export default function AppShell() {
       .catch(reportError);
   }
   // severityClass / vStatusClass moved to compliance-view.jsx (TD-003).
-  function addReportSection(type) {
-    const defaults = {
-      kpi:       { title: 'Open items', config: { metric: 'count', filter: { open: true } } },
-      chart:     { title: 'By status', config: { chartType: 'bar', dimension: 'status' } },
-      pivot:     { title: 'Custom chart', config: { spec: null } },
-      table:     { title: 'Work items', config: { limit: 20 } },
-      narrative: { title: 'Summary', config: { text: '' } },
-    };
-    const base = defaults[type] || defaults.kpi;
-    setReportSections(s => [...s, { type, title: base.title, config: base.config }]);
-  }
-  function updateReportSection(index, section) {
-    setReportSections(s => s.map((x, i) => (i === index ? section : x)));
-  }
-  function moveReportSection(index, delta) {
-    setReportSections(s => {
-      const j = index + delta;
-      if (j < 0 || j >= s.length) return s;
-      const next = [...s];
-      [next[index], next[j]] = [next[j], next[index]];
-      return next;
-    });
-  }
-  function removeReportSection(index) {
-    setReportSections(s => s.filter((_, i) => i !== index));
-  }
-
-  function addDashboardWidget(widgetType, config, title, gridW = 4) {
-    if (!selectedDashboard) return;
-    const body = { widgetType, title, config: JSON.stringify(config || {}), gridW, gridH: 2 };
-    api.send(`/dashboards/${selectedDashboard.id}/widgets`, { method: 'POST', body: JSON.stringify(body) })
-      .then(() => openDashboard(selectedDashboard.id))
-      .catch(() => showToast('Failed to add widget', 'error'));
-  }
-
-  function removeDashboardWidget(widgetId) {
-    api.send(`/dashboards/${selectedDashboard.id}/widgets/${widgetId}`, { method: 'DELETE' })
-      .then(() => openDashboard(selectedDashboard.id))
-      .catch(() => showToast('Failed to remove widget', 'error'));
-  }
-
-  function resizeDashboardWidget(widget, gridW) {
-    api.send(`/dashboards/${selectedDashboard.id}/widgets/${widget.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ ...widget, gridW }),
-    })
-      .then(() => openDashboard(selectedDashboard.id))
-      .catch(() => showToast('Failed to resize widget', 'error'));
-  }
-
-  // Persist a widget's config (e.g. a chart's group-by dimension) via the same PUT as resize.
-  function updateDashboardWidgetConfig(widget, config) {
-    api.send(`/dashboards/${selectedDashboard.id}/widgets/${widget.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ ...widget, config: JSON.stringify(config) }),
-    })
-      .then(() => openDashboard(selectedDashboard.id))
-      .catch(() => showToast('Failed to update widget', 'error'));
-  }
-
-  // Reorder widgets by dropping one onto another, then persist the new order.
-  function reorderDashboardWidgets(targetId) {
-    if (!selectedDashboard || dragWidgetId == null || dragWidgetId === targetId) return;
-    const ws = [...selectedDashboard.widgets];
-    const from = ws.findIndex(w => w.id === dragWidgetId);
-    const to = ws.findIndex(w => w.id === targetId);
-    if (from < 0 || to < 0) return;
-    const [moved] = ws.splice(from, 1);
-    ws.splice(to, 0, moved);
-    const payload = ws.map((w, i) => ({ id: w.id, gridX: w.gridX, gridY: w.gridY, gridW: w.gridW, gridH: w.gridH, position: i }));
-    setSelectedDashboard(d => ({ ...d, widgets: ws })); // optimistic
-    setDragWidgetId(null);
-    api.send(`/dashboards/${selectedDashboard.id}/layout`, { method: 'PUT', body: JSON.stringify(payload) })
-      .then(() => openDashboard(selectedDashboard.id))
-      .catch(() => showToast('Failed to save layout', 'error'));
-  }
-
   function fetchBranding() {
     api.raw(`/workspaces/${activeWorkspaceId}/branding`)
       .then(r => r.json()).then(d => {
@@ -1320,11 +1094,6 @@ export default function AppShell() {
       })
       .catch(() => setBoardColumns(null));
   }
-  function fetchFieldDefs(projectId) {
-    const q = projectId ? `?projectId=${projectId}` : '';
-    api.raw(`/field-defs${q}`)
-      .then(r => r.json()).then(d => setFieldDefs(Array.isArray(d) ? d : [])).catch(reportError);
-  }
   function fetchRoles() {
     api.raw(`/permission-schemes/roles`)
       .then(r => r.json()).then(d => setRoles(Array.isArray(d) ? d : [])).catch(reportError);
@@ -1364,11 +1133,6 @@ export default function AppShell() {
   function deleteTransition(wfId, transId) {
     api.raw(`/workflows/${wfId}/transitions/${transId}`, { method: 'DELETE' })
       .then(() => loadWorkflowDetail(wfId)).catch(reportError);
-  }
-  function createFieldDef() {
-    if (!newFieldForm.name.trim()) return;
-    api.raw(`/field-defs`, { method: 'POST', body: JSON.stringify({ ...newFieldForm, fieldKey: newFieldForm.name.toLowerCase().replace(/\s+/g,'_'), workspaceId: activeWorkspaceId }) })
-      .then(r => r.json()).then(() => { fetchFieldDefs(); setShowFieldForm(false); setNewFieldForm({ name: '', fieldType: 'TEXT', required: false, description: '' }); }).catch(reportError);
   }
   function createWorkItemType() {
     if (!newTypeForm.label.trim()) return;
@@ -1414,43 +1178,10 @@ export default function AppShell() {
 
   // ── Iteration 3 completions ──────────────────────────────────────────────────
 
-  function fetchFieldValues(workItemId) {
-    api.raw(`/field-defs/values/${workItemId}`)
-      .then(r => r.json()).then(d => {
-        const map = {};
-        (Array.isArray(d) ? d : []).forEach(fv => { map[fv.fieldDefId] = fv.valueText ?? fv.valueNumber ?? fv.valueJson ?? ''; });
-        setFieldValues(map);
-      }).catch(reportError);
-  }
 
-  function saveFieldValue(workItemId, fieldDefId, value) {
-    api.send(`/field-defs/values/${workItemId}/${fieldDefId}`, {
-      method: 'PUT', body: JSON.stringify({ valueText: value })
-    }).catch(reportError);
-  }
 
-  function fetchFieldLayouts() {
-    api.raw(`/field-layouts`).then(r => r.json()).then(d => setFieldLayouts(Array.isArray(d) ? d : [])).catch(reportError);
-  }
 
-  function fetchFieldVisibility() {
-    Promise.all((fieldDefs || []).map(fd =>
-      api.raw(`/permission-schemes/field-visibility/${fd.id}`)
-        .then(r => r.json())
-        .then(rows => (Array.isArray(rows) ? rows : []).map(row => ({ ...row, roleId: row.roleId || row.roleDefId })))
-    ))
-      .then(groups => setFieldVisibility(groups.flat()))
-      .catch(reportError);
-  }
 
-  function saveFieldVisibility() {
-    if (!newFieldVisForm.fieldDefId || !newFieldVisForm.roleId) { showToast('Select field and role', 'error'); return; }
-    api.send(`/permission-schemes/field-visibility/${newFieldVisForm.fieldDefId}/${newFieldVisForm.roleId}`, {
-      method: 'PUT', body: JSON.stringify({ visibility: newFieldVisForm.visibility })
-    })
-      .then(() => { showToast('Visibility saved'); fetchFieldVisibility(); setNewFieldVisForm({ fieldDefId: '', roleId: '', visibility: 'EDITABLE' }); })
-      .catch(() => showToast('Failed to save visibility', 'error'));
-  }
 
   function togglePermission(roleId, permission, currentlyGranted) {
     api.send(`/permission-schemes/permissions`, {
@@ -1610,310 +1341,6 @@ export default function AppShell() {
       .catch(() => showToast('Failed to remove item', 'error'));
   }
 
-  // ── Iteration 15 — Scrum Master Cockpit (Cap V) ──────────────────────────────
-  // Clear per-sprint analysis so the active-sprint auto-load re-fires for the new project
-  // (stale results would otherwise suppress the reload).
-  function resetCockpitAnalysis() {
-    setRiskPanel(null); setVarianceResult(null); setReviewResult(null);
-    setPatternsResult(null); setPlanningResult(null); setCapacityBoard(null);
-    setRiskSprintId(''); setVarianceSprintId(''); setReviewSprintId('');
-  }
-  function openCockpit() {
-    setView('smcockpit');
-    const pid = i15ProjectId || (projects[0] && projects[0].id) || '';
-    setI15ProjectId(pid);
-    resetCockpitAnalysis();
-    if (pid) { fetchCockpitContext(pid); fetchCoachTips(pid); fetchDigest(pid); fetchCeremonies(pid); fetchMyDay(pid); fetchImpediments(pid); fetchStandups(pid); fetchRetros(pid); fetchSprints(pid); }
-  }
-  function fetchCoachTips(pid) {
-    setCoachTips(null);
-    api.send(`/cockpit/pro-tips?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: pid }) })
-      .then(d => setCoachTips(d && Array.isArray(d.tips) ? d : null)).catch(() => setCoachTips(null));
-  }
-  function fetchDigest(pid) {
-    setDigest(null);
-    api.raw(`/cockpit/digest?workspaceId=${activeWorkspaceId}&projectId=${pid}`).then(r => r.json())
-      .then(d => setDigest(d && d.rag ? d : null)).catch(() => setDigest(null));
-  }
-
-  useEffect(() => {
-    if (view !== 'smcockpit' || projects.length === 0) return;
-    const projectIds = new Set(projects.map(p => p.id));
-    const pid = projectIds.has(i15ProjectId) ? i15ProjectId : projects[0].id;
-    if (pid !== i15ProjectId) {
-      queueMicrotask(() => setI15ProjectId(pid));
-    }
-    if (!pid) return;
-    fetchCockpitContext(pid);
-    fetchCoachTips(pid);
-    fetchDigest(pid);
-    fetchCeremonies(pid);
-    fetchMyDay(pid);
-    fetchImpediments(pid);
-    fetchStandups(pid);
-    fetchRetros(pid);
-    fetchSprints(pid);
-  }, [view, projects, i15ProjectId, activeWorkspaceId]);
-
-  function clusterRetro() {
-    if (!activeRetro?.session?.id) return;
-    api.send(`/cockpit/retro-cluster?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ retroId: activeRetro.session.id }) })
-      .then(d => { setRetroClusters(d && Array.isArray(d.themes) ? d : null); if (d?.meta?.fallback) showToast('Retro clustering used fallback (keyword themes).', 'info'); })
-      .catch(() => showToast('Retro clustering failed', 'error'));
-  }
-  function fetchMyDay(pid) {
-    api.raw(`/cockpit/my-day?projectId=${pid}`).then(r => r.json())
-      .then(d => setMyDay(d && typeof d === 'object' ? d : null)).catch(() => setMyDay(null));
-  }
-  function submitMyStandup() {
-    const sid = myDay?.todayStandup?.id;
-    const eid = myDay?.myStandupEntry?.id;
-    if (!sid || !eid) return;
-    api.send(`/standups/${sid}/entries/${eid}/record`, { method: 'POST', body: JSON.stringify(standupDraft) })
-      .then(() => { setStandupDraft({ yesterday: '', today: '', blockers: '' }); fetchMyDay(i15ProjectId); showToast('Standup update recorded'); })
-      .catch(() => showToast('Failed to record your update', 'error'));
-  }
-  function fetchCockpitContext(pid) {
-    api.raw(`/cockpit/context?projectId=${pid}`).then(r => r.json())
-      .then(d => setCockpitContext(d && d.roleKey ? d : null)).catch(() => setCockpitContext(null));
-  }
-  function fetchCeremonies(pid) {
-    api.raw(`/ceremonies?projectId=${pid}`).then(r => r.json())
-      .then(d => setCeremonies(Array.isArray(d) ? d : [])).catch(() => setCeremonies([]));
-  }
-  function scheduleCeremony() {
-    const memberIds = (workspaceMembers.length ? workspaceMembers : users).map(m => m.id).filter(Boolean);
-    const scheduledAt = newCeremony.scheduledAt ? new Date(newCeremony.scheduledAt).toISOString() : null;
-    api.send(`/ceremonies`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId, ceremonyType: newCeremony.ceremonyType, scheduledAt, sprintId: cockpitContext?.activeSprint?.id || null, memberIds }) })
-      .then(d => { setActiveCeremony(d); setNewCeremony({ ceremonyType: 'STANDUP', scheduledAt: '' }); fetchCeremonies(i15ProjectId); showToast('Ceremony scheduled'); })
-      .catch(() => showToast('Failed to schedule ceremony', 'error'));
-  }
-  function openCeremony(id) {
-    api.raw(`/ceremonies/${id}`).then(r => r.json()).then(d => setActiveCeremony(d)).catch(reportError);
-  }
-  function startCeremony(id) {
-    api.send(`/ceremonies/${id}/start`, { method: 'POST' })
-      .then(d => { setActiveCeremony(d); fetchCeremonies(i15ProjectId); fetchCockpitContext(i15ProjectId); showToast('Ceremony is live'); })
-      .catch(() => showToast('Failed to start ceremony', 'error'));
-  }
-  function joinCeremony(id) {
-    api.send(`/ceremonies/${id}/join`, { method: 'POST' })
-      .then(d => { setActiveCeremony(d); fetchCeremonies(i15ProjectId); showToast('You joined the ceremony'); })
-      .catch(() => showToast('Failed to join — is the ceremony live?', 'error'));
-  }
-  function excuseCeremony(id, userId) {
-    api.send(`/ceremonies/${id}/excuse`, { method: 'POST', body: JSON.stringify({ userId }) })
-      .then(d => setActiveCeremony(d)).catch(() => showToast('Failed to excuse member', 'error'));
-  }
-  function completeCeremony(id) {
-    api.send(`/ceremonies/${id}/complete`, { method: 'POST' })
-      .then(d => { setActiveCeremony(d); fetchCeremonies(i15ProjectId); fetchCockpitContext(i15ProjectId); showToast('Ceremony complete — absentees recorded'); })
-      .catch(() => showToast('Failed to complete ceremony', 'error'));
-  }
-  function fetchImpediments(pid) {
-    api.raw(`/impediments?projectId=${pid}`).then(r => r.json())
-      .then(d => setImpediments(Array.isArray(d) ? d : [])).catch(() => setImpediments([]));
-  }
-  function createImpediment() {
-    if (!newImpediment.title.trim()) { showToast('Title is required', 'error'); return; }
-    api.send(`/impediments`, { method: 'POST', body: JSON.stringify({ ...newImpediment, projectId: i15ProjectId }) })
-      .then(() => { showToast('Raised'); setNewImpediment({ title: '', raiseType: 'IMPEDIMENT', severity: 'MEDIUM', category: '', description: '' }); fetchImpediments(i15ProjectId); })
-      .catch(() => showToast('Failed to raise impediment', 'error'));
-  }
-  function updateImpediment(imp, patch) {
-    api.send(`/impediments/${imp.id}`, { method: 'PUT', body: JSON.stringify({ ...imp, ...patch }) })
-      .then(() => fetchImpediments(i15ProjectId)).catch(() => showToast('Failed to update', 'error'));
-  }
-  function fetchStandups(pid) {
-    api.raw(`/standups?projectId=${pid}`).then(r => r.json())
-      .then(d => setStandups(Array.isArray(d) ? d : [])).catch(() => setStandups([]));
-  }
-  function startStandup() {
-    const memberIds = (workspaceMembers.length ? workspaceMembers : users).map(m => m.id).filter(Boolean);
-    api.send(`/standups?`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId, memberIds }) })
-      .then(d => { setActiveStandup(d); fetchStandups(i15ProjectId); showToast('Standup started'); })
-      .catch(() => showToast('Failed to start standup', 'error'));
-  }
-  function openStandup(id) {
-    api.raw(`/standups/${id}`).then(r => r.json()).then(d => setActiveStandup(d)).catch(reportError);
-  }
-  function recordStandup(entryId) {
-    api.send(`/standups/${activeStandup.session.id}/entries/${entryId}/record`, { method: 'POST', body: JSON.stringify(standupDraft) })
-      .then(() => { setStandupDraft({ yesterday: '', today: '', blockers: '' }); openStandup(activeStandup.session.id); })
-      .catch(() => showToast('Failed to record', 'error'));
-  }
-  function advanceStandup() {
-    api.send(`/standups/${activeStandup.session.id}/advance`, { method: 'POST' })
-      .then(() => openStandup(activeStandup.session.id)).catch(reportError);
-  }
-  function completeStandup() {
-    api.send(`/standups/${activeStandup.session.id}/complete`, { method: 'POST' })
-      .then(d => { setActiveStandup(d); fetchStandups(i15ProjectId); showToast('Standup complete'); }).catch(reportError);
-  }
-  function fetchRetros(pid) {
-    api.raw(`/retros?projectId=${pid}`).then(r => r.json())
-      .then(d => setRetros(Array.isArray(d) ? d : [])).catch(() => setRetros([]));
-  }
-  function createRetro() {
-    if (!newRetro.title.trim()) { showToast('Title is required', 'error'); return; }
-    api.send(`/retros`, { method: 'POST', body: JSON.stringify({ ...newRetro, projectId: i15ProjectId }) })
-      .then(() => { showToast('Retro created'); setNewRetro({ title: '', template: 'START_STOP_CONTINUE', anonymous: false }); fetchRetros(i15ProjectId); })
-      .catch(() => showToast('Failed to create retro', 'error'));
-  }
-  function openRetro(id) {
-    setRetroClusters(null);
-    api.raw(`/retros/${id}`).then(r => r.json()).then(d => setActiveRetro(d)).catch(reportError);
-  }
-  function addRetroNote(columnKey) {
-    const content = (retroNoteDraft[columnKey] || '').trim();
-    if (!content) return;
-    api.send(`/retros/${activeRetro.session.id}/notes`, { method: 'POST', body: JSON.stringify({ columnKey, content }) })
-      .then(() => { setRetroNoteDraft({ ...retroNoteDraft, [columnKey]: '' }); openRetro(activeRetro.session.id); })
-      .catch(() => showToast('Failed to add note', 'error'));
-  }
-  function voteRetroNote(noteId) {
-    api.send(`/retros/notes/${noteId}/vote`, { method: 'POST' }).then(() => openRetro(activeRetro.session.id)).catch(reportError);
-  }
-  function convertRetroNote(noteId) {
-    api.send(`/retros/notes/${noteId}/convert`, { method: 'POST', body: JSON.stringify({}) })
-      .then(() => { showToast('Action item created'); openRetro(activeRetro.session.id); }).catch(() => showToast('Failed', 'error'));
-  }
-  function setTabLoading(tab, on) { setCockpitLoading(l => ({ ...l, [tab]: on })); }
-  function runSprintPlanning() {
-    setTabLoading('planning', true);
-    api.send(`/cockpit/sprint-planning?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId, timeOffPoints: Number(planningTimeOff) || 0 }) })
-      .then(d => setPlanningResult(d)).catch(() => showToast('Planning helper failed', 'error'))
-      .finally(() => setTabLoading('planning', false));
-  }
-  function fetchCapacity(sprintId) {
-    if (!sprintId) return;
-    setTabLoading('capacity', true);
-    api.raw(`/cockpit/capacity?workspaceId=${activeWorkspaceId}&sprintId=${sprintId}`).then(r => r.json())
-      .then(d => setCapacityBoard(d && Array.isArray(d.members) ? d : null)).catch(() => showToast('Capacity board failed', 'error'))
-      .finally(() => setTabLoading('capacity', false));
-  }
-  function saveMemberCapacity(sprintId, userId, { workingDays, timeOffDays, focusFactor }) {
-    if (!sprintId) return;
-    setTabLoading('capacity', true);
-    api.send(`/cockpit/capacity?workspaceId=${activeWorkspaceId}`, { method: 'PUT', body: JSON.stringify({ sprintId, userId, workingDays, timeOffDays, focusFactor }) })
-      .then(d => setCapacityBoard(d && Array.isArray(d.members) ? d : null)).catch(() => showToast('Capacity update failed', 'error'))
-      .finally(() => setTabLoading('capacity', false));
-  }
-  function runRiskPanel(sprintId = riskSprintId) {
-    if (!sprintId) { showToast('Select a sprint', 'error'); return; }
-    setRiskSprintId(sprintId);
-    setTabLoading('risk', true);
-    api.raw(`/cockpit/risk-panel?workspaceId=${activeWorkspaceId}&sprintId=${sprintId}`).then(r => r.json())
-      .then(d => setRiskPanel(d)).catch(() => showToast('Risk panel failed', 'error'))
-      .finally(() => setTabLoading('risk', false));
-  }
-  function runVariance(sprintId = varianceSprintId) {
-    if (!sprintId) { showToast('Select a sprint', 'error'); return; }
-    setVarianceSprintId(sprintId);
-    setTabLoading('variance', true);
-    api.raw(`/cockpit/variance?workspaceId=${activeWorkspaceId}&sprintId=${sprintId}`).then(r => r.json())
-      .then(d => setVarianceResult(d)).catch(() => showToast('Variance analysis failed', 'error'))
-      .finally(() => setTabLoading('variance', false));
-  }
-  function runReviewPrep(sprintId = reviewSprintId) {
-    if (!sprintId) { showToast('Select a sprint', 'error'); return; }
-    setReviewSprintId(sprintId);
-    setTabLoading('review', true);
-    api.send(`/cockpit/review-prep?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ sprintId }) })
-      .then(d => setReviewResult(d)).catch(() => showToast('Review prep failed', 'error'))
-      .finally(() => setTabLoading('review', false));
-  }
-  function runPatterns() {
-    setTabLoading('patterns', true);
-    api.send(`/cockpit/patterns?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId }) })
-      .then(d => setPatternsResult(d)).catch(() => showToast('Pattern detection failed', 'error'))
-      .finally(() => setTabLoading('patterns', false));
-  }
-
-  // ── Iteration 15 — Product Owner Workspace (Cap W) ───────────────────────────
-  function openPoWorkspace() {
-    setView('poworkspace');
-    const pid = i15ProjectId || (projects[0] && projects[0].id) || '';
-    setI15ProjectId(pid);
-    fetchRoadmapThemes(); fetchIdeas(); fetchFeedback(); fetchObjectives();
-  }
-  function fetchRoadmapThemes() {
-    api.raw(`/roadmap-themes?workspaceId=${activeWorkspaceId}`).then(r => r.json())
-      .then(d => setRoadmapThemes(Array.isArray(d) ? d : [])).catch(() => setRoadmapThemes([]));
-  }
-  function createTheme() {
-    if (!newTheme.name.trim()) { showToast('Name is required', 'error'); return; }
-    api.send(`/roadmap-themes`, { method: 'POST', body: JSON.stringify({ ...newTheme, workspaceId: activeWorkspaceId, projectId: i15ProjectId || null }) })
-      .then(() => { showToast('Theme added'); setNewTheme({ name: '', status: 'PLANNED', quarter: '', description: '' }); fetchRoadmapThemes(); })
-      .catch(() => showToast('Failed to add theme', 'error'));
-  }
-  function updateThemeStatus(theme, status) {
-    api.send(`/roadmap-themes/${theme.id}`, { method: 'PUT', body: JSON.stringify({ ...theme, status }) })
-      .then(() => fetchRoadmapThemes()).catch(() => showToast('Failed to update', 'error'));
-  }
-  function deleteTheme(id) {
-    api.send(`/roadmap-themes/${id}`, { method: 'DELETE' })
-      .then(() => { showToast('Theme deleted'); fetchRoadmapThemes(); })
-      .catch(() => showToast('Failed to delete theme', 'error'));
-  }
-  function fetchIdeas() {
-    api.raw(`/ideas?workspaceId=${activeWorkspaceId}`).then(r => r.json())
-      .then(d => setIdeas(Array.isArray(d) ? d : [])).catch(() => setIdeas([]));
-  }
-  function createIdea() {
-    if (!newIdea.title.trim()) { showToast('Title is required', 'error'); return; }
-    api.send(`/ideas`, { method: 'POST', body: JSON.stringify({ ...newIdea, workspaceId: activeWorkspaceId, projectId: i15ProjectId || null }) })
-      .then(() => { showToast('Idea captured'); setNewIdea({ title: '', description: '' }); fetchIdeas(); })
-      .catch(() => showToast('Failed to capture idea', 'error'));
-  }
-  function voteIdea(id) {
-    api.send(`/ideas/${id}/vote`, { method: 'POST' }).then(() => fetchIdeas()).catch(reportError);
-  }
-  function promoteIdea(id) {
-    api.send(`/ideas/${id}/promote`, { method: 'POST', body: JSON.stringify({}) })
-      .then(() => { showToast('Promoted to story'); fetchIdeas(); }).catch(() => showToast('Failed', 'error'));
-  }
-  function fetchFeedback() {
-    api.raw(`/customer-feedback?workspaceId=${activeWorkspaceId}`).then(r => r.json())
-      .then(d => setFeedbackItems(Array.isArray(d) ? d : [])).catch(() => setFeedbackItems([]));
-  }
-  function createFeedback() {
-    if (!newFeedback.content.trim()) { showToast('Content is required', 'error'); return; }
-    api.send(`/customer-feedback`, { method: 'POST', body: JSON.stringify({ ...newFeedback, workspaceId: activeWorkspaceId }) })
-      .then(() => { showToast('Feedback logged'); setNewFeedback({ customer: '', source: 'PORTAL', content: '' }); fetchFeedback(); })
-      .catch(() => showToast('Failed to log feedback', 'error'));
-  }
-  function clusterFeedback() {
-    api.send(`/po/feedback-cluster?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({}) })
-      .then(d => setFeedbackClusters(d)).catch(() => showToast('Clustering failed', 'error'));
-  }
-  function fetchObjectives() {
-    api.raw(`/objectives?workspaceId=${activeWorkspaceId}`).then(r => r.json())
-      .then(d => setObjectives(Array.isArray(d) ? d : [])).catch(() => setObjectives([]));
-  }
-  function createObjective() {
-    if (!newObjective.title.trim()) { showToast('Title is required', 'error'); return; }
-    api.send(`/objectives`, { method: 'POST', body: JSON.stringify({ ...newObjective, workspaceId: activeWorkspaceId, projectId: i15ProjectId || null }) })
-      .then(() => { showToast('Objective created'); setNewObjective({ title: '', level: 'TEAM', quarter: '' }); fetchObjectives(); })
-      .catch(() => showToast('Failed to create objective', 'error'));
-  }
-  function openObjective(id) {
-    api.raw(`/objectives/${id}`).then(r => r.json()).then(d => setActiveObjective(d)).catch(reportError);
-  }
-  function addKeyResult() {
-    if (!newKr.title.trim() || !activeObjective) { showToast('Key result title required', 'error'); return; }
-    api.send(`/objectives/${activeObjective.objective.id}/key-results`, { method: 'POST', body: JSON.stringify(newKr) })
-      .then(() => { setNewKr({ title: '', metricType: 'PERCENT', startValue: 0, targetValue: 100, currentValue: 0 }); openObjective(activeObjective.objective.id); })
-      .catch(() => showToast('Failed to add key result', 'error'));
-  }
-  function updateKrProgress(kr, currentValue) {
-    api.send(`/objectives/key-results/${kr.id}`, { method: 'PUT', body: JSON.stringify({ ...kr, currentValue: Number(currentValue) }) })
-      .then(() => openObjective(activeObjective.objective.id)).catch(reportError);
-  }
-  function runReleaseNotes() {
-    api.send(`/po/release-notes?workspaceId=${activeWorkspaceId}`, { method: 'POST', body: JSON.stringify({ projectId: i15ProjectId, releaseName: releaseNotesName || 'Release notes' }) })
-      .then(d => setReleaseNotesResult(d)).catch(() => showToast('Draft failed', 'error'));
-  }
 
   function logWork() {
     if (!worklogForm.timeSpentMinutes || !selectedItem?.id) { showToast('Time and work item required', 'error'); return; }

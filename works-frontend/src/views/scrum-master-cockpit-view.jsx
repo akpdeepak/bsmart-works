@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { Lightbulb, Sparkles } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { useI18n } from '@/lib/i18n';
@@ -107,7 +108,7 @@ export default function ScrumMasterCockpitView({
   if (loading && projects.length === 0 && sprints.length === 0) {
     return (
       <PageLayout header={null}>
-        <ListSkeleton rows={4} />
+        <AsyncBoundary loading label="Loading cockpit" skeleton={<ListSkeleton rows={4} />} />
       </PageLayout>
     );
   }

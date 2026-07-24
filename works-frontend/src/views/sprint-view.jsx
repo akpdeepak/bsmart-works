@@ -1,4 +1,5 @@
 import { Zap, Star, Globe, Lock, Unlock, X } from 'lucide-react';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
@@ -63,7 +64,7 @@ export default function SprintView({
   if (loading && !activeSprint && sprints.length === 0) {
     return (
       <div className="p-6">
-        <ListSkeleton rows={5} />
+        <AsyncBoundary loading label="Loading sprint" skeleton={<ListSkeleton rows={5} />} />
       </div>
     );
   }

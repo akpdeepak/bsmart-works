@@ -1,4 +1,5 @@
 import { FileText, File as FileIcon, ArrowLeft, Puzzle } from 'lucide-react';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
@@ -52,7 +53,7 @@ export default function ReportBuilderView({
   if (loading && reports.length === 0 && !selectedReport) {
     return (
       <PageLayout header={null}>
-        <ListSkeleton rows={4} />
+        <AsyncBoundary loading label="Loading reports" skeleton={<ListSkeleton rows={4} />} />
       </PageLayout>
     );
   }

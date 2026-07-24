@@ -33,11 +33,14 @@ import java.util.Map;
 public class KpiController {
 
     private final KpiService kpi;
+    private final MetricDefinitionService metricDefs;
     private final AuthenticatedUser authenticatedUser;
     private final RbacGate rbac;
 
-    public KpiController(KpiService kpi, AuthenticatedUser authenticatedUser, RbacGate rbac) {
+    public KpiController(KpiService kpi, MetricDefinitionService metricDefs,
+                         AuthenticatedUser authenticatedUser, RbacGate rbac) {
         this.kpi = kpi;
+        this.metricDefs = metricDefs;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
     }
@@ -47,14 +50,14 @@ public class KpiController {
     @GetMapping("/catalog")
     public List<Map<String, Object>> catalog(@RequestParam String workspaceId) {
         rbac.require(authenticatedUser.id(), workspaceId, "view_items");
-        return kpi.catalog();
+        return metricDefs.catalog();
     }
 
     @GetMapping("/definitions")
     public List<MetricDefinition> definitions(@RequestParam String workspaceId) {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "view_team_metrics");
-        return kpi.listDefinitions(workspaceId, userId);
+        return metricDefs.listDefinitions(workspaceId, userId);
     }
 
     @PostMapping("/definitions")
@@ -62,7 +65,7 @@ public class KpiController {
                                              @Valid @RequestBody MetricDefinition def) {
         String userId = authenticatedUser.id();
         rbac.require(userId, workspaceId, "manage_metrics");
-        return kpi.createDefinition(workspaceId, userId, def);
+        return metricDefs.createDefinition(workspaceId, userId, def);
     }
 
     // ── Personal view (private; self-or-shared) ─────────────────────────────────────
@@ -136,7 +139,7 @@ public class KpiController {
                                         @RequestParam(defaultValue = "ORG") String scopeLevel,
                                         @RequestParam(required = false) String scopeId) {
         rbac.require(authenticatedUser.id(), workspaceId, "view_team_metrics");
-        return kpi.history(workspaceId, metricKey, scopeLevel, scopeId);
+        return metricDefs.history(workspaceId, metricKey, scopeLevel, scopeId);
     }
 
     // ── Voluntary individual sharing ────────────────────────────────────────────────
@@ -145,7 +148,7 @@ public class KpiController {
     public List<MetricShare> shares(@RequestParam String workspaceId) {
         String caller = authenticatedUser.id();
         rbac.require(caller, workspaceId, "view_items");
-        return kpi.sharesByOwner(workspaceId, caller);
+        return metricDefs.sharesByOwner(workspaceId, caller);
     }
 
     public record ShareRequest(String viewerUserId) { }
@@ -157,14 +160,14 @@ public class KpiController {
         if (req == null || req.viewerUserId() == null || req.viewerUserId().isBlank()) {
             throw ApiException.badRequest("MISSING_VIEWER", "viewerUserId is required.", "viewerUserId");
         }
-        return kpi.share(workspaceId, caller, req.viewerUserId());
+        return metricDefs.share(workspaceId, caller, req.viewerUserId());
     }
 
     @DeleteMapping("/shares/{viewerUserId}")
     public Map<String, Object> unshare(@RequestParam String workspaceId, @PathVariable String viewerUserId) {
         String caller = authenticatedUser.id();
         rbac.require(caller, workspaceId, "view_items");
-        kpi.unshare(workspaceId, caller, viewerUserId);
+        metricDefs.unshare(workspaceId, caller, viewerUserId);
         return Map.of("ok", true);
     }
 }

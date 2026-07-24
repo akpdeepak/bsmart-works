@@ -7,6 +7,7 @@ import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.reporting.KpiController;
 import com.bcits.works.reporting.KpiService;
+import com.bcits.works.reporting.MetricDefinitionService;
 import com.bcits.works.reporting.MetricDefinition;
 
 import org.junit.jupiter.api.Tag;
@@ -36,9 +37,10 @@ class KpiControllerAccessTest {
     private static final String FOREIGN_WS = "ws-B";
 
     private final KpiService kpi = mock(KpiService.class);
+    private final MetricDefinitionService metricDefs = mock(MetricDefinitionService.class);
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private final RbacService rbac = mock(RbacService.class);
-    private final KpiController controller = new KpiController(kpi, authenticatedUser, rbac);
+    private final KpiController controller = new KpiController(kpi, metricDefs, authenticatedUser, rbac);
 
     KpiControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);
@@ -72,6 +74,6 @@ class KpiControllerAccessTest {
         deny("manage_metrics");
         assertThatThrownBy(() -> controller.createDefinition(FOREIGN_WS, new MetricDefinition()))
             .isInstanceOf(ApiException.class);
-        verify(kpi, never()).createDefinition(anyString(), anyString(), any());
+        verify(metricDefs, never()).createDefinition(anyString(), anyString(), any());
     }
 }
